@@ -1,0 +1,61 @@
+name: Jobblo Kustomize Check
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  summarize_changes:
+    name: "📜 Summarize changes for ${{ matrix.env }}"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env:
+          - dev
+          - prod
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: "🛎️ Checkout current"
+        uses: actions/checkout@v4
+
+      - name: "🛎️ Checkout main"
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+
+      - name: "📜 Render current (new)"
+        uses: int128/kustomize-action@v1
+        id: kustomize-head
+        with:
+          kustomization: overlays/${{ matrix.env }}/kustomization.yaml
+          write-individual-files: true
+          error-comment: true
+          error-comment-header: |
+            # 🚨 Feil funnet i **${{ matrix.env }}** manifests
+            Manifestene for ${{ matrix.env }} virker ikke!
+            Ikke godkjenn før du har fikset dette!
+
+      - name: "📜 Render base (main)"
+        uses: int128/kustomize-action@v1
+        id: kustomize-base
+        with:
+          base-directory: main
+          kustomization: overlays/${{ matrix.env }}/kustomization.yaml
+          write-individual-files: true
+          ignore-kustomize-error: true
+
+      - name: "📜 Sammenlign endringer"
+        uses: int128/diff-action@v1
+        with:
+          base: ${{ steps.kustomize-base.outputs.directory }}
+          head: ${{ steps.kustomize-head.outputs.directory }}
+          label: "env:${{ matrix.env }}"
+          update-if-exists-key: ${{ github.workflow }}/${{ github.job }}/${{ matrix.env }}
+          comment-header: |
+            # 📜 Endringsoppsummering for **${{ matrix.env }}**
+            Dette er forskjellene i manifestene for ${{ matrix.env }}.
+            Sjekk nøye før du merger!
