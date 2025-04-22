@@ -1,0 +1,26 @@
+# Terraform directories and files
+.terraform/
+*.tfstate
+*.tfstate.backup
+crash.log
+*.tfplan
+
+# Sensitive variable files (if applicable)
+*.tfvars
+*.tfvars.json
+
+# Local/Terraform logs
+*.log
+
+# Ignore override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore editor & OS-specific files
+*.swp
+*.swo
+.DS_Store
+.idea/
+.vscode/
