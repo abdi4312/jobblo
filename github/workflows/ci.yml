@@ -1,23 +1,22 @@
-name: CI - Lint & Test
+name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  #call-run-tests:
+   #uses: ./.github/workflows/run_tests.yml
+    #secrets: inherit
 
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16'  # Adjust Node version as needed
-
-      - name: Install dependencies and run tests
-        run: |
-          cd backend
-          npm install
-          npm test
+  call-build-and-push-backend:
+    #needs: call-run-tests
+    #if: ${{ needs.call-run-tests.result == 'success' }}
+    uses: ./.github/workflows/build_and_push_backend_container.yml
+    secrets: inherit
