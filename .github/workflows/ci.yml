@@ -18,5 +18,5 @@ jobs:
   call-build-and-push-backend:
     #needs: call-run-tests
     #if: ${{ needs.call-run-tests.resdult == 'success' }}
-    uses: ./.github/workflows/build_and_push_backend_container.yml
+    uses: ./.github/workflows/build_and_push_backend.yml
     secrets: inherit
