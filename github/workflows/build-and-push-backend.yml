@@ -1,32 +1,62 @@
-name: Build and Push Backend
+name: build_and_push_container
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - backend/**
+  workflow_call:
+
+permissions:
+  id-token: write
+  contents: write
 
 jobs:
-  build:
+
+  build-and-push:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0
+        with:
+          versionSpec: '5.x'
 
-      - name: Log in to Azure Container Registry
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0
+        with:
+          useConfigFile: true
+      - name: Set version tag in git
+        run: |
+          git tag ${{ steps.gitversion.outputs.fullSemVer }}
+          git push origin ${{ steps.gitversion.outputs.fullSemVer }}
+
+      - name: Log in to ACR
         uses: docker/login-action@v3
         with:
-          registry: jobbloacr123.azurecr.io
-          username: ${{ secrets.AZURE_USERNAME }}
-          password: ${{ secrets.AZURE_PASSWORD }}
+          registry: ${{ secrets.DOCKER_HOSTNAME }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image
+      - name: Docker build backend and push
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
+          context: .
           push: true
-          tags: jobbloacr123.azurecr.io/backend:latest
+          tags: ${{ secrets.DOCKER_HOSTNAME }}/learning-core/backend:${{ steps.gitversion.outputs.fullSemVer }}
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Update Azure Container App
+        run: |
+          az containerapp update \
+            --name jobblo-container-app \
+            --resource-group jobblo-rg \
+            --image ${{ secrets.DOCKER_HOSTNAME }}/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
