@@ -36,3 +36,29 @@ resource "azurerm_container_app" "jobblo_container_app" {
     }
   }
 }
+# GitHub Actions OIDC Identity
+resource "azurerm_user_assigned_identity" "github_identity" {
+  name                = "github-identity"
+  resource_group_name = azurerm_resource_group.jobblo_rg.name
+  location            = azurerm_resource_group.jobblo_rg.location
+}
+
+# Federated Identity Credential for GitHub Actions
+resource "azurerm_federated_identity_credential" "github_oidc" {
+  name                = "github-oidc"
+  resource_group_name = azurerm_resource_group.jobblo_rg.name
+  parent_id           = azurerm_user_assigned_identity.github_identity.id
+
+  issuer              = "https://token.actions.githubusercontent.com"
+  subject             = "repo:my-org/jobblo-backend:ref:refs/heads/main"
+
+  audience            = ["api://AzureADTokenExchange"]
+}
+
+# Allow GitHub identity to push to ACR
+resource "azurerm_role_assignment" "acr_push" {
+  principal_id         = azurerm_user_assigned_identity.github_identity.principal_id
+  role_definition_name = "AcrPush"
+  scope                = azurerm_container_registry.jobblo_acr.id
+}
+data "azurerm_client_config" "current" {}
