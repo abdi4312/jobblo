@@ -45,7 +45,8 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKER_HOSTNAME }}/learning-core/backend:${{ steps.gitversion.outputs.fullSemVer }}
+          tags: ${{ secrets.DOCKER_HOSTNAME }}/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
+
 
       - name: Log in to Azure
         uses: azure/login@v1
