@@ -13,7 +13,8 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -28,26 +29,28 @@ jobs:
         with:
           useConfigFile: true
 
-      - name: Set version tag in git
+      - name: Tag commit
         run: |
           git tag ${{ steps.gitversion.outputs.fullSemVer }}
           git push origin ${{ steps.gitversion.outputs.fullSemVer }}
+          git fetch
 
-      - name: Log in to ACR
+      - name: Login to ACR
         uses: docker/login-action@v3
         with:
           registry: ${{ secrets.DOCKER_HOSTNAME }}
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Docker build backend and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ secrets.DOCKER_HOSTNAME }}/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
+      - name: Build Docker image
+        run: |
+          docker build . -t ${{ secrets.DOCKER_HOSTNAME }}/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
 
-      - name: Log in to Azure
+      - name: Push Docker image
+        run: |
+          docker push ${{ secrets.DOCKER_HOSTNAME }}/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
+
+      - name: Log in to Azure (optional, if needed for container update)
         uses: azure/login@v1
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
