@@ -1,4 +1,4 @@
-name: build_and_push_container
+name: build_and_push_container #dummy code
 
 on:
   workflow_call:
