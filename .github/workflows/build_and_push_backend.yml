@@ -1,4 +1,4 @@
-name: build_and_push_container
+name: build_and_push_container # dummy change to trigger new build
 
 on:
   workflow_call:
