@@ -1,4 +1,4 @@
-# Bruk en stabil Node.js LTS-versjon
+# Bruk en stabil Node.js LTS-versjond
 FROM node:20
 
 # Sett arbeidskatalogen
