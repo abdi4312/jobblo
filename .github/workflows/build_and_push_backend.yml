@@ -1,4 +1,4 @@
-name: build_and_push_container #dummy codee
+name: build_and_push_container
 
 on:
   workflow_call:
@@ -44,7 +44,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build . -t ${{ secrets.DOCKER_HOSTNAME }}/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
+          docker build -f backend/Dockerfile . -t ${{ secrets.DOCKER_HOSTNAME }}/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
 
       - name: Push Docker image
         run: |
