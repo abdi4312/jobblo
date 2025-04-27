@@ -1,20 +1,18 @@
-# Use official Node.js image as a base
-FROM node:16
+# Bruk en stabil Node.js LTS-versjon
+FROM node:20
 
-# Set working directory inside container
+# Sett arbeidskatalogen
 WORKDIR /app
 
-# Copy backend package files
-COPY backend/package*.json ./
+# Kopier package.json og package-lock.json
+COPY package*.json ./
 
-# Install backend dependencies
+# Installer kun produksjonsavhengigheter
 RUN npm install
 
-# Copy the rest of the backend code
-COPY backend/ .
+# Kopier resten av applikasjonen
+COPY . .
 
-# Expose backend port (if your app listens on 3000)
-EXPOSE 3000
 
-# Start the app
-CMD ["npm", "start"]
+# Start applikasjonen
+CMD ["npm", "run", "start:prod"]
