@@ -62,3 +62,22 @@ resource "azurerm_role_assignment" "acr_push" {
   scope                = azurerm_container_registry.jobblo_acr.id
 }
 data "azurerm_client_config" "current" {}
+
+resource "azurerm_azuread_application" "jobblo_app" {
+  name = "jobblo-github-app"
+}
+
+resource "azurerm_azuread_service_principal" "jobblo_sp" {
+  application_id = azurerm_azuread_application.jobblo_app.client_id
+}
+
+resource "azurerm_azuread_service_principal_password" "jobblo_sp_password" {
+  service_principal_id = azurerm_azuread_service_principal.jobblo_sp.id
+  value                = random_password.password.result
+  end_date_relative    = "8760h" # 1 år
+}
+
+resource "random_password" "password" {
+  length  = 32
+  special = true
+}
