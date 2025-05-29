@@ -43,20 +43,21 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Log in to Azure Container Registry
-        run: |
-          az acr login --name ${{ secrets.ACR_NAME }}
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
 
       - name: Build Docker image
         run: |
-          docker build -f backend/Dockerfile . -t ${{ secrets.ACR_NAME }}.azurecr.io/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
+          docker build -f backend/Dockerfile . -t ${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
 
       - name: Push Docker image
         run: |
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
 
       - name: Update Azure Container App
         run: |
           az containerapp update \
             --name jobblo-container-app \
             --resource-group jobblo-rg \
-            --image ${{ secrets.ACR_NAME }}.azurecr.io/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
