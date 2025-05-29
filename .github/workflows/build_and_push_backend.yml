@@ -46,7 +46,6 @@ jobs:
         uses: azure/docker-login@v2
         with:
           login-server: ${{ secrets.ACR_LOGIN_SERVER }}
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
 
       - name: Build Docker image
         run: |
