@@ -65,3 +65,12 @@ resource "azurerm_role_assignment" "acr_push" {
   role_definition_name = "AcrPush"
   scope                = azurerm_container_registry.jobblo_acr.id
 }
+resource "azurerm_federated_identity_credential" "github_oidc_pull_request" {
+  name                = "github-oidc-pr"
+  resource_group_name = azurerm_resource_group.jobblo_rg.name
+  parent_id           = azurerm_user_assigned_identity.github_identity.id
+
+  issuer   = "https://token.actions.githubusercontent.com"
+  subject  = "repo:abdi4312/jobblo:pull_request"
+  audience = ["api://AzureADTokenExchange"]
+}
