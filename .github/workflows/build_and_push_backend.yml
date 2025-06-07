@@ -51,7 +51,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -f backend/Dockerfile . -t ${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
+          docker build -f backend/Dockerfile -t abdi4312/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }} .
 
       - name: Push Docker image
         run: |
