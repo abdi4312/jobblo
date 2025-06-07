@@ -21,3 +21,6 @@ output "tenant_id" {
 output "subscription_id" {
   value = data.azurerm_client_config.current.subscription_id
 }
+output "azure_client_id" {
+  value = azurerm_user_assigned_identity.github_identity.client_id
+}
