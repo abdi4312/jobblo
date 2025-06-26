@@ -1,5 +1,5 @@
 name: build_and_push_container
-#testrun
+# testrun
 on:
   workflow_call:
 
@@ -49,17 +49,28 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
+      - name: Set image variables
+        id: vars
+        run: |
+          echo "IMAGE_TAG=${{ steps.gitversion.outputs.fullSemVer }}" >> $GITHUB_ENV
+          echo "IMAGE_NAME=${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend" >> $GITHUB_ENV
+        env:
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+
       - name: Build Docker image
         run: |
-          docker build -f backend/Dockerfile -t abdi4312/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }} .
+          echo "Building Docker image: $IMAGE_NAME:$IMAGE_TAG"
+          docker build -f backend/Dockerfile -t $IMAGE_NAME:$IMAGE_TAG .
 
       - name: Push Docker image
         run: |
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
+          echo "Pushing Docker image: $IMAGE_NAME:$IMAGE_TAG"
+          docker push $IMAGE_NAME:$IMAGE_TAG
 
       - name: Update Azure Container App
         run: |
+          echo "Updating Azure Container App with image: $IMAGE_NAME:$IMAGE_TAG"
           az containerapp update \
             --name jobblo-container-app \
             --resource-group jobblo-rg \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
+            --image $IMAGE_NAME:$IMAGE_TAG
