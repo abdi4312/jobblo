@@ -54,13 +54,11 @@ jobs:
         run: |
           echo "IMAGE_TAG=${{ steps.gitversion.outputs.fullSemVer }}" >> $GITHUB_ENV
           echo "IMAGE_NAME=${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend" >> $GITHUB_ENV
-        env:
-          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
 
       - name: Build Docker image
         run: |
           echo "Building Docker image: $IMAGE_NAME:$IMAGE_TAG"
-          docker buildx build -f backend/Dockerfile -t $IMAGE_NAME:$IMAGE_TAG .
+          docker buildx build -f backend/Dockerfile -t $IMAGE_NAME:$IMAGE_TAG backend
 
       - name: Push Docker image
         run: |
