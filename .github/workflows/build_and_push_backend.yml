@@ -60,7 +60,7 @@ jobs:
       - name: Build Docker image
         run: |
           echo "Building Docker image: $IMAGE_NAME:$IMAGE_TAG"
-          docker buildx build -f backend/Dockerfile -t $IMAGE_NAME:$IMAGE_TAG .
+          docker buildx build -f backend/Dockerfile -t $IMAGE_NAME:$IMAGE_TAG "."
 
       - name: Push Docker image
         run: |
