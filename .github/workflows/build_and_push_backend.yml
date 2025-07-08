@@ -49,23 +49,32 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
+      # Optional: you can keep or remove this step if you don't need GITHUB_ENV variables
       - name: Set image variables
-        id: vars
         run: |
           echo "IMAGE_TAG=${{ steps.gitversion.outputs.fullSemVer }}" >> $GITHUB_ENV
           echo "IMAGE_NAME=${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend" >> $GITHUB_ENV
 
       - name: Build Docker image
+        env:
+          IMAGE_NAME: ${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend
+          IMAGE_TAG: ${{ steps.gitversion.outputs.fullSemVer }}
         run: |
           echo "Building Docker image: $IMAGE_NAME:$IMAGE_TAG"
           docker buildx build -f backend/Dockerfile -t $IMAGE_NAME:$IMAGE_TAG backend
 
       - name: Push Docker image
+        env:
+          IMAGE_NAME: ${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend
+          IMAGE_TAG: ${{ steps.gitversion.outputs.fullSemVer }}
         run: |
           echo "Pushing Docker image: $IMAGE_NAME:$IMAGE_TAG"
           docker push $IMAGE_NAME:$IMAGE_TAG
 
       - name: Update Azure Container App
+        env:
+          IMAGE_NAME: ${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend
+          IMAGE_TAG: ${{ steps.gitversion.outputs.fullSemVer }}
         run: |
           echo "Updating Azure Container App with image: $IMAGE_NAME:$IMAGE_TAG"
           az containerapp update \
