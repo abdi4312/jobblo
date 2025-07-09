@@ -52,9 +52,9 @@ jobs:
       # Optional: you can keep or remove this step if you don't need GITHUB_ENV variables
       - name: Set image variables
         run: |
+          CLEAN_REGISTRY=$(echo "${{ secrets.ACR_LOGIN_SERVER }}" | xargs)
           echo "IMAGE_TAG=${{ steps.gitversion.outputs.fullSemVer }}" >> $GITHUB_ENV
-          echo "IMAGE_NAME=${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend" >> $GITHUB_ENV
-
+          echo "IMAGE_NAME=${CLEAN_REGISTRY}/jobblo/backend" >> $GITHUB_ENV
       - name: Build Docker image
         env:
           IMAGE_NAME: ${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend
