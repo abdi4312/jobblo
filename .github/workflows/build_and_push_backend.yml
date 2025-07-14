@@ -75,4 +75,8 @@ jobs:
           az containerapp update \
             --name jobblo-container-app \
             --resource-group jobblo-rg \
-            --image $IMAGE_NAME:$IMAGE_TAG
+            --image $IMAGE_NAME:$IMAGE_TAG \
+            --container-name nginx \
+            --registry-server ${{ secrets.ACR_LOGIN_SERVER }} \
+            --registry-username ${{ secrets.ACR_USERNAME }} \
+            --registry-password ${{ secrets.ACR_PASSWORD }}
