@@ -1,5 +1,4 @@
 name: build_and_push_container
-
 on:
   workflow_call:
 
@@ -49,17 +48,45 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set image variables
+        run: |
+          CLEAN_REGISTRY=$(echo "${{ secrets.ACR_LOGIN_SERVER }}" | xargs)
+          echo "IMAGE_TAG=${{ steps.gitversion.outputs.fullSemVer }}" >> $GITHUB_ENV
+          echo "IMAGE_NAME=${CLEAN_REGISTRY}/jobblo/backend" >> $GITHUB_ENV
+
       - name: Build Docker image
+        env:
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
         run: |
-          docker build -f backend/Dockerfile -t abdi4312/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }} .
+          echo "Building Docker image: $IMAGE_NAME:$IMAGE_TAG"
+          docker buildx build -f backend/Dockerfile -t $IMAGE_NAME:$IMAGE_TAG . --push
 
-      - name: Push Docker image
+      - name: Configure container registry for Container App
         run: |
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
+          az containerapp registry set \
+            --name jobblo-container-app \
+            --resource-group jobblo-rg \
+            --server ${{ secrets.ACR_LOGIN_SERVER }} \
+            --username ${{ secrets.ACR_USERNAME }} \
+            --password ${{ secrets.ACR_PASSWORD }}
 
-      - name: Update Azure Container App
+      - name: Update Azure Container App image
+        env:
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
         run: |
+          echo "Updating Azure Container App with image: $IMAGE_NAME:$IMAGE_TAG"
           az containerapp update \
             --name jobblo-container-app \
             --resource-group jobblo-rg \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/jobblo/backend:${{ steps.gitversion.outputs.fullSemVer }}
+            --image $IMAGE_NAME:$IMAGE_TAG \
+            --container-name nginx
+
+      # Optional: restart revision to rollout immediately
+      # - name: Restart container app revision
+      #   run: |
+      #     az containerappp revision restart --name jobblo-container-app --resource-group jobblo-rg
