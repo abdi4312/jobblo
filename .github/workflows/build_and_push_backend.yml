@@ -89,4 +89,4 @@ jobs:
       # Optional: restart revision to rollout immediately
       # - name: Restart container app revision
       #   run: |
-      #     az containerapp revision restart --name jobblo-container-app --resource-group jobblo-rg
+      #     az containerappp revision restart --name jobblo-container-app --resource-group jobblo-rg
