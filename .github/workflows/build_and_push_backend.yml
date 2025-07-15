@@ -1,5 +1,4 @@
 name: build_and_push_container
-# testrun3
 on:
   workflow_call:
 
@@ -66,7 +65,16 @@ jobs:
           echo "Building Docker image: $IMAGE_NAME:$IMAGE_TAG"
           docker buildx build -f backend/Dockerfile -t $IMAGE_NAME:$IMAGE_TAG . --push
 
-      - name: Update Azure Container App
+      - name: Configure container registry for Container App
+        run: |
+          az containerapp registry set \
+            --name jobblo-container-app \
+            --resource-group jobblo-rg \
+            --server ${{ secrets.ACR_LOGIN_SERVER }} \
+            --username ${{ secrets.ACR_USERNAME }} \
+            --password ${{ secrets.ACR_PASSWORD }}
+
+      - name: Update Azure Container App image
         env:
           IMAGE_NAME: ${{ env.IMAGE_NAME }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
@@ -76,7 +84,9 @@ jobs:
             --name jobblo-container-app \
             --resource-group jobblo-rg \
             --image $IMAGE_NAME:$IMAGE_TAG \
-            --container-name nginx \
-            --registry-server ${{ secrets.ACR_LOGIN_SERVER }} \
-            --registry-username ${{ secrets.ACR_USERNAME }} \
-            --registry-password ${{ secrets.ACR_PASSWORD }}
+            --container-name nginx
+
+      # Optional: restart revision to rollout immediately
+      # - name: Restart container app revision
+      #   run: |
+      #     az containerapp revision restart --name jobblo-container-app --resource-group jobblo-rg
