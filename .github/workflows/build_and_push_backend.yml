@@ -1,4 +1,5 @@
 name: build_and_push_container
+
 on:
   workflow_call:
 
@@ -57,13 +58,24 @@ jobs:
           echo "IMAGE_TAG=${{ steps.gitversion.outputs.fullSemVer }}" >> $GITHUB_ENV
           echo "IMAGE_NAME=${CLEAN_REGISTRY}/jobblo/backend" >> $GITHUB_ENV
 
-      - name: Build Docker image
+      - name: Build and Push Docker image
         env:
           IMAGE_NAME: ${{ env.IMAGE_NAME }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
         run: |
           echo "Building Docker image: $IMAGE_NAME:$IMAGE_TAG"
           docker buildx build -f backend/Dockerfile -t $IMAGE_NAME:$IMAGE_TAG . --push
+
+      - name: Ensure Azure CLI containerapp extension is installed
+        run: |
+          az extension add --name containerapp --yes || az extension update --name containerapp
+
+      - name: Ensure Container App exists
+        run: |
+          az containerapp show \
+            --name jobblo-container-app \
+            --resource-group jobblo-rg \
+            || (echo "❌ Container App does not exist" && exit 1)
 
       - name: Configure container registry for Container App
         run: |
@@ -74,17 +86,26 @@ jobs:
             --username ${{ secrets.ACR_USERNAME }} \
             --password ${{ secrets.ACR_PASSWORD }}
 
+      - name: Get container name
+        id: get-container-name
+        run: |
+          cname=$(az containerapp show --name jobblo-container-app \
+            --resource-group jobblo-rg \
+            --query "properties.template.containers[0].name" -o tsv)
+          echo "CONTAINER_NAME=$cname" >> $GITHUB_ENV
+
       - name: Update Azure Container App image
         env:
           IMAGE_NAME: ${{ env.IMAGE_NAME }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
         run: |
           echo "Updating Azure Container App with image: $IMAGE_NAME:$IMAGE_TAG"
           az containerapp update \
             --name jobblo-container-app \
             --resource-group jobblo-rg \
             --image $IMAGE_NAME:$IMAGE_TAG \
-            --container-name nginx
+            --container-name $CONTAINER_NAME
 
       # Optional: restart revision to rollout immediately
       # - name: Restart container app revision
