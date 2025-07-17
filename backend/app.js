@@ -3,6 +3,20 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
+const mongoose = require('mongoose');
+const config = require('./config');
+
+// Set strictQuery to suppress deprecation warning
+mongoose.set('strictQuery', false);
+
+// Connect to MongoDB
+mongoose.connect(config.mongodb.uri, config.mongodb.options)
+  .then(() => {
+    console.log('Connected to MongoDB successfully');
+  })
+  .catch((err) => {
+    console.error('MongoDB connection error:', err);
+  });
 
 const indexRouter = require('./routes/index');
 const authRouter = require('./routes/auth');

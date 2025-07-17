@@ -12,6 +12,7 @@ const messageController = require('../controllers/messageController');
  *         - sender
  *         - receiver
  *         - content
+ *         - conversationId
  *       properties:
  *         sender:
  *           type: string
@@ -19,19 +20,27 @@ const messageController = require('../controllers/messageController');
  *         receiver:
  *           type: string
  *           description: ID til mottakeren
+ *         job:
+ *           type: string
+ *           description: ID til jobben meldingen gjelder
  *         content:
  *           type: string
  *           description: Meldingens innhold
- *         read:
- *           type: boolean
- *           description: Om meldingen er lest
+ *         conversationId:
+ *           type: string
+ *           description: ID for samtalen
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: Når meldingen ble opprettet
+ *         
  */
 
 /**
  * @swagger
  * /api/messages:
  *   get:
- *     summary: Hent alle meldinger for innlogget bruker
+ *     summary: Hent alle meldinger
  *     tags: [Meldinger]
  *     responses:
  *       200:
@@ -43,9 +52,7 @@ const messageController = require('../controllers/messageController');
  *               items:
  *                 $ref: '#/components/schemas/Message'
  */
-router.get('/', (req, res) => {
-    res.json([]);
-});
+router.get('/', messageController.getAllMessages);
 
 /**
  * @swagger
@@ -70,9 +77,7 @@ router.get('/', (req, res) => {
  *       404:
  *         description: Meldingen ble ikke funnet
  */
-router.get('/:id', (req, res) => {
-    res.status(404).json({ message: 'Melding ikke funnet' });
-});
+router.get('/:id', messageController.getMessageById);
 
 /**
  * @swagger
@@ -94,9 +99,7 @@ router.get('/:id', (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Message'
  */
-router.post('/', (req, res) => {
-    res.status(201).json({ message: 'Melding sendt' });
-});
+router.post('/', messageController.createMessage);
 
 /**
  * @swagger
@@ -117,8 +120,6 @@ router.post('/', (req, res) => {
  *       404:
  *         description: Meldingen ble ikke funnet
  */
-router.delete('/:id', (req, res) => {
-    res.status(204).end();
-});
+router.delete('/:id', messageController.deleteMessage);
 
 module.exports = router; 

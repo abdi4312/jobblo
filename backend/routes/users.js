@@ -32,6 +32,30 @@ const userController = require('../controllers/userController');
 
 /**
  * @swagger
+ * /api/users:
+ *   post:
+ *     summary: Opprett en ny bruker
+ *     tags: [Brukere]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/User'
+ *     responses:
+ *       201:
+ *         description: Brukeren ble opprettet
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Ugyldig input
+ */
+router.post('/', userController.createUser);
+
+/**
+ * @swagger
  * /api/users/{id}:
  *   get:
  *     summary: Hent en spesifikk bruker
