@@ -1,4 +1,4 @@
-@import "../../node_modules/tailwindcss/dist/lib.d.mts";
+@import "tailwindcss";
 
 :root {
   font-family: nunito, system-ui, Avenir, Helvetica, Arial, sans-serif,system-ui, Avenir, Helvetica, Arial, sans-serif;
