@@ -1,4 +1,4 @@
-const Job = require('../models/Job'); // Importer Mongoose-modellen
+const Job = require('../models/Job'); 
 
 exports.getAllJobs = async (req, res, next) => {
     try {
