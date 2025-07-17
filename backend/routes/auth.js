@@ -92,20 +92,6 @@ router.post('/register', authController.register);
  */
 router.post('/login', authController.login);
 
-/**
- * @swagger
- * /api/auth/me:
- *   get:
- *     summary: Hent innlogget bruker
- *     tags: [Autentisering]
- *     responses:
- *       200:
- *         description: Innlogget bruker
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
- */
-router.get('/me', authController.me);
+
 
 module.exports = router; 
