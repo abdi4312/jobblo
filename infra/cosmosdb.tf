@@ -5,7 +5,7 @@ resource "azurerm_cosmosdb_account" "mongo" {
   offer_type                = "Standard"
   kind                      = "MongoDB"
   automatic_failover_enabled = true
-
+  mongo_server_version        = "4.0"
 
   consistency_policy {
     consistency_level = "Session"
