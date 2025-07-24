@@ -1,0 +1,7 @@
+namePrefix: dev-
+resources:
+  - ../../../base/jobblo
+
+images:
+  - name: jobbloacr.azurecr.io/nginx
+    newTag: latest
