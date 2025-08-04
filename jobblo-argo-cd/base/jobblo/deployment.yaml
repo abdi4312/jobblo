@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jobblo
+  labels:
+    app: jobblo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jobblo
+  template:
+    metadata:
+      labels:
+        app: jobblo
+    spec:
+      containers:
+        - name: nginx
+          image: jobbloacr.azurecr.io/nginx:latest
+          ports:
+            - containerPort: 80
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
