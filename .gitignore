@@ -135,3 +135,10 @@ dist
 .yarn/install-state.gz
 .pnp.*
 .idea/
+# Ignore all .env files
+.env*
+# Ignore all repomix generated files and folders
+repomix*
+*.repomix
+**/repomix*
+**/*.repomix

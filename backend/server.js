@@ -1,8 +1,17 @@
 const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
+require('dotenv').config({ path: __dirname + '/.env' });
 
-const app = express();
+const connectDB = require('./db');
+connectDB()
+  .then(() => console.log('✅  MongoDB connected'))
+  .catch(err => {
+    console.error('❌  MongoDB connection error:', err.message);
+    process.exit(1);
+  });
+
+const app = require('./app');
 const port = 5000;
 
 app.use(express.json());
@@ -31,6 +40,6 @@ app.get('/api/test', (req, res) => {
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.listen(port, () => {
-    console.log(`Jobblo test-API kjører på http://localhost:${port}`);
-    console.log(`Swagger-docs på http://localhost:${port}/api/docs`);
+  console.log(`🚀  Jobblo API listening on http://localhost:${port}`);
+  console.log(`Swagger-docs på http://localhost:${port}/api/docs`);
 });
