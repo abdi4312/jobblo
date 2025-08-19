@@ -10,30 +10,54 @@ const jobController = require('../controllers/jobController');
  *       type: object
  *       required:
  *         - title
- *         - price
- *         - user
+ *         - userId
  *       properties:
+ *         _id:
+ *           type: string
+ *           description: Jobb-ID
+ *         userId:
+ *           type: string
+ *           description: ID til brukeren som la ut jobben
  *         title:
  *           type: string
  *           description: Tittel på jobben
  *         description:
  *           type: string
  *           description: Beskrivelse av jobben
- *         category:
- *           type: string
- *           description: Kategori for jobben
  *         price:
  *           type: number
  *           description: Pris for jobben
  *         location:
  *           type: string
  *           description: Lokasjon for jobben
- *         imageUrl:
+ *         categories:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Kategorier (IDer)
+ *         images:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Bilde-URLer
+ *         urgent:
+ *           type: boolean
+ *           description: Om jobben er haster
+ *         status:
  *           type: string
- *           description: URL til bilde for jobben
- *         user:
+ *           enum: [open, closed, in_progress]
+ *           description: Status på jobben
+ *         tags:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Stikkord
+ *         createdAt:
  *           type: string
- *           description: ID til brukeren som la ut jobben
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
  */
 
 /**
