@@ -75,3 +75,32 @@ resource "azurerm_role_assignment" "acr_push" {
   role_definition_name = "AcrPush"
   scope                = azurerm_container_registry.jobblo_acr.id
 }
+
+# 1. Azure Storage Account
+resource "azurerm_storage_account" "jobblo_storage" {
+  name                     = "jobblostorage" # må være globalt unikt
+  resource_group_name      = azurerm_resource_group.jobblo_rg.name
+  location                 = azurerm_resource_group.jobblo_rg.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  allow_blob_public_access = false
+  min_tls_version          = "TLS1_2"
+
+  tags = {
+    environment = "jobblo"
+  }
+}
+
+# 2. Blob Container (f.eks. for opplastede bilder)
+resource "azurerm_storage_container" "jobblo_container" {
+  name                  = "bilder"
+  storage_account_name  = azurerm_storage_account.jobblo_storage.name
+  container_access_type = "private" # eller "blob" hvis du ønsker offentlig lesetilgang
+}
+
+# (Valgfritt) 3. Role Assignment: gi GitHub eller app tilgang til Blob Storage
+resource "azurerm_role_assignment" "github_blob_access" {
+  principal_id         = azurerm_user_assigned_identity.github_identity.principal_id
+  role_definition_name = "Storage Blob Data Contributor"
+  scope                = azurerm_storage_account.jobblo_storage.id
+}
