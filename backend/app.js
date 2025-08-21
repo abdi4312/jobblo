@@ -7,7 +7,6 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
-
 const indexRouter = require('./routes/index');
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
@@ -19,13 +18,7 @@ const ordersRouter = require('./routes/orders');
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
-const connectDB = require('./db');
 
-// Connect to MongoDB
-connectDB().catch(err => {
-  console.error('MongoDB connection error:', err);
-  process.exit(1);
-});
 
 const app = express();
 
