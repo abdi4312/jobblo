@@ -1,24 +1,25 @@
-const Order = require('../models/Orders');
+const Order = require('../models/Order');
 
 // Get all orders
 exports.getAllOrders = async (req, res) => {
     try {
         const orders = await Order.find()
-            .populate('serviceId')
+            .populate('jobId')
             .populate('customerId', 'name')
             .populate('providerId', 'name')
             .populate('contractId');
         res.json(orders);
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+}
 };
 
 // Get a single order by ID
 exports.getOrderById = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id)
-            .populate('serviceId')
+            .populate('jobId')
             .populate('customerId', 'name')
             .populate('providerId', 'name')
             .populate('contractId');

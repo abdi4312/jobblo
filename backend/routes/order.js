@@ -9,13 +9,13 @@ const orderController = require('../controllers/orderController');
  *     Order:
  *       type: object
  *       required:
- *         - serviceId
+ *         - jobId
  *         - customerId
  *       properties:
  *         _id:
  *           type: string
  *           description: Order ID
- *         serviceId:
+ *         jobId:
  *           type: string
  *           description: Tjeneste-ID (Service)
  *         customerId:

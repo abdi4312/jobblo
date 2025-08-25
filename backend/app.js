@@ -14,7 +14,7 @@ const jobsRouter = require('./routes/job');
 const favoritesRouter = require('./routes/favorites');
 const messagesRouter = require('./routes/messages');
 const uploadRouter = require('./routes/upload');
-const ordersRouter = require('./routes/orders');
+const ordersRouter = require('./routes/order');
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
