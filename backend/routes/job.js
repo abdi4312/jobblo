@@ -114,7 +114,48 @@ router.get('/:id', jobController.getJobById);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Job'
+ *             type: object
+ *             required:
+ *               - title
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: ID til brukeren som oppretter jobben
+ *               title:
+ *                 type: string
+ *                 description: Tittel på jobben
+ *               description:
+ *                 type: string
+ *                 description: Beskrivelse av jobben
+ *               price:
+ *                 type: number
+ *                 description: Pris for jobben
+ *               location:
+ *                 type: string
+ *                 description: Lokasjon for jobben
+ *               categories:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Kategorier (IDer)
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Bilde-URLer
+ *               urgent:
+ *                 type: boolean
+ *                 description: Om jobben er haster
+ *               status:
+ *                 type: string
+ *                 enum: [open, closed, in_progress]
+ *                 description: Status på jobben
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Stikkord
  *     responses:
  *       201:
  *         description: Jobben ble opprettet
@@ -122,6 +163,10 @@ router.get('/:id', jobController.getJobById);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Job'
+ *       400:
+ *         description: Ugyldig input
+ *       404:
+ *         description: Bruker ikke funnet
  */
 router.post('/', jobController.createJob);
 
@@ -151,8 +196,12 @@ router.post('/', jobController.createJob);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Job'
+ *       400:
+ *         description: Ugyldig input eller dataformat
  *       404:
- *         description: Jobben ble ikke funnet
+ *         description: Jobb eller bruker ikke funnet
+ *       500:
+ *         description: Server-feil
  */
 router.put('/:id', jobController.updateJob);
 

@@ -51,6 +51,18 @@ router.get('/', favoriteController.getFavorites);
  *           type: string
  *         required: true
  *         description: ID for jobben som skal legges til som favoritt
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: ID til brukeren som legger til favoritt
  *     responses:
  *       201:
  *         description: Favoritt lagt til
@@ -58,6 +70,10 @@ router.get('/', favoriteController.getFavorites);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Favorite'
+ *       400:
+ *         description: Ugyldig input eller favoritt eksisterer allerede
+ *       404:
+ *         description: Bruker eller jobb ikke funnet
  */
 router.post('/:jobId', favoriteController.addFavorite);
 
@@ -74,9 +90,25 @@ router.post('/:jobId', favoriteController.addFavorite);
  *           type: string
  *         required: true
  *         description: ID for jobben som skal fjernes fra favoritter
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: ID til brukeren som fjerner favoritt
  *     responses:
  *       204:
  *         description: Favoritt fjernet
+ *       400:
+ *         description: Ugyldig input
+ *       404:
+ *         description: Bruker, jobb eller favoritt ikke funnet
  */
 router.delete('/:jobId', favoriteController.removeFavorite);
 
