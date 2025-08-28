@@ -9,22 +9,37 @@ const messageController = require('../controllers/messageController');
  *     Message:
  *       type: object
  *       required:
- *         - sender
- *         - receiver
- *         - content
+ *         - orderId
+ *         - senderId
  *       properties:
- *         sender:
+ *         orderId:
+ *           type: string
+ *           description: ID til ordren meldingen tilhører
+ *         senderId:
  *           type: string
  *           description: ID til avsenderen
- *         receiver:
- *           type: string
- *           description: ID til mottakeren
- *         content:
+ *         message:
  *           type: string
  *           description: Meldingens innhold
- *         read:
- *           type: boolean
- *           description: Om meldingen er lest
+ *         images:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Bilde-URLer
+ *         type:
+ *           type: string
+ *           enum: [text, image, system]
+ *           description: Type melding
+ *         readBy:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Liste over brukere som har lest meldingen
+ *         deletedFor:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Liste over brukere som har slettet meldingen
  */
 
 /**
@@ -33,19 +48,26 @@ const messageController = require('../controllers/messageController');
  *   get:
  *     summary: Hent alle meldinger for innlogget bruker
  *     tags: [Meldinger]
+ *     parameters:
+ *       - in: query
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID til brukeren som henter meldingene
  *     responses:
  *       200:
- *         description: Liste over meldinger
+ *         description: Liste over brukerens meldinger
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Message'
+ *       400:
+ *         description: Ugyldig bruker-ID eller mangler userId parameter
  */
-router.get('/', (req, res) => {
-    res.json([]);
-});
+router.get('/', messageController.getAllMessages);
 
 /**
  * @swagger
@@ -70,9 +92,7 @@ router.get('/', (req, res) => {
  *       404:
  *         description: Meldingen ble ikke funnet
  */
-router.get('/:id', (req, res) => {
-    res.status(404).json({ message: 'Melding ikke funnet' });
-});
+router.get('/:id', messageController.getMessageById);
 
 /**
  * @swagger
@@ -85,7 +105,29 @@ router.get('/:id', (req, res) => {
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Message'
+ *             type: object
+ *             required:
+ *               - orderId
+ *               - senderId
+ *             properties:
+ *               orderId:
+ *                 type: string
+ *                 description: ID til ordren meldingen tilhører
+ *               senderId:
+ *                 type: string
+ *                 description: ID til avsenderen
+ *               message:
+ *                 type: string
+ *                 description: Meldingens innhold
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Bilde-URLer
+ *               type:
+ *                 type: string
+ *                 enum: [text, image, system]
+ *                 description: Type melding
  *     responses:
  *       201:
  *         description: Melding sendt
@@ -93,10 +135,12 @@ router.get('/:id', (req, res) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Message'
+ *       400:
+ *         description: Ugyldig input
+ *       404:
+ *         description: Ordre eller bruker ikke funnet
  */
-router.post('/', (req, res) => {
-    res.status(201).json({ message: 'Melding sendt' });
-});
+router.post('/', messageController.createMessage);
 
 /**
  * @swagger
@@ -117,8 +161,6 @@ router.post('/', (req, res) => {
  *       404:
  *         description: Meldingen ble ikke funnet
  */
-router.delete('/:id', (req, res) => {
-    res.status(204).end();
-});
+router.delete('/:id', messageController.deleteMessage);
 
 module.exports = router; 
