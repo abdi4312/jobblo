@@ -1,12 +1,13 @@
 import './styles/App.css'
 import './styles/Jobblo.css'
 import { useState } from 'react';
+import Header from './components/layout/header/Header';
 
 export default function App() {
 
   return (
     <>
-      <JobbloPage />
+      <Header />
     </>
   )
 }
@@ -14,15 +15,6 @@ export default function App() {
 
 function JobbloPage() {
   const [isMonthly, setIsMonthly] = useState(true);
-
-
-
-
-
-
-
-
-
 
   return (
     <div className="jobblo-page">
