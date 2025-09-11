@@ -21,6 +21,7 @@ function JobbloPage() {
     position: 'relative',
     margin: '0 auto',
     fontFamily: 'Nunito, -apple-system, Roboto, Helvetica, sans-serif',
+    overflow: 'hidden',
   };
 
   const headerStyles: React.CSSProperties = {
@@ -391,14 +392,14 @@ function JobbloPage() {
 
   const stepsContainerStyles: React.CSSProperties = {
     display: 'flex',
-    width: '953px',
+    width: '320px',
     height: '205px',
-    padding: '28px 92px',
-    justifyContent: 'center',
+    padding: '28px 10px',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: '97px',
+    gap: '20px',
     position: 'absolute',
-    left: '76px',
+    left: '35px',
     top: '140px',
   };
 
@@ -416,19 +417,20 @@ function JobbloPage() {
 
   const categoryGridStyles: React.CSSProperties = {
     display: 'flex',
-    width: '538px',
+    width: '320px',
     height: '70px',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: '15px',
+    gap: '10px',
     position: 'absolute',
-    left: '33px',
+    left: '35px',
     top: '1468px',
+    flexWrap: 'wrap',
   };
 
   const categoryItemStyles: React.CSSProperties = {
-    width: '64px',
-    height: '70px',
+    width: '60px',
+    height: '65px',
     borderRadius: '6px',
     background: '#183A1D',
     position: 'relative',
@@ -437,6 +439,7 @@ function JobbloPage() {
     justifyContent: 'center',
     alignItems: 'center',
     cursor: 'pointer',
+    flexShrink: 0,
   };
 
   const categoryLabelStyles: React.CSSProperties = {
@@ -565,10 +568,10 @@ function JobbloPage() {
   };
 
   const testimonialsSectionStyles: React.CSSProperties = {
-    width: '408px',
+    width: '390px',
     height: '474px',
     position: 'absolute',
-    left: '-1px',
+    left: '0px',
     top: '2076px',
   };
 
@@ -591,11 +594,12 @@ function JobbloPage() {
   };
 
   const footerImageStyles: React.CSSProperties = {
-    width: '959px',
+    width: '390px',
     height: '257px',
     position: 'absolute',
-    left: '-286px',
+    left: '0px',
     top: '2514px',
+    objectFit: 'cover',
   };
 
   return (
@@ -1271,14 +1275,15 @@ function JobbloPage() {
       {/* Footer Text */}
       <div style={{
         color: 'rgba(45, 102, 64, 0.54)',
-        fontSize: '48px',
+        fontSize: '24px',
         fontWeight: '600',
         lineHeight: '120%',
         position: 'absolute',
-        left: '7px',
+        left: '20px',
         top: '2425px',
-        width: '629px',
+        width: '350px',
         height: '34px',
+        textAlign: 'center',
       }}>
         Få dine prosjekter unna gjort
       </div>
