@@ -15,6 +15,7 @@ const favoritesRouter = require('./routes/favorites');
 const messagesRouter = require('./routes/messages');
 const uploadRouter = require('./routes/upload');
 const ordersRouter = require('./routes/orders');
+const notificationsRouter = require('./routes/notifications');
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
@@ -39,6 +40,7 @@ app.use('/api/favorites', favoritesRouter);
 app.use('/api/messages', messagesRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/orders', ordersRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // Error handler
 app.use(function(req, res, next) {
