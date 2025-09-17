@@ -1,20 +1,12 @@
 import './styles/App.css'
 import './styles/Jobblo.css'
 import { useState } from 'react';
-import Header from './components/layout/header/Header';
+import { useNavigate } from 'react-router-dom';
+// import Header from './components/layout/header/Header';
 
 export default function App() {
-
-  return (
-    <>
-      <Header />
-    </>
-  )
-}
-
-
-function JobbloPage() {
   const [isMonthly, setIsMonthly] = useState(true);
+  const navigate = useNavigate();
 
   return (
     <div className="jobblo-page">
@@ -92,6 +84,12 @@ function JobbloPage() {
             viewBox="0 0 20 20" 
             fill="none" 
             className="jobblo-search-icon"
+            role="button"
+            tabIndex={0}
+            aria-label="Søk"
+            style={{ cursor: 'pointer' }}
+            onClick={() => { navigate('/search'); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/search'); } }}
           >
             <path d="M7.95828 12.122C6.68577 12.122 5.60721 11.68 4.7226 10.7959C3.83852 9.91235 3.39648 8.83405 3.39648 7.56101C3.39648 6.28796 3.83852 5.20939 4.7226 4.32532C5.60667 3.44124 6.68524 2.99947 7.95828 3C9.23133 3.00053 10.3096 3.44257 11.1932 4.32611C12.0767 5.20966 12.5188 6.28796 12.5193 7.56101C12.5193 8.11395 12.4214 8.64912 12.2256 9.16651C12.0298 9.6839 11.7724 10.1265 11.4535 10.4942L16.1569 15.1961C16.2312 15.2704 16.271 15.3619 16.2763 15.4707C16.2811 15.5785 16.2413 15.6748 16.1569 15.7597C16.072 15.8446 15.9781 15.887 15.8752 15.887C15.7722 15.887 15.6783 15.8446 15.5934 15.7597L10.8907 11.057C10.4927 11.3961 10.035 11.6585 9.51762 11.8442C9.00023 12.0299 8.48019 12.1228 7.95749 12.1228M7.95749 11.3268C9.0135 11.3268 9.90527 10.9633 10.6328 10.2363C11.3598 9.50932 11.7233 8.61754 11.7233 7.56101C11.7233 6.50447 11.3601 5.61296 10.6336 4.88649C9.90712 4.16002 9.01562 3.79652 7.95908 3.79599C6.90254 3.79599 6.01077 4.15949 5.28377 4.88649C4.55677 5.61349 4.193 6.505 4.19247 7.56101C4.19194 8.61701 4.55544 9.50852 5.28297 10.2355C6.0105 10.9625 6.90201 11.326 7.95749 11.326" fill="black"/>
           </svg>
