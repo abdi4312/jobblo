@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const Job = require('../models/Job');
+const Service = require('../models/Service');
 
 // Create a new user
 exports.createUser = async (req, res) => {
@@ -80,10 +80,10 @@ exports.deleteUser = async (req, res) => {
     }
 };
 
-exports.getUserJobs = async (req, res) => {
+exports.getUserServices = async (req, res) => {
     try {
-        const jobs = await Job.find({ userId: req.params.id });
-        res.json(jobs);
+        const services = await Service.find({ userId: req.params.id });
+        res.json(services);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }

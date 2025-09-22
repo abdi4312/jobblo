@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const jobController = require('../controllers/jobController');
+const serviceController = require('../controllers/serviceController');
 
 /**
  * @swagger
  * components:
  *   schemas:
- *     Job:
+ *     Service:
  *       type: object
  *       required:
  *         - title
@@ -14,22 +14,22 @@ const jobController = require('../controllers/jobController');
  *       properties:
  *         _id:
  *           type: string
- *           description: Jobb-ID
+ *           description: Service-ID
  *         userId:
  *           type: string
- *           description: ID til brukeren som la ut jobben
+ *           description: ID til brukeren som la ut tjenesten
  *         title:
  *           type: string
- *           description: Tittel på jobben
+ *           description: Tittel på tjenesten
  *         description:
  *           type: string
- *           description: Beskrivelse av jobben
+ *           description: Beskrivelse av tjenesten
  *         price:
  *           type: number
- *           description: Pris for jobben
+ *           description: Pris for tjenesten
  *         location:
  *           type: string
- *           description: Lokasjon for jobben
+ *           description: Lokasjon for tjenesten
  *         categories:
  *           type: array
  *           items:
@@ -42,11 +42,11 @@ const jobController = require('../controllers/jobController');
  *           description: Bilde-URLer
  *         urgent:
  *           type: boolean
- *           description: Om jobben er haster
+ *           description: Om tjenesten er haster
  *         status:
  *           type: string
  *           enum: [open, closed, in_progress]
- *           description: Status på jobben
+ *           description: Status på tjenesten
  *         tags:
  *           type: array
  *           items:
@@ -62,53 +62,53 @@ const jobController = require('../controllers/jobController');
 
 /**
  * @swagger
- * /api/jobs:
+ * /api/services:
  *   get:
- *     summary: Hent alle jobber
- *     tags: [Jobber]
+ *     summary: Hent alle tjenesteer
+ *     tags: [Tjenester]
  *     responses:
  *       200:
- *         description: Liste over alle jobber
+ *         description: Liste over alle tjenesteer
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/Job'
+ *                 $ref: '#/components/schemas/Service'
  */
-router.get('/', jobController.getAllJobs);
+router.get('/', serviceController.getAllServices);
 
 /**
  * @swagger
- * /api/jobs/{id}:
+ * /api/services/{id}:
  *   get:
- *     summary: Hent en spesifikk jobb
- *     tags: [Jobber]
+ *     summary: Hent en spesifikk tjeneste
+ *     tags: [Tjenester]
  *     parameters:
  *       - in: path
  *         name: id
  *         schema:
  *           type: string
  *         required: true
- *         description: ID for jobben
+ *         description: ID for tjenesten
  *     responses:
  *       200:
- *         description: En jobb
+ *         description: En tjeneste
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Job'
+ *               $ref: '#/components/schemas/Service'
  *       404:
- *         description: Jobben ble ikke funnet
+ *         description: Tjenesten ble ikke funnet
  */
-router.get('/:id', jobController.getJobById);
+router.get('/:id', serviceController.getServiceById);
 
 /**
  * @swagger
- * /api/jobs:
+ * /api/services:
  *   post:
- *     summary: Opprett en ny jobb
- *     tags: [Jobber]
+ *     summary: Opprett en ny tjeneste
+ *     tags: [Tjenester]
  *     requestBody:
  *       required: true
  *       content:
@@ -121,19 +121,19 @@ router.get('/:id', jobController.getJobById);
  *             properties:
  *               userId:
  *                 type: string
- *                 description: ID til brukeren som oppretter jobben
+ *                 description: ID til brukeren som oppretter tjenesten
  *               title:
  *                 type: string
- *                 description: Tittel på jobben
+ *                 description: Tittel på tjenesten
  *               description:
  *                 type: string
- *                 description: Beskrivelse av jobben
+ *                 description: Beskrivelse av tjenesten
  *               price:
  *                 type: number
- *                 description: Pris for jobben
+ *                 description: Pris for tjenesten
  *               location:
  *                 type: string
- *                 description: Lokasjon for jobben
+ *                 description: Lokasjon for tjenesten
  *               categories:
  *                 type: array
  *                 items:
@@ -146,11 +146,11 @@ router.get('/:id', jobController.getJobById);
  *                 description: Bilde-URLer
  *               urgent:
  *                 type: boolean
- *                 description: Om jobben er haster
+ *                 description: Om tjenesten er haster
  *               status:
  *                 type: string
  *                 enum: [open, closed, in_progress]
- *                 description: Status på jobben
+ *                 description: Status på tjenesten
  *               tags:
  *                 type: array
  *                 items:
@@ -158,72 +158,73 @@ router.get('/:id', jobController.getJobById);
  *                 description: Stikkord
  *     responses:
  *       201:
- *         description: Jobben ble opprettet
+ *         description: Tjenesten ble opprettet
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Job'
+ *               $ref: '#/components/schemas/Service'
  *       400:
  *         description: Ugyldig input
  *       404:
  *         description: Bruker ikke funnet
  */
-router.post('/', jobController.createJob);
+router.post('/', serviceController.createService);
 
 /**
  * @swagger
- * /api/jobs/{id}:
+ * /api/services/{id}:
  *   put:
- *     summary: Oppdater en jobb
- *     tags: [Jobber]
+ *     summary: Oppdater en tjeneste
+ *     tags: [Tjenester]
  *     parameters:
  *       - in: path
  *         name: id
  *         schema:
  *           type: string
  *         required: true
- *         description: ID for jobben
+ *         description: ID for tjenesten
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Job'
+ *             $ref: '#/components/schemas/Service'
  *     responses:
  *       200:
- *         description: Jobben ble oppdatert
+ *         description: Tjenesten ble oppdatert
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Job'
+ *               $ref: '#/components/schemas/Service'
  *       400:
  *         description: Ugyldig input eller dataformat
  *       404:
- *         description: Jobb eller bruker ikke funnet
+ *         description: Tjeneste eller bruker ikke funnet
  *       500:
  *         description: Server-feil
  */
-router.put('/:id', jobController.updateJob);
+router.put('/:id', serviceController.updateService);
 
 /**
  * @swagger
- * /api/jobs/{id}:
+ * /api/services/{id}:
  *   delete:
- *     summary: Slett en jobb
- *     tags: [Jobber]
+ *     summary: Slett en tjeneste
+ *     tags: [Tjenester]
  *     parameters:
  *       - in: path
  *         name: id
  *         schema:
  *           type: string
  *         required: true
- *         description: ID for jobben
+ *         description: ID for tjenesten
  *     responses:
  *       204:
- *         description: Jobben ble slettet
+ *         description: Tjenesten ble slettet
  *       404:
- *         description: Jobben ble ikke funnet
+ *         description: Tjenesten ble ikke funnet
  */
-router.delete('/:id', jobController.deleteJob);
+router.delete('/:id', serviceController.deleteService);
+
 
 module.exports = router;

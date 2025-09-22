@@ -198,9 +198,9 @@ router.delete('/:id', userController.deleteUser);
 
 /**
  * @swagger
- * /api/users/{id}/jobs:
+ * /api/users/{id}/services:
  *   get:
- *     summary: Hent alle jobber for en spesifikk bruker
+ *     summary: Hent alle serviceber for en spesifikk bruker
  *     tags: [Brukere]
  *     parameters:
  *       - in: path
@@ -211,7 +211,7 @@ router.delete('/:id', userController.deleteUser);
  *         description: ID for brukeren
  *     responses:
  *       200:
- *         description: Liste over brukerens jobber
+ *         description: Liste over brukerens serviceber
  *         content:
  *           application/json:
  *             schema:
@@ -221,7 +221,7 @@ router.delete('/:id', userController.deleteUser);
  *       404:
  *         description: Brukeren ble ikke funnet
  */
-router.get('/:id/jobs', userController.getUserJobs);
+router.get('/:id/services', userController.getUserServices);
 
 /**
  * @swagger
@@ -302,9 +302,9 @@ router.delete('/:id', userController.deleteUser);
 
 /**
  * @swagger
- * /api/users/{id}/jobs:
+ * /api/users/{id}/services:
  *   get:
- *     summary: Hent alle jobber for en spesifikk bruker
+ *     summary: Hent alle serviceber for en spesifikk bruker
  *     tags: [Brukere]
  *     parameters:
  *       - in: path
@@ -315,7 +315,7 @@ router.delete('/:id', userController.deleteUser);
  *         description: ID for brukeren
  *     responses:
  *       200:
- *         description: Liste over brukerens jobber
+ *         description: Liste over brukerens serviceber
  *         content:
  *           application/json:
  *             schema:
@@ -323,7 +323,7 @@ router.delete('/:id', userController.deleteUser);
  *               items:
  *                 $ref: '#/components/schemas/Job'
  */
-router.get('/:id/jobs', userController.getUserJobs);
+router.get('/:id/services', userController.getUserServices);
 
 /**
  * @swagger

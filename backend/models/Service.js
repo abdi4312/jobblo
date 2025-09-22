@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 
 
-const jobSchema = new mongoose.Schema({
+const serviceSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     title: { type: String, required: true },
     description: { type: String },
@@ -22,4 +22,4 @@ const jobSchema = new mongoose.Schema({
     needTools: { type: Boolean, default: false }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Job', jobSchema);
+module.exports = mongoose.model('Service', serviceSchema);

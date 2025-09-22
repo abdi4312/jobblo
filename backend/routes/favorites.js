@@ -10,14 +10,14 @@ const favoriteController = require('../controllers/favoriteController');
  *       type: object
  *       required:
  *         - user
- *         - job
+ *         - service
  *       properties:
  *         user:
  *           type: string
  *           description: ID til brukeren
- *         job:
+ *         service:
  *           type: string
- *           description: ID til jobben
+ *           description: ID til serviceben
  */
 
 /**
@@ -40,17 +40,17 @@ router.get('/', favoriteController.getFavorites);
 
 /**
  * @swagger
- * /api/favorites/{jobId}:
+ * /api/favorites/{serviceId}:
  *   post:
- *     summary: Legg til en jobb som favoritt
+ *     summary: Legg til en serviceb som favoritt
  *     tags: [Favoritter]
  *     parameters:
  *       - in: path
- *         name: jobId
+ *         name: serviceId
  *         schema:
  *           type: string
  *         required: true
- *         description: ID for jobben som skal legges til som favoritt
+ *         description: ID for serviceben som skal legges til som favoritt
  *     requestBody:
  *       required: true
  *       content:
@@ -73,23 +73,23 @@ router.get('/', favoriteController.getFavorites);
  *       400:
  *         description: Ugyldig input eller favoritt eksisterer allerede
  *       404:
- *         description: Bruker eller jobb ikke funnet
+ *         description: Bruker eller serviceb ikke funnet
  */
-router.post('/:jobId', favoriteController.addFavorite);
+router.post('/:serviceId', favoriteController.addFavorite);
 
 /**
  * @swagger
- * /api/favorites/{jobId}:
+ * /api/favorites/{serviceId}:
  *   delete:
- *     summary: Fjern en jobb fra favoritter
+ *     summary: Fjern en serviceb fra favoritter
  *     tags: [Favoritter]
  *     parameters:
  *       - in: path
- *         name: jobId
+ *         name: serviceId
  *         schema:
  *           type: string
  *         required: true
- *         description: ID for jobben som skal fjernes fra favoritter
+ *         description: ID for serviceben som skal fjernes fra favoritter
  *     requestBody:
  *       required: true
  *       content:
@@ -108,8 +108,8 @@ router.post('/:jobId', favoriteController.addFavorite);
  *       400:
  *         description: Ugyldig input
  *       404:
- *         description: Bruker, jobb eller favoritt ikke funnet
+ *         description: Bruker, serviceb eller favoritt ikke funnet
  */
-router.delete('/:jobId', favoriteController.removeFavorite);
+router.delete('/:serviceId', favoriteController.removeFavorite);
 
 module.exports = router; 
