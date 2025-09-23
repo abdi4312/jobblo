@@ -4,7 +4,7 @@ const Order = require('../models/Order');
 exports.getAllOrders = async (req, res) => {
     try {
         const orders = await Order.find()
-            .populate('jobId')
+            .populate('serviceId')
             .populate('customerId', 'name')
             .populate('providerId', 'name')
             .populate('contractId');
@@ -19,7 +19,7 @@ exports.getAllOrders = async (req, res) => {
 exports.getOrderById = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id)
-            .populate('jobId')
+            .populate('serviceId')
             .populate('customerId', 'name')
             .populate('providerId', 'name')
             .populate('contractId');

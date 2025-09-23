@@ -10,11 +10,12 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const indexRouter = require('./routes/index');
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
-const jobsRouter = require('./routes/job');
+const servicesRouter = require('./routes/service');
 const favoritesRouter = require('./routes/favorites');
 const messagesRouter = require('./routes/messages');
 const uploadRouter = require('./routes/upload');
 const ordersRouter = require('./routes/order');
+const notificationsRouter = require('./routes/notifications');
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
@@ -34,11 +35,12 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/', indexRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
-app.use('/api/jobs', jobsRouter);
+app.use('/api/services', servicesRouter);
 app.use('/api/favorites', favoritesRouter);
 app.use('/api/messages', messagesRouter);
 app.use('/api/upload', uploadRouter);
-app.use('/api/orders', ordersRouter);
+app.use('/api/order', ordersRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // Error handler
 app.use(function(req, res, next) {

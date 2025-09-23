@@ -1,9 +1,10 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('./models/User');
-const Job = require('./models/Job');
+const Service = require('./models/Service');
 const Message = require('./models/Message');
 const Favorite = require('./models/Favorite');
+const Notification = require('./models/Notification');
 
 const connectDB = async () => {
     try {
@@ -13,8 +14,6 @@ const connectDB = async () => {
         }
         
         await mongoose.connect(MONGODB_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
             retryWrites: false,
             maxIdleTimeMS: 120000,
             serverSelectionTimeoutMS: 5000,
@@ -65,7 +64,7 @@ const testUsers = [
   }
 ];
 
-const testJobs = [
+const testServices = [
   {
     title: "Hagearbeid og Vedlikehold",
     description: "Profesjonell hagearbeid og vedlikehold av hager, plener og uteområder. Inkluderer klipping av plen, beskjæring av busker, planting og generelt vedlikehold. Perfekt for huseiere som trenger hjelp med å holde hagen pen og ryddig.",
@@ -141,130 +140,172 @@ const seedDatabase = async () => {
     
     // Clear existing data with confirmation
     const userDeleteResult = await User.deleteMany({});
-    const jobDeleteResult = await Job.deleteMany({});
+    const serviceDeleteResult = await Service.deleteMany({});
     const messageDeleteResult = await Message.deleteMany({});
     const favoriteDeleteResult = await Favorite.deleteMany({});
+    const notificationDeleteResult = await Notification.deleteMany({});
     
     console.log(`   - Removed ${userDeleteResult.deletedCount} users`);
-    console.log(`   - Removed ${jobDeleteResult.deletedCount} jobs`);
+    console.log(`   - Removed ${serviceDeleteResult.deletedCount} services`);
     console.log(`   - Removed ${messageDeleteResult.deletedCount} messages`);
     console.log(`   - Removed ${favoriteDeleteResult.deletedCount} favorites`);
+    console.log(`   - Removed ${notificationDeleteResult.deletedCount} notifications`);
     
     // Verify collections are empty
     const userCount = await User.countDocuments();
-    const jobCount = await Job.countDocuments();
+    const serviceCount = await Service.countDocuments();
     const messageCount = await Message.countDocuments();
     const favoriteCount = await Favorite.countDocuments();
+    const notificationCount = await Notification.countDocuments();
     
-    if (userCount > 0 || jobCount > 0 || messageCount > 0 || favoriteCount > 0) {
+    if (userCount > 0 || serviceCount > 0 || messageCount > 0 || favoriteCount > 0 || notificationCount > 0) {
       console.log('⚠️  Warning: Some collections still contain data. Trying to clear again...');
       await User.deleteMany({});
-      await Job.deleteMany({});
+      await Service.deleteMany({});
       await Message.deleteMany({});
       await Favorite.deleteMany({});
+      await Notification.deleteMany({});
     }
     
     console.log('👥 Creating users...');
     
-    // Create users
-    const createdUsers = await User.create(testUsers);
-    console.log(`✅ Created ${createdUsers.length} users`);
+    // Create users with error handling for duplicates
+    const createdUsers = [];
+    for (const userData of testUsers) {
+        try {
+            const user = await User.create(userData);
+            createdUsers.push(user);
+        } catch (error) {
+            if (error.code === 11000) {
+                // User already exists, find and use existing user
+                const existingUser = await User.findOne({ email: userData.email });
+                if (existingUser) {
+                    createdUsers.push(existingUser);
+                    console.log(`   - User ${userData.email} already exists, using existing`);
+                }
+            } else {
+                throw error;
+            }
+        }
+    }
+    console.log(`✅ Created/found ${createdUsers.length} users`);
     
-    console.log('💼 Creating jobs...');
+    console.log('💼 Creating services...');
     
-    // Create jobs with random users
-    const jobsWithUsers = testJobs.map(job => ({
-      ...job,
-      user: createdUsers[Math.floor(Math.random() * createdUsers.length)]._id
+    // Create services with random users
+    const servicesWithUsers = testServices.map(service => ({
+      ...service,
+      userId: createdUsers[Math.floor(Math.random() * createdUsers.length)]._id
     }));
     
-    const createdJobs = await Job.create(jobsWithUsers);
-    console.log(`✅ Created ${createdJobs.length} jobs`);
+    const createdServices = await Service.create(servicesWithUsers);
+    console.log(`✅ Created ${createdServices.length} services`);
     
     console.log('💬 Creating messages...');
     
-    // Create some sample messages
-    const sampleMessages = [
-      {
-        content: "Hei! Jeg er interessert i hagearbeid-tjenesten din. Kan du hjelpe meg med å klippe plenen og beskjære buskene?",
-        sender: createdUsers[0]._id,
-        receiver: createdUsers[1]._id,
-        job: createdJobs[0]._id,
-        conversationId: `conv_${createdUsers[0]._id}_${createdUsers[1]._id}_${createdJobs[0]._id}`
-      },
-      {
-        content: "Takk for henvendelsen! Ja, jeg kan hjelpe deg med hagearbeid. Hvor stor er hagen og når trenger du det gjort?",
-        sender: createdUsers[1]._id,
-        receiver: createdUsers[0]._id,
-        job: createdJobs[0]._id,
-        conversationId: `conv_${createdUsers[0]._id}_${createdUsers[1]._id}_${createdJobs[0]._id}`
-      },
-      {
-        content: "Er det mulig å få hjelp med husvask neste uke? Trenger grundig rengjøring av hele huset.",
-        sender: createdUsers[2]._id,
-        receiver: createdUsers[1]._id,
-        job: createdJobs[1]._id,
-        conversationId: `conv_${createdUsers[2]._id}_${createdUsers[1]._id}_${createdJobs[1]._id}`
-      },
-      {
-        content: "Absolutt! Jeg kan komme neste uke. Hvor mange rom og hvilke dager passer deg best?",
-        sender: createdUsers[1]._id,
-        receiver: createdUsers[2]._id,
-        job: createdJobs[1]._id,
-        conversationId: `conv_${createdUsers[2]._id}_${createdUsers[1]._id}_${createdJobs[1]._id}`
-      }
-    ];
-    
-    const createdMessages = await Message.create(sampleMessages);
-    console.log(`✅ Created ${createdMessages.length} messages`);
+    let createdMessages = [];
+    // Skip messages if we don't have enough users or services
+    if (createdUsers.length < 1 || createdServices.length < 1) {
+        console.log('⚠️  Skipping messages - need at least 1 user and 1 service');
+    } else {
+        // Create some sample messages using the new Message schema
+        const sampleMessages = [
+            {
+                orderId: createdServices[0]._id, // Use service as orderId for now
+                senderId: createdUsers[0]._id,
+                message: "Hei! Jeg er interessert i denne tjenesten. Kan du hjelpe meg?",
+                type: 'text'
+            }
+        ];
+        
+        // Add more messages if we have multiple users
+        if (createdUsers.length > 1 && createdServices.length > 1) {
+            sampleMessages.push({
+                orderId: createdServices[1]._id,
+                senderId: createdUsers[1]._id,
+                message: "Takk for henvendelsen! Ja, jeg kan hjelpe deg. Hvor stor er oppgaven?",
+                type: 'text'
+            });
+        }
+        
+        createdMessages = await Message.create(sampleMessages);
+        console.log(`✅ Created ${createdMessages.length} messages`);
+    }
     
     console.log('⭐ Creating favorites...');
     
-    // Create some favorites
-    const sampleFavorites = [
-      {
-        user: createdUsers[0]._id,
-        job: createdJobs[0]._id
-      },
-      {
-        user: createdUsers[0]._id,
-        job: createdJobs[2]._id
-      },
-      {
-        user: createdUsers[1]._id,
-        job: createdJobs[1]._id
-      },
-      {
-        user: createdUsers[2]._id,
-        job: createdJobs[3]._id
-      },
-      {
-        user: createdUsers[3]._id,
-        job: createdJobs[4]._id
-      }
-    ];
+    let createdFavorites = [];
+    // Create some favorites - only if we have users and services
+    if (createdUsers.length > 0 && createdServices.length > 0) {
+        const sampleFavorites = [
+            {
+                user: createdUsers[0]._id,
+                service: createdServices[0]._id
+            }
+        ];
+        
+        // Add more favorites if we have multiple services
+        if (createdServices.length > 1) {
+            sampleFavorites.push({
+                user: createdUsers[0]._id,
+                service: createdServices[1]._id
+            });
+        }
+        
+        createdFavorites = await Favorite.create(sampleFavorites);
+        console.log(`✅ Created ${createdFavorites.length} favorites`);
+    } else {
+        console.log('⚠️  Skipping favorites - need at least 1 user and 1 service');
+    }
     
-    const createdFavorites = await Favorite.create(sampleFavorites);
-    console.log(`✅ Created ${createdFavorites.length} favorites`);
+    console.log('🔔 Creating notifications...');
+    
+    let createdNotifications = [];
+    // Create some sample notifications - only if we have users
+    if (createdUsers.length > 0) {
+        const sampleNotifications = [
+            {
+                userId: createdUsers[0]._id,
+                type: 'message',
+                content: 'Du har mottatt en ny melding om tjenesten din.',
+                read: false
+            },
+            {
+                userId: createdUsers[0]._id,
+                type: 'system',
+                content: 'Velkommen til Serviceblo! Din konto er nå aktiv.',
+                read: true
+            }
+        ];
+        
+        createdNotifications = await Notification.create(sampleNotifications);
+        console.log(`✅ Created ${createdNotifications.length} notifications`);
+    } else {
+        console.log('⚠️  Skipping notifications - need at least 1 user');
+    }
     
     // Final verification
     const finalUserCount = await User.countDocuments();
-    const finalJobCount = await Job.countDocuments();
+    const finalServiceCount = await Service.countDocuments();
     const finalMessageCount = await Message.countDocuments();
     const finalFavoriteCount = await Favorite.countDocuments();
+    const finalNotificationCount = await Notification.countDocuments();
     
     console.log('\n🎉 Database seeding completed successfully!');
     console.log(`📊 Summary:`);
     console.log(`   - Users: ${finalUserCount} (expected: ${createdUsers.length})`);
-    console.log(`   - Jobs: ${finalJobCount} (expected: ${createdJobs.length})`);
+    console.log(`   - Services: ${finalServiceCount} (expected: ${createdServices.length})`);
     console.log(`   - Messages: ${finalMessageCount} (expected: ${createdMessages.length})`);
     console.log(`   - Favorites: ${finalFavoriteCount} (expected: ${createdFavorites.length})`);
+    console.log(`   - Notifications: ${finalNotificationCount} (expected: ${createdNotifications.length})`);
     
     console.log('\n🔗 Test your APIs:');
     console.log('   GET /api/users - List all users');
-    console.log('   GET /api/jobs - List all jobs');
+    console.log('   GET /api/services - List all services');
     console.log('   GET /api/messages - List all messages');
     console.log('   GET /api/favorites - List all favorites');
+    console.log('   GET /api/notifications?userId=<USER_ID> - List user notifications');
+    console.log('   POST /api/notifications/test - Create test notification');
     
     process.exit(0);
     
