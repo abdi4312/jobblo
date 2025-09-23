@@ -1,4 +1,3 @@
-  
   export default function Header() {
 	const headerStyles: React.CSSProperties = {
 	  display: "flex",
@@ -76,26 +75,6 @@
 	  position: "relative"
 	}
   
-	const notificationBadgeStyles: React.CSSProperties = {
-	  width: "6px",
-	  height: "6px",
-	  aspectRatio: "1/1",
-	  position: "relative",
-	  right: "0.5px",
-	  top: "2px",
-	  fill: "#EA1717",
-	  strokeWidth: "1px",
-	  stroke: "#FFF"
-	}
-  
-	const chatBadgeStyles: React.CSSProperties = {
-	  width: "6px",
-	  height: "6px",
-	  aspectRatio: "1/1",
-	  position: "relative",
-	  left: "18.5px",
-	  fill: "#EA1717"
-	}
   
 	return (
 	  <header style={headerStyles}>
