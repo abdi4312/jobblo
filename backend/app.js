@@ -17,6 +17,7 @@ const uploadRouter = require('./routes/upload');
 const ordersRouter = require('./routes/order');
 const notificationsRouter = require('./routes/notifications');
 const adminRouter = require('./routes/admin');
+const reviewsRouter = require('./routes/review');
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
@@ -43,6 +44,7 @@ app.use('/api/upload', uploadRouter);
 app.use('/api/order', ordersRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api', reviewsRouter);
 
 // Error handler
 app.use(function(req, res, next) {
