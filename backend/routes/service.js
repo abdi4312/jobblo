@@ -227,4 +227,151 @@ router.put('/:id', serviceController.updateService);
 router.delete('/:id', serviceController.deleteService);
 
 
+// ------------------- Kart / GeoJSON -------------------
+
+/**
+ * @swagger
+ * /api/services/{id}/location:
+ *   put:
+ *     summary: Oppdater GeoJSON-lokasjon for en tjeneste
+ *     tags: [Tjenester]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID for tjenesten
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               latitude:
+ *                 type: number
+ *               longitude:
+ *                 type: number
+ *               address:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Lokasjon oppdatert
+ */
+
+/**
+ * @swagger
+ * /api/services/nearby:
+ *   get:
+ *     summary: Hent tjenester i nærheten basert på radius
+ *     tags: [Tjenester]
+ *     parameters:
+ *       - in: query
+ *         name: lat
+ *         schema:
+ *           type: number
+ *         required: true
+ *       - in: query
+ *         name: lng
+ *         schema:
+ *           type: number
+ *         required: true
+ *       - in: query
+ *         name: radius
+ *         schema:
+ *           type: number
+ *         required: true
+ *         description: Radius i meter
+ *     responses:
+ *       200:
+ *         description: Liste over tjenester i nærheten
+ */
+
+/**
+ * @swagger
+ * /api/services/map:
+ *   get:
+ *     summary: Hent tjenester innenfor et kartutsnitt (bounding box)
+ *     tags: [Tjenester]
+ *     parameters:
+ *       - in: query
+ *         name: neLat
+ *         schema:
+ *           type: number
+ *         required: true
+ *       - in: query
+ *         name: neLng
+ *         schema:
+ *           type: number
+ *         required: true
+ *       - in: query
+ *         name: swLat
+ *         schema:
+ *           type: number
+ *         required: true
+ *       - in: query
+ *         name: swLng
+ *         schema:
+ *           type: number
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Liste over tjenester innenfor bounding box
+ */
+
+// ------------------- Tidsregistrering -------------------
+
+/**
+ * @swagger
+ * /api/services/{id}/time-entries:
+ *   post:
+ *     summary: Legg til en time entry for en tjeneste
+ *     tags: [Tjenester]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID for tjenesten
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hours:
+ *                 type: number
+ *               date:
+ *                 type: string
+ *                 format: date-time
+ *               note:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Time entry lagt til
+ */
+
+/**
+ * @swagger
+ * /api/services/{id}/time-entries:
+ *   get:
+ *     summary: Hent alle time entries for en tjeneste
+ *     tags: [Tjenester]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID for tjenesten
+ *     responses:
+ *       200:
+ *         description: Liste over time entries
+ */
+
+
+
 module.exports = router;
