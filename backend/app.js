@@ -6,6 +6,7 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
+const cors = require('cors'); // Add CORS
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const indexRouter = require('./routes/index');
 const authRouter = require('./routes/auth');
@@ -23,9 +24,18 @@ const categoryRouter = require('./routes/category');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 
+// CORS configuration, frontend can access the backend api from localhost:5173
+const corsOptions = {
+    origin: 'http://localhost:5173', 
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    credentials: true,
+    optionsSuccessStatus: 200
+};
 
 const app = express();
 
+app.use(cors(corsOptions)); 
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
