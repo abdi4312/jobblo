@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const serviceController = require('../controllers/serviceController');
+// Oppdater GeoJSON-lokasjon for en tjeneste
+router.put('/:id/location', serviceController.updateLocation);
 
+router.get('/nearby', serviceController.getNearbyServices);
 /**
  * @swagger
  * components:
@@ -372,6 +375,9 @@ router.delete('/:id', serviceController.deleteService);
  *         description: Liste over time entries
  */
 
+// ------------------- Tidsregistrering -------------------
+router.post('/:id/time-entries', serviceController.addTimeEntry);
+router.get('/:id/time-entries', serviceController.getTimeEntries);
 
 
 module.exports = router;
