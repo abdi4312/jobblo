@@ -21,6 +21,9 @@ const reviewsRouter = require('./routes/review');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 
+// Import Passport configuration
+const passport = require('./config/passport');
+const session = require('express-session');
 
 const app = express();
 
@@ -28,6 +31,21 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+// Session configuration
+app.use(session({
+    secret: process.env.JWT_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false, // Set to true in production with HTTPS
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Swagger UI
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
