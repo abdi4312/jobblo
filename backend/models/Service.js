@@ -14,10 +14,9 @@ const serviceSchema = new mongoose.Schema({
     description: { type: String },
     price: { type: Number, min: 0 },
 
-    // ✅ GeoJSON location (brukes til kartfunksjon)
     location: {
         type: { type: String, enum: ['Point'], default: 'Point' },
-        coordinates: { type: [Number], index: '2dsphere' }, // [lng, lat]
+        coordinates: { type: [Number], index: '2dsphere' },
         address: { type: String }
     },
 
@@ -36,7 +35,6 @@ const serviceSchema = new mongoose.Schema({
     toDate: { type: Date },
     needTools: { type: Boolean, default: false },
 
-    // ✅ tidsregistreringer
     timeEntries: [timeEntrySchema]
 
 }, { timestamps: true });
