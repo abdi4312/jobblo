@@ -24,8 +24,15 @@ const favoriteController = require('../controllers/favoriteController');
  * @swagger
  * /api/favorites:
  *   get:
- *     summary: Hent alle favoritter for innlogget bruker
+ *     summary: Hent alle favoritter for en bruker
  *     tags: [Favoritter]
+ *     parameters:
+ *       - in: query
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID til brukeren som henter favorittene
  *     responses:
  *       200:
  *         description: Liste over brukerens favoritter
@@ -35,6 +42,10 @@ const favoriteController = require('../controllers/favoriteController');
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Favorite'
+ *       400:
+ *         description: Ugyldig bruker-ID eller mangler userId parameter
+ *       404:
+ *         description: Bruker ikke funnet
  */
 router.get('/', favoriteController.getFavorites);
 
