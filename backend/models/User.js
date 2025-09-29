@@ -24,4 +24,7 @@ const userSchema = new mongoose.Schema({
     }]
 }, { timestamps: true });
 
+// Add index to prevent duplicate OAuth providers
+userSchema.index({ 'oauthProviders.provider': 1, 'oauthProviders.providerId': 1 });
+
 module.exports = mongoose.model('User', userSchema);
