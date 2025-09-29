@@ -20,7 +20,7 @@ exports.getAllMessages = async (req, res) => {
                 { senderId: userId },
                 { 
                     orderId: { 
-                        $in: await require('../models/Orders').find({
+                        $in: await require('../models/Order').find({
                             $or: [
                                 { customerId: userId },
                                 { providerId: userId }
@@ -79,7 +79,7 @@ exports.createMessage = async (req, res) => {
         }
         
         // Check if order exists
-        const Order = require('../models/Orders');
+        const Order = require('../models/Order');
         const order = await Order.findById(orderId);
         if (!order) {
             return res.status(404).json({ error: 'Order not found' });
