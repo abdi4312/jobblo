@@ -1,0 +1,41 @@
+{
+  "compilerOptions": {
+    // File Layout
+    "rootDir": "./",
+    "outDir": "./dist",
+
+    // Environment Settings
+    "module": "nodenext",
+    "target": "esnext",
+    "lib": ["esnext"],
+    "types": ["node"],
+    
+    // Output
+    "sourceMap": true,
+
+    // MIDLERTIDIG: Fjern etter migrering er ferdig
+    "allowJs": true,
+    
+    // ETTER MIGRERING: Endre til true
+    "strict": false,
+    
+    // Recommended
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "public",
+    "views"
+  ]
+}

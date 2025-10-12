@@ -142,3 +142,7 @@ repomix*
 *.repomix
 **/repomix*
 **/*.repomix
+
+# compiled js files
+node_modules/
+dist/
