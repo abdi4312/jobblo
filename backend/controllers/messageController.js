@@ -123,3 +123,71 @@ exports.deleteMessage = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+exports.getMessageUpdates = async (req, res) => {
+    try {
+        const { userId, orderId, since } = req.query;
+
+        // Validate required parameters
+        if (!userId) {
+            return res.status(400).json({ error: 'userId query parameter is required' });
+        }
+        if (!since) {
+            return res.status(400).json({ error: 'since query parameter is required (ISO 8601 timestamp)' });
+        }
+
+        // Validate userId format
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ error: 'Invalid user ID format' });
+        }
+
+        // Validate orderId if provided
+        if (orderId && !mongoose.Types.ObjectId.isValid(orderId)) {
+            return res.status(400).json({ error: 'Invalid order ID format' });
+        }
+
+        // Validate timestamp format
+        const sinceDate = new Date(since);
+        if (isNaN(sinceDate.getTime())) {
+            return res.status(400).json({ error: 'Invalid timestamp format. Use ISO 8601 format (e.g., 2024-10-12T10:00:00Z)' });
+        }
+
+        // Build query
+        const query = {
+            updatedAt: { $gt: sinceDate },
+            deletedFor: { $ne: userId }  // Exclude messages deleted by this user
+        };
+
+        // If orderId is provided, filter by specific order
+        // Otherwise, get updates for all orders the user has access to
+        if (orderId) {
+            query.orderId = orderId;
+        } else {
+            // Find all orders where user is involved
+            const Order = require('../models/Order');
+            const userOrders = await Order.find({
+                $or: [
+                    { customerId: userId },
+                    { providerId: userId }
+                ]
+            }).distinct('_id');
+
+            query.orderId = { $in: userOrders };
+        }
+
+        // Fetch updates
+        const updates = await Message.find(query)
+            .populate('senderId', 'name email')
+            .populate('orderId', 'serviceId customerId providerId status')
+            .populate('readBy', 'name')
+            .sort({ updatedAt: 1 });  // Oldest first
+
+        res.json({
+            updates: updates,
+            count: updates.length,
+            lastChecked: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

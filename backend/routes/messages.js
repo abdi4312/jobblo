@@ -44,6 +44,56 @@ const messageController = require('../controllers/messageController');
 
 /**
  * @swagger
+ * /api/messages/updates:
+ *   get:
+ *     summary: Hent oppdateringer (nye meldinger, endringer i status, lesebekreftelser)
+ *     tags: [Meldinger]
+ *     parameters:
+ *       - in: query
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID til brukeren som henter oppdateringene
+ *       - in: query
+ *         name: since
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         required: true
+ *         description: Hent kun meldinger oppdatert etter dette tidspunktet (ISO 8601 format, f.eks. 2024-10-12T10:00:00Z)
+ *       - in: query
+ *         name: orderId
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Valgfritt - filtrer oppdateringer for en spesifikk ordre
+ *     responses:
+ *       200:
+ *         description: Liste over oppdaterte meldinger
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 updates:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Message'
+ *                 count:
+ *                   type: number
+ *                   description: Antall oppdateringer
+ *                 lastChecked:
+ *                   type: string
+ *                   format: date-time
+ *                   description: Tidsstempel for når denne forespørselen ble behandlet (bruk dette som 'since' parameter neste gang)
+ *       400:
+ *         description: Ugyldig input (mangler userId/since, eller ugyldig format)
+ */
+router.get('/updates', messageController.getMessageUpdates);
+
+/**
+ * @swagger
  * /api/messages:
  *   get:
  *     summary: Hent alle meldinger for innlogget bruker
