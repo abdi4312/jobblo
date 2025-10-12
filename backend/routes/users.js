@@ -343,4 +343,48 @@ router.get('/:id/services', userController.getUserServices);
  */
 router.get('/', userController.getAllUsers);
 
+/**
+ * @swagger
+ * /api/users/{id}/follow:
+ *   post:
+ *     summary: Følg eller slutte å følge en bruker
+ *     tags: [Brukere]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID til brukeren som skal følges/unfollowes
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: ID til brukeren som følger
+ *     responses:
+ *       200:
+ *         description: Følger status oppdatert
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 isFollowing:
+ *                   type: boolean
+ *       400:
+ *         description: Ugyldig input eller kan ikke følge seg selv
+ *       404:
+ *         description: Bruker ikke funnet
+ */
+router.post('/:id/follow', userController.followUser);
+
 module.exports = router;
