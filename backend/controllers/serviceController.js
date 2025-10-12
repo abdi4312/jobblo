@@ -23,6 +23,118 @@ exports.getServiceById = async (req, res) => {
     }
 };
 
+exports.getServiceDetails = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Validate service ID
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: 'Invalid service ID format' });
+        }
+
+        // Get the main service with full user details
+        const service = await Service.findById(id)
+            .populate('userId', 'name email avatarUrl role subscription verified')
+            .populate('categories', 'name description');
+
+        if (!service) {
+            return res.status(404).json({ error: 'Service not found' });
+        }
+
+        // Calculate statistics for the service
+        const Order = require('../models/Order');
+        const orderStats = await Order.aggregate([
+            { $match: { serviceId: new mongoose.Types.ObjectId(id) } },
+            {
+                $group: {
+                    _id: null,
+                    totalOrders: { $sum: 1 },
+                    completedOrders: {
+                        $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
+                    }
+                }
+            }
+        ]);
+
+        const stats = {
+            totalOrders: orderStats.length > 0 ? orderStats[0].totalOrders : 0,
+            completedOrders: orderStats.length > 0 ? orderStats[0].completedOrders : 0
+        };
+
+        // Find similar services
+        const similarServices = await findSimilarServices(service);
+
+        // Return full details
+        res.json({
+            service: service,
+            provider: service.userId,
+            stats: stats,
+            similarServices: similarServices
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+// Helper function to find similar services
+async function findSimilarServices(service) {
+    try {
+        const query = {
+            _id: { $ne: service._id }, // Exclude current service
+            status: 'open' // Only open services
+        };
+
+        // Match by categories if available
+        if (service.categories && service.categories.length > 0) {
+            query.categories = { $in: service.categories };
+        }
+
+        // Price range (±30%)
+        if (service.price) {
+            const priceMin = service.price * 0.7;
+            const priceMax = service.price * 1.3;
+            query.price = { $gte: priceMin, $lte: priceMax };
+        }
+
+        // Find similar services
+        let similarServices = await Service.find(query)
+            .populate('userId', 'name avatarUrl verified')
+            .populate('categories', 'name')
+            .limit(6)
+            .sort({ createdAt: -1 });
+
+        // If location exists, prioritize nearby services
+        if (service.location && service.location.coordinates && service.location.coordinates.length === 2) {
+            const nearbyServices = await Service.find({
+                ...query,
+                location: {
+                    $nearSphere: {
+                        $geometry: {
+                            type: 'Point',
+                            coordinates: service.location.coordinates
+                        },
+                        $maxDistance: 50000 // 50km radius
+                    }
+                }
+            })
+                .populate('userId', 'name avatarUrl verified')
+                .populate('categories', 'name')
+                .limit(6);
+
+            // Use nearby services if found, otherwise use the category-based results
+            if (nearbyServices.length > 0) {
+                similarServices = nearbyServices;
+            }
+        }
+
+        return similarServices;
+    } catch (err) {
+        console.error('Error finding similar services:', err);
+        return [];
+    }
+}
+
 exports.createService = async (req, res) => {
     try {
         const { userId, ...serviceData } = req.body;

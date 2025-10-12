@@ -83,6 +83,70 @@ router.get('/', serviceController.getAllServices);
 
 /**
  * @swagger
+ * /api/services/{id}/details:
+ *   get:
+ *     summary: Hent full info om tjeneste inkludert leverandør, statistikk og lignende tjenester
+ *     tags: [Tjenester]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID for tjenesten
+ *     responses:
+ *       200:
+ *         description: Full info om tjenesten
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 service:
+ *                   $ref: '#/components/schemas/Service'
+ *                   description: Komplett tjenesteinformasjon
+ *                 provider:
+ *                   type: object
+ *                   description: Leverandørens profilinformasjon
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     avatarUrl:
+ *                       type: string
+ *                     verified:
+ *                       type: boolean
+ *                     role:
+ *                       type: string
+ *                     subscription:
+ *                       type: string
+ *                 stats:
+ *                   type: object
+ *                   description: Statistikk for tjenesten
+ *                   properties:
+ *                     totalOrders:
+ *                       type: number
+ *                       description: Totalt antall bestillinger
+ *                     completedOrders:
+ *                       type: number
+ *                       description: Antall fullførte bestillinger
+ *                 similarServices:
+ *                   type: array
+ *                   description: Liste over lignende tjenester basert på kategori, pris og lokasjon
+ *                   items:
+ *                     $ref: '#/components/schemas/Service'
+ *       400:
+ *         description: Ugyldig tjeneste-ID format
+ *       404:
+ *         description: Tjenesten ble ikke funnet
+ */
+router.get('/:id/details', serviceController.getServiceDetails);
+
+/**
+ * @swagger
  * /api/services/{id}:
  *   get:
  *     summary: Hent en spesifikk tjeneste
