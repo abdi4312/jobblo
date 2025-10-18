@@ -65,6 +65,28 @@ router.get('/nearby', serviceController.getNearbyServices);
 
 /**
  * @swagger
+ * /api/services/my-posted:
+ *   get:
+ *     summary: Hent alle tjenester/oppdrag du har lagt ut
+ *     tags: [Tjenester]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Liste over alle tjenester/oppdrag du har lagt ut
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Service'
+ *       401:
+ *         description: Token mangler eller ugyldig
+ */
+router.get('/my-posted', serviceController.getMyPostedServices);
+
+/**
+ * @swagger
  * /api/services:
  *   get:
  *     summary: Hent alle tjenesteer
