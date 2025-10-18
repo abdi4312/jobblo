@@ -1,6 +1,5 @@
 const Service = require('../models/Service');
 const mongoose = require('mongoose');
-const jwt = require('jsonwebtoken');
 
 // ------------------- Standard CRUD -------------------
 exports.getAllServices = async (req, res) => {
@@ -304,16 +303,11 @@ exports.getTimeEntries = async (req, res) => {
 
 
 // Get all services posted by the authenticated user
+// Authentication handled by middleware - req.userId available
 exports.getMyPostedServices = async (req, res) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1];
-
-        if (!token) {
-            return res.status(401).json({ error: 'Token required' });
-        }
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = decoded.id;
+        // userId comes from authenticate middleware
+        const userId = req.userId;
 
         // Find all services posted by this user
         const services = await Service.find({ userId: userId })
@@ -323,9 +317,6 @@ exports.getMyPostedServices = async (req, res) => {
 
         res.json(services);
     } catch (err) {
-        if (err.name === 'JsonWebTokenError') {
-            return res.status(401).json({ error: 'Invalid token' });
-        }
         console.error(err);
         res.status(500).json({ error: 'Server error' });
     }
