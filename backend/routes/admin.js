@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -28,7 +29,7 @@ const adminController = require('../controllers/adminController');
  *       403:
  *         description: Admin access required
  */
-router.get('/users', adminController.getAllUsers);
+router.get('/users', authenticate, requireAdmin, adminController.getAllUsers);
 
 /**
  * @swagger
@@ -46,7 +47,7 @@ router.get('/users', adminController.getAllUsers);
  *       403:
  *         description: Admin access required
  */
-router.get('/orders', adminController.getAllOrders);
+router.get('/orders', authenticate, requireAdmin, adminController.getAllOrders);
 
 /**
  * @swagger
@@ -84,7 +85,7 @@ router.get('/orders', adminController.getAllOrders);
  *       404:
  *         description: Bruker ikke funnet
  */
-router.put('/users/:id/role', adminController.changeUserRole);
+router.put('/users/:id/role', authenticate, requireAdmin, adminController.changeUserRole);
 
 /**
  * @swagger
@@ -111,6 +112,6 @@ router.put('/users/:id/role', adminController.changeUserRole);
  *       404:
  *         description: Bruker ikke funnet
  */
-router.delete('/users/:id', adminController.deleteUser);
+router.delete('/users/:id', authenticate, requireAdmin, adminController.deleteUser);
 
 module.exports = router;
