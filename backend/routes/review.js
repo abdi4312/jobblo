@@ -174,6 +174,37 @@ router.delete('/reviews/:id', reviewController.deleteReview);
 
 /**
  * @swagger
+ * /api/reviews/latest:
+ *   get:
+ *     summary: Get latest reviews across the platform
+ *     tags: [Reviews]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 5
+ *         description: Number of reviews to return (default 5)
+ *     responses:
+ *       200:
+ *         description: Latest reviews retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 reviews:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Review'
+ *                 count:
+ *                   type: integer
+ *                   description: Number of reviews returned
+ */
+router.get('/reviews/latest', reviewController.getLatestReviews);
+
+/**
+ * @swagger
  * /api/reviews/user/{id}:
  *   get:
  *     summary: Get all reviews for services owned by a specific user
