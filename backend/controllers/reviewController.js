@@ -115,6 +115,34 @@ exports.deleteReview = async (req, res) => {
     }
 };
 
+// Get latest reviews across the platform
+exports.getLatestReviews = async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 5; // Default 5 reviews
+
+        const reviews = await Review.find()
+            .sort({ _id: -1 }) // Sort by newest first
+            .limit(limit)
+            .populate('reviewerId', 'name avatarUrl')
+            .populate('serviceId', 'title userId')
+            .populate({
+                path: 'serviceId',
+                populate: {
+                    path: 'userId',
+                    select: 'name avatarUrl'
+                }
+            });
+
+        res.json({
+            reviews,
+            count: reviews.length
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
 // Get all reviews for services owned by a specific user
 exports.getUserReviews = async (req, res) => {
     try {
