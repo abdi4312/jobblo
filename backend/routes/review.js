@@ -172,4 +172,31 @@ router.get('/reviews', reviewController.getAllReviews);
  */
 router.delete('/reviews/:id', reviewController.deleteReview);
 
+/**
+ * @swagger
+ * /api/reviews/user/{id}:
+ *   get:
+ *     summary: Get all reviews for services owned by a specific user
+ *     tags: [Reviews]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: Reviews retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ReviewWithStats'
+ *       400:
+ *         description: Invalid user ID
+ *       404:
+ *         description: User not found
+ */
+router.get('/reviews/user/:id', reviewController.getUserReviews);
+
 module.exports = router;
