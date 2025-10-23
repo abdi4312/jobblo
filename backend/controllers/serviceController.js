@@ -2,6 +2,7 @@ const Service = require('../models/Service');
 const mongoose = require('mongoose');
 
 // ------------------- Standard CRUD -------------------
+
 exports.getAllServices = async (req, res) => {
     try {
         const services = await Service.find().populate('userId', 'name');
@@ -146,6 +147,17 @@ exports.createService = async (req, res) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
 
+        // Normaliser felt
+        if (serviceData.location && typeof serviceData.location.address === 'string') {
+            const [addressPart, cityPart] = serviceData.location.address.split(',').map(s => s.trim());
+            serviceData.location.address = addressPart || '';
+            serviceData.location.city = cityPart || '';
+        }
+
+        // Default values
+        serviceData.status = serviceData.status || 'open';
+        serviceData.equipment = serviceData.equipment || 'utstyrfri';
+
         const service = await Service.create({ ...serviceData, userId });
         res.status(201).json(service);
     } catch (err) {
@@ -172,7 +184,19 @@ exports.updateService = async (req, res) => {
             if (!user) return res.status(404).json({ error: 'User not found' });
         }
 
-        const service = await Service.findByIdAndUpdate(serviceId, { $set: req.body }, { new: true });
+        // Split adresse og by hvis sendt samlet
+        if (req.body.location && typeof req.body.location.address === 'string' && !req.body.location.city) {
+            const [addressPart, cityPart] = req.body.location.address.split(',').map(s => s.trim());
+            req.body.location.address = addressPart || '';
+            req.body.location.city = cityPart || '';
+        }
+
+        const service = await Service.findByIdAndUpdate(
+            serviceId,
+            { $set: req.body },
+            { new: true, runValidators: true }
+        );
+
         res.json(service);
     } catch (err) {
         console.error(err);
@@ -194,14 +218,22 @@ exports.deleteService = async (req, res) => {
 };
 
 // ------------------- Kart / GeoJSON -------------------
+
 exports.updateLocation = async (req, res) => {
     try {
         const { id } = req.params;
-        const { latitude, longitude, address } = req.body;
+        const { latitude, longitude, address, city } = req.body;
 
         const service = await Service.findByIdAndUpdate(
             id,
-            { location: { type: 'Point', coordinates: [longitude, latitude], address } },
+            {
+                location: {
+                    type: 'Point',
+                    coordinates: [longitude, latitude],
+                    address,
+                    city
+                }
+            },
             { new: true }
         );
         if (!service) return res.status(404).json({ error: 'Service not found' });
@@ -212,7 +244,6 @@ exports.updateLocation = async (req, res) => {
     }
 };
 
-// Finn tjenester i radius uten å krasje hvis location mangler
 exports.getNearbyServices = async (req, res) => {
     try {
         const { lat, lng, radius } = req.query;
@@ -239,7 +270,6 @@ exports.getNearbyServices = async (req, res) => {
     }
 };
 
-
 exports.getServicesInBox = async (req, res) => {
     try {
         const { neLat, neLng, swLat, swLng } = req.query;
@@ -265,7 +295,6 @@ exports.getServicesInBox = async (req, res) => {
 
 // ------------------- Tidsregistrering -------------------
 
-// Legg til time entry
 exports.addTimeEntry = async (req, res) => {
     try {
         const { id } = req.params;
@@ -288,7 +317,6 @@ exports.addTimeEntry = async (req, res) => {
     }
 };
 
-// Hent alle time entries for en service
 exports.getTimeEntries = async (req, res) => {
     try {
         const { id } = req.params;

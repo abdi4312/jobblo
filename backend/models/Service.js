@@ -14,29 +14,49 @@ const serviceSchema = new mongoose.Schema({
     description: { type: String },
     price: { type: Number, min: 0 },
 
+    // Lokasjon — nå med separat adresse og by
     location: {
         type: { type: String, enum: ['Point'], default: 'Point' },
         coordinates: { type: [Number], index: '2dsphere' },
-        address: { type: String }
+        address: { type: String },   // eks. "Karl Johans gate 12"
+        city: { type: String }       // eks. "Oslo"
     },
 
-    categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
+    // Nå faktiske kategorinavn i stedet for ObjectId
+    categories: [{ type: String }],  // f.eks. ["Maling", "Flytting"]
+
     images: [{ type: String }],
     urgent: { type: Boolean, default: false },
     status: { type: String, enum: ['open', 'closed', 'in_progress'], default: 'open' },
+
+    // Tags brukes fortsatt som søkeord / filtre
     tags: [{ type: String }],
 
+    // Varighet
     duration: {
         value: { type: Number, min: 0 },
         unit: { type: String, enum: ['minutes', 'hours', 'days'], default: 'hours' }
     },
 
-    fromDate: { type: Date },
-    toDate: { type: Date },
-    needTools: { type: Boolean, default: false },
+    // Nytt feltnavn for datoer (fra–til)
+    fromDate: { type: Date },  // Startdato jobben skal gjøres
+    toDate: { type: Date },    // Sluttdato jobben skal gjøres
 
+    // Utstyrstatus – oppgradert fra boolean til enum
+    equipment: {
+        type: String,
+        enum: ['utstyrfri', 'delvis utstyr', 'trengs utstyr'],
+        default: 'utstyrfri'
+    },
+
+    // Favorittstatus for visning i UI (kan evt. styres via egen relasjon)
+    isFavorited: { type: Boolean, default: false },
+
+    // Timeføring
     timeEntries: [timeEntrySchema]
 
 }, { timestamps: true });
+
+serviceSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('Service', serviceSchema);
