@@ -20,14 +20,18 @@ const notificationsRouter = require('./routes/notifications');
 const adminRouter = require('./routes/admin');
 const reviewsRouter = require('./routes/review');
 const categoryRouter = require('./routes/category');
+<<<<<<< Updated upstream
 const feedRouter = require('./routes/feed');
+=======
+const filterRouter = require('./routes/filter')
+>>>>>>> Stashed changes
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 
 // CORS configuration, frontend can access the backend api from localhost:5173
 const corsOptions = {
-    origin: 'http://localhost:5173', 
+    origin: 'http://localhost:5173',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true,
@@ -39,7 +43,7 @@ const session = require('express-session');
 
 const app = express();
 
-app.use(cors(corsOptions)); 
+app.use(cors(corsOptions));
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -76,7 +80,11 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api', reviewsRouter);
 app.use('/api/categories', categoryRouter);
+<<<<<<< Updated upstream
 app.use('/api/feed', feedRouter);
+=======
+app.use('/api/filter', filterRouter);
+>>>>>>> Stashed changes
 
 // Error handler
 app.use(function(req, res, next) {

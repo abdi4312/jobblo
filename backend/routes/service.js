@@ -1,11 +1,24 @@
 const express = require('express');
 const router = express.Router();
 const serviceController = require('../controllers/serviceController');
+<<<<<<< Updated upstream
 const { authenticate } = require('../middleware/auth');
 // Oppdater GeoJSON-lokasjon for en tjeneste
 router.put('/:id/location', serviceController.updateLocation);
+=======
+>>>>>>> Stashed changes
 
+// ------------------- GeoJSON -------------------
+router.put('/:id/location', serviceController.updateLocation);
 router.get('/nearby', serviceController.getNearbyServices);
+router.get('/', serviceController.getAllServices);
+router.get('/:id', serviceController.getServiceById);
+router.post('/', serviceController.createService);
+router.put('/:id', serviceController.updateService);
+router.delete('/:id', serviceController.deleteService);
+router.post('/:id/time-entries', serviceController.addTimeEntry);
+router.get('/:id/time-entries', serviceController.getTimeEntries);
+
 /**
  * @swagger
  * components:
@@ -32,13 +45,27 @@ router.get('/nearby', serviceController.getNearbyServices);
  *           type: number
  *           description: Pris for tjenesten
  *         location:
- *           type: string
- *           description: Lokasjon for tjenesten
+ *           type: object
+ *           properties:
+ *             type:
+ *               type: string
+ *               enum: [Point]
+ *             coordinates:
+ *               type: array
+ *               items:
+ *                 type: number
+ *               description: [longitude, latitude]
+ *             address:
+ *               type: string
+ *               description: Gateadresse (f.eks. "Karl Johans gate 12")
+ *             city:
+ *               type: string
+ *               description: By (f.eks. "Oslo")
  *         categories:
  *           type: array
  *           items:
  *             type: string
- *           description: Kategorier (IDer)
+ *           description: Liste med kategorinavn (ikke ID)
  *         images:
  *           type: array
  *           items:
@@ -46,7 +73,7 @@ router.get('/nearby', serviceController.getNearbyServices);
  *           description: Bilde-URLer
  *         urgent:
  *           type: boolean
- *           description: Om tjenesten er haster
+ *           description: Om tjenesten haster
  *         status:
  *           type: string
  *           enum: [open, closed, in_progress]
@@ -55,13 +82,80 @@ router.get('/nearby', serviceController.getNearbyServices);
  *           type: array
  *           items:
  *             type: string
- *           description: Stikkord
+ *           description: Stikkord eller søkeord
+ *         duration:
+ *           type: object
+ *           properties:
+ *             value:
+ *               type: number
+ *             unit:
+ *               type: string
+ *               enum: [minutes, hours, days]
+ *         fromDate:
+ *           type: string
+ *           format: date
+ *           description: Startdato for når jobben skal utføres
+ *         toDate:
+ *           type: string
+ *           format: date
+ *           description: Sluttdato for når jobben skal utføres
+ *         equipment:
+ *           type: string
+ *           enum: [utstyrfri, delvis utstyr, trengs utstyr]
+ *           description: Hvorvidt jobben krever utstyr
+ *         isFavorited:
+ *           type: boolean
+ *           description: Om brukeren har favorittisert tjenesten
+ *         timeEntries:
+ *           type: array
+ *           description: Registrerte timer på tjenesten
+ *           items:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               hours:
+ *                 type: number
+ *               date:
+ *                 type: string
+ *                 format: date-time
+ *               note:
+ *                 type: string
  *         createdAt:
  *           type: string
  *           format: date-time
  *         updatedAt:
  *           type: string
  *           format: date-time
+ *
+ *   examples:
+ *     ExampleService:
+ *       summary: Eksempel på tjeneste
+ *       value:
+ *         _id: "6718e21f98a3c43a6c8d9c4b"
+ *         userId: "66ffbb129becc42fbc90a555"
+ *         title: "Male stue og kjøkken"
+ *         description: "Ønsker hjelp til å male vegger og tak i stue og kjøkken."
+ *         price: 4500
+ *         location:
+ *           type: "Point"
+ *           coordinates: [10.7461, 59.9127]
+ *           address: "Karl Johans gate 12"
+ *           city: "Oslo"
+ *         categories: ["Maling", "Oppussing"]
+ *         images: ["https://example.com/images/malejobb1.jpg"]
+ *         urgent: true
+ *         status: "open"
+ *         tags: ["innendørs", "privat", "rask"]
+ *         duration:
+ *           value: 2
+ *           unit: "days"
+ *         fromDate: "2025-10-24"
+ *         toDate: "2025-10-25"
+ *         equipment: "delvis utstyr"
+ *         isFavorited: false
+ *         createdAt: "2025-10-23T18:30:00Z"
+ *         updatedAt: "2025-10-23T18:30:00Z"
  */
 
 /**
@@ -90,19 +184,53 @@ router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
  * @swagger
  * /api/services:
  *   get:
- *     summary: Hent alle tjenesteer
+ *     summary: Hent alle tjenester
  *     tags: [Tjenester]
  *     responses:
  *       200:
- *         description: Liste over alle tjenesteer
+ *         description: Liste over alle tjenester
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Service'
+ *
+ *   post:
+ *     summary: Opprett en ny tjeneste
+ *     tags: [Tjenester]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Service'
+ *           example:
+ *             userId: "66ffbb129becc42fbc90a555"
+ *             title: "Flyttehjelp ønskes"
+ *             description: "Trenger hjelp til å flytte møbler fra leilighet til lager."
+ *             price: 2000
+ *             location:
+ *               address: "Dronningens gate 10"
+ *               city: "Trondheim"
+ *               coordinates: [10.3951, 63.4305]
+ *             categories: ["Flytting", "Transport"]
+ *             urgent: false
+ *             equipment: "trengs utstyr"
+ *             fromDate: "2025-11-01"
+ *             toDate: "2025-11-02"
+ *     responses:
+ *       201:
+ *         description: Tjenesten ble opprettet
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Service'
+ *       400:
+ *         description: Ugyldig input
+ *       404:
+ *         description: Bruker ikke funnet
  */
-router.get('/', serviceController.getAllServices);
 
 /**
  * @swagger
@@ -190,79 +318,7 @@ router.get('/:id/details', serviceController.getServiceDetails);
  *               $ref: '#/components/schemas/Service'
  *       404:
  *         description: Tjenesten ble ikke funnet
- */
-router.get('/:id', serviceController.getServiceById);
-
-/**
- * @swagger
- * /api/services:
- *   post:
- *     summary: Opprett en ny tjeneste
- *     tags: [Tjenester]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - title
- *               - userId
- *             properties:
- *               userId:
- *                 type: string
- *                 description: ID til brukeren som oppretter tjenesten
- *               title:
- *                 type: string
- *                 description: Tittel på tjenesten
- *               description:
- *                 type: string
- *                 description: Beskrivelse av tjenesten
- *               price:
- *                 type: number
- *                 description: Pris for tjenesten
- *               location:
- *                 type: string
- *                 description: Lokasjon for tjenesten
- *               categories:
- *                 type: array
- *                 items:
- *                   type: string
- *                 description: Kategorier (IDer)
- *               images:
- *                 type: array
- *                 items:
- *                   type: string
- *                 description: Bilde-URLer
- *               urgent:
- *                 type: boolean
- *                 description: Om tjenesten er haster
- *               status:
- *                 type: string
- *                 enum: [open, closed, in_progress]
- *                 description: Status på tjenesten
- *               tags:
- *                 type: array
- *                 items:
- *                   type: string
- *                 description: Stikkord
- *     responses:
- *       201:
- *         description: Tjenesten ble opprettet
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Service'
- *       400:
- *         description: Ugyldig input
- *       404:
- *         description: Bruker ikke funnet
- */
-router.post('/', serviceController.createService);
-
-/**
- * @swagger
- * /api/services/{id}:
+ *
  *   put:
  *     summary: Oppdater en tjeneste
  *     tags: [Tjenester]
@@ -292,12 +348,7 @@ router.post('/', serviceController.createService);
  *         description: Tjeneste eller bruker ikke funnet
  *       500:
  *         description: Server-feil
- */
-router.put('/:id', serviceController.updateService);
-
-/**
- * @swagger
- * /api/services/{id}:
+ *
  *   delete:
  *     summary: Slett en tjeneste
  *     tags: [Tjenester]
@@ -314,10 +365,6 @@ router.put('/:id', serviceController.updateService);
  *       404:
  *         description: Tjenesten ble ikke funnet
  */
-router.delete('/:id', serviceController.deleteService);
-
-
-// ------------------- Kart / GeoJSON -------------------
 
 /**
  * @swagger
@@ -344,6 +391,8 @@ router.delete('/:id', serviceController.deleteService);
  *               longitude:
  *                 type: number
  *               address:
+ *                 type: string
+ *               city:
  *                 type: string
  *     responses:
  *       200:
@@ -380,40 +429,6 @@ router.delete('/:id', serviceController.deleteService);
 
 /**
  * @swagger
- * /api/services/map:
- *   get:
- *     summary: Hent tjenester innenfor et kartutsnitt (bounding box)
- *     tags: [Tjenester]
- *     parameters:
- *       - in: query
- *         name: neLat
- *         schema:
- *           type: number
- *         required: true
- *       - in: query
- *         name: neLng
- *         schema:
- *           type: number
- *         required: true
- *       - in: query
- *         name: swLat
- *         schema:
- *           type: number
- *         required: true
- *       - in: query
- *         name: swLng
- *         schema:
- *           type: number
- *         required: true
- *     responses:
- *       200:
- *         description: Liste over tjenester innenfor bounding box
- */
-
-// ------------------- Tidsregistrering -------------------
-
-/**
- * @swagger
  * /api/services/{id}/time-entries:
  *   post:
  *     summary: Legg til en time entry for en tjeneste
@@ -442,11 +457,7 @@ router.delete('/:id', serviceController.deleteService);
  *     responses:
  *       201:
  *         description: Time entry lagt til
- */
-
-/**
- * @swagger
- * /api/services/{id}/time-entries:
+ *
  *   get:
  *     summary: Hent alle time entries for en tjeneste
  *     tags: [Tjenester]
@@ -461,10 +472,5 @@ router.delete('/:id', serviceController.deleteService);
  *       200:
  *         description: Liste over time entries
  */
-
-// ------------------- Tidsregistrering -------------------
-router.post('/:id/time-entries', serviceController.addTimeEntry);
-router.get('/:id/time-entries', serviceController.getTimeEntries);
-
 
 module.exports = router;
