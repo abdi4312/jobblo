@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
+const { authenticate } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -44,27 +45,33 @@ const orderController = require('../controllers/orderController');
 
 /**
  * @swagger
- * /api/orders:
+ * /api/order:
  *   get:
- *     summary: Hent alle ordre
+ *     summary: Hent alle ordre for innlogget bruker
  *     tags: [Ordre]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Liste over alle ordre
+ *         description: Liste over brukerens ordre (som kunde eller leverandør)
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Order'
+ *       401:
+ *         description: Mangler eller ugyldig autentisering
  */
 
 /**
  * @swagger
- * /api/orders/{id}:
+ * /api/order/{id}:
  *   get:
  *     summary: Hent en spesifikk ordre
  *     tags: [Ordre]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -79,22 +86,35 @@ const orderController = require('../controllers/orderController');
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Order'
+ *       401:
+ *         description: Mangler eller ugyldig autentisering
  *       404:
  *         description: Ordren ble ikke funnet
  */
 
 /**
  * @swagger
- * /api/orders:
+ * /api/order:
  *   post:
  *     summary: Opprett en ny ordre
  *     tags: [Ordre]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Order'
+ *             type: object
+ *             required:
+ *               - serviceId
+ *             properties:
+ *               serviceId:
+ *                 type: string
+ *                 description: ID til tjenesten (providerId og customerId settes automatisk)
+ *               price:
+ *                 type: number
+ *                 description: Pris (valgfri, bruker servicens pris som standard)
  *     responses:
  *       201:
  *         description: Ordren ble opprettet
@@ -103,15 +123,21 @@ const orderController = require('../controllers/orderController');
  *             schema:
  *               $ref: '#/components/schemas/Order'
  *       400:
- *         description: Ugyldig forespørsel
+ *         description: Ugyldig forespørsel eller kan ikke opprette ordre for egen tjeneste
+ *       401:
+ *         description: Mangler eller ugyldig autentisering
+ *       404:
+ *         description: Tjeneste ikke funnet
  */
 
 /**
  * @swagger
- * /api/orders/{id}:
+ * /api/order/{id}:
  *   put:
  *     summary: Oppdater en ordre
  *     tags: [Ordre]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -124,7 +150,15 @@ const orderController = require('../controllers/orderController');
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Order'
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [pending, confirmed, completed, cancelled]
+ *                 description: Ordrestatus
+ *               price:
+ *                 type: number
+ *                 description: Pris
  *     responses:
  *       200:
  *         description: Ordren ble oppdatert
@@ -134,16 +168,22 @@ const orderController = require('../controllers/orderController');
  *               $ref: '#/components/schemas/Order'
  *       400:
  *         description: Ugyldig forespørsel
+ *       401:
+ *         description: Mangler eller ugyldig autentisering
+ *       403:
+ *         description: Ikke autorisert til å oppdatere denne ordren
  *       404:
  *         description: Ordren ble ikke funnet
  */
 
 /**
  * @swagger
- * /api/orders/{id}:
+ * /api/order/{id}:
  *   delete:
  *     summary: Slett en ordre
  *     tags: [Ordre]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -152,33 +192,29 @@ const orderController = require('../controllers/orderController');
  *         required: true
  *         description: Ordre-ID
  *     responses:
- *       200:
+ *       204:
  *         description: Ordren ble slettet
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Order deleted
+ *       401:
+ *         description: Mangler eller ugyldig autentisering
+ *       403:
+ *         description: Ikke autorisert til å slette denne ordren
  *       404:
  *         description: Ordren ble ikke funnet
  */
 
-// List all orders
-router.get('/', orderController.getAllOrders);
+// List all orders for authenticated user
+router.get('/', authenticate, orderController.getAllOrders);
 
 // Get a single order by ID
 router.get('/:id', orderController.getOrderById);
 
-// Create a new order
-router.post('/', orderController.createOrder);
+// Create a new order (requires authentication)
+router.post('/', authenticate, orderController.createOrder);
 
-// Update an order
-router.put('/:id', orderController.updateOrder);
+// Update an order (requires authentication)
+router.put('/:id', authenticate, orderController.updateOrder);
 
-// Delete an order
-router.delete('/:id', orderController.deleteOrder);
+// Delete an order (requires authentication)
+router.delete('/:id', authenticate, orderController.deleteOrder);
 
 module.exports = router;

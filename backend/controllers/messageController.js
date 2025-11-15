@@ -1,39 +1,35 @@
 const Message = require('../models/Message');
+const Notification = require('../models/Notification');
+const Order = require('../models/Order');
+const User = require('../models/User');
 const mongoose = require('mongoose');
 
 exports.getAllMessages = async (req, res) => {
     try {
-        // For now, we'll get userId from query params since there's no auth middleware
-        const { userId } = req.query;
-        
-        if (!userId) {
-            return res.status(400).json({ error: 'userId query parameter is required' });
-        }
-        
-        if (!mongoose.Types.ObjectId.isValid(userId)) {
-            return res.status(400).json({ error: 'Invalid user ID format' });
-        }
-        
-        // Find messages where the user is either sender or part of the order
+        // Get userId from JWT middleware
+        const userId = req.userId;
+
+        // Get user's orders first
+        const userOrders = await Order.find({
+            $or: [
+                { customerId: userId },
+                { providerId: userId }
+            ]
+        }).select('_id').lean();
+
+        const orderIds = userOrders.map(o => o._id);
+
+        // Find messages where user is sender or part of the order
         const messages = await Message.find({
             $or: [
                 { senderId: userId },
-                { 
-                    orderId: { 
-                        $in: await require('../models/Order').find({
-                            $or: [
-                                { customerId: userId },
-                                { providerId: userId }
-                            ]
-                        }).distinct('_id')
-                    }
-                }
+                { orderId: { $in: orderIds } }
             ]
         })
         .populate('senderId', 'name email')
         .populate('orderId', 'serviceId customerId providerId status')
         .populate('readBy', 'name');
-        
+
         res.json(messages);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -52,6 +48,15 @@ exports.getMessageById = async (req, res) => {
         if (!message) {
             return res.status(404).json({ error: 'Message not found' });
         }
+
+        // Authorization: user must be sender OR part of the order
+        const order = message.orderId;
+        if (message.senderId._id.toString() !== req.userId &&
+            order.customerId.toString() !== req.userId &&
+            order.providerId.toString() !== req.userId) {
+            return res.status(403).json({ error: 'Not authorized to view this message' });
+        }
+
         res.json(message);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -60,38 +65,38 @@ exports.getMessageById = async (req, res) => {
 
 exports.createMessage = async (req, res) => {
     try {
-        const { orderId, senderId, message: messageContent, images, type } = req.body;
-        
+        const { orderId, message: messageContent, images, type } = req.body;
+        const senderId = req.userId; // Get from authenticated user
+
         // Validate required fields
         if (!orderId) {
             return res.status(400).json({ error: 'Order ID is required' });
         }
-        if (!senderId) {
-            return res.status(400).json({ error: 'Sender ID is required' });
+
+        // Validate message has content (either text or images)
+        if (!messageContent && (!images || images.length === 0)) {
+            return res.status(400).json({ error: 'Message must contain either text content or images' });
         }
-        
-        // Validate ObjectIds
+
+        // Validate ObjectId
         if (!mongoose.Types.ObjectId.isValid(orderId)) {
             return res.status(400).json({ error: 'Invalid order ID format' });
         }
-        if (!mongoose.Types.ObjectId.isValid(senderId)) {
-            return res.status(400).json({ error: 'Invalid sender ID format' });
-        }
-        
+
         // Check if order exists
-        const Order = require('../models/Order');
         const order = await Order.findById(orderId);
         if (!order) {
             return res.status(404).json({ error: 'Order not found' });
         }
-        
-        // Check if sender exists
-        const User = require('../models/User');
-        const user = await User.findById(senderId);
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+
+        // Check if sender has access to this order
+        if (order.customerId.toString() !== senderId && order.providerId.toString() !== senderId) {
+            return res.status(403).json({ error: 'Not authorized to send messages in this order' });
         }
-        
+
+        // Get sender's user info (already authenticated, so we know they exist)
+        const user = req.user;
+
         const message = await Message.create({
             orderId,
             senderId,
@@ -99,7 +104,49 @@ exports.createMessage = async (req, res) => {
             images: images || [],
             type: type || 'text'
         });
-        
+
+        // Populate sender info for the response
+        await message.populate('senderId', 'name email');
+
+        // Emit WebSocket event to the other participant
+        const otherParticipantId = order.customerId.toString() === senderId ? order.providerId : order.customerId;
+        const io = req.app.get('io');
+
+        // Save notification to database
+        let notification;
+        try {
+            notification = await Notification.create({
+                userId: otherParticipantId,
+                type: 'message',
+                content: `New message from ${user.name}`
+            });
+        } catch (notificationError) {
+            console.error('Failed to save notification to database:', notificationError.message);
+        }
+
+        if (io) {
+            // Emit new message event to recipient
+            io.to(otherParticipantId.toString()).emit('message:new', {
+                messageId: message._id,
+                orderId: message.orderId,
+                senderId: message.senderId,
+                senderName: user.name,
+                message: messageContent,
+                type: message.type,
+                images: message.images,
+                createdAt: message.createdAt
+            });
+
+            // Emit notification event to recipient
+            io.to(otherParticipantId.toString()).emit('notification:new', {
+                notificationId: notification?._id,
+                type: 'message',
+                content: `New message from ${user.name}`,
+                relatedOrderId: orderId,
+                timestamp: new Date().toISOString()
+            });
+        }
+
         res.status(201).json(message);
     } catch (error) {
         if (error.name === 'ValidationError') {
@@ -114,80 +161,23 @@ exports.deleteMessage = async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({ error: 'Invalid message ID format' });
         }
-        const message = await Message.findByIdAndDelete(req.params.id);
+
+        // Get the message first
+        const message = await Message.findById(req.params.id);
         if (!message) {
             return res.status(404).json({ error: 'Message not found' });
         }
+
+        // Authorization: only sender can delete their message (from JWT middleware)
+        if (message.senderId.toString() !== req.userId) {
+            return res.status(403).json({ error: 'Not authorized to delete this message' });
+        }
+
+        // Delete the message
+        await Message.findByIdAndDelete(req.params.id);
         res.status(204).end();
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
 
-exports.getMessageUpdates = async (req, res) => {
-    try {
-        const { userId, orderId, since } = req.query;
-
-        // Validate required parameters
-        if (!userId) {
-            return res.status(400).json({ error: 'userId query parameter is required' });
-        }
-        if (!since) {
-            return res.status(400).json({ error: 'since query parameter is required (ISO 8601 timestamp)' });
-        }
-
-        // Validate userId format
-        if (!mongoose.Types.ObjectId.isValid(userId)) {
-            return res.status(400).json({ error: 'Invalid user ID format' });
-        }
-
-        // Validate orderId if provided
-        if (orderId && !mongoose.Types.ObjectId.isValid(orderId)) {
-            return res.status(400).json({ error: 'Invalid order ID format' });
-        }
-
-        // Validate timestamp format
-        const sinceDate = new Date(since);
-        if (isNaN(sinceDate.getTime())) {
-            return res.status(400).json({ error: 'Invalid timestamp format. Use ISO 8601 format (e.g., 2024-10-12T10:00:00Z)' });
-        }
-
-        // Build query
-        const query = {
-            updatedAt: { $gt: sinceDate },
-            deletedFor: { $ne: userId }  // Exclude messages deleted by this user
-        };
-
-        // If orderId is provided, filter by specific order
-        // Otherwise, get updates for all orders the user has access to
-        if (orderId) {
-            query.orderId = orderId;
-        } else {
-            // Find all orders where user is involved
-            const Order = require('../models/Order');
-            const userOrders = await Order.find({
-                $or: [
-                    { customerId: userId },
-                    { providerId: userId }
-                ]
-            }).distinct('_id');
-
-            query.orderId = { $in: userOrders };
-        }
-
-        // Fetch updates
-        const updates = await Message.find(query)
-            .populate('senderId', 'name email')
-            .populate('orderId', 'serviceId customerId providerId status')
-            .populate('readBy', 'name')
-            .sort({ updatedAt: 1 });  // Oldest first
-
-        res.json({
-            updates: updates,
-            count: updates.length,
-            lastChecked: new Date().toISOString()
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
