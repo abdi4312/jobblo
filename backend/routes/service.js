@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const serviceController = require('../controllers/serviceController');
 const { authenticate } = require('../middleware/auth');
-// Oppdater GeoJSON-lokasjon for en tjeneste
-router.put('/:id/location', serviceController.updateLocation);
 
 // ------------------- GeoJSON -------------------
 router.put('/:id/location', serviceController.updateLocation);
