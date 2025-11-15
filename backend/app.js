@@ -1,13 +1,16 @@
 require('dotenv').config(); // Laster inn .env-variabler
 const connectDB = require('./db'); // Importer db-filen
 connectDB(); // Koble til MongoDB
+
 const createError = require('http-errors');
 const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
-const cors = require('cors'); // Add CORS
+const cors = require('cors');
+
 require('dotenv').config({ path: path.join(__dirname, '.env') });
+
 const indexRouter = require('./routes/index');
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
@@ -20,16 +23,13 @@ const notificationsRouter = require('./routes/notifications');
 const adminRouter = require('./routes/admin');
 const reviewsRouter = require('./routes/review');
 const categoryRouter = require('./routes/category');
-<<<<<<< Updated upstream
 const feedRouter = require('./routes/feed');
-=======
-const filterRouter = require('./routes/filter')
->>>>>>> Stashed changes
+const filterRouter = require('./routes/filter');
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 
-// CORS configuration, frontend can access the backend api from localhost:5173
+// CORS configuration
 const corsOptions = {
     origin: 'http://localhost:5173',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -37,7 +37,7 @@ const corsOptions = {
     credentials: true,
     optionsSuccessStatus: 200
 };
-// Import Passport configuration
+
 const passport = require('./config/passport');
 const session = require('express-session');
 
@@ -80,20 +80,17 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api', reviewsRouter);
 app.use('/api/categories', categoryRouter);
-<<<<<<< Updated upstream
 app.use('/api/feed', feedRouter);
-=======
 app.use('/api/filter', filterRouter);
->>>>>>> Stashed changes
 
 // Error handler
 app.use(function(req, res, next) {
-  next(createError(404));
+    next(createError(404));
 });
 
 app.use(function(err, req, res, next) {
-  res.status(err.status || 500);
-  res.json({ error: err.message });
+    res.status(err.status || 500);
+    res.json({ error: err.message });
 });
 
 module.exports = app;
