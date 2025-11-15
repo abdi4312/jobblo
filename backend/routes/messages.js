@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const messageController = require('../controllers/messageController');
+const { authenticate } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -10,14 +11,16 @@ const messageController = require('../controllers/messageController');
  *       type: object
  *       required:
  *         - orderId
- *         - senderId
  *       properties:
+ *         _id:
+ *           type: string
+ *           description: Meldingens ID
  *         orderId:
  *           type: string
  *           description: ID til ordren meldingen tilhører
  *         senderId:
  *           type: string
- *           description: ID til avsenderen
+ *           description: ID til avsenderen (settes automatisk fra JWT token)
  *         message:
  *           type: string
  *           description: Meldingens innhold
@@ -40,57 +43,16 @@ const messageController = require('../controllers/messageController');
  *           items:
  *             type: string
  *           description: Liste over brukere som har slettet meldingen
- */
-
-/**
- * @swagger
- * /api/messages/updates:
- *   get:
- *     summary: Hent oppdateringer (nye meldinger, endringer i status, lesebekreftelser)
- *     tags: [Meldinger]
- *     parameters:
- *       - in: query
- *         name: userId
- *         schema:
- *           type: string
- *         required: true
- *         description: ID til brukeren som henter oppdateringene
- *       - in: query
- *         name: since
- *         schema:
+ *         createdAt:
  *           type: string
  *           format: date-time
- *         required: true
- *         description: Hent kun meldinger oppdatert etter dette tidspunktet (ISO 8601 format, f.eks. 2024-10-12T10:00:00Z)
- *       - in: query
- *         name: orderId
- *         schema:
+ *           description: Når meldingen ble opprettet
+ *         updatedAt:
  *           type: string
- *         required: false
- *         description: Valgfritt - filtrer oppdateringer for en spesifikk ordre
- *     responses:
- *       200:
- *         description: Liste over oppdaterte meldinger
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 updates:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Message'
- *                 count:
- *                   type: number
- *                   description: Antall oppdateringer
- *                 lastChecked:
- *                   type: string
- *                   format: date-time
- *                   description: Tidsstempel for når denne forespørselen ble behandlet (bruk dette som 'since' parameter neste gang)
- *       400:
- *         description: Ugyldig input (mangler userId/since, eller ugyldig format)
+ *           format: date-time
+ *           description: Når meldingen sist ble oppdatert
  */
-router.get('/updates', messageController.getMessageUpdates);
+
 
 /**
  * @swagger
@@ -98,13 +60,8 @@ router.get('/updates', messageController.getMessageUpdates);
  *   get:
  *     summary: Hent alle meldinger for innlogget bruker
  *     tags: [Meldinger]
- *     parameters:
- *       - in: query
- *         name: userId
- *         schema:
- *           type: string
- *         required: true
- *         description: ID til brukeren som henter meldingene
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Liste over brukerens meldinger
@@ -114,10 +71,10 @@ router.get('/updates', messageController.getMessageUpdates);
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Message'
- *       400:
- *         description: Ugyldig bruker-ID eller mangler userId parameter
+ *       401:
+ *         description: Mangler eller ugyldig autentisering
  */
-router.get('/', messageController.getAllMessages);
+router.get('/', authenticate, messageController.getAllMessages);
 
 /**
  * @swagger
@@ -125,6 +82,8 @@ router.get('/', messageController.getAllMessages);
  *   get:
  *     summary: Hent en spesifikk melding
  *     tags: [Meldinger]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -139,10 +98,14 @@ router.get('/', messageController.getAllMessages);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Message'
+ *       401:
+ *         description: Mangler eller ugyldig autentisering
+ *       403:
+ *         description: Ikke autorisert til å se denne meldingen
  *       404:
  *         description: Meldingen ble ikke funnet
  */
-router.get('/:id', messageController.getMessageById);
+router.get('/:id', authenticate, messageController.getMessageById);
 
 /**
  * @swagger
@@ -150,6 +113,8 @@ router.get('/:id', messageController.getMessageById);
  *   post:
  *     summary: Send en ny melding
  *     tags: [Meldinger]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -158,14 +123,10 @@ router.get('/:id', messageController.getMessageById);
  *             type: object
  *             required:
  *               - orderId
- *               - senderId
  *             properties:
  *               orderId:
  *                 type: string
  *                 description: ID til ordren meldingen tilhører
- *               senderId:
- *                 type: string
- *                 description: ID til avsenderen
  *               message:
  *                 type: string
  *                 description: Meldingens innhold
@@ -187,10 +148,14 @@ router.get('/:id', messageController.getMessageById);
  *               $ref: '#/components/schemas/Message'
  *       400:
  *         description: Ugyldig input
+ *       401:
+ *         description: Mangler eller ugyldig autentisering
+ *       403:
+ *         description: Ikke autorisert til å sende melding i denne ordren
  *       404:
  *         description: Ordre eller bruker ikke funnet
  */
-router.post('/', messageController.createMessage);
+router.post('/', authenticate, messageController.createMessage);
 
 /**
  * @swagger
@@ -198,6 +163,8 @@ router.post('/', messageController.createMessage);
  *   delete:
  *     summary: Slett en melding
  *     tags: [Meldinger]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -208,9 +175,13 @@ router.post('/', messageController.createMessage);
  *     responses:
  *       204:
  *         description: Melding slettet
+ *       401:
+ *         description: Mangler eller ugyldig autentisering
+ *       403:
+ *         description: Ikke autorisert til å slette denne meldingen
  *       404:
  *         description: Meldingen ble ikke funnet
  */
-router.delete('/:id', messageController.deleteMessage);
+router.delete('/:id', authenticate, messageController.deleteMessage);
 
 module.exports = router; 
