@@ -1,0 +1,150 @@
+.container {
+  display: flex;
+  padding: 0 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  align-self: stretch;
+}
+
+.radioItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: stretch;
+}
+
+.radioButton {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.radioContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 100px;
+  position: relative;
+}
+
+.radioStateLayer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.radioInput {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  z-index: 1;
+}
+
+.radioIcon {
+  width: 24px;
+  height: 24px;
+  position: relative;
+  pointer-events: none;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1 0 0;
+  align-self: stretch;
+  color: #181D18;
+  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: 0.25px;
+  cursor: pointer;
+}
+
+/* Hover effects */
+.radioInput:hover + .radioIcon {
+  background-color: rgba(66, 73, 64, 0.08);
+  border-radius: 50%;
+}
+
+.radioInput:focus + .radioIcon {
+  outline: 2px solid #376A3E;
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
+/* Mobile responsive */
+@media (max-width: 360px) {
+  .container {
+    gap: 4px;
+    padding: 0 8px;
+  }
+  
+  .radioItem {
+    gap: 6px;
+  }
+  
+  .label {
+    font-size: 13px;
+    line-height: 18px;
+  }
+}
+
+@media (max-width: 320px) {
+  .container {
+    gap: 3px;
+    padding: 0 6px;
+  }
+  
+  .radioItem {
+    gap: 5px;
+  }
+  
+  .label {
+    font-size: 12px;
+    line-height: 16px;
+  }
+  
+  .radioIcon {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .radioInput {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (min-width: 481px) {
+  .container {
+    gap: 8px;
+    padding: 0 16px;
+  }
+  
+  .radioItem {
+    gap: 12px;
+  }
+  
+  .label {
+    font-size: 16px;
+    line-height: 22px;
+  }
+  
+  .radioIcon {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .radioInput {
+    width: 28px;
+    height: 28px;
+  }
+}

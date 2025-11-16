@@ -1,0 +1,323 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 25px;
+  align-self: stretch;
+}
+
+.imagesList {
+  display: flex;
+  transform: rotate(-0.054deg);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 25px;
+  align-self: stretch;
+}
+
+.imageItem {
+  display: flex;
+  transform: rotate(0.054deg);
+  align-items: center;
+  gap: 10px;
+  align-self: stretch;
+  background: rgba(255, 255, 255, 0.00);
+}
+
+.imageWrapper {
+  display: flex;
+  width: 128px;
+  height: 128px;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.image {
+  width: 128px;
+  height: 128px;
+  transform: rotate(-0.054deg);
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.imageControls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex: 1 0 0;
+  align-self: stretch;
+}
+
+.deleteButton {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.deleteBtn {
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.deleteIcon {
+  width: 14px;
+  height: 14px;
+  fill: rgba(0, 0, 0, 0.43);
+}
+
+.deleteText {
+  color: rgba(0, 0, 0, 0.64);
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 140%;
+}
+
+.textareaField {
+  display: flex;
+  height: 75px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  align-self: stretch;
+}
+
+.textarea {
+  display: flex;
+  padding: 12px 16px;
+  align-items: flex-start;
+  flex: 1 0 0;
+  align-self: stretch;
+  border-radius: 8px;
+  border: 1px solid rgba(217, 217, 217, 1);
+  background: rgba(255, 255, 255, 1);
+  position: relative;
+}
+
+.textareaInput {
+  flex: 1 0 0;
+  color: rgba(179, 179, 179, 1);
+  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 140%;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+}
+
+.textareaInput::placeholder {
+  color: rgba(179, 179, 179, 1);
+}
+
+.textareaInput:focus {
+  color: #181D18;
+}
+
+.dragIcon {
+  width: 6.627px;
+  height: 6.627px;
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  stroke-width: 1px;
+  stroke: rgba(179, 179, 179, 1);
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.addButtonContent {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 16px;
+  border: 1px solid #C1C9BE;
+  width: 100%;
+}
+
+.addButtonStateLayer {
+  display: flex;
+  padding: 16px 24px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.addButtonLabel {
+  color: #424940;
+  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  letter-spacing: 0.15px;
+}
+
+/* Hover effects */
+.deleteBtn:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+  border-radius: 4px;
+}
+
+.deleteBtn:hover .deleteIcon {
+  fill: rgba(0, 0, 0, 0.6);
+}
+
+.deleteBtn:hover .deleteText {
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.addButton:hover .addButtonContent {
+  background-color: rgba(193, 201, 190, 0.08);
+}
+
+.addButton:focus .addButtonContent {
+  outline: 2px solid #376A3E;
+  outline-offset: 2px;
+}
+
+/* Mobile responsive */
+@media (max-width: 360px) {
+  .container {
+    gap: 20px;
+  }
+  
+  .imagesList {
+    gap: 20px;
+  }
+  
+  .imageItem {
+    gap: 8px;
+  }
+  
+  .imageWrapper {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .image {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .deleteText {
+    font-size: 14px;
+  }
+  
+  .textareaInput {
+    font-size: 14px;
+  }
+  
+  .addButtonLabel {
+    font-size: 14px;
+  }
+  
+  .addButtonStateLayer {
+    padding: 12px 20px;
+  }
+}
+
+@media (max-width: 320px) {
+  .container {
+    gap: 16px;
+  }
+  
+  .imagesList {
+    gap: 16px;
+  }
+  
+  .imageItem {
+    gap: 6px;
+  }
+  
+  .imageWrapper {
+    width: 90px;
+    height: 90px;
+  }
+  
+  .image {
+    width: 90px;
+    height: 90px;
+  }
+  
+  .deleteText {
+    font-size: 13px;
+  }
+  
+  .textareaInput {
+    font-size: 13px;
+  }
+  
+  .addButtonLabel {
+    font-size: 13px;
+  }
+  
+  .addButtonStateLayer {
+    padding: 10px 16px;
+  }
+  
+  .textareaField {
+    height: 65px;
+  }
+}
+
+@media (min-width: 481px) {
+  .container {
+    gap: 30px;
+  }
+  
+  .imagesList {
+    gap: 30px;
+  }
+  
+  .imageItem {
+    gap: 12px;
+  }
+  
+  .imageWrapper {
+    width: 144px;
+    height: 144px;
+  }
+  
+  .image {
+    width: 144px;
+    height: 144px;
+  }
+  
+  .deleteText {
+    font-size: 18px;
+  }
+  
+  .textareaInput {
+    font-size: 18px;
+  }
+  
+  .addButtonLabel {
+    font-size: 18px;
+  }
+  
+  .addButtonStateLayer {
+    padding: 20px 28px;
+  }
+  
+  .textareaField {
+    height: 85px;
+  }
+}

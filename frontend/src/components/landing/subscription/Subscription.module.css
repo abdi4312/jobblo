@@ -1,0 +1,56 @@
+.subscriptionContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 40px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.upperContainerBg {
+  background-image: url("src/assets/images/tools.png");
+  background-size: cover;
+  background-repeat: no-repeat;
+  border-radius: 10px;
+  background-position-y: -40px;
+}
+.upperContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 10px;
+  text-align: center;
+  padding: 20px 40px;
+  height: 140px;
+  backdrop-filter: brightness(0.3) blur(2px);
+}
+
+.upperContainer h3 {
+  margin: 0;
+  color: white;
+  font-weight: 500;
+}
+
+.lowerContainer {
+  display: flex;
+  gap: 10px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: solid var(--color-text-strong) 8px;
+  border-radius: 12px;
+  position: relative;
+  top: -40px;
+  height: 250px;
+  width: 200px;
+  background-color: #ffffff;
+}
+
+.lowerContainer h3 {
+  text-align: center;
+  margin: 0;
+}
+
+.lowerContainer ul {
+  padding-left: 40px;
+}

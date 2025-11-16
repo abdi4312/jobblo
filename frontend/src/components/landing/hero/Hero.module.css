@@ -1,0 +1,53 @@
+.heroBackground {
+  background-image: url("../../../assets/images/gardening.png");
+  background-size: cover;
+}
+
+.heroOverlay {
+  backdrop-filter: blur(2px) brightness(0.4);
+  width: 100%;
+}
+
+.heroContainer {
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 40px;
+  text-align: center;
+  gap: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.heroContainer * {
+  margin: 0;
+}
+
+.heroTitle {
+  font-weight: 700;
+}
+
+.heroSubTitle {
+  font-weight: 300;
+}
+
+.heroSubTitle span {
+  font-weight: 600;
+}
+
+.heroButtonContainer {
+  display: flex;
+  gap: 20px;
+}
+
+.searchActionContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
+}
+
+.antSearchBar {
+  /*opacity: 0.75;*/
+}

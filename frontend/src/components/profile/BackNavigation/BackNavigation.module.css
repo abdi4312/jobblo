@@ -1,0 +1,57 @@
+.container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 24px;
+  gap: 3px;
+  padding: 0;
+}
+
+.backButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.backButton:hover {
+  opacity: 0.7;
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.text {
+  color: var(--color-text);
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 120%;
+  margin-left: 3px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 360px) {
+  .container {
+    height: 22px;
+  }
+  
+  .text {
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 481px) {
+  .text {
+    font-size: 17px;
+  }
+}

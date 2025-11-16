@@ -1,0 +1,26 @@
+.container {
+  background-color: #fcf9eb;
+  max-width: 1300px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 60px;
+  padding: 0 20px;
+  position: relative;
+  z-index: 1;
+  margin: 0 auto;
+}
+
+.iconContainer {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.jobbloIcon {
+  cursor: pointer;
+}
+
+.buttonContainer {
+  display: flex;
+}

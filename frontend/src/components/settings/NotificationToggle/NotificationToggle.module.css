@@ -1,0 +1,104 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  position: relative;
+}
+
+.label {
+  color: var(--color-icon);
+  font-family: 'Inter', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: normal;
+  text-align: center;
+}
+
+.toggleButton {
+  width: 24px;
+  height: 24px;
+  aspect-ratio: 1/1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.toggleButton:hover {
+  transform: scale(1.05);
+}
+
+.toggleButton:active {
+  transform: scale(0.95);
+}
+
+.toggleButton:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
+.toggleButton svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Mobile first responsive adjustments */
+@media (max-width: 360px) {
+  .label {
+    font-size: 13px;
+  }
+  
+  .toggleButton {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .toggleButton svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+@media (min-width: 391px) and (max-width: 480px) {
+  .label {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 481px) {
+  .label {
+    font-size: 15px;
+  }
+  
+  .toggleButton {
+    width: 26px;
+    height: 26px;
+  }
+  
+  .toggleButton svg {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .toggleButton {
+    transition: none;
+  }
+  
+  .toggleButton:hover {
+    transform: none;
+  }
+  
+  .toggleButton:active {
+    transform: none;
+  }
+}

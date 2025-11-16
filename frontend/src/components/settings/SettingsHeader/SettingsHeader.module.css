@@ -1,0 +1,90 @@
+.container {
+  width: 100%;
+  height: 40px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.headerContent {
+  width: 100%;
+  height: 40px;
+  flex-shrink: 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.titleWrapper {
+  display: inline-flex;
+  height: 22px;
+  padding: 3px 2px;
+  justify-content: center;
+  align-items: center;
+  gap: 66px;
+  flex-shrink: 0;
+  background: var(--color-bg);
+  position: absolute;
+  left: 39px;
+  top: 0;
+  width: 310px;
+}
+
+.title {
+  color: var(--color-text);
+  font-family: 'Nunito Sans', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 120%;
+  margin: 0;
+  padding: 0;
+}
+
+.divider {
+  width: 100%;
+  height: 0;
+  flex-shrink: 0;
+  stroke-width: 1px;
+  stroke: var(--color-divider);
+  position: absolute;
+  left: 0;
+  top: 40px;
+}
+
+.divider svg {
+  width: 100%;
+  height: 2px;
+}
+
+/* Mobile first responsive adjustments */
+@media (max-width: 360px) {
+  .titleWrapper {
+    left: 30px;
+    width: 300px;
+  }
+  
+  .title {
+    font-size: 18px;
+  }
+}
+
+@media (min-width: 391px) and (max-width: 480px) {
+  .titleWrapper {
+    left: 45px;
+    width: 350px;
+  }
+  
+  .title {
+    font-size: 21px;
+  }
+}
+
+@media (min-width: 481px) {
+  .titleWrapper {
+    left: 50px;
+    width: 400px;
+  }
+  
+  .title {
+    font-size: 22px;
+  }
+}

@@ -1,0 +1,53 @@
+.infoContainer {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.infoTitle {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: end;
+  padding-bottom: 16px;
+}
+
+.infoTitle h2 {
+  font-size: 1.8em;
+  margin: 0;
+  font-weight: 700;
+}
+
+.infoJobbloIcon {
+  width: 150px;
+  height: 64px;
+}
+
+.infoTextContainer {
+  width: 60%;
+  padding: 0 20px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.textImageWrapper {
+  display: flex;
+}
+
+.womanGardening {
+  object-fit: scale-down;
+  width: 36%;
+}
+
+.infoText1,
+.infoText2 {
+  margin: 0;
+}
+
+.infoText1 {
+  color: var(--color-cta);
+  font-weight: 700;
+}
+
+.infoText2 {
+}

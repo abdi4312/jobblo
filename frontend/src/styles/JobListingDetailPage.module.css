@@ -1,0 +1,18 @@
+.container {
+  width: 100%;
+  max-width: 390px;
+  margin: 0 auto;
+  background-color: var(--color-bg);
+  min-height: 100vh;
+  position: relative;
+}
+
+.content {
+  padding: 0 13px 20px 13px;
+}
+
+@media (min-width: 391px) {
+  .container {
+    max-width: 440px;
+  }
+}
