@@ -1,0 +1,16 @@
+export { default as HomeIcon } from "./home.svg?react";
+export { default as JobbloIcon } from "./jobblo.svg?react";
+export { default as MessageIcon } from "./message.svg?react";
+export { default as MessageNotificationIcon } from "./messageNotification.svg?react";
+export { default as PlusIcon } from "./plus.svg?react";
+export { default as ProfileIcon } from "./profile.svg?react";
+export { default as VippsIcon } from "./vipps.svg?react";
+export { default as BellIcon } from "./bell.svg?react";
+export { default as BellNotificationIcon } from "./bellNotification.svg?react";
+export { default as CashIcon } from "./cash.svg?react";
+export { default as MyPostsIcon } from "./myPosts.svg?react";
+export { default as StarIcon } from "./star.svg?react";
+export { default as HelpIcon } from "./help.svg?react";
+export { default as SettingsIcon } from "./settings.svg?react";
+export { default as HeartIcon } from "./heart.svg?react";
+export { default as MapIcon } from "./map.svg?react";

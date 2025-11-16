@@ -1,0 +1,87 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 11px;
+}
+
+.profileImageContainer {
+  display: flex;
+  width: 70px;
+  height: 70px;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 163px;
+  border: 1px solid rgba(50, 50, 50, 0.61);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.profileImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  aspect-ratio: 1/1;
+}
+
+.changeImageButton {
+  display: flex;
+  padding: 4px;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.11);
+  background: rgba(255, 255, 255, 0.30);
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.changeImageButton:hover {
+  opacity: 0.8;
+}
+
+.changeImageButton:active {
+  transform: translateY(1px);
+}
+
+.changeImageText {
+  color: var(--color-icon);
+  font-family: 'Nunito Sans', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 120%;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 360px) {
+  .profileImageContainer {
+    width: 65px;
+    height: 65px;
+  }
+  
+  .changeImageText {
+    font-size: 15px;
+  }
+  
+  .changeImageButton {
+    padding: 3px;
+  }
+}
+
+@media (min-width: 481px) {
+  .profileImageContainer {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .changeImageText {
+    font-size: 17px;
+  }
+  
+  .changeImageButton {
+    padding: 6px;
+  }
+}

@@ -1,0 +1,166 @@
+.container {
+  display: flex;
+  align-items: flex-start;
+  align-content: flex-start;
+  gap: 4px;
+  align-self: stretch;
+  flex-wrap: wrap;
+}
+
+.chipWrapper {
+  display: flex;
+  align-items: flex-start;
+}
+
+.chip {
+  display: flex;
+  height: 32px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+  border: 1px solid #C1C9BE;
+  background: #D1E5CE;
+}
+
+.stateLayer {
+  display: flex;
+  padding: 6px 8px 6px 12px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.labelText {
+  color: #3A4B3A;
+  text-align: center;
+  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.1px;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.closeIcon {
+  width: 18px;
+  height: 18px;
+}
+
+/* Hover effects */
+.chip:hover {
+  background: #C5D9C2;
+  border-color: #A8BBA5;
+}
+
+.closeButton:hover {
+  background-color: rgba(58, 75, 58, 0.1);
+  border-radius: 50%;
+}
+
+.closeButton:focus {
+  outline: 2px solid #376A3E;
+  outline-offset: 1px;
+  border-radius: 50%;
+}
+
+/* Mobile responsive */
+@media (max-width: 360px) {
+  .container {
+    gap: 3px;
+  }
+  
+  .chip {
+    height: 28px;
+  }
+  
+  .stateLayer {
+    padding: 4px 6px 4px 8px;
+    gap: 6px;
+  }
+  
+  .labelText {
+    font-size: 12px;
+    line-height: 16px;
+  }
+  
+  .closeButton {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .closeIcon {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+@media (max-width: 320px) {
+  .container {
+    gap: 2px;
+  }
+  
+  .chip {
+    height: 26px;
+  }
+  
+  .stateLayer {
+    padding: 3px 5px 3px 7px;
+    gap: 5px;
+  }
+  
+  .labelText {
+    font-size: 11px;
+    line-height: 14px;
+  }
+  
+  .closeButton {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .closeIcon {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+@media (min-width: 481px) {
+  .container {
+    gap: 6px;
+  }
+  
+  .chip {
+    height: 36px;
+  }
+  
+  .stateLayer {
+    padding: 8px 10px 8px 14px;
+    gap: 10px;
+  }
+  
+  .labelText {
+    font-size: 16px;
+    line-height: 22px;
+  }
+  
+  .closeButton {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .closeIcon {
+    width: 20px;
+    height: 20px;
+  }
+}

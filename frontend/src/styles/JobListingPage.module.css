@@ -1,0 +1,594 @@
+/* theme variables migrated into index.css */
+
+/* Mobile-first design for job listing page */
+.container {
+  /* mobile-first fluid container */
+  width: 100%;
+  max-width: min(440px, 100%);
+  margin: 0 auto;
+  background-color: var(--color-bg);
+  min-height: 100vh;
+  font-family: 'Nunito', 'Nunito Sans', -apple-system, Roboto, Helvetica, sans-serif;
+  box-sizing: border-box;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+/* Status Bar */
+.statusBar {
+  width: 100%;
+  height: 47px;
+  background-color: var(--color-bg);
+}
+
+/* Header */
+.header {
+  display: flex;
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--color-bg);
+}
+
+.logo {
+  width: 77px;
+  height: 28px;
+}
+
+.navigation {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.navItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.navItem:hover {
+  opacity: 0.8;
+}
+
+.navItem span {
+  color: var(--color-text);
+  font-family: 'Nunito Sans';
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.navIcon {
+  width: 11px;
+  height: 11px;
+  fill: var(--color-icon);
+}
+
+/* Search Section */
+.searchSection {
+  padding: 20px 12px 16px;
+}
+
+.searchContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 23px;
+  width: 100%;
+  height: 38px;
+  margin-bottom: 20px;
+}
+
+.mapSection {
+  display: flex;
+  width: 24px;
+  height: 38px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.mapIcon {
+  width: 24px;
+  height: 24px;
+  fill: var(--color-text);
+}
+
+.mapText {
+  color: var(--color-text);
+  font-family: 'Nunito Sans';
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+.searchInputContainer {
+  position: relative;
+  width: min(299px, 100%);
+  height: 37px;
+  max-width: 100%;
+}
+
+.searchInput {
+  width: 100%;
+  height: 100%;
+  border-radius: 9px;
+  border: 1px solid var(--color-text);
+  background: var(--color-white);
+  padding: 0 40px 0 19px;
+  color: rgba(0, 0, 0, 0.35);
+  font-family: 'Nunito Sans';
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.2;
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.searchIcon {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  fill: var(--color-text);
+}
+
+.actionButtons {
+  display: flex;
+  width: min(194px, 100%);
+  height: 35px;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 0 auto;
+}
+
+.createJobButton {
+  display: flex;
+  min-width: 90px;
+  max-width: 55%;
+  height: 35px;
+  padding: 0 13px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 5px;
+  background: var(--color-primary);
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  color: var(--color-white);
+  font-family: 'Nunito';
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.createJobButton:hover {
+  background: var(--color-primary-700);
+}
+
+.swipeButton {
+  display: flex;
+  min-width: 64px;
+  max-width: 45%;
+  height: 35px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 5px;
+  background: var(--color-accent);
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.swipeButton:hover {
+  background: var(--color-accent-700);
+}
+
+.swipeText {
+  color: var(--color-white);
+  font-family: 'Nunito Sans';
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 8px;
+}
+
+.swipeImage {
+  width: 27px;
+  height: 14px;
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Categories Section */
+.categoriesSection {
+  padding: 0 20px 24px;
+}
+
+.sectionTitle {
+  color: var(--color-text);
+  font-family: 'Nunito';
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0 0 16px 0;
+}
+
+.categoriesGrid {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 6px;
+}
+
+.categoriesGrid::-webkit-scrollbar {
+  display: none;
+}
+
+.categoryCard {
+  display: flex;
+  width: 76px;
+  height: 79px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 6px;
+  background: var(--color-accent);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.categoryCard:hover {
+  background: var(--color-accent-700);
+}
+
+.categoryIcon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.categoryName {
+  color: var(--color-white);
+  font-family: 'Nunito';
+  font-size: 14px;
+  font-weight: 400;
+  line-height: normal;
+  text-align: center;
+}
+
+/* Tab Navigation */
+.tabContainer {
+  padding: 0 21px;
+  margin-bottom: 24px;
+}
+
+.tabNavigation {
+  width: min(350px, 100%);
+  height: 43px;
+  border-radius: 12px;
+  border: 0.5px solid rgba(0, 0, 0, 0.20);
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.tab {
+  flex: 1;
+  height: 33px;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-family: 'Nunito';
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tabActive {
+  background: var(--color-primary);
+  color: var(--color-white);
+  border-radius: 10px;
+  margin: 5px;
+}
+
+/* Jobs Section */
+.jobsSection {
+  padding: 0 20px 40px;
+}
+
+.jobsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.filterButton {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text);
+  font-family: 'Nunito';
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.filterIcon {
+  width: 21px;
+  height: 21px;
+  fill: var(--color-text-strong);
+}
+
+.jobsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.jobCard {
+  width: 100%;
+  max-width: 320px;
+  min-height: 220px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: -4px 2px 10.1px 0 rgba(59, 56, 56, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.jobCard:hover,
+.jobCard:focus {
+  transform: translateY(-4px);
+  box-shadow: -6px 6px 18px 0 rgba(59, 56, 56, 0.35);
+  cursor: pointer;
+}
+
+.newBadge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 51px;
+  height: 18px;
+  border-radius: 8px;
+  background: var(--color-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.newBadge span {
+  color: var(--color-text);
+  font-family: 'Nunito';
+  font-size: 9px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.jobImageContainer {
+  position: relative;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16/9;
+}
+
+.jobImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px 10px 0 0;
+}
+
+.favoriteButton {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--color-white);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.favoriteButton:hover {
+  background: var(--color-light-gray);
+}
+
+.heartIcon {
+  width: 23px;
+  height: 23px;
+  fill: var(--color-warning);
+}
+
+.ratingContainer {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 13px;
+  align-items: center;
+}
+
+.ratingDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-light-gray);
+}
+
+.ratingDotActive {
+  background: var(--color-accent);
+}
+
+.jobContent {
+  padding: 9px 8px 24px;
+}
+
+.jobTitle {
+  color: var(--color-text);
+  font-family: 'Nunito';
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0 0 8px 0;
+}
+
+.jobTags {
+  display: flex;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.jobTag {
+  height: 20px;
+  border-radius: 8px;
+  padding: 4px 10px;
+  color: var(--color-white);
+  font-family: 'Nunito';
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+}
+
+.jobTagPrimary {
+  background: var(--color-accent);
+}
+
+.jobTagSecondary {
+  background: var(--color-blue);
+}
+
+.jobDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.jobDetail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.detailIcon {
+  width: 19px;
+  height: 19px;
+  fill: var(--color-muted-gray);
+  flex-shrink: 0;
+}
+
+.jobDetail span {
+  color: var(--color-text);
+  font-family: 'Nunito';
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.jobPrice {
+  display: inline-flex;
+  min-width: 72px;
+  height: 24px;
+  border-radius: 5px;
+  background: rgba(45, 79, 43, 0.14);
+  align-items: center;
+  justify-content: center;
+  color: var(--color-price);
+  font-family: 'Nunito';
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-left: 8px;
+}
+
+/* Responsive design */
+@media (max-width: 390px) {
+  .container {
+    max-width: 100%;
+  }
+  
+  .jobsGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .jobCard {
+    width: 100%;
+    max-width: 173px;
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 391px) {
+  .jobsGrid {
+    justify-items: center;
+  }
+}
+
+/* Focus states for accessibility */
+.searchInput:focus,
+.createJobButton:focus,
+.swipeButton:focus,
+.categoryCard:focus,
+.tab:focus,
+.filterButton:focus,
+.favoriteButton:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Active states */
+.createJobButton:active {
+  transform: translateY(1px);
+}
+
+.swipeButton:active {
+  transform: translateY(1px);
+}
+
+.categoryCard:active {
+  transform: scale(0.98);
+}
+
+.favoriteButton:active {
+  transform: scale(0.95);
+}

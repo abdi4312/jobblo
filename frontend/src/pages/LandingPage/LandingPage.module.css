@@ -1,0 +1,11 @@
+.orangeBar {
+  height: 36px;
+  background-color: var(--color-primary);
+  border-radius: 0 0 8px 8px;
+}
+
+.landingPageContent {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}

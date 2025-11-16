@@ -1,0 +1,44 @@
+.container {
+  display: flex;
+  width: 390px;
+  max-width: 100vw;
+  padding: 14px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  background: transparent;
+  box-sizing: border-box;
+}
+
+/* Mobile first responsive adjustments */
+@media (max-width: 360px) {
+  .container {
+    width: 100%;
+    padding: 12px;
+    gap: 6px;
+  }
+}
+
+@media (min-width: 361px) and (max-width: 390px) {
+  .container {
+    width: 100%;
+    padding: 14px;
+  }
+}
+
+@media (min-width: 391px) and (max-width: 480px) {
+  .container {
+    width: 100%;
+    max-width: 480px;
+    padding: 16px;
+  }
+}
+
+@media (min-width: 481px) {
+  .container {
+    width: 100%;
+    max-width: 600px;
+    padding: 18px;
+    gap: 10px;
+  }
+}

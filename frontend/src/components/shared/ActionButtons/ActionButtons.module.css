@@ -1,0 +1,242 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.topButtonsRow {
+  display: flex;
+  padding: 0 8px;
+  justify-content: space-between;
+  align-items: center;
+  align-self: stretch;
+}
+
+.bottomButtonRow {
+  display: flex;
+  padding: 0 8px;
+  justify-content: space-between;
+  align-items: center;
+  align-self: stretch;
+}
+
+/* Preview Button */
+.previewButton {
+  display: flex;
+  align-items: flex-start;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.previewButtonContent {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 16px;
+  border: 1px solid #C1C9BE;
+}
+
+.previewButtonStateLayer {
+  display: flex;
+  padding: 16px 24px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.previewButtonLabel {
+  color: #424940;
+  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  letter-spacing: 0.15px;
+}
+
+/* Publish Button */
+.publishButton {
+  display: flex;
+  align-items: flex-start;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.publishButtonContent {
+  display: flex;
+  padding: 0 17px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 16px;
+  background: #376A3E;
+}
+
+.publishButtonStateLayer {
+  display: flex;
+  padding: 16px 24px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.publishButtonLabel {
+  color: #FFF;
+  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  letter-spacing: 0.15px;
+}
+
+/* Delete Button */
+.deleteButton {
+  display: flex;
+  align-items: flex-start;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 100%;
+}
+
+.deleteButtonContent {
+  display: flex;
+  padding: 0 83px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 16px;
+  background: #AC0000;
+  width: 100%;
+}
+
+.deleteButtonStateLayer {
+  display: flex;
+  padding: 16px 24px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.deleteButtonLabel {
+  color: #FFF;
+  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  letter-spacing: 0.15px;
+}
+
+/* Hover Effects */
+.previewButton:hover .previewButtonContent {
+  background-color: rgba(193, 201, 190, 0.08);
+  border-color: #A8BBA5;
+}
+
+.publishButton:hover .publishButtonContent {
+  background: #2E5633;
+}
+
+.deleteButton:hover .deleteButtonContent {
+  background: #8B0000;
+}
+
+.previewButton:focus .previewButtonContent,
+.publishButton:focus .publishButtonContent,
+.deleteButton:focus .deleteButtonContent {
+  outline: 2px solid #376A3E;
+  outline-offset: 2px;
+}
+
+.deleteButton:focus .deleteButtonContent {
+  outline-color: #AC0000;
+}
+
+/* Mobile responsive */
+@media (max-width: 360px) {
+  .container {
+    gap: 12px;
+  }
+  
+  .topButtonsRow,
+  .bottomButtonRow {
+    padding: 0 4px;
+  }
+  
+  .previewButtonStateLayer,
+  .publishButtonStateLayer,
+  .deleteButtonStateLayer {
+    padding: 12px 18px;
+  }
+  
+  .previewButtonLabel,
+  .publishButtonLabel,
+  .deleteButtonLabel {
+    font-size: 14px;
+    line-height: 20px;
+  }
+  
+  .deleteButtonContent {
+    padding: 0 60px;
+  }
+}
+
+@media (max-width: 320px) {
+  .container {
+    gap: 10px;
+  }
+  
+  .topButtonsRow,
+  .bottomButtonRow {
+    padding: 0 2px;
+  }
+  
+  .previewButtonStateLayer,
+  .publishButtonStateLayer,
+  .deleteButtonStateLayer {
+    padding: 10px 16px;
+  }
+  
+  .previewButtonLabel,
+  .publishButtonLabel,
+  .deleteButtonLabel {
+    font-size: 13px;
+    line-height: 18px;
+  }
+  
+  .deleteButtonContent {
+    padding: 0 40px;
+  }
+}
+
+@media (min-width: 481px) {
+  .container {
+    gap: 20px;
+  }
+  
+  .topButtonsRow,
+  .bottomButtonRow {
+    padding: 0 12px;
+  }
+  
+  .previewButtonStateLayer,
+  .publishButtonStateLayer,
+  .deleteButtonStateLayer {
+    padding: 20px 28px;
+  }
+  
+  .previewButtonLabel,
+  .publishButtonLabel,
+  .deleteButtonLabel {
+    font-size: 18px;
+    line-height: 26px;
+  }
+  
+  .deleteButtonContent {
+    padding: 0 100px;
+  }
+}

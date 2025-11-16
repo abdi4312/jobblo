@@ -1,0 +1,14 @@
+.guideContainer {
+  color: white;
+  padding: 6px 20px 20px 20px;
+  background-color: var(--color-accent);
+}
+
+.guideContainer h2 {
+  font-weight: 500;
+}
+
+.guideStepContainer {
+  display: flex;
+  gap: 20px;
+}

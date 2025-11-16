@@ -1,0 +1,8 @@
+.buttonContainer {
+  background-color: #ff5b24;
+  padding: 6px;
+  display: flex;
+  border-radius: 6px;
+  gap: 4px;
+  color: white;
+}

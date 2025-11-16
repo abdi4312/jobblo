@@ -1,0 +1,160 @@
+.container {
+  display: flex;
+  height: 56px;
+  flex-direction: column;
+  align-items: flex-start;
+  align-self: stretch;
+  border-radius: 4px 4px 0 0;
+  position: relative;
+}
+
+.container.multiline {
+  height: auto;
+  min-height: 80px;
+}
+
+.inputWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1 0 0;
+  align-self: stretch;
+  border-radius: 4px;
+  border: 1px solid #717970;
+  position: relative;
+}
+
+.stateLayer {
+  display: flex;
+  padding: 4px 0 4px 16px;
+  align-items: flex-start;
+  gap: 4px;
+  flex: 1 0 0;
+  align-self: stretch;
+  border-radius: 4px 4px 0 0;
+  position: relative;
+}
+
+.content {
+  display: flex;
+  height: 48px;
+  padding: 4px 0;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  flex: 1 0 0;
+  position: relative;
+}
+
+.multiline .content {
+  height: auto;
+  min-height: 72px;
+}
+
+.inputContainer {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  position: relative;
+}
+
+.input {
+  flex: 1 0 0;
+  color: #181D18;
+  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  letter-spacing: 0.5px;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  resize: none;
+}
+
+.input::placeholder {
+  color: #B3B3B3;
+}
+
+.labelContainer {
+  display: flex;
+  padding: 0 4px;
+  align-items: center;
+  position: absolute;
+  left: -4px;
+  top: -12px;
+  background: #FFF;
+  z-index: 1;
+}
+
+.labelText span {
+  color: #424940;
+  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  letter-spacing: 0.4px;
+}
+
+/* Focus state */
+.inputWrapper:focus-within {
+  border: 3px solid #376A3E;
+}
+
+.inputWrapper:focus-within .labelText span {
+  color: #376A3E;
+}
+
+/* Multiline specific styles */
+.multiline .labelContainer {
+  background: #FCF9EB;
+}
+
+/* Mobile responsive */
+@media (max-width: 360px) {
+  .input {
+    font-size: 15px;
+  }
+  
+  .labelText span {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 320px) {
+  .input {
+    font-size: 14px;
+  }
+  
+  .labelText span {
+    font-size: 10px;
+  }
+}
+
+@media (min-width: 481px) {
+  .container {
+    height: 64px;
+  }
+  
+  .multiline {
+    min-height: 96px;
+  }
+  
+  .content {
+    height: 56px;
+  }
+  
+  .multiline .content {
+    min-height: 88px;
+  }
+  
+  .input {
+    font-size: 18px;
+  }
+  
+  .labelText span {
+    font-size: 14px;
+  }
+}

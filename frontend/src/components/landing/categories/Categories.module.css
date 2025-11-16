@@ -1,0 +1,18 @@
+.categoriesContainer {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.categoriesContainer h2 {
+  padding: 6px 20px;
+
+  margin: 0;
+}
+
+.categoryContainer {
+  display: flex;
+  overflow-x: auto;
+  gap: 6px;
+  padding: 20px 20px;
+  scrollbar-width: none;
+}

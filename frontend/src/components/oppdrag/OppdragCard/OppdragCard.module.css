@@ -1,0 +1,201 @@
+.container {
+  width: 173px;
+  height: 316px;
+  box-shadow: -4px 2px 10.1px 0 rgba(59, 56, 56, 0.25);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  background-color: var(--color-white);
+}
+
+.imageContainer {
+  width: 173px;
+  height: 115px;
+  position: relative;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px 10px 0 0;
+}
+
+.imageIndicators {
+  position: absolute;
+  bottom: 10px;
+  left: 56px;
+  display: flex;
+  gap: 13px;
+}
+
+.indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--color-light-gray);
+}
+
+.activeIndicator {
+  background-color: var(--color-accent);
+}
+
+.content {
+  width: 173px;
+  height: 220px;
+  background-color: var(--color-surface);
+  border-radius: 0 0 10px 10px;
+  padding: 9px 8px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.title {
+  color: var(--color-text);
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 120%;
+  margin: 0 0 10px 0;
+  width: 147px;
+}
+
+.tags {
+  display: flex;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.categoryTag {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background-color: var(--color-accent);
+  color: var(--color-white);
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 120%;
+}
+
+.equipmentTag {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background-color: #31D2FF;
+  color: var(--color-white);
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 120%;
+}
+
+.details {
+  margin-bottom: 15px;
+}
+
+.detailItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.detailIcon {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+}
+
+.detailText {
+  color: #212121;
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 120%;
+}
+
+.priceTag {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  width: 126px;
+  height: 24px;
+  background-color: rgba(45, 79, 43, 0.14);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.priceText {
+  color: var(--color-price);
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 120%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 360px) {
+  .container {
+    width: 160px;
+    height: 290px;
+  }
+  
+  .imageContainer {
+    width: 160px;
+    height: 100px;
+  }
+  
+  .content {
+    width: 160px;
+    height: 190px;
+  }
+  
+  .title {
+    font-size: 18px;
+    width: 135px;
+  }
+  
+  .priceTag {
+    width: 115px;
+    height: 22px;
+    left: 20px;
+    bottom: 20px;
+  }
+  
+  .priceText {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 481px) {
+  .container {
+    width: 180px;
+    height: 330px;
+  }
+  
+  .imageContainer {
+    width: 180px;
+    height: 120px;
+  }
+  
+  .content {
+    width: 180px;
+    height: 230px;
+  }
+  
+  .title {
+    width: 155px;
+  }
+  
+  .priceTag {
+    width: 130px;
+    height: 26px;
+    left: 25px;
+    bottom: 25px;
+  }
+  
+  .priceText {
+    font-size: 17px;
+  }
+}

@@ -1,0 +1,128 @@
+.container {
+  width: 100%;
+  position: relative;
+  height: 234px;
+}
+
+.imageContainer {
+  width: 100%;
+  height: 234px;
+  position: relative;
+}
+
+.mainImage {
+  width: 391px;
+  height: 234px;
+  border-radius: 0 0 10px 10px;
+  object-fit: cover;
+  position: absolute;
+  left: -1px;
+  top: 0;
+}
+
+.actionButtons {
+  position: absolute;
+  left: 13px;
+  top: 250px;
+  display: flex;
+  gap: 12px;
+}
+
+.actionButton {
+  width: 25px;
+  height: 25px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.registerButton {
+  position: absolute;
+  right: 13px;
+  top: 243px;
+  width: 107px;
+  height: 34px;
+  background-color: var(--color-campaign);
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.registerText {
+  color: var(--color-white);
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 120%;
+}
+
+.navigationDots {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.dotContainer {
+  width: 64px;
+  height: 16px;
+  background-color: rgba(251, 236, 213, 0.7);
+  border-radius: 50px;
+  border: 0.2px solid var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px 8px;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--color-fbe);
+}
+
+.activeDot {
+  background-color: var(--color-accent);
+}
+
+.carouselNavigation {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 14px;
+  pointer-events: none;
+}
+
+.navButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  pointer-events: all;
+  padding: 0;
+}
+
+.navCircle {
+  width: 30px;
+  height: 30px;
+  background-color: var(--color-fbe);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navCircle svg {
+  width: 16px;
+  height: 16px;
+}

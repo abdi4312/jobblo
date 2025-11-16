@@ -1,0 +1,159 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 390px;
+  max-width: 100vw;
+  min-height: 844px;
+  background: var(--color-bg);
+  padding: 23px 0;
+  gap: 24px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.navigation {
+  width: 100%;
+  padding: 0 23px;
+}
+
+.header {
+  width: 100%;
+  height: 40px;
+  position: relative;
+}
+
+.headerContent {
+  display: flex;
+  height: 22px;
+  padding: 3px 2px;
+  justify-content: center;
+  align-items: center;
+  gap: 66px;
+  background: var(--color-bg);
+  position: absolute;
+  left: 39px;
+  top: 0;
+  width: calc(100% - 78px);
+}
+
+.title {
+  color: var(--color-text);
+  font-family: 'Nunito Sans', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 120%;
+  margin: 0;
+  text-align: center;
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background-color: var(--color-divider);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  width: 100%;
+  padding: 7px 0;
+}
+
+.fieldsSection {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  width: 100%;
+  padding: 3px 25px;
+}
+
+/* Mobile first - small phones */
+@media (max-width: 360px) {
+  .container {
+    width: 100%;
+    padding: 20px 0;
+    gap: 20px;
+  }
+  
+  .navigation {
+    padding: 0 16px;
+  }
+  
+  .title {
+    font-size: 18px;
+  }
+  
+  .headerContent {
+    left: 32px;
+    width: calc(100% - 64px);
+  }
+  
+  .content {
+    gap: 32px;
+  }
+  
+  .fieldsSection {
+    padding: 3px 16px;
+  }
+}
+
+/* Medium phones */
+@media (min-width: 361px) and (max-width: 390px) {
+  .container {
+    width: 100%;
+  }
+  
+  .navigation {
+    padding: 0 20px;
+  }
+  
+  .fieldsSection {
+    padding: 3px 20px;
+  }
+}
+
+/* Large phones */
+@media (min-width: 391px) and (max-width: 480px) {
+  .container {
+    width: 100%;
+    max-width: 480px;
+    gap: 26px;
+  }
+  
+  .title {
+    font-size: 21px;
+  }
+  
+  .content {
+    gap: 44px;
+  }
+}
+
+/* Tablet and larger */
+@media (min-width: 481px) {
+  .container {
+    width: 100%;
+    max-width: 600px;
+    padding: 30px 0;
+    gap: 30px;
+  }
+  
+  .title {
+    font-size: 22px;
+  }
+  
+  .content {
+    gap: 50px;
+  }
+  
+  .fieldsSection {
+    padding: 3px 40px;
+  }
+}

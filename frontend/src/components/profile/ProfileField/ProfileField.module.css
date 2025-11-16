@@ -1,0 +1,97 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  padding: 3px 4px;
+}
+
+.content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.fieldInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+}
+
+.label {
+  color: var(--color-text);
+  font-family: 'Nunito Sans', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 120%;
+}
+
+.value {
+  color: var(--color-text);
+  font-family: 'Nunito Sans', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 120%;
+}
+
+.editButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.editButton:hover {
+  opacity: 0.7;
+}
+
+.editIcon {
+  width: 24px;
+  height: 24px;
+}
+
+.divider {
+  height: 1px;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.36);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 360px) {
+  .label,
+  .value {
+    font-size: 15px;
+  }
+  
+  .editButton {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .editIcon {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+@media (min-width: 481px) {
+  .label,
+  .value {
+    font-size: 17px;
+  }
+  
+  .container {
+    padding: 4px 6px;
+  }
+}

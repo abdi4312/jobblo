@@ -1,0 +1,28 @@
+.guideStepContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 164px;
+}
+
+.stepImage {
+  background-color: var(--color-bg);
+  width: 128px;
+  height: 128px;
+  border-radius: 999px;
+}
+
+.stepText {
+  display: flex;
+  flex-direction: column;
+}
+
+.stepTextTitle,
+.stepTextSubtitle {
+  margin: 0;
+}
+
+.stepTextTitle {
+  font-weight: 700;
+  color: var(--color-cta);
+}

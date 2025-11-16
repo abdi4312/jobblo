@@ -1,0 +1,154 @@
+.container {
+  width: 173px;
+  height: 316px;
+  box-shadow: -4px 2px 10.1px 0 rgba(59, 56, 56, 0.25);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.imageContainer {
+  width: 173px;
+  height: 115px;
+  position: relative;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px 10px 0 0;
+}
+
+.heartButton {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  background-color: var(--color-white);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.heartIcon {
+  width: 23px;
+  height: 23px;
+}
+
+.content {
+  width: 173px;
+  height: 220px;
+  background-color: var(--color-surface);
+  border-radius: 0 0 10px 10px;
+  padding: 9px 8px;
+  position: relative;
+}
+
+.title {
+  color: var(--color-text);
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 120%;
+  margin: 0 0 10px 0;
+  width: 147px;
+}
+
+.tags {
+  display: flex;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.categoryTag {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background-color: var(--color-accent);
+  color: var(--color-white);
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 120%;
+}
+
+.equipmentTag {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background-color: var(--color-blue);
+  color: var(--color-white);
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 120%;
+}
+
+.details {
+  margin-bottom: 10px;
+}
+
+.detailItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.detailIcon {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+}
+
+.detailText {
+  color: var(--color-text);
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 120%;
+}
+
+.priceTag {
+  position: absolute;
+  bottom: 34px;
+  left: 16px;
+  width: 126px;
+  height: 24px;
+  background-color: rgba(45, 79, 43, 0.14);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.priceText {
+  color: var(--color-price);
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 120%;
+}
+
+.dots {
+  position: absolute;
+  bottom: 10px;
+  left: 56px;
+  display: flex;
+  gap: 13px;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--color-light-gray);
+}
+
+.activeDot {
+  background-color: var(--color-accent);
+}

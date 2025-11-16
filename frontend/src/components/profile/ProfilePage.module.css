@@ -1,0 +1,12 @@
+.container {
+  background: var(--color-bg);
+  display: flex;
+
+  max-width: 100vw;
+  min-height: 100vh;
+  flex-direction: column;
+  align-items: center;
+  gap: 21px;
+  padding: 0 18px;
+  margin: 0 auto;
+}

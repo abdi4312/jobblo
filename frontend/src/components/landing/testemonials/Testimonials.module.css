@@ -1,0 +1,26 @@
+.testimonialsContainer {
+  padding: 20px 20px 20px 20px;
+  background-color: var(--color-fbe);
+}
+
+.title {
+  font-weight: 300;
+}
+
+.text {
+  font-weight: 600;
+}
+
+.testimonialItemLeft,
+.testimonialItemRight {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+}
+
+.testimonialItemLeft img,
+.testimonialItemRight img {
+  height: auto;
+  width: 170px;
+  object-fit: contain;
+}
