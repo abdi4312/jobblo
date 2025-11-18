@@ -78,7 +78,7 @@ export default function AnmeldelserPage() {
   const currentReviews = activeTab === "received" ? receivedReviews : givenReviews;
 
   return (
-    <div style={{ minHeight: "70vh" }}>
+    <div style={{ minHeight: "70vh", maxWidth: "800px", margin: "0 auto" }}>
       {/* Header */}
       <button
         onClick={() => navigate(-1)}
