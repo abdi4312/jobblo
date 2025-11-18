@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const Job = require('../models/Job');
+const Service = require('../models/Service');
 
 // Create a new user
 exports.createUser = async (req, res) => {
@@ -80,10 +80,10 @@ exports.deleteUser = async (req, res) => {
     }
 };
 
-exports.getUserJobs = async (req, res) => {
+exports.getUserServices = async (req, res) => {
     try {
-        const jobs = await Job.find({ userId: req.params.id });
-        res.json(jobs);
+        const services = await Service.find({ userId: req.params.id });
+        res.json(services);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -96,5 +96,40 @@ exports.getAllUsers = async (req, res) => {
         res.json(users);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
+    }
+};
+
+// Follow/Unfollow a user
+exports.followUser = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const targetUserId = req.params.id;
+        
+        if (!userId || userId === targetUserId) {
+            return res.status(400).json({ error: 'Invalid request' });
+        }
+        
+        const [user, targetUser] = await Promise.all([
+            User.findById(userId),
+            User.findById(targetUserId)
+        ]);
+        
+        if (!user || !targetUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        const isFollowing = user.following.includes(targetUserId);
+        
+        if (isFollowing) {
+            await User.findByIdAndUpdate(userId, { $pull: { following: targetUserId } });
+            await User.findByIdAndUpdate(targetUserId, { $pull: { followers: userId } });
+            res.json({ message: 'Unfollowed', isFollowing: false });
+        } else {
+            await User.findByIdAndUpdate(userId, { $addToSet: { following: targetUserId } });
+            await User.findByIdAndUpdate(targetUserId, { $addToSet: { followers: userId } });
+            res.json({ message: 'Followed', isFollowing: true });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 };

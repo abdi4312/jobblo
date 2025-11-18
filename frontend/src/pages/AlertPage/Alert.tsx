@@ -23,7 +23,7 @@ export default function Alert() {
 
   // Get user ID from Zustand store
   const user = useUserStore((state) => state.user);
-  const userId = user?._id;
+  const userId = user?.id;
   
   const tabs = [
     { id: 'nyheter', label: 'Nyheter' },

@@ -5,7 +5,8 @@ const mongoose = require('mongoose');
 const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, unique: true, required: true, lowercase: true, trim: true, index: true },
-    phone: { type: String, unique: true, sparse: true },
+    password: { type: String, required: true },
+    phone: { type: String, unique: true, sparse: true, default: null },
     avatarUrl: { type: String },
     bio: { type: String },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
@@ -22,5 +23,8 @@ const userSchema = new mongoose.Schema({
         providerId: { type: String }
     }]
 }, { timestamps: true });
+
+// Add index to prevent duplicate OAuth providers
+userSchema.index({ 'oauthProviders.provider': 1, 'oauthProviders.providerId': 1 });
 
 module.exports = mongoose.model('User', userSchema);

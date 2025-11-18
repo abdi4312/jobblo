@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const messageController = require('../controllers/messageController');
+const { authenticate } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -9,23 +10,49 @@ const messageController = require('../controllers/messageController');
  *     Message:
  *       type: object
  *       required:
- *         - sender
- *         - receiver
- *         - content
+ *         - orderId
  *       properties:
- *         sender:
+ *         _id:
  *           type: string
- *           description: ID til avsenderen
- *         receiver:
+ *           description: Meldingens ID
+ *         orderId:
  *           type: string
- *           description: ID til mottakeren
- *         content:
+ *           description: ID til ordren meldingen tilhører
+ *         senderId:
+ *           type: string
+ *           description: ID til avsenderen (settes automatisk fra JWT token)
+ *         message:
  *           type: string
  *           description: Meldingens innhold
- *         read:
- *           type: boolean
- *           description: Om meldingen er lest
+ *         images:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Bilde-URLer
+ *         type:
+ *           type: string
+ *           enum: [text, image, system]
+ *           description: Type melding
+ *         readBy:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Liste over brukere som har lest meldingen
+ *         deletedFor:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Liste over brukere som har slettet meldingen
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: Når meldingen ble opprettet
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           description: Når meldingen sist ble oppdatert
  */
+
 
 /**
  * @swagger
@@ -33,19 +60,21 @@ const messageController = require('../controllers/messageController');
  *   get:
  *     summary: Hent alle meldinger for innlogget bruker
  *     tags: [Meldinger]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Liste over meldinger
+ *         description: Liste over brukerens meldinger
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Message'
+ *       401:
+ *         description: Mangler eller ugyldig autentisering
  */
-router.get('/', (req, res) => {
-    res.json([]);
-});
+router.get('/', authenticate, messageController.getAllMessages);
 
 /**
  * @swagger
@@ -53,6 +82,8 @@ router.get('/', (req, res) => {
  *   get:
  *     summary: Hent en spesifikk melding
  *     tags: [Meldinger]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -67,12 +98,14 @@ router.get('/', (req, res) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Message'
+ *       401:
+ *         description: Mangler eller ugyldig autentisering
+ *       403:
+ *         description: Ikke autorisert til å se denne meldingen
  *       404:
  *         description: Meldingen ble ikke funnet
  */
-router.get('/:id', (req, res) => {
-    res.status(404).json({ message: 'Melding ikke funnet' });
-});
+router.get('/:id', authenticate, messageController.getMessageById);
 
 /**
  * @swagger
@@ -80,12 +113,32 @@ router.get('/:id', (req, res) => {
  *   post:
  *     summary: Send en ny melding
  *     tags: [Meldinger]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Message'
+ *             type: object
+ *             required:
+ *               - orderId
+ *             properties:
+ *               orderId:
+ *                 type: string
+ *                 description: ID til ordren meldingen tilhører
+ *               message:
+ *                 type: string
+ *                 description: Meldingens innhold
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Bilde-URLer
+ *               type:
+ *                 type: string
+ *                 enum: [text, image, system]
+ *                 description: Type melding
  *     responses:
  *       201:
  *         description: Melding sendt
@@ -93,10 +146,16 @@ router.get('/:id', (req, res) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Message'
+ *       400:
+ *         description: Ugyldig input
+ *       401:
+ *         description: Mangler eller ugyldig autentisering
+ *       403:
+ *         description: Ikke autorisert til å sende melding i denne ordren
+ *       404:
+ *         description: Ordre eller bruker ikke funnet
  */
-router.post('/', (req, res) => {
-    res.status(201).json({ message: 'Melding sendt' });
-});
+router.post('/', authenticate, messageController.createMessage);
 
 /**
  * @swagger
@@ -104,6 +163,8 @@ router.post('/', (req, res) => {
  *   delete:
  *     summary: Slett en melding
  *     tags: [Meldinger]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -114,11 +175,13 @@ router.post('/', (req, res) => {
  *     responses:
  *       204:
  *         description: Melding slettet
+ *       401:
+ *         description: Mangler eller ugyldig autentisering
+ *       403:
+ *         description: Ikke autorisert til å slette denne meldingen
  *       404:
  *         description: Meldingen ble ikke funnet
  */
-router.delete('/:id', (req, res) => {
-    res.status(204).end();
-});
+router.delete('/:id', authenticate, messageController.deleteMessage);
 
 module.exports = router; 
