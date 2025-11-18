@@ -36,7 +36,7 @@ export function ProfileMenuSection() {
       <ProfileMenuItem
         icon={<Icons.StarIcon />}
         text="Anmeldelser"
-        onClick={() => handleMenuItemClick("Anmeldelser")}
+        onClick={() => navigate("/Anmeldelser")}
       />
       <ProfileMenuItem
         icon={<Icons.HelpIcon />}
@@ -47,7 +47,7 @@ export function ProfileMenuSection() {
         icon={<Icons.SettingsIcon />}
         text="Innstillinger"
         showDivider={false}
-        onClick={() => handleMenuItemClick("Innstillinger")}
+        onClick={() => navigate("/Innstillinger")}
       />
     </div>
   );
