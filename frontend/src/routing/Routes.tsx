@@ -7,6 +7,8 @@ import MinProfil from "../pages/ProfilePage/MinProfil.tsx";
 import LoginPage from "../pages/LoginPage/LoginPage.tsx";
 import RegisterPage from "../pages/RegisterPage/RegisterPage.tsx";
 import { ProtectedRoute } from "../components/shared/ProtectedRoute.tsx";
+import InstillingerPage from "../pages/InstillingerPage/InstillingerPage.tsx";
+import AnmeldelserPage from "../pages/AnmeldelserPage/AnmeldelserPage.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -48,6 +50,14 @@ export const routes: RouteObject[] = [
       {
         path: "register",
         element: <RegisterPage />,
+      },
+      {
+        path: "Innstillinger",
+        element: <InstillingerPage />,
+      },
+      {
+        path: "Anmeldelser",
+        element: <AnmeldelserPage />,
       },
     ],
   },
