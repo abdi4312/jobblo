@@ -22,22 +22,30 @@ export const routes: RouteObject[] = [
       {
         path: "job-listing",
         element: (
-          <ProtectedRoute>
-            <JobListingPage />,
-          </ProtectedRoute>
+            <JobListingPage />
         ),
       },
       {
         path: "profile",
-        element: <ProfilePage />,
+	      
+        element:
+	        <ProtectedRoute>
+		        <ProfilePage />,
+	        </ProtectedRoute>
       },
       {
         path: "Publish-job",
-        element: <LeggUtOppdrag />,
+        element:
+	        <ProtectedRoute>
+		        <LeggUtOppdrag />,
+	        </ProtectedRoute>
       },
       {
         path: "Alert",
-        element: <Alert />,
+        element:
+	        <ProtectedRoute>
+		        <Alert />,
+	        </ProtectedRoute>
       },
       {
         path: "Min-profil",
