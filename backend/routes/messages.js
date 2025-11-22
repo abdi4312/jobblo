@@ -5,183 +5,114 @@ const { authenticate } = require('../middleware/auth');
 
 /**
  * @swagger
- * components:
- *   schemas:
- *     Message:
- *       type: object
- *       required:
- *         - orderId
- *       properties:
- *         _id:
- *           type: string
- *           description: Meldingens ID
- *         orderId:
- *           type: string
- *           description: ID til ordren meldingen tilhører
- *         senderId:
- *           type: string
- *           description: ID til avsenderen (settes automatisk fra JWT token)
- *         message:
- *           type: string
- *           description: Meldingens innhold
- *         images:
- *           type: array
- *           items:
- *             type: string
- *           description: Bilde-URLer
- *         type:
- *           type: string
- *           enum: [text, image, system]
- *           description: Type melding
- *         readBy:
- *           type: array
- *           items:
- *             type: string
- *           description: Liste over brukere som har lest meldingen
- *         deletedFor:
- *           type: array
- *           items:
- *             type: string
- *           description: Liste over brukere som har slettet meldingen
- *         createdAt:
- *           type: string
- *           format: date-time
- *           description: Når meldingen ble opprettet
- *         updatedAt:
- *           type: string
- *           format: date-time
- *           description: Når meldingen sist ble oppdatert
+ * tags:
+ *   name: Messages
+ *   description: Meldingssystem
  */
-
 
 /**
  * @swagger
  * /api/messages:
  *   get:
- *     summary: Hent alle meldinger for innlogget bruker
- *     tags: [Meldinger]
+ *     summary: Hent alle meldinger relatert til brukerens ordre
+ *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Liste over brukerens meldinger
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Message'
- *       401:
- *         description: Mangler eller ugyldig autentisering
+ *         description: Liste med meldinger
  */
 router.get('/', authenticate, messageController.getAllMessages);
+
+
+/**
+ * @swagger
+ * /api/messages/order/{orderId}:
+ *   get:
+ *     summary: Hent alle meldinger for en ordre
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *     responses:
+ *       200:
+ *         description: Meldinger fra order
+ */
+router.get('/order/:orderId', authenticate, messageController.getMessagesForOrder);
+
 
 /**
  * @swagger
  * /api/messages/{id}:
  *   get:
- *     summary: Hent en spesifikk melding
- *     tags: [Meldinger]
+ *     summary: Hent melding etter ID
+ *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for meldingen
- *     responses:
- *       200:
- *         description: En melding
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Message'
- *       401:
- *         description: Mangler eller ugyldig autentisering
- *       403:
- *         description: Ikke autorisert til å se denne meldingen
- *       404:
- *         description: Meldingen ble ikke funnet
  */
 router.get('/:id', authenticate, messageController.getMessageById);
+
 
 /**
  * @swagger
  * /api/messages:
  *   post:
- *     summary: Send en ny melding
- *     tags: [Meldinger]
+ *     summary: Send melding
+ *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - orderId
- *             properties:
- *               orderId:
- *                 type: string
- *                 description: ID til ordren meldingen tilhører
- *               message:
- *                 type: string
- *                 description: Meldingens innhold
- *               images:
- *                 type: array
- *                 items:
- *                   type: string
- *                 description: Bilde-URLer
- *               type:
- *                 type: string
- *                 enum: [text, image, system]
- *                 description: Type melding
- *     responses:
- *       201:
- *         description: Melding sendt
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Message'
- *       400:
- *         description: Ugyldig input
- *       401:
- *         description: Mangler eller ugyldig autentisering
- *       403:
- *         description: Ikke autorisert til å sende melding i denne ordren
- *       404:
- *         description: Ordre eller bruker ikke funnet
  */
 router.post('/', authenticate, messageController.createMessage);
+
+
+/**
+ * @swagger
+ * /api/messages/{id}/read:
+ *   patch:
+ *     summary: Marker en melding som lest
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.patch('/:id/read', authenticate, messageController.markAsRead);
+
+
+/**
+ * @swagger
+ * /api/messages/order/{orderId}/read:
+ *   patch:
+ *     summary: Marker ALLE meldinger i en ordre som lest
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.patch('/order/:orderId/read', authenticate, messageController.markOrderMessagesAsRead);
+
+
+/**
+ * @swagger
+ * /api/messages/{id}/delete-for-me:
+ *   patch:
+ *     summary: Skjuler melding for bruker (soft delete)
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.patch('/:id/delete-for-me', authenticate, messageController.deleteForMe);
+
 
 /**
  * @swagger
  * /api/messages/{id}:
  *   delete:
- *     summary: Slett en melding
- *     tags: [Meldinger]
+ *     summary: Slett melding permanent (kun avsender)
+ *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for meldingen
- *     responses:
- *       204:
- *         description: Melding slettet
- *       401:
- *         description: Mangler eller ugyldig autentisering
- *       403:
- *         description: Ikke autorisert til å slette denne meldingen
- *       404:
- *         description: Meldingen ble ikke funnet
  */
 router.delete('/:id', authenticate, messageController.deleteMessage);
 
-module.exports = router; 
+module.exports = router;
+r;
