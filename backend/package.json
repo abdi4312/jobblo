@@ -34,5 +34,10 @@
     "@types/node": "^24.7.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
-  }
+  },
+  "description": "This is the backend for the Jobblo app. It provides RESTful APIs.",
+  "main": "main.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
