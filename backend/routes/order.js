@@ -5,36 +5,38 @@ const { authenticate } = require('../middleware/auth');
 
 /**
  * @swagger
+ * tags:
+ *   name: Orders
+ *   description: Ordre- og oppdragsstyring
+ */
+
+/**
+ * @swagger
  * components:
  *   schemas:
  *     Order:
  *       type: object
  *       required:
  *         - serviceId
- *         - customerId
  *       properties:
  *         _id:
  *           type: string
- *           description: Order ID
  *         serviceId:
  *           type: string
- *           description: Tjeneste-ID (Service)
+ *           description: ID til tjenesten ordren gjelder
  *         customerId:
  *           type: string
- *           description: Kunde-ID (User)
+ *           description: ID til kunden som bestiller tjenesten
  *         providerId:
  *           type: string
- *           description: Leverandør-ID (User)
+ *           description: ID til tjenestetilbyderen
  *         status:
  *           type: string
  *           enum: [pending, confirmed, completed, cancelled]
- *           description: Ordrestatus
  *         price:
  *           type: number
- *           description: Pris
  *         contractId:
  *           type: string
- *           description: Kontrakt-ID
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -45,15 +47,15 @@ const { authenticate } = require('../middleware/auth');
 
 /**
  * @swagger
- * /api/order:
+ * /api/orders:
  *   get:
  *     summary: Hent alle ordre for innlogget bruker
- *     tags: [Ordre]
+ *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Liste over brukerens ordre (som kunde eller leverandør)
+ *         description: Liste over ordre for bruker (kunde eller tilbyder)
  *         content:
  *           application/json:
  *             schema:
@@ -63,41 +65,43 @@ const { authenticate } = require('../middleware/auth');
  *       401:
  *         description: Mangler eller ugyldig autentisering
  */
+router.get('/', authenticate, orderController.getAllOrders);
 
 /**
  * @swagger
- * /api/order/{id}:
+ * /api/orders/{id}:
  *   get:
  *     summary: Hent en spesifikk ordre
- *     tags: [Ordre]
+ *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
- *         schema:
- *           type: string
  *         required: true
  *         description: Ordre-ID
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
- *         description: En ordre
+ *         description: Ordredetaljer
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Order'
- *       401:
- *         description: Mangler eller ugyldig autentisering
+ *       403:
+ *         description: Ikke autorisert til å se denne ordren
  *       404:
- *         description: Ordren ble ikke funnet
+ *         description: Ordre ikke funnet
  */
+router.get('/:id', authenticate, orderController.getOrderById);
 
 /**
  * @swagger
- * /api/order:
+ * /api/orders:
  *   post:
  *     summary: Opprett en ny ordre
- *     tags: [Ordre]
+ *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -111,10 +115,10 @@ const { authenticate } = require('../middleware/auth');
  *             properties:
  *               serviceId:
  *                 type: string
- *                 description: ID til tjenesten (providerId og customerId settes automatisk)
+ *                 description: ID til tjenesten
  *               price:
  *                 type: number
- *                 description: Pris (valgfri, bruker servicens pris som standard)
+ *                 description: Pris for oppdraget
  *     responses:
  *       201:
  *         description: Ordren ble opprettet
@@ -123,28 +127,26 @@ const { authenticate } = require('../middleware/auth');
  *             schema:
  *               $ref: '#/components/schemas/Order'
  *       400:
- *         description: Ugyldig forespørsel eller kan ikke opprette ordre for egen tjeneste
- *       401:
- *         description: Mangler eller ugyldig autentisering
+ *         description: Ugyldig forespørsel
  *       404:
  *         description: Tjeneste ikke funnet
  */
+router.post('/', authenticate, orderController.createOrder);
 
 /**
  * @swagger
- * /api/order/{id}:
- *   put:
- *     summary: Oppdater en ordre
- *     tags: [Ordre]
+ * /api/orders/{id}:
+ *   patch:
+ *     summary: Oppdater en ordre (bare status og pris)
+ *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: Ordre-ID
  *     requestBody:
  *       required: true
  *       content:
@@ -155,66 +157,46 @@ const { authenticate } = require('../middleware/auth');
  *               status:
  *                 type: string
  *                 enum: [pending, confirmed, completed, cancelled]
- *                 description: Ordrestatus
+ *                 description: Oppdatert ordrestatus
  *               price:
  *                 type: number
- *                 description: Pris
+ *                 description: Oppdatert pris
  *     responses:
  *       200:
- *         description: Ordren ble oppdatert
+ *         description: Ordre oppdatert
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Order'
- *       400:
- *         description: Ugyldig forespørsel
- *       401:
- *         description: Mangler eller ugyldig autentisering
  *       403:
- *         description: Ikke autorisert til å oppdatere denne ordren
+ *         description: Ikke autorisert til å oppdatere ordren
  *       404:
- *         description: Ordren ble ikke funnet
+ *         description: Ordre ikke funnet
  */
+router.patch('/:id', authenticate, orderController.updateOrder);
 
 /**
  * @swagger
- * /api/order/{id}:
+ * /api/orders/{id}:
  *   delete:
- *     summary: Slett en ordre
- *     tags: [Ordre]
+ *     summary: Kanseller en ordre
+ *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: Ordre-ID
  *     responses:
  *       204:
- *         description: Ordren ble slettet
- *       401:
- *         description: Mangler eller ugyldig autentisering
+ *         description: Ordre kansellert
  *       403:
- *         description: Ikke autorisert til å slette denne ordren
+ *         description: Ikke autorisert
  *       404:
- *         description: Ordren ble ikke funnet
+ *         description: Ordre ikke funnet
  */
-
-// List all orders for authenticated user
-router.get('/', authenticate, orderController.getAllOrders);
-
-// Get a single order by ID
-router.get('/:id', orderController.getOrderById);
-
-// Create a new order (requires authentication)
-router.post('/', authenticate, orderController.createOrder);
-
-// Update an order (requires authentication)
-router.put('/:id', authenticate, orderController.updateOrder);
-
-// Delete an order (requires authentication)
 router.delete('/:id', authenticate, orderController.deleteOrder);
 
 module.exports = router;
