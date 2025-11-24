@@ -12,6 +12,35 @@ const { authenticate } = require('../middleware/auth');
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     Message:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *         orderId:
+ *           type: string
+ *         senderId:
+ *           type: string
+ *         receiverId:
+ *           type: string
+ *         content:
+ *           type: string
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         read:
+ *           type: boolean
+ *
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ */
+
+/**
+ * @swagger
  * /api/messages:
  *   get:
  *     summary: Hent alle meldinger relatert til brukerens ordre
@@ -21,6 +50,12 @@ const { authenticate } = require('../middleware/auth');
  *     responses:
  *       200:
  *         description: Liste med meldinger
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Message'
  */
 router.get('/', authenticate, messageController.getAllMessages);
 
@@ -36,9 +71,12 @@ router.get('/', authenticate, messageController.getAllMessages);
  *     parameters:
  *       - in: path
  *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
- *         description: Meldinger fra order
+ *         description: Meldinger fra ordre
  */
 router.get('/order/:orderId', authenticate, messageController.getMessagesForOrder);
 
@@ -51,6 +89,15 @@ router.get('/order/:orderId', authenticate, messageController.getMessagesForOrde
  *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Enkeltmelding
  */
 router.get('/:id', authenticate, messageController.getMessageById);
 
@@ -63,6 +110,23 @@ router.get('/:id', authenticate, messageController.getMessageById);
  *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [orderId, receiverId, content]
+ *             properties:
+ *               orderId:
+ *                 type: string
+ *               receiverId:
+ *                 type: string
+ *               content:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Melding sendt
  */
 router.post('/', authenticate, messageController.createMessage);
 
@@ -75,6 +139,15 @@ router.post('/', authenticate, messageController.createMessage);
  *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Meldingen er markert som lest
  */
 router.patch('/:id/read', authenticate, messageController.markAsRead);
 
@@ -87,6 +160,15 @@ router.patch('/:id/read', authenticate, messageController.markAsRead);
  *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Alle meldinger er markert som lest
  */
 router.patch('/order/:orderId/read', authenticate, messageController.markOrderMessagesAsRead);
 
@@ -95,10 +177,19 @@ router.patch('/order/:orderId/read', authenticate, messageController.markOrderMe
  * @swagger
  * /api/messages/{id}/delete-for-me:
  *   patch:
- *     summary: Skjuler melding for bruker (soft delete)
+ *     summary: Skjul melding for bruker (soft delete)
  *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Meldingen ble skjult
  */
 router.patch('/:id/delete-for-me', authenticate, messageController.deleteForMe);
 
@@ -111,8 +202,16 @@ router.patch('/:id/delete-for-me', authenticate, messageController.deleteForMe);
  *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Meldingen ble slettet permanent
  */
 router.delete('/:id', authenticate, messageController.deleteMessage);
 
 module.exports = router;
-r;
