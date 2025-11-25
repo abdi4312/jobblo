@@ -1,11 +1,12 @@
 const Service = require('../models/Service');
 const mongoose = require('mongoose');
 
-// ------------------- Standard CRUD -------------------
+// ------------------- Get All Services -------------------
 
 exports.getAllServices = async (req, res) => {
     try {
-        const services = await Service.find().populate('userId', 'name');
+        const services = await Service.find()
+            .populate('userId', 'name');
         res.json(services);
     } catch (err) {
         console.error(err);
@@ -13,9 +14,12 @@ exports.getAllServices = async (req, res) => {
     }
 };
 
+// ------------------- Get Service By ID -------------------
+
 exports.getServiceById = async (req, res) => {
     try {
-        const service = await Service.findById(req.params.id).populate('userId', 'name');
+        const service = await Service.findById(req.params.id)
+            .populate('userId', 'name');
         if (!service) return res.status(404).json({ error: 'Service not found' });
         res.json(service);
     } catch (err) {
@@ -24,25 +28,23 @@ exports.getServiceById = async (req, res) => {
     }
 };
 
+// ------------------- Full Service Details -------------------
+
 exports.getServiceDetails = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Validate service ID
-        if (!mongoose.Types.ObjectId.isValid(id)) {
+        if (!mongoose.Types.ObjectId.isValid(id))
             return res.status(400).json({ error: 'Invalid service ID format' });
-        }
 
-        // Get the main service with full user details
         const service = await Service.findById(id)
             .populate('userId', 'name email avatarUrl role subscription verified')
             .populate('categories', 'name description');
 
-        if (!service) {
+        if (!service)
             return res.status(404).json({ error: 'Service not found' });
-        }
 
-        // Calculate statistics for the service
+        // Stats
         const Order = require('../models/Order');
         const orderStats = await Order.aggregate([
             { $match: { serviceId: new mongoose.Types.ObjectId(id) } },
@@ -50,95 +52,86 @@ exports.getServiceDetails = async (req, res) => {
                 $group: {
                     _id: null,
                     totalOrders: { $sum: 1 },
-                    completedOrders: {
-                        $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
-                    }
+                    completedOrders: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } }
                 }
             }
         ]);
 
         const stats = {
-            totalOrders: orderStats.length > 0 ? orderStats[0].totalOrders : 0,
-            completedOrders: orderStats.length > 0 ? orderStats[0].completedOrders : 0
+            totalOrders: orderStats[0]?.totalOrders || 0,
+            completedOrders: orderStats[0]?.completedOrders || 0
         };
 
-        // Find similar services
+        // Similar services
         const similarServices = await findSimilarServices(service);
 
-        // Return full details
         res.json({
-            service: service,
+            service,
             provider: service.userId,
-            stats: stats,
-            similarServices: similarServices
+            stats,
+            similarServices
         });
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error' });
     }
 };
 
-// Helper function to find similar services
+// Helper: Find similar services
 async function findSimilarServices(service) {
     try {
         const query = {
-            _id: { $ne: service._id }, // Exclude current service
-            status: 'open' // Only open services
+            _id: { $ne: service._id },
+            status: 'open'
         };
 
-        // Match by categories if available
-        if (service.categories && service.categories.length > 0) {
+        if (service.categories?.length > 0) {
             query.categories = { $in: service.categories };
         }
 
-        // Price range (±30%)
         if (service.price) {
-            const priceMin = service.price * 0.7;
-            const priceMax = service.price * 1.3;
-            query.price = { $gte: priceMin, $lte: priceMax };
+            const min = service.price * 0.7;
+            const max = service.price * 1.3;
+            query.price = { $gte: min, $lte: max };
         }
 
-        // Find similar services
-        let similarServices = await Service.find(query)
+        let similar = await Service.find(query)
+            .limit(6)
             .populate('userId', 'name avatarUrl verified')
             .populate('categories', 'name')
-            .limit(6)
             .sort({ createdAt: -1 });
 
-        // If location exists, prioritize nearby services
-        if (service.location && service.location.coordinates && service.location.coordinates.length === 2) {
-            const nearbyServices = await Service.find({
+        if (service.location?.coordinates?.length === 2) {
+            const nearby = await Service.find({
                 ...query,
                 location: {
                     $nearSphere: {
-                        $geometry: {
-                            type: 'Point',
-                            coordinates: service.location.coordinates
-                        },
-                        $maxDistance: 50000 // 50km radius
+                        $geometry: { type: 'Point', coordinates: service.location.coordinates },
+                        $maxDistance: 50000
                     }
                 }
             })
+                .limit(6)
                 .populate('userId', 'name avatarUrl verified')
-                .populate('categories', 'name')
-                .limit(6);
+                .populate('categories', 'name');
 
-            // Use nearby services if found, otherwise use the category-based results
-            if (nearbyServices.length > 0) {
-                similarServices = nearbyServices;
-            }
+            if (nearby.length > 0) similar = nearby;
         }
 
-        return similarServices;
+        return similar;
+
     } catch (err) {
-        console.error('Error finding similar services:', err);
+        console.error('Similar services error:', err);
         return [];
     }
 }
 
+// ------------------- Create Service -------------------
+
 exports.createService = async (req, res) => {
     try {
-        const { userId, ...serviceData } = req.body;
+        const { userId, images, imageMetadata, ...serviceData } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(userId))
             return res.status(400).json({ error: 'Invalid user ID format' });
@@ -147,77 +140,92 @@ exports.createService = async (req, res) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
 
-        // Normaliser felt
-        if (serviceData.location && typeof serviceData.location.address === 'string') {
-            const [addressPart, cityPart] = serviceData.location.address.split(',').map(s => s.trim());
-            serviceData.location.address = addressPart || '';
-            serviceData.location.city = cityPart || '';
+        // Normalize address
+        if (serviceData.location?.address && !serviceData.location.city) {
+            const [addr, city] = serviceData.location.address.split(',').map(s => s.trim());
+            serviceData.location.address = addr || '';
+            serviceData.location.city = city || '';
         }
 
-        // Default values
+        // defaults
         serviceData.status = serviceData.status || 'open';
         serviceData.equipment = serviceData.equipment || 'utstyrfri';
 
+        // Add images
+        if (images) serviceData.images = images;
+        if (imageMetadata) serviceData.imageMetadata = imageMetadata;
+
         const service = await Service.create({ ...serviceData, userId });
+
         res.status(201).json(service);
+
     } catch (err) {
         console.error(err);
         res.status(400).json({ error: err.message });
     }
 };
 
+// ------------------- Update Service -------------------
+
 exports.updateService = async (req, res) => {
     try {
-        const serviceId = req.params.id;
-        if (!mongoose.Types.ObjectId.isValid(serviceId))
+        const id = req.params.id;
+
+        if (!mongoose.Types.ObjectId.isValid(id))
             return res.status(400).json({ error: 'Invalid service ID format' });
 
-        const existingService = await Service.findById(serviceId);
-        if (!existingService) return res.status(404).json({ error: 'Service not found' });
+        const service = await Service.findById(id);
+        if (!service)
+            return res.status(404).json({ error: 'Service not found' });
 
-        if (req.body.userId) {
-            if (!mongoose.Types.ObjectId.isValid(req.body.userId))
-                return res.status(400).json({ error: 'Invalid user ID format' });
-
-            const User = require('../models/User');
-            const user = await User.findById(req.body.userId);
-            if (!user) return res.status(404).json({ error: 'User not found' });
+        // Split "address, city"
+        if (req.body.location?.address && !req.body.location.city) {
+            const [addr, city] = req.body.location.address.split(',').map(s => s.trim());
+            req.body.location.address = addr || '';
+            req.body.location.city = city || '';
         }
 
-        // Split adresse og by hvis sendt samlet
-        if (req.body.location && typeof req.body.location.address === 'string' && !req.body.location.city) {
-            const [addressPart, cityPart] = req.body.location.address.split(',').map(s => s.trim());
-            req.body.location.address = addressPart || '';
-            req.body.location.city = cityPart || '';
+        // ⭐ MERGE existing + new images
+        if (req.body.images) {
+            service.images = [...service.images, ...req.body.images];
         }
 
-        const service = await Service.findByIdAndUpdate(
-            serviceId,
-            { $set: req.body },
-            { new: true, runValidators: true }
-        );
+        // ⭐ MERGE image metadata
+        if (req.body.imageMetadata) {
+            service.imageMetadata = [...service.imageMetadata, ...req.body.imageMetadata];
+        }
+
+        // Update other fields
+        Object.assign(service, req.body);
+
+        await service.save();
 
         res.json(service);
+
     } catch (err) {
         console.error(err);
-        if (err.name === 'ValidationError') return res.status(400).json({ error: err.message });
-        if (err.name === 'CastError') return res.status(400).json({ error: 'Invalid data format' });
+        if (err.name === 'ValidationError')
+            return res.status(400).json({ error: err.message });
         res.status(500).json({ error: 'Server error' });
     }
 };
+
+// ------------------- Delete Service -------------------
 
 exports.deleteService = async (req, res) => {
     try {
         const service = await Service.findByIdAndDelete(req.params.id);
         if (!service) return res.status(404).json({ error: 'Service not found' });
+
         res.json({ message: 'Service deleted' });
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error' });
     }
 };
 
-// ------------------- Kart / GeoJSON -------------------
+// ------------------- GeoJSON Endpoints -------------------
 
 exports.updateLocation = async (req, res) => {
     try {
@@ -236,8 +244,11 @@ exports.updateLocation = async (req, res) => {
             },
             { new: true }
         );
+
         if (!service) return res.status(404).json({ error: 'Service not found' });
+
         res.json(service);
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error' });
@@ -248,13 +259,10 @@ exports.getNearbyServices = async (req, res) => {
     try {
         const { lat, lng, radius } = req.query;
 
-        if (!lat || !lng || !radius) {
+        if (!lat || !lng || !radius)
             return res.status(400).json({ error: 'Missing lat, lng or radius' });
-        }
 
         const services = await Service.find({
-            location: { $exists: true, $ne: null },
-            'location.coordinates': { $exists: true, $ne: [] },
             location: {
                 $nearSphere: {
                     $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
@@ -264,6 +272,7 @@ exports.getNearbyServices = async (req, res) => {
         });
 
         res.json(services);
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error' });
@@ -273,6 +282,7 @@ exports.getNearbyServices = async (req, res) => {
 exports.getServicesInBox = async (req, res) => {
     try {
         const { neLat, neLng, swLat, swLng } = req.query;
+
         const polygon = {
             type: 'Polygon',
             coordinates: [[
@@ -283,17 +293,20 @@ exports.getServicesInBox = async (req, res) => {
                 [parseFloat(swLng), parseFloat(swLat)]
             ]]
         };
+
         const services = await Service.find({
             location: { $geoWithin: { $geometry: polygon } }
         });
+
         res.json(services);
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error' });
     }
 };
 
-// ------------------- Tidsregistrering -------------------
+// ------------------- Time Entries -------------------
 
 exports.addTimeEntry = async (req, res) => {
     try {
@@ -306,11 +319,11 @@ exports.addTimeEntry = async (req, res) => {
         const service = await Service.findById(id);
         if (!service) return res.status(404).json({ error: 'Service not found' });
 
-        const entry = { userId, hours, date, note };
-        service.timeEntries.push(entry);
+        service.timeEntries.push({ userId, hours, date, note });
         await service.save();
 
         res.status(201).json(service.timeEntries.at(-1));
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error' });
@@ -320,30 +333,29 @@ exports.addTimeEntry = async (req, res) => {
 exports.getTimeEntries = async (req, res) => {
     try {
         const { id } = req.params;
+
         const service = await Service.findById(id);
         if (!service) return res.status(404).json({ error: 'Service not found' });
+
         res.json(service.timeEntries);
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error' });
     }
 };
 
+// ------------------- My Services -------------------
 
-// Get all services posted by the authenticated user
-// Authentication handled by middleware - req.userId available
 exports.getMyPostedServices = async (req, res) => {
     try {
-        // userId comes from authenticate middleware
-        const userId = req.userId;
-
-        // Find all services posted by this user
-        const services = await Service.find({ userId: userId })
+        const services = await Service.find({ userId: req.userId })
             .populate('categories')
             .populate('userId', 'name email')
             .sort({ _id: -1 });
 
         res.json(services);
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error' });

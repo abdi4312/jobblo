@@ -14,45 +14,48 @@ const serviceSchema = new mongoose.Schema({
     description: { type: String },
     price: { type: Number, min: 0 },
 
-    // Lokasjon — nå med separat adresse og by
+    // Lokasjon
     location: {
         type: { type: String, enum: ['Point'], default: 'Point' },
         coordinates: { type: [Number], index: '2dsphere' },
-        address: { type: String },   // eks. "Karl Johans gate 12"
-        city: { type: String }       // eks. "Oslo"
+        address: { type: String },
+        city: { type: String }
     },
 
-    // Nå faktiske kategorinavn i stedet for ObjectId
-    categories: [{ type: String }],  // f.eks. ["Maling", "Flytting"]
+    // Faktiske kategorinavn
+    categories: [{ type: String }],
 
+    // Liste over bilde-URLer (Azure URLs)
     images: [{ type: String }],
+
+    // Utvidet metadata for bedre kontroll
+    imageMetadata: [{
+        url: String,
+        blobName: String,
+        uploadedAt: { type: Date, default: Date.now }
+    }],
+
     urgent: { type: Boolean, default: false },
     status: { type: String, enum: ['open', 'closed', 'in_progress'], default: 'open' },
 
-    // Tags brukes fortsatt som søkeord / filtre
     tags: [{ type: String }],
 
-    // Varighet
     duration: {
         value: { type: Number, min: 0 },
         unit: { type: String, enum: ['minutes', 'hours', 'days'], default: 'hours' }
     },
 
-    // Nytt feltnavn for datoer (fra–til)
-    fromDate: { type: Date },  // Startdato jobben skal gjøres
-    toDate: { type: Date },    // Sluttdato jobben skal gjøres
+    fromDate: { type: Date },
+    toDate: { type: Date },
 
-    // Utstyrstatus – oppgradert fra boolean til enum
     equipment: {
         type: String,
         enum: ['utstyrfri', 'delvis utstyr', 'trengs utstyr'],
         default: 'utstyrfri'
     },
 
-    // Favorittstatus for visning i UI (kan evt. styres via egen relasjon)
     isFavorited: { type: Boolean, default: false },
 
-    // Timeføring
     timeEntries: [timeEntrySchema]
 
 }, { timestamps: true });
