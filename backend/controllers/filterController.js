@@ -1,5 +1,3 @@
-// controllers/FilterController.js
-
 const Filter = require("../models/Filter");
 const Service = require("../models/Service");
 
@@ -10,22 +8,24 @@ const Service = require("../models/Service");
  */
 exports.getFilterOptions = async (req, res) => {
     try {
-        // Hent unike kategorier fra eksisterende jobber
-        const categories = await Service.distinct("category");
+        // Alle kategorier (array)
+        const categories = await Service.distinct("categories");
 
-        // Beregn prisintervall (min og maks pris i databasen)
+        // Prisintervall
         const priceStats = await Service.aggregate([
             {
                 $group: {
                     _id: null,
                     min: { $min: "$price" },
-                    max: { $max: "$price" },
-                },
-            },
+                    max: { $max: "$price" }
+                }
+            }
         ]);
 
-        // Sett standardverdier hvis ingen data finnes
-        const priceRange = priceStats[0] || { min: 0, max: 10000 };
+        const priceRange =
+            priceStats.length > 0
+                ? priceStats[0]
+                : { min: 0, max: 10000 };
 
         res.status(200).json({
             success: true,
@@ -36,18 +36,16 @@ exports.getFilterOptions = async (req, res) => {
                     "newest",
                     "price_low",
                     "price_high",
-                    "rating_high",
-                    "nearby",
+                    "nearby"
                 ],
-                flags: ["urgentOnly", "verifiedProvidersOnly"],
-            },
+                flags: ["urgentOnly"]
+            }
         });
     } catch (error) {
-        console.error("Error fetching filter options:", error);
         res.status(500).json({
             success: false,
             message: "Kunne ikke hente filtervalg",
-            error: error.message,
+            error: error.message
         });
     }
 };
@@ -64,108 +62,81 @@ exports.applyFilters = async (req, res) => {
             priceRange,
             location,
             urgentOnly,
-            verifiedProvidersOnly,
             searchKeyword,
-            sortBy,
+            sortBy
         } = req.body;
 
         const query = {};
 
-        // Kategori-filter
-        if (categories && categories.length > 0) {
-            query.category = { $in: categories };
+        // KATEGORIER
+        if (categories?.length > 0) {
+            query.categories = { $in: categories };
         }
 
-        // Prisintervall
-        if (priceRange && (priceRange.min || priceRange.max)) {
+        // PRIS
+        if (priceRange) {
             query.price = {
-                $gte: priceRange.min || 0,
-                $lte: priceRange.max || 100000,
+                $gte: priceRange.min ?? 0,
+                $lte: priceRange.max ?? 100000
             };
         }
 
-        // Urgent
-        if (urgentOnly) query.urgent = true;
+        // URGENT
+        if (urgentOnly) {
+            query.urgent = true;
+        }
 
-        // Søkeord
-        if (searchKeyword && searchKeyword.trim() !== "") {
+        // SØKEORD
+        if (searchKeyword) {
+            const regex = { $regex: searchKeyword, $options: "i" };
             query.$or = [
-                { title: { $regex: searchKeyword, $options: "i" } },
-                { description: { $regex: searchKeyword, $options: "i" } },
-                { category: { $regex: searchKeyword, $options: "i" } },
+                { title: regex },
+                { description: regex },
+                { categories: regex }
             ];
         }
 
-        // Geo-lokasjon (radius)
+        // GEO-FILTER
         if (
             location &&
-            location.coordinates &&
-            location.coordinates.lat &&
-            location.coordinates.lng
+            location.lat &&
+            location.lng &&
+            location.radius
         ) {
             query.location = {
-                $near: {
+                $nearSphere: {
                     $geometry: {
                         type: "Point",
-                        coordinates: [
-                            location.coordinates.lng,
-                            location.coordinates.lat,
-                        ],
+                        coordinates: [location.lng, location.lat]
                     },
-                    $maxDistance: (location.radius || 10) * 1000, // km → meter
-                },
+                    $maxDistance: location.radius * 1000
+                }
             };
         }
 
-        // Sortering
+        // SORTERING
         let sortQuery = { createdAt: -1 };
-        switch (sortBy) {
-            case "price_low":
-                sortQuery = { price: 1 };
-                break;
-            case "price_high":
-                sortQuery = { price: -1 };
-                break;
-            case "rating_high":
-                sortQuery = { rating: -1 };
-                break;
-            case "nearby":
-                sortQuery = { distance: 1 };
-                break;
-        }
 
-        // Hent resultater
+        if (sortBy === "price_low") sortQuery = { price: 1 };
+        if (sortBy === "price_high") sortQuery = { price: -1 };
+        if (sortBy === "newest") sortQuery = { createdAt: -1 };
+
+        // HENT RESULTATER
         const services = await Service.find(query)
-            .sort(sortQuery)
-            .limit(100)
-            .populate("userId", "name avatarUrl rating");
-
-        // Lagre filteret for brukeren (valgfritt)
-        if (req.user?._id) {
-            const filter = new Filter({
-                userId: req.user._id,
-                categories,
-                priceRange,
-                location,
-                urgentOnly,
-                verifiedProvidersOnly,
-                searchKeyword,
-                sortBy,
-            });
-            await filter.save();
-        }
+            .populate("userId", "name avatarUrl verified")
+            .limit(200)
+            .sort(sortQuery);
 
         res.status(200).json({
             success: true,
             count: services.length,
-            results: services,
+            results: services
         });
     } catch (error) {
-        console.error("Error applying filters:", error);
         res.status(500).json({
             success: false,
             message: "Kunne ikke hente filtrerte resultater",
-            error: error.message,
+            error: error.message
         });
     }
 };
