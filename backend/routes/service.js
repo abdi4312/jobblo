@@ -191,6 +191,145 @@ router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
  *               items:
  *                 $ref: '#/components/schemas/Service'
  *
+ const express = require('express');
+ const router = express.Router();
+ const serviceController = require('../controllers/serviceController');
+ const { authenticate } = require('../middleware/auth');
+
+ /**
+ * @swagger
+ * tags:
+ *   name: Tjenester
+ *   description: API for å håndtere tjenester/oppdrag
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Service:
+ *       type: object
+ *       required:
+ *         - title
+ *         - userId
+ *       properties:
+ *         _id:
+ *           type: string
+ *           description: Service-ID
+ *         userId:
+ *           type: string
+ *           description: ID til brukeren som la ut tjenesten
+ *         title:
+ *           type: string
+ *         description:
+ *           type: string
+ *         price:
+ *           type: number
+ *         location:
+ *           type: object
+ *           properties:
+ *             type:
+ *               type: string
+ *               enum: [Point]
+ *             coordinates:
+ *               type: array
+ *               items:
+ *                 type: number
+ *               description: "[longitude, latitude]"
+ *             address:
+ *               type: string
+ *             city:
+ *               type: string
+ *         categories:
+ *           type: array
+ *           items:
+ *             type: string
+ *         images:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Liste over bilde-URLer
+ *         imageMetadata:
+ *           type: array
+ *           description: Metadata om opplastede bilder (Azure Blob)
+ *           items:
+ *             type: object
+ *             properties:
+ *               url:
+ *                 type: string
+ *               blobName:
+ *                 type: string
+ *               uploadedAt:
+ *                 type: string
+ *                 format: date-time
+ *         urgent:
+ *           type: boolean
+ *         status:
+ *           type: string
+ *           enum: [open, closed, in_progress]
+ *         tags:
+ *           type: array
+ *           items:
+ *             type: string
+ *         duration:
+ *           type: object
+ *           properties:
+ *             value:
+ *               type: number
+ *             unit:
+ *               type: string
+ *               enum: [minutes, hours, days]
+ *         fromDate:
+ *           type: string
+ *           format: date
+ *         toDate:
+ *           type: string
+ *           format: date
+ *         equipment:
+ *           type: string
+ *           enum: [utstyrfri, delvis utstyr, trengs utstyr]
+ *         isFavorited:
+ *           type: boolean
+ *         timeEntries:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               hours:
+ *                 type: number
+ *               date:
+ *                 type: string
+ *                 format: date-time
+ *               note:
+ *                 type: string
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ */
+
+/* -----------------------------
+      ROUTER ORDER (IMPORTANT)
+------------------------------*/
+
+// GEO FIRST
+router.put('/:id/location', serviceController.updateLocation);
+
+router.get('/nearby', serviceController.getNearbyServices);
+
+// MY POSTED
+router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
+
+// GET ALL
+router.get('/', serviceController.getAllServices);
+
+/**
+ * @swagger
+ * /api/services:
  *   post:
  *     summary: Opprett en ny tjeneste
  *     tags: [Tjenester]
@@ -207,45 +346,28 @@ router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
  *             price: 2000
  *             location:
  *               address: "Dronningens gate 10"
- *               city: "Trondheim"
+ *               city: "Oslo"
  *               coordinates: [10.3951, 63.4305]
- *             categories: ["Flytting", "Transport"]
- *             urgent: false
- *             equipment: "trengs utstyr"
- *             fromDate: "2025-11-01"
- *             toDate: "2025-11-02"
+ *             categories: ["Flytting"]
+ *             images:
+ *               - "https://yourblob.blob.core.windows.net/bilder/service/demo1.png"
+ *             imageMetadata:
+ *               - url: "https://yourblob.blob.core.windows.net/bilder/service/demo1.png"
+ *                 blobName: "service/66ffbb129becc42fbc90a555/demo1.png"
  *     responses:
  *       201:
  *         description: Tjenesten ble opprettet
- *       400:
- *         description: Ugyldig input
- *       404:
- *         description: Bruker ikke funnet
  */
+router.post('/', serviceController.createService);
 
-/**
- * @swagger
- * /api/services/{id}/details:
- *   get:
- *     summary: Hent full info om tjeneste inkludert leverandør, statistikk og lignende tjenester
- *     tags: [Tjenester]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Full info om tjenesten
- */
+// DETAILS (must be above /:id)
 router.get('/:id/details', serviceController.getServiceDetails);
 
 /**
  * @swagger
  * /api/services/{id}:
  *   get:
- *     summary: Hent en spesifikk tjeneste
+ *     summary: Hent en tjeneste
  *     tags: [Tjenester]
  *   put:
  *     summary: Oppdater en tjeneste
@@ -262,7 +384,7 @@ router.delete('/:id', serviceController.deleteService);
  * @swagger
  * /api/services/{id}/location:
  *   put:
- *     summary: Oppdater GeoJSON-lokasjon for en tjeneste
+ *     summary: Oppdater GeoJSON-lokasjon
  *     tags: [Tjenester]
  */
 router.put('/:id/location', serviceController.updateLocation);
