@@ -75,7 +75,7 @@ app.use('/api/services', servicesRouter);
 app.use('/api/favorites', favoritesRouter);
 app.use('/api/messages', messagesRouter);
 app.use('/api/upload', uploadRouter);
-app.use('/api/order', ordersRouter);
+app.use('/api/orders', ordersRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api', reviewsRouter);

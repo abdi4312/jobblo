@@ -26,8 +26,7 @@ exports.getAllMessages = async (req, res) => {
             deletedFor: { $ne: userId }
         })
             .populate('senderId', 'name email')
-            .populate('orderId', 'serviceId customerId providerId status')
-            .sort({ createdAt: 1 });
+            .populate('orderId', 'serviceId customerId providerId status');
 
         res.json(messages);
     } catch (error) {
@@ -60,8 +59,7 @@ exports.getMessagesForOrder = async (req, res) => {
             orderId,
             deletedFor: { $ne: req.userId }
         })
-            .populate('senderId', 'name email')
-            .sort({ createdAt: 1 });
+            .populate('senderId', 'name email');
 
         res.json(messages);
     } catch (error) {
@@ -109,13 +107,13 @@ exports.getMessageById = async (req, res) => {
  */
 exports.createMessage = async (req, res) => {
     try {
-        const { orderId, message: text, images, type } = req.body;
+        const { orderId, content, images, type } = req.body;
         const senderId = req.userId;
 
         if (!orderId)
             return res.status(400).json({ error: 'Order ID is required' });
 
-        if (!text && (!images || images.length === 0))
+        if (!content && (!images || images.length === 0))
             return res.status(400).json({ error: 'Message must contain text or images' });
 
         if (!mongoose.Types.ObjectId.isValid(orderId))
@@ -132,7 +130,7 @@ exports.createMessage = async (req, res) => {
         const message = await Message.create({
             orderId,
             senderId,
-            message: text,
+            message: content,
             images: images || [],
             type: type || 'text'
         });
