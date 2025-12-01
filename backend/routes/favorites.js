@@ -4,6 +4,13 @@ const favoriteController = require('../controllers/favoriteController');
 
 /**
  * @swagger
+ * tags:
+ *   name: Favoritter
+ *   description: API for håndtering av favoritt-tjenester
+ */
+
+/**
+ * @swagger
  * components:
  *   schemas:
  *     Favorite:
@@ -14,10 +21,16 @@ const favoriteController = require('../controllers/favoriteController');
  *       properties:
  *         user:
  *           type: string
- *           description: ID til brukeren
+ *           description: ID til brukeren som har favoritten
  *         service:
  *           type: string
- *           description: ID til serviceben
+ *           description: ID til tjenesten (Service)
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
  */
 
 /**
@@ -29,10 +42,10 @@ const favoriteController = require('../controllers/favoriteController');
  *     parameters:
  *       - in: query
  *         name: userId
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: ID til brukeren som henter favorittene
+ *         description: ID til brukeren
  *     responses:
  *       200:
  *         description: Liste over brukerens favoritter
@@ -43,7 +56,7 @@ const favoriteController = require('../controllers/favoriteController');
  *               items:
  *                 $ref: '#/components/schemas/Favorite'
  *       400:
- *         description: Ugyldig bruker-ID eller mangler userId parameter
+ *         description: userId mangler eller ugyldig
  *       404:
  *         description: Bruker ikke funnet
  */
@@ -53,15 +66,15 @@ router.get('/', favoriteController.getFavorites);
  * @swagger
  * /api/favorites/{serviceId}:
  *   post:
- *     summary: Legg til en serviceb som favoritt
+ *     summary: Legg til en tjeneste som favoritt
  *     tags: [Favoritter]
  *     parameters:
  *       - in: path
  *         name: serviceId
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: ID for serviceben som skal legges til som favoritt
+ *         description: ID til tjenesten som skal favorittmerkes
  *     requestBody:
  *       required: true
  *       content:
@@ -73,18 +86,18 @@ router.get('/', favoriteController.getFavorites);
  *             properties:
  *               userId:
  *                 type: string
- *                 description: ID til brukeren som legger til favoritt
+ *                 description: ID til brukeren
  *     responses:
  *       201:
- *         description: Favoritt lagt til
+ *         description: Favoritt opprettet
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Favorite'
  *       400:
- *         description: Ugyldig input eller favoritt eksisterer allerede
+ *         description: Ugyldig input eller favoritt finnes allerede
  *       404:
- *         description: Bruker eller serviceb ikke funnet
+ *         description: Bruker eller tjeneste ikke funnet
  */
 router.post('/:serviceId', favoriteController.addFavorite);
 
@@ -92,15 +105,15 @@ router.post('/:serviceId', favoriteController.addFavorite);
  * @swagger
  * /api/favorites/{serviceId}:
  *   delete:
- *     summary: Fjern en serviceb fra favoritter
+ *     summary: Fjern en tjeneste fra favoritter
  *     tags: [Favoritter]
  *     parameters:
  *       - in: path
  *         name: serviceId
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: ID for serviceben som skal fjernes fra favoritter
+ *         description: ID til tjenesten som skal fjernes
  *     requestBody:
  *       required: true
  *       content:
@@ -112,15 +125,15 @@ router.post('/:serviceId', favoriteController.addFavorite);
  *             properties:
  *               userId:
  *                 type: string
- *                 description: ID til brukeren som fjerner favoritt
+ *                 description: ID til brukeren
  *     responses:
  *       204:
  *         description: Favoritt fjernet
  *       400:
  *         description: Ugyldig input
  *       404:
- *         description: Bruker, serviceb eller favoritt ikke funnet
+ *         description: Favoritt ikke funnet
  */
 router.delete('/:serviceId', favoriteController.removeFavorite);
 
-module.exports = router; 
+module.exports = router;
