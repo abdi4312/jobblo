@@ -142,6 +142,13 @@ exports.createMessage = async (req, res) => {
                 ? order.providerId
                 : order.customerId;
 
+        // Create notification for recipient
+        await Notification.create({
+            userId: otherUser,
+            type: 'message',
+            content: `New message from ${message.senderId.name}`
+        });
+
         const io = req.app.get('io');
 
         if (io) {
