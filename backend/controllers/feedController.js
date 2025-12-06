@@ -1,3 +1,6 @@
+const User = require('../models/User');
+const Service = require('../models/Service');
+
 exports.getFollowingFeed = async (req, res) => {
     try {
         const userId = req.userId; // Fra authenticate middleware
