@@ -149,10 +149,10 @@ exports.createMessage = async (req, res) => {
             content: `New message from ${message.senderId.name}`
         });
 
+        // Emit message for real-time delivery to connected users
         const io = req.app.get('io');
-
         if (io) {
-            io.to(otherUser.toString()).emit('message:new', message);
+            io.to(`chat-${orderId}`).emit('message:new', message);
         }
 
         res.status(201).json(message);
