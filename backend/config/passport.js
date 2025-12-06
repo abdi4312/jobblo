@@ -59,6 +59,7 @@ passport.use(new GoogleStrategy({
                 name: profile.displayName,
                 email: profile.emails[0].value,
                 password: 'oauth-user',
+                phone: `oauth-temp-${profile.id}`, // Temporary unique placeholder
                 avatarUrl: profile.photos[0]?.value,
                 verified: true,
                 role: 'user',
