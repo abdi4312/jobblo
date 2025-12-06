@@ -61,5 +61,6 @@ const serviceSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 serviceSchema.index({ location: '2dsphere' });
+serviceSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('Service', serviceSchema);
