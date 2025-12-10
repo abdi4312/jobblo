@@ -66,34 +66,77 @@ exports.markAsRead = async (req, res) => {
 exports.createTestNotification = async (req, res) => {
     try {
         const { userId, type, content } = req.body;
-        
+
         // Validate required fields
         if (!userId) {
             return res.status(400).json({ error: 'userId is required' });
         }
-        
+
         // Validate ObjectId format
         if (!mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ error: 'Invalid user ID format' });
         }
-        
+
         // Check if user exists
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        
+
         // Create test notification with default values if not provided
         const testNotification = await Notification.create({
             userId,
             type: type || 'test',
             content: content || 'Dette er en test-notifikasjon fra Jobblo API'
         });
-        
+
         // Populate user info
         await testNotification.populate('userId', 'name email');
-        
+
         res.status(201).json(testNotification);
+    } catch (error) {
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ error: error.message });
+        }
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// POST /api/notifications/system - Create system notification for all users (admin only)
+exports.createSystemNotification = async (req, res) => {
+    try {
+        const { type, content } = req.body;
+
+        // Validate required fields
+        if (!type) {
+            return res.status(400).json({ error: 'Type is required' });
+        }
+        if (!content) {
+            return res.status(400).json({ error: 'Content is required' });
+        }
+
+        // Fetch all users (only _id)
+        const users = await User.find().select('_id');
+
+        if (users.length === 0) {
+            return res.status(400).json({ error: 'No users found in system' });
+        }
+
+        // Build notification documents for bulk insert
+        const notifications = users.map(user => ({
+            userId: user._id,
+            type,
+            content
+        }));
+
+        // Bulk insert notifications
+        const createdNotifications = await Notification.insertMany(notifications);
+
+        res.status(201).json({
+            success: true,
+            count: createdNotifications.length,
+            message: `System notification sent to ${createdNotifications.length} users`
+        });
     } catch (error) {
         if (error.name === 'ValidationError') {
             return res.status(400).json({ error: error.message });

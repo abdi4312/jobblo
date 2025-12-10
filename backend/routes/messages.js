@@ -19,19 +19,26 @@ const { authenticate } = require('../middleware/auth');
  *       properties:
  *         _id:
  *           type: string
+ *           readOnly: true
  *         orderId:
  *           type: string
+ *           example: "65ab1234ffd2e1a9b3c11d90"
  *         senderId:
  *           type: string
+ *           readOnly: true
  *         receiverId:
  *           type: string
+ *           example: "65ab12ff1122bb9912ac33ae"
  *         content:
  *           type: string
+ *           example: "Hei! Når passer det for deg?"
  *         createdAt:
  *           type: string
  *           format: date-time
+ *           readOnly: true
  *         read:
  *           type: boolean
+ *           readOnly: true
  *
  *   securitySchemes:
  *     bearerAuth:
@@ -43,7 +50,7 @@ const { authenticate } = require('../middleware/auth');
  * @swagger
  * /api/messages:
  *   get:
- *     summary: Hent alle meldinger relatert til brukerens ordre
+ *     summary: Hent alle meldinger relatert til innlogget bruker (avsender eller mottaker)
  *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
@@ -59,12 +66,11 @@ const { authenticate } = require('../middleware/auth');
  */
 router.get('/', authenticate, messageController.getAllMessages);
 
-
 /**
  * @swagger
  * /api/messages/order/{orderId}:
  *   get:
- *     summary: Hent alle meldinger for en ordre
+ *     summary: Hent alle meldinger for en bestemt ordre
  *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
@@ -76,16 +82,15 @@ router.get('/', authenticate, messageController.getAllMessages);
  *           type: string
  *     responses:
  *       200:
- *         description: Meldinger fra ordre
+ *         description: Meldinger tilknyttet ordren
  */
 router.get('/order/:orderId', authenticate, messageController.getMessagesForOrder);
-
 
 /**
  * @swagger
  * /api/messages/{id}:
  *   get:
- *     summary: Hent melding etter ID
+ *     summary: Hent enkeltmelding etter ID
  *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
@@ -97,16 +102,15 @@ router.get('/order/:orderId', authenticate, messageController.getMessagesForOrde
  *           type: string
  *     responses:
  *       200:
- *         description: Enkeltmelding
+ *         description: Melding funnet
  */
 router.get('/:id', authenticate, messageController.getMessageById);
-
 
 /**
  * @swagger
  * /api/messages:
  *   post:
- *     summary: Send melding
+ *     summary: Send melding (senderId hentes fra token)
  *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
@@ -120,16 +124,18 @@ router.get('/:id', authenticate, messageController.getMessageById);
  *             properties:
  *               orderId:
  *                 type: string
+ *                 example: "65ab1234ffd2e1a9b3c11d90"
  *               receiverId:
  *                 type: string
+ *                 example: "65ab12ff1122bb9912ac33ae"
  *               content:
  *                 type: string
+ *                 example: "Hei! Jeg er på vei."
  *     responses:
  *       201:
  *         description: Melding sendt
  */
 router.post('/', authenticate, messageController.createMessage);
-
 
 /**
  * @swagger
@@ -151,12 +157,11 @@ router.post('/', authenticate, messageController.createMessage);
  */
 router.patch('/:id/read', authenticate, messageController.markAsRead);
 
-
 /**
  * @swagger
  * /api/messages/order/{orderId}/read:
  *   patch:
- *     summary: Marker ALLE meldinger i en ordre som lest
+ *     summary: Marker alle meldinger i en ordre som lest
  *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
@@ -168,10 +173,9 @@ router.patch('/:id/read', authenticate, messageController.markAsRead);
  *           type: string
  *     responses:
  *       200:
- *         description: Alle meldinger er markert som lest
+ *         description: Alle meldinger markert som lest
  */
 router.patch('/order/:orderId/read', authenticate, messageController.markOrderMessagesAsRead);
-
 
 /**
  * @swagger
@@ -193,7 +197,6 @@ router.patch('/order/:orderId/read', authenticate, messageController.markOrderMe
  */
 router.patch('/:id/delete-for-me', authenticate, messageController.deleteForMe);
 
-
 /**
  * @swagger
  * /api/messages/{id}:
@@ -210,7 +213,7 @@ router.patch('/:id/delete-for-me', authenticate, messageController.deleteForMe);
  *           type: string
  *     responses:
  *       200:
- *         description: Meldingen ble slettet permanent
+ *         description: Meldingen ble slettet
  */
 router.delete('/:id', authenticate, messageController.deleteMessage);
 

@@ -69,6 +69,22 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle joining a chat room
+  socket.on('join-chat', (orderId) => {
+    if (!socket.userId) {
+      socket.emit('error', { message: 'User not authenticated' });
+      return;
+    }
+    socket.join(`chat-${orderId}`);
+    console.log(`User ${socket.userId} joined chat room ${orderId}`);
+  });
+
+  // Handle leaving a chat room
+  socket.on('leave-chat', (orderId) => {
+    socket.leave(`chat-${orderId}`);
+    console.log(`User ${socket.userId} left chat room ${orderId}`);
+  });
+
   socket.on('disconnect', () => {
     console.log(`❌ Socket.io disconnected: ${socket.id}`);
   });

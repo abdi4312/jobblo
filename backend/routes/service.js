@@ -191,6 +191,145 @@ router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
  *               items:
  *                 $ref: '#/components/schemas/Service'
  *
+ const express = require('express');
+ const router = express.Router();
+ const serviceController = require('../controllers/serviceController');
+ const { authenticate } = require('../middleware/auth');
+
+ /**
+ * @swagger
+ * tags:
+ *   name: Tjenester
+ *   description: API for å håndtere tjenester/oppdrag
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Service:
+ *       type: object
+ *       required:
+ *         - title
+ *         - userId
+ *       properties:
+ *         _id:
+ *           type: string
+ *           description: Service-ID
+ *         userId:
+ *           type: string
+ *           description: ID til brukeren som la ut tjenesten
+ *         title:
+ *           type: string
+ *         description:
+ *           type: string
+ *         price:
+ *           type: number
+ *         location:
+ *           type: object
+ *           properties:
+ *             type:
+ *               type: string
+ *               enum: [Point]
+ *             coordinates:
+ *               type: array
+ *               items:
+ *                 type: number
+ *               description: "[longitude, latitude]"
+ *             address:
+ *               type: string
+ *             city:
+ *               type: string
+ *         categories:
+ *           type: array
+ *           items:
+ *             type: string
+ *         images:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Liste over bilde-URLer
+ *         imageMetadata:
+ *           type: array
+ *           description: Metadata om opplastede bilder (Azure Blob)
+ *           items:
+ *             type: object
+ *             properties:
+ *               url:
+ *                 type: string
+ *               blobName:
+ *                 type: string
+ *               uploadedAt:
+ *                 type: string
+ *                 format: date-time
+ *         urgent:
+ *           type: boolean
+ *         status:
+ *           type: string
+ *           enum: [open, closed, in_progress]
+ *         tags:
+ *           type: array
+ *           items:
+ *             type: string
+ *         duration:
+ *           type: object
+ *           properties:
+ *             value:
+ *               type: number
+ *             unit:
+ *               type: string
+ *               enum: [minutes, hours, days]
+ *         fromDate:
+ *           type: string
+ *           format: date
+ *         toDate:
+ *           type: string
+ *           format: date
+ *         equipment:
+ *           type: string
+ *           enum: [utstyrfri, delvis utstyr, trengs utstyr]
+ *         isFavorited:
+ *           type: boolean
+ *         timeEntries:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               hours:
+ *                 type: number
+ *               date:
+ *                 type: string
+ *                 format: date-time
+ *               note:
+ *                 type: string
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ */
+
+/* -----------------------------
+      ROUTER ORDER (IMPORTANT)
+------------------------------*/
+
+// GEO FIRST
+router.put('/:id/location', serviceController.updateLocation);
+
+router.get('/nearby', serviceController.getNearbyServices);
+
+// MY POSTED
+router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
+
+// GET ALL
+router.get('/', serviceController.getAllServices);
+
+/**
+ * @swagger
+ * /api/services:
  *   post:
  *     summary: Opprett en ny tjeneste
  *     tags: [Tjenester]
@@ -203,269 +342,73 @@ router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
  *           example:
  *             userId: "66ffbb129becc42fbc90a555"
  *             title: "Flyttehjelp ønskes"
- *             description: "Trenger hjelp til å flytte møbler fra leilighet til lager."
+ *             description: "Trenger hjelp til å flytte møbler."
  *             price: 2000
  *             location:
  *               address: "Dronningens gate 10"
- *               city: "Trondheim"
+ *               city: "Oslo"
  *               coordinates: [10.3951, 63.4305]
- *             categories: ["Flytting", "Transport"]
- *             urgent: false
- *             equipment: "trengs utstyr"
- *             fromDate: "2025-11-01"
- *             toDate: "2025-11-02"
+ *             categories: ["Flytting"]
+ *             images:
+ *               - "https://yourblob.blob.core.windows.net/bilder/service/demo1.png"
+ *             imageMetadata:
+ *               - url: "https://yourblob.blob.core.windows.net/bilder/service/demo1.png"
+ *                 blobName: "service/66ffbb129becc42fbc90a555/demo1.png"
  *     responses:
  *       201:
  *         description: Tjenesten ble opprettet
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Service'
- *       400:
- *         description: Ugyldig input
- *       404:
- *         description: Bruker ikke funnet
  */
+router.post('/', serviceController.createService);
 
-/**
- * @swagger
- * /api/services/{id}/details:
- *   get:
- *     summary: Hent full info om tjeneste inkludert leverandør, statistikk og lignende tjenester
- *     tags: [Tjenester]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for tjenesten
- *     responses:
- *       200:
- *         description: Full info om tjenesten
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 service:
- *                   $ref: '#/components/schemas/Service'
- *                   description: Komplett tjenesteinformasjon
- *                 provider:
- *                   type: object
- *                   description: Leverandørens profilinformasjon
- *                   properties:
- *                     _id:
- *                       type: string
- *                     name:
- *                       type: string
- *                     email:
- *                       type: string
- *                     avatarUrl:
- *                       type: string
- *                     verified:
- *                       type: boolean
- *                     role:
- *                       type: string
- *                     subscription:
- *                       type: string
- *                 stats:
- *                   type: object
- *                   description: Statistikk for tjenesten
- *                   properties:
- *                     totalOrders:
- *                       type: number
- *                       description: Totalt antall bestillinger
- *                     completedOrders:
- *                       type: number
- *                       description: Antall fullførte bestillinger
- *                 similarServices:
- *                   type: array
- *                   description: Liste over lignende tjenester basert på kategori, pris og lokasjon
- *                   items:
- *                     $ref: '#/components/schemas/Service'
- *       400:
- *         description: Ugyldig tjeneste-ID format
- *       404:
- *         description: Tjenesten ble ikke funnet
- */
+// DETAILS (must be above /:id)
 router.get('/:id/details', serviceController.getServiceDetails);
 
 /**
  * @swagger
  * /api/services/{id}:
  *   get:
- *     summary: Hent en spesifikk tjeneste
+ *     summary: Hent en tjeneste
  *     tags: [Tjenester]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for tjenesten
- *     responses:
- *       200:
- *         description: En tjeneste
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Service'
- *       404:
- *         description: Tjenesten ble ikke funnet
- *
  *   put:
  *     summary: Oppdater en tjeneste
  *     tags: [Tjenester]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for tjenesten
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Service'
- *     responses:
- *       200:
- *         description: Tjenesten ble oppdatert
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Service'
- *       400:
- *         description: Ugyldig input eller dataformat
- *       404:
- *         description: Tjeneste eller bruker ikke funnet
- *       500:
- *         description: Server-feil
- *
  *   delete:
  *     summary: Slett en tjeneste
  *     tags: [Tjenester]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for tjenesten
- *     responses:
- *       204:
- *         description: Tjenesten ble slettet
- *       404:
- *         description: Tjenesten ble ikke funnet
  */
+router.get('/:id', serviceController.getServiceById);
+router.put('/:id', serviceController.updateService);
+router.delete('/:id', serviceController.deleteService);
 
 /**
  * @swagger
  * /api/services/{id}/location:
  *   put:
- *     summary: Oppdater GeoJSON-lokasjon for en tjeneste
+ *     summary: Oppdater GeoJSON-lokasjon
  *     tags: [Tjenester]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for tjenesten
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               latitude:
- *                 type: number
- *               longitude:
- *                 type: number
- *               address:
- *                 type: string
- *               city:
- *                 type: string
- *     responses:
- *       200:
- *         description: Lokasjon oppdatert
  */
+router.put('/:id/location', serviceController.updateLocation);
 
 /**
  * @swagger
  * /api/services/nearby:
  *   get:
- *     summary: Hent tjenester i nærheten basert på radius
+ *     summary: Hent tjenester i nærheten
  *     tags: [Tjenester]
- *     parameters:
- *       - in: query
- *         name: lat
- *         schema:
- *           type: number
- *         required: true
- *       - in: query
- *         name: lng
- *         schema:
- *           type: number
- *         required: true
- *       - in: query
- *         name: radius
- *         schema:
- *           type: number
- *         required: true
- *         description: Radius i meter
- *     responses:
- *       200:
- *         description: Liste over tjenester i nærheten
  */
+router.get('/nearby', serviceController.getNearbyServices);
 
 /**
  * @swagger
  * /api/services/{id}/time-entries:
  *   post:
- *     summary: Legg til en time entry for en tjeneste
+ *     summary: Legg til time entry
  *     tags: [Tjenester]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for tjenesten
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               hours:
- *                 type: number
- *               date:
- *                 type: string
- *                 format: date-time
- *               note:
- *                 type: string
- *     responses:
- *       201:
- *         description: Time entry lagt til
- *
  *   get:
- *     summary: Hent alle time entries for en tjeneste
+ *     summary: Hent alle time entries
  *     tags: [Tjenester]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for tjenesten
- *     responses:
- *       200:
- *         description: Liste over time entries
  */
+router.post('/:id/time-entries', serviceController.addTimeEntry);
+router.get('/:id/time-entries', serviceController.getTimeEntries);
 
 module.exports = router;
