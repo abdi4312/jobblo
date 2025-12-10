@@ -62,6 +62,7 @@ router.get("/options", filterController.getFilterOptions);
  *       500:
  *         description: Serverfeil ved henting av resultater
  */
+
 router.post("/apply", filterController.applyFilters);
 
 module.exports = router;

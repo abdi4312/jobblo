@@ -8,10 +8,10 @@ router.put('/:id/location', serviceController.updateLocation);
 router.get('/nearby', serviceController.getNearbyServices);
 router.get('/', serviceController.getAllServices);
 router.get('/:id', serviceController.getServiceById);
-router.post('/', serviceController.createService);
-router.put('/:id', serviceController.updateService);
-router.delete('/:id', serviceController.deleteService);
-router.post('/:id/time-entries', serviceController.addTimeEntry);
+router.post('/', authenticate, serviceController.createService); 
+router.put('/:id', authenticate, serviceController.updateService);
+router.delete('/:id', authenticate, serviceController.deleteService);
+router.post('/:id/time-entries', authenticate, serviceController.addTimeEntry);
 router.get('/:id/time-entries', serviceController.getTimeEntries);
 
 /**

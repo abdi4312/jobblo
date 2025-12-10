@@ -131,7 +131,8 @@ async function findSimilarServices(service) {
 
 exports.createService = async (req, res) => {
     try {
-        const { userId, images, imageMetadata, ...serviceData } = req.body;
+        const userId = req.userId;
+        const { images, imageMetadata, ...serviceData } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(userId))
             return res.status(400).json({ error: 'Invalid user ID format' });
@@ -178,6 +179,10 @@ exports.updateService = async (req, res) => {
         if (!service)
             return res.status(404).json({ error: 'Service not found' });
 
+        if (service.userId.toString() !== req.userId) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
         // Split "address, city"
         if (req.body.location?.address && !req.body.location.city) {
             const [addr, city] = req.body.location.address.split(',').map(s => s.trim());
@@ -214,8 +219,19 @@ exports.updateService = async (req, res) => {
 
 exports.deleteService = async (req, res) => {
     try {
-        const service = await Service.findByIdAndDelete(req.params.id);
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id))
+            return res.status(400).json({ error: 'Invalid service ID format' });
+
+        const service = await Service.findById(id);
         if (!service) return res.status(404).json({ error: 'Service not found' });
+
+        if (service.userId.toString() !== req.userId) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        await service.deleteOne();
 
         res.json({ message: 'Service deleted' });
 
