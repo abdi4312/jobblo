@@ -3,15 +3,17 @@ const Service = require('../models/Service');
 
 exports.getFollowingFeed = async (req, res) => {
     try {
-        const userId = req.userId; // Fra authenticate middleware
+        const userId = req.userId; // Always authenticated user
 
-        const user = await User.findById(userId);
+        // Fetch only fields needed to reduce payload + speed up query
+        const user = await User.findById(userId).select('following');
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
 
+        // Empty feed if user follows no one
         if (!user.following || user.following.length === 0) {
-            return res.json([]); // Tom feed
+            return res.json({ success: true, data: [] });
         }
 
         const services = await Service.find({
@@ -20,11 +22,16 @@ exports.getFollowingFeed = async (req, res) => {
         })
             .populate('userId', 'name avatarUrl verified')
             .populate('categories', 'name')
-            .sort({ createdAt: -1 }); // Nyeste først
+            .sort({ createdAt: -1 });
 
-        res.json(services);
+        return res.json({
+            success: true,
+            count: services.length,
+            data: services
+        });
+
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: error.message });
+        console.error("FEED ERROR:", error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };
