@@ -1,4 +1,3 @@
-const Filter = require("../models/Filter");
 const Service = require("../models/Service");
 
 /**
@@ -8,10 +7,10 @@ const Service = require("../models/Service");
  */
 exports.getFilterOptions = async (req, res) => {
     try {
-        // Alle kategorier (array)
+        // Distinct category names
         const categories = await Service.distinct("categories");
 
-        // Prisintervall
+        // Price range calculation
         const priceStats = await Service.aggregate([
             {
                 $group: {
@@ -22,12 +21,11 @@ exports.getFilterOptions = async (req, res) => {
             }
         ]);
 
-        const priceRange =
-            priceStats.length > 0
-                ? priceStats[0]
-                : { min: 0, max: 10000 };
+        const priceRange = priceStats.length
+            ? { min: priceStats[0].min, max: priceStats[0].max }
+            : { min: 0, max: 10000 };
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             filters: {
                 categories,
@@ -36,13 +34,15 @@ exports.getFilterOptions = async (req, res) => {
                     "newest",
                     "price_low",
                     "price_high",
+                    "rating_high",
                     "nearby"
                 ],
                 flags: ["urgentOnly"]
             }
         });
     } catch (error) {
-        res.status(500).json({
+        console.error("GET FILTER OPTIONS ERROR:", error);
+        return res.status(500).json({
             success: false,
             message: "Kunne ikke hente filtervalg",
             error: error.message
@@ -62,6 +62,7 @@ exports.applyFilters = async (req, res) => {
             priceRange,
             location,
             urgentOnly,
+            verifiedProvidersOnly,
             searchKeyword,
             sortBy
         } = req.body;
@@ -69,26 +70,31 @@ exports.applyFilters = async (req, res) => {
         const query = {};
 
         // KATEGORIER
-        if (categories?.length > 0) {
+        if (Array.isArray(categories) && categories.length > 0) {
             query.categories = { $in: categories };
         }
 
         // PRIS
-        if (priceRange) {
+        if (priceRange && (priceRange.min != null || priceRange.max != null)) {
             query.price = {
                 $gte: priceRange.min ?? 0,
                 $lte: priceRange.max ?? 100000
             };
         }
 
-        // URGENT
-        if (urgentOnly) {
+        // URGENT FILTER
+        if (urgentOnly === true) {
             query.urgent = true;
         }
 
+        // VERIFIED PROVIDERS ONLY
+        if (verifiedProvidersOnly === true) {
+            query["userId.verified"] = true;
+        }
+
         // SØKEORD
-        if (searchKeyword) {
-            const regex = { $regex: searchKeyword, $options: "i" };
+        if (searchKeyword && typeof searchKeyword === "string") {
+            const regex = new RegExp(searchKeyword, "i");
             query.$or = [
                 { title: regex },
                 { description: regex },
@@ -96,12 +102,12 @@ exports.applyFilters = async (req, res) => {
             ];
         }
 
-        // GEO-FILTER
+        // GEO-FILTER (stronger validation)
         if (
             location &&
-            location.lat &&
-            location.lng &&
-            location.radius
+            typeof location.lat === "number" &&
+            typeof location.lng === "number" &&
+            typeof location.radius === "number"
         ) {
             query.location = {
                 $nearSphere: {
@@ -114,26 +120,31 @@ exports.applyFilters = async (req, res) => {
             };
         }
 
-        // SORTERING
-        let sortQuery = { createdAt: -1 };
+        // SORT LOGIC
+        let sortQuery = { createdAt: -1 }; // Default = newest
 
         if (sortBy === "price_low") sortQuery = { price: 1 };
         if (sortBy === "price_high") sortQuery = { price: -1 };
+        if (sortBy === "rating_high") sortQuery = { rating: -1 };
         if (sortBy === "newest") sortQuery = { createdAt: -1 };
 
-        // HENT RESULTATER
+        // TODO: "nearby" sorting requires geo + distance calculation
+
         const services = await Service.find(query)
             .populate("userId", "name avatarUrl verified")
-            .limit(200)
-            .sort(sortQuery);
+            .populate("categories", "name")
+            .sort(sortQuery)
+            .limit(200); // Prevent huge overload
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             count: services.length,
             results: services
         });
+
     } catch (error) {
-        res.status(500).json({
+        console.error("APPLY FILTER ERROR:", error);
+        return res.status(500).json({
             success: false,
             message: "Kunne ikke hente filtrerte resultater",
             error: error.message

@@ -2,176 +2,173 @@ const Contract = require('../models/Contract');
 const Order = require('../models/Order');
 const mongoose = require('mongoose');
 
+// Helper to validate ObjectId
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+// Helper: check if authenticated user is either customer or provider
+const getUserRole = (order, userId) => {
+    if (order.customerId.toString() === userId) return "customer";
+    if (order.providerId.toString() === userId) return "provider";
+    return null;
+};
+
 /**
  * GET /api/contracts/:id
- * Get contract by ID
+ * Retrieve contract by ID
  */
 exports.getContractById = async (req, res) => {
     try {
-        const contractId = req.params.id;
+        const { id } = req.params;
 
-        if (!mongoose.Types.ObjectId.isValid(contractId)) {
-            return res.status(400).json({ error: 'Invalid contract ID format' });
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: "Invalid contract ID format" });
         }
 
-        const contract = await Contract.findById(contractId)
-            .populate('orderId');
+        const contract = await Contract.findById(id).populate("orderId");
+        if (!contract) return res.status(404).json({ error: "Contract not found" });
 
-        if (!contract) {
-            return res.status(404).json({ error: 'Contract not found' });
-        }
-
-        // Authorization
         const order = contract.orderId;
+        const role = getUserRole(order, req.userId);
 
-        if (
-            order.customerId.toString() !== req.userId &&
-            order.providerId.toString() !== req.userId
-        ) {
-            return res.status(403).json({ error: 'Not authorized to view this contract' });
+        if (!role) {
+            return res.status(403).json({ error: "Not authorized to view this contract" });
         }
 
-        res.json(contract);
+        return res.json({
+            success: true,
+            contract
+        });
 
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("GET CONTRACT ERROR:", error);
+        return res.status(500).json({ error: "Internal server error" });
     }
 };
 
-
 /**
  * POST /api/contracts
- * Create a new contract for an order
+ * Create a contract for an order
  */
 exports.createContract = async (req, res) => {
     try {
         const { orderId, content } = req.body;
 
         if (!orderId || !content) {
-            return res.status(400).json({ error: 'orderId and content are required' });
+            return res.status(400).json({ error: "orderId and content are required" });
         }
 
-        if (!mongoose.Types.ObjectId.isValid(orderId)) {
-            return res.status(400).json({ error: 'Invalid order ID format' });
+        if (!isValidId(orderId)) {
+            return res.status(400).json({ error: "Invalid order ID format" });
         }
 
         const order = await Order.findById(orderId);
-        if (!order) return res.status(404).json({ error: 'Order not found' });
+        if (!order) return res.status(404).json({ error: "Order not found" });
 
-        // Only customer or provider can create a contract
-        if (
-            order.customerId.toString() !== req.userId &&
-            order.providerId.toString() !== req.userId
-        ) {
-            return res.status(403).json({ error: 'Not authorized to create contract for this order' });
+        const role = getUserRole(order, req.userId);
+        if (!role) {
+            return res.status(403).json({ error: "Not authorized to create a contract for this order" });
         }
 
-        // Prevent multiple contracts on the same order
+        // Ensure only one contract per order
         const existing = await Contract.findOne({ orderId });
         if (existing) {
-            return res.status(400).json({ error: 'Contract already exists for this order' });
+            return res.status(400).json({ error: "Contract already exists for this order" });
         }
 
-        const contract = await Contract.create({
-            orderId,
-            content
+        const contract = await Contract.create({ orderId, content });
+        await contract.populate("orderId");
+
+        return res.status(201).json({
+            success: true,
+            message: "Contract created successfully",
+            contract
         });
 
-        await contract.populate('orderId');
-
-        res.status(201).json(contract);
-
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("CREATE CONTRACT ERROR:", error);
+        return res.status(500).json({ error: "Internal server error" });
     }
 };
 
-
 /**
  * PATCH /api/contracts/:id/sign
- * Sign contract (customer or provider)
+ * Sign the contract (customer or provider)
  */
 exports.signContract = async (req, res) => {
     try {
-        const contractId = req.params.id;
+        const { id } = req.params;
 
-        if (!mongoose.Types.ObjectId.isValid(contractId)) {
-            return res.status(400).json({ error: 'Invalid contract ID format' });
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: "Invalid contract ID format" });
         }
 
-        const contract = await Contract.findById(contractId).populate('orderId');
-        if (!contract) return res.status(404).json({ error: 'Contract not found' });
+        const contract = await Contract.findById(id).populate("orderId");
+        if (!contract) return res.status(404).json({ error: "Contract not found" });
 
         const order = contract.orderId;
+        const role = getUserRole(order, req.userId);
 
-        let role = null;
-
-        if (order.customerId.toString() === req.userId) {
-            role = 'customer';
-        } else if (order.providerId.toString() === req.userId) {
-            role = 'provider';
-        } else {
-            return res.status(403).json({ error: 'Not authorized to sign this contract' });
+        if (!role) {
+            return res.status(403).json({ error: "Not authorized to sign this contract" });
         }
 
-        // Apply signature
-        if (role === 'customer') {
+        // Role-based signing rules
+        if (role === "customer") {
             if (contract.signedByCustomer) {
-                return res.status(400).json({ error: 'Customer already signed' });
+                return res.status(400).json({ error: "Customer already signed" });
             }
             contract.signedByCustomer = true;
         }
 
-        if (role === 'provider') {
+        if (role === "provider") {
             if (contract.signedByProvider) {
-                return res.status(400).json({ error: 'Provider already signed' });
+                return res.status(400).json({ error: "Provider already signed" });
             }
             contract.signedByProvider = true;
         }
 
         await contract.save();
 
-        res.json({
+        return res.json({
             success: true,
-            message: `${role} signed the contract`,
+            message: `${role} signed the contract successfully`,
             contract
         });
 
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("SIGN CONTRACT ERROR:", error);
+        return res.status(500).json({ error: "Internal server error" });
     }
 };
 
-
 /**
  * DELETE /api/contracts/:id
+ * Remove contract (allowed for customer or provider)
  */
 exports.deleteContract = async (req, res) => {
     try {
-        const contractId = req.params.id;
+        const { id } = req.params;
 
-        if (!mongoose.Types.ObjectId.isValid(contractId)) {
-            return res.status(400).json({ error: 'Invalid contract ID format' });
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: "Invalid contract ID format" });
         }
 
-        const contract = await Contract.findById(contractId).populate('orderId');
-        if (!contract) return res.status(404).json({ error: 'Contract not found' });
+        const contract = await Contract.findById(id).populate("orderId");
+        if (!contract) return res.status(404).json({ error: "Contract not found" });
 
         const order = contract.orderId;
+        const role = getUserRole(order, req.userId);
 
-        // Authorization
-        if (
-            order.customerId.toString() !== req.userId &&
-            order.providerId.toString() !== req.userId
-        ) {
-            return res.status(403).json({ error: 'Not authorized to delete this contract' });
+        if (!role) {
+            return res.status(403).json({ error: "Not authorized to delete this contract" });
         }
 
-        await Contract.findByIdAndDelete(contractId);
+        await Contract.findByIdAndDelete(id);
 
-        res.status(204).end();
+        return res.status(204).end();
 
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("DELETE CONTRACT ERROR:", error);
+        return res.status(500).json({ error: "Internal server error" });
     }
 };

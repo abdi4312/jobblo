@@ -8,7 +8,7 @@ router.put('/:id/location', serviceController.updateLocation);
 router.get('/nearby', serviceController.getNearbyServices);
 router.get('/', serviceController.getAllServices);
 router.get('/:id', serviceController.getServiceById);
-router.post('/', authenticate, serviceController.createService);
+router.post('/', authenticate, serviceController.createService); 
 router.put('/:id', authenticate, serviceController.updateService);
 router.delete('/:id', authenticate, serviceController.deleteService);
 router.post('/:id/time-entries', authenticate, serviceController.addTimeEntry);
