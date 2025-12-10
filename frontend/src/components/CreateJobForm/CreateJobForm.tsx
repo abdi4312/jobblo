@@ -34,7 +34,7 @@ export default function CreateJobForm({ onSubmit, userId }: CreateJobFormProps) 
       location: {
         address,
         city,
-        coordinates: [0, 0] // You may want to use a geocoding API to get actual coordinates
+        coordinates: [0, 0] // Placeholder for coordinates
       },
       categories: categories.split(',').map(cat => cat.trim()),
       urgent,
