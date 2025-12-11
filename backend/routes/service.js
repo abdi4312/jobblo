@@ -3,204 +3,10 @@ const router = express.Router();
 const serviceController = require('../controllers/serviceController');
 const { authenticate } = require('../middleware/auth');
 
-// ------------------- GeoJSON -------------------
-router.put('/:id/location', serviceController.updateLocation);
-router.get('/nearby', serviceController.getNearbyServices);
-router.get('/', serviceController.getAllServices);
-router.get('/:id', serviceController.getServiceById);
-router.post('/', authenticate, serviceController.createService); 
-router.put('/:id', authenticate, serviceController.updateService);
-router.delete('/:id', authenticate, serviceController.deleteService);
-router.post('/:id/time-entries', authenticate, serviceController.addTimeEntry);
-router.get('/:id/time-entries', serviceController.getTimeEntries);
-
 /**
- * @swagger
- * components:
- *   schemas:
- *     Service:
- *       type: object
- *       required:
- *         - title
- *         - userId
- *       properties:
- *         _id:
- *           type: string
- *           description: Service-ID
- *         userId:
- *           type: string
- *           description: ID til brukeren som la ut tjenesten
- *         title:
- *           type: string
- *           description: Tittel på tjenesten
- *         description:
- *           type: string
- *           description: Beskrivelse av tjenesten
- *         price:
- *           type: number
- *           description: Pris for tjenesten
- *         location:
- *           type: object
- *           properties:
- *             type:
- *               type: string
- *               enum: [Point]
- *             coordinates:
- *               type: array
- *               items:
- *                 type: number
- *               description: [longitude, latitude]
- *             address:
- *               type: string
- *               description: Gateadresse (f.eks. "Karl Johans gate 12")
- *             city:
- *               type: string
- *               description: By (f.eks. "Oslo")
- *         categories:
- *           type: array
- *           items:
- *             type: string
- *           description: Liste med kategorinavn (ikke ID)
- *         images:
- *           type: array
- *           items:
- *             type: string
- *           description: Bilde-URLer
- *         urgent:
- *           type: boolean
- *           description: Om tjenesten haster
- *         status:
- *           type: string
- *           enum: [open, closed, in_progress]
- *           description: Status på tjenesten
- *         tags:
- *           type: array
- *           items:
- *             type: string
- *           description: Stikkord eller søkeord
- *         duration:
- *           type: object
- *           properties:
- *             value:
- *               type: number
- *             unit:
- *               type: string
- *               enum: [minutes, hours, days]
- *         fromDate:
- *           type: string
- *           format: date
- *           description: Startdato for når jobben skal utføres
- *         toDate:
- *           type: string
- *           format: date
- *           description: Sluttdato for når jobben skal utføres
- *         equipment:
- *           type: string
- *           enum: [utstyrfri, delvis utstyr, trengs utstyr]
- *           description: Hvorvidt jobben krever utstyr
- *         isFavorited:
- *           type: boolean
- *           description: Om brukeren har favorittisert tjenesten
- *         timeEntries:
- *           type: array
- *           description: Registrerte timer på tjenesten
- *           items:
- *             type: object
- *             properties:
- *               userId:
- *                 type: string
- *               hours:
- *                 type: number
- *               date:
- *                 type: string
- *                 format: date-time
- *               note:
- *                 type: string
- *         createdAt:
- *           type: string
- *           format: date-time
- *         updatedAt:
- *           type: string
- *           format: date-time
- *
- *   examples:
- *     ExampleService:
- *       summary: Eksempel på tjeneste
- *       value:
- *         _id: "6718e21f98a3c43a6c8d9c4b"
- *         userId: "66ffbb129becc42fbc90a555"
- *         title: "Male stue og kjøkken"
- *         description: "Ønsker hjelp til å male vegger og tak i stue og kjøkken."
- *         price: 4500
- *         location:
- *           type: "Point"
- *           coordinates: [10.7461, 59.9127]
- *           address: "Karl Johans gate 12"
- *           city: "Oslo"
- *         categories: ["Maling", "Oppussing"]
- *         images: ["https://example.com/images/malejobb1.jpg"]
- *         urgent: true
- *         status: "open"
- *         tags: ["innendørs", "privat", "rask"]
- *         duration:
- *           value: 2
- *           unit: "days"
- *         fromDate: "2025-10-24"
- *         toDate: "2025-10-25"
- *         equipment: "delvis utstyr"
- *         isFavorited: false
- *         createdAt: "2025-10-23T18:30:00Z"
- *         updatedAt: "2025-10-23T18:30:00Z"
- */
-
-/**
- * @swagger
- * /api/services/my-posted:
- *   get:
- *     summary: Hent alle tjenester/oppdrag du har lagt ut
- *     tags: [Tjenester]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Liste over alle tjenester/oppdrag du har lagt ut
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Service'
- *       401:
- *         description: Token mangler eller ugyldig
- */
-router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
-
-/**
- * @swagger
- * /api/services:
- *   get:
- *     summary: Hent alle tjenester
- *     tags: [Tjenester]
- *     responses:
- *       200:
- *         description: Liste over alle tjenester
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Service'
- *
- const express = require('express');
- const router = express.Router();
- const serviceController = require('../controllers/serviceController');
- const { authenticate } = require('../middleware/auth');
-
- /**
- * @swagger
- * tags:
- *   name: Tjenester
- *   description: API for å håndtere tjenester/oppdrag
+ * -------------------------------------------------------
+ *  SWAGGER COMPONENTS (Schemas for Service)
+ * -------------------------------------------------------
  */
 
 /**
@@ -211,14 +17,11 @@ router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
  *       type: object
  *       required:
  *         - title
- *         - userId
  *       properties:
  *         _id:
  *           type: string
- *           description: Service-ID
  *         userId:
  *           type: string
- *           description: ID til brukeren som la ut tjenesten
  *         title:
  *           type: string
  *         description:
@@ -248,10 +51,8 @@ router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
  *           type: array
  *           items:
  *             type: string
- *           description: Liste over bilde-URLer
  *         imageMetadata:
  *           type: array
- *           description: Metadata om opplastede bilder (Azure Blob)
  *           items:
  *             type: object
  *             properties:
@@ -288,8 +89,6 @@ router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
  *         equipment:
  *           type: string
  *           enum: [utstyrfri, delvis utstyr, trengs utstyr]
- *         isFavorited:
- *           type: boolean
  *         timeEntries:
  *           type: array
  *           items:
@@ -304,111 +103,172 @@ router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
  *                 format: date-time
  *               note:
  *                 type: string
- *         createdAt:
- *           type: string
- *           format: date-time
- *         updatedAt:
- *           type: string
- *           format: date-time
  */
 
-/* -----------------------------
-      ROUTER ORDER (IMPORTANT)
-------------------------------*/
 
-// GEO FIRST
-router.put('/:id/location', serviceController.updateLocation);
-
-router.get('/nearby', serviceController.getNearbyServices);
-
-// MY POSTED
-router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
-
-// GET ALL
-router.get('/', serviceController.getAllServices);
+/**
+ * -------------------------------------------------------
+ *  GET ALL SERVICES
+ * -------------------------------------------------------
+ */
 
 /**
  * @swagger
  * /api/services:
- *   post:
- *     summary: Opprett en ny tjeneste
- *     tags: [Tjenester]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Service'
- *           example:
- *             userId: "66ffbb129becc42fbc90a555"
- *             title: "Flyttehjelp ønskes"
- *             description: "Trenger hjelp til å flytte møbler."
- *             price: 2000
- *             location:
- *               address: "Dronningens gate 10"
- *               city: "Oslo"
- *               coordinates: [10.3951, 63.4305]
- *             categories: ["Flytting"]
- *             images:
- *               - "https://yourblob.blob.core.windows.net/bilder/service/demo1.png"
- *             imageMetadata:
- *               - url: "https://yourblob.blob.core.windows.net/bilder/service/demo1.png"
- *                 blobName: "service/66ffbb129becc42fbc90a555/demo1.png"
- *     responses:
- *       201:
- *         description: Tjenesten ble opprettet
- */
-router.post('/', serviceController.createService);
-
-// DETAILS (must be above /:id)
-router.get('/:id/details', serviceController.getServiceDetails);
-
-/**
- * @swagger
- * /api/services/{id}:
  *   get:
- *     summary: Hent en tjeneste
+ *     summary: Get all services
  *     tags: [Tjenester]
- *   put:
- *     summary: Oppdater en tjeneste
- *     tags: [Tjenester]
- *   delete:
- *     summary: Slett en tjeneste
- *     tags: [Tjenester]
+ *     responses:
+ *       200:
+ *         description: Returns all services
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Service'
  */
-router.get('/:id', serviceController.getServiceById);
-router.put('/:id', serviceController.updateService);
-router.delete('/:id', serviceController.deleteService);
+router.get('/', serviceController.getAllServices);
+
+
+/**
+ * -------------------------------------------------------
+ *  GET MY POSTED SERVICES
+ * -------------------------------------------------------
+ */
 
 /**
  * @swagger
- * /api/services/{id}/location:
- *   put:
- *     summary: Oppdater GeoJSON-lokasjon
+ * /api/services/my-posted:
+ *   get:
+ *     summary: Get all services created by logged-in user
  *     tags: [Tjenester]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of user's posted services
  */
-router.put('/:id/location', serviceController.updateLocation);
+router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
+
+
+/**
+ * -------------------------------------------------------
+ *  GEOJSON ROUTES
+ * -------------------------------------------------------
+ */
 
 /**
  * @swagger
  * /api/services/nearby:
  *   get:
- *     summary: Hent tjenester i nærheten
+ *     summary: Get services nearby using coordinates
  *     tags: [Tjenester]
  */
 router.get('/nearby', serviceController.getNearbyServices);
 
 /**
  * @swagger
- * /api/services/{id}/time-entries:
- *   post:
- *     summary: Legg til time entry
- *     tags: [Tjenester]
- *   get:
- *     summary: Hent alle time entries
+ * /api/services/{id}/location:
+ *   put:
+ *     summary: Update service location
  *     tags: [Tjenester]
  */
-router.post('/:id/time-entries', serviceController.addTimeEntry);
-router.get('/:id/time-entries', serviceController.getTimeEntries);
+router.put('/:id/location', authenticate, serviceController.updateLocation);
+
+
+/**
+ * -------------------------------------------------------
+ *  CREATE SERVICE
+ * -------------------------------------------------------
+ */
+
+/**
+ * @swagger
+ * /api/services:
+ *   post:
+ *     summary: Create a new service
+ *     tags: [Tjenester]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       201:
+ *         description: Service created
+ */
+router.post('/', authenticate, serviceController.createService);
+
+
+/**
+ * -------------------------------------------------------
+ *  SERVICE DETAILS
+ * -------------------------------------------------------
+ */
+
+/**
+ * @swagger
+ * /api/services/{id}:
+ *   get:
+ *     summary: Get service by ID
+ *     tags: [Tjenester]
+ */
+router.get('/:id', serviceController.getServiceById);
+
+
+/**
+ * -------------------------------------------------------
+ *  UPDATE SERVICE (OWNER ONLY)
+ * -------------------------------------------------------
+ */
+
+/**
+ * @swagger
+ * /api/services/{id}:
+ *   put:
+ *     summary: Update a service
+ *     tags: [Tjenester]
+ */
+router.put('/:id', authenticate, serviceController.updateService);
+
+
+/**
+ * -------------------------------------------------------
+ *  DELETE SERVICE (OWNER ONLY)
+ * -------------------------------------------------------
+ */
+
+/**
+ * @swagger
+ * /api/services/{id}:
+ *   delete:
+ *     summary: Delete a service
+ *     tags: [Tjenester]
+ */
+router.delete('/:id', authenticate, serviceController.deleteService);
+
+
+/**
+ * -------------------------------------------------------
+ *  TIME ENTRIES
+ * -------------------------------------------------------
+ */
+
+/**
+ * @swagger
+ * /api/services/{id}/time-entries:
+ *   post:
+ *     summary: Add a time entry to service
+ *     tags: [Tjenester]
+ */
+router.post('/:id/time-entries', authenticate, serviceController.addTimeEntry);
+
+/**
+ * @swagger
+ * /api/services/{id}/time-entries:
+ *   get:
+ *     summary: Get all time entries for a service
+ *     tags: [Tjenester]
+ */
+router.get('/:id/time-entries', authenticate, serviceController.getTimeEntries);
+
 
 module.exports = router;
