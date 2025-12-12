@@ -21,6 +21,12 @@ const swaggerDefinition = {
             },
         },
     },
+
+    security: [
+        {
+            bearerAuth: [],
+        },
+    ],
 };
 
 const options = {
