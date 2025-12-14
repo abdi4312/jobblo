@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema({
     phone: { type: String, unique: true, sparse: true, default: null },
     avatarUrl: { type: String },
     bio: { type: String },
-    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    role: { type: String, enum: ['user', 'admin', 'provider'], default: 'user' },
     subscription: { type: String, enum: ['free', 'basic', 'plus', 'premium'], default: 'free' },
     verified: { type: Boolean, default: false },
     lastLogin: { type: Date },
@@ -21,6 +21,26 @@ const userSchema = new mongoose.Schema({
     oauthProviders: [{
         provider: { type: String },
         providerId: { type: String }
+    }],
+    accountStatus: {
+        type: String,
+        enum: ['active', 'inactive', 'verified'],
+        default: 'active'
+    },
+
+    averageRating: {
+        type: Number,
+        default: 0
+    },
+
+    reviewCount: {
+        type: Number,
+        default: 0
+    },
+
+    favorites: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Service'
     }]
 }, { timestamps: true });
 
