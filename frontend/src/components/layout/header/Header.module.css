@@ -1,9 +1,11 @@
 .container {
   background-color: #fcf9eb;
   max-width: 1300px;
-  display: flex;
-  justify-content: space-between;
+
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
+
   height: 60px;
   padding: 0 20px;
   position: relative;
@@ -15,6 +17,7 @@
   align-items: center;
   display: flex;
   gap: 8px;
+  justify-self: center;
 }
 
 .jobbloIcon {
@@ -23,4 +26,13 @@
 
 .buttonContainer {
   display: flex;
+  gap: 10px;
+  justify-self: end;
+}
+
+button {
+  padding: 6px;
+  display: flex;
+  border-radius: 6px;
+  gap: 4px;
 }
