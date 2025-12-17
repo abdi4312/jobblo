@@ -5,14 +5,19 @@ export type User = {
   email: string;
   password: string;
   avatarUrl?: string;
+  bio?: string;
   role?: string;
   subscription?: string;
-  verified?: true;
+  verified?: boolean;
   followers?: User[];
   following?: User[];
   availability?: []; // Hva er dette?
   earnings?: number;
   spending?: number;
+  accountStatus?: string;
+  averageRating?: number;
+  reviewCount?: number;
+  favorites?: string[];
   oauthProviders?: [
     {
       provider: "google";
@@ -20,9 +25,9 @@ export type User = {
       _id: "68d98d54a60a9dfeeaec8dc7";
     },
   ];
-  createdAt?: "2025-09-28T19:32:36.745Z";
-  updatedAt?: "2025-09-28T19:32:36.745Z";
-  __v?: 0; // Hva er dette?
+  createdAt?: string;
+  updatedAt?: string;
+  __v?: number;
 };
 
 export type AuthTokens = {

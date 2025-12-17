@@ -23,7 +23,7 @@ export default function Alert() {
 
   // Get user ID from Zustand store
   const user = useUserStore((state) => state.user);
-  const userId = user?.id;
+  const userId = user?._id;
   
   const tabs = [
     { id: 'nyheter', label: 'Nyheter' },
@@ -32,6 +32,9 @@ export default function Alert() {
 
   useEffect(() => {
     const fetchAlerts = async () => {
+      console.log('User:', user);
+      console.log('User ID:', userId);
+      
       if (!userId) {
         console.log('No user logged in');
         setLoading(false);
@@ -40,13 +43,19 @@ export default function Alert() {
 
       try {
         setLoading(true);
+        console.log('Fetching alerts for user:', userId);
         const response = await fetch(`${mainLink}/api/notifications?userId=${userId}`);
         
+        console.log('Response status:', response.status);
+        
         if (!response.ok) {
+          const errorText = await response.text();
+          console.error('API Error:', errorText);
           throw new Error('Failed to fetch');
         }
         
         const data = await response.json();
+        console.log('Alerts data:', data);
         setAlerts(data);
       } catch (error) {
         console.error('Error fetching:', error);
@@ -59,7 +68,10 @@ export default function Alert() {
     fetchAlerts();
   }, [userId]);
 
-  const nyheter = alerts.filter(alert => alert.type === 'Nyhet');
+  // Show unread notifications in "nyheter" tab
+  const nyheter = alerts.filter(alert => !alert.read);
+  
+  // Show read notifications in "lagrede" tab
   const lagrede = alerts.filter(alert => alert.read);
 
   return (

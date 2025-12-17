@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useUserStore } from "../../stores/userStore";
+import { mainLink } from "../../api/mainURLs";
 
 interface ProfileData {
   email: string;
@@ -18,20 +20,35 @@ interface ProfileData {
 
 export default function MinProfil() {
   const navigate = useNavigate();
+  const user = useUserStore((state) => state.user);
+  
   const [formData, setFormData] = useState<ProfileData>({
-    email: "olanormannen@theman.com",
+    email: "",
     password: "************",
-    phoneNumber: "645 23 452",
-    name: "Ola",
-    lastName: "Normann",
-    birthDate: "1832",
-    gender: "Mann",
-    address: "Ola gate 23",
-    postNumber: "1337",
-    postSted: "Sandvika",
-    country: "Norge",
-    profileImage: "https://via.placeholder.com/100",
+    phoneNumber: "",
+    name: "",
+    lastName: "",
+    birthDate: "",
+    gender: "",
+    address: "",
+    postNumber: "",
+    postSted: "",
+    country: "",
+    profileImage: "",
   });
+
+  // Load user data when component mounts
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        email: user.email || "",
+        phoneNumber: user.phone || "",
+        name: user.name || "",
+        profileImage: user.avatarUrl || "",
+      }));
+    }
+  }, [user]);
 
   const [editingField, setEditingField] = useState<string | null>(null);
 
@@ -40,8 +57,59 @@ export default function MinProfil() {
   };
 
   const handleSave = async (field: string) => {
-    console.log(`Saving ${field}:`, formData[field as keyof ProfileData]);
-    setEditingField(null);
+    if (!user?._id) {
+      alert('User not logged in');
+      return;
+    }
+
+    try {
+      // Map form fields to API fields
+      const fieldMapping: Record<string, string> = {
+        phoneNumber: 'phone',
+        name: 'name',
+        email: 'email',
+        // Add more mappings as needed
+      };
+
+      const apiField = fieldMapping[field] || field;
+      const updateData = {
+        [apiField]: formData[field as keyof ProfileData]
+      };
+
+      console.log(`Updating ${field} (${apiField}):`, updateData);
+
+      const response = await fetch(`${mainLink}/api/users/${user._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Backend error:', errorData);
+        
+        // Check for duplicate key error
+        if (errorData.error && errorData.error.includes('dup key')) {
+          throw new Error('Dette telefonnummeret er allerede i bruk');
+        }
+        
+        throw new Error(errorData.error || 'Failed to update user');
+      }
+
+      const updatedUser = await response.json();
+      console.log('Updated user:', updatedUser);
+      
+      // Update Zustand store with new data
+      useUserStore.getState().setUser(updatedUser);
+      
+      alert('Oppdatert!');
+      setEditingField(null);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      alert(error instanceof Error ? error.message : 'Kunne ikke oppdatere');
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -189,16 +257,26 @@ export default function MinProfil() {
           borderRadius: "50%",
           overflow: "hidden",
           border: "3px solid var(--color-primary)",
+          backgroundColor: "var(--color-surface)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}>
-          <img 
-            src={formData.profileImage} 
-            alt="Profile"
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover"
-            }}
-          />
+          {formData.profileImage ? (
+            <img 
+              src={formData.profileImage} 
+              alt="Profile"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover"
+              }}
+            />
+          ) : (
+            <span style={{ fontSize: "40px", color: "var(--color-primary)" }}>
+              {formData.name ? formData.name.charAt(0).toUpperCase() : "?"}
+            </span>
+          )}
         </div>
         <button
           style={{
@@ -214,6 +292,70 @@ export default function MinProfil() {
           Endre bilde
         </button>
       </div>
+
+      {/* User Stats */}
+      {user && (
+        <div style={{ padding: "0 20px", marginBottom: "20px" }}>
+          <div style={{ 
+            backgroundColor: "var(--color-surface)", 
+            borderRadius: "12px", 
+            padding: "16px",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "12px"
+          }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "24px", fontWeight: "bold", color: "var(--color-primary)" }}>
+                {user.averageRating || 0}⭐
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--color-text)" }}>Rating</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "24px", fontWeight: "bold", color: "var(--color-primary)" }}>
+                {user.reviewCount || 0}
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--color-text)" }}>Anmeldelser</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "24px", fontWeight: "bold", color: "var(--color-accent)" }}>
+                {user.earnings || 0} kr
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--color-text)" }}>Tjent</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "24px", fontWeight: "bold", color: "var(--color-accent)" }}>
+                {user.spending || 0} kr
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--color-text)" }}>Brukt</div>
+            </div>
+          </div>
+          {user.bio && (
+            <div style={{ marginTop: "12px", padding: "12px", backgroundColor: "var(--color-surface)", borderRadius: "8px" }}>
+              <strong>Bio:</strong> {user.bio}
+            </div>
+          )}
+          <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
+            <span style={{ 
+              padding: "4px 12px", 
+              backgroundColor: "var(--color-primary)", 
+              color: "white", 
+              borderRadius: "12px",
+              fontSize: "12px"
+            }}>
+              {user.role}
+            </span>
+            <span style={{ 
+              padding: "4px 12px", 
+              backgroundColor: "var(--color-accent)", 
+              color: "white", 
+              borderRadius: "12px",
+              fontSize: "12px"
+            }}>
+              {user.subscription}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Profile Fields */}
       <div style={{ padding: "0 20px" }}>
