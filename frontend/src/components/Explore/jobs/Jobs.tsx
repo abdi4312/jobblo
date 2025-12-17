@@ -27,9 +27,18 @@ export default function JobsContainer() {
         try {
           const res = await fetch(`${mainLink}/api/services`);
           const data = await res.json();
-          setJobs(data);
+          // Ensure data is an array before setting it
+          if (Array.isArray(data)) {
+            setJobs(data);
+          } else if (data && Array.isArray(data.services)) {
+            setJobs(data.services);
+          } else {
+            console.error("API response is not an array:", data);
+            setJobs([]);
+          }
         } catch (err) {
           console.error("Failed to fetch jobs:", err);
+          setJobs([]);
         }
       }
     
@@ -94,7 +103,8 @@ export default function JobsContainer() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'utforsk' && <Utforsk jobs={jobs} gridColumns={gridColumns} />}
+        {activeTab === 'utforsk' && jobs.length > 0 && <Utforsk jobs={jobs} gridColumns={gridColumns} />}
+        {activeTab === 'utforsk' && jobs.length === 0 && <div>Loading jobs...</div>}
 
         {activeTab === 'fordeg' && (
           <div style={{ display: "flex", justifyContent: "space-between" }}>
