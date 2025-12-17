@@ -33,7 +33,7 @@ export function Hero() {
             <Button onClick={() => navigate("/job-listing")}>
               Utforsk Jobblo
             </Button>
-            <Button type={"primary"}>Legg ut annonse</Button>
+            <Button onClick={() => navigate("/publish-job")} type={"primary"}>Legg ut annonse</Button>
           </div>
           </div>
         </div>

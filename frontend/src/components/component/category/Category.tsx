@@ -5,14 +5,14 @@ export function Category({
   categoryIcon,
 }: {
   category: string;
-  categoryIcon: string;
+  categoryIcon: React.ReactNode;
 }) {
   return (
     <>
       <div className={styles.categoryContainer}>
-        <span className={`material-symbols-outlined ${styles.categoryIcon}`}>
+        <div className={styles.categoryIcon}>
           {categoryIcon}
-        </span>
+        </div>
         <h3>{category}</h3>
       </div>
     </>
