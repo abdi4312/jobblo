@@ -3,11 +3,15 @@ import { mainLink } from "../../../api/mainURLs";
 import type { Jobs } from '../../../types/Jobs';
 import Utforsk from './tabs/Utforsk';
 import { Button, Dropdown } from 'antd';
+import { useUserStore } from '../../../stores/userStore';
 
 export default function JobsContainer() {
     const [activeTab, setActiveTab] = useState('utforsk');
     const [jobs, setJobs] = useState<Jobs[]>([]);
     const [gridColumns, setGridColumns] = useState(2); // Default to 2 columns
+    
+    const { user, tokens } = useUserStore();
+    const userId = user?._id;
 
     const handleLayoutChange = (columns: number) => {
         setGridColumns(columns);
@@ -18,8 +22,6 @@ export default function JobsContainer() {
         { key: '2', label: '2 Cards per Row', onClick: () => handleLayoutChange(2) },
         { key: '4', label: '4 Cards per Row', onClick: () => handleLayoutChange(4) }
     ];
-
-    const userId = '68d98d54a60a9dfeeaec8dc6';
     
     // Fetch jobs from API
     useEffect(() => {
@@ -47,18 +49,34 @@ export default function JobsContainer() {
 
     // Fetch Followers jobs from API IKKE FERDIG IKKE FERDIG IKKE FERDIG IKKE FERDIG SE PÅ DENNE.
     useEffect(() => {
-      async function fetchJobs() {
+      async function fetchFollowingJobs() {
+        if (!userId || !tokens?.accessToken) {
+          console.log('User not logged in, skipping following feed');
+          return;
+        }
+
         try {
-          const res = await fetch(`${mainLink}/api/feed/following?userId=${userId}`);
+          const res = await fetch(`${mainLink}/api/feed/following?userId=${userId}`, {
+            headers: {
+              'Authorization': `Bearer ${tokens.accessToken}`,
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          if (!res.ok) {
+            throw new Error(`Failed to fetch following feed: ${res.status}`);
+          }
+          
           const data = await res.json();
-          setJobs(data);
+          // Handle the following feed data appropriately
+          console.log('Following feed:', data);
         } catch (err) {
-          console.error("Failed to fetch jobs:", err);
+          console.error("Failed to fetch following jobs:", err);
         }
       }
     
-      fetchJobs();
-    }, []);    
+      fetchFollowingJobs();
+    }, [userId, tokens]);    
 
     const tabs = [
     { id: 'utforsk', label: 'Utforsk' },
