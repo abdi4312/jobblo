@@ -3,4 +3,5 @@ export type CategoryType = {
   name: string;
   description: string;
   slug: string;
+  icon: string;
 };
