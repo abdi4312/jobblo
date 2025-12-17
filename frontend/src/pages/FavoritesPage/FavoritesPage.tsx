@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { getFavorites } from "../../api/favoriteAPI.ts";
-import type { Jobs } from "../../types/Jobs.ts";
+import { useUserStore } from "../../stores/userStore.ts";
+import type { FavoritesResponse } from "../../types/FavoritesTypes.ts";
+import { JobCard } from "../../components/Explore/jobs/JobCard/JobCard.tsx";
 
 export function FavoritesPage() {
-  const [favorites, setFavorites] = useState<Jobs[]>([]);
+  const [favorites, setFavorites] = useState<FavoritesResponse | null>(null);
+  const userToken = useUserStore((state) => state.tokens);
 
   useEffect(() => {
     async function fetchFavorites() {
       try {
-        const data = await getFavorites();
+        const data = await getFavorites(userToken);
         setFavorites(data);
       } catch (err) {
         console.error("Failed to catch categories", err);
@@ -18,7 +21,11 @@ export function FavoritesPage() {
     void fetchFavorites();
   }, []);
 
-  console.log(favorites);
-
-  return <></>;
+  return (
+    <>
+      {favorites?.data.map((services) => (
+        <JobCard job={services.service} gridColumns={2}></JobCard>
+      ))}
+    </>
+  );
 }
