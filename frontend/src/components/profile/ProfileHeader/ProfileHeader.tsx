@@ -29,7 +29,9 @@ export function ProfileHeader() {
               strokeOpacity="0.62"
             />
           </svg>
-          <span className={styles.rating}>4.3</span>
+          <span className={styles.rating}>
+            {user?.averageRating ? user.averageRating.toFixed(1) : "N/A"}
+          </span>
         </div>
         <div className={styles.memberSince}>medlem siden {memberSince}</div>
       </div>
