@@ -3,7 +3,6 @@ import { ProfileMenuItem } from "../ProfileMenuItem/ProfileMenuItem";
 import * as Icons from "../../../assets/icons";
 import { useNavigate } from "react-router-dom";
 
-
 export function ProfileMenuSection() {
   const navigate = useNavigate();
   const handleMenuItemClick = (item: string) => {
@@ -31,7 +30,7 @@ export function ProfileMenuSection() {
       <ProfileMenuItem
         icon={<Icons.HeartIcon />}
         text="Favoritter"
-        onClick={() => handleMenuItemClick("Favoritter")}
+        onClick={() => navigate("/favoritter")}
       />
       <ProfileMenuItem
         icon={<Icons.StarIcon />}

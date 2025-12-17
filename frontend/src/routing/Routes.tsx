@@ -9,6 +9,7 @@ import RegisterPage from "../pages/RegisterPage/RegisterPage.tsx";
 import { ProtectedRoute } from "../components/shared/ProtectedRoute.tsx";
 import InstillingerPage from "../pages/InstillingerPage/InstillingerPage.tsx";
 import AnmeldelserPage from "../pages/AnmeldelserPage/AnmeldelserPage.tsx";
+import { FavoritesPage } from "../pages/FavoritesPage/FavoritesPage.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -21,31 +22,32 @@ export const routes: RouteObject[] = [
       },
       {
         path: "job-listing",
-        element: (
-            <JobListingPage />
-        ),
+        element: <JobListingPage />,
       },
       {
         path: "profile",
-	      
-        element:
-	        <ProtectedRoute>
-		        <ProfilePage />,
-	        </ProtectedRoute>
+
+        element: (
+          <ProtectedRoute>
+            <ProfilePage />,
+          </ProtectedRoute>
+        ),
       },
       {
         path: "Publish-job",
-        element:
-	        <ProtectedRoute>
-		        <LeggUtOppdrag />,
-	        </ProtectedRoute>
+        element: (
+          <ProtectedRoute>
+            <LeggUtOppdrag />,
+          </ProtectedRoute>
+        ),
       },
       {
         path: "Alert",
-        element:
-	        <ProtectedRoute>
-		        <Alert />,
-	        </ProtectedRoute>
+        element: (
+          <ProtectedRoute>
+            <Alert />,
+          </ProtectedRoute>
+        ),
       },
       {
         path: "Min-profil",
@@ -66,6 +68,10 @@ export const routes: RouteObject[] = [
       {
         path: "Anmeldelser",
         element: <AnmeldelserPage />,
+      },
+      {
+        path: "favoritter",
+        element: <FavoritesPage />,
       },
     ],
   },
