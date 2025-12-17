@@ -28,7 +28,7 @@ export function Categories() {
           {category.map((item) => (
             <Category
               category={item.name}
-              categoryIcon={<span className="material-symbols-outlined">{item.slug}</span>}
+              categoryIcon={item.slug}
               key={item._id}
             />
           ))}
