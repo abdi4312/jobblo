@@ -1,11 +1,28 @@
 const User = require('../models/User');
 const Service = require('../models/Service');
+const mongoose = require('mongoose');
+
+// Helper to validate ObjectId
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+// Helper to authorize user 
+function authorizeUser(req, targetUserId) {
+  const currentUserId = req.userId;       
+  const currentUserRole = req.user.role;
+
+  // Only admin OR the same user can proceed
+  if (currentUserRole !== "admin" && currentUserId !== targetUserId) {
+    return false;
+  }
+  return true;
+}
 
 // Create a new user
 exports.createUser = async (req, res) => {
     try {
         const {
             name,
+            lastName,
             email,
             phone,
             avatarUrl,
@@ -24,6 +41,7 @@ exports.createUser = async (req, res) => {
 
         const user = new User({
             name,
+            lastName,
             email,
             phone,
             avatarUrl,
@@ -52,7 +70,18 @@ exports.createUser = async (req, res) => {
 
 exports.getUserById = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const { id } = req.params;
+
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: "Invalid user ID format" });
+        }
+
+        // Authorization check
+       if (!authorizeUser(req, id)) {
+          return res.status(403).json({ error: "Not authorized" });
+       }
+
+        const user = await User.findById(id).select('-password');
         if (!user) return res.status(404).json({ error: 'User not found' });
         res.json(user);
     } catch (err) {
@@ -62,7 +91,24 @@ exports.getUserById = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
     try {
-        const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const { id } = req.params;
+
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: "Invalid user ID format" });
+        }
+
+        // Authorization check
+        if (!authorizeUser(req, id)) {
+          return res.status(403).json({ error: "Not authorized" });
+        }
+
+        // Prevent normal user from changing 'role'
+        if (req.body.role && req.user.role !== "admin") {
+          return res.status(403).json({ error: "Only admin can change role" });
+        }
+
+        const user = await User.findByIdAndUpdate(id, req.body, { new: true });
+
         if (!user) return res.status(404).json({ error: 'User not found' });
         res.json(user);
     } catch (err) {
@@ -72,7 +118,18 @@ exports.updateUser = async (req, res) => {
 
 exports.deleteUser = async (req, res) => {
     try {
-        const user = await User.findByIdAndDelete(req.params.id);
+        const { id } = req.params;
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: "Invalid user ID format" });
+        }
+
+        // Authorization check
+        if (!authorizeUser(req, id)) {
+          return res.status(403).json({ error: "Not authorized" });
+        }
+        
+        const user = await User.findByIdAndDelete(id);
+
         if (!user) return res.status(404).json({ error: 'User not found' });
         res.json({ message: 'User deleted' });
     } catch (err) {
@@ -82,7 +139,16 @@ exports.deleteUser = async (req, res) => {
 
 exports.getUserServices = async (req, res) => {
     try {
-        const services = await Service.find({ userId: req.params.id });
+        const { id } = req.params;
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: "Invalid user ID format" });
+        }
+
+        // Authorization check
+        if (!authorizeUser(req, id)) {
+          return res.status(403).json({ error: "Not authorized" });
+        }
+        const services = await Service.find({ userId: id });
         res.json(services);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
@@ -92,7 +158,7 @@ exports.getUserServices = async (req, res) => {
 // List all users
 exports.getAllUsers = async (req, res) => {
     try {
-        const users = await User.find();
+        const users = await User.find().select('-password');
         res.json(users);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
@@ -102,32 +168,53 @@ exports.getAllUsers = async (req, res) => {
 // Follow/Unfollow a user
 exports.followUser = async (req, res) => {
     try {
-        const { userId } = req.body;
-        const targetUserId = req.params.id;
+        const currentUserId = req.userId;
+        const targetUserId = req.params.id
         
-        if (!userId || userId === targetUserId) {
-            return res.status(400).json({ error: 'Invalid request' });
+        // Validate IDs
+        if (!isValidId(currentUserId) || !isValidId(targetUserId)) {
+            return res.status(400).json({ error: "Invalid user ID format" });
         }
         
-        const [user, targetUser] = await Promise.all([
-            User.findById(userId),
+        // Can't follow yourself
+        if (currentUserId === targetUserId) {
+            return res.status(400).json({ error: "You cannot follow yourself" });
+        }
+        
+        // Fetch users
+        const [currentUser, targetUser] = await Promise.all([
+            User.findById(currentUserId),
             User.findById(targetUserId)
-        ]);
+        ])
         
-        if (!user || !targetUser) {
-            return res.status(404).json({ error: 'User not found' });
+        if (!currentUser || !targetUser) {
+            return res.status(404).json({ error: "User not found" });
         }
         
-        const isFollowing = user.following.includes(targetUserId);
-        
+        const isFollowing = currentUser.following.includes(targetUserId);
+
         if (isFollowing) {
-            await User.findByIdAndUpdate(userId, { $pull: { following: targetUserId } });
-            await User.findByIdAndUpdate(targetUserId, { $pull: { followers: userId } });
-            res.json({ message: 'Unfollowed', isFollowing: false });
+            // Unfollow
+            await User.findByIdAndUpdate(currentUserId, {
+                $pull: { following: targetUserId }
+            });
+
+            await User.findByIdAndUpdate(targetUserId, {
+                $pull: { followers: currentUserId }
+            });
+
+            return res.json({ message: "Unfollowed", isFollowing: false });
         } else {
-            await User.findByIdAndUpdate(userId, { $addToSet: { following: targetUserId } });
-            await User.findByIdAndUpdate(targetUserId, { $addToSet: { followers: userId } });
-            res.json({ message: 'Followed', isFollowing: true });
+            // Follow
+            await User.findByIdAndUpdate(currentUserId, {
+                $addToSet: { following: targetUserId }
+            });
+
+            await User.findByIdAndUpdate(targetUserId, {
+                $addToSet: { followers: currentUserId }
+            });
+
+            return res.json({ message: "Followed", isFollowing: true });
         }
     } catch (error) {
         res.status(500).json({ error: error.message });

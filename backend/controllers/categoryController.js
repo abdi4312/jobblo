@@ -1,18 +1,29 @@
 const Category = require('../models/Category');
 const mongoose = require('mongoose');
 
+// Helper to validate ObjectId
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+
 exports.createCategory = async (req, res) => {
     try {
         const { name, description, icon } = req.body;
-        
+
+        // ✅ Validate name
+        if (!name || !name.trim()) {
+            return res.status(400).json({
+                error: 'Category name is required'
+            });
+        }
+
         // Generate slug from name
-        const slug = name.toLowerCase()
-            .replace(/[^a-z0-9]/g, '-')
-            .replace(/-+/g, '-')
-            .trim('-');
+        const slug = name
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
         
         const category = await Category.create({
-            name,
+            name : name.trim(),
             slug,
             description,
             icon
@@ -41,13 +52,15 @@ exports.getAllCategories = async (req, res) => {
 
 exports.getCategoryById = async (req, res) => {
     try {
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({ error: 'Invalid category ID format' });
+        const { id } = req.params;
+
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: "Invalid category ID format" });
         }
         
-        const category = await Category.findById(req.params.id);
+        const category = await Category.findById(id);
         if (!category) {
-            return res.status(404).json({ error: 'Category not found' });
+            return res.status(404).json({ error: "Category not found" });
         }
         
         res.json(category);
@@ -58,30 +71,43 @@ exports.getCategoryById = async (req, res) => {
 
 exports.updateCategory = async (req, res) => {
     try {
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({ error: 'Invalid category ID format' });
+        let { id } = req.params;
+
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: "Invalid category ID format" });
         }
         
         // Filter out Swagger placeholder values and undefined fields
-        const updateData = {};
-        Object.keys(req.body).forEach(key => {
-            const value = req.body[key];
-            if (value !== undefined && value !== 'string' && value !== '') {
-                updateData[key] = value;
+         const updateData = {};
+        for (const [key, value] of Object.entries(req.body)) {
+            if (value !== undefined && value !== null) {
+                if (typeof value === 'string') {
+                    if (value.trim() !== '') updateData[key] = value.trim();
+                } else {
+                    updateData[key] = value;
+                }
             }
-        });
+        }
         
         // If name is being updated, regenerate slug
         if (updateData.name) {
-            updateData.slug = updateData.name.toLowerCase()
-                .replace(/[^a-z0-9]/g, '-')
-                .replace(/-+/g, '-')
-                .trim('-');
+            updateData.slug = updateData.name
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
         }
+
+        //No fields to update
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({
+                error: 'No valid fields provided for update'
+            });
         
-        const category = await Category.findByIdAndUpdate(req.params.id, updateData, { new: true });
+        }
+        const category = await Category.findByIdAndUpdate(id, updateData, { new: true });
         if (!category) {
-            return res.status(404).json({ error: 'Category not found' });
+            return res.status(404).json({ error: "Category not found" });
         }
         
         res.json(category);
@@ -95,13 +121,15 @@ exports.updateCategory = async (req, res) => {
 
 exports.deleteCategory = async (req, res) => {
     try {
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({ error: 'Invalid category ID format' });
+        let { id } = req.params;
+
+        if (!isValidId(id)) {
+            return res.status(400).json({ error: "Invalid category ID format" });
         }
         
-        const category = await Category.findByIdAndDelete(req.params.id);
+        const category = await Category.findByIdAndDelete(id);
         if (!category) {
-            return res.status(404).json({ error: 'Category not found' });
+            return res.status(404).json({ error: "Category not found" });   
         }
         
         res.json({ message: 'Category deleted successfully' });

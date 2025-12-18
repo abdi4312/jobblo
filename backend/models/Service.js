@@ -54,8 +54,6 @@ const serviceSchema = new mongoose.Schema({
         default: 'utstyrfri'
     },
 
-    isFavorited: { type: Boolean, default: false },
-
     timeEntries: [timeEntrySchema]
 
 }, { timestamps: true });
