@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const categoryController = require('../controllers/categoryController');
-
+const {authenticate ,requireAdmin} = require('../middleware/auth');
 /**
  * @swagger
  * components:
@@ -71,7 +71,7 @@ const categoryController = require('../controllers/categoryController');
  *       400:
  *         description: Ugyldig input eller kategori eksisterer allerede
  */
-router.post('/', categoryController.createCategory);
+router.post('/', authenticate, requireAdmin, categoryController.createCategory);
 
 /**
  * @swagger
@@ -154,7 +154,7 @@ router.get('/:id', categoryController.getCategoryById);
  *       404:
  *         description: Kategori ikke funnet
  */
-router.put('/:id', categoryController.updateCategory);
+router.put('/:id', authenticate, requireAdmin, categoryController.updateCategory);
 
 /**
  * @swagger
@@ -175,6 +175,6 @@ router.put('/:id', categoryController.updateCategory);
  *       404:
  *         description: Kategori ikke funnet
  */
-router.delete('/:id', categoryController.deleteCategory);
+router.delete('/:id', authenticate, requireAdmin, categoryController.deleteCategory);
 
 module.exports = router;
