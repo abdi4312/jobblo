@@ -187,13 +187,86 @@ router.put('/:id/location', authenticate, serviceController.updateLocation);
  * @swagger
  * /api/services:
  *   post:
- *     summary: Create a new service
+ *     summary: Opprett en ny tjeneste (Norway)
  *     tags: [Tjenester]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *               - price
+ *               - location
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: Rengjøring av bolig
+ *               description:
+ *                 type: string
+ *                 example: Profesjonell rengjøring av leilighet
+ *               price:
+ *                 type: number
+ *                 example: 500
+ *               location:
+ *                 type: object
+ *                 required:
+ *                   - address
+ *                   - city
+ *                   - coordinates
+ *                 properties:
+ *                   address:
+ *                     type: string
+ *                     example: Main Street 10
+ *                   city:
+ *                     type: string
+ *                     example: Oslo
+ *                   coordinates:
+ *                     type: array
+ *                     description: "[longitude, latitude] – Norway"
+ *                     minItems: 2
+ *                     maxItems: 2
+ *                     items:
+ *                       type: number
+ *                     example: [10.7461, 59.9127]
+ *               categories:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example:
+ *                   - Cleaning
+ *                   - House Service
+ *               urgent:
+ *                 type: boolean
+ *                 example: false
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example:
+ *                   - cleaning
+ *                   - home
+ *               duration:
+ *                 type: object
+ *                 properties:
+ *                   value:
+ *                     type: number
+ *                     example: 2
+ *                   unit:
+ *                     type: string
+ *                     enum: [minutes, hours, days]
+ *                     example: hours
  *     responses:
  *       201:
- *         description: Service created
+ *         description: Tjeneste opprettet
+ *       400:
+ *         description: Ugyldig forespørsel
+ *       401:
+ *         description: Ikke autorisert
  */
 router.post('/', authenticate, serviceController.createService);
 
