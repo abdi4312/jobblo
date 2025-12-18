@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
+const {authenticate,requireAdmin } = require('../middleware/auth');
 
 
 /**
@@ -107,7 +108,7 @@ const userController = require('../controllers/userController');
  *       400:
  *         description: Ugyldig forespørsel eller e-post/telefon finnes allerede
  */
-router.post('/', userController.createUser);
+router.post('/', authenticate, requireAdmin ,userController.createUser);
 
 /**
  * @swagger
@@ -132,7 +133,7 @@ router.post('/', userController.createUser);
  *       404:
  *         description: Brukeren ble ikke funnet
  */
-router.get('/:id', userController.getUserById);
+router.get('/:id',authenticate, userController.getUserById);
 
 /**
  * @swagger
@@ -165,7 +166,7 @@ router.get('/:id', userController.getUserById);
  *       404:
  *         description: Brukeren ble ikke funnet
  */
-router.put('/:id', userController.updateUser);
+router.put('/:id', authenticate ,userController.updateUser);
 
 /**
  * @swagger
@@ -194,7 +195,7 @@ router.put('/:id', userController.updateUser);
  *       404:
  *         description: Brukeren ble ikke funnet
  */
-router.delete('/:id', userController.deleteUser);
+router.delete('/:id', authenticate, userController.deleteUser);
 
 /**
  * @swagger
@@ -221,7 +222,7 @@ router.delete('/:id', userController.deleteUser);
  *       404:
  *         description: Brukeren ble ikke funnet
  */
-router.get('/:id/services', userController.getUserServices);
+router.get('/:id/services',authenticate, userController.getUserServices);
 
 /**
  * @swagger
@@ -341,7 +342,7 @@ router.get('/:id/services', userController.getUserServices);
  *               items:
  *                 $ref: '#/components/schemas/User'
  */
-router.get('/', userController.getAllUsers);
+router.get('/', authenticate, requireAdmin, userController.getAllUsers);
 
 /**
  * @swagger
@@ -385,6 +386,6 @@ router.get('/', userController.getAllUsers);
  *       404:
  *         description: Bruker ikke funnet
  */
-router.post('/:id/follow', userController.followUser);
+router.post('/:id/follow', authenticate, userController.followUser);
 
 module.exports = router;

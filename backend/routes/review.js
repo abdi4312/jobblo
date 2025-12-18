@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const reviewController = require('../controllers/reviewController');
+const {authenticate} = require('../middleware/auth');
 
 /**
  * @swagger
@@ -102,7 +103,7 @@ const reviewController = require('../controllers/reviewController');
  *       404:
  *         description: Service or reviewer not found
  */
-router.post('/services/:id/reviews', reviewController.createReview);
+router.post('/services/:id/reviews', authenticate, reviewController.createReview);
 
 /**
  * @swagger
@@ -129,7 +130,7 @@ router.post('/services/:id/reviews', reviewController.createReview);
  *       404:
  *         description: Service not found
  */
-router.get('/services/:id/reviews', reviewController.getServiceReviews);
+router.get('/services/:id/reviews', authenticate, reviewController.getServiceReviews);
 
 /**
  * @swagger
@@ -170,7 +171,7 @@ router.get('/reviews', reviewController.getAllReviews);
  *       404:
  *         description: Review not found
  */
-router.delete('/reviews/:id', reviewController.deleteReview);
+router.delete('/reviews/:id', authenticate, reviewController.deleteReview);
 
 /**
  * @swagger
@@ -228,6 +229,6 @@ router.get('/reviews/latest', reviewController.getLatestReviews);
  *       404:
  *         description: User not found
  */
-router.get('/reviews/user/:id', reviewController.getUserReviews);
+router.get('/reviews/user/:id', authenticate, reviewController.getUserReviews);
 
 module.exports = router;
