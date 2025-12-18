@@ -4,6 +4,24 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const mongoose = require('mongoose');
 
+// Helper to validate ObjectId
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+const isUserRelatedToOrder = ({ userId, order }) => {
+    return (
+        order.customerId.toString() === userId ||
+        order.providerId.toString() === userId
+    );
+};
+
+const canAccessMessage = ({ userId, order, message }) => {
+    return (
+        message.senderId.toString() === userId ||
+        order.customerId.toString() === userId ||
+        order.providerId.toString() === userId
+    );
+};
+
 /**
  * GET /api/messages
  * Hent alle meldinger relatert til brukerens ordre
@@ -41,19 +59,17 @@ exports.getAllMessages = async (req, res) => {
  */
 exports.getMessagesForOrder = async (req, res) => {
     try {
-        const orderId = req.params.orderId;
+        const { orderId } = req.params;
 
-        if (!mongoose.Types.ObjectId.isValid(orderId)) {
+        if (!isValidId(orderId)) {
             return res.status(400).json({ error: 'Invalid order ID format' });
         }
 
         const order = await Order.findById(orderId);
         if (!order) return res.status(404).json({ error: 'Order not found' });
 
-        if (order.customerId.toString() !== req.userId &&
-            order.providerId.toString() !== req.userId) {
+        if (!isUserRelatedToOrder({ userId: req.userId, order }))
             return res.status(403).json({ error: 'Not authorized' });
-        }
 
         const messages = await Message.find({
             orderId,
@@ -73,11 +89,13 @@ exports.getMessagesForOrder = async (req, res) => {
  */
 exports.getMessageById = async (req, res) => {
     try {
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        const { id } = req.params;
+
+        if (!isValidId(id)) {
             return res.status(400).json({ error: 'Invalid message ID format' });
         }
 
-        const message = await Message.findById(req.params.id)
+        const message = await Message.findById(id)
             .populate('senderId', 'name email')
             .populate('orderId', 'serviceId customerId providerId status');
 
@@ -85,9 +103,7 @@ exports.getMessageById = async (req, res) => {
 
         const order = message.orderId;
 
-        if (message.senderId._id.toString() !== req.userId &&
-            order.customerId.toString() !== req.userId &&
-            order.providerId.toString() !== req.userId) {
+        if (!canAccessMessage({userId: req.userId,order: message.orderId, message})) {
             return res.status(403).json({ error: 'Not authorized' });
         }
 
@@ -116,7 +132,7 @@ exports.createMessage = async (req, res) => {
         if (!content && (!images || images.length === 0))
             return res.status(400).json({ error: 'Message must contain text or images' });
 
-        if (!mongoose.Types.ObjectId.isValid(orderId))
+        if (!isValidId(orderId))
             return res.status(400).json({ error: 'Invalid order ID format' });
 
         const order = await Order.findById(orderId);
@@ -167,18 +183,31 @@ exports.createMessage = async (req, res) => {
  */
 exports.markAsRead = async (req, res) => {
     try {
-        const messageId = req.params.id;
+        if (!req.userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
 
-        if (!mongoose.Types.ObjectId.isValid(messageId))
+        const { id } = req.params;
+
+        if (!isValidId(id))
             return res.status(400).json({ error: 'Invalid message ID format' });
 
-        const message = await Message.findById(messageId);
+        const message = await Message.findById(id);
         if (!message) return res.status(404).json({ error: 'Message not found' });
 
-        if (!message.readBy.includes(req.userId)) {
-            message.readBy.push(req.userId);
-            await message.save();
+        // Check if already read
+        const alreadyRead = Array.isArray(message.readReceipts) &&
+            message.readReceipts.some(
+                r => r.userId && r.userId.toString() === req.userId
+            );
+
+        if (alreadyRead) {
+            return res.status(200).json({ success: true, message: 'Message already marked as read' });
         }
+
+        // Mark as read
+        message.readReceipts.push({ userId: req.userId, readAt: Date.now() });
+        await message.save();
 
         res.json({ success: true, message: 'Message marked as read' });
     } catch (err) {
@@ -192,14 +221,17 @@ exports.markAsRead = async (req, res) => {
  */
 exports.markOrderMessagesAsRead = async (req, res) => {
     try {
-        const orderId = req.params.orderId;
+        const { orderId } = req.params;
+
+        if (!isValidId(orderId))
+            return res.status(400).json({ error: 'Invalid order ID format' });
 
         await Message.updateMany(
             {
                 orderId,
-                readBy: { $ne: req.userId }
+                'readReceipts.userId': { $ne: req.userId }
             },
-            { $push: { readBy: req.userId } }
+            { $push:  { readReceipts: { userId: req.userId, readAt: new Date() } } }
         );
 
         res.json({ success: true });
@@ -214,9 +246,9 @@ exports.markOrderMessagesAsRead = async (req, res) => {
  */
 exports.deleteForMe = async (req, res) => {
     try {
-        const messageId = req.params.id;
+        const { id } = req.params;
 
-        await Message.findByIdAndUpdate(messageId, {
+        await Message.findByIdAndUpdate(id, {
             $addToSet: { deletedFor: req.userId }
         });
 
@@ -233,13 +265,20 @@ exports.deleteForMe = async (req, res) => {
  */
 exports.deleteMessage = async (req, res) => {
     try {
-        const message = await Message.findById(req.params.id);
+        if (!req.userId) return res.status(401).json({ error: 'Unauthorized' });
+
+        const { id } = req.params;
+        
+        if (!isValidId(id))
+            return res.status(400).json({ error: 'Invalid message ID format' });
+
+        const message = await Message.findById(id);
         if (!message) return res.status(404).json({ error: 'Message not found' });
 
         if (message.senderId.toString() !== req.userId)
             return res.status(403).json({ error: 'Not allowed' });
 
-        await Message.findByIdAndDelete(req.params.id);
+        await Message.findByIdAndDelete(id);
 
         res.status(204).end();
     } catch (error) {
