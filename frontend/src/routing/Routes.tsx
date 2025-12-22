@@ -10,6 +10,11 @@ import { ProtectedRoute } from "../components/shared/ProtectedRoute.tsx";
 import InstillingerPage from "../pages/InstillingerPage/InstillingerPage.tsx";
 import AnmeldelserPage from "../pages/AnmeldelserPage/AnmeldelserPage.tsx";
 import { FavoritesPage } from "../pages/FavoritesPage/FavoritesPage.tsx";
+import OmOssPage from "../pages/OmOssPage/OmOssPage.tsx";
+import TjenesterPage from "../pages/TjenesterPage/TjenesterPage.tsx";
+import TeamPage from "../pages/TeamPage/TeamPage.tsx";
+import SupportPage from "../pages/SupportPage/SupportPage.tsx";
+import AnnonsereglerPage from "../pages/AnnonsereglerPage/AnnonsereglerPage.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -72,6 +77,26 @@ export const routes: RouteObject[] = [
       {
         path: "favoritter",
         element: <FavoritesPage />,
+      },
+      {
+        path: "om-oss",
+        element: <OmOssPage />,
+      },
+      {
+        path: "tjenester",
+        element: <TjenesterPage />,
+      },
+      {
+        path: "team",
+        element: <TeamPage />,
+      },
+      {
+        path: "support",
+        element: <SupportPage />,
+      },
+      {
+        path: "annonseregler",
+        element: <AnnonsereglerPage />,
       },
     ],
   },

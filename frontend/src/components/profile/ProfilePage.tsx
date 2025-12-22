@@ -4,14 +4,25 @@ import { CoinsSection } from "./CoinsSection/CoinsSection";
 import { ProfileMenuSection } from "./ProfileMenuSection/ProfileMenuSection";
 import { useUserStore } from "../../stores/userStore";
 import { useNavigate } from "react-router-dom";
+import { toast } from 'react-toastify';
+import { Modal } from 'antd';
 
 export default function ProfilePage() {
   const logout = useUserStore((state) => state.logout);
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout();
-    navigate("/");
+    Modal.confirm({
+      title: 'Er du sikker?',
+      content: 'Vil du virkelig logge ut?',
+      okText: 'Ja, logg ut',
+      cancelText: 'Avbryt',
+      onOk() {
+        logout();
+        toast.success("Du har blitt logget ut");
+        navigate("/");
+      },
+    });
   };
 
   return (

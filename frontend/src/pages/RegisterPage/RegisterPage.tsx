@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as Icons from "../../assets/icons";
 import { mainLink } from "../../api/mainURLs";
+import { toast } from 'react-toastify';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -22,12 +23,12 @@ export default function RegisterPage() {
 
   const handleRegister = async () => {
     if (formData.password !== formData.confirmPassword) {
-      alert("Passordene matcher ikke");
+      toast.error("Passordene matcher ikke");
       return;
     }
 
     if (!formData.name || !formData.email || !formData.password) {
-      alert("Vennligst fyll ut alle feltene");
+      toast.error("Vennligst fyll ut alle feltene");
       return;
     }
 
@@ -49,16 +50,20 @@ export default function RegisterPage() {
 
       if (!response.ok) {
         const errorText = await response.text();
+        if (errorText.includes('already exists') || errorText.includes('duplicate')) {
+          toast.error("En bruker med denne e-posten eksisterer allerede");
+        } else {
+          toast.error("Kunne ikke registrere bruker");
+        }
         throw new Error(errorText);
       }
 
       const data = await response.json();
       console.log("Registration successful:", data);
-      alert("Registrering vellykket!");
+      toast.success("Registrering vellykket!");
       navigate("/login");
     } catch (error) {
       console.error("Error registering:", error);
-      alert("Kunne ikke registrere bruker");
     } finally {
       setLoading(false);
     }

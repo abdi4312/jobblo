@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import * as Icons from "../../assets/icons";
 import { mainLink } from "../../api/mainURLs";
 import { useUserStore } from "../../stores/userStore";
+import { toast } from 'react-toastify';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      alert("Vennligst fyll ut alle feltene");
+      toast.error("Vennligst fyll ut alle feltene");
       return;
     }
 
@@ -34,6 +35,11 @@ export default function LoginPage() {
 
       if (!response.ok) {
         const errorText = await response.text();
+        if (response.status === 401) {
+          toast.error("Feil e-post eller passord");
+        } else {
+          toast.error("Kunne ikke logge inn");
+        }
         throw new Error(errorText);
       }
 
@@ -49,11 +55,10 @@ export default function LoginPage() {
         }
       );
       
-      alert("Innlogging vellykket!");
+      toast.success("Innlogging vellykket!");
       navigate("/");
     } catch (error) {
       console.error("Error logging in:", error);
-      alert("Kunne ikke logge inn");
     } finally {
       setLoading(false);
     }

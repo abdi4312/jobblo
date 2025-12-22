@@ -102,17 +102,26 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
         }}>
           {job.categories}
         </h4>
-        <h4 style={{
-          width: "60px",
-          backgroundColor: "var(--color-blue)", 
-          overflow: "hidden", 
-          marginLeft: "12px", 
-          margin: "0", 
-          borderRadius: "4px"
-
-        }}>
-          {job.equipment}
-        </h4>
+        
+        {/* Equipment Badge with color coding */}
+        {job.equipment && (
+          <h4 style={{
+            minWidth: "fit-content",
+            padding: "0 8px",
+            backgroundColor: 
+              job.equipment === 'utstyrfri' ? '#22c55e' : // Green
+              job.equipment === 'delvis utstyr' ? '#ea7e15' : // Orange
+              '#6b7280', // Gray for "trengs utstyr"
+            overflow: "hidden", 
+            margin: "0", 
+            borderRadius: "4px",
+            whiteSpace: "nowrap"
+          }}>
+            {job.equipment === 'utstyrfri' ? 'Utstyrfri' :
+             job.equipment === 'delvis utstyr' ? 'Noe utstyr' :
+             'Utstyr kreves'}
+          </h4>
+        )}
       </div>
 
       {/* Job Details */}
