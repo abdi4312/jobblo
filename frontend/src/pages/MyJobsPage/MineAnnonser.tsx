@@ -38,6 +38,8 @@ interface Service {
   imageMetadata: any[];
   timeEntries: any[];
   duration: Duration;
+  fromDate?: string;
+  toDate?: string;
   createdAt: string;
   updatedAt: string;
   __v: number;
@@ -117,6 +119,9 @@ export default function MineAnnonser() {
   };
 
   const handleFormSubmit = async (jobData: any) => {
+    console.log('Updating job with data:', jobData);
+    console.log('Full data as JSON:', JSON.stringify(jobData, null, 2));
+    
     try {
       const response = await fetch(`${mainLink}/api/services/${editingService!._id}`, {
         method: 'PUT',
@@ -132,7 +137,10 @@ export default function MineAnnonser() {
         setEditingService(null);
         fetchMyServices(); // Refresh the list
       } else {
-        alert('Kunne ikke oppdatere oppdrag');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Failed to update job:', errorData);
+        console.error('Response status:', response.status);
+        alert(`Kunne ikke oppdatere oppdrag: ${errorData.error || errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error updating job:', error);
@@ -165,8 +173,8 @@ export default function MineAnnonser() {
 
         <div style={{ padding: "20px", maxWidth:"900px", margin:"auto", paddingBottom:"80px" }}>
           <CreateJobForm 
-            onSubmit={handleFormSubmit} 
-            userId={editingService.userId._id}
+            onSubmit={handleFormSubmit}
+            isEditMode={true}
             initialData={{
               title: editingService.title,
               description: editingService.description,
@@ -175,7 +183,11 @@ export default function MineAnnonser() {
               city: editingService.location.city,
               categories: editingService.categories.join(', '),
               urgent: editingService.urgent,
-              equipment: editingService.equipment,
+              equipment: editingService.equipment || '',
+              fromDate: editingService.fromDate ? new Date(editingService.fromDate).toISOString().split('T')[0] : '',
+              toDate: editingService.toDate ? new Date(editingService.toDate).toISOString().split('T')[0] : '',
+              durationValue: editingService.duration?.value?.toString() || '',
+              durationUnit: editingService.duration?.unit || 'hours',
             }}
           />
         </div>
@@ -243,92 +255,218 @@ export default function MineAnnonser() {
           Du har ingen annonser ennå
         </div>
       ) : (
-        <div style={{ padding: '20px' }}>
+        <div style={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+          gap: '20px',
+          padding: '20px',
+        }}>
           {services.map((service) => (
             <div
               key={service._id}
-              style={{
-                border: '1px solid #e0e0e0',
-                borderRadius: '12px',
-                padding: '20px',
-                marginBottom: '20px',
-                backgroundColor: 'white',
+              style={{ 
+                borderRadius: "16px", 
+                backgroundColor: "var(--color-surface)",
+                boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                position: 'relative',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: '0 0 10px 0', fontSize: '20px' }}>{service.title}</h3>
-                  <p style={{ margin: '0 0 10px 0', color: 'var(--color-icon)' }}>
-                    {service.description}
-                  </p>
-                  <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}>
-                    <span style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>
-                      {service.price} NOK
-                    </span>
-                    <span style={{ color: 'var(--color-icon)' }}>
-                      📍 {service.location.city}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                    {service.categories.map((cat, index) => (
-                      <span
-                        key={index}
-                        style={{
-                          backgroundColor: 'var(--color-background)',
-                          padding: '4px 12px',
-                          borderRadius: '16px',
-                          fontSize: '14px',
-                        }}
-                      >
-                        {cat}
-                      </span>
-                    ))}
-                  </div>
-                  <div style={{ fontSize: '14px', color: 'var(--color-icon)' }}>
-                    Status: <span style={{ 
-                      color: service.status === 'open' ? 'green' : 'orange',
-                      fontWeight: 'bold'
-                    }}>{service.status}</span>
-                    {service.urgent && (
-                      <span style={{ marginLeft: '10px', color: 'red', fontWeight: 'bold' }}>
-                        ⚡ Haster
-                      </span>
-                    )}
-                  </div>
-                </div>
+              {/* Image Section */}
+              <div style={{ 
+                width: "100%", 
+                height: "150px", 
+                borderRadius: "16px 16px 0 0",
+                backgroundColor: "#f0f0f0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                position: "relative",
+              }}>
+                {service.images && service.images[0] ? (
+                  <img 
+                    src={service.images[0]} 
+                    alt={service.title}
+                    style={{ 
+                      width: "100%", 
+                      height: "100%", 
+                      objectFit: "cover",
+                      borderRadius: "16px 16px 0 0",
+                    }}
+                  />
+                ) : (
+                  <span style={{ color: "#666", fontSize: "16px" }}>
+                    Ingen bilde
+                  </span>
+                )}
                 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginLeft: '20px' }}>
-                  <button
-                    onClick={() => handleEdit(service)}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: 'var(--color-primary)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    ✏️ Rediger
-                  </button>
-                  <button
-                    onClick={() => handleDelete(service._id)}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#ff4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    🗑️ Slett
-                  </button>
+                {/* Status Badge */}
+                {service.urgent && (
+                  <div style={{
+                    position: "absolute",
+                    top: "8px",
+                    left: "8px",
+                    background: "#ff4444",
+                    color: "white",
+                    padding: "4px 12px",
+                    borderRadius: "12px",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                  }}>
+                    ⚡ Haster
+                  </div>
+                )}
+              </div>
+
+              {/* Title */}
+              <h3 style={{ 
+                marginLeft: "12px", 
+                marginBottom: "4px", 
+                marginTop: "12px",
+                color: "var(--color-text)", 
+                whiteSpace: "nowrap", 
+                overflow: "hidden", 
+                textOverflow: "ellipsis" 
+              }}>
+                {service.title}
+              </h3>
+
+              {/* Categories & Equipment */}
+              <div style={{ display: "flex", fontSize: "14px", gap: "8px", padding: "0 12px", flexWrap: "wrap" }}>
+                {service.categories.map((cat, index) => (
+                  <h4 key={index} style={{ 
+                    padding: "2px 8px",
+                    backgroundColor: "var(--color-accent)",
+                    color: "var(--color-white)",
+                    margin: "0", 
+                    borderRadius: "4px",
+                    fontSize: "12px",
+                  }}>
+                    {cat}
+                  </h4>
+                ))}
+                
+                {service.equipment && (
+                  <h4 style={{
+                    padding: "2px 8px",
+                    backgroundColor: 
+                      service.equipment === 'utstyrfri' ? '#22c55e' : 
+                      service.equipment === 'delvis utstyr' ? '#ea7e15' : 
+                      '#6b7280',
+                    color: "white",
+                    margin: "0", 
+                    borderRadius: "4px",
+                    fontSize: "12px",
+                    whiteSpace: "nowrap"
+                  }}>
+                    {service.equipment === 'utstyrfri' ? 'Utstyrfri' :
+                     service.equipment === 'delvis utstyr' ? 'Noe utstyr' :
+                     'Utstyr kreves'}
+                  </h4>
+                )}
+              </div>
+
+              {/* Job Details */}
+              <div style={{ fontSize: "14px", fontWeight: "lighter", padding: "8px 16px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px" }}>
+                  <span className='material-symbols-outlined' style={{ fontSize: "18px" }}>location_on</span>
+                  <h3 style={{ margin: 0, fontSize: "14px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {service.location.address}, {service.location.city}
+                  </h3>
                 </div>
+
+                {service.duration && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px" }}>
+                    <span className='material-symbols-outlined' style={{ fontSize: "18px" }}>schedule</span>
+                    <h3 style={{ margin: 0, fontSize: "14px" }}>
+                      {service.duration.value} {service.duration.unit}
+                    </h3>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span className='material-symbols-outlined' style={{ fontSize: "18px" }}>info</span>
+                  <h3 style={{ 
+                    margin: 0, 
+                    fontSize: "14px",
+                    color: service.status === 'open' ? '#22c55e' : '#ea7e15',
+                    fontWeight: 'bold'
+                  }}>
+                    {service.status === 'open' ? 'Aktiv' : service.status}
+                  </h3>
+                </div>
+              </div>
+
+              {/* Price */}
+              <div style={{ 
+                display: "flex", 
+                justifyContent: "center", 
+                width: "80%", 
+                marginTop: "8px", 
+                marginLeft: "auto",
+                marginRight: "auto",
+                padding: "8px 0",
+                backgroundColor: "var(--color-muted-gray)",
+                borderRadius: "10px",
+              }}>
+                <span style={{ 
+                  fontWeight: 900, 
+                  color: "var(--color-price)",
+                  fontSize: "17px"
+                }}>
+                  {service.price}kr
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ 
+                display: 'flex', 
+                gap: '8px', 
+                padding: '12px',
+                borderTop: '1px solid #e0e0e0',
+                marginTop: '12px'
+              }}>
+                <button
+                  onClick={() => handleEdit(service)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    backgroundColor: 'var(--color-primary)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>edit</span>
+                  Rediger
+                </button>
+                <button
+                  onClick={() => handleDelete(service._id)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    backgroundColor: '#ff4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>delete</span>
+                  Slett
+                </button>
               </div>
             </div>
           ))}
