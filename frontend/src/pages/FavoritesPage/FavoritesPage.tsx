@@ -24,7 +24,11 @@ export function FavoritesPage() {
   return (
     <>
       {favorites?.data.map((services) => (
-        <JobCard job={services.service} gridColumns={2}></JobCard>
+        <JobCard
+          key={services.service._id}
+          job={services.service}
+          gridColumns={2}
+        ></JobCard>
       ))}
     </>
   );
