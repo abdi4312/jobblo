@@ -1,7 +1,10 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import type { Jobs } from "../../../../types/Jobs";
-import { setFavorites } from "../../../../api/favoriteAPI.ts";
+import {
+  deleteFavorites,
+  getFavorites,
+  setFavorites,
+} from "../../../../api/favoriteAPI.ts";
 import { useUserStore } from "../../../../stores/userStore.ts";
 
 interface JobCardProps {
@@ -10,24 +13,43 @@ interface JobCardProps {
 }
 
 export const JobCard = ({ job, gridColumns }: JobCardProps) => {
-  const [isFavorited, setIsFavorited] = useState(false);
   const userToken = useUserStore((state) => state.tokens);
-  const navigate = useNavigate();
+  const [isFavorited, setIsFavorited] = useState(false);
 
-  const handleFavoriteClick = (e: React.MouseEvent) => {
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsFavorited(!isFavorited);
-    void setFavorites(job._id, userToken);
+    setIsFavorited((prevState) => !prevState);
+    try {
+      if (isFavorited) {
+        await deleteFavorites(job._id, userToken);
+      } else {
+        await setFavorites(job._id, userToken);
+      }
+    } catch (err) {
+      console.error("Failed to update favorites", err);
+    }
   };
 
-  const handleCardClick = () => {
-    navigate(`/job-listing/${job._id}`);
-  };
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (!userToken) return;
+      try {
+        const res = await getFavorites(userToken);
+        const favorited = res.data.some(
+          (fav: any) => fav.service._id === job._id,
+        );
+        setIsFavorited(favorited);
+      } catch (err) {
+        console.error("Error", err);
+      }
+    };
+
+    void checkFavoriteStatus();
+  }, [userToken, job._id]);
 
   return (
     <div
-      onClick={handleCardClick}
       style={{
         borderRadius: "16px",
         backgroundColor: "var(--color-surface)",
@@ -35,7 +57,6 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
         maxWidth:
           gridColumns === 1 ? "800px" : gridColumns === 4 ? "200px" : "400px",
         margin: "0 auto",
-        cursor: "pointer",
         boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
       }}
     >
