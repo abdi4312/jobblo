@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { mainLink } from "../../api/mainURLs";
 import { useUserStore } from "../../stores/userStore";
+import { useNavigate } from "react-router-dom";
 
 interface Alert {
   _id: string;
@@ -20,6 +21,7 @@ export default function Alert() {
   const [activeTab, setActiveTab] = useState('nyheter');
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   // Get user ID from Zustand store
   const user = useUserStore((state) => state.user);
@@ -76,7 +78,23 @@ export default function Alert() {
 
   return (
     <>
-      <div style={{ padding: "20px 30px" }}>
+      <div style={{ padding: "20px 30px", maxWidth: "800px", margin: "0 auto" }}>
+        <button
+          onClick={() => navigate(-1)}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: 'var(--color-primary)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '16px',
+            fontWeight: '600',
+            marginBottom: '16px',
+          }}
+        >
+          ← Tilbake
+        </button>
         <h2 style={{ marginBottom: "20px" }}>Varslinger</h2>
 
         {/* Tab Headers */}

@@ -10,24 +10,25 @@ export default function InstillingerPage() {
   };
 
   return (
-    <div style={{ minHeight: "70vh" }}>
+    <div style={{ minHeight: "70vh", maxWidth: "800px", margin: "0 auto", padding: "0 20px" }}>
       {/* Header */}
 
       <button
         onClick={() => navigate(-1)}
         style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          gap: "4px",
-          fontSize: "16px",
-          color: "var(--color-text)",
+          padding: '8px 16px',
+          backgroundColor: 'var(--color-primary)',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontSize: '16px',
+          fontWeight: '600',
+          marginTop: '20px',
+          marginBottom: '16px',
         }}
       >
-        <span className="material-symbols-outlined">arrow_back</span>
-        Tilbake til Min Side
+        ← Tilbake
       </button>
       {/* Title */}
       <h2

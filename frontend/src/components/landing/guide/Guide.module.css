@@ -1,14 +1,151 @@
 .guideContainer {
   color: white;
-  padding: 6px 20px 20px 20px;
+  padding: 60px 20px;
   background-color: var(--color-accent);
 }
 
 .guideContainer h2 {
-  font-weight: 500;
+  font-weight: 700;
+  margin: 0;
+}
+
+.guideHeading {
+  font-size: 42px;
+  margin-bottom: 48px;
+  text-align: center;
 }
 
 .guideStepContainer {
   display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
   gap: 20px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 0 20px;
+}
+
+.guideStepContainer::-webkit-scrollbar {
+  display: none;
+}
+
+.carouselWrapper {
+  position: relative;
+  padding: 0 60px;
+}
+
+.navButtonLeft,
+.navButtonRight {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  background-color: var(--color-cta);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.navButtonLeft:hover,
+.navButtonRight:hover {
+  transform: translateY(-50%) scale(1.05);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.navButtonLeft:active,
+.navButtonRight:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.navButtonLeft span,
+.navButtonRight span {
+  color: white;
+  font-size: 32px;
+}
+
+.navButtonLeft {
+  left: 0;
+}
+
+.navButtonRight {
+  right: 0;
+}
+
+.carouselDots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 40px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.4);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.dot:hover {
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+.activeDot {
+  background-color: var(--color-cta);
+  width: 24px;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .guideContainer {
+    padding: 40px 16px;
+  }
+
+  .guideHeading {
+    font-size: 28px;
+    margin-bottom: 32px;
+  }
+
+  .carouselWrapper {
+    padding: 0;
+  }
+
+  .guideStepContainer {
+    gap: 0;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+
+  .navButtonLeft,
+  .navButtonRight {
+    width: 40px;
+    height: 40px;
+  }
+
+  .navButtonLeft span,
+  .navButtonRight span {
+    font-size: 28px;
+  }
+
+  .navButtonLeft {
+    left: 8px;
+  }
+
+  .navButtonRight {
+    right: 8px;
+  }
+
+  .carouselDots {
+    margin-top: 32px;
+  }
 }

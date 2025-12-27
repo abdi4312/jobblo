@@ -4,10 +4,12 @@ import jobbloswipe from "../../../assets/images/jobbloswipe.png";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../../../stores/userStore";
 import { toast } from "react-toastify";
+import { useState } from "react";
 
 export function Search() {
   const navigate = useNavigate();
   const isAuth = useUserStore((state) => state.isAuthenticated);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handlePublishClick = () => {
     if (!isAuth) {
@@ -16,6 +18,21 @@ export function Search() {
       return;
     }
     navigate("/publish-job");
+  };
+
+  const handleSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search/${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      toast.warning("Vennligst skriv inn et søkeord");
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
   };
 
   return (
@@ -38,12 +55,18 @@ export function Search() {
             paddingLeft: "10px"}} 
             type="text" 
             placeholder="Søk etter oppdrag"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyPress={handleKeyPress}
             />
 
-            <span style={{
+            <span 
+                onClick={handleSearch}
+                style={{
                 right: "30px", 
                 position: "relative", 
-                paddingTop:"7px"}} 
+                paddingTop:"7px",
+                cursor: "pointer"}} 
                 className="material-symbols-outlined">
                 search
             </span>

@@ -2,14 +2,20 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: 164px;
+  min-width: calc((100% - 40px) / 3);
+  scroll-snap-align: start;
+  align-items: center;
+  text-align: center;
 }
 
 .stepImage {
   background-color: var(--color-bg);
-  width: 128px;
-  height: 128px;
+  width: 180px;
+  height: 180px;
   border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .stepText {
@@ -24,5 +30,34 @@
 
 .stepTextTitle {
   font-weight: 700;
+  font-size: 20px;
   color: var(--color-cta);
+}
+
+.stepTextSubtitle {
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .guideStepContainer {
+    min-width: 100%;
+    padding: 0 16px;
+  }
+
+  .stepImage {
+    width: 120px;
+    height: 120px;
+  }
+
+  .stepImage span {
+    font-size: 54px !important;
+  }
+
+  .stepTextTitle {
+    font-size: 18px;
+  }
+
+  .stepTextSubtitle {
+    font-size: 14px;
+  }
 }

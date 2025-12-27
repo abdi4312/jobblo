@@ -13,9 +13,21 @@ export default function JobsContainer() {
     const [loadingNearby, setLoadingNearby] = useState(false);
     const [gridColumns, setGridColumns] = useState(2); // Default to 2 columns
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+    const [jobsToShow, setJobsToShow] = useState(16);
+    const [nearbyJobsToShow, setNearbyJobsToShow] = useState(16);
     
     const { user, tokens } = useUserStore();
     const userId = user?._id;
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const handleLayoutChange = (columns: number) => {
         setGridColumns(columns);
@@ -24,7 +36,7 @@ export default function JobsContainer() {
     const items = [
         { key: '1', label: '1 Card per Row', onClick: () => handleLayoutChange(1) },
         { key: '2', label: '2 Cards per Row', onClick: () => handleLayoutChange(2) },
-        { key: '4', label: '4 Cards per Row', onClick: () => handleLayoutChange(4) }
+        { key: '4', label: '4 Cards per Row', onClick: () => handleLayoutChange(4), disabled: isMobile }
     ];
     
     // Fetch jobs from API
@@ -174,7 +186,30 @@ export default function JobsContainer() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'utforsk' && jobs.length > 0 && <Utforsk jobs={jobs} gridColumns={gridColumns} />}
+        {activeTab === 'utforsk' && jobs.length > 0 && (
+          <>
+            <Utforsk jobs={jobs.slice(0, jobsToShow)} gridColumns={gridColumns} />
+            {jobs.length > jobsToShow && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '32px' }}>
+                <button
+                  onClick={() => setJobsToShow(prev => prev + 16)}
+                  style={{
+                    padding: '12px 32px',
+                    backgroundColor: 'var(--color-primary)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                  }}
+                >
+                  Last inn flere ({jobs.length - jobsToShow} gjenstår)
+                </button>
+              </div>
+            )}
+          </>
+        )}
         {activeTab === 'utforsk' && jobs.length === 0 && <div>Loading jobs...</div>}
 
         {activeTab === 'fordeg' && userLocation === null && (
@@ -205,12 +240,31 @@ export default function JobsContainer() {
               gap: '20px',
               padding: '20px 0'
             }}>
-              {nearbyJobs.map((job) => (
+              {nearbyJobs.slice(0, nearbyJobsToShow).map((job) => (
                 <div key={job._id}>
                   <JobCard job={job} gridColumns={gridColumns} />
                 </div>
               ))}
             </div>
+            {nearbyJobs.length > nearbyJobsToShow && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '32px' }}>
+                <button
+                  onClick={() => setNearbyJobsToShow(prev => prev + 16)}
+                  style={{
+                    padding: '12px 32px',
+                    backgroundColor: 'var(--color-primary)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                  }}
+                >
+                  Last inn flere ({nearbyJobs.length - nearbyJobsToShow} gjenstår)
+                </button>
+              </div>
+            )}
           </div>
         )}
 

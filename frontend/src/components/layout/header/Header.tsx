@@ -9,22 +9,6 @@ import { Modal } from 'antd';
 
 export default function Header() {
   const navigate = useNavigate();
-  const logout = useUserStore((state) => state.logout);
-  const isAuth = useUserStore((state) => state.isAuthenticated);
-
-  function handleLogout() {
-    Modal.confirm({
-      title: 'Er du sikker?',
-      content: 'Vil du virkelig logge ut?',
-      okText: 'Ja, logg ut',
-      cancelText: 'Avbryt',
-      onOk() {
-        logout();
-        toast.success("Du har blitt logget ut");
-        navigate("/login");
-      },
-    });
-  }
 
   return (
     <>
@@ -43,7 +27,6 @@ export default function Header() {
 
         <div className={styles.buttonContainer}>
           <VippsButton />
-          {isAuth && <button onClick={handleLogout}>logout</button>}
         </div>
       </div>
     </>

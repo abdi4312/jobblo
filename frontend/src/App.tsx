@@ -6,10 +6,11 @@ import Footer from "./components/layout/footer/Footer.tsx";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ScrollToTop } from "./components/shared/ScrollToTop.tsx";
+import { App as AntApp } from 'antd';
 
 export default function App() {
   return (
-    <>
+    <AntApp>
       <ScrollToTop />
       <Header />
       <Outlet />
@@ -26,6 +27,6 @@ export default function App() {
         pauseOnHover
         theme="light"
       />
-    </>
+    </AntApp>
   );
 }

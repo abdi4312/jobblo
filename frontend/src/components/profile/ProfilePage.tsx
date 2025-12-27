@@ -5,14 +5,15 @@ import { ProfileMenuSection } from "./ProfileMenuSection/ProfileMenuSection";
 import { useUserStore } from "../../stores/userStore";
 import { useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
-import { Modal } from 'antd';
+import { App } from 'antd';
 
 export default function ProfilePage() {
   const logout = useUserStore((state) => state.logout);
   const navigate = useNavigate();
+  const { modal } = App.useApp();
 
   const handleLogout = () => {
-    Modal.confirm({
+    modal.confirm({
       title: 'Er du sikker?',
       content: 'Vil du virkelig logge ut?',
       okText: 'Ja, logg ut',

@@ -2,8 +2,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 40px;
-  max-width: 800px;
+  padding: 0 40px 40px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
@@ -11,14 +11,14 @@
   background-image: url("src/assets/images/tools.png");
   background-size: cover;
   background-repeat: no-repeat;
-  border-radius: 10px;
+  border-radius: 24px;
   background-position-y: -40px;
 }
 .upperContainer {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  border-radius: 10px;
+  border-radius: 24px;
   text-align: center;
   padding: 20px 40px;
   height: 140px;
@@ -33,16 +33,17 @@
 
 .lowerContainer {
   display: flex;
-  gap: 10px;
+  gap: 16px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   border: solid var(--color-text-strong) 8px;
-  border-radius: 12px;
+  border-radius: 24px;
   position: relative;
   top: -40px;
-  height: 250px;
-  width: 200px;
+  min-height: 320px;
+  width: 280px;
+  padding: 24px 20px;
   background-color: #ffffff;
 }
 
@@ -53,4 +54,102 @@
 
 .lowerContainer ul {
   padding-left: 40px;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.listContainer {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.priceButton {
+  border: 2px solid var(--color-text-strong);
+  border-radius: 12px;
+  height: 44px;
+  font-size: 15px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 20px;
+  margin-top: 8px;
+}
+
+.priceButton:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.priceButton span {
+  font-size: 20px;
+}
+
+.exploreButton {
+  margin-top: 0;
+  height: 48px;
+  font-size: 16px;
+  padding: 0 32px;
+  border-radius: 12px;
+}
+
+.pricingCard {
+  background: #f9f9f9;
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+}
+
+.pricingCard ul {
+  list-style: none;
+  padding: 0;
+}
+
+.pricingCard ul li {
+  position: relative;
+  padding-left: 28px;
+  margin-bottom: 8px;
+}
+
+.pricingCard ul li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--color-primary);
+  font-weight: bold;
+  font-size: 18px;
+}
+@media (max-width: 768px) {
+  .subscriptionContainer {
+    padding: 0 16px 40px;
+  }
+
+  .upperContainer {
+    padding: 16px 20px;
+    height: auto;
+    min-height: 120px;
+  }
+
+  .lowerContainer {
+    width: 100%;
+    max-width: 320px;
+    padding: 20px 16px;
+    min-height: auto;
+  }
+
+  .lowerContainer ul {
+    font-size: 14px;
+  }
+
+  .priceButton {
+    width: 100%;
+  }
+
+  .exploreButton {
+    width: auto;
+    max-width: 280px;
+    height: 40px;
+    font-size: 16px;
+  }
 }

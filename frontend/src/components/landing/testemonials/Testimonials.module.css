@@ -16,6 +16,7 @@
   display: flex;
   flex-direction: row;
   gap: 20px;
+  align-items: center;
 }
 
 .testimonialItemLeft img,
@@ -23,4 +24,23 @@
   height: auto;
   width: 170px;
   object-fit: contain;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .testimonialItemLeft,
+  .testimonialItemRight {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .testimonialItemLeft img,
+  .testimonialItemRight img {
+    width: 120px;
+  }
+
+  .text {
+    font-size: 15px;
+  }
 }

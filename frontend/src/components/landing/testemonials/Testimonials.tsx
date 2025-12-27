@@ -5,8 +5,8 @@ export function Testimonials() {
   return (
     <>
       <div className={styles.testimonialsContainer}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-          <p className={styles.title}>Hva andre sier om oss</p>
+        <div style={{ maxWidth: "900px", margin: "0 auto", padding: "0 20px" }}>
+          <p className={styles.title} style={{ fontSize: '42px', marginBottom: '48px', textAlign: 'center', fontWeight: 700 }}>Hva andre sier om oss</p>
           <div className={styles.testimonialItemRight}>
             <p className={styles.text}>
               Jobblo har bistått oss med å flytte kontor gjentatte ganger med
