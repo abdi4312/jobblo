@@ -1,0 +1,114 @@
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.hero {
+  text-align: center;
+  padding: 60px 20px;
+  background: linear-gradient(135deg, #ea7e15 0%, #f5a442 100%);
+  color: white;
+  border-radius: 12px;
+  margin-bottom: 60px;
+}
+
+.hero h1 {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  font-weight: 800;
+}
+
+.subtitle {
+  font-size: 1.25rem;
+  opacity: 0.95;
+}
+
+.content {
+  padding: 0 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.intro {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.intro p {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #666;
+}
+
+.rules {
+  margin-bottom: 60px;
+}
+
+.ruleSection {
+  padding: 30px;
+  background: white;
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+  margin-bottom: 30px;
+}
+
+.ruleSection h2 {
+  font-size: 1.5rem;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.ruleSection ul {
+  list-style: none;
+  padding: 0;
+}
+
+.ruleSection ul li {
+  padding-left: 30px;
+  position: relative;
+  margin-bottom: 12px;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #666;
+}
+
+.ruleSection ul li::before {
+  content: "•";
+  color: #ea7e15;
+  font-weight: bold;
+  font-size: 1.5rem;
+  position: absolute;
+  left: 10px;
+  top: -3px;
+}
+
+.ruleSection p {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #666;
+}
+
+.link {
+  color: #ea7e15;
+  text-decoration: none;
+  font-weight: 700;
+  transition: color 0.2s;
+}
+
+.link:hover {
+  color: #d66e0d;
+  text-decoration: underline;
+}
+
+.footer {
+  text-align: center;
+  padding: 40px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.footer p {
+  font-size: 1.1rem;
+  color: #666;
+}

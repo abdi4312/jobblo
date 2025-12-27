@@ -84,7 +84,18 @@ export default function EditJobPage() {
   };
 
   const handleDelete = () => {
-    console.log('Delete job');
+    Modal.confirm({
+      title: 'Er du sikker?',
+      content: 'Vil du virkelig slette dette oppdraget? Dette kan ikke angres.',
+      okText: 'Ja, slett',
+      cancelText: 'Avbryt',
+      okType: 'danger',
+      onOk() {
+        console.log('Delete job');
+        toast.success('Oppdraget ble slettet');
+        // Add actual delete logic here
+      },
+    });
   };
 
   return (

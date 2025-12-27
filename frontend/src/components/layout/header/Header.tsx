@@ -4,6 +4,8 @@ import { VippsButton } from "../../component/button/VippsButton.tsx";
 import { VerticalDivider } from "../../component/divider/verticalDivider/VerticalDivider.tsx";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../../../stores/userStore.ts";
+import { toast } from 'react-toastify';
+import { Modal } from 'antd';
 
 export default function Header() {
   const navigate = useNavigate();
@@ -11,7 +13,17 @@ export default function Header() {
   const isAuth = useUserStore((state) => state.isAuthenticated);
 
   function handleLogout() {
-    logout();
+    Modal.confirm({
+      title: 'Er du sikker?',
+      content: 'Vil du virkelig logge ut?',
+      okText: 'Ja, logg ut',
+      cancelText: 'Avbryt',
+      onOk() {
+        logout();
+        toast.success("Du har blitt logget ut");
+        navigate("/login");
+      },
+    });
   }
 
   return (

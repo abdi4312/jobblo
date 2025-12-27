@@ -1,0 +1,77 @@
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.hero {
+  text-align: center;
+  padding: 60px 20px;
+  background: linear-gradient(135deg, #ea7e15 0%, #f5a442 100%);
+  color: white;
+  border-radius: 12px;
+  margin-bottom: 60px;
+}
+
+.hero h1 {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  font-weight: 800;
+}
+
+.subtitle {
+  font-size: 1.25rem;
+  opacity: 0.95;
+}
+
+.content {
+  padding: 0 20px;
+}
+
+.section {
+  margin-bottom: 60px;
+}
+
+.section h2 {
+  font-size: 2rem;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.section p {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #666;
+  max-width: 800px;
+}
+
+.values {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.valueCard {
+  padding: 30px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.valueCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.valueCard h3 {
+  font-size: 1.5rem;
+  color: #ea7e15;
+  margin-bottom: 12px;
+}
+
+.valueCard p {
+  font-size: 1rem;
+  color: #666;
+}

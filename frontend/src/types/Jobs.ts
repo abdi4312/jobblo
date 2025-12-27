@@ -17,7 +17,7 @@ export type Jobs = {
   urgent: boolean;
   status: 'open' | 'closed';
   tags: string[];
-  equipment: string[];
+  equipment: 'utstyrfri' | 'delvis utstyr' | 'trengs utstyr';
   createdAt: string;
   updatedAt: string;
   timeEntries?: {

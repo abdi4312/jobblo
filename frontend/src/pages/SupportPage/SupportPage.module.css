@@ -1,0 +1,157 @@
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.hero {
+  text-align: center;
+  padding: 60px 20px;
+  background: linear-gradient(135deg, #ea7e15 0%, #f5a442 100%);
+  color: white;
+  border-radius: 12px;
+  margin-bottom: 60px;
+}
+
+.hero h1 {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  font-weight: 800;
+}
+
+.subtitle {
+  font-size: 1.25rem;
+  opacity: 0.95;
+}
+
+.content {
+  padding: 0 20px;
+}
+
+.faq {
+  margin-bottom: 80px;
+}
+
+.faq h2 {
+  font-size: 2rem;
+  color: #333;
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.faqItem {
+  padding: 30px;
+  background: white;
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+  margin-bottom: 20px;
+  transition: box-shadow 0.2s;
+}
+
+.faqItem:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.faqItem h3 {
+  font-size: 1.25rem;
+  color: #ea7e15;
+  margin-bottom: 12px;
+}
+
+.faqItem p {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #666;
+}
+
+.contact {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.contact h2 {
+  font-size: 2rem;
+  color: #333;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.contact > p {
+  text-align: center;
+  font-size: 1.1rem;
+  color: #666;
+  margin-bottom: 40px;
+}
+
+.contactForm {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+  margin-bottom: 40px;
+}
+
+.formGroup {
+  margin-bottom: 24px;
+}
+
+.formGroup label {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.formGroup input,
+.formGroup textarea {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 1rem;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-family: 'Nunito', sans-serif;
+  transition: border-color 0.2s;
+}
+
+.formGroup input:focus,
+.formGroup textarea:focus {
+  outline: none;
+  border-color: #ea7e15;
+}
+
+.submitButton {
+  width: 100%;
+  padding: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: #ea7e15;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.submitButton:hover {
+  background: #d66e0d;
+}
+
+.contactInfo {
+  text-align: center;
+  padding: 30px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.contactInfo h3 {
+  font-size: 1.25rem;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.contactInfo p {
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 8px;
+}

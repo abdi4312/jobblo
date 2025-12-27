@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as Icons from "../../assets/icons";
 import { mainLink } from "../../api/mainURLs";
+import { toast } from 'react-toastify';
+import styles from "./RegisterPage.module.css";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -22,12 +24,12 @@ export default function RegisterPage() {
 
   const handleRegister = async () => {
     if (formData.password !== formData.confirmPassword) {
-      alert("Passordene matcher ikke");
+      toast.error("Passordene matcher ikke");
       return;
     }
 
     if (!formData.name || !formData.email || !formData.password) {
-      alert("Vennligst fyll ut alle feltene");
+      toast.error("Vennligst fyll ut alle feltene");
       return;
     }
 
@@ -49,57 +51,37 @@ export default function RegisterPage() {
 
       if (!response.ok) {
         const errorText = await response.text();
+        if (errorText.includes('already exists') || errorText.includes('duplicate')) {
+          toast.error("En bruker med denne e-posten eksisterer allerede");
+        } else {
+          toast.error("Kunne ikke registrere bruker");
+        }
         throw new Error(errorText);
       }
 
       const data = await response.json();
       console.log("Registration successful:", data);
-      alert("Registrering vellykket!");
+      toast.success("Registrering vellykket!");
       navigate("/login");
     } catch (error) {
       console.error("Error registering:", error);
-      alert("Kunne ikke registrere bruker");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "flex-start",
-      minHeight: "100vh",
-      padding: "20px",
-      paddingTop: "60px"
-    }}>
+    <div className={styles.container}>
 
       {/* Register Card */}
-      <div style={{
-        backgroundColor: "white",
-        borderRadius: "16px",
-        padding: "40px 30px",
-        width: "80%",
-        maxWidth: "380px",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
-      }}>
+      <div className={styles.card}>
         {/* Title */}
-        <h2 style={{
-          textAlign: "center",
-          fontSize: "20px",
-          fontWeight: "600",
-          marginBottom: "8px"
-        }}>
+        <h2 className={styles.title}>
           Registrer deg til
         </h2>
 
         {/* Jobblo Logo */}
-        <div style={{
-          display: "flex",
-          justifyContent: "center",
-          marginBottom: "24px"
-        }}>
+        <div className={styles.logo}>
           <Icons.JobbloIcon />
         </div>
 
@@ -109,17 +91,7 @@ export default function RegisterPage() {
             placeholder="Fornavn"
             value={formData.name}
             onChange={(e) => handleInputChange("name", e.target.value)}
-            style={{
-            width: "100%",
-            padding: "12px",
-            border: "1px solid #ddd",
-            borderRadius: "8px",
-            fontSize: "16px",
-            backgroundColor: "#f9f9f9",
-            outline: "none",
-            marginBottom: "12px",
-            boxSizing: "border-box"
-          }}
+            className={styles.input}
           />
 
         {/* Email Input */}
@@ -128,17 +100,7 @@ export default function RegisterPage() {
           placeholder="E-post"
           value={formData.email}
           onChange={(e) => handleInputChange("email", e.target.value)}
-          style={{
-            width: "100%",
-            padding: "12px",
-            border: "1px solid #ddd",
-            borderRadius: "8px",
-            fontSize: "16px",
-            backgroundColor: "#f9f9f9",
-            outline: "none",
-            marginBottom: "12px",
-            boxSizing: "border-box"
-          }}
+          className={styles.input}
         />
 
 
@@ -148,17 +110,7 @@ export default function RegisterPage() {
           placeholder="Passord"
           value={formData.password}
           onChange={(e) => handleInputChange("password", e.target.value)}
-          style={{
-            width: "100%",
-            padding: "12px",
-            border: "1px solid #ddd",
-            borderRadius: "8px",
-            fontSize: "16px",
-            backgroundColor: "#f9f9f9",
-            outline: "none",
-            marginBottom: "12px",
-            boxSizing: "border-box"
-          }}
+          className={styles.input}
         />
 
         {/* Confirm Password Input */}
@@ -167,32 +119,17 @@ export default function RegisterPage() {
           placeholder="Bekreft passord"
           value={formData.confirmPassword}
           onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-          style={{
-            width: "100%",
-            padding: "12px",
-            border: "1px solid #ddd",
-            borderRadius: "8px",
-            fontSize: "16px",
-            backgroundColor: "#f9f9f9",
-            outline: "none",
-            marginBottom: "20px",
-            boxSizing: "border-box"
-          }}
+          className={styles.input}
         />
 
         {/* Info Text */}
-        <p style={{
-          fontSize: "12px",
-          color: "#888",
-          marginBottom: "20px",
-          lineHeight: "1.5"
-        }}>
+        <p className={styles.infoText}>
           Ved å registrere deg godtar du våre{" "}
-          <a href="#" style={{ color: "#FF5B24", textDecoration: "none" }}>
+          <a href="#" className={styles.link}>
             vilkår og betingelser
           </a>
           {" "}og{" "}
-          <a href="#" style={{ color: "#FF5B24", textDecoration: "none" }}>
+          <a href="#" className={styles.link}>
             personvernregler
           </a>
           .
@@ -202,19 +139,7 @@ export default function RegisterPage() {
         <button
           onClick={handleRegister}
           disabled={loading}
-          style={{
-            width: "100%",
-            padding: "14px",
-            backgroundColor: "#C8B4D4",
-            color: "white",
-            border: "none",
-            borderRadius: "24px",
-            fontSize: "16px",
-            fontWeight: "600",
-            cursor: loading ? "not-allowed" : "pointer",
-            opacity: loading ? 0.6 : 1,
-            marginBottom: "12px"
-          }}
+           className={`${styles.registerBtn} ${loading ? styles.registerBtnDisabled : ""}`}
         >
           {loading ? "Registrerer..." : "Registrer deg"}
         </button>
@@ -222,42 +147,19 @@ export default function RegisterPage() {
         {/* Cancel Link */}
         <button
           onClick={() => navigate(-1)}
-          style={{
-            width: "100%",
-            background: "transparent",
-            border: "none",
-            color: "#666",
-            fontSize: "14px",
-            cursor: "pointer",
-            padding: "8px",
-            marginBottom: "12px"
-          }}
+          className={styles.cancelBtn}
         >
           Avbryt
         </button>
 
         {/* Login Section */}
-        <div style={{
-          textAlign: "center",
-          paddingTop: "16px",
-          borderTop: "1px solid #e0e0e0"
-        }}>
-          <p style={{ fontSize: "14px", color: "#666", marginBottom: "12px" }}>
+        <div className={styles.loginSection}>
+          <p className={styles.loginText}>
             Har du allerede en konto?
           </p>
           <button
             onClick={() => navigate("/login")}
-            style={{
-              width: "100%",
-              padding: "12px",
-              backgroundColor: "transparent",
-              color: "var(--color-primary)",
-              border: "2px solid var(--color-primary)",
-              borderRadius: "24px",
-              fontSize: "16px",
-              fontWeight: "600",
-              cursor: "pointer"
-            }}
+            className={styles.loginBtn}
           >
             Logg inn
           </button>
@@ -265,21 +167,8 @@ export default function RegisterPage() {
       </div>
 
       {/* Language Selector */}
-      <div style={{
-        position: "absolute",
-        top: "20px",
-        right: "20px"
-      }}>
-        <select
-          style={{
-            padding: "8px 12px",
-            border: "1px solid #ddd",
-            borderRadius: "6px",
-            fontSize: "14px",
-            cursor: "pointer",
-            backgroundColor: "white"
-          }}
-        >
+       <div className={styles.languageSelector}>
+        <select className={styles.select}>
           <option value="EN">EN</option>
           <option value="NO">NO</option>
         </select>
