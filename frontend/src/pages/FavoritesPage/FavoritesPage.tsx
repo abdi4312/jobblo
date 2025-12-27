@@ -3,13 +3,11 @@ import { getFavorites } from "../../api/favoriteAPI.ts";
 import { useUserStore } from "../../stores/userStore.ts";
 import type { FavoritesResponse } from "../../types/FavoritesTypes.ts";
 import { JobCard } from "../../components/Explore/jobs/JobCard/JobCard.tsx";
-import { useNavigate } from "react-router-dom";
-import styles from "./FavoritesPage.module.css";
+import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper.tsx";
 
 export function FavoritesPage() {
   const [favorites, setFavorites] = useState<FavoritesResponse | null>(null);
   const userToken = useUserStore((state) => state.tokens);
-  const nav = useNavigate();
 
   useEffect(() => {
     async function fetchFavorites() {
@@ -26,14 +24,7 @@ export function FavoritesPage() {
 
   return (
     <>
-      <div className={styles.container}>
-        <button onClick={() => nav(-1)} className={styles.button}>
-          <span className="material-symbols-outlined">arrow_back</span>
-          Tilbake
-        </button>
-      </div>
-
-      <h2 className={styles.title}>Mine Favoritter</h2>
+      <ProfileTitleWrapper title={"Mine favoritter"} buttonText={"Tilbake"} />
       {favorites?.data.map((services) => (
         <JobCard
           key={services.service._id}
