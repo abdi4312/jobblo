@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import type { CategoryType } from "../../../types/categoryTypes.ts";
 import { useNavigate } from "react-router-dom";
 
-export function Categories() {
+export function Categories({ showTitle = true }: { showTitle?: boolean }) {
   const [category, setCategory] = useState<CategoryType[]>([]);
   const navigate = useNavigate();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -52,8 +52,27 @@ export function Categories() {
   return (
     <>
       <div className={styles.categoriesContainer}>
-        <h2 style={{ fontSize: '42px', marginBottom: '32px', textAlign: 'center' }}>Kategorier</h2>
-        <div style={{ position: 'relative', padding: '0 20px' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          {showTitle && (
+            <h2 style={{ 
+              fontSize: '42px', 
+              marginBottom: '32px', 
+              textAlign: 'center',
+            }}>
+              <style>
+                {`
+                  @media (max-width: 768px) {
+                    h2 {
+                      font-size: 28px !important;
+                      margin-bottom: 20px !important;
+                    }
+                  }
+                `}
+              </style>
+              Kategorier
+            </h2>
+          )}
+          <div style={{ position: 'relative', padding: '0 20px' }}>
           <button
             onClick={() => scroll('left')}
             style={{
@@ -112,6 +131,7 @@ export function Categories() {
           >
             <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>chevron_right</span>
           </button>
+        </div>
         </div>
       </div>
     </>

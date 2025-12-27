@@ -17,10 +17,25 @@
   box-shadow: 0 10px 12px -6px rgba(0, 0, 0, 0.5);
 }
 
+@media (max-width: 768px) {
+  .categoryContainer {
+    width: 80px;
+    height: 55px;
+    padding: 6px;
+    gap: 2px;
+  }
+}
+
 .categoryContainer h3 {
   margin: 0;
   font-weight: 600;
   font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .categoryContainer h3 {
+    font-size: 12px;
+  }
 }
 
 .categoryContainer h3,
@@ -35,4 +50,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .categoryIcon {
+    font-size: 32px;
+  }
 }

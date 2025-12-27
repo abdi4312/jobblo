@@ -7,7 +7,7 @@ export default function JobListingPage() {
   <div style={{maxWidth:"900px", margin:"0 auto", paddingBottom:"80px"}}>
         <Search />
         <div style={{paddingTop:"20px"}}/>
-        <Categories />
+        <Categories showTitle={false} />
         <Jobs />
 
   </div>
