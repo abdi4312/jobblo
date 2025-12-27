@@ -5,14 +5,46 @@ const mongoose = require('mongoose');
 
 exports.getAllServices = async (req, res) => {
     try {
-        const services = await Service.find()
-            .populate('userId', 'name');
-        res.json(services);
+        const { category, search, page = 1, limit = 25 } = req.query;
+
+        const query = {};
+
+        if (category) {
+            const categoriesArray = category.split(',').map(c => c.trim());
+            query.categories = { $in: categoriesArray };
+        }
+
+        if (search) {
+            query.$or = [
+                { title: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const services = await Service.find(query)
+            .populate('userId', 'name')
+            .skip((page - 1) * limit)
+            .limit(parseInt(limit))
+            .sort({ createdAt: -1 });
+
+        const total = await Service.countDocuments(query);
+
+        res.json({
+            data: services,
+            pagination: {
+                total,
+                page: Number(page),
+                limit: Number(limit),
+                totalPages: Math.ceil(total / limit)
+            }
+        });
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error' });
     }
 };
+
 
 // ------------------- Get Service By ID -------------------
 
