@@ -4,19 +4,31 @@ import ImageUpload from "../ImageUpload/ImageUpload";
 interface CreateJobFormProps {
   onSubmit: (jobData: any) => void;
   userId: string;
+  initialData?: {
+    title?: string;
+    description?: string;
+    price?: string;
+    address?: string;
+    city?: string;
+    categories?: string;
+    urgent?: boolean;
+    equipment?: string;
+    fromDate?: string;
+    toDate?: string;
+  };
 }
 
-export default function CreateJobForm({ onSubmit, userId }: CreateJobFormProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
-  const [categories, setCategories] = useState("");
-  const [urgent, setUrgent] = useState(false);
-  const [equipment, setEquipment] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+export default function CreateJobForm({ onSubmit, userId, initialData }: CreateJobFormProps) {
+  const [title, setTitle] = useState(initialData?.title || "");
+  const [description, setDescription] = useState(initialData?.description || "");
+  const [price, setPrice] = useState(initialData?.price || "");
+  const [address, setAddress] = useState(initialData?.address || "");
+  const [city, setCity] = useState(initialData?.city || "");
+  const [categories, setCategories] = useState(initialData?.categories || "");
+  const [urgent, setUrgent] = useState(initialData?.urgent || false);
+  const [equipment, setEquipment] = useState(initialData?.equipment || "");
+  const [fromDate, setFromDate] = useState(initialData?.fromDate || "");
+  const [toDate, setToDate] = useState(initialData?.toDate || "");
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
 
   const handleImagesChange = (images: File[]) => {
@@ -257,7 +269,7 @@ export default function CreateJobForm({ onSubmit, userId }: CreateJobFormProps) 
           fontSize: "16px",
         }}
       >
-        Publiser oppdrag
+        {initialData ? "Oppdater oppdrag" : "Publiser oppdrag"}
       </button>
     </form>
   );

@@ -3,7 +3,7 @@ import App from "../App.tsx";
 import { JobListingPage, LandingPage, ProfilePage } from "../pages";
 import LeggUtOppdrag from "../pages/LeggUtOppdragPage/LeggUtOppdrag.tsx";
 import Alert from "../pages/AlertPage/Alert.tsx";
-import MinProfil from "../pages/ProfilePage/MinProfil.tsx";
+import MinProfil from "../pages/MinProfil/MinProfil.tsx";
 import LoginPage from "../pages/LoginPage/LoginPage.tsx";
 import RegisterPage from "../pages/RegisterPage/RegisterPage.tsx";
 import { ProtectedRoute } from "../components/shared/ProtectedRoute.tsx";
@@ -15,6 +15,7 @@ import TjenesterPage from "../pages/TjenesterPage/TjenesterPage.tsx";
 import TeamPage from "../pages/TeamPage/TeamPage.tsx";
 import SupportPage from "../pages/SupportPage/SupportPage.tsx";
 import AnnonsereglerPage from "../pages/AnnonsereglerPage/AnnonsereglerPage.tsx";
+import MineAnnonser from "../pages/MyJobsPage/MineAnnonser.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -35,6 +36,15 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <ProfilePage />,
+          </ProtectedRoute>
+        ),
+      },
+       {
+        path: "mine-annonser",
+
+        element: (
+          <ProtectedRoute>
+            <MineAnnonser />,
           </ProtectedRoute>
         ),
       },

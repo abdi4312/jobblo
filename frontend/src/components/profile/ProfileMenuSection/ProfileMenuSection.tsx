@@ -25,7 +25,7 @@ export function ProfileMenuSection() {
       <ProfileMenuItem
         icon={<Icons.MyPostsIcon />}
         text="Mine annonser"
-        onClick={() => handleMenuItemClick("Mine annonser")}
+        onClick={() => navigate("/Mine-annonser")}
       />
       <ProfileMenuItem
         icon={<Icons.HeartIcon />}
