@@ -11,7 +11,17 @@
   padding: 0 13px 20px 13px;
 }
 
-@media (min-width: 391px) {
+@media (min-width: 768px) {
+  .container {
+    max-width: 800px;
+  }
+  
+  .content {
+    padding: 0 40px 40px 40px;
+  }
+}
+
+@media (min-width: 391px) and (max-width: 767px) {
   .container {
     max-width: 440px;
   }

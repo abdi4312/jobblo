@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ImageUpload from "../ImageUpload/ImageUpload";
+import { mainLink } from "../../api/mainURLs";
 
 interface CreateJobFormProps {
   onSubmit: (jobData: any) => void;
@@ -35,6 +36,23 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
   const [durationValue, setDurationValue] = useState(initialData?.durationValue || "");
   const [durationUnit, setDurationUnit] = useState(initialData?.durationUnit || "hours");
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(`${mainLink}/api/categories`);
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableCategories(data.map((cat: any) => cat.name || cat));
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    
+    fetchCategories();
+  }, []);
 
   const handleImagesChange = (images: File[]) => {
     setSelectedImages(images);
@@ -198,19 +216,31 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
         <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
           Kategorier *
         </label>
-        <input
-          type="text"
+        <select
           value={categories}
           onChange={(e) => setCategories(e.target.value)}
           required
-          placeholder="Flytting, Transport (kommaseparert)"
+          size={1}
           style={{
-            width: "90%",
+            width: "calc(90% + 24px)",
             padding: "12px",
             borderRadius: "8px",
             border: "1px solid var(--color-icon)",
+            fontSize: "16px",
+            fontFamily: "inherit",
+            color: "var(--color-text)",
+            cursor: "pointer",
+            maxHeight: "200px",
+            overflow: "auto",
           }}
-        />
+        >
+          <option value="">Velg kategori...</option>
+          {availableCategories.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div style={{ marginBottom: "24px" }}>
@@ -220,11 +250,18 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
         <select
           value={equipment}
           onChange={(e) => setEquipment(e.target.value)}
+          size={1}
           style={{
-            width: "90%",
+            width: "calc(90% + 24px)",
             padding: "12px",
             borderRadius: "8px",
             border: "1px solid var(--color-icon)",
+            fontSize: "16px",
+            fontFamily: "inherit",
+            color: "var(--color-text)",
+            cursor: "pointer",
+            maxHeight: "200px",
+            overflow: "auto",
           }}
         >
           <option value="">Velg...</option>

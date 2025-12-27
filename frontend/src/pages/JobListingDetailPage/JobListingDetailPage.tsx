@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import styles from '../styles/JobListingDetailPage.module.css';
-import JobHeader from '../components/job/JobHeader/JobHeader';
-import JobImageCarousel from '../components/job/JobImageCarousel/JobImageCarousel';
-import JobDetails from '../components/job/JobDetails/JobDetails';
-import JobDescription from '../components/job/JobDescription/JobDescription';
-import JobLocation from '../components/job/JobLocation/JobLocation';
-import RelatedJobs from '../components/job/RelatedJobs/RelatedJobs';
-import { mainLink } from '../api/mainURLs';
+import styles from '../../styles/JobListingDetailPage.module.css';
+import JobHeader from '../../components/job/JobHeader/JobHeader';
+import JobImageCarousel from '../../components/job/JobImageCarousel/JobImageCarousel';
+import JobDetails from '../../components/job/JobDetails/JobDetails';
+import JobDescription from '../../components/job/JobDescription/JobDescription';
+import JobLocation from '../../components/job/JobLocation/JobLocation';
+import RelatedJobs from '../../components/job/RelatedJobs/RelatedJobs';
+import { mainLink } from '../../api/mainURLs';
 
 interface Service {
   _id: string;
@@ -41,6 +41,39 @@ const JobListingDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const [job, setJob] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const getStatusConfig = (status: string) => {
+    const normalizedStatus = status?.toLowerCase();
+    if (normalizedStatus === 'open' || normalizedStatus === 'åpen') {
+      return {
+        text: 'Åpen',
+        bgColor: '#E8F5E9',
+        textColor: '#2E7D32',
+        icon: '✓'
+      };
+    } else if (normalizedStatus === 'closed' || normalizedStatus === 'lukket') {
+      return {
+        text: 'Lukket',
+        bgColor: '#FFEBEE',
+        textColor: '#C62828',
+        icon: '✕'
+      };
+    } else if (normalizedStatus === 'in progress' || normalizedStatus === 'pågår') {
+      return {
+        text: 'Pågår',
+        bgColor: '#FFF3E0',
+        textColor: '#E65100',
+        icon: '⟳'
+      };
+    } else {
+      return {
+        text: status || 'Ukjent',
+        bgColor: '#F5F5F5',
+        textColor: '#616161',
+        icon: '?'
+      };
+    }
+  };
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -104,14 +137,14 @@ const JobListingDetailPage: React.FC = () => {
         <h2 style={{ margin: 0, fontSize: '20px' }}>Tilbake</h2>
       </div>
 
-      <JobHeader />
-
       <JobImageCarousel images={job?.images} />
+
       <div className={styles.content}>
         <JobDetails job={job} />
-        <JobDescription description={job?.description} />
+        <JobDescription description={job?.description} price={job?.price} urgent={job?.urgent} />
         <JobLocation location={job?.location} />
-        <RelatedJobs />
+        
+        <RelatedJobs coordinates={job?.location?.coordinates} currentJobId={job?._id} />
       </div>
     </div>
   );

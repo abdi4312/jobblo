@@ -1,72 +1,85 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './RelatedJobs.module.css';
-import JobCard from '../JobCard/JobCard';
+import { mainLink } from '../../../api/mainURLs';
+import { JobCard } from '../../Explore/jobs/JobCard/JobCard';
+import type { Jobs } from '../../../types/Jobs';
 
-const RelatedJobs: React.FC = () => {
-  const jobsData = [
-    {
-      image: "https://api.builder.io/api/v1/image/assets/TEMP/0d8e29846c42e592a0100389997853a366e46652?width=346",
-      title: "Maling av stue",
-      category: "Male",
-      equipment: "Utstyr fri",
-      location: "Gate 12 , Bærum",
-      duration: "7 timer",
-      date: "07.08.25",
-      price: "350kr/ timen",
-      isFirst: true
-    },
-    {
-      image: "https://api.builder.io/api/v1/image/assets/TEMP/4dcea95cbb92944ad1f5c8a8a8c0a199ac1a638c?width=346",
-      title: "Maling av stue",
-      category: "Male",
-      equipment: "Utstyr fri",
-      location: "Gate 12 , Bærum",
-      duration: "7 timer",
-      date: "07.08.25",
-      price: "350kr/ timen",
-      isFirst: false
-    },
-    {
-      image: "https://api.builder.io/api/v1/image/assets/TEMP/ad33659c33381eac40061641b81f19d65a13ad9f?width=346",
-      title: "Maling av stue",
-      category: "Male",
-      equipment: "Utstyr fri",
-      location: "Gate 12 , Bærum",
-      duration: "7 timer",
-      date: "07.08.25",
-      price: "350kr/ timen",
-      isFirst: false
-    },
-    {
-      image: "https://api.builder.io/api/v1/image/assets/TEMP/fabc6c79d1bc295e56a2b2e4f27520c3554fd155?width=346",
-      title: "Maling av stue",
-      category: "Male",
-      equipment: "Utstyr fri",
-      location: "Gate 12 , Bærum",
-      duration: "7 timer",
-      date: "07.08.25",
-      price: "350kr/ timen",
-      isFirst: false
-    }
-  ];
+interface RelatedJobsProps {
+  coordinates?: [number, number];
+  currentJobId?: string;
+}
+
+const RelatedJobs: React.FC<RelatedJobsProps> = ({ coordinates, currentJobId }) => {
+  const [nearbyJobs, setNearbyJobs] = useState<Jobs[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchNearbyJobs = async () => {
+      if (!coordinates || coordinates.length !== 2) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const [longitude, latitude] = coordinates;
+        // Use lat, lng, and radius as expected by the backend
+        const response = await fetch(
+          `${mainLink}/api/services/nearby?lat=${latitude}&lng=${longitude}&radius=50000`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Filter out the current job and limit to 4
+          const filtered = data
+            .filter((job: Jobs) => job._id !== currentJobId)
+            .slice(0, 4);
+          setNearbyJobs(filtered);
+        } else {
+          const errorText = await response.text();
+          console.error('Failed to fetch nearby jobs:', response.status, errorText);
+        }
+      } catch (err) {
+        console.error('Error fetching nearby jobs:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNearbyJobs();
+  }, [coordinates, currentJobId]);
+
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <h3 className={styles.sectionTitle}>Jobber i nærheten</h3>
+        <div style={{ padding: '20px', textAlign: 'center' }}>Laster...</div>
+      </div>
+    );
+  }
+
+  if (nearbyJobs.length === 0) {
+    return (
+      <div className={styles.container}>
+        <h3 className={styles.sectionTitle}>Jobber i nærheten</h3>
+        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text)' }}>
+          Ingen jobber i nærheten funnet
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
-      <h3 className={styles.sectionTitle}>Andre annonser i samme kategori</h3>
+      <h3 className={styles.sectionTitle}>Jobber i nærheten</h3>
       
       <div className={styles.jobsGrid}>
-        {jobsData.map((job, index) => (
+        {nearbyJobs.map((job) => (
           <JobCard
-            key={index}
-            image={job.image}
-            title={job.title}
-            category={job.category}
-            equipment={job.equipment}
-            location={job.location}
-            duration={job.duration}
-            date={job.date}
-            price={job.price}
-            isFirst={job.isFirst}
+            key={job._id}
+            job={job}
+            gridColumns={2}
           />
         ))}
       </div>

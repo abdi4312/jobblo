@@ -1,5 +1,6 @@
 .container {
   padding: 20px 0 40px 0;
+  width: 100%;
 }
 
 .sectionTitle {
@@ -13,9 +14,14 @@
 
 .jobsGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: 17px;
-  justify-items: center;
+  width: 100%;
+}
+
+.jobsGrid > div {
+  overflow: hidden;
+  border-radius: 16px;
 }
 
 @media (max-width: 390px) {
@@ -24,3 +30,4 @@
     gap: 20px;
   }
 }
+

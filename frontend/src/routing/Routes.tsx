@@ -16,7 +16,7 @@ import TeamPage from "../pages/TeamPage/TeamPage.tsx";
 import SupportPage from "../pages/SupportPage/SupportPage.tsx";
 import AnnonsereglerPage from "../pages/AnnonsereglerPage/AnnonsereglerPage.tsx";
 import MineAnnonser from "../pages/MyJobsPage/MineAnnonser.tsx";
-import JobListingDetailPage from "../pages/JobListingDetailPage.tsx";
+import JobListingDetailPage from "../pages/JobListingDetailPage/JobListingDetailPage.tsx";
 
 export const routes: RouteObject[] = [
   {

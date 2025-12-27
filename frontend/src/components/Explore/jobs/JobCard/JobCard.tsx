@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Jobs } from "../../../../types/Jobs";
 import {
   deleteFavorites,
@@ -13,8 +14,13 @@ interface JobCardProps {
 }
 
 export const JobCard = ({ job, gridColumns }: JobCardProps) => {
+  const navigate = useNavigate();
   const userToken = useUserStore((state) => state.tokens);
   const [isFavorited, setIsFavorited] = useState(false);
+
+  const handleCardClick = () => {
+    navigate(`/job-listing/${job._id}`);
+  };
 
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -50,6 +56,7 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
 
   return (
     <div
+      onClick={handleCardClick}
       style={{
         borderRadius: "16px",
         backgroundColor: "var(--color-surface)",
@@ -58,6 +65,7 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
           gridColumns === 1 ? "800px" : gridColumns === 4 ? "200px" : "400px",
         margin: "0 auto",
         boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+        cursor: "pointer",
       }}
     >
       {/* Image Section */}
@@ -81,6 +89,7 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
               width: "100%",
               height: "100%",
               objectFit: "cover",
+              borderRadius: "16px 16px 0 0",
             }}
           />
         ) : (
@@ -144,6 +153,7 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
       <div
         style={{
           display: "flex",
+          flexDirection: "column",
           fontSize: "16px",
           gap: "8px",
           color: "var(--color-white)",
@@ -152,41 +162,52 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
       >
         <h4
           style={{
-            width: "60px",
+            minWidth: "fit-content",
+            width: "fit-content",
+            padding: "4px 8px",
             backgroundColor: "var(--color-accent)",
-            overflow: "hidden",
             margin: "0",
             borderRadius: "4px",
+            whiteSpace: "nowrap",
+            display: "inline-block",
+            color: "#ffffff",
+            fontSize: "14px",
+            fontWeight: "500",
+            lineHeight: "1.5",
+            minHeight: "24px",
           }}
         >
-          {job.categories}
+          No Category
         </h4>
 
         {/* Equipment Badge with color coding */}
-        {job.equipment && (
-          <h4
-            style={{
-              minWidth: "fit-content",
-              padding: "0 8px",
-              backgroundColor:
-                job.equipment === "utstyrfri"
-                  ? "#22c55e" // Green
-                  : job.equipment === "delvis utstyr"
-                    ? "#ea7e15" // Orange
-                    : "#6b7280", // Gray for "trengs utstyr"
-              overflow: "hidden",
-              margin: "0",
-              borderRadius: "4px",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {job.equipment === "utstyrfri"
-              ? "Utstyrfri"
-              : job.equipment === "delvis utstyr"
-                ? "Noe utstyr"
-                : "Utstyr kreves"}
-          </h4>
-        )}
+        <h4
+          style={{
+            minWidth: "fit-content",
+            width: "fit-content",
+            padding: "4px 8px",
+            backgroundColor:
+              job.equipment === "utstyrfri"
+                ? "#22c55e" // Green
+                : job.equipment === "delvis utstyr"
+                  ? "#ea7e15" // Orange
+                  : job.equipment === "trengs utstyr"
+                    ? "#6b7280" // Gray
+                    : "#9ca3af", // Light gray for no equipment
+            margin: "0",
+            borderRadius: "4px",
+            whiteSpace: "nowrap",
+            display: "inline-block",
+          }}
+        >
+          {job.equipment === "utstyrfri"
+            ? "Utstyrfri"
+            : job.equipment === "delvis utstyr"
+              ? "Noe utstyr"
+              : job.equipment === "trengs utstyr"
+                ? "Utstyr kreves"
+                : "Ingen utstyr info"}
+        </h4>
       </div>
 
       {/* Job Details */}

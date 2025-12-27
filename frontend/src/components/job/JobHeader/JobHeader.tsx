@@ -1,28 +1,65 @@
 import React from 'react';
 import styles from './JobHeader.module.css';
 
-const JobHeader: React.FC = () => {
+interface JobHeaderProps {
+  job?: {
+    userId?: {
+      name: string;
+      email: string;
+    };
+    location?: {
+      city?: string;
+    };
+    images?: string[];
+  } | null;
+}
+
+const JobHeader: React.FC<JobHeaderProps> = ({ job }) => {
+  const jobImage = job?.images && job.images.length > 0 
+    ? job.images[0] 
+    : 'https://api.dicebear.com/7.x/avataaars/svg?seed=default';
+
   return (
     <div className={styles.container}>
-      <div className={styles.topSection}></div>
+      {/* Job Image Section */}
+      <div style={{
+        width: '100%',
+        height: '200px',
+        backgroundColor: '#f0f0f0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden'
+      }}>
+        <img 
+          src={jobImage}
+          alt={job?.userId?.name || 'Job image'}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover'
+          }}
+        />
+      </div>
+
       <div className={styles.headerSection}>
         <div className={styles.userInfo}>
           <div className={styles.avatar}>
             <img 
-              src="https://api.builder.io/api/v1/image/assets/TEMP/2c213166c1012e0d151a24cbe2c41708a8e525ac?width=81" 
-              alt="Kari Henriksen" 
+              src="https://api.dicebear.com/7.x/avataaars/svg?seed=default" 
+              alt={job?.userId?.name || 'User'} 
               className={styles.avatarImage}
             />
           </div>
           <div className={styles.userDetails}>
-            <div className={styles.userName}>Kari Henriksen</div>
+            <div className={styles.userName}>{job?.userId?.name || 'Bruker'}</div>
             <div className={styles.userLocation}>
               <img 
                 src="https://api.builder.io/api/v1/image/assets/TEMP/927f9e994cd2e9bd65f4a586488cd0d39310d01a?width=24" 
                 alt="" 
                 className={styles.locationIcon}
               />
-              <span className={styles.locationText}>Kariksen</span>
+              <span className={styles.locationText}>{job?.location?.city || 'Ukjent'}</span>
             </div>
           </div>
           <div className={styles.ratingBadge}>

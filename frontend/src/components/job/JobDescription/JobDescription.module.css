@@ -3,14 +3,14 @@
 }
 
 .priceSection {
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
 .priceLabel {
   color: var(--color-text);
   font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
   font-size: 16px;
-  font-weight: 400;
+  font-weight: 700;
   line-height: 120%;
   margin: 0 0 12px 0;
 }
@@ -24,14 +24,14 @@
 }
 
 .descriptionSection {
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
 .descriptionLabel {
   color: var(--color-text);
   font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
   font-size: 18px;
-  font-weight: 400;
+  font-weight: 700;
   line-height: 120%;
   margin: 0 0 12px 0;
 }
@@ -41,13 +41,15 @@
   font-family: 'Nunito Sans', -apple-system, Roboto, Helvetica, sans-serif;
   font-size: 16px;
   font-weight: 600;
-  line-height: 120%;
+  line-height: 150%;
   margin: 0;
-  width: 360px;
+  width: 100%;
+  word-wrap: break-word;
 }
 
 .divider {
   width: 100%;
   height: 1px;
   background-color: rgba(0, 0, 0, 0.22);
+  margin: 20px 0;
 }
