@@ -1,6 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { Jobs } from "../../../../types/Jobs";
-import { setFavorites } from "../../../../api/favoriteAPI.ts";
+import {
+  deleteFavorites,
+  getFavorites,
+  setFavorites,
+} from "../../../../api/favoriteAPI.ts";
 import { useUserStore } from "../../../../stores/userStore.ts";
 
 interface JobCardProps {
@@ -9,15 +13,40 @@ interface JobCardProps {
 }
 
 export const JobCard = ({ job, gridColumns }: JobCardProps) => {
-  const [isFavorited, setIsFavorited] = useState(false);
   const userToken = useUserStore((state) => state.tokens);
+  const [isFavorited, setIsFavorited] = useState(false);
 
-  const handleFavoriteClick = (e: React.MouseEvent) => {
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsFavorited(!isFavorited);
-    void setFavorites(job._id, userToken);
+    setIsFavorited((prevState) => !prevState);
+    try {
+      if (isFavorited) {
+        await deleteFavorites(job._id, userToken);
+      } else {
+        await setFavorites(job._id, userToken);
+      }
+    } catch (err) {
+      console.error("Failed to update favorites", err);
+    }
   };
+
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (!userToken) return;
+      try {
+        const res = await getFavorites(userToken);
+        const favorited = res.data.some(
+          (fav: any) => fav.service._id === job._id,
+        );
+        setIsFavorited(favorited);
+      } catch (err) {
+        console.error("Error", err);
+      }
+    };
+
+    void checkFavoriteStatus();
+  }, [userToken, job._id]);
 
   return (
     <div

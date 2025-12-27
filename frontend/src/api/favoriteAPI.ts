@@ -27,3 +27,18 @@ export async function setFavorites(
   });
   return await res.json();
 }
+
+export async function deleteFavorites(
+  serviceId: string,
+  userToken: AuthTokens | null,
+) {
+  const myHeaders = new Headers();
+  myHeaders.append("accept", "application/json");
+  myHeaders.append("Authorization", `Bearer ${userToken?.accessToken}`);
+
+  const res = await fetch(`${mainLink}/api/favorites/${serviceId}`, {
+    method: "DELETE",
+    headers: myHeaders,
+  });
+  return await res.json();
+}
