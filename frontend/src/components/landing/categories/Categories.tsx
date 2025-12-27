@@ -28,7 +28,7 @@ export function Categories() {
           {category.map((item) => (
             <Category
               category={item.name}
-              categoryIcon={item.icon}
+              categoryIcon={item.slug}
               key={item._id}
             />
           ))}

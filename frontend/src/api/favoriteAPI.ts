@@ -13,7 +13,17 @@ export async function getFavorites(userToken: AuthTokens | null) {
   return await res.json();
 }
 
-export async function setFavorites() {
-  const res = await fetch(`${mainLink}/api/favorites`);
+export async function setFavorites(
+  serviceId: string,
+  userToken: AuthTokens | null,
+) {
+  const myHeaders = new Headers();
+  myHeaders.append("accept", "application/json");
+  myHeaders.append("Authorization", `Bearer ${userToken?.accessToken}`);
+
+  const res = await fetch(`${mainLink}/api/favorites/${serviceId}`, {
+    method: "POST",
+    headers: myHeaders,
+  });
   return await res.json();
 }
