@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styles from '../../styles/JobListingDetailPage.module.css';
 import JobHeader from '../../components/job/JobHeader/JobHeader';
@@ -8,6 +8,9 @@ import JobDescription from '../../components/job/JobDescription/JobDescription';
 import JobLocation from '../../components/job/JobLocation/JobLocation';
 import RelatedJobs from '../../components/job/RelatedJobs/RelatedJobs';
 import { mainLink } from '../../api/mainURLs';
+import { getFavorites, setFavorites, deleteFavorites } from '../../api/favoriteAPI';
+import { useUserStore } from '../../stores/userStore';
+import { toast } from 'react-toastify';
 
 interface Service {
   _id: string;
@@ -36,11 +39,17 @@ interface Service {
   createdAt: string;
 }
 
-const JobListingDetailPage: React.FC = () => {
+const JobListingDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [job, setJob] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const userToken = useUserStore((state) => state.tokens);
+  const isAuth = useUserStore((state) => state.isAuthenticated);
+  const currentUser = useUserStore((state) => state.user);
+  
+  const isOwnJob = job?.userId?._id === currentUser?._id;
 
   const getStatusConfig = (status: string) => {
     const normalizedStatus = status?.toLowerCase();
@@ -101,6 +110,57 @@ const JobListingDetailPage: React.FC = () => {
     fetchJob();
   }, [id]);
 
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (!userToken || !id) return;
+      try {
+        const res = await getFavorites(userToken);
+        const favorited = res.data.some(
+          (fav: any) => fav.service._id === id,
+        );
+        setIsFavorited(favorited);
+      } catch (err) {
+        console.error("Error checking favorite status", err);
+      }
+    };
+
+    void checkFavoriteStatus();
+  }, [userToken, id]);
+
+  const handleFavoriteClick = async () => {
+    if (!isAuth) {
+      toast.error("Du må logge inn for å legge til favoritter");
+      navigate("/login");
+      return;
+    }
+
+    if (!id) return;
+
+    try {
+      if (isFavorited) {
+        await deleteFavorites(id, userToken);
+        toast.success("Fjernet fra favoritter");
+      } else {
+        await setFavorites(id, userToken);
+        toast.success("Lagt til i favoritter");
+      }
+      setIsFavorited(!isFavorited);
+    } catch (err) {
+      console.error("Failed to update favorites", err);
+      toast.error("Kunne ikke oppdatere favoritter");
+    }
+  };
+
+  const handleSendMessage = () => {
+    if (!isAuth) {
+      toast.error("Du må logge inn for å sende melding");
+      navigate("/login");
+      return;
+    }
+    // TODO: Implement message functionality
+    toast.info("Meldingsfunksjon kommer snart");
+  };
+
   if (loading) {
     return (
       <div className={styles.container}>
@@ -138,6 +198,63 @@ const JobListingDetailPage: React.FC = () => {
       </div>
 
       <JobImageCarousel images={job?.images} />
+
+      {/* Action buttons */}
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        margin: '20px',
+        marginBottom: '24px'
+      }}>
+        <button
+          onClick={handleFavoriteClick}
+          style={{
+            flex: 1,
+            backgroundColor: isFavorited ? '#ff4d4f' : 'var(--color-primary)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '12px',
+            fontSize: '16px',
+            fontWeight: '500',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
+          }}
+        >
+          <span className="material-symbols-outlined">
+            {isFavorited ? 'favorite' : 'favorite_border'}
+          </span>
+          {isFavorited ? 'Fjern favoritt' : 'Legg til favoritt'}
+        </button>
+        <button
+          onClick={handleSendMessage}
+          disabled={isOwnJob}
+          style={{
+            flex: 1,
+            backgroundColor: isOwnJob ? '#cccccc' : 'var(--color-primary)',
+            color: isOwnJob ? '#666666' : 'white',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '12px',
+            fontSize: '16px',
+            fontWeight: '500',
+            cursor: isOwnJob ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            opacity: isOwnJob ? 0.6 : 1
+          }}
+        >
+          <span className="material-symbols-outlined">
+            send
+          </span>
+          {isOwnJob ? 'Din egen annonse' : 'Send melding'}
+        </button>
+      </div>
 
       <div className={styles.content}>
         <JobDetails job={job} />
