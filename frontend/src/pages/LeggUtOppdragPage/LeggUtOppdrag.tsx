@@ -1,18 +1,26 @@
 import CreateJobForm from "../../components/CreateJobForm/CreateJobForm";
 import { mainLink } from "../../api/mainURLs";
+import { useUserStore } from "../../stores/userStore";
 
 export default function LeggUtOppdrag() {
-  // TODO: Get actual userId from authentication/session
-  const userId = "68d98d54a60a9dfeeaec8dc6"; // Placeholder - replace with actual user ID
+  const userToken = useUserStore((state) => state.tokens);
+  const user = useUserStore((state) => state.user);
+  const userId = user?.id || "68d98d54a60a9dfeeaec8dc6"; // Fallback to placeholder
 
   const handleFormSubmit = async (jobData: any) => {
     console.log('Sending job data:', jobData); // Log the data being sent
+    
+    if (!userToken?.accessToken) {
+      alert('Du må være logget inn for å publisere et oppdrag');
+      return;
+    }
     
     try {
       const response = await fetch(`${mainLink}/api/services`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userToken.accessToken}`,
         },
         body: JSON.stringify(jobData),
       });

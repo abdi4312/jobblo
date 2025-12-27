@@ -3,7 +3,7 @@ import ImageUpload from "../ImageUpload/ImageUpload";
 
 interface CreateJobFormProps {
   onSubmit: (jobData: any) => void;
-  userId: string;
+  userId?: string;
   initialData?: {
     title?: string;
     description?: string;
@@ -15,10 +15,13 @@ interface CreateJobFormProps {
     equipment?: string;
     fromDate?: string;
     toDate?: string;
+    durationValue?: string;
+    durationUnit?: string;
   };
+  isEditMode?: boolean;
 }
 
-export default function CreateJobForm({ onSubmit, userId, initialData }: CreateJobFormProps) {
+export default function CreateJobForm({ onSubmit, userId, initialData, isEditMode = false }: CreateJobFormProps) {
   const [title, setTitle] = useState(initialData?.title || "");
   const [description, setDescription] = useState(initialData?.description || "");
   const [price, setPrice] = useState(initialData?.price || "");
@@ -29,6 +32,8 @@ export default function CreateJobForm({ onSubmit, userId, initialData }: CreateJ
   const [equipment, setEquipment] = useState(initialData?.equipment || "");
   const [fromDate, setFromDate] = useState(initialData?.fromDate || "");
   const [toDate, setToDate] = useState(initialData?.toDate || "");
+  const [durationValue, setDurationValue] = useState(initialData?.durationValue || "");
+  const [durationUnit, setDurationUnit] = useState(initialData?.durationUnit || "hours");
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
 
   const handleImagesChange = (images: File[]) => {
@@ -39,24 +44,43 @@ export default function CreateJobForm({ onSubmit, userId, initialData }: CreateJ
     e.preventDefault();
     
     const jobData: any = {
-      userId,
       title,
       description,
       price: Number(price),
       location: {
+        type: 'Point',
         address,
         city,
-        coordinates: [0, 0] // Placeholder for coordinates
+        coordinates: [10.7461, 59.9127] // Default Oslo coordinates
       },
-      categories: categories.split(',').map(cat => cat.trim()),
+      categories: categories.split(',').map(cat => cat.trim()).filter(cat => cat.length > 0),
       urgent,
-      fromDate,
-      toDate,
     };
+
+    // Only include userId when creating a new job (not editing)
+    if (!isEditMode && userId) {
+      jobData.userId = userId;
+    }
 
     // Only include equipment if it's filled
     if (equipment && equipment.trim() !== '') {
       jobData.equipment = equipment;
+    }
+
+    // Only include dates if they're filled
+    if (fromDate) {
+      jobData.fromDate = fromDate;
+    }
+    if (toDate) {
+      jobData.toDate = toDate;
+    }
+
+    // Include duration if value is provided
+    if (durationValue && Number(durationValue) > 0) {
+      jobData.duration = {
+        value: Number(durationValue),
+        unit: durationUnit
+      };
     }
 
     // TODO: Uncomment when backend is ready to accept File objects
@@ -204,9 +228,46 @@ export default function CreateJobForm({ onSubmit, userId, initialData }: CreateJ
           }}
         >
           <option value="">Velg...</option>
-          <option value="Ja">Ja, trengs utstyr</option>
-          <option value="Nei">Nei, trengs ikke utstyr</option>
+          <option value="utstyrfri">Utstyrfri</option>
+          <option value="delvis utstyr">Delvis utstyr</option>
+          <option value="trengs utstyr">Trengs utstyr</option>
         </select>
+      </div>
+
+      <div style={{ marginBottom: "24px" }}>
+        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+          Varighet
+        </label>
+        <div style={{ display: "flex", gap: "12px" }}>
+          <input
+            type="number"
+            value={durationValue}
+            onChange={(e) => setDurationValue(e.target.value)}
+            min="0"
+            step="0.5"
+            placeholder="2"
+            style={{
+              flex: 1,
+              padding: "12px",
+              borderRadius: "8px",
+              border: "1px solid var(--color-icon)",
+            }}
+          />
+          <select
+            value={durationUnit}
+            onChange={(e) => setDurationUnit(e.target.value)}
+            style={{
+              flex: 1,
+              padding: "12px",
+              borderRadius: "8px",
+              border: "1px solid var(--color-icon)",
+            }}
+          >
+            <option value="minutes">Minutter</option>
+            <option value="hours">Timer</option>
+            <option value="days">Dager</option>
+          </select>
+        </div>
       </div>
 
       <div style={{ marginBottom: "24px" }}>
