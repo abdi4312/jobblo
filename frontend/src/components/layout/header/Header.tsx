@@ -3,9 +3,6 @@ import * as Icons from "../../../assets/icons";
 import { VippsButton } from "../../component/button/VippsButton.tsx";
 import { VerticalDivider } from "../../component/divider/verticalDivider/VerticalDivider.tsx";
 import { useNavigate } from "react-router-dom";
-import { useUserStore } from "../../../stores/userStore.ts";
-import { toast } from 'react-toastify';
-import { Modal } from 'antd';
 
 export default function Header() {
   const navigate = useNavigate();
