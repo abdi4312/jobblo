@@ -264,11 +264,22 @@ export default function MineAnnonser() {
           {services.map((service) => (
             <div
               key={service._id}
+              onClick={() => navigate(`/job-listing/${service._id}`)}
               style={{ 
                 borderRadius: "16px", 
                 backgroundColor: "var(--color-surface)",
                 boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
                 position: 'relative',
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
               }}
             >
               {/* Image Section */}
@@ -426,7 +437,10 @@ export default function MineAnnonser() {
                 marginTop: '12px'
               }}>
                 <button
-                  onClick={() => handleEdit(service)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit(service);
+                  }}
                   style={{
                     flex: 1,
                     padding: '10px',
@@ -447,7 +461,10 @@ export default function MineAnnonser() {
                   Rediger
                 </button>
                 <button
-                  onClick={() => handleDelete(service._id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(service._id);
+                  }}
                   style={{
                     flex: 1,
                     padding: '10px',

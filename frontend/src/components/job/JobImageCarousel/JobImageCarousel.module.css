@@ -23,6 +23,20 @@
   top: 0;
 }
 
+@media (min-width: 769px) {
+  .container {
+    height: 450px;
+  }
+  
+  .imageContainer {
+    height: 450px;
+  }
+  
+  .mainImage {
+    height: 450px;
+  }
+}
+
 .navigationDots {
   position: absolute;
   bottom: 10px;
