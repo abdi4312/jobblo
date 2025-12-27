@@ -1,5 +1,5 @@
-import React from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import styles from '../styles/JobListingDetailPage.module.css';
 import JobHeader from '../components/job/JobHeader/JobHeader';
 import JobImageCarousel from '../components/job/JobImageCarousel/JobImageCarousel';
@@ -7,49 +7,83 @@ import JobDetails from '../components/job/JobDetails/JobDetails';
 import JobDescription from '../components/job/JobDescription/JobDescription';
 import JobLocation from '../components/job/JobLocation/JobLocation';
 import RelatedJobs from '../components/job/RelatedJobs/RelatedJobs';
-import { jobs as sampleJobs } from '../data/jobs';
+import { mainLink } from '../api/mainURLs';
+
+interface Service {
+  _id: string;
+  title: string;
+  description: string;
+  price: number;
+  location: {
+    address: string;
+    city: string;
+    coordinates: [number, number];
+  };
+  categories: string[];
+  images: string[];
+  urgent: boolean;
+  status: string;
+  equipment: string;
+  duration?: {
+    value: number;
+    unit: string;
+  };
+  userId: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  createdAt: string;
+}
 
 const JobListingDetailPage: React.FC = () => {
-  const location = useLocation();
-  const params = useParams();
+  const { id } = useParams();
+  const [job, setJob] = useState<Service | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  type LocationState = {
-    job?: {
-      id?: number;
-      title?: string;
-      image?: string;
-      location?: string;
+  useEffect(() => {
+    const fetchJob = async () => {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${mainLink}/api/services/${id}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          setJob(data);
+        } else {
+          console.error('Failed to fetch job');
+        }
+      } catch (err) {
+        console.error('Error fetching job:', err);
+      } finally {
+        setLoading(false);
+      }
     };
-  };
 
-  const jobFromState = (location.state as LocationState)?.job;
-  const jobFromId = params.id ? sampleJobs.find((j) => String(j.id) === params.id) : undefined;
-  const job = jobFromState ?? jobFromId;
+    fetchJob();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div style={{ padding: '40px', textAlign: 'center' }}>Laster...</div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
       <JobHeader />
 
-      {/* Small preview for verification: uses passed job state when available */}
-  <div style={{ padding: '12px', borderBottom: '1px solid var(--color-light-gray)' }}>
-        {job ? (
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <img src={job.image} alt={job.title} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8 }} />
-            <div>
-              <div style={{ fontWeight: 700 }}>{job.title}</div>
-              <div style={{ color: 'var(--color-muted-gray)' }}>{job.location}</div>
-            </div>
-          </div>
-        ) : (
-          <div>Showing details for job id: <strong>{params.id}</strong></div>
-        )}
-      </div>
-
-      <JobImageCarousel />
+      <JobImageCarousel images={job?.images} />
       <div className={styles.content}>
-        <JobDetails />
-        <JobDescription />
-        <JobLocation />
+        <JobDetails job={job} />
+        <JobDescription description={job?.description} />
+        <JobLocation location={job?.location} />
         <RelatedJobs />
       </div>
     </div>

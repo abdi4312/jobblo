@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Jobs } from "../../../../types/Jobs";
 import { setFavorites } from "../../../../api/favoriteAPI.ts";
 import { useUserStore } from "../../../../stores/userStore.ts";
@@ -11,6 +12,7 @@ interface JobCardProps {
 export const JobCard = ({ job, gridColumns }: JobCardProps) => {
   const [isFavorited, setIsFavorited] = useState(false);
   const userToken = useUserStore((state) => state.tokens);
+  const navigate = useNavigate();
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -19,8 +21,13 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
     void setFavorites(job._id, userToken);
   };
 
+  const handleCardClick = () => {
+    navigate(`/job-listing/${job._id}`);
+  };
+
   return (
     <div
+      onClick={handleCardClick}
       style={{
         borderRadius: "16px",
         backgroundColor: "var(--color-surface)",
@@ -28,6 +35,7 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
         maxWidth:
           gridColumns === 1 ? "800px" : gridColumns === 4 ? "200px" : "400px",
         margin: "0 auto",
+        cursor: "pointer",
         boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
       }}
     >
