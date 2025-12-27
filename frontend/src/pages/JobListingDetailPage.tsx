@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import styles from '../styles/JobListingDetailPage.module.css';
 import JobHeader from '../components/job/JobHeader/JobHeader';
 import JobImageCarousel from '../components/job/JobImageCarousel/JobImageCarousel';
@@ -38,6 +38,7 @@ interface Service {
 
 const JobListingDetailPage: React.FC = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [job, setJob] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -77,6 +78,32 @@ const JobListingDetailPage: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      {/* Back button */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '12px', 
+        padding: '16px 20px',
+        borderBottom: '1px solid var(--color-light-gray)'
+      }}>
+        <button
+          onClick={() => navigate(-1)}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            padding: 0,
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>
+            arrow_back
+          </span>
+        </button>
+        <h2 style={{ margin: 0, fontSize: '20px' }}>Tilbake</h2>
+      </div>
+
       <JobHeader />
 
       <JobImageCarousel images={job?.images} />
