@@ -1,0 +1,30 @@
+.container {
+  width: 350px;
+  border-right: 1px solid #ddd;
+}
+
+.chatItem {
+  padding: 16px;
+  cursor: pointer;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  transition: background 0.2s ease;
+}
+
+.chatItem:hover {
+  background: #f7f7f7;
+}
+
+.active {
+  background: #f0f0f0;
+}
+
+.name {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.lastMessage {
+  font-size: 13px;
+  color: #666;
+}

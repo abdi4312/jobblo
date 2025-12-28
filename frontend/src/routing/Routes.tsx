@@ -19,6 +19,7 @@ import MineAnnonser from "../pages/MyJobsPage/MineAnnonser.tsx";
 import JobListingDetailPage from "../pages/JobListingDetailPage/JobListingDetailPage.tsx";
 import CategoryJobs from "../pages/CategoryJobsPage/CategoryJobs.tsx";
 import SearchResults from "../pages/SearchResultsPage/SearchResults.tsx";
+import ChatList from "../pages/ChatPage/ChatInterFace.tsx"
 
 export const routes: RouteObject[] = [
   {
@@ -32,6 +33,9 @@ export const routes: RouteObject[] = [
       {
         path: "job-listing",
         element: <JobListingPage />,
+      },
+       { path: "chat",
+        element: <ChatList />,
       },
       {
         path: "job-listing/:id",

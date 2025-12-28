@@ -52,6 +52,7 @@ const JobListingDetailPage = () => {
   const isOwnJob = job?.userId?._id === currentUser?._id;
 
   const getStatusConfig = (status: string) => {
+    const userToken = useUserStore((state) => state.tokens);
     const normalizedStatus = status?.toLowerCase();
     if (normalizedStatus === 'open' || normalizedStatus === 'åpen') {
       return {
@@ -169,6 +170,33 @@ const JobListingDetailPage = () => {
     );
   }
 
+const handleSendMessagess = async (providerId: string) => {
+      if (!userToken?.accessToken) {
+      setError('Du må være logget inn for å se dine annonser');
+      setLoading(false);
+      return;
+    }
+  try {
+    const res = await fetch(`${mainLink}/api/chats/create`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Agar token use kar rahe ho to yahan Authorization header bhi add karo
+        'Authorization': `Bearer ${userToken.accessToken}`
+      },
+      body: JSON.stringify({ providerId }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to create/get chat: ${res.status}`);
+    }
+    navigate(`/chat`);
+  } catch (err) {
+    console.error("Error creating/getting chat:", err);
+  }
+};
+
+
   return (
     <div className={styles.container}>
       {/* Back button */}
@@ -258,6 +286,7 @@ const JobListingDetailPage = () => {
 
       <div className={styles.content}>
         <JobDetails job={job} />
+        <button onClick={()=>handleSendMessagess(job?.userId._id)}>Chat Service Provider</button>
         <JobDescription description={job?.description} price={job?.price} urgent={job?.urgent} />
         <JobLocation location={job?.location} />
         
