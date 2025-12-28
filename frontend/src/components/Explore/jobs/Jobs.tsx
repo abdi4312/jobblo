@@ -44,12 +44,12 @@ export default function JobsContainer() {
       async function fetchJobs() {
         try {
           const res = await fetch(`${mainLink}/api/services`);
-          const data = await res.json();
+          const data = await res.json();          
           // Ensure data is an array before setting it
           if (Array.isArray(data)) {
             setJobs(data);
-          } else if (data && Array.isArray(data.services)) {
-            setJobs(data.services);
+          } else if (data && Array.isArray(data.data)) {
+            setJobs(data.data);
           } else {
             console.error("API response is not an array:", data);
             setJobs([]);
@@ -142,6 +142,8 @@ export default function JobsContainer() {
     
       fetchFollowingJobs();
     }, [userId, tokens]);    
+    console.log(jobs);
+    
 
     const tabs = [
     { id: 'utforsk', label: 'Utforsk' },
