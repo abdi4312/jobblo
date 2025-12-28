@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Socket } from 'socket.io-client';
 import { useUserStore } from "../../../stores/userStore";
 import styles from './ChatMessage.module.css';
+import { mainLink } from '../../../api/mainURLs';
 
 /* ================= TYPES ================= */
 
@@ -61,7 +62,7 @@ const ChatWindow: React.FC<Props> = ({ currentChat, socket }) => {
 
     axios
       .get<{ messages: Message[] }>(
-        `http://localhost:5001/api/chats/${currentChat._id}`,
+        `${mainLink}/api/chats/${currentChat._id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       )
       .then(res => setMessages(res.data.messages ?? []))

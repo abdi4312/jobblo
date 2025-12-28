@@ -5,6 +5,7 @@ import ChatWindow from '../../components/chat/ChatWindow/ChatMessage';
 import ChatListItem from '../../components/chat/ChatList/ChatList';
 import { useUserStore } from "../../stores/userStore";
 import styles from './ChatInterface.module.css';
+import { mainLink } from '../../api/mainURLs';
 
 // Types
 interface Chat {
@@ -22,7 +23,7 @@ interface MessageData {
 }
 
 // Socket connection
-const socket: Socket = io("http://localhost:5001");
+const socket: Socket = io(mainLink);
 
 const ChatInterface: React.FC = () => {
   const userToken = useUserStore((state) => state.tokens);
@@ -33,7 +34,7 @@ const ChatInterface: React.FC = () => {
   // Fetch chats from backend
   useEffect(() => {
     if (token) {
-      axios.get('http://localhost:5001/api/chats/get', { headers: { Authorization: `Bearer ${token}` } })
+      axios.get(`${mainLink}/api/chats/get`, { headers: { Authorization: `Bearer ${token}` } })
         .then(res => {
           if (Array.isArray(res.data)) {
             setChats(res.data);
