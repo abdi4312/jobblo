@@ -3,7 +3,15 @@ const Hero = require("../models/Hero");
 
 exports.CreateHero = async (req, res) => {
   try {
-    const { title, subtitle, description,image, activeFrom, expireAt } = req.body;
+    const {
+      title,
+      subtitle,
+      subtitleSecondary,
+      description,
+      image,
+      activeFrom,
+      expireAt,
+    } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: "Title er påkrevd" });
@@ -23,17 +31,18 @@ exports.CreateHero = async (req, res) => {
 
     // console.log(imageUrl);
 
-       if (!activeFrom || !expireAt) {
+    if (!activeFrom || !expireAt) {
       return res
         .status(400)
         .json({ error: "activeFrom og expireAt er påkrevd" });
     }
-// ✅ auto active logic
+    // ✅ auto active logic
     const now = new Date();
     const isActive = now >= new Date(activeFrom) && now <= new Date(expireAt);
     const hero = await Hero.create({
       title,
       subtitle,
+      subtitleSecondary,
       description,
       image,
       activeFrom,
@@ -56,7 +65,7 @@ exports.GetHero = async (req, res) => {
     const now = new Date();
     const heroes = await Hero.find({
       activeFrom: { $lte: now },
-      expireAt: { $gte: now }
+      expireAt: { $gte: now },
     }).sort({ createdAt: -1 });
 
     res.status(200).json(heroes);
@@ -65,7 +74,6 @@ exports.GetHero = async (req, res) => {
     res.status(500).json({ error: "Kunne ikke hente hero data" });
   }
 };
-
 
 /**
  * UPDATE HERO
@@ -81,6 +89,8 @@ exports.UpdateHero = async (req, res) => {
     // update text fields
     hero.title = req.body.title ?? hero.title;
     hero.subtitle = req.body.subtitle ?? hero.subtitle;
+    hero.subtitleSecondary =
+      req.body.subtitleSecondary ?? hero.subtitleSecondary;
     hero.description = req.body.description ?? hero.description;
 
     // update image if exists
