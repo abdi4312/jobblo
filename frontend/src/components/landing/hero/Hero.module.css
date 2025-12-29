@@ -1,11 +1,36 @@
 .heroBackground {
-  background-image: url("../../../assets/images/gardening.png");
   background-size: cover;
+  /* background-position: center;*/
+  /* background-repeat: no-repeat; */
+  /* width: 100%; */
+  /* position: relative; */
 }
 
 .heroOverlay {
-  backdrop-filter: blur(2px) brightness(0.4);
   width: 100%;
+  position: relative;
+}
+
+.slideContainer {
+  width: 100%;
+  height: 500px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.slideOverlay {
+  backdrop-filter: blur(2px) brightness(0.4);
+  -webkit-backdrop-filter: blur(2px) brightness(0.4);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom:24px;
+  /* padding: 0 20px; */
 }
 
 .heroContainer {
@@ -13,11 +38,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 80px 40px;
+  padding: 20px 40px;
+  margin-bottom: 2rem;
   text-align: center;
-  gap: 24px;
-  max-width: 900px;
-  margin: 0 auto;
+  gap: 20px;
+  max-width: 1200px;
+  width: 100%;
 }
 
 .heroContainer * {
@@ -41,18 +67,90 @@
   color: var(--color-cta);
 }
 
+.heroDescription {
+  max-width: 700px;
+  font-size: 20px;
+  line-height: 1.6;
+  align-items: center;
+  opacity: 0.95;
+  margin-bottom: 14px;
+}
+
+.heroSearchContainer {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  /* width: auto; */
+  min-width: auto;
+  z-index: 10;
+}
+
 .heroButtonContainer {
   display: flex;
-  gap: 20px;
+  flex-direction: row;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 24px;
+}
+
+.heroButtonContainer button {
+  width: auto;
 }
 
 .searchActionContainer {
   display: flex;
   flex-direction: row;
-  align-items: center;
-  gap: 20px;
+  gap: 12px;
+  width: 100%;
+  align-items: stretch;
 }
 
 .antSearchBar {
-  /*opacity: 0.75;*/
+  width: 100%;
+}
+
+/* 🔁 DESKTOP LAYOUT */
+@media (min-width: 768px) {
+  .heroButtonContainer {
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .heroButtonContainer button {
+    width: auto;
+    display: hidden;
+  }
+
+  .searchActionContainer {
+    flex-direction: row;
+  }
+
+  .heroSearchContainer{
+    min-width: 500px;
+  }
+}
+
+.heroSwiper {
+  width: 100%;
+  height: 100%;
+}
+
+/* Pagination dots */
+:global(.swiper-pagination-bullet) {
+  background: white;
+  opacity: 0.6;
+}
+
+/* Active bullet */
+:global(.swiper-pagination-bullet-active) {
+  background: #EA7E15 !important;
+  opacity: 1;
+}
+
+/* Navigation arrows */
+:global(.swiper-button-next),
+:global(.swiper-button-prev) {
+  color: #EA7E15 !important;
 }
