@@ -1,8 +1,15 @@
 import styles from "./AnnonsereglerPage.module.css";
+import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
+import { useEffect } from "react";
 
 export default function AnnonsereglerPage() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className={styles.container}>
+      <ProfileTitleWrapper title="Annonseregler" buttonText="Tilbake" />
       <div className={styles.hero}>
         <h1>Annonseregler</h1>
         <p className={styles.subtitle}>

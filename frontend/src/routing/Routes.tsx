@@ -17,9 +17,13 @@ import SupportPage from "../pages/SupportPage/SupportPage.tsx";
 import AnnonsereglerPage from "../pages/AnnonsereglerPage/AnnonsereglerPage.tsx";
 import MineAnnonser from "../pages/MyJobsPage/MineAnnonser.tsx";
 import JobListingDetailPage from "../pages/JobListingDetailPage/JobListingDetailPage.tsx";
-import CategoryJobs from "../pages/CategoryJobsPage/CategoryJobs.tsx";
-import SearchResults from "../pages/SearchResultsPage/SearchResults.tsx";
+// import CategoryJobs from "../pages/CategoryJobsPage/CategoryJobs.tsx";
+// import SearchResults from "../pages/SearchResultsPage/SearchResults.tsx";
 import ChatList from "../pages/ChatPage/ChatInterFace.tsx"
+import CoinsPage from "../pages/CoinsPage/CoinsPage.tsx";
+import { MessagesPage } from "../pages/MessagesPage/MessagesPage.tsx";
+import { ConversationView } from "../pages/ConversationView/ConversationView.tsx";
+import MinInntekt from "../pages/MinInntekt/MinInntekt.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -80,6 +84,14 @@ export const routes: RouteObject[] = [
         element: <MinProfil />,
       },
       {
+        path: "min-inntekt",
+        element: (
+          <ProtectedRoute>
+            <MinInntekt />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: "login",
         element: <LoginPage />,
       },
@@ -98,6 +110,14 @@ export const routes: RouteObject[] = [
       {
         path: "favoritter",
         element: <FavoritesPage />,
+      },
+      {
+        path: "coins",
+        element: (
+          <ProtectedRoute>
+            <CoinsPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "om-oss",
@@ -120,12 +140,20 @@ export const routes: RouteObject[] = [
         element: <AnnonsereglerPage />,
       },
       {
-        path: "category/:categoryName",
-        element: <CategoryJobs />,
+        path: "messages",
+        element: (
+          <ProtectedRoute>
+            <MessagesPage />
+          </ProtectedRoute>
+        ),
       },
       {
-        path: "search/:searchQuery",
-        element: <SearchResults />,
+        path: "messages/:conversationId",
+        element: (
+          <ProtectedRoute>
+            <ConversationView />
+          </ProtectedRoute>
+        ),
       },
     ],
   },

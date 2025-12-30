@@ -6,3 +6,5 @@ export { default as MineOppdragPage } from "./MineOppdragPage";
 export { default as ProfilePage } from "./ProfilePage/ProfilePage.tsx";
 export { default as ProfileSettingsPage } from "./ProfileSettingsPage";
 export { default as SettingsPage } from "./SettingsPage";
+export { MessagesPage } from "./MessagesPage/MessagesPage.tsx";
+export { ConversationView } from "./ConversationView/ConversationView.tsx";

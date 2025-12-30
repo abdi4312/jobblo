@@ -1,8 +1,15 @@
 import styles from "./TjenesterPage.module.css";
+import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
+import { useEffect } from "react";
 
 export default function TjenesterPage() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className={styles.container}>
+      <ProfileTitleWrapper title="Våre tjenester" buttonText="Tilbake" />
       <div className={styles.hero}>
         <h1>Våre tjenester</h1>
         <p className={styles.subtitle}>

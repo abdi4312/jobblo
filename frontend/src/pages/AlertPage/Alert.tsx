@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { mainLink } from "../../api/mainURLs";
 import { useUserStore } from "../../stores/userStore";
 import { useNavigate } from "react-router-dom";
+import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 
 interface Alert {
   _id: string;
@@ -79,23 +80,7 @@ export default function Alert() {
   return (
     <>
       <div style={{ padding: "20px 30px", maxWidth: "800px", margin: "0 auto" }}>
-        <button
-          onClick={() => navigate(-1)}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: 'var(--color-primary)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '16px',
-            fontWeight: '600',
-            marginBottom: '16px',
-          }}
-        >
-          ← Tilbake
-        </button>
-        <h2 style={{ marginBottom: "20px" }}>Varslinger</h2>
+        <ProfileTitleWrapper title="Varslinger" buttonText="Tilbake" />
 
         {/* Tab Headers */}
         <div style={{

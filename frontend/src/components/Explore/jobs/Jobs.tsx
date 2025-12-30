@@ -6,16 +6,26 @@ import { Button, Dropdown } from 'antd';
 import { JobCard } from './JobCard/JobCard';
 import { useUserStore } from '../../../stores/userStore';
 
-export default function JobsContainer() {
+interface JobsContainerProps {
+  selectedCategories?: string[];
+  searchQuery?: string;
+}
+
+export default function JobsContainer({ selectedCategories = [], searchQuery = "" }: JobsContainerProps) {
     const [activeTab, setActiveTab] = useState('utforsk');
     const [jobs, setJobs] = useState<Jobs[]>([]);
     const [nearbyJobs, setNearbyJobs] = useState<Jobs[]>([]);
     const [loadingNearby, setLoadingNearby] = useState(false);
+    const [loadingJobs, setLoadingJobs] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [gridColumns, setGridColumns] = useState(2); // Default to 2 columns
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-    const [jobsToShow, setJobsToShow] = useState(16);
     const [nearbyJobsToShow, setNearbyJobsToShow] = useState(16);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalJobs, setTotalJobs] = useState(0);
+    const limit = 16;
     
     const { user, tokens } = useUserStore();
     const userId = user?._id;
@@ -42,6 +52,8 @@ export default function JobsContainer() {
     // Fetch jobs from API
     useEffect(() => {
       async function fetchJobs() {
+        setLoadingJobs(true);
+        setCurrentPage(1); // Reset to page 1 when filters change
         try {
           const res = await fetch(`${mainLink}/api/services`);
           const data = await res.json();          
@@ -57,11 +69,50 @@ export default function JobsContainer() {
         } catch (err) {
           console.error("Failed to fetch jobs:", err);
           setJobs([]);
+        } finally {
+          setLoadingJobs(false);
         }
       }
     
       fetchJobs();
-    }, []);
+    }, [selectedCategories, searchQuery]);
+
+    // Load more jobs (next page)
+    const loadMoreJobs = async () => {
+      if (currentPage >= totalPages || loadingMore) return;
+      
+      setLoadingMore(true);
+      try {
+        const nextPage = currentPage + 1;
+        let url = `${mainLink}/api/services`;
+        const params = new URLSearchParams();
+        
+        params.append('page', String(nextPage));
+        params.append('limit', String(limit));
+        
+        if (selectedCategories.length > 0) {
+          params.append('category', selectedCategories.join(','));
+        }
+        if (searchQuery) {
+          params.append('search', searchQuery);
+        }
+        
+        url += `?${params.toString()}`;
+        
+        console.log('Loading more jobs from:', url);
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (data && Array.isArray(data.data)) {
+          setJobs(prev => [...prev, ...data.data]);
+          setCurrentPage(nextPage);
+        }
+      } catch (err) {
+        console.error("Failed to load more jobs:", err);
+      } finally {
+        setLoadingMore(false);
+      }
+    };
 
     // Get user's current location
     useEffect(() => {
@@ -153,29 +204,56 @@ export default function JobsContainer() {
 
   return (
     <div>
-      <div style={{ padding: "0px 30px"}}>
+      <div style={{ padding: isMobile ? "0px 12px" : "0px 30px"}}>
         {/* Tab Headers */}
         <div style={{
           backgroundColor: "var(--color-surface)",
           display: "flex",
-          justifyContent: "space-between",
-          height: '50%',
-          borderRadius: '16px',
+          gap: isMobile ? "8px" : "12px",
+          padding: isMobile ? "6px" : "8px",
+          borderRadius: '12px',
+          boxShadow: "-4px 2px 10.1px 0 rgba(59, 56, 56, 0.15)",
+          marginBottom: "20px",
         }}>
           {tabs.map(tab => (
-            <h3
+            <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
+                flex: 1,
                 cursor: 'pointer',
                 color: activeTab === tab.id ? "var(--color-white)" : "var(--color-text)",
-                backgroundColor: activeTab === tab.id ? "var(--color-primary)" : "var(--color-surface)",
-                padding: '5px 18px',
+                backgroundColor: activeTab === tab.id ? "var(--color-primary)" : "transparent",
+                padding: isMobile ? '10px 8px' : '12px 20px',
                 borderRadius: '8px',
+                border: activeTab === tab.id ? 'none' : '1px solid transparent',
+                fontSize: isMobile ? '13px' : '15px',
+                fontWeight: activeTab === tab.id ? '700' : '600',
+                transition: 'all 0.2s ease',
+                boxShadow: activeTab === tab.id ? "-2px 1px 6px 0 rgba(59, 56, 56, 0.2)" : "none",
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: isMobile ? '4px' : '8px',
+                flexDirection: isMobile ? 'column' : 'row',
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== tab.id) {
+                  e.currentTarget.style.backgroundColor = "rgba(234, 126, 21, 0.1)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== tab.id) {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }
               }}
             >
-              {tab.label}
-            </h3>
+              <span className="material-symbols-outlined" style={{ fontSize: isMobile ? "18px" : "20px" }}>
+                {tab.id === 'utforsk' ? 'explore' : tab.id === 'fordeg' ? 'near_me' : 'group'}
+              </span>
+              {!isMobile && tab.label}
+              {isMobile && <span style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>{tab.label}</span>}
+            </button>
           ))}
         </div>
 
@@ -188,31 +266,46 @@ export default function JobsContainer() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'utforsk' && jobs.length > 0 && (
+        {activeTab === 'utforsk' && loadingJobs && (
+          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text)' }}>
+            Laster jobber...
+          </div>
+        )}
+
+        {activeTab === 'utforsk' && !loadingJobs && jobs.length === 0 && (
+          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text)' }}>
+            <h3>Ingen jobber funnet</h3>
+            {selectedCategories.length > 0 && (
+              <p>Prøv å fjerne noen filtre for å se flere resultater</p>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'utforsk' && !loadingJobs && jobs.length > 0 && (
           <>
-            <Utforsk jobs={jobs.slice(0, jobsToShow)} gridColumns={gridColumns} />
-            {jobs.length > jobsToShow && (
+            <Utforsk jobs={jobs} gridColumns={gridColumns} />
+            {currentPage < totalPages && (
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: '32px' }}>
                 <button
-                  onClick={() => setJobsToShow(prev => prev + 16)}
+                  onClick={loadMoreJobs}
+                  disabled={loadingMore}
                   style={{
                     padding: '12px 32px',
-                    backgroundColor: 'var(--color-primary)',
+                    backgroundColor: loadingMore ? 'var(--color-surface)' : 'var(--color-primary)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
-                    cursor: 'pointer',
+                    cursor: loadingMore ? 'not-allowed' : 'pointer',
                     fontSize: '16px',
                     fontWeight: '600',
                   }}
                 >
-                  Last inn flere ({jobs.length - jobsToShow} gjenstår)
+                  {loadingMore ? 'Laster...' : `Last inn flere (${totalJobs - jobs.length} gjenstår)`}
                 </button>
               </div>
             )}
           </>
         )}
-        {activeTab === 'utforsk' && jobs.length === 0 && <div>Loading jobs...</div>}
 
         {activeTab === 'fordeg' && userLocation === null && (
           <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text)' }}>

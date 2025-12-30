@@ -1,15 +1,27 @@
 .container {
   display: flex;
-  width: 354px;
-  max-width: calc(100vw - 36px);
-  padding: 14px 0;
+  width: 100%;
+  max-width: 100%;
+  padding: 20px 0;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  border-radius: 15px;
+  gap: 8px;
+  border-radius: 12px;
   background: linear-gradient(180deg, var(--color-cta) 0%, var(--color-primary) 100%);
   position: relative;
   overflow: hidden;
+  box-shadow: -4px 2px 10.1px 0 rgba(59, 56, 56, 0.25);
+}
+
+.levelName {
+  color: rgba(255, 255, 255, 0.95);
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .title {
@@ -112,11 +124,9 @@
 }
 
 /* Mobile first responsive adjustments */
-@media (max-width: 360px) {
+@media (max-width: 768px) {
   .container {
-    width: calc(100vw - 32px);
-    padding: 12px 0;
-    gap: 12px;
+    padding: 18px 0;
   }
   
   .title {
@@ -124,30 +134,45 @@
   }
   
   .coinsAmount {
-    font-size: 32px;
+    font-size: 34px;
+  }
+  
+  .useCoinsButton {
+    width: calc(100% - 32px);
+    height: 78px;
+  }
+  
+  .buttonText {
+    font-size: 19px;
+  }
+}
+
+@media (max-width: 440px) {
+  .container {
+    padding: 16px 0;
+    gap: 6px;
+  }
+  
+  .title {
+    font-size: 20px;
+  }
+  
+  .coinsAmount {
+    font-size: 30px;
   }
   
   .useCoinsButton {
     width: calc(100% - 24px);
-    height: 76px;
+    height: 72px;
     padding: 12px 28px;
   }
   
   .buttonText {
     font-size: 18px;
   }
-}
 
-@media (min-width: 391px) and (max-width: 480px) {
-  .container {
-    width: calc(100vw - 40px);
-    max-width: 440px;
+  .levelName {
+    font-size: 14px;
   }
 }
 
-@media (min-width: 481px) {
-  .container {
-    width: 100%;
-    max-width: 560px;
-  }
-}
