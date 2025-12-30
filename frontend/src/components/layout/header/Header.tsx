@@ -19,7 +19,7 @@ export default function Header() {
           <VerticalDivider />
           <Icons.PlusIcon onClick={() => navigate("/publish-job")} />
           <VerticalDivider />
-          <Icons.MessageIcon />
+          <Icons.MessageIcon onClick={() => navigate("/messages")} />
         </div>
 
         <div className={styles.buttonContainer}>

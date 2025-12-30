@@ -10,7 +10,8 @@ export type Jobs = {
     address: string;
   };
   duration: {
-    unit: 'hours' | 'days';
+    value?: number;
+    unit: 'minutes' | 'hours' | 'days';
   };
   categories: string[];
   images: string[];

@@ -1,8 +1,15 @@
 import styles from "./TeamPage.module.css";
+import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
+import { useEffect } from "react";
 
 export default function TeamPage() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className={styles.container}>
+      <ProfileTitleWrapper title="Møt teamet" buttonText="Tilbake" />
       <div className={styles.hero}>
         <h1>Møt teamet</h1>
         <p className={styles.subtitle}>

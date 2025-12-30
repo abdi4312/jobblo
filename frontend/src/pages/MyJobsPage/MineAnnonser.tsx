@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../../stores/userStore";
 import { mainLink } from "../../api/mainURLs";
 import CreateJobForm from "../../components/CreateJobForm/CreateJobForm";
+import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 
 interface Location {
   coordinates: [number, number];
@@ -202,40 +203,7 @@ export default function MineAnnonser() {
       margin: "0 auto",
       minHeight: "100vh"
     }}>
-      {/* Header */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        padding: "16px 20px",
-        borderBottom: "1px solid #e0e0e0",
-      }}>
-        <button
-          onClick={() => navigate(-1)}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-            fontSize: "16px",
-            color: "var(--color-text)",
-          }}
-        >
-          <span className="material-symbols-outlined">arrow_back</span>
-          Tilbake
-        </button>
-      </div>
-
-      {/* Title */}
-      <h2 style={{
-        textAlign: "center",
-        margin: "20px 0",
-        fontSize: "24px",
-        fontWeight: "600"
-      }}>
-        Mine Annonser
-      </h2>
+      <ProfileTitleWrapper title="Mine Annonser" buttonText="Tilbake" />
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px' }}>Laster...</div>
@@ -389,7 +357,7 @@ export default function MineAnnonser() {
                   <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px" }}>
                     <span className='material-symbols-outlined' style={{ fontSize: "18px" }}>schedule</span>
                     <h3 style={{ margin: 0, fontSize: "14px" }}>
-                      {service.duration.value} {service.duration.unit}
+                      {service.duration.value ? `${service.duration.value} ${service.duration.unit}` : 'Ikke angitt'}
                     </h3>
                   </div>
                 )}

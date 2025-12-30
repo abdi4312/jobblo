@@ -9,6 +9,8 @@ interface CategoriesProps {
   showTitle?: boolean;
   onCategoriesChange?: (categories: string[]) => void;
   allowMultiSelect?: boolean;
+  searchQuery?: string;
+  onSearchClear?: () => void;
 }
 
 export function Categories({

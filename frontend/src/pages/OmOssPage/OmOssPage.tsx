@@ -1,8 +1,15 @@
 import styles from "./OmOssPage.module.css";
+import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
+import { useEffect } from "react";
 
 export default function OmOssPage() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className={styles.container}>
+      <ProfileTitleWrapper title="Om Jobblo" buttonText="Tilbake" />
       <div className={styles.hero}>
         <h1>Om Jobblo</h1>
         <p className={styles.subtitle}>

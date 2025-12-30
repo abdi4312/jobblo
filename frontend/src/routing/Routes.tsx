@@ -17,6 +17,10 @@ import SupportPage from "../pages/SupportPage/SupportPage.tsx";
 import AnnonsereglerPage from "../pages/AnnonsereglerPage/AnnonsereglerPage.tsx";
 import MineAnnonser from "../pages/MyJobsPage/MineAnnonser.tsx";
 import JobListingDetailPage from "../pages/JobListingDetailPage/JobListingDetailPage.tsx";
+import CoinsPage from "../pages/CoinsPage/CoinsPage.tsx";
+import { MessagesPage } from "../pages/MessagesPage/MessagesPage.tsx";
+import { ConversationView } from "../pages/ConversationView/ConversationView.tsx";
+import MinInntekt from "../pages/MinInntekt/MinInntekt.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -74,6 +78,14 @@ export const routes: RouteObject[] = [
         element: <MinProfil />,
       },
       {
+        path: "min-inntekt",
+        element: (
+          <ProtectedRoute>
+            <MinInntekt />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: "login",
         element: <LoginPage />,
       },
@@ -94,6 +106,14 @@ export const routes: RouteObject[] = [
         element: <FavoritesPage />,
       },
       {
+        path: "coins",
+        element: (
+          <ProtectedRoute>
+            <CoinsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: "om-oss",
         element: <OmOssPage />,
       },
@@ -112,6 +132,22 @@ export const routes: RouteObject[] = [
       {
         path: "annonseregler",
         element: <AnnonsereglerPage />,
+      },
+      {
+        path: "messages",
+        element: (
+          <ProtectedRoute>
+            <MessagesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "messages/:conversationId",
+        element: (
+          <ProtectedRoute>
+            <ConversationView />
+          </ProtectedRoute>
+        ),
       },
     ],
   },

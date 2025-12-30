@@ -1,5 +1,6 @@
 import styles from "./ProfileTitleWrapper.module.css";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 export function ProfileTitleWrapper({
   title,
@@ -9,6 +10,10 @@ export function ProfileTitleWrapper({
   buttonText: string;
 }) {
   const nav = useNavigate();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   return (
     <>
