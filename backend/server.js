@@ -17,7 +17,7 @@ connectDB()
   });
 
 const app = require('./app');
-const port = 5001;
+const port = 5000;
 
 // Create HTTP server for WebSocket support
 const server = http.createServer(app);
