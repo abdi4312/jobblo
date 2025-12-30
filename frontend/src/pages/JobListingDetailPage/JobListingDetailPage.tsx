@@ -181,6 +181,16 @@ const JobListingDetailPage = () => {
     } catch (err) {
       console.error("Error creating/getting chat:", err);
     }
+    
+    // Navigate to messages page - you can pass job/user info via state if needed
+    navigate("/messages", { 
+      // state: { 
+      //   recipientId: job?.userId?._id,
+      //   recipientName: job?.userId?.name,
+      //   jobId: job?._id,
+      //   jobTitle: job?.title
+      // } 
+    });
   };
 
   if (loading) {
