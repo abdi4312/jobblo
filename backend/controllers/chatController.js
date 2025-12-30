@@ -55,8 +55,8 @@ exports.getMyChats = async (req, res) => {
     const filter = role === "user" ? { clientId: id } : { providerId: id };
 
     const chats = await Chat.find(filter)
-      .populate("clientId", "name role")
-      .populate("providerId", "name role")
+      .populate("clientId", "name role avatarUrl")
+      .populate("providerId", "name role avatarUrl")
       .sort({ updatedAt: -1 });
 
     res.json(chats);
@@ -74,9 +74,9 @@ exports.getChatById = async (req, res) => {
       return res.status(400).json({ error: "Invalid chat ID format" });
 
     const chat = await Chat.findById(chatId)
-      .populate("clientId", "name")
-      .populate("providerId", "name")
-      .populate("messages.senderId", "name");
+      .populate("clientId", "name avatarUrl")
+      .populate("providerId", "name avatarUrl")
+      .populate("messages.senderId", "name avatarUrl");
 
     if (!chat) {
       return res.status(404).json({ message: "Chat not found" });
