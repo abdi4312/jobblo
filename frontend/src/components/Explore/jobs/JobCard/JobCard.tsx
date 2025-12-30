@@ -160,25 +160,48 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
           padding: "0 12px",
         }}
       >
-        <h4
-          style={{
-            minWidth: "fit-content",
-            width: "fit-content",
-            padding: "4px 8px",
-            backgroundColor: "var(--color-accent)",
-            margin: "0",
-            borderRadius: "4px",
-            whiteSpace: "nowrap",
-            display: "inline-block",
-            color: "#ffffff",
-            fontSize: "14px",
-            fontWeight: "500",
-            lineHeight: "1.5",
-            minHeight: "24px",
-          }}
-        >
-          No Category
-        </h4>
+        {job.categories && job.categories.length > 0 ? (
+          job.categories.map((category, index) => (
+            <h4
+              key={index}
+              style={{
+                minWidth: "fit-content",
+                width: "fit-content",
+                padding: "4px 8px",
+                backgroundColor: "var(--color-accent)",
+                margin: "0",
+                borderRadius: "4px",
+                whiteSpace: "nowrap",
+                display: "inline-block",
+                color: "#ffffff",
+                fontWeight: "500",
+                lineHeight: "1.5",
+                minHeight: "24px",
+              }}
+            >
+              {category}
+            </h4>
+          ))
+        ) : (
+          <h4
+            style={{
+              minWidth: "fit-content",
+              width: "fit-content",
+              padding: "4px 8px",
+              backgroundColor: "var(--color-accent)",
+              margin: "0",
+              borderRadius: "4px",
+              whiteSpace: "nowrap",
+              display: "inline-block",
+              color: "#ffffff",
+              fontWeight: "500",
+              lineHeight: "1.5",
+              minHeight: "24px",
+            }}
+          >
+            No Category
+          </h4>
+        )}
 
         {/* Equipment Badge with color coding */}
         <h4
@@ -198,6 +221,10 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
             borderRadius: "4px",
             whiteSpace: "nowrap",
             display: "inline-block",
+            color: "#ffffff",
+            fontWeight: "500",
+            lineHeight: "1.5",
+            minHeight: "24px",
           }}
         >
           {job.equipment === "utstyrfri"

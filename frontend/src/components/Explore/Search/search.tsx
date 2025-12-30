@@ -4,12 +4,43 @@ import jobbloswipe from "../../../assets/images/jobbloswipe.png";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../../../stores/userStore";
 import { toast } from "react-toastify";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import debounce from "lodash.debounce";
 
-export function Search() {
+interface SearchProps {
+  onSearchChange?: (searchQuery: string) => void;
+  value?: string;
+}
+
+export function Search({ onSearchChange, value }: SearchProps) {
   const navigate = useNavigate();
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Sync local state with external value prop
+  useEffect(() => {
+    if (value !== undefined) {
+      setSearchQuery(value);
+    }
+  }, [value]);
+
+  // Create debounced search function that waits 1 second after user stops typing
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((query: string) => {
+        if (onSearchChange) {
+          onSearchChange(query.trim());
+        }
+      }, 1000),
+    [onSearchChange]
+  );
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [debouncedSearch]);
 
   const handlePublishClick = () => {
     if (!isAuth) {
@@ -20,11 +51,21 @@ export function Search() {
     navigate("/publish-job");
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    // Trigger debounced search if callback is provided
+    if (onSearchChange) {
+      debouncedSearch(value);
+    }
+  };
+
   const handleSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (searchQuery.trim()) {
+    // Only navigate to search page if no callback is provided (legacy behavior)
+    if (!onSearchChange && searchQuery.trim()) {
       navigate(`/search/${encodeURIComponent(searchQuery.trim())}`);
-    } else {
+    } else if (!onSearchChange && !searchQuery.trim()) {
       toast.warning("Vennligst skriv inn et søkeord");
     }
   };
@@ -56,7 +97,7 @@ export function Search() {
             type="text" 
             placeholder="Søk etter oppdrag"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleInputChange}
             onKeyPress={handleKeyPress}
             />
 

@@ -17,8 +17,6 @@ import SupportPage from "../pages/SupportPage/SupportPage.tsx";
 import AnnonsereglerPage from "../pages/AnnonsereglerPage/AnnonsereglerPage.tsx";
 import MineAnnonser from "../pages/MyJobsPage/MineAnnonser.tsx";
 import JobListingDetailPage from "../pages/JobListingDetailPage/JobListingDetailPage.tsx";
-import CategoryJobs from "../pages/CategoryJobsPage/CategoryJobs.tsx";
-import SearchResults from "../pages/SearchResultsPage/SearchResults.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -114,14 +112,6 @@ export const routes: RouteObject[] = [
       {
         path: "annonseregler",
         element: <AnnonsereglerPage />,
-      },
-      {
-        path: "category/:categoryName",
-        element: <CategoryJobs />,
-      },
-      {
-        path: "search/:searchQuery",
-        element: <SearchResults />,
       },
     ],
   },
