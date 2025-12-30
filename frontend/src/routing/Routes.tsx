@@ -20,6 +20,7 @@ import JobListingDetailPage from "../pages/JobListingDetailPage/JobListingDetail
 import CoinsPage from "../pages/CoinsPage/CoinsPage.tsx";
 import { MessagesPage } from "../pages/MessagesPage/MessagesPage.tsx";
 import { ConversationView } from "../pages/ConversationView/ConversationView.tsx";
+import MinInntekt from "../pages/MinInntekt/MinInntekt.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -75,6 +76,14 @@ export const routes: RouteObject[] = [
       {
         path: "Min-profil",
         element: <MinProfil />,
+      },
+      {
+        path: "min-inntekt",
+        element: (
+          <ProtectedRoute>
+            <MinInntekt />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "login",

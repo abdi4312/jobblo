@@ -14,8 +14,10 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
       name: "Gratis",
       price: 0,
       freeViews: 2,
+      pricePerExtraView: 79,
       features: [
         "2 gratis visninger",
+        "79 kr per ekstra visning",
         "Grunnleggende funksjoner",
         "Begrenset tilgang"
       ]
@@ -24,8 +26,10 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
       name: "Start",
       price: 199,
       freeViews: 5,
+      pricePerExtraView: 39,
       features: [
         "5 gratis visninger",
+        "39 kr per ekstra visning",
         "Kommer øverst etter forespørsel",
         "Standardsupport"
       ]
@@ -34,8 +38,10 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
       name: "Pro",
       price: 399,
       freeViews: 10,
+      pricePerExtraView: 29,
       features: [
         "10 gratis visninger",
+        "29 kr per ekstra visning",
         "Kommer øverst etter forespørsel",
         "Prioritert support"
       ]
@@ -44,9 +50,11 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
       name: "Premium",
       price: 639,
       freeViews: 20,
+      pricePerExtraView: 19,
       popular: true,
       features: [
         "20 gratis visninger",
+        "19 kr per ekstra visning",
         "Kommer øverst når kunder søker",
         "Premium support 24/7",
         "Verifisert bedriftsbadge"
@@ -59,8 +67,10 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
       name: "Gratis",
       price: 0,
       freeViews: 2,
+      pricePerExtraView: 45,
       features: [
         "2 gratis visninger",
+        "45 kr per ekstra visning",
         "Grunnleggende funksjoner",
         "Begrenset tilgang"
       ]
@@ -69,8 +79,10 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
       name: "Fleksibel",
       price: 99,
       freeViews: 5,
+      pricePerExtraView: 25,
       features: [
         "5 gratis visninger",
+        "25 kr per ekstra visning",
         "Standardsupport",
         "Estimat under 15 000 kr"
       ]
@@ -79,9 +91,11 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
       name: "Jobbpluss",
       price: 149,
       freeViews: 15,
+      pricePerExtraView: 15,
       popular: true,
       features: [
         "15 gratis visninger",
+        "15 kr per ekstra visning",
         "Prioritert support",
         "Estimat under 15 000 kr",
         "Ekstra fordeler"
