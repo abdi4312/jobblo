@@ -2,6 +2,7 @@ import CreateJobForm from "../../components/CreateJobForm/CreateJobForm";
 import { mainLink } from "../../api/mainURLs";
 import { useUserStore } from "../../stores/userStore";
 import { useNavigate } from "react-router-dom";
+import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 
 export default function LeggUtOppdrag() {
   const navigate = useNavigate();
@@ -56,22 +57,8 @@ export default function LeggUtOppdrag() {
 
   return (
     <>
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '12px', 
-        padding: '20px',
-        maxWidth: '900px',
-        margin: '0 auto'
-      }}>
-        <span 
-          className="material-symbols-outlined" 
-          onClick={() => navigate(-1)}
-          style={{ fontSize: '32px', cursor: 'pointer' }}
-        >
-          arrow_back
-        </span>
-        <h2 style={{ margin: 0 }}>Oppdrag</h2>
+      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <ProfileTitleWrapper title="Oppdrag" buttonText="Tilbake" />
       </div>
 
       <div style={{height:"2px", width:"90vw", backgroundColor:"var(--color-muted-gray)", margin:"auto"}}></div>

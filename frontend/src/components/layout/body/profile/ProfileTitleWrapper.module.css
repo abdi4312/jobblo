@@ -4,15 +4,29 @@
   padding: 16px 20px;
   border-bottom: 1px solid #e0e0e0;
 }
+
 .button {
-  background: none;
+  background-color: var(--color-primary);
+  color: white;
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 16px;
-  color: var(--color-text);
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.button:hover {
+  background-color: #d67012;
+  transform: translateY(-1px);
+}
+
+.button:active {
+  transform: translateY(0);
 }
 
 .title {
@@ -20,4 +34,5 @@
   margin: 20px 0;
   font-size: 24px;
   font-weight: 600;
+  color: var(--color-text-strong);
 }

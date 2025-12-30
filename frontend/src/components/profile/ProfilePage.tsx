@@ -31,7 +31,7 @@ export default function ProfilePage() {
       <ProfileHeader />
       <CoinsSection />
       <ProfileMenuSection />
-      
+
       <button
         onClick={handleLogout}
         style={{

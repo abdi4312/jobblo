@@ -5,11 +5,22 @@
   padding: 14px 0;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
   border-radius: 15px;
   background: linear-gradient(180deg, var(--color-cta) 0%, var(--color-primary) 100%);
   position: relative;
   overflow: hidden;
+}
+
+.levelName {
+  color: rgba(255, 255, 255, 0.95);
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .title {

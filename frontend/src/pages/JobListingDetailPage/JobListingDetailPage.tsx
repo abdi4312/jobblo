@@ -11,6 +11,7 @@ import { mainLink } from '../../api/mainURLs';
 import { getFavorites, setFavorites, deleteFavorites } from '../../api/favoriteAPI';
 import { useUserStore } from '../../stores/userStore';
 import { toast } from 'react-toastify';
+import { ProfileTitleWrapper } from '../../components/layout/body/profile/ProfileTitleWrapper';
 
 interface Service {
   _id: string;
@@ -171,31 +172,7 @@ const JobListingDetailPage = () => {
 
   return (
     <div className={styles.container}>
-      {/* Back button */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '12px', 
-        padding: '16px 20px',
-        borderBottom: '1px solid var(--color-light-gray)'
-      }}>
-        <button
-          onClick={() => navigate(-1)}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            padding: 0,
-          }}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>
-            arrow_back
-          </span>
-        </button>
-        <h2 style={{ margin: 0, fontSize: '20px' }}>Tilbake</h2>
-      </div>
+      <ProfileTitleWrapper title="Tilbake" buttonText="Tilbake" />
 
       <JobImageCarousel images={job?.images} />
 

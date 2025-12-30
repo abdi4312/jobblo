@@ -17,6 +17,7 @@ import SupportPage from "../pages/SupportPage/SupportPage.tsx";
 import AnnonsereglerPage from "../pages/AnnonsereglerPage/AnnonsereglerPage.tsx";
 import MineAnnonser from "../pages/MyJobsPage/MineAnnonser.tsx";
 import JobListingDetailPage from "../pages/JobListingDetailPage/JobListingDetailPage.tsx";
+import CoinsPage from "../pages/CoinsPage/CoinsPage.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -92,6 +93,14 @@ export const routes: RouteObject[] = [
       {
         path: "favoritter",
         element: <FavoritesPage />,
+      },
+      {
+        path: "coins",
+        element: (
+          <ProtectedRoute>
+            <CoinsPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "om-oss",

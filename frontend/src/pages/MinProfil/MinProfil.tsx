@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../../stores/userStore";
 import { mainLink } from "../../api/mainURLs";
+import { PricingModal } from "../../components/shared/PricingModal/PricingModal";
+import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 
 interface ProfileData {
   email: string;
@@ -21,6 +23,7 @@ interface ProfileData {
 export default function MinProfil() {
   const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   
   const [formData, setFormData] = useState<ProfileData>({
     email: "",
@@ -208,40 +211,7 @@ export default function MinProfil() {
       margin: "0 auto",
       minHeight: "100vh"
     }}>
-      {/* Header */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        padding: "16px 20px",
-        borderBottom: "1px solid #e0e0e0",
-      }}>
-        <button
-          onClick={() => navigate(-1)}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-            fontSize: "16px",
-            color: "var(--color-text)",
-          }}
-        >
-          <span className="material-symbols-outlined">arrow_back</span>
-          Tilbake til Min Side
-        </button>
-      </div>
-
-      {/* Title */}
-      <h2 style={{
-        textAlign: "center",
-        margin: "20px 0",
-        fontSize: "24px",
-        fontWeight: "600"
-      }}>
-        Min profil
-      </h2>
+      <ProfileTitleWrapper title="Min profil" buttonText="Tilbake" />
 
       {/* Profile Picture */}
       <div style={{
@@ -377,6 +347,33 @@ export default function MinProfil() {
         <ProfileField label="Poststed" field="postSted" value={formData.postSted} />
         <ProfileField label="Land" field="country" value={formData.country} />
       </div>
+
+      {/* Pricing Button */}
+      <div style={{ padding: "20px", marginTop: "20px" }}>
+        <button
+          onClick={() => setIsPricingModalOpen(true)}
+          style={{
+            width: "100%",
+            padding: "16px",
+            backgroundColor: "var(--color-primary)",
+            color: "white",
+            border: "none",
+            borderRadius: "12px",
+            fontSize: "16px",
+            fontWeight: "600",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+          }}
+        >
+          <span className="material-symbols-outlined">payments</span>
+          Se våre priser
+        </button>
+      </div>
+
+      <PricingModal isOpen={isPricingModalOpen} onClose={() => setIsPricingModalOpen(false)} />
     </div>
   );
 }
