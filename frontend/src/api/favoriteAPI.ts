@@ -1,4 +1,6 @@
-import { mainLink } from "./mainURLs.ts";
+//! Import used for Fetch API
+// import { mainLink } from "./mainURLs.ts;
+
 import type { AuthTokens } from "../types/userTypes.ts";
 import axios from "axios";
 import type { FavoritesResponse } from "../types/FavoritesTypes.ts";
