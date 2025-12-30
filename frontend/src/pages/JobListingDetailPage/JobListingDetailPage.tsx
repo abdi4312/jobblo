@@ -49,7 +49,7 @@ const JobListingDetailPage = () => {
   const userToken = useUserStore((state) => state.tokens);
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const currentUser = useUserStore((state) => state.user);
-  
+
   const isOwnJob = job?.userId?._id === currentUser?._id;
 
   const getStatusConfig = (status: string) => {
@@ -95,7 +95,7 @@ const JobListingDetailPage = () => {
 
       try {
         const response = await fetch(`${mainLink}/api/services/${id}`);
-        
+
         if (response.ok) {
           const data = await response.json();
           setJob(data);
@@ -153,14 +153,34 @@ const JobListingDetailPage = () => {
     }
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async (providerId: string) => {
     if (!isAuth) {
       toast.error("Du må logge inn for å sende melding");
       navigate("/login");
       return;
     }
-    // TODO: Implement message functionality
-    toast.info("Meldingsfunksjon kommer snart");
+    try {
+      if (!userToken?.accessToken) {
+        setError("Du må være logget inn for å se dine annonser");
+        setLoading(false);
+        return;
+      }
+      const res = await fetch(`${mainLink}/api/chats/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userToken.accessToken}`,
+        },
+        body: JSON.stringify({ providerId }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to create/get chat: ${res.status}`);
+      }
+      navigate(`/messages`);
+    } catch (err) {
+      console.error("Error creating/getting chat:", err);
+    }
   };
 
   if (loading) {
@@ -171,32 +191,30 @@ const JobListingDetailPage = () => {
     );
   }
 
-const handleSendMessagess = async (providerId: string) => {
-      if (!userToken?.accessToken) {
-      setError('Du må være logget inn for å se dine annonser');
+  const handleSendMessagess = async () => {
+    if (!userToken?.accessToken) {
+      setError("Du må være logget inn for å se dine annonser");
       setLoading(false);
       return;
     }
-  try {
-    const res = await fetch(`${mainLink}/api/chats/create`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        // Agar token use kar rahe ho to yahan Authorization header bhi add karo
-        'Authorization': `Bearer ${userToken.accessToken}`
-      },
-      body: JSON.stringify({ providerId }),
-    });
+    try {
+      const res = await fetch(`${mainLink}/api/chats/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userToken.accessToken}`,
+        },
+        body: JSON.stringify({ providerId }),
+      });
 
-    if (!res.ok) {
-      throw new Error(`Failed to create/get chat: ${res.status}`);
+      if (!res.ok) {
+        throw new Error(`Failed to create/get chat: ${res.status}`);
+      }
+      navigate(`/messages`);
+    } catch (err) {
+      console.error("Error creating/getting chat:", err);
     }
-    navigate(`/chat`);
-  } catch (err) {
-    console.error("Error creating/getting chat:", err);
-  }
-};
-
+  };
 
   return (
     <div className={styles.container}>
@@ -235,7 +253,7 @@ const handleSendMessagess = async (providerId: string) => {
           {isFavorited ? 'Fjern favoritt' : 'Legg til favoritt'}
         </button>
         <button
-          onClick={handleSendMessage}
+          onClick={() => handleSendMessage(job?.userId._id)}
           disabled={isOwnJob}
           style={{
             flex: 1,
@@ -263,11 +281,13 @@ const handleSendMessagess = async (providerId: string) => {
 
       <div className={styles.content}>
         <JobDetails job={job} />
-        <button onClick={()=>handleSendMessagess(job?.userId._id)}>Chat Service Provider</button>
         <JobDescription description={job?.description} price={job?.price} urgent={job?.urgent} />
         <JobLocation location={job?.location} />
-        
-        <RelatedJobs coordinates={job?.location?.coordinates} currentJobId={job?._id} />
+
+        <RelatedJobs
+          coordinates={job?.location?.coordinates}
+          currentJobId={job?._id}
+        />
       </div>
     </div>
   );
