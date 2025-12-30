@@ -9,9 +9,11 @@ interface CategoriesProps {
   showTitle?: boolean;
   onCategoriesChange?: (categories: string[]) => void;
   allowMultiSelect?: boolean;
+  searchQuery?: string;
+  onSearchClear?: () => void;
 }
 
-export function Categories({ showTitle = true, onCategoriesChange, allowMultiSelect = false }: CategoriesProps) {
+export function Categories({ showTitle = true, onCategoriesChange, allowMultiSelect = false, searchQuery, onSearchClear }: CategoriesProps) {
   const [category, setCategory] = useState<CategoryType[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const navigate = useNavigate();
@@ -92,7 +94,7 @@ export function Categories({ showTitle = true, onCategoriesChange, allowMultiSel
           )}
           
           {/* Selected Categories Filter Bar */}
-          {allowMultiSelect && selectedCategories.length > 0 && (
+          {allowMultiSelect && (selectedCategories.length > 0 || searchQuery) && (
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -105,6 +107,43 @@ export function Categories({ showTitle = true, onCategoriesChange, allowMultiSel
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}>
               <span style={{ fontWeight: '600', fontSize: '14px' }}>Filtre:</span>
+              
+              {/* Search Query Filter */}
+              {searchQuery && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  backgroundColor: 'var(--color-primary)',
+                  color: 'white',
+                  borderRadius: '16px',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>search</span>
+                  <span>{searchQuery}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onSearchClear) onSearchClear();
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'white',
+                      cursor: 'pointer',
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      fontSize: '18px'
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              
               {selectedCategories.map((cat) => (
                 <div key={cat} style={{
                   display: 'flex',

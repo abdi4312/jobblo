@@ -18,6 +18,8 @@ import AnnonsereglerPage from "../pages/AnnonsereglerPage/AnnonsereglerPage.tsx"
 import MineAnnonser from "../pages/MyJobsPage/MineAnnonser.tsx";
 import JobListingDetailPage from "../pages/JobListingDetailPage/JobListingDetailPage.tsx";
 import CoinsPage from "../pages/CoinsPage/CoinsPage.tsx";
+import { MessagesPage } from "../pages/MessagesPage/MessagesPage.tsx";
+import { ConversationView } from "../pages/ConversationView/ConversationView.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -121,6 +123,22 @@ export const routes: RouteObject[] = [
       {
         path: "annonseregler",
         element: <AnnonsereglerPage />,
+      },
+      {
+        path: "messages",
+        element: (
+          <ProtectedRoute>
+            <MessagesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "messages/:conversationId",
+        element: (
+          <ProtectedRoute>
+            <ConversationView />
+          </ProtectedRoute>
+        ),
       },
     ],
   },

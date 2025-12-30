@@ -357,7 +357,7 @@ export default function MineAnnonser() {
                   <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "4px" }}>
                     <span className='material-symbols-outlined' style={{ fontSize: "18px" }}>schedule</span>
                     <h3 style={{ margin: 0, fontSize: "14px" }}>
-                      {service.duration.value} {service.duration.unit}
+                      {service.duration.value ? `${service.duration.value} ${service.duration.unit}` : 'Ikke angitt'}
                     </h3>
                   </div>
                 )}

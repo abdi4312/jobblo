@@ -103,6 +103,23 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
           </span>
         )}
 
+        {/* Status Badge */}
+        {job.urgent && (
+          <div style={{
+            position: "absolute",
+            top: "8px",
+            left: "8px",
+            background: "#ff4444",
+            color: "white",
+            padding: "4px 12px",
+            borderRadius: "12px",
+            fontSize: "12px",
+            fontWeight: "bold",
+          }}>
+            ⚡ Haster
+          </div>
+        )}
+
         {/* Favorite Heart Button */}
         <button
           onClick={handleFavoriteClick}
@@ -251,7 +268,7 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
               textOverflow: "ellipsis",
             }}
           >
-            {job.location.address} address
+            {job.location.city || 'Ukjent by'}
           </h3>
         </div>
 
@@ -266,7 +283,7 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
               maxWidth: "250px",
             }}
           >
-            {job.duration.unit}
+            {job.duration.value ? `${job.duration.value} ${job.duration.unit}` : 'Ikke angitt'}
           </h3>
         </div>
 

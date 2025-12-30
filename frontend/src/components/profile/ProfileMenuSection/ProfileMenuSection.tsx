@@ -45,7 +45,7 @@ export function ProfileMenuSection() {
         <ProfileMenuItem
           icon={<Icons.HelpIcon />}
           text="Kundeservice"
-          onClick={() => handleMenuItemClick("Kundeservice")}
+          onClick={() => navigate("/Support")}
         />
         <ProfileMenuItem
           icon={<Icons.SettingsIcon />}

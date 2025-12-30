@@ -19,7 +19,7 @@ export function Search({ onSearchChange, value }: SearchProps) {
 
   // Sync local state with external value prop
   useEffect(() => {
-    if (value !== undefined) {
+    if (value !== undefined && value !== searchQuery) {
       setSearchQuery(value);
     }
   }, [value]);

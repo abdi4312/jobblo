@@ -80,19 +80,7 @@ export default function AnmeldelserPage() {
 
   return (
     <div style={{ minHeight: "70vh", maxWidth: "800px", margin: "0 auto" }}>
-      <ProfileTitleWrapper title="Anmeldelser" buttonText="Tilbake" />
-
-      {/* Title */}
-      <h2
-        style={{
-          textAlign: "center",
-          margin: "20px 0",
-          fontSize: "24px",
-          fontWeight: "600"
-        }}
-      >
-        Anmeldelser
-      </h2>
+      <ProfileTitleWrapper title="Anmeldelser" buttonText="Tilbake til Min Side" />
 
       {/* Rating Summary */}
       {!loading && totalReviews > 0 && (

@@ -80,10 +80,8 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
       jobData.userId = userId;
     }
 
-    // Only include equipment if it's filled
-    if (equipment && equipment.trim() !== '') {
-      jobData.equipment = equipment;
-    }
+    // Equipment is now required
+    jobData.equipment = equipment;
 
     // Only include dates if they're filled
     if (fromDate) {
@@ -245,12 +243,13 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
 
       <div style={{ marginBottom: "24px" }}>
         <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-          Utstyr (valgfritt)
+          Utstyr
         </label>
         <select
           value={equipment}
           onChange={(e) => setEquipment(e.target.value)}
           size={1}
+          required
           style={{
             width: "calc(90% + 24px)",
             padding: "12px",

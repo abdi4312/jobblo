@@ -3,6 +3,7 @@ import { mainLink } from "../../api/mainURLs";
 import { useUserStore } from "../../stores/userStore";
 import { useNavigate } from "react-router-dom";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
+import { toast } from 'react-toastify';
 
 export default function LeggUtOppdrag() {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export default function LeggUtOppdrag() {
     console.log('Sending job data:', jobData); // Log the data being sent
     
     if (!userToken?.accessToken) {
-      alert('Du må være logget inn for å publisere et oppdrag');
+      toast.error('Du må være logget inn for å publisere et oppdrag');
       return;
     }
     
@@ -42,16 +43,16 @@ export default function LeggUtOppdrag() {
         console.log('Job created successfully');
         const result = await response.json();
         console.log(result);
-        // Redirect or show success message
-        alert('Oppdrag publisert!');
+        toast.success('Oppdrag publisert!');
+        navigate(-1);
       } else {
         const errorText = await response.text();
         console.error('Failed to create job. Status:', response.status, 'Error:', errorText);
-        alert(`Kunne ikke publisere oppdrag. Status: ${response.status}`);
+        toast.error(`Kunne ikke publisere oppdrag. Status: ${response.status}`);
       }
     } catch (error) {
       console.error('Error creating job:', error);
-      alert('Det oppstod en feil ved kommunikasjon med serveren');
+      toast.error('Det oppstod en feil ved kommunikasjon med serveren');
     }
   };
 
