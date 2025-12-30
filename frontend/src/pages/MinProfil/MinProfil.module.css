@@ -1,0 +1,430 @@
+.container {
+  background: var(--color-bg);
+  min-height: 100vh;
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+}
+
+.content {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.profileSection {
+  background: var(--color-surface);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: -4px 2px 10.1px 0 rgba(59, 56, 56, 0.25);
+  border: 1px solid rgba(24, 58, 29, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.2s ease;
+}
+
+.profileSection:hover {
+  transform: translateY(-2px);
+  box-shadow: -4px 4px 12px 0 rgba(59, 56, 56, 0.3);
+  border-color: rgba(24, 58, 29, 0.2);
+}
+
+.profileImageContainer {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--color-accent);
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(24, 58, 29, 0.3);
+  position: relative;
+}
+
+.profileImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profileInitial {
+  font-size: 40px;
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.changePhotoButton {
+  padding: 8px 20px;
+  background: transparent;
+  color: var(--color-accent);
+  border: 2px solid var(--color-accent);
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.changePhotoButton:hover {
+  background: var(--color-accent);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.statsGrid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.statCard {
+  background: linear-gradient(135deg, rgba(24, 58, 29, 0.05) 0%, rgba(131, 167, 144, 0.1) 100%);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  border: 1px solid rgba(24, 58, 29, 0.1);
+  transition: all 0.2s ease;
+}
+
+.statCard:hover {
+  background: linear-gradient(135deg, rgba(24, 58, 29, 0.08) 0%, rgba(131, 167, 144, 0.15) 100%);
+  transform: translateY(-1px);
+  border-color: rgba(24, 58, 29, 0.2);
+}
+
+.statValue {
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.statValue.primary {
+  color: var(--color-primary);
+}
+
+.statValue.accent {
+  color: var(--color-accent);
+}
+
+.statLabel {
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 12px;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.bioSection {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  background: rgba(24, 58, 29, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(24, 58, 29, 0.1);
+}
+
+.bioLabel {
+  font-weight: 600;
+  color: var(--color-accent);
+  margin-bottom: 4px;
+}
+
+.bioText {
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.badge {
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  text-transform: capitalize;
+}
+
+.badge.role {
+  background: var(--color-primary);
+}
+
+.badge.subscription {
+  background: var(--color-accent);
+}
+
+.fieldsSection {
+  background: var(--color-surface);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: -4px 2px 10.1px 0 rgba(59, 56, 56, 0.25);
+  border: 1px solid rgba(24, 58, 29, 0.1);
+  transition: all 0.2s ease;
+}
+
+.fieldsSection:hover {
+  transform: translateY(-2px);
+  box-shadow: -4px 4px 12px 0 rgba(59, 56, 56, 0.3);
+  border-color: rgba(24, 58, 29, 0.2);
+}
+
+.sectionTitle {
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(24, 58, 29, 0.1);
+}
+
+.field:last-child {
+  border-bottom: none;
+}
+
+.fieldLabel {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--color-text);
+  min-width: 100px;
+}
+
+.fieldValue {
+  font-size: 15px;
+  color: #666;
+  flex: 1;
+  text-align: right;
+  margin-right: 12px;
+}
+
+.fieldInput {
+  flex: 1;
+  padding: 10px 12px;
+  border: 2px solid var(--color-accent);
+  border-radius: 8px;
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 15px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.fieldInput:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(234, 126, 21, 0.1);
+}
+
+.fieldActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.saveButton {
+  padding: 8px 16px;
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.saveButton:hover {
+  background: #153014;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(24, 58, 29, 0.3);
+}
+
+.editIcon {
+  font-size: 20px;
+  color: var(--color-accent);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.editIcon:hover {
+  color: var(--color-primary);
+  transform: scale(1.1);
+}
+
+.divider {
+  height: 1px;
+  background: rgba(24, 58, 29, 0.1);
+  margin: 8px 0;
+}
+
+.pricingButton {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-cta) 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: -4px 2px 10.1px 0 rgba(59, 56, 56, 0.25);
+  transition: all 0.2s ease;
+}
+
+.pricingButton:hover {
+  transform: translateY(-2px);
+  box-shadow: -4px 4px 12px 0 rgba(234, 126, 21, 0.4);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px 14px;
+  }
+
+  .content {
+    gap: 20px;
+  }
+
+  .profileSection {
+    padding: 20px 16px;
+  }
+
+  .fieldsSection {
+    padding: 16px;
+  }
+
+  .statsGrid {
+    gap: 10px;
+  }
+
+  .statCard {
+    padding: 14px;
+  }
+
+  .statValue {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 440px) {
+  .container {
+    padding: 12px 12px;
+  }
+
+  .content {
+    gap: 16px;
+  }
+
+  .profileSection {
+    padding: 16px 12px;
+    gap: 12px;
+  }
+
+  .profileImageContainer {
+    width: 80px;
+    height: 80px;
+    border-width: 2px;
+  }
+
+  .profileInitial {
+    font-size: 32px;
+  }
+
+  .changePhotoButton {
+    padding: 6px 16px;
+    font-size: 13px;
+  }
+
+  .statsGrid {
+    gap: 8px;
+  }
+
+  .statCard {
+    padding: 12px 8px;
+  }
+
+  .statValue {
+    font-size: 20px;
+  }
+
+  .statLabel {
+    font-size: 11px;
+  }
+
+  .fieldsSection {
+    padding: 14px 12px;
+  }
+
+  .field {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 0;
+  }
+
+  .fieldLabel {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .fieldValue {
+    width: 100%;
+    text-align: left;
+    margin-right: 0;
+  }
+
+  .fieldActions {
+    width: 100%;
+  }
+
+  .fieldInput {
+    font-size: 14px;
+    padding: 8px 10px;
+  }
+
+  .sectionTitle {
+    font-size: 16px;
+  }
+
+  .pricingButton {
+    padding: 14px;
+    font-size: 15px;
+  }
+
+  .badges {
+    justify-content: center;
+  }
+}
