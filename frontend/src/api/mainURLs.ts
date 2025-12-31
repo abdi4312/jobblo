@@ -1,5 +1,25 @@
 import axios from "axios";
+import { useUserStore } from "../stores/userStore";
 
-export const mainLink = "http://localhost:5000";
+const mainLink = axios.create({
+  baseURL: "http://localhost:5000",
+  headers: {
+    Accept: "application/json",
+  },
+});
 
-axios.defaults.baseURL = mainLink;
+// 🔐 Bearer Token auto attach
+mainLink.interceptors.request.use(
+  (config) => {
+    const { tokens } = useUserStore.getState();
+    const token = tokens?.accessToken;
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+export default mainLink;
