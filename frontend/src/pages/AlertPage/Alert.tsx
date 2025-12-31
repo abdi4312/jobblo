@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { mainLink } from "../../api/mainURLs";
+import mainLink from "../../api/mainURLs";
 import { useUserStore } from "../../stores/userStore";
 import { useNavigate } from "react-router-dom";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";

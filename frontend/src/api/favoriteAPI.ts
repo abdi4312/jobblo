@@ -4,6 +4,7 @@
 import type { AuthTokens } from "../types/userTypes.ts";
 import axios from "axios";
 import type { FavoritesResponse } from "../types/FavoritesTypes.ts";
+import mainLink from "./mainURLs.ts";
 
 // export async function getFavorites(userToken: AuthTokens | null) {
 //   const myHeaders = new Headers();
@@ -17,14 +18,8 @@ import type { FavoritesResponse } from "../types/FavoritesTypes.ts";
 //   return await res.json();
 // }
 
-export async function getFavorites(userToken: AuthTokens | null) {
-  const res = await axios.get<FavoritesResponse>("/api/favorites", {
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${userToken?.accessToken}`,
-    },
-  });
-
+export async function getFavorites() {
+  const res = await mainLink.get<FavoritesResponse>('/api/favorites')
   return res.data;
 }
 

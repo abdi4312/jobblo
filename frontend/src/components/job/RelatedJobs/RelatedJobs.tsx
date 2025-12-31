@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './RelatedJobs.module.css';
-import { mainLink } from '../../../api/mainURLs';
+import  mainLink  from '../../../api/mainURLs';
 import { JobCard } from '../../Explore/jobs/JobCard/JobCard';
 import type { Jobs } from '../../../types/Jobs';
 

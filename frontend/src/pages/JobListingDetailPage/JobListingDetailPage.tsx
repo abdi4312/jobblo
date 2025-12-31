@@ -7,7 +7,7 @@ import JobDetails from '../../components/job/JobDetails/JobDetails';
 import JobDescription from '../../components/job/JobDescription/JobDescription';
 import JobLocation from '../../components/job/JobLocation/JobLocation';
 import RelatedJobs from '../../components/job/RelatedJobs/RelatedJobs';
-import { mainLink } from '../../api/mainURLs';
+import  mainLink  from '../../api/mainURLs';
 import { getFavorites, setFavorites, deleteFavorites } from '../../api/favoriteAPI';
 import { useUserStore } from '../../stores/userStore';
 import { toast } from 'react-toastify';
@@ -93,10 +93,12 @@ const JobListingDetailPage = () => {
       }
 
       try {
-        const response = await fetch(`${mainLink}/api/services/${id}`);
+        // const response = await fetch(`${mainLink}/api/services/${id}`);
+        const response = await mainLink.get(`/api/services/${id}`)
+        console.log(response);
         
-        if (response.ok) {
-          const data = await response.json();
+        if (response.data) {
+          const data = await response.data;
           setJob(data);
         } else {
           console.error('Failed to fetch job');

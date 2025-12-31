@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as Icons from "../../assets/icons";
-import { mainLink } from "../../api/mainURLs";
+import mainLink from "../../api/mainURLs";
 import { toast } from 'react-toastify';
 import styles from "./RegisterPage.module.css";
 

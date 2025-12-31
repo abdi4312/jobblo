@@ -1,12 +1,9 @@
-import axios from "axios";
+import mainLink from "./mainURLs";
 
 export async function userLogin(email: string, password: string) {
-  const res = await axios.post(
+  const res = await mainLink.post(
     "/api/auth/login",
     { email, password },
-    {
-      headers: { "Content-Type": "application/json" },
-    },
   );
 
   return res;
