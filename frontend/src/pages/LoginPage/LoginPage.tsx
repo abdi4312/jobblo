@@ -5,6 +5,7 @@ import { mainLink } from "../../api/mainURLs";
 import { useUserStore } from "../../stores/userStore";
 import { toast } from 'react-toastify';
 import styles from "./loginPage.module.css";
+import SocialAuthButtons from "../../components/SocialAuthButtons/AuthButton";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ export default function LoginPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(loginData),
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -128,6 +130,11 @@ export default function LoginPage() {
         >
           Cancel
         </button>
+
+
+        {/* Social Auth Buttons */}
+        <SocialAuthButtons />
+        
 
         {/* Register Section */}
         <div className={styles.registerSection}>
