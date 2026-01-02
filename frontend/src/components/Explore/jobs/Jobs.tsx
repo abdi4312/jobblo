@@ -55,37 +55,13 @@ export default function JobsContainer({ selectedCategories = [], searchQuery = "
         setLoadingJobs(true);
         setCurrentPage(1); // Reset to page 1 when filters change
         try {
-          let url = `${mainLink}/api/services`;
-          const params = new URLSearchParams();
-          
-          params.append('page', '1');
-          params.append('limit', String(limit));
-          
-          if (selectedCategories.length > 0) {
-            params.append('category', selectedCategories.join(','));
-          }
-          if (searchQuery) {
-            params.append('search', searchQuery);
-          }
-          
-          url += `?${params.toString()}`;
-          
-          console.log('Fetching jobs from:', url);
-          const res = await fetch(url);
-          const data = await res.json();
-          console.log('API response:', data);
-          
-          // Handle pagination response format
-          if (data && Array.isArray(data.data)) {
-            setJobs(data.data);
-            if (data.pagination) {
-              setTotalPages(data.pagination.totalPages || 1);
-              setTotalJobs(data.pagination.total || 0);
-            }
-          } else if (Array.isArray(data)) {
+          const res = await fetch(`${mainLink}/api/services`);
+          const data = await res.json();          
+          // Ensure data is an array before setting it
+          if (Array.isArray(data)) {
             setJobs(data);
-          } else if (data && Array.isArray(data.services)) {
-            setJobs(data.services);
+          } else if (data && Array.isArray(data.data)) {
+            setJobs(data.data);
           } else {
             console.error("API response is not an array:", data);
             setJobs([]);
@@ -217,6 +193,8 @@ export default function JobsContainer({ selectedCategories = [], searchQuery = "
     
       fetchFollowingJobs();
     }, [userId, tokens]);    
+    console.log(jobs);
+    
 
     const tabs = [
     { id: 'utforsk', label: 'Utforsk' },
