@@ -8,6 +8,7 @@ import styles from "./MessagesPage.module.css";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 import { mainLink } from "../../api/mainURLs";
 import axios from "axios";
+import type { User } from "../../types/userTypes.ts";
 
 interface Conversation {
   _id: string;
@@ -128,40 +129,36 @@ export function MessagesPage() {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) =>
-          setChats(Array.isArray(res.data) ? res.data : res.data.chats || [])
+          setChats(Array.isArray(res.data) ? res.data : res.data.chats || []),
         )
         .catch((err) => console.error(err));
     }
   }, [token]);
 
- useEffect(() => {
-  if (!token) return;
+  useEffect(() => {
+    if (!token) return;
 
-  const socket = initSocket(token);
+    const socket = initSocket(token);
 
-  console.log(token);
-  
+    console.log(token);
 
-  socket.emit("user:connect", { token });
+    socket.emit("user:connect", { token });
 
-  const handleReceiveMessage = (data: MessageData) => {
-    setChats((prev) =>
-      prev.map((c) =>
-        c._id === data.chatId
-          ? { ...c, lastMessage: data.message.text }
-          : c
-      )
-    );
-  };
+    const handleReceiveMessage = (data: MessageData) => {
+      setChats((prev) =>
+        prev.map((c) =>
+          c._id === data.chatId ? { ...c, lastMessage: data.message.text } : c,
+        ),
+      );
+    };
 
-  socket.on("receive-message", handleReceiveMessage);
+    socket.on("receive-message", handleReceiveMessage);
 
-  return () => {
-    socket.off("receive-message", handleReceiveMessage);
-    disconnectSocket();
-  };
-}, [token]);
-
+    return () => {
+      socket.off("receive-message", handleReceiveMessage);
+      disconnectSocket();
+    };
+  }, [token]);
 
   const filterConversations = () => {
     if (activeFilter === "Alle") return DUMMY_CONVERSATIONS;
@@ -169,10 +166,10 @@ export function MessagesPage() {
     return DUMMY_CONVERSATIONS.filter((conv) => {
       if (activeFilter === "Oppdrag") {
         // User is the one who posted the job (customer)
-        return conv.orderId.customerId === userId;
+        return conv.orderId.customerId === user?._id;
       } else {
         // User is trying to get the job (provider)
-        return conv.orderId.providerId === userId;
+        return conv.orderId.providerId === user?._id;
       }
     });
   };
@@ -183,7 +180,7 @@ export function MessagesPage() {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
   const getOtherParticipant = (conv: Conversation) => {
-    return conv.participants.find((p) => p._id !== userId);
+    return conv.participants.find((p) => p._id !== user?._id);
   };
 
   const filteredConversations = filterConversations();
@@ -206,7 +203,7 @@ export function MessagesPage() {
               >
                 {filter}
               </button>
-            )
+            ),
           )}
         </div>
 
