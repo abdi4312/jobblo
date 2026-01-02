@@ -6,6 +6,7 @@ const mainLink = axios.create({
   headers: {
     Accept: "application/json",
   },
+  withCredentials: true,
 });
 
 // 🔐 Bearer Token auto attach
