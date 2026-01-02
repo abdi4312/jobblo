@@ -27,7 +27,7 @@ export default function MinProfil() {
   const user = useUserStore((state) => state.user);
   const userToken = useUserStore((state) => state.tokens);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
-  
+
   const [formData, setFormData] = useState<ProfileData>({
     email: "",
     password: "************",
@@ -56,13 +56,13 @@ export default function MinProfil() {
         
         // ⚠️ TODO: Add these fields to User model and fetch from backend
         // Currently using empty strings as placeholders
-        // lastName: user.lastName || "",
-        // birthDate: user.birthDate || "",
-        // gender: user.gender || "",
-        // address: user.address || "",
-        // postNumber: user.postNumber || "",
-        // postSted: user.postSted || "",
-        // country: user.country || "",
+        lastName: user.lastName || "",
+        birthDate: user.birthDate || "",
+        gender: user.gender || "",
+        address: user.address || "",
+        postNumber: user.postNumber || "",
+        postSted: user.postSted || "",
+        country: user.country || "",
       }));
     }
   }, [user]);
