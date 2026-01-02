@@ -15,17 +15,23 @@ const User = require('../models/User');
 const authenticate = async (req, res, next) => {
     try {
         // Extract token from Authorization header
-        const authHeader = req.headers.authorization;
+        // const authHeader = req.headers.authorization;
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({
-                error: 'Authentication required',
-                message: 'Please provide a valid authorization token'
-            });
-        }
+        // if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        //     return res.status(401).json({
+        //         error: 'Authentication required',
+        //         message: 'Please provide a valid authorization token'
+        //     });
+        // }
 
-        const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+        
 
+        // const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+        
+  const token = req.cookies.token;
+  if (!token) {
+    return res.json({ message: "Not logging" });
+  }
         // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
