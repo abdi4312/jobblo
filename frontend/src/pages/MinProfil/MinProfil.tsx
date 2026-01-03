@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useUserStore } from "../../stores/userStore";
-import { mainLink } from "../../api/mainURLs";
+import mainLink from "../../api/mainURLs";
 import { PricingModal } from "../../components/shared/PricingModal/PricingModal";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 import { toast } from 'react-toastify';
