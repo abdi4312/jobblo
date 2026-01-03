@@ -10,6 +10,8 @@ import {
   updateService,
 } from "../../api/servicesAPI.ts";
 import axios from "axios";
+import { toast } from 'react-toastify';
+import { App } from 'antd';
 
 interface Location {
   coordinates: [number, number];
@@ -56,6 +58,8 @@ export default function MineAnnonser() {
   const navigate = useNavigate();
   const userToken = useUserStore((state) => state.tokens);
 
+  const { modal } = App.useApp();
+  
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingService, setEditingService] = useState<Service | null>(null);

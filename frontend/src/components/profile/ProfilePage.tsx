@@ -9,6 +9,7 @@ import { App } from 'antd';
 
 export default function ProfilePage() {
   const logout = useUserStore((state) => state.logout);
+  const user = useUserStore((state) => state.user);
   const navigate = useNavigate();
   const { modal } = App.useApp();
 
@@ -28,29 +29,23 @@ export default function ProfilePage() {
 
   return (
     <div className={styles.container}>
-      <ProfileHeader />
-      <CoinsSection />
-      <ProfileMenuSection />
+      <div className={styles.content}>
+        <ProfileHeader />
 
-      <button
-        onClick={handleLogout}
-        style={{
-          width: "90%",
-          maxWidth: "400px",
-          margin: "24px auto",
-          padding: "16px",
-          backgroundColor: "#ff4444",
-          color: "white",
-          border: "none",
-          borderRadius: "12px",
-          fontSize: "16px",
-          fontWeight: "600",
-          cursor: "pointer",
-          display: "block",
-        }}
-      >
-        Logg ut
-      </button>
+        <CoinsSection />
+        <ProfileMenuSection />
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className={styles.logoutButton}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+            logout
+          </span>
+          Logg ut
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../../stores/userStore";
 import mainLink from "../../api/mainURLs";
 import { PricingModal } from "../../components/shared/PricingModal/PricingModal";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
+import { toast } from 'react-toastify';
+import styles from "./MinProfil.module.css";
 
 interface ProfileData {
   email: string;
@@ -21,10 +22,10 @@ interface ProfileData {
 }
 
 export default function MinProfil() {
-  const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
+  const userToken = useUserStore((state) => state.tokens);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
-  
+
   const [formData, setFormData] = useState<ProfileData>({
     email: "",
     password: "************",
@@ -45,10 +46,21 @@ export default function MinProfil() {
     if (user) {
       setFormData(prev => ({
         ...prev,
+        // ✅ Real data from backend
         email: user.email || "",
         phoneNumber: user.phone || "",
         name: user.name || "",
         profileImage: user.avatarUrl || "",
+        
+        // ⚠️ TODO: Add these fields to User model and fetch from backend
+        // Currently using empty strings as placeholders
+        lastName: user.lastName || "",
+        birthDate: user.birthDate || "",
+        gender: user.gender || "",
+        address: user.address || "",
+        postNumber: user.postNumber || "",
+        postSted: user.postSted || "",
+        country: user.country || "",
       }));
     }
   }, [user]);
@@ -61,7 +73,12 @@ export default function MinProfil() {
 
   const handleSave = async (field: string) => {
     if (!user?._id) {
-      alert('User not logged in');
+      toast.error('Du må være logget inn');
+      return;
+    }
+
+    if (!userToken?.accessToken) {
+      toast.error('Mangler autentisering. Vennligst logg inn på nytt.');
       return;
     }
 
@@ -71,7 +88,13 @@ export default function MinProfil() {
         phoneNumber: 'phone',
         name: 'name',
         email: 'email',
-        // Add more mappings as needed
+        lastName: 'lastName',
+        birthDate: 'birthDate',
+        gender: 'gender',
+        address: 'address',
+        postNumber: 'postNumber',
+        postSted: 'postSted',
+        country: 'country',
       };
 
       const apiField = fieldMapping[field] || field;
@@ -85,6 +108,7 @@ export default function MinProfil() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userToken.accessToken}`,
         },
         body: JSON.stringify(updateData),
       });
@@ -98,7 +122,7 @@ export default function MinProfil() {
           throw new Error('Dette telefonnummeret er allerede i bruk');
         }
         
-        throw new Error(errorData.error || 'Failed to update user');
+        throw new Error(errorData.message || errorData.error || 'Kunne ikke oppdatere');
       }
 
       const updatedUser = await response.json();
@@ -107,11 +131,11 @@ export default function MinProfil() {
       // Update Zustand store with new data
       useUserStore.getState().setUser(updatedUser);
       
-      alert('Oppdatert!');
+      toast.success('Oppdatert!');
       setEditingField(null);
     } catch (error) {
       console.error('Error updating user:', error);
-      alert(error instanceof Error ? error.message : 'Kunne ikke oppdatere');
+      toast.error(error instanceof Error ? error.message : 'Kunne ikke oppdatere');
     }
   };
 
@@ -133,59 +157,28 @@ export default function MinProfil() {
     value: string; 
     type?: string;
   }) => (
-    <div style={{
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: "16px 0",
-      borderBottom: "1px solid #e0e0e0",
-    }}>
-      <span style={{ 
-        fontWeight: "600", 
-        fontSize: "16px",
-        minWidth: "120px"
-      }}>
-        {label}
-      </span>
+    <div className={styles.field}>
+      <span className={styles.fieldLabel}>{label}</span>
       
       {editingField === field ? (
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
+        <div className={styles.fieldActions}>
           <input
             type={type}
             value={value}
             onChange={(e) => handleInputChange(field, e.target.value)}
-            style={{
-              flex: 1,
-              padding: "8px",
-              border: "1px solid var(--color-primary)",
-              borderRadius: "4px",
-              fontSize: "16px",
-            }}
+            className={styles.fieldInput}
             autoFocus
           />
           <button
             onClick={() => handleSave(field)}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "var(--color-primary)",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
+            className={styles.saveButton}
           >
             Lagre
           </button>
         </div>
       ) : (
         <>
-          <span style={{ 
-            fontSize: "16px",
-            color: "#666",
-            flex: 1,
-            textAlign: "right",
-            marginRight: "12px"
-          }}>
+          <span className={styles.fieldValue}>
             {field === "password" ? "************" : value}
           </span>
           <span 
@@ -193,7 +186,7 @@ export default function MinProfil() {
             onClick={() => handleEdit(field)}
             style={{
               fontSize: "20px",
-              color: "var(--color-primary)",
+              color: "var(--color-accent)",
               cursor: "pointer",
             }}
           >
@@ -205,168 +198,223 @@ export default function MinProfil() {
   );
 
   return (
-    <div style={{ 
-      padding: "0",
-      maxWidth: "600px",
-      margin: "0 auto",
-      minHeight: "100vh"
-    }}>
-      <ProfileTitleWrapper title="Min profil" buttonText="Tilbake" />
+    <div className={styles.container}>
+      <div className={styles.content}>
+        <ProfileTitleWrapper title="Min profil" buttonText="Tilbake" />
 
-      {/* Profile Picture */}
-      <div style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        marginBottom: "40px",
-        gap: "12px"
-      }}>
-        <div style={{
-          width: "100px",
-          height: "100px",
-          borderRadius: "50%",
-          overflow: "hidden",
-          border: "3px solid var(--color-primary)",
-          backgroundColor: "var(--color-surface)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}>
-          {formData.profileImage ? (
-            <img 
-              src={formData.profileImage} 
-              alt="Profile"
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover"
-              }}
-            />
-          ) : (
-            <span style={{ fontSize: "40px", color: "var(--color-primary)" }}>
-              {formData.name ? formData.name.charAt(0).toUpperCase() : "?"}
-            </span>
+        {/* Profile Picture Section */}
+        <div className={styles.profileSection}>
+          <div className={styles.profileImageContainer}>
+            {formData.profileImage ? (
+              <img 
+                src={formData.profileImage} 
+                alt="Profile"
+                className={styles.profileImage}
+              />
+            ) : (
+              <span className={styles.profileInitial}>
+                {formData.name ? formData.name.charAt(0).toUpperCase() : "?"}
+              </span>
+            )}
+          </div>
+          <button className={styles.changePhotoButton}>
+            Endre bilde
+          </button>
+
+          {/* User Stats */}
+          {user && (
+            <>
+              {/* ✅ All stats below come from real backend data */}
+              <div className={styles.statsGrid}>
+                <div className={styles.statCard}>
+                  <div className={`${styles.statValue} ${styles.primary}`}>
+                    {user.averageRating || 0}⭐
+                  </div>
+                  <div className={styles.statLabel}>Rating</div>
+                </div>
+                <div className={styles.statCard}>
+                  <div className={`${styles.statValue} ${styles.primary}`}>
+                    {user.reviewCount || 0}
+                  </div>
+                  <div className={styles.statLabel}>Anmeldelser</div>
+                </div>
+                <div className={styles.statCard}>
+                  <div className={`${styles.statValue} ${styles.accent}`}>
+                    {user.earnings || 0} kr
+                  </div>
+                  <div className={styles.statLabel}>Tjent</div>
+                </div>
+                <div className={styles.statCard}>
+                  <div className={`${styles.statValue} ${styles.accent}`}>
+                    {user.spending || 0} kr
+                  </div>
+                  <div className={styles.statLabel}>Brukt</div>
+                </div>
+              </div>
+
+              {/* ✅ Real data: user.bio from backend */}
+              {user.bio && (
+                <div className={styles.bioSection}>
+                  <div className={styles.bioLabel}>Bio:</div>
+                  <div className={styles.bioText}>{user.bio}</div>
+                </div>
+              )}
+
+              {/* ✅ Real data: user.role and user.subscription from backend */}
+              <div className={styles.badges}>
+                <span className={`${styles.badge} ${styles.role}`}>
+                  {user.role}
+                </span>
+                <span className={`${styles.badge} ${styles.subscription}`}>
+                  {user.subscription}
+                </span>
+              </div>
+            </>
           )}
         </div>
-        <button
-          style={{
-            padding: "8px 20px",
-            backgroundColor: "transparent",
-            color: "var(--color-primary)",
-            border: "1px solid var(--color-primary)",
-            borderRadius: "20px",
-            cursor: "pointer",
-            fontSize: "14px",
-          }}
-        >
-          Endre bilde
-        </button>
-      </div>
 
-      {/* User Stats */}
-      {user && (
-        <div style={{ padding: "0 20px", marginBottom: "20px" }}>
-          <div style={{ 
-            backgroundColor: "var(--color-surface)", 
-            borderRadius: "12px", 
-            padding: "16px",
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "12px"
-          }}>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "24px", fontWeight: "bold", color: "var(--color-primary)" }}>
-                {user.averageRating || 0}⭐
-              </div>
-              <div style={{ fontSize: "12px", color: "var(--color-text)" }}>Rating</div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "24px", fontWeight: "bold", color: "var(--color-primary)" }}>
-                {user.reviewCount || 0}
-              </div>
-              <div style={{ fontSize: "12px", color: "var(--color-text)" }}>Anmeldelser</div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "24px", fontWeight: "bold", color: "var(--color-accent)" }}>
-                {user.earnings || 0} kr
-              </div>
-              <div style={{ fontSize: "12px", color: "var(--color-text)" }}>Tjent</div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "24px", fontWeight: "bold", color: "var(--color-accent)" }}>
-                {user.spending || 0} kr
-              </div>
-              <div style={{ fontSize: "12px", color: "var(--color-text)" }}>Brukt</div>
-            </div>
+        {/* Personal Information */}
+        <div className={styles.fieldsSection}>
+          <div className={styles.sectionTitle}>
+            <span className="material-symbols-outlined" style={{ fontSize: 22, color: 'var(--color-accent)' }}>
+              person
+            </span>
+            Personlig informasjon
           </div>
-          {user.bio && (
-            <div style={{ marginTop: "12px", padding: "12px", backgroundColor: "var(--color-surface)", borderRadius: "8px" }}>
-              <strong>Bio:</strong> {user.bio}
-            </div>
-          )}
-          <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
+          {/* ✅ Real data from backend */}
+          <ProfileField label="Epost" field="email" value={formData.email} type="email" />
+          {/* ⚠️ Password always shows asterisks for security - not editable here */}
+          <ProfileField label="Passord" field="password" value={formData.password} type="password" />
+          {/* ✅ Real data from backend (user.phone) */}
+          <ProfileField label="Mobil" field="phoneNumber" value={formData.phoneNumber} type="tel" />
+          <div className={styles.divider} />
+          {/* ✅ Real data from backend (user.name) */}
+          <ProfileField label="Fornavn" field="name" value={formData.name} />
+          {/* ⚠️ TODO: Add to User model - currently empty */}
+          <div style={{ position: 'relative' }}>
+            <ProfileField label="Etternavn" field="lastName" value={formData.lastName} />
             <span style={{ 
-              padding: "4px 12px", 
-              backgroundColor: "var(--color-primary)", 
-              color: "white", 
-              borderRadius: "12px",
-              fontSize: "12px"
-            }}>
-              {user.role}
-            </span>
+              position: 'absolute', 
+              top: '50%', 
+              right: '40px', 
+              transform: 'translateY(-50%)',
+              fontSize: '11px', 
+              color: '#ff9800', 
+              fontWeight: '600',
+              background: 'rgba(255, 152, 0, 0.1)',
+              padding: '2px 8px',
+              borderRadius: '4px'
+            }}>TODO</span>
+          </div>
+          {/* ⚠️ TODO: Add to User model - currently empty */}
+          <div style={{ position: 'relative' }}>
+            <ProfileField label="Født" field="birthDate" value={formData.birthDate} />
             <span style={{ 
-              padding: "4px 12px", 
-              backgroundColor: "var(--color-accent)", 
-              color: "white", 
-              borderRadius: "12px",
-              fontSize: "12px"
-            }}>
-              {user.subscription}
-            </span>
+              position: 'absolute', 
+              top: '50%', 
+              right: '40px', 
+              transform: 'translateY(-50%)',
+              fontSize: '11px', 
+              color: '#ff9800', 
+              fontWeight: '600',
+              background: 'rgba(255, 152, 0, 0.1)',
+              padding: '2px 8px',
+              borderRadius: '4px'
+            }}>TODO</span>
+          </div>
+          {/* ⚠️ TODO: Add to User model - currently empty */}
+          <div style={{ position: 'relative' }}>
+            <ProfileField label="Kjønn" field="gender" value={formData.gender} />
+            <span style={{ 
+              position: 'absolute', 
+              top: '50%', 
+              right: '40px', 
+              transform: 'translateY(-50%)',
+              fontSize: '11px', 
+              color: '#ff9800', 
+              fontWeight: '600',
+              background: 'rgba(255, 152, 0, 0.1)',
+              padding: '2px 8px',
+              borderRadius: '4px'
+            }}>TODO</span>
           </div>
         </div>
-      )}
 
-      {/* Profile Fields */}
-      <div style={{ padding: "0 20px" }}>
-        <ProfileField label="Epost" field="email" value={formData.email} type="email" />
-        <ProfileField label="Passord" field="password" value={formData.password} type="password" />
-        <ProfileField label="Mobil" field="phoneNumber" value={formData.phoneNumber} type="tel" />
-        
-        <div style={{ height: "20px" }} />
-        
-        <ProfileField label="Fornavn" field="name" value={formData.name} />
-        <ProfileField label="Etternavn" field="lastName" value={formData.lastName} />
-        <ProfileField label="Født" field="birthDate" value={formData.birthDate} />
-        <ProfileField label="Kjønn" field="gender" value={formData.gender} />
-        
-        <div style={{ height: "20px" }} />
-        
-        <ProfileField label="Adresse" field="address" value={formData.address} />
-        <ProfileField label="Postnummer" field="postNumber" value={formData.postNumber} />
-        <ProfileField label="Poststed" field="postSted" value={formData.postSted} />
-        <ProfileField label="Land" field="country" value={formData.country} />
-      </div>
+        {/* Address Information */}
+        <div className={styles.fieldsSection}>
+          <div className={styles.sectionTitle}>
+            <span className="material-symbols-outlined" style={{ fontSize: 22, color: 'var(--color-accent)' }}>
+              home
+            </span>
+            Adresse
+          </div>
+          {/* ⚠️ TODO: Add all address fields to User model - currently empty */}
+          <div style={{ position: 'relative' }}>
+            <ProfileField label="Adresse" field="address" value={formData.address} />
+            <span style={{ 
+              position: 'absolute', 
+              top: '50%', 
+              right: '40px', 
+              transform: 'translateY(-50%)',
+              fontSize: '11px', 
+              color: '#ff9800', 
+              fontWeight: '600',
+              background: 'rgba(255, 152, 0, 0.1)',
+              padding: '2px 8px',
+              borderRadius: '4px'
+            }}>TODO</span>
+          </div>
+          <div style={{ position: 'relative' }}>
+            <ProfileField label="Postnummer" field="postNumber" value={formData.postNumber} />
+            <span style={{ 
+              position: 'absolute', 
+              top: '50%', 
+              right: '40px', 
+              transform: 'translateY(-50%)',
+              fontSize: '11px', 
+              color: '#ff9800', 
+              fontWeight: '600',
+              background: 'rgba(255, 152, 0, 0.1)',
+              padding: '2px 8px',
+              borderRadius: '4px'
+            }}>TODO</span>
+          </div>
+          <div style={{ position: 'relative' }}>
+            <ProfileField label="Poststed" field="postSted" value={formData.postSted} />
+            <span style={{ 
+              position: 'absolute', 
+              top: '50%', 
+              right: '40px', 
+              transform: 'translateY(-50%)',
+              fontSize: '11px', 
+              color: '#ff9800', 
+              fontWeight: '600',
+              background: 'rgba(255, 152, 0, 0.1)',
+              padding: '2px 8px',
+              borderRadius: '4px'
+            }}>TODO</span>
+          </div>
+          <div style={{ position: 'relative' }}>
+            <ProfileField label="Land" field="country" value={formData.country} />
+            <span style={{ 
+              position: 'absolute', 
+              top: '50%', 
+              right: '40px', 
+              transform: 'translateY(-50%)',
+              fontSize: '11px', 
+              color: '#ff9800', 
+              fontWeight: '600',
+              background: 'rgba(255, 152, 0, 0.1)',
+              padding: '2px 8px',
+              borderRadius: '4px'
+            }}>TODO</span>
+          </div>
+        </div>
 
-      {/* Pricing Button */}
-      <div style={{ padding: "20px", marginTop: "20px" }}>
+        {/* Pricing Button */}
         <button
           onClick={() => setIsPricingModalOpen(true)}
-          style={{
-            width: "100%",
-            padding: "16px",
-            backgroundColor: "var(--color-primary)",
-            color: "white",
-            border: "none",
-            borderRadius: "12px",
-            fontSize: "16px",
-            fontWeight: "600",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-          }}
+          className={styles.pricingButton}
         >
           <span className="material-symbols-outlined">payments</span>
           Se våre priser

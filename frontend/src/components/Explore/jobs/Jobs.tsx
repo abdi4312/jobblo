@@ -253,29 +253,56 @@ export default function JobsContainer({ selectedCategories = [], searchQuery = "
 
   return (
     <div>
-      <div style={{ padding: "0px 30px"}}>
+      <div style={{ padding: isMobile ? "0px 12px" : "0px 30px"}}>
         {/* Tab Headers */}
         <div style={{
-            backgroundColor: "var(--color-surface)",
-            display: "flex",
-            justifyContent: "space-between",
-          height: '50%',
-          borderRadius: '16px',
+          backgroundColor: "var(--color-surface)",
+          display: "flex",
+          gap: isMobile ? "8px" : "12px",
+          padding: isMobile ? "6px" : "8px",
+          borderRadius: '12px',
+          boxShadow: "-4px 2px 10.1px 0 rgba(59, 56, 56, 0.15)",
+          marginBottom: "20px",
         }}>
           {tabs.map(tab => (
-            <h3
+            <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
+                flex: 1,
                 cursor: 'pointer',
                 color: activeTab === tab.id ? "var(--color-white)" : "var(--color-text)",
-                backgroundColor: activeTab === tab.id ? "var(--color-primary)" : "var(--color-surface)",
-                padding: '5px 18px',
+                backgroundColor: activeTab === tab.id ? "var(--color-primary)" : "transparent",
+                padding: isMobile ? '10px 8px' : '12px 20px',
                 borderRadius: '8px',
+                border: activeTab === tab.id ? 'none' : '1px solid transparent',
+                fontSize: isMobile ? '13px' : '15px',
+                fontWeight: activeTab === tab.id ? '700' : '600',
+                transition: 'all 0.2s ease',
+                boxShadow: activeTab === tab.id ? "-2px 1px 6px 0 rgba(59, 56, 56, 0.2)" : "none",
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: isMobile ? '4px' : '8px',
+                flexDirection: isMobile ? 'column' : 'row',
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== tab.id) {
+                  e.currentTarget.style.backgroundColor = "rgba(234, 126, 21, 0.1)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== tab.id) {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }
               }}
             >
-              {tab.label}
-            </h3>
+              <span className="material-symbols-outlined" style={{ fontSize: isMobile ? "18px" : "20px" }}>
+                {tab.id === 'utforsk' ? 'explore' : tab.id === 'fordeg' ? 'near_me' : 'group'}
+              </span>
+              {!isMobile && tab.label}
+              {isMobile && <span style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>{tab.label}</span>}
+            </button>
           ))}
         </div>
 

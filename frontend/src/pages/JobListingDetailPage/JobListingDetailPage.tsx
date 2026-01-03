@@ -160,8 +160,16 @@ const JobListingDetailPage = () => {
       navigate("/login");
       return;
     }
-    // TODO: Implement message functionality
-    toast.info("Meldingsfunksjon kommer snart");
+    
+    // Navigate to messages page - you can pass job/user info via state if needed
+    navigate("/messages", { 
+      state: { 
+        recipientId: job?.userId?._id,
+        recipientName: job?.userId?.name,
+        jobId: job?._id,
+        jobTitle: job?.title
+      } 
+    });
   };
 
   if (loading) {
