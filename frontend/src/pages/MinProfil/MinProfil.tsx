@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../../stores/userStore";
 import { mainLink } from "../../api/mainURLs";
 import { PricingModal } from "../../components/shared/PricingModal/PricingModal";
@@ -23,7 +22,6 @@ interface ProfileData {
 }
 
 export default function MinProfil() {
-  const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
   const userToken = useUserStore((state) => state.tokens);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
@@ -90,7 +88,13 @@ export default function MinProfil() {
         phoneNumber: 'phone',
         name: 'name',
         email: 'email',
-        // Add more mappings as needed
+        lastName: 'lastName',
+        birthDate: 'birthDate',
+        gender: 'gender',
+        address: 'address',
+        postNumber: 'postNumber',
+        postSted: 'postSted',
+        country: 'country',
       };
 
       const apiField = fieldMapping[field] || field;

@@ -8,6 +8,7 @@ export type Jobs = {
     type: string;
     coordinates: number[];
     address: string;
+    city?: string;
   };
   duration: {
     value?: number;
