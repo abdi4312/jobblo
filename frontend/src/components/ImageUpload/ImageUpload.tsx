@@ -61,19 +61,16 @@ export default function ImageUpload({ onImagesChange }: ImageUploadProps) {
         type="button"
         onClick={handleButtonClick}
         style={{
-          marginBottom: '16px',
-          width: "40%",
-          height: "60px",
-          padding: "12px",
+          padding: "12px 16px",
           borderRadius: "8px",
-          border: "1px solid var(--color-icon)",
+          border: "1px dashed var(--color-icon)",
           backgroundColor: "white",
           cursor: "pointer",
-          textAlign: "left",
-          color: "var(--color-text)"
+          fontSize: "14px",
+          color: "var(--color-text)",
         }}
       >
-        Legg til bilder 
+        + Legg til bilder 
       </button>
 
       {/* Image previews */}
