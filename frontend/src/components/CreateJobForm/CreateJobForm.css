@@ -1,0 +1,15 @@
+.text-input {
+  width: 90%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-icon);
+  font-size: 16px;
+  font-family: inherit;
+}
+
+.text-input::placeholder {
+  font-size: 16px;        
+  font-family: inherit;  
+  color: #999;           
+  font-weight: 400;
+}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import ImageUpload from "../ImageUpload/ImageUpload";
 import { mainLink } from "../../api/mainURLs";
+import "./CreateJobForm.css"
 
 interface CreateJobFormProps {
   onSubmit: (jobData: any) => void;
@@ -37,6 +38,9 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
   const [durationUnit, setDurationUnit] = useState(initialData?.durationUnit || "hours");
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -113,6 +117,7 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
         </label>
         <ImageUpload onImagesChange={handleImagesChange} />
       </div>
+      
 
       <div style={{ marginBottom: "24px" }}>
         <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
@@ -121,6 +126,7 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
         <input
           type="text"
           value={title}
+          className="text-input"
           onChange={(e) => setTitle(e.target.value)}
           required
           placeholder="F.eks. Flyttehjelp ønskes"
@@ -141,6 +147,7 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           required
+          className="text-input"
           rows={5}
           placeholder="Beskriv oppdraget i detalj..."
           style={{
@@ -160,6 +167,7 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
         <input
           type="number"
           value={price}
+          className="text-input"
           onChange={(e) => setPrice(e.target.value)}
           required
           placeholder="2000"
@@ -181,6 +189,7 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
           value={address}
           onChange={(e) => setAddress(e.target.value)}
           required
+          className="text-input"
           placeholder="Dronningens gate 10"
           style={{
             width: "90%",
@@ -200,6 +209,7 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
           value={city}
           onChange={(e) => setCity(e.target.value)}
           required
+          className="text-input"
           placeholder="Trondheim"
           style={{
             width: "90%",
@@ -218,6 +228,7 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
           value={categories}
           onChange={(e) => setCategories(e.target.value)}
           required
+          className="text-input"
           size={1}
           style={{
             width: "calc(90% + 24px)",
@@ -250,6 +261,7 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
           onChange={(e) => setEquipment(e.target.value)}
           size={1}
           required
+          className="text-input"
           style={{
             width: "calc(90% + 24px)",
             padding: "12px",
@@ -274,11 +286,12 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
         <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
           Varighet
         </label>
-        <div style={{ display: "flex", gap: "12px" }}>
+        <div style={{ display: "flex", gap: "12px", maxWidth: "93.5%", }}>
           <input
             type="number"
             value={durationValue}
             onChange={(e) => setDurationValue(e.target.value)}
+            className="text-input"
             min="0"
             step="0.5"
             placeholder="2"
@@ -291,7 +304,10 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
           />
           <select
             value={durationUnit}
-            onChange={(e) => setDurationUnit(e.target.value)}
+            onChange={(e) => {setDurationUnit(e.target.value);
+              if (e.target.value !== "days") setToDate("");
+            }}
+            className="text-input"
             style={{
               flex: 1,
               padding: "12px",
@@ -305,16 +321,58 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
           </select>
         </div>
       </div>
+      {durationUnit === "days" ? (   //TIl og fra dato vises kun hvis varighet er i dager    
+      <>
+        <div style={{ marginBottom: "24px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+            Fra dato *
+          </label>
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            required
+            className="text-input"
+            style={{
+              width: "90%",
+              padding: "12px",
+              borderRadius: "8px",
+              border: "1px solid var(--color-icon)",
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "24px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+            Til dato *
+          </label>
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            required
+            className="text-input"
+            style={{
+              width: "90%",
+              padding: "12px",
+              borderRadius: "8px",
+              border: "1px solid var(--color-icon)",
+            }}
+          />
+        </div>
+      </>
+      ):(
 
       <div style={{ marginBottom: "24px" }}>
         <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-          Fra dato *
+          Dato*
         </label>
         <input
           type="date"
           value={fromDate}
           onChange={(e) => setFromDate(e.target.value)}
           required
+          className="text-input"
           style={{
             width: "90%",
             padding: "12px",
@@ -322,25 +380,7 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
             border: "1px solid var(--color-icon)",
           }}
         />
-      </div>
-
-      <div style={{ marginBottom: "24px" }}>
-        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-          Til dato *
-        </label>
-        <input
-          type="date"
-          value={toDate}
-          onChange={(e) => setToDate(e.target.value)}
-          required
-          style={{
-            width: "90%",
-            padding: "12px",
-            borderRadius: "8px",
-            border: "1px solid var(--color-icon)",
-          }}
-        />
-      </div>
+      </div> )}
 
       <div style={{ marginBottom: "24px" }}>
         <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
