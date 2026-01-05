@@ -72,6 +72,15 @@
   font-weight: 600;
   cursor: pointer;
   margin-bottom: 12px;
+  transition: background-color 0.3s ease;
+}
+
+.loginBtn:not(:disabled) {
+  background-color: var(--color-primary);
+}
+
+.loginBtn:not(:disabled):hover {
+  background-color: #d68d19;
 }
 
 .loginBtn:disabled {

@@ -115,7 +115,7 @@ export default function LoginPage() {
         {/* Login Button */}
         <button
           onClick={handleLogin}
-          disabled={loading}
+          disabled={loading || !email || !password}
           className={styles.loginBtn}
           >
           {loading ? "Logger inn..." : "Logg inn"}

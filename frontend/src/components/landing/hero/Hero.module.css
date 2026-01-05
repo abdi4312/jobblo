@@ -54,5 +54,21 @@
 }
 
 .antSearchBar {
-  /*opacity: 0.75;*/
+  width: 600px !important;
+}
+
+.antSearchBar :global(.ant-input-search) {
+  width: 100% !important;
+}
+
+@media (max-width: 768px) {
+  .antSearchBar {
+    width: 400px !important;
+  }
+}
+
+@media (max-width: 440px) {
+  .antSearchBar {
+    width: 300px !important;
+  }
 }

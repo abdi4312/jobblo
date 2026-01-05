@@ -21,7 +21,7 @@ export function Hero() {
       <div className={styles.heroBackground}>
         <div className={styles.heroOverlay}>
           <div className={styles.heroContainer}>
-            <h1 className={styles.heroTitle}>Jobblo AS</h1>
+            <h1 className={styles.heroTitle}>Jobblo</h1>
             <h2 className={styles.heroSubTitle}>
               Små jobber <span>Store Muligheter</span>
             </h2>

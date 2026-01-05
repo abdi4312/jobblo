@@ -72,7 +72,7 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
       <div
         style={{
           width: "100%",
-          height: "100px",
+          height: "180px",
           borderRadius: "16px 16px 0 0",
           backgroundColor: "#f0f0f0",
           display: "flex",
