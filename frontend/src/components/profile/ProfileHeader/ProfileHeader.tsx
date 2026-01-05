@@ -1,7 +1,7 @@
 import styles from "./ProfileHeader.module.css";
 import { useUserStore } from "../../../stores/userStore";
 import { useState, useEffect } from "react";
-import { mainLink } from "../../../api/mainURLs";
+import  mainLink  from "../../../api/mainURLs";
 
 export function ProfileHeader() {
   const user = useUserStore((state) => state.user);
@@ -17,19 +17,12 @@ export function ProfileHeader() {
   }, [userToken]);
 
   const fetchJobStats = async () => {
-    if (!userToken?.accessToken) {
-      return;
-    }
 
     try {
-      const response = await fetch(`${mainLink}/api/services/my-posted`, {
-        headers: {
-          'Authorization': `Bearer ${userToken.accessToken}`,
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
+      const response = await mainLink.get("/api/services/my-posted");
+
+      if (response.data) {
+        const data = response.data;
         // Count active jobs (status: 'active' or 'open')
         const active = data.filter((service: any) => 
           service.status === 'active' || service.status === 'open'
@@ -52,7 +45,7 @@ export function ProfileHeader() {
       <div className={styles.topSection}>
         <div className={styles.profileImageContainer}>
           <img 
-            src="https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332" 
+            src={user?.avatarUrl || "https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332"} 
             alt="Profile" 
             className={styles.profileImage}
           />

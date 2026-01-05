@@ -21,6 +21,8 @@ import CoinsPage from "../pages/CoinsPage/CoinsPage.tsx";
 import { MessagesPage } from "../pages/MessagesPage/MessagesPage.tsx";
 import { ConversationView } from "../pages/ConversationView/ConversationView.tsx";
 import MinInntekt from "../pages/MinInntekt/MinInntekt.tsx";
+import OAuthSuccess from "../pages/OAuthSuccess.tsx";
+import { PublicRoute } from "../components/shared/PublicRoute.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -30,6 +32,10 @@ export const routes: RouteObject[] = [
       {
         index: true,
         element: <LandingPage />,
+      },
+      {
+        path: "oauth-success",
+        element: <OAuthSuccess />,
       },
       {
         path: "job-listing",
@@ -87,11 +93,19 @@ export const routes: RouteObject[] = [
       },
       {
         path: "login",
-        element: <LoginPage />,
+        element: (
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        ),
       },
       {
         path: "register",
-        element: <RegisterPage />,
+        element: (
+          <PublicRoute>
+            <RegisterPage />
+          </PublicRoute>
+        ),
       },
       {
         path: "Innstillinger",

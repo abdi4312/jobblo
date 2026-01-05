@@ -1,9 +1,19 @@
-import mainLink from "./mainURLs";
+import { useUserStore } from "../stores/userStore";
+import  mainLink  from "./mainURLs"; // ensure mainLink is Axios instance
 
 export async function userLogin(email: string, password: string) {
-  const res = await mainLink.post("/api/auth/login", { email, password });
+  try {
+    // POST login request
+    const res = await mainLink.post("/api/auth/login", { email, password }, { withCredentials: true });
 
-  return res;
+    const { fetchProfile } = useUserStore.getState();
+    await fetchProfile();
+
+    return res.data;
+  } catch (err: any) {
+    console.error("Login failed:", err.response?.data || err.message);
+    throw err;
+  }
 }
 
 export async function registerUser(userData: {
@@ -11,6 +21,13 @@ export async function registerUser(userData: {
   email: string;
   password: string;
 }) {
-  const res = await mainLink.post("/api/auth/register", userData);
-  return res.data;
+  try {
+    const res = await mainLink.post("/api/auth/register", userData);
+    const { fetchProfile } = useUserStore.getState();
+    await fetchProfile();
+    return res.data;
+  } catch (err: any) {
+    console.error("Registration failed:", err.response?.data || err.message);
+    throw err;
+  }
 }
