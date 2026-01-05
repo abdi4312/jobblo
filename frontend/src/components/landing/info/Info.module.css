@@ -25,7 +25,7 @@
 }
 
 .infoTextContainer {
-  width: 60%;
+  width: 55%;
   padding: 0 20px 20px 20px;
   display: flex;
   flex-direction: column;
@@ -37,8 +37,9 @@
 }
 
 .womanGardening {
-  object-fit: scale-down;
-  width: 36%;
+  object-fit: cover;
+  width: 45%;
+  border-radius: 12px;
 }
 
 .infoText1,
@@ -79,8 +80,8 @@
   }
 
   .womanGardening {
-    width: 80%;
-    max-width: 300px;
+    width: 60%;
+    max-width: 250px;
   }
 
   .infoText1 {
