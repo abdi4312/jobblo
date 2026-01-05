@@ -43,7 +43,7 @@ export default function RegisterPage() {
       });
 
       toast.success("Registrering vellykket!");
-      navigate("/login");
+      navigate("/");
     } catch (error) {
       console.error("Error registering:", error);
       if (axios.isAxiosError(error)) {

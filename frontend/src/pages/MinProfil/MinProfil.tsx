@@ -23,7 +23,6 @@ interface ProfileData {
 
 export default function MinProfil() {
   const user = useUserStore((state) => state.user);
-  const userToken = useUserStore((state) => state.tokens);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
 
   const [formData, setFormData] = useState<ProfileData>({
@@ -85,12 +84,6 @@ export default function MinProfil() {
       toast.error('Du må være logget inn');
       return;
     }
-
-    if (!userToken?.accessToken) {
-      toast.error('Mangler autentisering. Vennligst logg inn på nytt.');
-      return;
-    }
-
     try {
       // Map form fields to API fields
       const fieldMapping: Record<string, string> = {
@@ -124,17 +117,10 @@ export default function MinProfil() {
 
       console.log(`Updating ${field} (${apiField}):`, updateData);
 
-      const response = await fetch(`${mainLink}/api/users/${user._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userToken.accessToken}`,
-        },
-        body: JSON.stringify(updateData),
-      });
+      const respones = await mainLink.put(`/api/users/${user._id}`, updateData);
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (!respones.data) {
+        const errorData = await respones.data;
         console.error('Backend error:', errorData);
         
         // Check for duplicate key error
@@ -145,7 +131,7 @@ export default function MinProfil() {
         throw new Error(errorData.message || errorData.error || 'Kunne ikke oppdatere');
       }
 
-      const updatedUser = await response.json();
+      const updatedUser = await respones.data;
       console.log('Updated user:', updatedUser);
       
       // Update Zustand store with new data

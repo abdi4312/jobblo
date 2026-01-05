@@ -21,6 +21,7 @@ import CoinsPage from "../pages/CoinsPage/CoinsPage.tsx";
 import { MessagesPage } from "../pages/MessagesPage/MessagesPage.tsx";
 import { ConversationView } from "../pages/ConversationView/ConversationView.tsx";
 import MinInntekt from "../pages/MinInntekt/MinInntekt.tsx";
+import OAuthSuccess from "../pages/OAuthSuccess.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -30,6 +31,10 @@ export const routes: RouteObject[] = [
       {
         index: true,
         element: <LandingPage />,
+      },
+      {
+        path: "oauth-success",
+        element: <OAuthSuccess />,
       },
       {
         path: "job-listing",
