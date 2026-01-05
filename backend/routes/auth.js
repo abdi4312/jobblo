@@ -1,3 +1,7 @@
+const User = require('../models/User');
+
+const {authenticate} = require('../middleware/auth');
+
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
@@ -137,24 +141,21 @@ router.get('/google/callback',
 
             // Generate JWT
             const token = jwt.sign(
-                { userId: req.user._id, email: req.user.email },
+                { id: req.user._id, },
                 process.env.JWT_SECRET,
                 { expiresIn: '24h' }
             );
 
-            const cookieOptions = {
-                httpOnly: true,
-                secure: false, // localhost par false, production mein true
-                sameSite: 'lax',
-                maxAge: 24 * 60 * 60 * 1000 
+           const cookieOptions = {
+                httpOnly: true,         
+                secure: false,           
+                sameSite: 'lax',         
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
             };
-
             // Token ko cookie mein set karein
             res.cookie('token', token, cookieOptions);
 
-            // AB SIRF REDIRECT KAREIN (res.json nahi karna)
-            // Redirect frontend ke dashboard par le jayega aur cookie sath jayegi
-            return res.redirect(process.env.frontendURL);
+            return res.redirect(process.env.frontendURL + 'oauth-success');
 
         } catch (error) {
             console.error("Callback Error:", error);
@@ -180,19 +181,17 @@ router.get('/google/callback',
  *       401:
  *         description: Not authenticated
  */
-router.get('/profile', (req, res) => {
-    if (req.user) {
-        res.json({
-            user: {
-                id: req.user._id,
-                name: req.user.name,
-                email: req.user.email,
-                avatarUrl: req.user.avatarUrl,
-                verified: req.user.verified
-            }
-        });
-    } else {
-        res.status(401).json({ message: 'Not authenticated' });
+router.get('/profile', authenticate, async(req, res) => {
+    try {
+
+        const  id  = req.userId;
+
+        const user = await User.findById(id).select('-password');
+
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
     }
 });
 
@@ -207,11 +206,10 @@ router.get('/profile', (req, res) => {
  *         description: Successfully logged out
  */
 router.post('/logout', (req, res) => {
-  // Clear the JWT cookie
   res.clearCookie('token', {
     httpOnly: true,
-    secure: false,    // production me true
-    sameSite: 'none'
+    secure: false,       
+    sameSite: 'lax'   
   });
 
   res.json({ message: 'Logged out successfully' });
