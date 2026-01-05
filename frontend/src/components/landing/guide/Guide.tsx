@@ -91,6 +91,7 @@ export function Guide() {
       <div className={styles.guideContainer}>
         <div style={{ maxWidth: "900px", margin: "0 auto" }}>
           <h2 className={styles.guideHeading}>Slik Fungerer Jobblo</h2>
+          <div style={{ marginTop: "60px" }}>
           <div className={styles.carouselWrapper}>
             <div className={styles.guideStepContainer} id="guideStepContainer" onScroll={handleScroll}>
               {steps.map((step, index) => (
@@ -117,6 +118,7 @@ export function Guide() {
                 onClick={() => scrollToSlide(index * itemsPerView)}
               />
             ))}
+          </div>
           </div>
         </div>
       </div>

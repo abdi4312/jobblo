@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../../stores/userStore";
-import { mainLink } from "../../api/mainURLs";
+import mainLink from "../../api/mainURLs";
 import { PricingModal } from "../../components/shared/PricingModal/PricingModal";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 import { toast } from 'react-toastify';
@@ -23,7 +22,6 @@ interface ProfileData {
 }
 
 export default function MinProfil() {
-  const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
   const userToken = useUserStore((state) => state.tokens);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
@@ -46,6 +44,18 @@ export default function MinProfil() {
   // Load user data when component mounts
   useEffect(() => {
     if (user) {
+      // Convert birthDate from YYYY-MM-DD to DD/MM/YYYY for display
+      let displayBirthDate = "";
+      if (user.birthDate) {
+        const dateMatch = user.birthDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (dateMatch) {
+          const [, year, month, day] = dateMatch;
+          displayBirthDate = `${day}/${month}/${year}`;
+        } else {
+          displayBirthDate = user.birthDate;
+        }
+      }
+
       setFormData(prev => ({
         ...prev,
         // ✅ Real data from backend
@@ -53,11 +63,8 @@ export default function MinProfil() {
         phoneNumber: user.phone || "",
         name: user.name || "",
         profileImage: user.avatarUrl || "",
-        
-        // ⚠️ TODO: Add these fields to User model and fetch from backend
-        // Currently using empty strings as placeholders
         lastName: user.lastName || "",
-        birthDate: user.birthDate || "",
+        birthDate: displayBirthDate,
         gender: user.gender || "",
         address: user.address || "",
         postNumber: user.postNumber || "",
@@ -90,12 +97,29 @@ export default function MinProfil() {
         phoneNumber: 'phone',
         name: 'name',
         email: 'email',
-        // Add more mappings as needed
+        lastName: 'lastName',
+        birthDate: 'birthDate',
+        gender: 'gender',
+        address: 'address',
+        postNumber: 'postNumber',
+        postSted: 'postSted',
+        country: 'country',
       };
 
       const apiField = fieldMapping[field] || field;
+      let fieldValue = formData[field as keyof ProfileData];
+
+      // Convert DD/MM/YYYY to YYYY-MM-DD for birthDate
+      if (field === 'birthDate' && fieldValue) {
+        const dateMatch = fieldValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (dateMatch) {
+          const [, day, month, year] = dateMatch;
+          fieldValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+      }
+
       const updateData = {
-        [apiField]: formData[field as keyof ProfileData]
+        [apiField]: fieldValue
       };
 
       console.log(`Updating ${field} (${apiField}):`, updateData);
@@ -135,7 +159,21 @@ export default function MinProfil() {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string) => {    // Format birthDate with slashes DD/MM/YYYY
+    if (field === 'birthDate') {
+      // Remove all non-digits
+      let cleaned = value.replace(/\D/g, '');
+      
+      // Add slashes automatically
+      if (cleaned.length >= 2) {
+        cleaned = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
+      }
+      if (cleaned.length >= 5) {
+        cleaned = cleaned.slice(0, 5) + '/' + cleaned.slice(5, 9);
+      }
+      
+      value = cleaned;
+    }
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -158,13 +196,29 @@ export default function MinProfil() {
       
       {editingField === field ? (
         <div className={styles.fieldActions}>
-          <input
-            type={type}
-            value={value}
-            onChange={(e) => handleInputChange(field, e.target.value)}
-            className={styles.fieldInput}
-            autoFocus
-          />
+          {field === "gender" ? (
+            <select
+              value={value}
+              onChange={(e) => handleInputChange(field, e.target.value)}
+              className={styles.fieldInput}
+              autoFocus
+            >
+              <option value="">Velg kjønn</option>
+              <option value="male">Mann</option>
+              <option value="female">Kvinne</option>
+              <option value="unisex">Unisex</option>
+            </select>
+          ) : (
+            <input
+              type={type}
+              value={value}
+              onChange={(e) => handleInputChange(field, e.target.value)}
+              className={styles.fieldInput}
+              autoFocus
+              placeholder={field === "birthDate" ? "DD/MM/YYYY" : type === "date" ? "YYYY-MM-DD" : ""}
+              maxLength={field === "birthDate" ? 10 : undefined}
+            />
+          )}
           <button
             onClick={() => handleSave(field)}
             className={styles.saveButton}
@@ -175,7 +229,17 @@ export default function MinProfil() {
       ) : (
         <>
           <span className={styles.fieldValue}>
-            {field === "password" ? "************" : value}
+            {field === "password" 
+              ? "************" 
+              : field === "gender" && value
+                ? value === "male" 
+                  ? "Mann" 
+                  : value === "female" 
+                    ? "Kvinne" 
+                    : value === "unisex"
+                      ? "Unisex"
+                      : value
+                : value}
           </span>
           <span 
             className="material-symbols-outlined"
@@ -286,54 +350,12 @@ export default function MinProfil() {
           <div className={styles.divider} />
           {/* ✅ Real data from backend (user.name) */}
           <ProfileField label="Fornavn" field="name" value={formData.name} />
-          {/* ⚠️ TODO: Add to User model - currently empty */}
-          <div style={{ position: 'relative' }}>
-            <ProfileField label="Etternavn" field="lastName" value={formData.lastName} />
-            <span style={{ 
-              position: 'absolute', 
-              top: '50%', 
-              right: '40px', 
-              transform: 'translateY(-50%)',
-              fontSize: '11px', 
-              color: '#ff9800', 
-              fontWeight: '600',
-              background: 'rgba(255, 152, 0, 0.1)',
-              padding: '2px 8px',
-              borderRadius: '4px'
-            }}>TODO</span>
-          </div>
-          {/* ⚠️ TODO: Add to User model - currently empty */}
-          <div style={{ position: 'relative' }}>
-            <ProfileField label="Født" field="birthDate" value={formData.birthDate} />
-            <span style={{ 
-              position: 'absolute', 
-              top: '50%', 
-              right: '40px', 
-              transform: 'translateY(-50%)',
-              fontSize: '11px', 
-              color: '#ff9800', 
-              fontWeight: '600',
-              background: 'rgba(255, 152, 0, 0.1)',
-              padding: '2px 8px',
-              borderRadius: '4px'
-            }}>TODO</span>
-          </div>
-          {/* ⚠️ TODO: Add to User model - currently empty */}
-          <div style={{ position: 'relative' }}>
-            <ProfileField label="Kjønn" field="gender" value={formData.gender} />
-            <span style={{ 
-              position: 'absolute', 
-              top: '50%', 
-              right: '40px', 
-              transform: 'translateY(-50%)',
-              fontSize: '11px', 
-              color: '#ff9800', 
-              fontWeight: '600',
-              background: 'rgba(255, 152, 0, 0.1)',
-              padding: '2px 8px',
-              borderRadius: '4px'
-            }}>TODO</span>
-          </div>
+          {/* ✅ Real data from backend (user.lastName) */}
+          <ProfileField label="Etternavn" field="lastName" value={formData.lastName} />
+          {/* ✅ Real data from backend (user.birthDate) */}
+          <ProfileField label="Født" field="birthDate" value={formData.birthDate} type="text" />
+          {/* ✅ Real data from backend (user.gender) */}
+          <ProfileField label="Kjønn" field="gender" value={formData.gender} />
         </div>
 
         {/* Address Information */}
@@ -344,67 +366,14 @@ export default function MinProfil() {
             </span>
             Adresse
           </div>
-          {/* ⚠️ TODO: Add all address fields to User model - currently empty */}
-          <div style={{ position: 'relative' }}>
-            <ProfileField label="Adresse" field="address" value={formData.address} />
-            <span style={{ 
-              position: 'absolute', 
-              top: '50%', 
-              right: '40px', 
-              transform: 'translateY(-50%)',
-              fontSize: '11px', 
-              color: '#ff9800', 
-              fontWeight: '600',
-              background: 'rgba(255, 152, 0, 0.1)',
-              padding: '2px 8px',
-              borderRadius: '4px'
-            }}>TODO</span>
-          </div>
-          <div style={{ position: 'relative' }}>
-            <ProfileField label="Postnummer" field="postNumber" value={formData.postNumber} />
-            <span style={{ 
-              position: 'absolute', 
-              top: '50%', 
-              right: '40px', 
-              transform: 'translateY(-50%)',
-              fontSize: '11px', 
-              color: '#ff9800', 
-              fontWeight: '600',
-              background: 'rgba(255, 152, 0, 0.1)',
-              padding: '2px 8px',
-              borderRadius: '4px'
-            }}>TODO</span>
-          </div>
-          <div style={{ position: 'relative' }}>
-            <ProfileField label="Poststed" field="postSted" value={formData.postSted} />
-            <span style={{ 
-              position: 'absolute', 
-              top: '50%', 
-              right: '40px', 
-              transform: 'translateY(-50%)',
-              fontSize: '11px', 
-              color: '#ff9800', 
-              fontWeight: '600',
-              background: 'rgba(255, 152, 0, 0.1)',
-              padding: '2px 8px',
-              borderRadius: '4px'
-            }}>TODO</span>
-          </div>
-          <div style={{ position: 'relative' }}>
-            <ProfileField label="Land" field="country" value={formData.country} />
-            <span style={{ 
-              position: 'absolute', 
-              top: '50%', 
-              right: '40px', 
-              transform: 'translateY(-50%)',
-              fontSize: '11px', 
-              color: '#ff9800', 
-              fontWeight: '600',
-              background: 'rgba(255, 152, 0, 0.1)',
-              padding: '2px 8px',
-              borderRadius: '4px'
-            }}>TODO</span>
-          </div>
+          {/* ✅ Real data from backend (user.address) */}
+          <ProfileField label="Adresse" field="address" value={formData.address} />
+          {/* ✅ Real data from backend (user.postNumber) */}
+          <ProfileField label="Postnummer" field="postNumber" value={formData.postNumber} />
+          {/* ✅ Real data from backend (user.postSted) */}
+          <ProfileField label="Poststed" field="postSted" value={formData.postSted} />
+          {/* ✅ Real data from backend (user.country) */}
+          <ProfileField label="Land" field="country" value={formData.country} />
         </div>
 
         {/* Pricing Button */}

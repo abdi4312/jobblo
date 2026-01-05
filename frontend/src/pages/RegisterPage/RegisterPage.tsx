@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as Icons from "../../assets/icons";
-import { mainLink } from "../../api/mainURLs";
-import { toast } from 'react-toastify';
+import { toast } from "react-toastify";
 import styles from "./RegisterPage.module.css";
+import { registerUser } from "../../api/userAPI.ts";
+import axios from "axios";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -11,14 +12,14 @@ export default function RegisterPage() {
     name: "",
     email: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -35,36 +36,22 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const registerData = {
+      await registerUser({
         name: formData.name,
         email: formData.email,
-        password: formData.password
-      };
-
-      const response = await fetch(`${mainLink}/api/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(registerData),
+        password: formData.password,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        if (errorText.includes('already exists') || errorText.includes('duplicate')) {
-          toast.error("En bruker med denne e-posten eksisterer allerede");
-        } else {
-          toast.error("Kunne ikke registrere bruker");
-        }
-        throw new Error(errorText);
-      }
-
-      const data = await response.json();
-      console.log("Registration successful:", data);
       toast.success("Registrering vellykket!");
       navigate("/login");
     } catch (error) {
       console.error("Error registering:", error);
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401)
+          toast.error("En bruker med denne e-posten eksisterer allerede");
+      } else {
+        toast.error("Kunne ikke registrere bruker");
+      }
     } finally {
       setLoading(false);
     }
@@ -72,13 +59,10 @@ export default function RegisterPage() {
 
   return (
     <div className={styles.container}>
-
       {/* Register Card */}
       <div className={styles.card}>
         {/* Title */}
-        <h2 className={styles.title}>
-          Registrer deg til
-        </h2>
+        <h2 className={styles.title}>Registrer deg til</h2>
 
         {/* Jobblo Logo */}
         <div className={styles.logo}>
@@ -86,13 +70,13 @@ export default function RegisterPage() {
         </div>
 
         {/* Name Fields */}
-          <input
-            type="text"
-            placeholder="Fornavn"
-            value={formData.name}
-            onChange={(e) => handleInputChange("name", e.target.value)}
-            className={styles.input}
-          />
+        <input
+          type="text"
+          placeholder="Fornavn"
+          value={formData.name}
+          onChange={(e) => handleInputChange("name", e.target.value)}
+          className={styles.input}
+        />
 
         {/* Email Input */}
         <input
@@ -102,7 +86,6 @@ export default function RegisterPage() {
           onChange={(e) => handleInputChange("email", e.target.value)}
           className={styles.input}
         />
-
 
         {/* Password Input */}
         <input
@@ -127,8 +110,8 @@ export default function RegisterPage() {
           Ved å registrere deg godtar du våre{" "}
           <a href="#" className={styles.link}>
             vilkår og betingelser
-          </a>
-          {" "}og{" "}
+          </a>{" "}
+          og{" "}
           <a href="#" className={styles.link}>
             personvernregler
           </a>
@@ -139,24 +122,19 @@ export default function RegisterPage() {
         <button
           onClick={handleRegister}
           disabled={loading}
-           className={`${styles.registerBtn} ${loading ? styles.registerBtnDisabled : ""}`}
+          className={`${styles.registerBtn} ${loading ? styles.registerBtnDisabled : ""}`}
         >
           {loading ? "Registrerer..." : "Registrer deg"}
         </button>
 
         {/* Cancel Link */}
-        <button
-          onClick={() => navigate(-1)}
-          className={styles.cancelBtn}
-        >
+        <button onClick={() => navigate(-1)} className={styles.cancelBtn}>
           Avbryt
         </button>
 
         {/* Login Section */}
         <div className={styles.loginSection}>
-          <p className={styles.loginText}>
-            Har du allerede en konto?
-          </p>
+          <p className={styles.loginText}>Har du allerede en konto?</p>
           <button
             onClick={() => navigate("/login")}
             className={styles.loginBtn}
@@ -167,7 +145,7 @@ export default function RegisterPage() {
       </div>
 
       {/* Language Selector */}
-       <div className={styles.languageSelector}>
+      <div className={styles.languageSelector}>
         <select className={styles.select}>
           <option value="EN">EN</option>
           <option value="NO">NO</option>

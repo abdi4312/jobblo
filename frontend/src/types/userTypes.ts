@@ -2,6 +2,7 @@ export type User = {
   phone?: string;
   _id: string;
   name: string;
+  lastName?: string;
   email: string;
   password: string;
   avatarUrl?: string;
@@ -9,6 +10,12 @@ export type User = {
   role?: string;
   subscription?: string;
   verified?: boolean;
+  birthDate?: string;
+  gender?: string;
+  address?: string;
+  postNumber?: string;
+  postSted?: string;
+  country?: string;
   followers?: User[];
   following?: User[];
   availability?: []; // Hva er dette?
