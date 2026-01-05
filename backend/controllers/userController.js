@@ -138,7 +138,7 @@ exports.updateUser = async (req, res) => {
         return res.status(400).json({ error: "No valid fields provided for update" });
         }
 
-        const user = await User.findByIdAndUpdate(id, req.body, { new: true });
+        const user = await User.findByIdAndUpdate(id, updates, { new: true });
 
         if (!user) return res.status(404).json({ error: 'User not found' });
         res.json(user);
