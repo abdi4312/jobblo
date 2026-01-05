@@ -28,9 +28,9 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
     setIsFavorited((prevState) => !prevState);
     try {
       if (isFavorited) {
-        await deleteFavorites(job._id, userToken);
+        await deleteFavorites(job._id);
       } else {
-        await setFavorites(job._id, userToken);
+        await setFavorites(job._id);
       }
     } catch (err) {
       console.error("Failed to update favorites", err);
@@ -41,10 +41,8 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
     const checkFavoriteStatus = async () => {
       if (!userToken) return;
       try {
-        const res = await getFavorites(userToken);
-        const favorited = res.data.some(
-          (fav: any) => fav.service._id === job._id,
-        );
+        const res = await getFavorites();
+        const favorited = res.data.some((fav) => fav.service._id === job._id);
         setIsFavorited(favorited);
       } catch (err) {
         console.error("Error", err);
@@ -105,17 +103,19 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
 
         {/* Status Badge */}
         {job.urgent && (
-          <div style={{
-            position: "absolute",
-            top: "8px",
-            left: "8px",
-            background: "#ff4444",
-            color: "white",
-            padding: "4px 12px",
-            borderRadius: "12px",
-            fontSize: "12px",
-            fontWeight: "bold",
-          }}>
+          <div
+            style={{
+              position: "absolute",
+              top: "8px",
+              left: "8px",
+              background: "#ff4444",
+              color: "white",
+              padding: "4px 12px",
+              borderRadius: "12px",
+              fontSize: "12px",
+              fontWeight: "bold",
+            }}
+          >
             ⚡ Haster
           </div>
         )}
@@ -268,7 +268,7 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
               textOverflow: "ellipsis",
             }}
           >
-            {job.location.city || 'Ukjent by'}
+            {job.location.city || "Ukjent by"}
           </h3>
         </div>
 
@@ -283,7 +283,9 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
               maxWidth: "250px",
             }}
           >
-            {job.duration.value ? `${job.duration.value} ${job.duration.unit}` : 'Ikke angitt'}
+            {job.duration.value
+              ? `${job.duration.value} ${job.duration.unit}`
+              : "Ikke angitt"}
           </h3>
         </div>
 

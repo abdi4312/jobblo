@@ -48,7 +48,7 @@ export const routes: RouteObject[] = [
           </ProtectedRoute>
         ),
       },
-       {
+      {
         path: "mine-annonser",
 
         element: (
