@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import styles from "./RegisterPage.module.css";
 import { registerUser } from "../../api/userAPI.ts";
 import axios from "axios";
+import SocialAuthButtons from "../../components/SocialAuthButtons/AuthButton.tsx";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -131,6 +132,9 @@ export default function RegisterPage() {
         <button onClick={() => navigate(-1)} className={styles.cancelBtn}>
           Avbryt
         </button>
+
+        {/* Social Auth Buttons */}
+        <SocialAuthButtons />
 
         {/* Login Section */}
         <div className={styles.loginSection}>
