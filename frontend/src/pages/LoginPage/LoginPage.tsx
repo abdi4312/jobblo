@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as Icons from "../../assets/icons";
-import { useUserStore } from "../../stores/userStore";
 import { toast } from "react-toastify";
 import styles from "./loginPage.module.css";
 import { userLogin } from "../../api/userAPI.ts";
@@ -10,7 +9,6 @@ import SocialAuthButtons from "../../components/SocialAuthButtons/AuthButton.tsx
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const login = useUserStore((state) => state.login);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,13 +24,6 @@ export default function LoginPage() {
       const response = await userLogin(email, password);
 
       const data = response.data;
-
-      // Store user and tokens in Zustand store
-      login(data.user, {
-        accessToken: data.token,
-        refreshToken: data.refreshToken,
-      });
-
       toast.success("Innlogging vellykket!");
       navigate("/");
     } catch (error) {
