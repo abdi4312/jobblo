@@ -73,6 +73,9 @@
   cursor: pointer;
   margin-bottom: 12px;
   transition: background-color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .loginBtn:not(:disabled) {
@@ -97,6 +100,9 @@
   cursor: pointer;
   padding: 8px;
   margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .registerSection {
@@ -121,4 +127,7 @@
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
