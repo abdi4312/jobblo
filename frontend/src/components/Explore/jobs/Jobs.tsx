@@ -212,7 +212,7 @@ export default function JobsContainer({ selectedCategories = [], searchQuery = "
   // Fetch Followers jobs from API IKKE FERDIG IKKE FERDIG IKKE FERDIG IKKE FERDIG SE PÅ DENNE.
   useEffect(() => {
     async function fetchFollowingJobs() {
-      if (!userId || !tokens?.accessToken) {
+      if (!userId) {
           console.log('User not logged in, skipping following feed');
         return;
       }
