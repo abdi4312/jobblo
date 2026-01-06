@@ -7,10 +7,9 @@ import { toast } from 'react-toastify';
 
 export default function LeggUtOppdrag() {
   const navigate = useNavigate();
-  const userToken = useUserStore((state) => state.tokens);
   const user = useUserStore((state) => state.user);
 
-  if (!user || !userToken?.accessToken) {
+  if (!user) {
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
         <h2>Du må være logget inn for å legge ut oppdrag</h2>
@@ -24,30 +23,18 @@ export default function LeggUtOppdrag() {
   const handleFormSubmit = async (jobData: any) => {
     console.log('Sending job data:', jobData); // Log the data being sent
     
-    if (!userToken?.accessToken) {
-      toast.error('Du må være logget inn for å publisere et oppdrag');
-      return;
-    }
-    
     try {
-      const response = await fetch(`${mainLink}/api/services`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userToken.accessToken}`,
-        },
-        body: JSON.stringify(jobData),
-      });
-      
-      if (response.ok) {
+      const response = await mainLink.post("/api/services", jobData);
+
+      if (response.data) {
         console.log('Job created successfully');
-        const result = await response.json();
+        const result = response.data;
         console.log(result);
         toast.success('Oppdrag publisert!');
         navigate(-1);
       } else {
-        const errorText = await response.text();
-        console.error('Failed to create job. Status:', response.status, 'Error:', errorText);
+        // const errorText = await response.json();
+        console.error('Failed to create job. Status:', response.status, 'Error:');
         toast.error(`Kunne ikke publisere oppdrag. Status: ${response.status}`);
       }
     } catch (error) {
