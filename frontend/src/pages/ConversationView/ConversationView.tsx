@@ -1,113 +1,84 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
+import { initSocket } from "../../socket/socket";
+
 import styles from "./ConversationView.module.css";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
+import { useUserStore } from "../../stores/userStore";
+import mainLink from "../../api/mainURLs";
 
 interface Message {
   _id: string;
   senderId: {
     _id: string;
     name: string;
-    profileImage?: string;
+    avatarUrl?: string;
+    text: string;
   };
   message: string;
   images?: string[];
   createdAt: string;
   status: "sent" | "delivered" | "read";
 }
-
-// Dummy messages data
-const DUMMY_MESSAGES: Message[] = [
-  {
-    _id: "msg1",
-    senderId: {
-      _id: "user2",
-      name: "Kari Nordmann"
-    },
-    message: "Hei! Jeg så annonsen din om snømåking. Er det fortsatt ledig?",
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    status: "read"
-  },
-  {
-    _id: "msg2",
-    senderId: {
-      _id: "user1",
-      name: "Ole Hansen"
-    },
-    message: "Ja, det stemmer! Når kan du starte?",
-    createdAt: new Date(Date.now() - 86400000 * 2 + 3600000).toISOString(),
-    status: "read"
-  },
-  {
-    _id: "msg3",
-    senderId: {
-      _id: "user2",
-      name: "Kari Nordmann"
-    },
-    message: "Jeg kan starte allerede i morgen tidlig, rundt kl 07:00. Passer det?",
-    createdAt: new Date(Date.now() - 86400000 + 7200000).toISOString(),
-    status: "read"
-  },
-  {
-    _id: "msg4",
-    senderId: {
-      _id: "user1",
-      name: "Ole Hansen"
-    },
-    message: "Perfekt! Snakkes i morgen 👍",
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-    status: "delivered"
-  }
-];
+interface SendMessagePayload {
+  chatId: string;
+  text: string;
+}
+interface ReceiveMessagePayload {
+  chatId: string;
+  message: Message;
+}
 
 export function ConversationView() {
   const { conversationId } = useParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const [messages, setMessages] = useState<Message[]>(DUMMY_MESSAGES);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
-  const userId = "user1"; // Dummy user ID
   const jobTitle = "Snømåking - Oslo sentrum"; // Dummy job title
+  const { user } = useUserStore();
+  const userId = user?._id;
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (!conversationId) return;
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || sending) return;
-
-    setSending(true);
-    
-    // Simulate sending message (dummy)
-    const sentMessage: Message = {
-      _id: `msg${messages.length + 1}`,
-      senderId: {
-        _id: userId,
-        name: "Ole Hansen"
-      },
-      message: newMessage,
-      createdAt: new Date().toISOString(),
-      status: "sent"
+    const fetchMessages = async () => {
+      try {
+        const res = await mainLink.get(`/api/chats/${conversationId}`);
+        setMessages(res.data.messages ?? []);
+      } catch (err) {
+        console.error("Fetch messages error:", err);
+      }
     };
 
-    setMessages([...messages, sentMessage]);
-    setNewMessage("");
-    
-    // Simulate API delay
-    setTimeout(() => {
-      setSending(false);
-    }, 500);
-  };
+    fetchMessages();
+
+    // ========== SOCKET ==========
+    const socket = initSocket();
+    if (!socket) return;
+
+    socket.emit("join-chat", conversationId);
+
+    const onReceiveMessage = (data: ReceiveMessagePayload) => {
+      if (data.chatId === conversationId) {
+        setMessages((prev) => [...prev, data.message]);
+      }
+    };
+
+    socket.on("receive-message", onReceiveMessage);
+
+    return () => {
+      socket.off("receive-message", onReceiveMessage);
+      socket.emit("leave-chat", conversationId);
+    };
+  }, [conversationId]);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleTimeString("nb-NO", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -121,7 +92,10 @@ export function ConversationView() {
     } else if (date.toDateString() === yesterday.toDateString()) {
       return "I går";
     } else {
-      return date.toLocaleDateString("nb-NO", { day: "numeric", month: "long" });
+      return date.toLocaleDateString("nb-NO", {
+        day: "numeric",
+        month: "long",
+      });
     }
   };
 
@@ -135,24 +109,40 @@ export function ConversationView() {
     return groups;
   };
 
+  const handleSend = () => {
+    if (!newMessage.trim()) return;
+
+    const socket = initSocket();
+    if (!socket) return;
+
+    socket.emit("send-message", {
+      chatId: conversationId,
+      text: newMessage.trim(),
+    });
+
+    setNewMessage("");
+  };
+
   const messageGroups = groupMessagesByDate();
 
   return (
     <div className={styles.pageContainer}>
-      <ProfileTitleWrapper 
-        title={jobTitle} 
-        buttonText="Tilbake" 
-      />
-      
+      <ProfileTitleWrapper title={jobTitle} buttonText="Tilbake" />
+
       <div className={styles.chatContainer}>
         <div className={styles.messagesArea}>
           {messages.length === 0 ? (
             <div className={styles.empty}>
-              <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#ccc' }}>
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: "48px", color: "#ccc" }}
+              >
                 chat
               </span>
               <p>Ingen meldinger ennå</p>
-              <p className={styles.emptySubtext}>Send en melding for å starte samtalen</p>
+              <p className={styles.emptySubtext}>
+                Send en melding for å starte samtalen
+              </p>
             </div>
           ) : (
             Object.entries(messageGroups).map(([date, msgs]) => (
@@ -160,25 +150,30 @@ export function ConversationView() {
                 <div className={styles.dateLabel}>
                   {formatDate(msgs[0].createdAt)}
                 </div>
-                {msgs.map((msg) => (
+                {msgs.map((msg, index) => (
                   <div
-                    key={msg._id}
+                    key={msg._id || index}
                     className={`${styles.messageWrapper} ${
-                      msg.senderId._id === userId ? styles.sent : styles.received
+                      msg.senderId._id === userId
+                        ? styles.sent
+                        : styles.received
                     }`}
                   >
                     {msg.senderId._id !== userId && (
                       <div className={styles.avatar}>
-                        {msg.senderId.profileImage ? (
-                          <img src={msg.senderId.profileImage} alt={msg.senderId.name} />
+                        {msg.senderId.avatarUrl ? (
+                          <img
+                            src={msg.senderId.avatarUrl}
+                            alt={msg.senderId.name}
+                          />
                         ) : (
                           <div className={styles.avatarPlaceholder}>
-                            {msg.senderId.name.charAt(0).toUpperCase()}
+                            {msg.senderId.name}
                           </div>
                         )}
                       </div>
                     )}
-                    
+
                     <div className={styles.messageBubble}>
                       {msg.images && msg.images.length > 0 && (
                         <div className={styles.messageImages}>
@@ -187,8 +182,10 @@ export function ConversationView() {
                           ))}
                         </div>
                       )}
-                      <p className={styles.messageText}>{msg.message}</p>
-                      <span className={styles.messageTime}>{formatTime(msg.createdAt)}</span>
+                      <p className={styles.messageText}>{msg.text}</p>
+                      <span className={styles.messageTime}>
+                        {formatTime(msg.createdAt)}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -199,34 +196,36 @@ export function ConversationView() {
         </div>
 
         {/* Message Input */}
-        <form className={styles.inputArea} onSubmit={handleSendMessage}>
+        <div className={styles.inputArea}>
           <div className={styles.inputContainer}>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={styles.attachButton}
               aria-label="Legg ved fil"
             >
               <span className="material-symbols-outlined">attach_file</span>
             </button>
-            
+
             <input
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Skriv en melding..."
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
               className={styles.messageInput}
               disabled={sending}
             />
-            
-            <button 
-              type="submit" 
+
+            <button
+              type="submit"
               className={styles.sendButton}
               disabled={!newMessage.trim() || sending}
+              onClick={handleSend}
             >
               <span className="material-symbols-outlined">send</span>
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
