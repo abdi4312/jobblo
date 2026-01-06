@@ -1,0 +1,12 @@
+const express = require('express');
+const router = express.Router();
+// const upload = require('../middleware/multer');
+// const {authenticate,requireAdmin } = require('../middleware/auth');
+
+const heroController = require('../controllers/heroController');
+
+router.post('/', heroController.CreateHero);
+router.get('/', heroController.GetHero);
+
+
+module.exports = router;

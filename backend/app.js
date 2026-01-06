@@ -25,6 +25,7 @@ const reviewsRouter = require('./routes/review');
 const categoryRouter = require('./routes/category');
 const feedRouter = require('./routes/feed');
 const filterRouter = require('./routes/filter');
+const heroSelectRouter = require('./routes/Herojs');
 const chatRouter = require('./routes/chat');
 
 const swaggerUi = require('swagger-ui-express');
@@ -35,7 +36,7 @@ const corsOptions = {
     origin: 'http://localhost:5173',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    credentials: true,
+  credentials: true,
     optionsSuccessStatus: 200
 };
 
@@ -56,7 +57,7 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: false, // Set to true in production with HTTPS
+      secure: false, // Set to true in production with HTTPS
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
@@ -83,17 +84,18 @@ app.use('/api', reviewsRouter);
 app.use('/api/categories', categoryRouter);
 app.use('/api/feed', feedRouter);
 app.use('/api/filter', filterRouter);
+app.use('/api/hero', heroSelectRouter);
 app.use("/api/chats", chatRouter);
 
 
 // Error handler
 app.use(function(req, res, next) {
-    next(createError(404));
+  next(createError(404));
 });
 
 app.use(function(err, req, res, next) {
-    res.status(err.status || 500);
-    res.json({ error: err.message });
+  res.status(err.status || 500);
+  res.json({ error: err.message });
 });
 
 module.exports = app;
