@@ -6,8 +6,6 @@ import {
   getFavorites,
   setFavorites,
 } from "../../../../api/favoriteAPI.ts";
-import { useUserStore } from "../../../../stores/userStore.ts";
-
 interface JobCardProps {
   job: Jobs;
   gridColumns: number;
@@ -15,7 +13,6 @@ interface JobCardProps {
 
 export const JobCard = ({ job, gridColumns }: JobCardProps) => {
   const navigate = useNavigate();
-  const userToken = useUserStore((state) => state.tokens);
   const [isFavorited, setIsFavorited] = useState(false);
 
   const handleCardClick = () => {
@@ -39,7 +36,6 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
 
   useEffect(() => {
     const checkFavoriteStatus = async () => {
-      if (!userToken) return;
       try {
         const res = await getFavorites();
         const favorited = res.data.some((fav) => fav.service._id === job._id);
@@ -50,7 +46,7 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
     };
 
     void checkFavoriteStatus();
-  }, [userToken, job._id]);
+  }, [ job._id]);
 
   return (
     <div
