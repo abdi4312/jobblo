@@ -10,14 +10,10 @@ interface JobLocationProps {
 
 const JobLocation: React.FC<JobLocationProps> = ({ location }) => {
   const getLocationText = () => {
-    if (location?.address && location?.city) {
-      return `${location.address}, ${location.city}`;
-    } else if (location?.city) {
+    if (location?.city) {
       return location.city;
-    } else if (location?.address) {
-      return location.address;
     }
-    return 'Ingen adresse spesifisert';
+    return 'Ingen by spesifisert';
   };
 
   return (

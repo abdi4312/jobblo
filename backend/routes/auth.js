@@ -1,3 +1,7 @@
+const User = require('../models/User');
+
+const {authenticate} = require('../middleware/auth');
+
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
@@ -125,32 +129,41 @@ router.get('/google',
  *         description: Authentication failed
  */
 router.get('/google/callback',
-    passport.authenticate('google', { failureRedirect: '/login' }),
+    // 1. Passport authenticate ko handle karein
+    passport.authenticate('google', { failureRedirect: process.env.frontendURL + '?error=auth_failed', session: false }),
+    
+    // 2. Sirf ek hi response handler rakhein
     (req, res) => {
-        // Successful authentication
-        // Generate JWT token for the user
-        const token = jwt.sign(
-            {
-                userId: req.user._id,
-                email: req.user.email
-            },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
-        );
+        try {
+            if (!req.user) {
+                return res.redirect(process.env.frontendURL + '?error=no_user');
+            }
 
-        // In production, you'd redirect to your frontend with the token
-        // For now, we'll send JSON response
-        res.json({
-            success: true,
-            message: 'Authentication successful',
-            user: {
-                id: req.user._id,
-                name: req.user.name,
-                email: req.user.email,
-                avatarUrl: req.user.avatarUrl
-            },
-            token: token
-        });
+            // Generate JWT
+            const token = jwt.sign(
+                { id: req.user._id, },
+                process.env.JWT_SECRET,
+                { expiresIn: '24h' }
+            );
+
+           const cookieOptions = {
+                httpOnly: true,         
+                secure: false,           
+                sameSite: 'lax',         
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            };
+            // Token ko cookie mein set karein
+            res.cookie('token', token, cookieOptions);
+
+            return res.redirect(process.env.frontendURL + 'oauth-success');
+
+        } catch (error) {
+            console.error("Callback Error:", error);
+            // Error hone ki soorat mein agar response nahi bheja gaya to redirect karein
+            if (!res.headersSent) {
+                return res.redirect('http://localhost:3000/login?error=server_error');
+            }
+        }
     }
 );
 
@@ -168,19 +181,17 @@ router.get('/google/callback',
  *       401:
  *         description: Not authenticated
  */
-router.get('/profile', (req, res) => {
-    if (req.user) {
-        res.json({
-            user: {
-                id: req.user._id,
-                name: req.user.name,
-                email: req.user.email,
-                avatarUrl: req.user.avatarUrl,
-                verified: req.user.verified
-            }
-        });
-    } else {
-        res.status(401).json({ message: 'Not authenticated' });
+router.get('/profile', authenticate, async(req, res) => {
+    try {
+
+        const  id  = req.userId;
+
+        const user = await User.findById(id).select('-password');
+
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
     }
 });
 
@@ -195,12 +206,14 @@ router.get('/profile', (req, res) => {
  *         description: Successfully logged out
  */
 router.post('/logout', (req, res) => {
-    req.logout((err) => {
-        if (err) {
-            return res.status(500).json({ message: 'Logout failed' });
-        }
-        res.json({ message: 'Logged out successfully' });
-    });
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: false,       
+    sameSite: 'lax'   
+  });
+
+  res.json({ message: 'Logged out successfully' });
 });
+
 
 module.exports = router; 

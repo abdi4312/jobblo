@@ -34,7 +34,7 @@ export function Hero() {
 
   const handleSearch = (value: string) => {
     if (value.trim()) {
-      navigate(`/search/${encodeURIComponent(value.trim())}`);
+      navigate('/job-listing', { state: { searchQuery: value.trim() } });
     } else {
       toast.warning("Vennligst skriv inn et søkeord");
     }

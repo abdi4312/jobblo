@@ -1,0 +1,385 @@
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding-bottom: 100px;
+  overflow-x: hidden;
+}
+
+.content {
+  padding: 16px;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Total Section */
+.totalSection {
+  background-color: var(--color-surface);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: -4px 2px 10.1px 0 rgba(59, 56, 56, 0.25);
+  position: relative;
+  max-width: 100%;
+}
+
+.totalLabel {
+  font-size: 14px;
+  color: var(--color-text);
+  margin: 0 0 4px 0;
+  font-weight: 500;
+}
+
+.totalAmount {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  color: var(--color-text);
+}
+
+.filterButtonWrapper {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.filterButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 16px;
+  background-color: var(--color-bg);
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border: none;
+}
+
+.filterButton:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.filterButton .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.filterMenu {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  background-color: var(--color-surface);
+  border-radius: 10px;
+  box-shadow: -4px 2px 10.1px 0 rgba(59, 56, 56, 0.25);
+  overflow: hidden;
+  z-index: 10;
+  min-width: 120px;
+}
+
+.filterOption {
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.filterOption:hover {
+  background-color: rgba(234, 126, 21, 0.1);
+}
+
+.activeFilter {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.activeFilter:hover {
+  background-color: var(--color-primary);
+}
+
+/* Chart */
+.chartContainer {
+  background-color: var(--color-surface);
+  border-radius: 12px;
+  padding: 24px 20px;
+  margin-bottom: 20px;
+  box-shadow: -4px 2px 10.1px 0 rgba(59, 56, 56, 0.25);
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 120px;
+  position: relative;
+  max-width: 100%;
+}
+
+.barWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+  position: relative;
+  min-width: 0;
+}
+
+.bar {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.bar:hover {
+  opacity: 0.8;
+}
+
+.selectedBar {
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.barTooltip {
+  position: absolute;
+  top: -30px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  max-width: 100%;
+}
+
+.tab {
+  flex: 1;
+  padding: 12px 24px;
+  background-color: var(--color-surface);
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--color-text);
+  box-shadow: -4px 2px 10.1px 0 rgba(59, 56, 56, 0.15);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab:hover {
+  background-color: rgba(234, 126, 21, 0.1);
+}
+
+.activeTab {
+  background-color: var(--color-primary);
+  color: white;
+  box-shadow: -4px 2px 10.1px 0 rgba(59, 56, 56, 0.25);
+}
+
+.activeTab:hover {
+  background-color: var(--color-primary);
+}
+
+/* History */
+.historySection {
+  margin-top: 8px;
+}
+
+.historyTitle {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  color: var(--color-text);
+}
+
+.transactionList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.transactionItem {
+  background-color: var(--color-surface);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: -4px 2px 10.1px 0 rgba(59, 56, 56, 0.15);
+  transition: transform 0.2s;
+}
+
+.transactionItem:hover {
+  transform: translateY(-2px);
+  box-shadow: -4px 2px 10.1px 0 rgba(59, 56, 56, 0.25);
+}
+
+.transactionMain {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.transactionInfo {
+  flex: 1;
+}
+
+.transactionTitle {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: var(--color-text);
+}
+
+.transactionFrom {
+  font-size: 13px;
+  color: var(--color-text);
+  opacity: 0.7;
+  margin: 0;
+}
+
+.transactionRight {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.transactionAmount {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+}
+
+.transactionDate {
+  font-size: 12px;
+  color: var(--color-text);
+  opacity: 0.6;
+  margin: 0;
+}
+
+.transactionStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .content {
+    padding: 12px;
+  }
+
+  .totalAmount {
+    font-size: 28px;
+  }
+
+  .filterButtonWrapper {
+    right: 12px;
+    top: 12px;
+  }
+
+  .filterButton {
+    padding: 4px 12px;
+    font-size: 13px;
+  }
+
+  .chartContainer {
+    padding: 16px 12px;
+  }
+
+  .chart {
+    height: 100px;
+    gap: 8px;
+  }
+
+  .tabs {
+    gap: 8px;
+  }
+
+  .tab {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .transactionItem {
+    padding: 12px;
+  }
+
+  .transactionTitle {
+    font-size: 14px;
+  }
+
+  .transactionFrom {
+    font-size: 12px;
+  }
+
+  .transactionAmount {
+    font-size: 15px;
+  }
+
+  .transactionStatus {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 440px) {
+  .content {
+    padding: 8px;
+  }
+
+  .totalSection {
+    padding: 12px 16px;
+  }
+
+  .totalAmount {
+    font-size: 24px;
+  }
+
+  .filterButtonWrapper {
+    right: 8px;
+    top: 8px;
+  }
+
+  .chart {
+    height: 80px;
+    gap: 6px;
+  }
+
+  .tab {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .transactionMain {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .transactionRight {
+    align-items: flex-start;
+  }
+
+  .barTooltip {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 
 export default function InstillingerPage() {
   const navigate = useNavigate();
@@ -11,36 +12,7 @@ export default function InstillingerPage() {
 
   return (
     <div style={{ minHeight: "70vh", maxWidth: "800px", margin: "0 auto", padding: "0 20px" }}>
-      {/* Header */}
-
-      <button
-        onClick={() => navigate(-1)}
-        style={{
-          padding: '8px 16px',
-          backgroundColor: 'var(--color-primary)',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          cursor: 'pointer',
-          fontSize: '16px',
-          fontWeight: '600',
-          marginTop: '20px',
-          marginBottom: '16px',
-        }}
-      >
-        ← Tilbake
-      </button>
-      {/* Title */}
-      <h2
-        style={{
-          textAlign: "center",
-          margin: "20px 0",
-          fontSize: "24px",
-          fontWeight: "600",
-        }}
-      >
-        Instillinger
-      </h2>
+      <ProfileTitleWrapper title="Innstillinger" buttonText="Tilbake" />
 
       <div
         style={{

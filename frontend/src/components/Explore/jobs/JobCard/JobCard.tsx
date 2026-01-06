@@ -6,8 +6,6 @@ import {
   getFavorites,
   setFavorites,
 } from "../../../../api/favoriteAPI.ts";
-import { useUserStore } from "../../../../stores/userStore.ts";
-
 interface JobCardProps {
   job: Jobs;
   gridColumns: number;
@@ -15,7 +13,6 @@ interface JobCardProps {
 
 export const JobCard = ({ job, gridColumns }: JobCardProps) => {
   const navigate = useNavigate();
-  const userToken = useUserStore((state) => state.tokens);
   const [isFavorited, setIsFavorited] = useState(false);
 
   const handleCardClick = () => {
@@ -28,9 +25,9 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
     setIsFavorited((prevState) => !prevState);
     try {
       if (isFavorited) {
-        await deleteFavorites(job._id, userToken);
+        await deleteFavorites(job._id);
       } else {
-        await setFavorites(job._id, userToken);
+        await setFavorites(job._id);
       }
     } catch (err) {
       console.error("Failed to update favorites", err);
@@ -39,12 +36,9 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
 
   useEffect(() => {
     const checkFavoriteStatus = async () => {
-      if (!userToken) return;
       try {
-        const res = await getFavorites(userToken);
-        const favorited = res.data.some(
-          (fav: any) => fav.service._id === job._id,
-        );
+        const res = await getFavorites();
+        const favorited = res.data.some((fav) => fav.service._id === job._id);
         setIsFavorited(favorited);
       } catch (err) {
         console.error("Error", err);
@@ -52,7 +46,7 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
     };
 
     void checkFavoriteStatus();
-  }, [userToken, job._id]);
+  }, [ job._id]);
 
   return (
     <div
@@ -72,7 +66,7 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
       <div
         style={{
           width: "100%",
-          height: "100px",
+          height: "180px",
           borderRadius: "16px 16px 0 0",
           backgroundColor: "#f0f0f0",
           display: "flex",
@@ -101,6 +95,25 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
           >
             No image available
           </span>
+        )}
+
+        {/* Status Badge */}
+        {job.urgent && (
+          <div
+            style={{
+              position: "absolute",
+              top: "8px",
+              left: "8px",
+              background: "#ff4444",
+              color: "white",
+              padding: "4px 12px",
+              borderRadius: "12px",
+              fontSize: "12px",
+              fontWeight: "bold",
+            }}
+          >
+            ⚡ Haster
+          </div>
         )}
 
         {/* Favorite Heart Button */}
@@ -160,25 +173,48 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
           padding: "0 12px",
         }}
       >
-        <h4
-          style={{
-            minWidth: "fit-content",
-            width: "fit-content",
-            padding: "4px 8px",
-            backgroundColor: "var(--color-accent)",
-            margin: "0",
-            borderRadius: "4px",
-            whiteSpace: "nowrap",
-            display: "inline-block",
-            color: "#ffffff",
-            fontSize: "14px",
-            fontWeight: "500",
-            lineHeight: "1.5",
-            minHeight: "24px",
-          }}
-        >
-          No Category
-        </h4>
+        {job.categories && job.categories.length > 0 ? (
+          job.categories.map((category, index) => (
+            <h4
+              key={index}
+              style={{
+                minWidth: "fit-content",
+                width: "fit-content",
+                padding: "4px 8px",
+                backgroundColor: "var(--color-accent)",
+                margin: "0",
+                borderRadius: "4px",
+                whiteSpace: "nowrap",
+                display: "inline-block",
+                color: "#ffffff",
+                fontWeight: "500",
+                lineHeight: "1.5",
+                minHeight: "24px",
+              }}
+            >
+              {category}
+            </h4>
+          ))
+        ) : (
+          <h4
+            style={{
+              minWidth: "fit-content",
+              width: "fit-content",
+              padding: "4px 8px",
+              backgroundColor: "var(--color-accent)",
+              margin: "0",
+              borderRadius: "4px",
+              whiteSpace: "nowrap",
+              display: "inline-block",
+              color: "#ffffff",
+              fontWeight: "500",
+              lineHeight: "1.5",
+              minHeight: "24px",
+            }}
+          >
+            No Category
+          </h4>
+        )}
 
         {/* Equipment Badge with color coding */}
         <h4
@@ -198,6 +234,10 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
             borderRadius: "4px",
             whiteSpace: "nowrap",
             display: "inline-block",
+            color: "#ffffff",
+            fontWeight: "500",
+            lineHeight: "1.5",
+            minHeight: "24px",
           }}
         >
           {job.equipment === "utstyrfri"
@@ -224,7 +264,7 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
               textOverflow: "ellipsis",
             }}
           >
-            {job.location.address} address
+            {job.location.city || "Ukjent by"}
           </h3>
         </div>
 
@@ -239,7 +279,9 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
               maxWidth: "250px",
             }}
           >
-            {job.duration.unit}
+            {job.duration.value
+              ? `${job.duration.value} ${job.duration.unit}`
+              : "Ikke angitt"}
           </h3>
         </div>
 

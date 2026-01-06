@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import ImageUpload from "../ImageUpload/ImageUpload";
-import { mainLink } from "../../api/mainURLs";
+import mainLink from "../../api/mainURLs";
 
 interface CreateJobFormProps {
   onSubmit: (jobData: any) => void;
@@ -41,9 +41,10 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch(`${mainLink}/api/categories`);
-        if (response.ok) {
-          const data = await response.json();
+        // const response = await fetch(`${mainLink}/api/categories`);
+        const response = await mainLink.get('/api/categories')
+        if (response.data) {
+          const data = await response.data;
           setAvailableCategories(data.map((cat: any) => cat.name || cat));
         }
       } catch (error) {
@@ -80,10 +81,8 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
       jobData.userId = userId;
     }
 
-    // Only include equipment if it's filled
-    if (equipment && equipment.trim() !== '') {
-      jobData.equipment = equipment;
-    }
+    // Equipment is now required
+    jobData.equipment = equipment;
 
     // Only include dates if they're filled
     if (fromDate) {
@@ -245,12 +244,13 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
 
       <div style={{ marginBottom: "24px" }}>
         <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-          Utstyr (valgfritt)
+          Utstyr
         </label>
         <select
           value={equipment}
           onChange={(e) => setEquipment(e.target.value)}
           size={1}
+          required
           style={{
             width: "calc(90% + 24px)",
             padding: "12px",

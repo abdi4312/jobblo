@@ -1,0 +1,189 @@
+const User = require("../models/User");
+const Chat = require("../models/ChatMessage");
+const mongoose = require("mongoose");
+
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+exports.createOrGetChat = async (req, res) => {
+  try {
+    const { providerId } = req.body;
+    let { id } = req.user;
+
+    if (id === providerId) {
+      return res
+        .status(400)
+        .json({ message: "You cannot create a chat with yourself." });
+    }
+
+    const provider = await User.findById(providerId).select("role name");
+    if (!provider) {
+      return res.status(404).json({ message: "Provider not found." });
+    }
+    if (provider.role !== "provider") {
+      return res
+        .status(403)
+        .json({ message: "Invalid provider: role mismatch." });
+    }
+    let chat = await Chat.findOne({
+      id,
+      providerId,
+    })
+      .populate("clientId", "name")
+      .populate("providerId", "name");
+
+    if (chat) {
+      return res.status(200).json(chat);
+    }
+
+    chat = await Chat.create({
+      clientId: id,
+      providerId,
+      messages: [],
+    });
+
+    res.status(201).json(chat);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getMyChats = async (req, res) => {
+  try {
+    const { id } = req.user;
+    const { role } = req.user;
+
+    const filter = role === "user" ? { clientId: id } : { providerId: id };
+
+    const chats = await Chat.find(filter)
+      .populate("clientId", "name role avatarUrl")
+      .populate("providerId", "name role avatarUrl")
+      .sort({ updatedAt: -1 });
+
+    res.json(chats);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getChatById = async (req, res) => {
+  try {
+    const { id } = req.user;
+    const { chatId } = req.params;
+
+    if (!isValidId(chatId))
+      return res.status(400).json({ error: "Invalid chat ID format" });
+
+    const chat = await Chat.findById(chatId)
+      .populate("clientId", "name avatarUrl")
+      .populate("providerId", "name avatarUrl")
+      .populate("messages.senderId", "name avatarUrl");
+
+    if (!chat) {
+      return res.status(404).json({ message: "Chat not found" });
+    }
+
+    // 🔒 Authorization check: user must be either client or provider of this chat
+    if (
+      chat.clientId._id.toString() !== id &&
+      chat.providerId._id.toString() !== id
+    ) {
+      return res
+        .status(403)
+        .json({ message: "Unauthorized: You are not part of this chat." });
+    }
+
+    res.json(chat);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.sendMessage = async (req, res) => {
+  try {
+    const { text } = req.body;
+    const { id } = req.user;
+    const { chatId } = req.params;
+
+    if (!isValidId(chatId))
+      return res.status(400).json({ error: "Invalid chat ID format" });
+
+    const chat = await Chat.findById(chatId);
+
+    if (!chat) {
+      return res.status(404).json({ message: "Chat not found" });
+    }
+
+    // 🔒 Authorization check: user must be either client or provider of this chat
+    if (
+      chat.clientId._id.toString() !== id &&
+      chat.providerId._id.toString() !== id
+    ) {
+      return res
+        .status(403)
+        .json({ message: "Unauthorized: You are not part of this chat." });
+    }
+
+    const message = {
+      senderId: id,
+      text,
+      createdAt: new Date(),
+    };
+
+    chat.messages.push(message);
+    chat.lastMessage = text;
+
+    await chat.save();
+
+    res.status(201).json(message);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * PATCH /api/chat/:id/delete-for-me
+ */
+
+exports.deleteForMe = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await Chat.findByIdAndUpdate(id, {
+      $addToSet: { deletedFor: req.userId },
+    });
+
+    res.json({ success: true, message: "Message hidden" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * DELETE /api/chat/:id
+ * Permanent delete — only for sender
+ */
+exports.deleteChat = async (req, res) => {
+  try {
+    if (!req.userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const { id } = req.params;
+
+    if (!isValidId(id))
+      return res.status(400).json({ error: "Invalid chat ID format" });
+
+    const chat = await Chat.findById(id);
+    if (!chat) return res.status(404).json({ error: "Chat not found" });
+
+    if (
+      chat.clientId.toString() !== req.userId &&
+      chat.providerId.toString() !== req.userId
+    )
+      return res.status(403).json({ error: "Not allowed" });
+
+    await Chat.findByIdAndDelete(id);
+
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

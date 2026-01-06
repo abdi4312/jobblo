@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import StjerneIcon from "../../assets/icons/stjerne.svg?react";
+import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 
 interface DisplayReview {
   id: string;
@@ -79,36 +80,7 @@ export default function AnmeldelserPage() {
 
   return (
     <div style={{ minHeight: "70vh", maxWidth: "800px", margin: "0 auto" }}>
-      {/* Header */}
-      <button
-        onClick={() => navigate(-1)}
-        style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          gap: "4px",
-          fontSize: "16px",
-          color: "var(--color-text)",
-          padding: "16px 20px",
-        }}
-      >
-        <span className="material-symbols-outlined">arrow_back</span>
-        Tilbake til Min Side
-      </button>
-
-      {/* Title */}
-      <h2
-        style={{
-          textAlign: "center",
-          margin: "20px 0",
-          fontSize: "24px",
-          fontWeight: "600"
-        }}
-      >
-        Anmeldelser
-      </h2>
+      <ProfileTitleWrapper title="Anmeldelser" buttonText="Tilbake til Min Side" />
 
       {/* Rating Summary */}
       {!loading && totalReviews > 0 && (

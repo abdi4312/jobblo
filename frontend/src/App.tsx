@@ -7,8 +7,16 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ScrollToTop } from "./components/shared/ScrollToTop.tsx";
 import { App as AntApp } from 'antd';
+import { useUserStore } from "./stores/userStore.ts";
+import { useEffect } from "react";
 
 export default function App() {
+const { fetchProfile,} = useUserStore((state) => state);
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
   return (
     <AntApp>
       <ScrollToTop />
