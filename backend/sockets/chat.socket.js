@@ -1,51 +1,44 @@
 const jwt = require("jsonwebtoken");
-const ChatController = require("../controllers/chatController");
+const cookie = require("cookie");
 
 module.exports = (io) => {
+  io.use((socket, next) => {
+    try {
+      const rawCookie = socket.handshake.headers.cookie;
+      if (!rawCookie) {
+        return next(new Error("No cookies found"));
+      }
+
+      // 🍪 parse cookies
+      const cookies = cookie.parse(rawCookie);
+      const token = cookies.token;
+
+      if (!token) {
+        return next(new Error("No token in cookie"));
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      socket.userId = String(decoded.id || decoded._id);
+
+      next();
+    } catch (err) {
+      next(new Error("Socket auth failed"));
+    }
+  });
+
   io.on("connection", (socket) => {
     console.log(`🔌 Socket connected: ${socket.id}`);
+    console.log(`✅ Auth user: ${socket.userId}`);
 
-    // =========================
-    // 🔐 USER AUTH
-    // =========================
-    socket.on("user:connect", ({ token }) => {
-      console.log("Received token:", token);
-      try {
-        if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET not set");
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log("Decoded JWT:", decoded);
-
-        // ✅ ID extract karne ka safe tariqa
-        const userId = decoded?.id || decoded?._id;
-        if (!userId) throw new Error("No User ID found in token");
-
-        // ✅ Always store as string safely
-        socket.userId = String(userId);
-
-        // ✅ Join personal room
-        socket.join(socket.userId);
-
-        socket.emit("user:authenticated", {
-          message: "Authentication successful",
-        });
-        console.log(`✅ User ${socket.userId} authenticated`);
-      } catch (err) {
-        console.log("❌ Token verification failed:", err.message);
-        socket.emit("error", { message: "Auth failed: " + err.message });
-      }
-    });
+    // join personal room
+    socket.join(socket.userId);
 
     // =========================
     // 💬 JOIN CHAT ROOM
     // =========================
     socket.on("join-chat", (chatId) => {
-      if (socket.userId) {
-        socket.join(`chat-${chatId}`);
-        console.log(`👥 User ${socket.userId} joined chat-${chatId}`);
-      } else {
-        console.log("❌ join-chat failed: userId not found");
-      }
+      socket.join(`chat-${chatId}`);
+      console.log(`👥 ${socket.userId} joined chat-${chatId}`);
     });
 
     // =========================
@@ -53,38 +46,28 @@ module.exports = (io) => {
     // =========================
     socket.on("send-message", async ({ chatId, text }) => {
       try {
-        if (!socket.userId)
-          return socket.emit("error", { message: "Not authenticated" });
-
         const Chat = require("../models/ChatMessage");
 
-        // 1. Chat dhundein
         const chat = await Chat.findById(chatId);
-        if (!chat) return socket.emit("error", { message: "Chat not found" });
+        if (!chat) return;
 
-        // 2. Naya message object banayein
         const newMessage = {
           senderId: socket.userId,
-          text: text,
+          text,
           createdAt: new Date(),
           seenBy: [socket.userId],
         };
 
-        // 3. Database mein push karein
         chat.messages.push(newMessage);
         chat.lastMessage = text;
         await chat.save();
 
-        // 4. Room mein emit karein
         io.to(`chat-${chatId}`).emit("receive-message", {
           chatId,
           message: newMessage,
         });
-
-        console.log(`📩 Message sent in chat-${chatId} by ${socket.userId}`);
       } catch (err) {
-        console.error("Socket Send Error:", err.message);
-        socket.emit("error", { message: "Message failed to send" });
+        console.error("Send message error:", err.message);
       }
     });
 
@@ -92,47 +75,31 @@ module.exports = (io) => {
     // 👁️ MARK SEEN
     // =========================
     socket.on("mark-seen", async ({ chatId }) => {
-      try {
-        if (!socket.userId) return;
+      const Chat = require("../models/ChatMessage");
+      const chat = await Chat.findById(chatId);
+      if (!chat) return;
 
-        const Chat = require("../models/ChatMessage");
-        const chat = await Chat.findById(chatId);
-        if (!chat) return;
+      chat.messages.forEach((m) => {
+        if (!m.seenBy.includes(socket.userId)) {
+          m.seenBy.push(socket.userId);
+        }
+      });
 
-        chat.messages.forEach((msg) => {
-          if (!msg.seenBy?.includes(socket.userId)) {
-            if (!msg.seenBy) msg.seenBy = [];
-            msg.seenBy.push(socket.userId);
-          }
-        });
+      await chat.save();
 
-        await chat.save();
-
-        io.to(`chat-${chatId}`).emit("seen-update", {
-          chatId,
-          userId: socket.userId,
-        });
-      } catch (err) {
-        console.error("Mark seen error:", err.message);
-      }
+      io.to(`chat-${chatId}`).emit("seen-update", {
+        chatId,
+        userId: socket.userId,
+      });
     });
 
     // =========================
-    // 🚪 LEAVE CHAT
+    // ❌ DISCONNECT
     // =========================
-    socket.on("leave-chat", (chatId) => {
-      if (socket.userId) {
-        socket.leave(`chat-${chatId}`);
-        console.log(`🚪 User ${socket.userId} left chat-${chatId}`);
-      }
-    });
-
-    // =========================
-    // ❌ DISCONNECT (Single handler only!)
-    // =========================
-    socket.on("disconnect", () => {
-      const displayId = socket.userId ? String(socket.userId) : "Anonymous";
-      console.log(`❌ Socket disconnected: ${socket.id} (User: ${displayId})`);
+    socket.on("disconnect", (reason) => {
+      console.log(
+        `❌ Socket disconnected: ${socket.id} | user=${socket.userId} | ${reason}`,
+      );
     });
   });
 };
