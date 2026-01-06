@@ -4,6 +4,8 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
+const chatSocket = require("./sockets/chat.socket");
+
 require('dotenv').config({ path: __dirname + '/.env' });
 
 const connectDB = require('./db');
@@ -30,65 +32,66 @@ const io = new Server(server, {
 
 // Make io accessible to routes
 app.set('io', io);
+chatSocket(io);
 
-io.on('connection', (socket) => {
-  console.log(`Socket.io connected: ${socket.id}`);
+// io.on('connection', (socket) => {
+//   console.log(`Socket.io connected: ${socket.id}`);
 
   // Authenticate user with JWT
-  socket.on('user:connect', (data) => {
-    const { token, userId } = data;
+  // socket.on('user:connect', (data) => {
+  //   const { token, userId } = data;
 
     // Verify JWT token
-    if (!process.env.JWT_SECRET) {
-      socket.emit('error', { message: 'Server not configured for authentication' });
-      socket.disconnect();
-      return;
-    }
+    // if (!process.env.JWT_SECRET) {
+    //   socket.emit('error', { message: 'Server not configured for authentication' });
+    //   socket.disconnect();
+    //   return;
+    // }
 
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // try {
+      // const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
       // Verify token userId matches claimed userId (token has userId field)
-      if (decoded.userId !== userId) {
-        socket.emit('error', { message: 'Invalid credentials' });
-        socket.disconnect();
-        return;
-      }
+      // if (decoded.userId !== userId) {
+      //   socket.emit('error', { message: 'Invalid credentials' });
+      //   socket.disconnect();
+      //   return;
+      // }
 
       // Valid authentication - join user room
-      socket.join(userId.toString());
-      socket.userId = userId; // Store userId on socket for later use
-      console.log(`✅ User ${userId} authenticated on socket ${socket.id}`);
+  //     socket.join(userId.toString());
+  //     socket.userId = userId; // Store userId on socket for later use
+  //     console.log(`✅ User ${userId} authenticated on socket ${socket.id}`);
 
-      // Emit success event
-      socket.emit('user:authenticated', { message: 'Authentication successful' });
-    } catch (err) {
-      socket.emit('error', { message: 'Authentication failed: ' + err.message });
-      console.error(`❌ Token verification failed:`, err.message);
-      socket.disconnect();
-    }
-  });
+  //     // Emit success event
+  //     socket.emit('user:authenticated', { message: 'Authentication successful' });
+  //   } catch (err) {
+  //     socket.emit('error', { message: 'Authentication failed: ' + err.message });
+  //     console.error(`❌ Token verification failed:`, err.message);
+  //     socket.disconnect();
+  //   }
+  // });
 
   // Handle joining a chat room
-  socket.on('join-chat', (orderId) => {
-    if (!socket.userId) {
-      socket.emit('error', { message: 'User not authenticated' });
-      return;
-    }
-    socket.join(`chat-${orderId}`);
-    console.log(`User ${socket.userId} joined chat room ${orderId}`);
-  });
+  // socket.on('join-chat', (orderId) => {
+  //   if (!socket.userId) {
+  //     socket.emit('error', { message: 'User not authenticated' });
+  //     return;
+  //   }
+  //   socket.join(`chat-${orderId}`);
+  //   console.log(`User ${socket.userId} joined chat room ${orderId}`);
+  // });
 
   // Handle leaving a chat room
-  socket.on('leave-chat', (orderId) => {
-    socket.leave(`chat-${orderId}`);
-    console.log(`User ${socket.userId} left chat room ${orderId}`);
-  });
+  // socket.on('leave-chat', (orderId) => {
+  //   socket.leave(`chat-${orderId}`);
+  //   console.log(`User ${socket.userId} left chat room ${orderId}`);
+  // });
 
-  socket.on('disconnect', () => {
-    console.log(`❌ Socket.io disconnected: ${socket.id}`);
-  });
-});
+//   socket.on('disconnect', () => {
+//     console.log(`❌ Socket.io disconnected: ${socket.id}`);
+//   });
+// });
 
 app.use(express.json());
 
