@@ -1,23 +1,29 @@
 import { io, Socket } from "socket.io-client";
-import { mainLink } from "../api/mainURLs";
+import mainLink from "../api/mainURLs";
 
 let socket: Socket | null = null;
 
-export const initSocket = (token?: string) => {
+export const initSocket = () => {
   if (!socket) {
-    socket = io(mainLink, {
-      auth: token ? { token } : undefined,
+    socket = io(mainLink.defaults.baseURL, {
       transports: ["websocket"],
     });
+
+    socket.on("connect", () => {
+      console.log("✅ Socket connected:", socket?.id);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("❌ Socket disconnected:", reason);
+    });
   }
+
   return socket;
 };
 
-export const getSocket = () => socket;
-
 export const disconnectSocket = () => {
-  if (socket) {
+  if (socket && socket.connected) {
     socket.disconnect();
-    socket = null;
   }
+  socket = null;
 };

@@ -52,35 +52,37 @@ const JobListingDetailPage = () => {
   const isOwnJob = job?.userId?._id === currentUser?._id;
 
   const getStatusConfig = (status: string) => {
-    const userToken = useUserStore((state) => state.tokens);
     const normalizedStatus = status?.toLowerCase();
-    if (normalizedStatus === 'open' || normalizedStatus === 'åpen') {
+    if (normalizedStatus === "open" || normalizedStatus === "åpen") {
       return {
-        text: 'Åpen',
-        bgColor: '#E8F5E9',
-        textColor: '#2E7D32',
-        icon: '✓'
+        text: "Åpen",
+        bgColor: "#E8F5E9",
+        textColor: "#2E7D32",
+        icon: "✓",
       };
-    } else if (normalizedStatus === 'closed' || normalizedStatus === 'lukket') {
+    } else if (normalizedStatus === "closed" || normalizedStatus === "lukket") {
       return {
-        text: 'Lukket',
-        bgColor: '#FFEBEE',
-        textColor: '#C62828',
-        icon: '✕'
+        text: "Lukket",
+        bgColor: "#FFEBEE",
+        textColor: "#C62828",
+        icon: "✕",
       };
-    } else if (normalizedStatus === 'in progress' || normalizedStatus === 'pågår') {
+    } else if (
+      normalizedStatus === "in progress" ||
+      normalizedStatus === "pågår"
+    ) {
       return {
-        text: 'Pågår',
-        bgColor: '#FFF3E0',
-        textColor: '#E65100',
-        icon: '⟳'
+        text: "Pågår",
+        bgColor: "#FFF3E0",
+        textColor: "#E65100",
+        icon: "⟳",
       };
     } else {
       return {
-        text: status || 'Ukjent',
-        bgColor: '#F5F5F5',
-        textColor: '#616161',
-        icon: '?'
+        text: status || "Ukjent",
+        bgColor: "#F5F5F5",
+        textColor: "#616161",
+        icon: "?",
       };
     }
   };
@@ -94,17 +96,17 @@ const JobListingDetailPage = () => {
 
       try {
         // const response = await fetch(`${mainLink}/api/services/${id}`);
-        const response = await mainLink.get(`/api/services/${id}`)
+        const response = await mainLink.get(`/api/services/${id}`);
         console.log(response);
-        
+
         if (response.data) {
           const data = await response.data;
           setJob(data);
         } else {
-          console.error('Failed to fetch job');
+          console.error("Failed to fetch job");
         }
       } catch (err) {
-        console.error('Error fetching job:', err);
+        console.error("Error fetching job:", err);
       } finally {
         setLoading(false);
       }
@@ -119,10 +121,8 @@ const JobListingDetailPage = () => {
       try {
         const res = await getFavorites();
         console.log("res", res);
-        
-        const favorited = res.data.some(
-          (fav: any) => fav.service._id === id,
-        );
+
+        const favorited = res.data.some((fav: any) => fav.service._id === id);
         setIsFavorited(favorited);
       } catch (err) {
         console.error("Error checking favorite status", err);
@@ -143,10 +143,10 @@ const JobListingDetailPage = () => {
 
     try {
       if (isFavorited) {
-        await deleteFavorites(id,);
+        await deleteFavorites(id);
         toast.success("Fjernet fra favoritter");
       } else {
-        await setFavorites(id,);
+        await setFavorites(id);
         toast.success("Lagt til i favoritter");
       }
       setIsFavorited(!isFavorited);
@@ -163,72 +163,28 @@ const JobListingDetailPage = () => {
       return;
     }
     try {
-      if (!userToken?.accessToken) {
-        setError("Du må være logget inn for å se dine annonser");
-        setLoading(false);
-        return;
-      }
-      const res = await fetch(`${mainLink}/api/chats/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${userToken.accessToken}`,
-        },
-        body: JSON.stringify({ providerId }),
+      const response = await mainLink.post("/api/chats/create", {
+        providerId,
       });
-
-      if (!res.ok) {
-        throw new Error(`Failed to create/get chat: ${res.status}`);
+      if (!response.data) {
+        throw new Error(`Failed to create/get chat: ${response.status}`);
       }
       navigate(`/messages`);
     } catch (err) {
       console.error("Error creating/getting chat:", err);
     }
-    
+
     // Navigate to messages page - you can pass job/user info via state if needed
-    navigate("/messages", { 
-      // state: { 
-      //   recipientId: job?.userId?._id,
-      //   recipientName: job?.userId?.name,
-      //   jobId: job?._id,
-      //   jobTitle: job?.title
-      // } 
-    });
+    navigate("/messages", {});
   };
 
   if (loading) {
     return (
       <div className={styles.container}>
-        <div style={{ padding: '40px', textAlign: 'center' }}>Laster...</div>
+        <div style={{ padding: "40px", textAlign: "center" }}>Laster...</div>
       </div>
     );
   }
-
-  const handleSendMessagess = async () => {
-    if (!userToken?.accessToken) {
-      setError("Du må være logget inn for å se dine annonser");
-      setLoading(false);
-      return;
-    }
-    try {
-      const res = await fetch(`${mainLink}/api/chats/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${userToken.accessToken}`,
-        },
-        body: JSON.stringify({ providerId }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Failed to create/get chat: ${res.status}`);
-      }
-      navigate(`/messages`);
-    } catch (err) {
-      console.error("Error creating/getting chat:", err);
-    }
-  };
-
   return (
     <div className={styles.container}>
       <ProfileTitleWrapper title="Tilbake" buttonText="Tilbake" />
@@ -236,59 +192,59 @@ const JobListingDetailPage = () => {
       <JobImageCarousel images={job?.images} />
 
       {/* Action buttons */}
-      <div style={{
-        display: 'flex',
-        gap: '12px',
-        margin: '20px',
-        marginBottom: '24px'
-      }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "12px",
+          margin: "20px",
+          marginBottom: "24px",
+        }}
+      >
         <button
           onClick={handleFavoriteClick}
           style={{
             flex: 1,
-            backgroundColor: isFavorited ? '#ff4d4f' : 'var(--color-primary)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '12px',
-            fontSize: '16px',
-            fontWeight: '500',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px'
+            backgroundColor: isFavorited ? "#ff4d4f" : "var(--color-primary)",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            padding: "12px",
+            fontSize: "16px",
+            fontWeight: "500",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
           }}
         >
           <span className="material-symbols-outlined">
-            {isFavorited ? 'favorite' : 'favorite_border'}
+            {isFavorited ? "favorite" : "favorite_border"}
           </span>
-          {isFavorited ? 'Fjern favoritt' : 'Legg til favoritt'}
+          {isFavorited ? "Fjern favoritt" : "Legg til favoritt"}
         </button>
         <button
           onClick={() => handleSendMessage(job?.userId._id)}
           disabled={isOwnJob}
           style={{
             flex: 1,
-            backgroundColor: isOwnJob ? '#cccccc' : 'var(--color-primary)',
-            color: isOwnJob ? '#666666' : 'white',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '12px',
-            fontSize: '16px',
-            fontWeight: '500',
-            cursor: isOwnJob ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            opacity: isOwnJob ? 0.6 : 1
+            backgroundColor: isOwnJob ? "#cccccc" : "var(--color-primary)",
+            color: isOwnJob ? "#666666" : "white",
+            border: "none",
+            borderRadius: "8px",
+            padding: "12px",
+            fontSize: "16px",
+            fontWeight: "500",
+            cursor: isOwnJob ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            opacity: isOwnJob ? 0.6 : 1,
           }}
         >
-          <span className="material-symbols-outlined">
-            send
-          </span>
-          {isOwnJob ? 'Din egen annonse' : 'Send melding'}
+          <span className="material-symbols-outlined">send</span>
+          {isOwnJob ? "Din egen annonse" : "Send melding"}
         </button>
       </div>
 

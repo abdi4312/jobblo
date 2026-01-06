@@ -2,11 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { initSocket } from "../../socket/socket";
 
-import axios from "axios";
 import styles from "./ConversationView.module.css";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 import { useUserStore } from "../../stores/userStore";
-import { mainLink } from "../../api/mainURLs";
+import mainLink from "../../api/mainURLs";
 
 interface Message {
   _id: string;
@@ -36,30 +35,28 @@ export function ConversationView() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
-  const { tokens } = useUserStore();
   const jobTitle = "Snømåking - Oslo sentrum"; // Dummy job title
- const { user } = useUserStore();
- const userId = user?._id
- 
-  const token = tokens?.accessToken;
+  const { user } = useUserStore();
+  const userId = user?._id;
 
   useEffect(() => {
-    if (!conversationId || !token) return;
+    if (!conversationId) return;
 
-    axios
-      .get(`${mainLink}/api/chats/${conversationId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setMessages(res.data.messages ?? []))
-      .catch(console.error);
+    const fetchMessages = async () => {
+      try {
+        const res = await mainLink.get(`/api/chats/${conversationId}`);
+        setMessages(res.data.messages ?? []);
+      } catch (err) {
+        console.error("Fetch messages error:", err);
+      }
+    };
 
-    if (!token) return;
+    fetchMessages();
 
-    const socket = initSocket(token);
+    // ========== SOCKET ==========
+    const socket = initSocket();
+    if (!socket) return;
 
-    console.log(token);
-
-    socket.emit("user:connect", { token });
     socket.emit("join-chat", conversationId);
 
     const onReceiveMessage = (data: ReceiveMessagePayload) => {
@@ -74,7 +71,7 @@ export function ConversationView() {
       socket.off("receive-message", onReceiveMessage);
       socket.emit("leave-chat", conversationId);
     };
-  }, [conversationId, token]);
+  }, [conversationId]);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -113,13 +110,16 @@ export function ConversationView() {
   };
 
   const handleSend = () => {
-    const socket = initSocket(token);
     if (!newMessage.trim()) return;
-    const payload: SendMessagePayload = {
+
+    const socket = initSocket();
+    if (!socket) return;
+
+    socket.emit("send-message", {
       chatId: conversationId,
       text: newMessage.trim(),
-    };
-    socket.emit("send-message", payload);
+    });
+
     setNewMessage("");
   };
 
@@ -150,9 +150,9 @@ export function ConversationView() {
                 <div className={styles.dateLabel}>
                   {formatDate(msgs[0].createdAt)}
                 </div>
-                {msgs.map((msg) => (
+                {msgs.map((msg, index) => (
                   <div
-                    key={msg._id}
+                    key={msg._id || index}
                     className={`${styles.messageWrapper} ${
                       msg.senderId._id === userId
                         ? styles.sent

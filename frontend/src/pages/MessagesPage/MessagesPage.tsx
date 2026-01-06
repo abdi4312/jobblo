@@ -6,7 +6,7 @@ import { initSocket, disconnectSocket } from "../../socket/socket";
 import { useUserStore } from "../../stores/userStore";
 import styles from "./MessagesPage.module.css";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
-import { mainLink } from "../../api/mainURLs";
+import mainLink from "../../api/mainURLs";
 import axios from "axios";
 import type { User } from "../../types/userTypes.ts";
 
@@ -108,47 +108,32 @@ const DUMMY_CONVERSATIONS: Conversation[] = [
 export function MessagesPage() {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<FilterType>("Alle");
-  const userToken = useUserStore((state) => state.tokens);
   const [chats, setChats] = useState<Chat[]>([]);
-  const token = userToken?.accessToken;
   const { user } = useUserStore();
   const userRole = user?.role;
 
-  // const [socket, setSocket] = useState<Socket | null>(null);
+  useEffect(() => {
+    const fetchChats = async () => {
+      try {
+        const res = await mainLink.get(`/api/chats/get`);
 
-  // useEffect(() => {
-  //   const s = io(mainLink);
-  //   setSocket(s);
-  //   return () => s.disconnect();
-  // }, []);
+        setChats(Array.isArray(res.data) ? res.data : res.data.chats || []);
+      } catch (error) {
+        console.error("Fetch chats error:", error);
+      }
+    };
+
+    fetchChats();
+  }, []);
 
   useEffect(() => {
-    if (token) {
-      axios
-        .get(`${mainLink}/api/chats/get`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((res) =>
-          setChats(Array.isArray(res.data) ? res.data : res.data.chats || []),
-        )
-        .catch((err) => console.error(err));
-    }
-  }, [token]);
-
-  useEffect(() => {
-    if (!token) return;
-
-    const socket = initSocket(token);
-
-    console.log(token);
-
-    socket.emit("user:connect", { token });
+    const socket = initSocket();
 
     const handleReceiveMessage = (data: MessageData) => {
       setChats((prev) =>
         prev.map((c) =>
-          c._id === data.chatId ? { ...c, lastMessage: data.message.text } : c,
-        ),
+          c._id === data.chatId ? { ...c, lastMessage: data.message.text } : c
+        )
       );
     };
 
@@ -158,7 +143,7 @@ export function MessagesPage() {
       socket.off("receive-message", handleReceiveMessage);
       disconnectSocket();
     };
-  }, [token]);
+  }, []);
 
   const filterConversations = () => {
     if (activeFilter === "Alle") return DUMMY_CONVERSATIONS;
@@ -203,7 +188,7 @@ export function MessagesPage() {
               >
                 {filter}
               </button>
-            ),
+            )
           )}
         </div>
 
