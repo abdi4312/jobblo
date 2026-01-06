@@ -27,6 +27,7 @@ const feedRouter = require('./routes/feed');
 const filterRouter = require('./routes/filter');
 const heroSelectRouter = require('./routes/Herojs');
 const chatRouter = require('./routes/chat');
+const couponRouter = require('./routes/coupon');
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
@@ -86,6 +87,7 @@ app.use('/api/feed', feedRouter);
 app.use('/api/filter', filterRouter);
 app.use('/api/hero', heroSelectRouter);
 app.use("/api/chats", chatRouter);
+app.use('/api/coupons', couponRouter);
 
 
 // Error handler
