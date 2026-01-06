@@ -25,6 +25,7 @@ const reviewsRouter = require('./routes/review');
 const categoryRouter = require('./routes/category');
 const feedRouter = require('./routes/feed');
 const filterRouter = require('./routes/filter');
+const chatRouter = require('./routes/chat');
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
@@ -82,6 +83,8 @@ app.use('/api', reviewsRouter);
 app.use('/api/categories', categoryRouter);
 app.use('/api/feed', feedRouter);
 app.use('/api/filter', filterRouter);
+app.use("/api/chats", chatRouter);
+
 
 // Error handler
 app.use(function(req, res, next) {
