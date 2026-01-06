@@ -14,7 +14,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 
-import { mainLink } from "../../../api/mainURLs";
+import  mainLink  from "../../../api/mainURLs";
 import { useEffect, useState, useCallback } from "react";
 
 // Hero item type
@@ -44,7 +44,7 @@ export function Hero() {
   const getHero = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await axios.get<HeroItem[]>(`${mainLink}/api/hero`);
+      const res = await mainLink.get<HeroItem[]>(`/api/hero`);
       if (res.data && res.data.length > 0) {
         setHero(res.data);
       }
