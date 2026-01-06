@@ -7,7 +7,7 @@ import JobDetails from '../../components/job/JobDetails/JobDetails';
 import JobDescription from '../../components/job/JobDescription/JobDescription';
 import JobLocation from '../../components/job/JobLocation/JobLocation';
 import RelatedJobs from '../../components/job/RelatedJobs/RelatedJobs';
-import { mainLink } from '../../api/mainURLs';
+import  mainLink  from '../../api/mainURLs';
 import { getFavorites, setFavorites, deleteFavorites } from '../../api/favoriteAPI';
 import { useUserStore } from '../../stores/userStore';
 import { toast } from 'react-toastify';
@@ -46,7 +46,6 @@ const JobListingDetailPage = () => {
   const [job, setJob] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
-  const userToken = useUserStore((state) => state.tokens);
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const currentUser = useUserStore((state) => state.user);
 
@@ -94,10 +93,12 @@ const JobListingDetailPage = () => {
       }
 
       try {
-        const response = await fetch(`${mainLink}/api/services/${id}`);
-
-        if (response.ok) {
-          const data = await response.json();
+        // const response = await fetch(`${mainLink}/api/services/${id}`);
+        const response = await mainLink.get(`/api/services/${id}`)
+        console.log(response);
+        
+        if (response.data) {
+          const data = await response.data;
           setJob(data);
         } else {
           console.error('Failed to fetch job');
@@ -114,9 +115,11 @@ const JobListingDetailPage = () => {
 
   useEffect(() => {
     const checkFavoriteStatus = async () => {
-      if (!userToken || !id) return;
+      if (!id) return;
       try {
-        const res = await getFavorites(userToken);
+        const res = await getFavorites();
+        console.log("res", res);
+        
         const favorited = res.data.some(
           (fav: any) => fav.service._id === id,
         );
@@ -127,7 +130,7 @@ const JobListingDetailPage = () => {
     };
 
     void checkFavoriteStatus();
-  }, [userToken, id]);
+  }, [id]);
 
   const handleFavoriteClick = async () => {
     if (!isAuth) {
@@ -140,10 +143,10 @@ const JobListingDetailPage = () => {
 
     try {
       if (isFavorited) {
-        await deleteFavorites(id, userToken);
+        await deleteFavorites(id,);
         toast.success("Fjernet fra favoritter");
       } else {
-        await setFavorites(id, userToken);
+        await setFavorites(id,);
         toast.success("Lagt til i favoritter");
       }
       setIsFavorited(!isFavorited);

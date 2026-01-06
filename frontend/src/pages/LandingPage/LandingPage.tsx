@@ -17,7 +17,7 @@ export default function LandingPage() {
         <Info />
         <Guide />
         <Categories />
-        <Subscription />
+        {/* <Subscription /> */}
         <Testimonials />
       </div>
     </>

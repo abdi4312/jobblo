@@ -9,16 +9,15 @@ import { ProfileTitleWrapper } from "../../components/layout/body/profile/Profil
 export function FavoritesPage() {
   const [favorites, setFavorites] = useState<FavoritesResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const userToken = useUserStore((state) => state.tokens);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchFavorites();
-  }, [userToken]);
+  }, []);
 
   const fetchFavorites = async () => {
     try {
-      const data = await getFavorites(userToken);
+      const data = await getFavorites();
       setFavorites(data);
     } catch (err) {
       console.error("Failed to fetch favorites", err);
@@ -30,7 +29,7 @@ export function FavoritesPage() {
   const handleRemoveFavorite = async (serviceId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await deleteFavorites(serviceId, userToken);
+      await deleteFavorites(serviceId,);
       toast.success("Fjernet fra favoritter");
       fetchFavorites(); // Refresh the list
     } catch (err) {

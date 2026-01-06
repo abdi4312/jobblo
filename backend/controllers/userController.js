@@ -28,6 +28,12 @@ exports.createUser = async (req, res) => {
             avatarUrl,
             bio,
             role,
+            birthDate,
+            gender,
+            address,
+            postNumber,
+            postSted,
+            country,
             subscription,
             verified,
             lastLogin,
@@ -47,6 +53,12 @@ exports.createUser = async (req, res) => {
             avatarUrl,
             bio,
             role,
+            birthDate,
+            gender,
+            address,
+            postNumber,
+            postSted,
+            country,
             subscription,
             verified,
             lastLogin,
@@ -102,12 +114,31 @@ exports.updateUser = async (req, res) => {
           return res.status(403).json({ error: "Not authorized" });
         }
 
-        // Prevent normal user from changing 'role'
-        if (req.body.role && req.user.role !== "admin") {
-          return res.status(403).json({ error: "Only admin can change role" });
+         // Allowed fields for normal user
+        const allowedUpdates = ["name", "email", "phone", "lastName", "bio", "birthDate","gender",
+            "address","postNumber","postSted","country"];
+
+        if (req.user.role === "admin") {
+            allowedUpdates.push("role");
         }
 
-        const user = await User.findByIdAndUpdate(id, req.body, { new: true });
+        const updates = {};
+         for (const key of allowedUpdates) {
+           if (req.body[key] !== undefined) {
+            updates[key] = req.body[key];
+        }
+         }
+
+         if (updates.length === 0) {
+            return res.status(400).json({ error: "No fields provided for update" });
+        }
+        // Prevent normal user from changing 'role'
+            // ❌ If nothing to update, return early
+        if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No valid fields provided for update" });
+        }
+
+        const user = await User.findByIdAndUpdate(id, updates, { new: true });
 
         if (!user) return res.status(404).json({ error: 'User not found' });
         res.json(user);
@@ -117,106 +148,106 @@ exports.updateUser = async (req, res) => {
 };
 
 exports.deleteUser = async (req, res) => {
-    try {
-        const { id } = req.params;
-        if (!isValidId(id)) {
-            return res.status(400).json({ error: "Invalid user ID format" });
-        }
+  try {
+    const { id } = req.params;
+    if (!isValidId(id)) {
+      return res.status(400).json({ error: "Invalid user ID format" });
+    }
 
-        // Authorization check
-        if (!authorizeUser(req, id)) {
-          return res.status(403).json({ error: "Not authorized" });
-        }
-        
-        const user = await User.findByIdAndDelete(id);
+    // Authorization check
+    if (!authorizeUser(req, id)) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    const user = await User.findByIdAndDelete(id);
 
         if (!user) return res.status(404).json({ error: 'User not found' });
         res.json({ message: 'User deleted' });
-    } catch (err) {
+  } catch (err) {
         res.status(500).json({ error: 'Server error' });
-    }
+  }
 };
 
 exports.getUserServices = async (req, res) => {
-    try {
-        const { id } = req.params;
-        if (!isValidId(id)) {
-            return res.status(400).json({ error: "Invalid user ID format" });
-        }
-
-        // Authorization check
-        if (!authorizeUser(req, id)) {
-          return res.status(403).json({ error: "Not authorized" });
-        }
-        const services = await Service.find({ userId: id });
-        res.json(services);
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+  try {
+    const { id } = req.params;
+    if (!isValidId(id)) {
+      return res.status(400).json({ error: "Invalid user ID format" });
     }
+
+    // Authorization check
+    if (!authorizeUser(req, id)) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const services = await Service.find({ userId: id });
+    res.json(services);
+  } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+  }
 };
 
 // List all users
 exports.getAllUsers = async (req, res) => {
-    try {
+  try {
         const users = await User.find().select('-password');
-        res.json(users);
-    } catch (err) {
+    res.json(users);
+  } catch (err) {
         res.status(500).json({ error: 'Server error' });
-    }
+  }
 };
 
 // Follow/Unfollow a user
 exports.followUser = async (req, res) => {
-    try {
-        const currentUserId = req.userId;
+  try {
+    const currentUserId = req.userId;
         const targetUserId = req.params.id
-        
-        // Validate IDs
-        if (!isValidId(currentUserId) || !isValidId(targetUserId)) {
-            return res.status(400).json({ error: "Invalid user ID format" });
-        }
-        
-        // Can't follow yourself
-        if (currentUserId === targetUserId) {
-            return res.status(400).json({ error: "You cannot follow yourself" });
-        }
-        
-        // Fetch users
-        const [currentUser, targetUser] = await Promise.all([
-            User.findById(currentUserId),
+
+    // Validate IDs
+    if (!isValidId(currentUserId) || !isValidId(targetUserId)) {
+      return res.status(400).json({ error: "Invalid user ID format" });
+    }
+
+    // Can't follow yourself
+    if (currentUserId === targetUserId) {
+      return res.status(400).json({ error: "You cannot follow yourself" });
+    }
+
+    // Fetch users
+    const [currentUser, targetUser] = await Promise.all([
+      User.findById(currentUserId),
             User.findById(targetUserId)
         ])
-        
-        if (!currentUser || !targetUser) {
-            return res.status(404).json({ error: "User not found" });
-        }
-        
-        const isFollowing = currentUser.following.includes(targetUserId);
 
-        if (isFollowing) {
-            // Unfollow
-            await User.findByIdAndUpdate(currentUserId, {
-                $pull: { following: targetUserId }
-            });
-
-            await User.findByIdAndUpdate(targetUserId, {
-                $pull: { followers: currentUserId }
-            });
-
-            return res.json({ message: "Unfollowed", isFollowing: false });
-        } else {
-            // Follow
-            await User.findByIdAndUpdate(currentUserId, {
-                $addToSet: { following: targetUserId }
-            });
-
-            await User.findByIdAndUpdate(targetUserId, {
-                $addToSet: { followers: currentUserId }
-            });
-
-            return res.json({ message: "Followed", isFollowing: true });
-        }
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    if (!currentUser || !targetUser) {
+      return res.status(404).json({ error: "User not found" });
     }
+
+    const isFollowing = currentUser.following.includes(targetUserId);
+
+    if (isFollowing) {
+      // Unfollow
+      await User.findByIdAndUpdate(currentUserId, {
+                $pull: { following: targetUserId }
+      });
+
+      await User.findByIdAndUpdate(targetUserId, {
+                $pull: { followers: currentUserId }
+      });
+
+      return res.json({ message: "Unfollowed", isFollowing: false });
+    } else {
+      // Follow
+      await User.findByIdAndUpdate(currentUserId, {
+                $addToSet: { following: targetUserId }
+      });
+
+      await User.findByIdAndUpdate(targetUserId, {
+                $addToSet: { followers: currentUserId }
+      });
+
+      return res.json({ message: "Followed", isFollowing: true });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };

@@ -8,17 +8,18 @@ export type Jobs = {
     type: string;
     coordinates: number[];
     address: string;
+    city: string;
   };
   duration: {
     value?: number;
-    unit: 'minutes' | 'hours' | 'days';
+    unit: "minutes" | "hours" | "days";
   };
   categories: string[];
   images: string[];
   urgent: boolean;
-  status: 'open' | 'closed';
+  status: "open" | "closed";
   tags: string[];
-  equipment: 'utstyrfri' | 'delvis utstyr' | 'trengs utstyr';
+  equipment: "utstyrfri" | "delvis utstyr" | "trengs utstyr";
   createdAt: string;
   updatedAt: string;
   timeEntries?: {

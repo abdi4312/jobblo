@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { mainLink } from "../../../api/mainURLs";
+import mainLink from "../../../api/mainURLs";
 import type { Jobs } from '../../../types/Jobs';
 import Utforsk from './tabs/Utforsk';
 import { Button, Dropdown } from 'antd';
@@ -13,190 +13,239 @@ interface JobsContainerProps {
 
 export default function JobsContainer({ selectedCategories = [], searchQuery = "" }: JobsContainerProps) {
     const [activeTab, setActiveTab] = useState('utforsk');
-    const [jobs, setJobs] = useState<Jobs[]>([]);
-    const [nearbyJobs, setNearbyJobs] = useState<Jobs[]>([]);
-    const [loadingNearby, setLoadingNearby] = useState(false);
-    const [loadingJobs, setLoadingJobs] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [gridColumns, setGridColumns] = useState(2); // Default to 2 columns
+  const [jobs, setJobs] = useState<Jobs[]>([]);
+  const [nearbyJobs, setNearbyJobs] = useState<Jobs[]>([]);
+  const [loadingNearby, setLoadingNearby] = useState(false);
+  const [loadingJobs, setLoadingJobs] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [gridColumns, setGridColumns] = useState(2); // Default to 2 columns
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
-    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-    const [nearbyJobsToShow, setNearbyJobsToShow] = useState(16);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [totalJobs, setTotalJobs] = useState(0);
-    const limit = 16;
-    
-    const { user, tokens } = useUserStore();
-    const userId = user?._id;
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [nearbyJobsToShow, setNearbyJobsToShow] = useState(16);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalJobs, setTotalJobs] = useState(0);
+  const limit = 16;
 
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth <= 768);
-        };
+  const { user, tokens } = useUserStore();
+  const userId = user?._id;
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
 
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
-    }, []);
+  }, []);
 
-    const handleLayoutChange = (columns: number) => {
-        setGridColumns(columns);
-    };
+  const handleLayoutChange = (columns: number) => {
+    setGridColumns(columns);
+  };
 
-    const items = [
+  const items = [
         { key: '1', label: '1 Card per Row', onClick: () => handleLayoutChange(1) },
         { key: '2', label: '2 Cards per Row', onClick: () => handleLayoutChange(2) },
         { key: '4', label: '4 Cards per Row', onClick: () => handleLayoutChange(4), disabled: isMobile }
-    ];
-    
-    // Fetch jobs from API
-    useEffect(() => {
-      async function fetchJobs() {
-        setLoadingJobs(true);
-        setCurrentPage(1); // Reset to page 1 when filters change
-        try {
-          const res = await fetch(`${mainLink}/api/services`);
-          const data = await res.json();          
-          // Ensure data is an array before setting it
-          if (Array.isArray(data)) {
-            setJobs(data);
-          } else if (data && Array.isArray(data.data)) {
-            setJobs(data.data);
-          } else {
-            console.error("API response is not an array:", data);
-            setJobs([]);
-          }
-        } catch (err) {
-          console.error("Failed to fetch jobs:", err);
-          setJobs([]);
-        } finally {
-          setLoadingJobs(false);
-        }
-      }
-    
-      fetchJobs();
-    }, [selectedCategories, searchQuery]);
+  ];
 
-    // Load more jobs (next page)
-    const loadMoreJobs = async () => {
-      if (currentPage >= totalPages || loadingMore) return;
-      
-      setLoadingMore(true);
+  // Fetch jobs from API
+  useEffect(() => {
+    async function fetchJobs() {
+      setLoadingJobs(true);
+      setCurrentPage(1);
+
       try {
-        const nextPage = currentPage + 1;
-        let url = `${mainLink}/api/services`;
-        const params = new URLSearchParams();
-        
-        params.append('page', String(nextPage));
-        params.append('limit', String(limit));
-        
-        if (selectedCategories.length > 0) {
-          params.append('category', selectedCategories.join(','));
-        }
-        if (searchQuery) {
-          params.append('search', searchQuery);
-        }
-        
-        url += `?${params.toString()}`;
-        
-        console.log('Loading more jobs from:', url);
-        const res = await fetch(url);
-        const data = await res.json();
-        
-        if (data && Array.isArray(data.data)) {
-          setJobs(prev => [...prev, ...data.data]);
-          setCurrentPage(nextPage);
+        const res = await mainLink.get("/api/services", {
+          params: {
+            page: 1,
+            limit,
+            category: selectedCategories.length
+              ? selectedCategories.join(",")
+              : undefined,
+            search: searchQuery || undefined,
+          },
+        });
+
+        const data = res.data;
+
+        if (Array.isArray(data?.data)) {
+          setJobs(data.data);
+          setTotalPages(data.pagination?.totalPages || 1);
+          setTotalJobs(data.pagination?.total || 0);
+        } else {
+          setJobs([]);
         }
       } catch (err) {
-        console.error("Failed to load more jobs:", err);
+        console.error("Failed to fetch jobs:", err);
+        setJobs([]);
       } finally {
-        setLoadingMore(false);
+        setLoadingJobs(false);
       }
-    };
+    }
 
-    // Get user's current location
-    useEffect(() => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
+    fetchJobs();
+  }, [selectedCategories, searchQuery]);
+
+  // Load more jobs (next page)
+  // const loadMoreJobs = async () => {
+  //   if (currentPage >= totalPages || loadingMore) return;
+
+  //   setLoadingMore(true);
+  //   try {
+  //     const nextPage = currentPage + 1;
+  //     // let url = `${mainLink}/api/services`;
+  //     let url = await mainLink.get('/api/services')
+  //     console.log(url);
+
+  //     const params = new URLSearchParams();
+
+  //     params.append('page', String(nextPage));
+  //     params.append('limit', String(limit));
+
+  //     if (selectedCategories.length > 0) {
+  //       params.append('category', selectedCategories.join(','));
+  //     }
+  //     if (searchQuery) {
+  //       params.append('search', searchQuery);
+  //     }
+
+  //     url += `?${params.toString()}`;
+
+  //     console.log('Loading more jobs from:', url);
+  //     // const res = await fetch(url);
+  //     const data = (await url).data;
+  //     console.log(data);
+
+  //     if (data && Array.isArray(data.data)) {
+  //       setJobs(prev => [...prev, ...data.data]);
+  //       setCurrentPage(nextPage);
+  //     }
+  //   } catch (err) {
+  //     console.error("Failed to load more jobs:", err);
+  //   } finally {
+  //     setLoadingMore(false);
+  //   }
+  // };
+
+  const loadMoreJobs = async () => {
+    if (currentPage >= totalPages || loadingMore) return;
+
+    setLoadingMore(true);
+
+    try {
+      const nextPage = currentPage + 1;
+
+      const res = await mainLink.get("/api/services", {
+        params: {
+          page: nextPage,
+          limit,
+          category: selectedCategories.length
+            ? selectedCategories.join(",")
+            : undefined,
+          search: searchQuery || undefined,
+        },
+      });
+
+      if (Array.isArray(res.data?.data)) {
+        setJobs((prev) => [...prev, ...res.data.data]);
+        setCurrentPage(nextPage);
+      }
+    } catch (err) {
+      console.error("Failed to load more jobs:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // Get user's current location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
             setUserLocation([position.coords.longitude, position.coords.latitude]);
-          },
-          (error) => {
+        },
+        (error) => {
             console.error('Error getting user location:', error);
-            setUserLocation(null);
-          }
-        );
-      } else {
-        setUserLocation(null);
-      }
-    }, []);
+          setUserLocation(null);
+        }
+      );
+    } else {
+      setUserLocation(null);
+    }
+  }, []);
 
-    // Fetch nearby jobs for "For deg" tab
-    useEffect(() => {
-      async function fetchNearbyJobs() {
+  // Fetch nearby jobs for "For deg" tab
+  useEffect(() => {
+    async function fetchNearbyJobs() {
         if (!userLocation || activeTab !== 'fordeg') {
-          return;
-        }
+        return;
+      }
 
-        setLoadingNearby(true);
-        try {
-          const [longitude, latitude] = userLocation;
-          const res = await fetch(
-            `${mainLink}/api/services/nearby?lat=${latitude}&lng=${longitude}&radius=50000`
-          );
-          
-          if (res.ok) {
-            const data = await res.json();
-            setNearbyJobs(data);
-          } else {
-            console.error('Failed to fetch nearby jobs:', res.status);
-            setNearbyJobs([]);
-          }
-        } catch (err) {
-          console.error('Error fetching nearby jobs:', err);
+      setLoadingNearby(true);
+      try {
+        const [longitude, latitude] = userLocation;
+        // const res = await fetch(
+        //   `${mainLink}/api/services/nearby?lat=${latitude}&lng=${longitude}&radius=50000`
+        // );
+        const res = await mainLink.get(
+          `/api/services/nearby?lat=${latitude}&lng=${longitude}&radius=50000`
+        );
+        if (res.data) {
+          const data = await res.data;
+          setNearbyJobs(data);
+        } else {
+          console.error("Failed to fetch nearby jobs:", res.status);
           setNearbyJobs([]);
-        } finally {
-          setLoadingNearby(false);
         }
+      } catch (err) {
+        console.error("Error fetching nearby jobs:", err);
+        setNearbyJobs([]);
+      } finally {
+        setLoadingNearby(false);
       }
+    }
 
-      fetchNearbyJobs();
-    }, [userLocation, activeTab]);
+    fetchNearbyJobs();
+  }, [userLocation, activeTab]);
 
-    // Fetch Followers jobs from API IKKE FERDIG IKKE FERDIG IKKE FERDIG IKKE FERDIG SE PÅ DENNE.
-    useEffect(() => {
-      async function fetchFollowingJobs() {
-        if (!userId || !tokens?.accessToken) {
+  // Fetch Followers jobs from API IKKE FERDIG IKKE FERDIG IKKE FERDIG IKKE FERDIG SE PÅ DENNE.
+  useEffect(() => {
+    async function fetchFollowingJobs() {
+      if (!userId) {
           console.log('User not logged in, skipping following feed');
-          return;
-        }
-
-        try {
-          const res = await fetch(`${mainLink}/api/feed/following?userId=${userId}`, {
-            headers: {
-              'Authorization': `Bearer ${tokens.accessToken}`,
-              'Content-Type': 'application/json',
-            }
-          });
-          
-          if (!res.ok) {
-            throw new Error(`Failed to fetch following feed: ${res.status}`);
-          }
-          
-          const data = await res.json();
-          // Handle the following feed data appropriately
-          console.log('Following feed:', data);
-        } catch (err) {
-          console.error("Failed to fetch following jobs:", err);
-        }
+        return;
       }
-    
-      fetchFollowingJobs();
-    }, [userId, tokens]);    
-    console.log(jobs);
-    
 
-    const tabs = [
+      try {
+        // const res = await fetch(
+        //   `${mainLink}/api/feed/following?userId=${userId}`,
+        //   {
+        //     headers: {
+        //       Authorization: `Bearer ${tokens.accessToken}`,
+        //       "Content-Type": "application/json",
+        //     },
+        //   }
+        // );
+
+        const res = await mainLink.get(`/api/feed/following?userId=${userId}`)
+
+        if (!res.data) {
+          throw new Error(`Failed to fetch following feed: ${res.status}`);
+        }
+
+        const data = await res.data;
+        // Handle the following feed data appropriately
+          console.log('Following feed:', data);
+      } catch (err) {
+        console.error("Failed to fetch following jobs:", err);
+      }
+    }
+
+    fetchFollowingJobs();
+  }, [userId, tokens]);
+
+  const tabs = [
     { id: 'utforsk', label: 'Utforsk' },
     { id: 'fordeg', label: 'Nær deg' },
     { id: 'folger', label: 'Følger' }
@@ -258,11 +307,11 @@ export default function JobsContainer({ selectedCategories = [], searchQuery = "
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
-            <Dropdown menu={{ items }} placement="bottomRight">
+          <Dropdown menu={{ items }} placement="bottomRight">
                 <Button icon={<span className="material-symbols-outlined">grid_view</span>}>
-                    Layout
-                </Button>
-            </Dropdown>
+              Layout
+            </Button>
+          </Dropdown>
         </div>
 
         {/* Tab Content */}
@@ -320,28 +369,28 @@ export default function JobsContainer({ selectedCategories = [], searchQuery = "
 
         {activeTab === 'fordeg' && userLocation !== null && !loadingNearby && nearbyJobs.length === 0 && (
           <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text)' }}>
-            Ingen jobber i nærheten funnet
-          </div>
-        )}
+              Ingen jobber i nærheten funnet
+            </div>
+          )}
 
         {activeTab === 'fordeg' && userLocation !== null && !loadingNearby && nearbyJobs.length > 0 && (
-          <div>
+            <div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
-              <h3>Jobber nær deg</h3>
-            </div>
+                <h3>Jobber nær deg</h3>
+              </div>
             <div style={{
               display: 'grid',
               gridTemplateColumns: gridColumns === 1 ? '1fr' : gridColumns === 4 ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)',
               gap: '20px',
               padding: '20px 0'
             }}>
-              {nearbyJobs.slice(0, nearbyJobsToShow).map((job) => (
-                <div key={job._id}>
-                  <JobCard job={job} gridColumns={gridColumns} />
-                </div>
-              ))}
-            </div>
-            {nearbyJobs.length > nearbyJobsToShow && (
+                {nearbyJobs.slice(0, nearbyJobsToShow).map((job) => (
+                  <div key={job._id}>
+                    <JobCard job={job} gridColumns={gridColumns} />
+                  </div>
+                ))}
+              </div>
+              {nearbyJobs.length > nearbyJobsToShow && (
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: '32px' }}>
                 <button
                   onClick={() => setNearbyJobsToShow(prev => prev + 16)}
@@ -354,14 +403,14 @@ export default function JobsContainer({ selectedCategories = [], searchQuery = "
                     cursor: 'pointer',
                     fontSize: '16px',
                     fontWeight: '600',
-                  }}
-                >
+                    }}
+                  >
                   Last inn flere ({nearbyJobs.length - nearbyJobsToShow} gjenstår)
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
         {activeTab === 'folger' && (
           <div style={{ display: "flex", justifyContent: "space-between" }}>

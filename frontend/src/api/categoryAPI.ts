@@ -1,6 +1,6 @@
-import { mainLink } from "./mainURLs.ts";
+import mainLink from "./mainURLs";
 
 export async function getCategories() {
-  const res = await fetch(`${mainLink}/api/categories`);
-  return await res.json();
+  const res = await mainLink.get("/api/categories");
+  return res.data;
 }
