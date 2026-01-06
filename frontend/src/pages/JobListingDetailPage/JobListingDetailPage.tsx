@@ -46,7 +46,6 @@ const JobListingDetailPage = () => {
   const [job, setJob] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
-  const userToken = useUserStore((state) => state.tokens);
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const currentUser = useUserStore((state) => state.user);
   
@@ -115,9 +114,11 @@ const JobListingDetailPage = () => {
 
   useEffect(() => {
     const checkFavoriteStatus = async () => {
-      if (!userToken || !id) return;
+      if (!id) return;
       try {
-        const res = await getFavorites(userToken);
+        const res = await getFavorites();
+        console.log("res", res);
+        
         const favorited = res.data.some(
           (fav: any) => fav.service._id === id,
         );
@@ -128,7 +129,7 @@ const JobListingDetailPage = () => {
     };
 
     void checkFavoriteStatus();
-  }, [userToken, id]);
+  }, [id]);
 
   const handleFavoriteClick = async () => {
     if (!isAuth) {
@@ -141,10 +142,10 @@ const JobListingDetailPage = () => {
 
     try {
       if (isFavorited) {
-        await deleteFavorites(id, userToken);
+        await deleteFavorites(id,);
         toast.success("Fjernet fra favoritter");
       } else {
-        await setFavorites(id, userToken);
+        await setFavorites(id,);
         toast.success("Lagt til i favoritter");
       }
       setIsFavorited(!isFavorited);

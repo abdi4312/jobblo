@@ -5,7 +5,6 @@ import  mainLink  from "../../../api/mainURLs";
 
 export function ProfileHeader() {
   const user = useUserStore((state) => state.user);
-  const userToken = useUserStore((state) => state.tokens);
   const [activeJobs, setActiveJobs] = useState(0);
   const [completedJobs, setCompletedJobs] = useState(0);
 
@@ -14,7 +13,7 @@ export function ProfileHeader() {
 
   useEffect(() => {
     fetchJobStats();
-  }, [userToken]);
+  }, [user]);
 
   const fetchJobStats = async () => {
 

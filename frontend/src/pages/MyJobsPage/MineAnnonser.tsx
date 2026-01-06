@@ -56,7 +56,6 @@ interface Service {
 
 export default function MineAnnonser() {
   const navigate = useNavigate();
-  const userToken = useUserStore((state) => state.tokens);
 
   const { modal } = App.useApp();
   
@@ -70,12 +69,6 @@ export default function MineAnnonser() {
   }, []);
 
   const fetchMyServices = async () => {
-    if (!userToken?.accessToken) {
-      setError("Du må være logget inn for å se dine annonser");
-      setLoading(false);
-      return;
-    }
-
     try {
       const data = await getMyPostedServices();
       setServices(data);
