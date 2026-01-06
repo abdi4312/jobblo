@@ -1,3 +1,5 @@
+const {iduraCallback} = require('../controllers/iduraAuthcontroller');
+
 const User = require('../models/User');
 
 const {authenticate} = require('../middleware/auth');
@@ -166,6 +168,8 @@ router.get('/google/callback',
         }
     }
 );
+
+router.get("/idura/callback", iduraCallback);
 
 /**
  * @swagger
