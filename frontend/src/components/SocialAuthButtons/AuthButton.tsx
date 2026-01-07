@@ -2,12 +2,12 @@ import styles from "./AuthButton.module.css";
 
 export default function SocialAuthButtons() {
   const handleGoogle = () => {
-    window.location.href = "http://localhost:5001/api/auth/google";
+    window.location.href = `${import.meta.env.VITE_IDURA_MAIN_URL}/api/auth/google`;
   };
 
   const handleApple = () => {
-    window.location.href = "http://localhost:5001/api/auth/apple";
-  };
+    window.location.href = `${import.meta.env.VITE_IDURA_MAIN_URL}/api/auth/apple`;
+  }
 
   return (
     <div className={styles.socialAuth}>

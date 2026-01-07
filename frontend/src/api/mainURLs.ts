@@ -2,7 +2,7 @@ import axios from "axios";
 // import { useUserStore } from "../stores/userStore";
 
 const mainLink = axios.create({
-  baseURL: "http://localhost:5000",
+  baseURL: import.meta.env.VITE_IDURA_MAIN_URL,
   headers: {
     Accept: "application/json",
   },

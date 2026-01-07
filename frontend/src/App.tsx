@@ -11,7 +11,7 @@ import { useUserStore } from "./stores/userStore.ts";
 import { useEffect } from "react";
 
 export default function App() {
-const { fetchProfile,} = useUserStore((state) => state);
+const { fetchProfile} = useUserStore((state) => state);
 
   useEffect(() => {
     fetchProfile();
