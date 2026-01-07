@@ -2,11 +2,11 @@ import styles from "./AuthButton.module.css";
 
 export default function SocialAuthButtons() {
   const handleGoogle = () => {
-    window.location.href = `${import.meta.env.VITE_IDURA_MAIN_URL}/api/auth/google`;
+    window.location.href = `${import.meta.env.VITE_MAIN_URL}/api/auth/google`;
   };
 
   const handleApple = () => {
-    window.location.href = `${import.meta.env.VITE_IDURA_MAIN_URL}/api/auth/apple`;
+    window.location.href = `${import.meta.env.VITE_MAIN_URL}/api/auth/apple`;
   }
 
   return (
