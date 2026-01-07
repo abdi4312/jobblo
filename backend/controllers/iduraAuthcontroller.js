@@ -4,6 +4,8 @@ const User = require("../models/User");
 
 exports.iduraCallback = async (req, res) => {
   try {
+    console.log("IDURA CODE:", req.query.code);
+
     const { code } = req.query;
 
     const tokenRes = await axios.post(

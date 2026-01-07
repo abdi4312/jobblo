@@ -132,13 +132,13 @@ router.get('/google',
  */
 router.get('/google/callback',
     // 1. Passport authenticate ko handle karein
-    passport.authenticate('google', { failureRedirect: process.env.frontendURL + '?error=auth_failed', session: false }),
+    passport.authenticate('google', { failureRedirect: process.env.FRONTEND_URL + '?error=auth_failed', session: false }),
     
     // 2. Sirf ek hi response handler rakhein
     (req, res) => {
         try {
             if (!req.user) {
-                return res.redirect(process.env.frontendURL + '?error=no_user');
+                return res.redirect(process.env.FRONTEND_URL + '?error=no_user');
             }
 
             // Generate JWT
@@ -157,7 +157,7 @@ router.get('/google/callback',
             // Token ko cookie mein set karein
             res.cookie('token', token, cookieOptions);
 
-            return res.redirect(process.env.frontendURL + 'oauth-success');
+            return res.redirect(process.env.FRONTEND_URL + 'oauth-success');
 
         } catch (error) {
             console.error("Callback Error:", error);
