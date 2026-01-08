@@ -48,6 +48,17 @@ const userSchema = new mongoose.Schema({
     favorites: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Service'
+    }],
+    pointsBalance: {
+        type: Number,
+        default: 0
+    },
+    pointsHistory: [{
+        points: Number,
+        reason: String,
+        orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
+        serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service' },
+        createdAt: { type: Date, default: Date.now }
     }]
 }, { timestamps: true });
 
