@@ -17,7 +17,7 @@ connectDB()
   });
 
 const app = require('./app');
-const port = 5000;
+const port = process.env.PORT || 5001;
 
 // Create HTTP server for WebSocket support
 const server = http.createServer(app);
@@ -25,7 +25,7 @@ const server = http.createServer(app);
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173',
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173' || 'http://localhost:5174',
     credentials: true
   }
 });
