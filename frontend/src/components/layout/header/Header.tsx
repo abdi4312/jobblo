@@ -1,4 +1,3 @@
-import styles from "./Header.module.css";
 import * as Icons from "../../../assets/icons";
 import { VippsButton } from "../../component/button/VippsButton.tsx";
 import { VerticalDivider } from "../../component/divider/verticalDivider/VerticalDivider.tsx";
@@ -20,24 +19,26 @@ export default function Header() {
   };
 
   return (
-    <>
-      <div className={styles.container}>
-        <div className={styles.jobbloIcon} onClick={() => navigate("/")}>
-          <Icons.JobbloIcon />
-        </div>
-
-        <div className={styles.iconContainer}>
-          <Icons.BellIcon onClick={() => handleProtectedNavigation("/Alert")} />
-          <VerticalDivider />
-          <Icons.PlusIcon onClick={() => handleProtectedNavigation("/publish-job")} />
-          <VerticalDivider />
-          <Icons.MessageIcon onClick={() => handleProtectedNavigation("/messages")} />
-        </div>
-
-        <div className={styles.buttonContainer}>
-          <VippsButton />
-        </div>
+    <div className="bg-[#fcf9eb] max-w-325 grid grid-cols-[1fr_auto_1fr] items-center h-15 px-5 relative z-10 mx-auto">
+      
+      {/* Jobblo Icon */}
+      <div className="cursor-pointer" onClick={() => navigate("/")}>
+        <Icons.JobbloIcon />
       </div>
-    </>
+
+      {/* Icon Container */}
+      <div className="flex items-center gap-2 justify-self-center">
+        <Icons.BellIcon onClick={() => handleProtectedNavigation("/Alert")} />
+        <VerticalDivider />
+        <Icons.PlusIcon onClick={() => handleProtectedNavigation("/publish-job")} />
+        <VerticalDivider />
+        <Icons.MessageIcon onClick={() => handleProtectedNavigation("/messages")} />
+      </div>
+
+      {/* Button Container */}
+      <div className="flex gap-2.5 justify-self-end">
+        <VippsButton />
+      </div>
+    </div>
   );
 }
