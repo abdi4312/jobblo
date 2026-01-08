@@ -1,7 +1,8 @@
 import styles from "./CoinsSection.module.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Modal } from "antd";
+import { useUserStore } from "../../../stores/userStore";
 
 interface Level {
   name: string;
@@ -26,10 +27,14 @@ function getLevelInfo(points: number): Level {
 
 export function CoinsSection() {
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const { fetchProfile,} = useUserStore((state) => state);
+  const user = useUserStore((state) => state.user);
   const navigate = useNavigate();
-  const userPoints = 70; // This should come from user store
+  const userPoints = user?.pointsBalance || 0; // This should come from user store
   const levelInfo = getLevelInfo(userPoints);
-
+  useEffect(() => {
+    fetchProfile();
+  }, []);
   const showModal = () => {
     setIsModalVisible(true);
   };
