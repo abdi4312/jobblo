@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "./CoinsPage.module.css";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
+import { useUserStore } from "../../stores/userStore";
 
 interface Level {
   name: string;
@@ -25,10 +26,14 @@ function getLevelInfo(points: number): Level {
 }
 
 export default function CoinsPage() {
+  const { fetchProfile,} = useUserStore((state) => state);
+  const user = useUserStore((state) => state.user);
   const navigate = useNavigate();
-  const userCoins = 5431; // This should come from user store in real implementation
+  const userCoins = user?.pointsBalance || 0; 
   const levelInfo = getLevelInfo(userCoins);
-
+    useEffect(() => {
+        fetchProfile();
+      }, []);
   const rewards = [
     {
       id: 1,
