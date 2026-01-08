@@ -34,7 +34,7 @@
   --color-bg-dark: #111d15;
   --color-fbe: #fbecd5;
 }
-
+@import "tailwindcss";
 /* Helper: easy-theme class to scope overrides if needed */
 .easy-theme {
   color: var(--color-text);

@@ -3,15 +3,15 @@ import "./styles/Jobblo.css";
 import { Outlet } from "react-router-dom";
 import Header from "./components/layout/header/Header.tsx";
 import Footer from "./components/layout/footer/Footer.tsx";
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { ScrollToTop } from "./components/shared/ScrollToTop.tsx";
-import { App as AntApp } from 'antd';
+import { App as AntApp } from "antd";
 import { useUserStore } from "./stores/userStore.ts";
 import { useEffect } from "react";
 
 export default function App() {
-const { fetchProfile} = useUserStore((state) => state);
+  const { fetchProfile } = useUserStore((state) => state);
 
   useEffect(() => {
     fetchProfile();
@@ -23,7 +23,7 @@ const { fetchProfile} = useUserStore((state) => state);
       <Header />
       <Outlet />
       <Footer />
-      <ToastContainer 
+      <ToastContainer
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
