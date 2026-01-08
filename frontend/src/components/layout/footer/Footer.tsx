@@ -13,6 +13,8 @@ export default function Footer() {
         <Link to="/om-oss">Om oss</Link>
         <Link to="/tjenester">Tjenester</Link>
         <Link to="/team">Vårt team</Link>
+        <Link to="/user-term">Brukervilkår</Link>
+        <Link to="/sale-subscription-terms">Vilkår for bruk og abonnement</Link>
         <Link to="/support">Support</Link>
         <Link to="/annonseregler">Annonseregler</Link>
         <a onClick={() => setIsPricingModalOpen(true)} style={{ cursor: 'pointer' }}>Se våre priser</a>

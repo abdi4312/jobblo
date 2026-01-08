@@ -17,14 +17,14 @@ import SupportPage from "../pages/SupportPage/SupportPage.tsx";
 import AnnonsereglerPage from "../pages/AnnonsereglerPage/AnnonsereglerPage.tsx";
 import MineAnnonser from "../pages/MyJobsPage/MineAnnonser.tsx";
 import JobListingDetailPage from "../pages/JobListingDetailPage/JobListingDetailPage.tsx";
-// import CategoryJobs from "../pages/CategoryJobsPage/CategoryJobs.tsx";
-// import SearchResults from "../pages/SearchResultsPage/SearchResults.tsx";
 import CoinsPage from "../pages/CoinsPage/CoinsPage.tsx";
 import { MessagesPage } from "../pages/MessagesPage/MessagesPage.tsx";
 import { ConversationView } from "../pages/ConversationView/ConversationView.tsx";
 import MinInntekt from "../pages/MinInntekt/MinInntekt.tsx";
 import OAuthSuccess from "../pages/OAuthSuccess.tsx";
 import { PublicRoute } from "../components/shared/PublicRoute.tsx";
+import SaleSubscriptionTermsPage from "../pages/SaleSubscriptionTermsPage/SaleSubscriptionTermsPage.tsx";
+import JobbloUserTerm from "../pages/UserTerm/UserTerm.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -164,6 +164,15 @@ export const routes: RouteObject[] = [
             <ConversationView />
           </ProtectedRoute>
         ),
+      },
+
+      {
+        path: "sale-subscription-terms",
+        element: <SaleSubscriptionTermsPage />,
+      },
+      {
+        path: "user-term",
+        element: <JobbloUserTerm />,
       },
     ],
   },
