@@ -1,0 +1,20 @@
+.custom-alert-container {
+  display: flex;
+  align-items: center;
+  background-color: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  border-radius: 10px;
+  padding: 12px 30px;
+  max-width: 900px;
+  gap: 10px;
+  margin: 0px auto;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.alert-text {
+  color: #2e7d32;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 500;
+}

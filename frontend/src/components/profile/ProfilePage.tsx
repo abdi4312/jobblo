@@ -6,6 +6,7 @@ import { useUserStore } from "../../stores/userStore";
 import { useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
 import { App } from 'antd';
+import Verified from "../verified/Verified";
 
 export default function ProfilePage() {
   const logout = useUserStore((state) => state.logout);
@@ -31,7 +32,7 @@ export default function ProfilePage() {
     <div className={styles.container}>
       <div className={styles.content}>
         <ProfileHeader />
-
+        <Verified/>
         <CoinsSection />
         <ProfileMenuSection />
 
