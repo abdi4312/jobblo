@@ -224,7 +224,7 @@ export function Categories({
                     transition: "all 0.2s ease",
                   }}
                 >
-                  <Category category={item.name} categoryIcon={item.slug} />
+                  <Category category={item.name} categoryIcon={item.icon} />
                 </div>
               ))}
             </div>
