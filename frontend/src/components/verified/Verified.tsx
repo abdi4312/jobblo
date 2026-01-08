@@ -1,11 +1,13 @@
 import { useUserStore } from "../../stores/userStore";
+import styles from "./Verified.module.css";
 
 export default function Verified() {
-
-    const isAuth = useUserStore((state: { isAuthenticated: boolean }) => state.isAuthenticated);
-    if (!isAuth) {
-      return;
-    }
+  const isAuth = useUserStore(
+    (state: { isAuthenticated: boolean }) => state.isAuthenticated
+  );
+  if (!isAuth) {
+    return;
+  }
   const handleIdura = () => {
     const domain = import.meta.env.VITE_IDURA_DOMAIN;
     const acr = import.meta.env.VITE_IDURA_ACR;
@@ -29,17 +31,17 @@ export default function Verified() {
   };
 
   return (
-    <div>
-      <button
-        onClick={handleIdura}
-        style={{
-          padding: "12px 24px",
-          fontSize: "16px",
-          cursor: "pointer",
-        }}
-      >
-        Verify with BankID
-      </button>
+    <div className={styles["custom-alert-container"]}>
+      {/* <span className="material-symbols-outlined alert-icon">warning</span> */}
+      <p className={styles["alert-text"]}>
+        Identitetsverifisering er påkrevd i henhold til norske regelverk.
+        <span
+          style={{ textDecoration: "underline", cursor: "pointer" }}
+          onClick={handleIdura}
+        >
+          Verifiser med IDURa.
+        </span>
+      </p>
     </div>
   );
 }
