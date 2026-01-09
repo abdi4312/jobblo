@@ -51,9 +51,15 @@
 }
 
 .heroTitle {
+  font-size: 56px; /* samme som før */
   font-weight: 700;
-  font-size: 56px;
-  letter-spacing: -1px;
+  color: #fff;
+  line-height: 1.1;
+}
+
+.highlight {
+  color: #ff8a00;
+  font-weight: 800;
 }
 
 .heroSubTitle {
@@ -78,12 +84,11 @@
 
 .heroSearchContainer {
   position: absolute;
-  bottom: 40px;
+  bottom: 110px; /* ← prøv 80–140px */
   left: 50%;
   transform: translateX(-50%);
-  /* width: auto; */
-  min-width: auto;
   z-index: 10;
+  
 }
 
 .heroButtonContainer {
@@ -98,6 +103,7 @@
 .heroButtonContainer button {
   width: auto;
 }
+
 
 .searchActionContainer {
   display: flex;

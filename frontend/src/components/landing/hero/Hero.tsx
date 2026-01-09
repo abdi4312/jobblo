@@ -108,15 +108,11 @@ export function Hero() {
                 <div className={styles.slideOverlay}>
                   <div className={styles.heroContainer}>
                     <h1 className={styles.heroTitle}>
-                      {item?.title || "Jobblo AS"}
+                      {item?.subtitle || "Små jobber"}{" "}
+                      <span className={styles.highlight}>
+                        {item?.subtitleSecondary || "Store muligheter"}
+                      </span>
                     </h1>
-
-                    <h2 className={styles.heroSubTitle}>
-                      {item?.subtitle || "Små jobber"}
-                      {" "} {/* Fix: Added space between subtitle and secondary */}
-                      <span>{item?.subtitleSecondary}</span>
-                    </h2>
-
                     <p className={styles.heroDescription}>
                       {item?.description}
                     </p>
