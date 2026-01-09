@@ -156,6 +156,39 @@
   box-shadow: 0 2px 4px rgba(24, 58, 29, 0.3);
 }
 
+.deleteButton {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #ff4444;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.9;
+}
+
+.deleteButton:hover {
+  opacity: 1;
+  background: #cc0000;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.deleteButton:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.deleteButton span {
+  font-size: 20px;
+}
+
 .empty {
   display: flex;
   flex-direction: column;

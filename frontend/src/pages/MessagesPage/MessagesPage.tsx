@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { initSocket, disconnectSocket } from "../../socket/socket";
-import { getMyChats, type Chat } from "../../api/chatAPI";
+import { getMyChats, deleteChatForMe, type Chat } from "../../api/chatAPI";
 import { useUserStore } from "../../stores/userStore";
 import styles from "./MessagesPage.module.css";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
@@ -87,6 +87,23 @@ export function MessagesPage() {
 
   const filteredChats = filterChats();
 
+  const handleDeleteChat = async (e: React.MouseEvent, chatId: string) => {
+    e.stopPropagation(); // Prevent navigating to chat when clicking delete
+    
+    if (!confirm("Er du sikker på at du vil slette denne samtalen?")) {
+      return;
+    }
+
+    try {
+      await deleteChatForMe(chatId);
+      setChats((prev) => prev.filter((chat) => chat._id !== chatId));
+      toast.success("Samtale slettet");
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+      toast.error("Kunne ikke slette samtale");
+    }
+  };
+
   return (
     <div className={styles.pageContainer}>
       <ProfileTitleWrapper title="Meldinger" buttonText="Tilbake" />
@@ -159,6 +176,14 @@ export function MessagesPage() {
                       {chat.lastMessage || "Ingen meldinger ennå"}
                     </p>
                   </div>
+
+                  <button
+                    className={styles.deleteButton}
+                    onClick={(e) => handleDeleteChat(e, chat._id)}
+                    aria-label="Slett samtale"
+                  >
+                    <span className="material-symbols-outlined">delete</span>
+                  </button>
                 </div>
               );
             })

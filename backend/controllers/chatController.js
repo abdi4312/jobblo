@@ -51,9 +51,10 @@ exports.getMyChats = async (req, res) => {
   try {
     const { id } = req.user;
 
-    // Get ALL chats where user is either client or provider
+    // Get ALL chats where user is either client or provider, and not deleted by them
     const chats = await Chat.find({
-      $or: [{ clientId: id }, { providerId: id }]
+      $or: [{ clientId: id }, { providerId: id }],
+      deletedFor: { $ne: id }
     })
       .populate("clientId", "name role avatarUrl")
       .populate("providerId", "name role avatarUrl")
@@ -147,12 +148,13 @@ exports.sendMessage = async (req, res) => {
 exports.deleteForMe = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
 
     await Chat.findByIdAndUpdate(id, {
-      $addToSet: { deletedFor: req.userId },
+      $addToSet: { deletedFor: userId },
     });
 
-    res.json({ success: true, message: "Message hidden" });
+    res.json({ success: true, message: "Chat hidden" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -164,7 +166,8 @@ exports.deleteForMe = async (req, res) => {
  */
 exports.deleteChat = async (req, res) => {
   try {
-    if (!req.userId) return res.status(401).json({ error: "Unauthorized" });
+    const userId = req.user.id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
     const { id } = req.params;
 
@@ -175,8 +178,8 @@ exports.deleteChat = async (req, res) => {
     if (!chat) return res.status(404).json({ error: "Chat not found" });
 
     if (
-      chat.clientId.toString() !== req.userId &&
-      chat.providerId.toString() !== req.userId
+      chat.clientId.toString() !== userId &&
+      chat.providerId.toString() !== userId
     )
       return res.status(403).json({ error: "Not allowed" });
 
