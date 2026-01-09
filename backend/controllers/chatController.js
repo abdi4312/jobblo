@@ -63,10 +63,12 @@ exports.getMyChats = async (req, res) => {
     // Get ALL chats where user is either client or provider, and not deleted by them
     const chats = await Chat.find({
       $or: [{ clientId: id }, { providerId: id }],
-      deletedFor: { $ne: id }
+      deletedFor: { $ne: id },
     })
       .populate("clientId", "name role avatarUrl")
-      .populate("providerId", "name role avatarUrl")      .populate("serviceId", "title description")      .sort({ updatedAt: -1 });
+      .populate("providerId", "name role avatarUrl")
+      .populate("serviceId", "title description")
+      .sort({ updatedAt: -1 });
 
     res.json(chats);
   } catch (error) {
@@ -145,7 +147,7 @@ exports.sendMessage = async (req, res) => {
     await chat.save();
 
     // Emit socket event to notify users in the chat room
-    const io = req.app.get('io');
+    const io = req.app.get("io");
     if (io) {
       io.to(`chat-${chatId}`).emit("receive-message", {
         chatId,
@@ -166,10 +168,10 @@ exports.sendMessage = async (req, res) => {
 exports.deleteForMe = async (req, res) => {
   try {
     const { chatId } = req.params;
-    const userId = req.user.id;
+    const { id } = req.user;
 
     await Chat.findByIdAndUpdate(chatId, {
-      $addToSet: { deletedFor: userId },
+      $addToSet: { deletedFor: id },
     });
 
     res.json({ success: true, message: "Chat hidden" });
@@ -184,8 +186,8 @@ exports.deleteForMe = async (req, res) => {
  */
 exports.deleteChat = async (req, res) => {
   try {
-    const userId = req.user.id;
-    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    const { id } = req.user;
+    if (!id) return res.status(401).json({ error: "Unauthorized" });
 
     const { chatId } = req.params;
 
@@ -195,10 +197,7 @@ exports.deleteChat = async (req, res) => {
     const chat = await Chat.findById(chatId);
     if (!chat) return res.status(404).json({ error: "Chat not found" });
 
-    if (
-      chat.clientId.toString() !== userId &&
-      chat.providerId.toString() !== userId
-    )
+    if (chat.clientId.toString() !== id && chat.providerId.toString() !== id)
       return res.status(403).json({ error: "Not allowed" });
 
     await Chat.findByIdAndDelete(chatId);

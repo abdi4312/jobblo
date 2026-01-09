@@ -5,7 +5,7 @@ let socket: Socket | null = null;
 
 export const initSocket = () => {
   if (!socket) {
-    socket = io("http://localhost:5000", {
+    socket = io(mainLink.defaults.baseURL, {
       transports: ["websocket"],
     });
 
