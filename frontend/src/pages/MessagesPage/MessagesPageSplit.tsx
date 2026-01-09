@@ -179,10 +179,16 @@ export function MessagesPageSplit() {
     };
   }, []); // Empty dependency array to prevent infinite loop
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change, but only if we're already near the bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (messages.length > 0) {
+      // Use a slight delay to ensure the DOM has updated
+      const timer = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [messages.length]); // Only trigger when message count changes, not on every message update
 
   const loadContract = async (contractId: string) => {
     try {
@@ -329,7 +335,7 @@ export function MessagesPageSplit() {
   const messageGroups = groupMessagesByDate();
 
   return (
-    <div className={styles.pageContainer} style={{ minHeight: "100vh", background: "#f0f0f0" }}>
+    <div className={styles.pageContainer} style={{ minHeight: "100vh", background: "#fcf9eb" }}>
       {/* Back button to leave messages page */}
       <div className={styles.backButtonContainer}>
         <button 
