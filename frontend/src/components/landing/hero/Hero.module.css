@@ -51,10 +51,11 @@
 }
 
 .heroTitle {
-  font-size: 56px; /* samme som før */
+  font-size: 56px; 
   font-weight: 700;
   color: #fff;
   line-height: 1.1;
+  text-align: center;
 }
 
 .highlight {
@@ -71,6 +72,12 @@
 .heroSubTitle span {
   font-weight: 700;
   color: var(--color-cta);
+}
+.smallText {
+  font-size: 42px; 
+  font-weight: 500;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .heroDescription {

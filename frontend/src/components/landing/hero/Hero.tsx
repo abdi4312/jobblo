@@ -81,7 +81,7 @@ export function Hero() {
   const heroData = hero.length > 0 ? hero : [{
     image: jobbloSwipe,
     title: "Jobblo AS",
-    subtitle: "Små jobber",
+    subtitle: "Små jobber.",
     subtitleSecondary: "Store Muligheter",
     description: "Finn kvalitetssertifisert fagfolk for alle dine prosjekter: oppussing, hagearbeid og annet alt på et sted."
   }];
@@ -108,7 +108,9 @@ export function Hero() {
                 <div className={styles.slideOverlay}>
                   <div className={styles.heroContainer}>
                     <h1 className={styles.heroTitle}>
-                      {item?.subtitle || "Små jobber"}{" "}
+                      <span className={styles.smallText}>
+                        {item?.subtitle || "Små jobber"}
+                      </span>{" "}
                       <span className={styles.highlight}>
                         {item?.subtitleSecondary || "Store muligheter"}
                       </span>
