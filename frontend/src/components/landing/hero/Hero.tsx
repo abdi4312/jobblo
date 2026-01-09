@@ -8,10 +8,8 @@ import jobbloSwipe from "../../../assets/images/gardening.png";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Navigation, Pagination } from "swiper/modules";
 
-// Swiper styles
-import "swiper/swiper.css";
-import "swiper/modules/navigation.css";
-import "swiper/modules/pagination.css";
+// Swiper styles - using bundle which includes all module styles
+import "swiper/swiper-bundle.css";
 
 import  mainLink  from "../../../api/mainURLs";
 import { useEffect, useState, useCallback } from "react";

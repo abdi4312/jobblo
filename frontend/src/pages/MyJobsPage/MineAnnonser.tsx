@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUserStore } from "../../stores/userStore";
-import mainLink from "../../api/mainURLs";
 import CreateJobForm from "../../components/CreateJobForm/CreateJobForm";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 import {
@@ -10,8 +8,6 @@ import {
   updateService,
 } from "../../api/servicesAPI.ts";
 import axios from "axios";
-import { toast } from 'react-toastify';
-import { App } from 'antd';
 
 interface Location {
   coordinates: [number, number];
@@ -56,8 +52,6 @@ interface Service {
 
 export default function MineAnnonser() {
   const navigate = useNavigate();
-
-  const { modal } = App.useApp();
   
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);

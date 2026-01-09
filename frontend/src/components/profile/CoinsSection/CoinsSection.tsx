@@ -30,7 +30,7 @@ export function CoinsSection() {
   const { fetchProfile,} = useUserStore((state) => state);
   const user = useUserStore((state) => state.user);
   const navigate = useNavigate();
-  const userPoints = user?.pointsBalance || 0; // This should come from user store
+  const userPoints = user?.pointsBalance || 0;
   const levelInfo = getLevelInfo(userPoints);
   useEffect(() => {
     fetchProfile();

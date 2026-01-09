@@ -25,6 +25,7 @@ export type User = {
   averageRating?: number;
   reviewCount?: number;
   favorites?: string[];
+  pointsBalance?: number;
   oauthProviders?: [
     {
       provider: "google";
