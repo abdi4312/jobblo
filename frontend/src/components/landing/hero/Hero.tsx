@@ -10,9 +10,9 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Navigation, Pagination } from "swiper/modules";
 
 // Swiper styles
-import "swiper/css";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
+import "swiper/swiper.css";
+import "swiper/modules/navigation.css";
+import "swiper/modules/pagination.css";
 
 import  mainLink  from "../../../api/mainURLs";
 import { useEffect, useState, useCallback } from "react";
