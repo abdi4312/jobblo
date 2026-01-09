@@ -7,11 +7,6 @@ import { PricingModal } from "../../shared/PricingModal/PricingModal";
 export function ProfileMenuSection() {
   const navigate = useNavigate();
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
-  
-  const handleMenuItemClick = (item: string) => {
-    console.log(`Clicked on: ${item}`);
-    // Add navigation logic here
-  };
 
   const iconStyle = { color: "var(--color-accent)", fontSize: "24px" };
 

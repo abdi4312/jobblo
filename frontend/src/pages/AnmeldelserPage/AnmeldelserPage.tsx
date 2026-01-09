@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import StjerneIcon from "../../assets/icons/stjerne.svg?react";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 
@@ -14,7 +13,6 @@ interface DisplayReview {
 }
 
 export default function AnmeldelserPage() {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"received" | "given">("received");
   const [receivedReviews, setReceivedReviews] = useState<DisplayReview[]>([]);
   const [givenReviews, setGivenReviews] = useState<DisplayReview[]>([]);

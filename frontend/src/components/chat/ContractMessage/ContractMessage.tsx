@@ -17,8 +17,8 @@ export function ContractMessage({ contract, currentUserId, onContractUpdated }: 
   const isCustomer = order?.customerId?._id === currentUserId || order?.customerId === currentUserId;
   const isProvider = order?.providerId?._id === currentUserId || order?.providerId === currentUserId;
   
-  const userHasSigned = isCustomer ? contract.signedByCustomer : contract.signedByProvider;
-  const otherPartySigned = isCustomer ? contract.signedByProvider : contract.signedByCustomer;
+  const userHasSigned = isCustomer ? contract.signedByCustomer : (isProvider ? contract.signedByProvider : false);
+  const otherPartySigned = isCustomer ? contract.signedByProvider : (isProvider ? contract.signedByCustomer : false);
   const bothSigned = contract.signedByCustomer && contract.signedByProvider;
 
   const handleSign = async () => {

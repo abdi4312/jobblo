@@ -10,7 +10,6 @@ import Verified from "../verified/Verified";
 
 export default function ProfilePage() {
   const logout = useUserStore((state) => state.logout);
-  const user = useUserStore((state) => state.user);
   const navigate = useNavigate();
   const { modal } = App.useApp();
 

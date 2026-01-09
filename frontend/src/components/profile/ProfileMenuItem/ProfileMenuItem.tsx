@@ -21,6 +21,7 @@ export function ProfileMenuItem({ icon, text, showDivider = true, onClick }: Pro
           chevron_right
         </span>
       </div>
+      {showDivider && <div className={styles.divider} />}
     </div>
   );
 }
