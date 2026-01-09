@@ -51,5 +51,6 @@ export type UserState = {
   setTokens: (tokens: AuthTokens) => void;
 
   login: (user: User, tokens: AuthTokens) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
+  fetchProfile: () => Promise<void>;
 };
