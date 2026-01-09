@@ -1,57 +1,68 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
-import { initSocket } from "../../socket/socket";
+import { useParams, useNavigate } from "react-router-dom";
+import { initSocket, disconnectSocket } from "../../socket/socket";
+import { getChatById, sendMessage, type Chat, type ChatMessage } from "../../api/chatAPI";
+import { toast } from "react-toastify";
 
 import styles from "./ConversationView.module.css";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 import { useUserStore } from "../../stores/userStore";
-import mainLink from "../../api/mainURLs";
 
 interface Message {
-  _id: string;
-  senderId: {
+  _id?: string;
+  senderId: string | {
     _id: string;
     name: string;
     avatarUrl?: string;
-    text: string;
   };
-  message: string;
+  text: string;
   images?: string[];
   createdAt: string;
-  status: "sent" | "delivered" | "read";
+  status?: "sent" | "delivered" | "read";
 }
-interface SendMessagePayload {
-  chatId: string;
-  text: string;
-}
+
 interface ReceiveMessagePayload {
   chatId: string;
-  message: Message;
+  message: ChatMessage;
 }
 
 export function ConversationView() {
   const { conversationId } = useParams();
+  const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [chat, setChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
-  const jobTitle = "Snømåking - Oslo sentrum"; // Dummy job title
+  const [loading, setLoading] = useState(true);
   const { user } = useUserStore();
   const userId = user?._id;
+
+  const otherUser = chat
+    ? chat.clientId._id === userId
+      ? chat.providerId
+      : chat.clientId
+    : null;
 
   useEffect(() => {
     if (!conversationId) return;
 
-    const fetchMessages = async () => {
+    const fetchChat = async () => {
       try {
-        const res = await mainLink.get(`/api/chats/${conversationId}`);
-        setMessages(res.data.messages ?? []);
+        setLoading(true);
+        const chatData = await getChatById(conversationId);
+        setChat(chatData);
+        setMessages(chatData.messages || []);
       } catch (err) {
-        console.error("Fetch messages error:", err);
+        console.error("Fetch chat error:", err);
+        toast.error("Kunne ikke laste samtale");
+        navigate("/messages");
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchMessages();
+    fetchChat();
 
     // ========== SOCKET ==========
     const socket = initSocket();
@@ -62,6 +73,7 @@ export function ConversationView() {
     const onReceiveMessage = (data: ReceiveMessagePayload) => {
       if (data.chatId === conversationId) {
         setMessages((prev) => [...prev, data.message]);
+        setChat((prevChat) => prevChat ? { ...prevChat, lastMessage: data.message.text } : null);
       }
     };
 
@@ -70,8 +82,9 @@ export function ConversationView() {
     return () => {
       socket.off("receive-message", onReceiveMessage);
       socket.emit("leave-chat", conversationId);
+      disconnectSocket();
     };
-  }, [conversationId]);
+  }, [conversationId, navigate]);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -109,25 +122,49 @@ export function ConversationView() {
     return groups;
   };
 
-  const handleSend = () => {
-    if (!newMessage.trim()) return;
+  const handleSend = async () => {
+    if (!newMessage.trim() || !conversationId || sending) return;
 
-    const socket = initSocket();
-    if (!socket) return;
-
-    socket.emit("send-message", {
-      chatId: conversationId,
-      text: newMessage.trim(),
-    });
-
-    setNewMessage("");
+    try {
+      setSending(true);
+      const msg = await sendMessage(conversationId, newMessage.trim());
+      
+      setMessages((prev) => [...prev, msg]);
+      setChat((prevChat) => prevChat ? { ...prevChat, lastMessage: msg.text } : null);
+      setNewMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Kunne ikke sende melding");
+    } finally {
+      setSending(false);
+    }
   };
 
   const messageGroups = groupMessagesByDate();
 
+  if (loading) {
+    return (
+      <div className={styles.pageContainer}>
+        <div className={styles.empty}>
+          <p>Laster samtale...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!chat) {
+    return (
+      <div className={styles.pageContainer}>
+        <div className={styles.empty}>
+          <p>Samtale ikke funnet</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.pageContainer}>
-      <ProfileTitleWrapper title={jobTitle} buttonText="Tilbake" />
+      <ProfileTitleWrapper title={otherUser?.name || "Chat"} buttonText="Tilbake" />
 
       <div className={styles.chatContainer}>
         <div className={styles.messagesArea}>
@@ -150,45 +187,51 @@ export function ConversationView() {
                 <div className={styles.dateLabel}>
                   {formatDate(msgs[0].createdAt)}
                 </div>
-                {msgs.map((msg, index) => (
-                  <div
-                    key={msg._id || index}
-                    className={`${styles.messageWrapper} ${
-                      msg.senderId._id === userId
-                        ? styles.sent
-                        : styles.received
-                    }`}
-                  >
-                    {msg.senderId._id !== userId && (
-                      <div className={styles.avatar}>
-                        {msg.senderId.avatarUrl ? (
-                          <img
-                            src={msg.senderId.avatarUrl}
-                            alt={msg.senderId.name}
-                          />
-                        ) : (
-                          <div className={styles.avatarPlaceholder}>
-                            {msg.senderId.name}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className={styles.messageBubble}>
-                      {msg.images && msg.images.length > 0 && (
-                        <div className={styles.messageImages}>
-                          {msg.images.map((img, idx) => (
-                            <img key={idx} src={img} alt="attachment" />
-                          ))}
+                {msgs.map((msg, index) => {
+                  const senderId = typeof msg.senderId === 'string' ? msg.senderId : msg.senderId._id;
+                  const senderName = typeof msg.senderId === 'object' ? msg.senderId.name : 'Unknown';
+                  const senderAvatar = typeof msg.senderId === 'object' ? msg.senderId.avatarUrl : undefined;
+                  
+                  return (
+                    <div
+                      key={msg._id || index}
+                      className={`${styles.messageWrapper} ${
+                        senderId === userId
+                          ? styles.sent
+                          : styles.received
+                      }`}
+                    >
+                      {senderId !== userId && (
+                        <div className={styles.avatar}>
+                          {senderAvatar ? (
+                            <img
+                              src={senderAvatar}
+                              alt={senderName}
+                            />
+                          ) : (
+                            <div className={styles.avatarPlaceholder}>
+                              {senderName?.charAt(0) || '?'}
+                            </div>
+                          )}
                         </div>
                       )}
-                      <p className={styles.messageText}>{msg.text}</p>
-                      <span className={styles.messageTime}>
-                        {formatTime(msg.createdAt)}
-                      </span>
+
+                      <div className={styles.messageBubble}>
+                        {msg.images && msg.images.length > 0 && (
+                          <div className={styles.messageImages}>
+                            {msg.images.map((img, idx) => (
+                              <img key={idx} src={img} alt="attachment" />
+                            ))}
+                          </div>
+                        )}
+                        <p className={styles.messageText}>{msg.text}</p>
+                        <span className={styles.messageTime}>
+                          {formatTime(msg.createdAt)}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ))
           )}

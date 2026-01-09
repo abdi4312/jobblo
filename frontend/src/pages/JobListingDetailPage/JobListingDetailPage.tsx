@@ -169,13 +169,12 @@ const JobListingDetailPage = () => {
       if (!response.data) {
         throw new Error(`Failed to create/get chat: ${response.status}`);
       }
-      navigate(`/messages`);
+      // Navigate directly to the chat conversation
+      navigate(`/messages/${response.data._id}`);
     } catch (err) {
       console.error("Error creating/getting chat:", err);
+      toast.error("Kunne ikke opprette samtale");
     }
-
-    // Navigate to messages page - you can pass job/user info via state if needed
-    navigate("/messages", {});
   };
 
   if (loading) {

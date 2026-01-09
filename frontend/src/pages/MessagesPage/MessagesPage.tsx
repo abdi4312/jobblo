@@ -1,125 +1,39 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-// import io, { Socket } from "socket.io-client";
 import { initSocket, disconnectSocket } from "../../socket/socket";
-
+import { getMyChats, type Chat } from "../../api/chatAPI";
 import { useUserStore } from "../../stores/userStore";
 import styles from "./MessagesPage.module.css";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
-import mainLink from "../../api/mainURLs";
-import axios from "axios";
-import type { User } from "../../types/userTypes.ts";
+import { toast } from "react-toastify";
 
-interface Conversation {
-  _id: string;
-  participants: Array<{
-    _id: string;
-    name: string;
-    profileImage?: string;
-  }>;
-  lastMessage: string;
-  orderId: {
-    _id: string;
-    serviceId: {
-      title: string;
-    };
-    customerId: string;
-    providerId: string;
-  };
-  unreadCount?: number;
-  updatedAt: string;
-}
-
-interface Chat {
-  _id: string;
-  name: string;
-  lastMessage?: string;
-  [key: string]: any;
-}
-
-interface Chats {
-  _id: string;
-  clientId?: User;
-  providerId?: User;
-  lastMessage?: string;
-  updatedAt?: string;
-}
 interface MessageData {
   chatId: string;
   message: { text: string; [key: string]: any };
 }
-type FilterType = "Alle" | "Oppdrag" | "Forespørsel";
 
-// Dummy data for UI preview
-const DUMMY_CONVERSATIONS: Conversation[] = [
-  {
-    _id: "1",
-    participants: [
-      { _id: "user1", name: "Ole Hansen" },
-      { _id: "user2", name: "Kari Nordmann" },
-    ],
-    lastMessage: "Hei! Når passer det for deg å starte?",
-    orderId: {
-      _id: "order1",
-      serviceId: { title: "Snømåking - Oslo sentrum" },
-      customerId: "user1",
-      providerId: "user2",
-    },
-    unreadCount: 2,
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: "2",
-    participants: [
-      { _id: "user1", name: "Ole Hansen" },
-      {
-        _id: "user3",
-        name: "Per Olsen",
-        profileImage: "https://i.pravatar.cc/150?img=3",
-      },
-    ],
-    lastMessage: "Takk for jobben! Alt er ferdig.",
-    orderId: {
-      _id: "order2",
-      serviceId: { title: "Maling av stue" },
-      customerId: "user3",
-      providerId: "user1",
-    },
-    updatedAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    _id: "3",
-    participants: [
-      { _id: "user1", name: "Ole Hansen" },
-      { _id: "user4", name: "Lisa Berg" },
-    ],
-    lastMessage: "Kan vi avtale tid neste uke?",
-    orderId: {
-      _id: "order3",
-      serviceId: { title: "Flyttehjelp - 3 roms leilighet" },
-      customerId: "user1",
-      providerId: "user4",
-    },
-    unreadCount: 1,
-    updatedAt: new Date(Date.now() - 172800000).toISOString(),
-  },
-];
+type FilterType = "Alle" | "Mine Oppdrag" | "Mine Forespørsler";
 
 export function MessagesPage() {
   const navigate = useNavigate();
-  const [activeFilter, setActiveFilter] = useState<FilterType>("Alle");
   const [chats, setChats] = useState<Chat[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<FilterType>("Alle");
   const { user } = useUserStore();
   const userRole = user?.role;
 
   useEffect(() => {
     const fetchChats = async () => {
       try {
-        const res = await mainLink.get(`/api/chats/get`);
-
-        setChats(Array.isArray(res.data) ? res.data : res.data.chats || []);
+        setLoading(true);
+        const data = await getMyChats();
+        console.log("Fetched chats:", data);
+        setChats(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Fetch chats error:", error);
+        toast.error("Kunne ikke laste samtaler");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -145,30 +59,33 @@ export function MessagesPage() {
     };
   }, []);
 
-  const filterConversations = () => {
-    if (activeFilter === "Alle") return DUMMY_CONVERSATIONS;
-
-    return DUMMY_CONVERSATIONS.filter((conv) => {
-      if (activeFilter === "Oppdrag") {
-        // User is the one who posted the job (customer)
-        return conv.orderId.customerId === user?._id;
-      } else {
-        // User is trying to get the job (provider)
-        return conv.orderId.providerId === user?._id;
-      }
-    });
-  };
-
   const formatTime = (dateString?: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  };
-  const getOtherParticipant = (conv: Conversation) => {
-    return conv.participants.find((p) => p._id !== user?._id);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const hours = diff / (1000 * 60 * 60);
+
+    if (hours < 24) {
+      return date.toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" });
+    } else {
+      return date.toLocaleDateString("nb-NO", { day: "2-digit", month: "2-digit" });
+    }
   };
 
-  const filteredConversations = filterConversations();
+  const filterChats = () => {
+    if (activeFilter === "Alle") {
+      return chats;
+    } else if (activeFilter === "Mine Oppdrag") {
+      // Chats for jobs I posted (I'm the provider)
+      return chats.filter((chat) => chat.providerId._id === user?._id);
+    } else {
+      // Mine Forespørsler - Chats for jobs I'm asking for (I'm the client)
+      return chats.filter((chat) => chat.clientId._id === user?._id);
+    }
+  };
+
+  const filteredChats = filterChats();
 
   return (
     <div className={styles.pageContainer}>
@@ -177,7 +94,7 @@ export function MessagesPage() {
       <div className={styles.contentContainer}>
         {/* Filter Tabs */}
         <div className={styles.filterTabs}>
-          {(["Alle", "Oppdrag", "Forespørsel"] as FilterType[]).map(
+          {(["Alle", "Mine Oppdrag", "Mine Forespørsler"] as FilterType[]).map(
             (filter) => (
               <button
                 key={filter}
@@ -194,7 +111,11 @@ export function MessagesPage() {
 
         {/* Conversations List */}
         <div className={styles.conversationsList}>
-          {filteredConversations.length === 0 ? (
+          {loading ? (
+            <div className={styles.empty}>
+              <p>Laster...</p>
+            </div>
+          ) : filteredChats.length === 0 ? (
             <div className={styles.empty}>
               <span
                 className="material-symbols-outlined"
@@ -205,48 +126,39 @@ export function MessagesPage() {
               <p>Ingen meldinger</p>
             </div>
           ) : (
-            chats.map((conv) => {
-              const otherPersonName =
-                userRole === "user"
-                  ? conv.providerId?.name
-                  : conv.clientId?.name;
+            filteredChats.map((chat) => {
+              const otherPerson =
+                chat.clientId._id === user?._id
+                  ? chat.providerId
+                  : chat.clientId;
 
-              const otheravatarUrl =
-                userRole === "user"
-                  ? conv.providerId?.avatarUrl
-                  : conv.clientId?.avatarUrl;
               return (
                 <div
-                  key={conv._id}
+                  key={chat._id}
                   className={styles.conversationItem}
-                  onClick={() => navigate(`/messages/${conv._id}`)}
+                  onClick={() => navigate(`/messages/${chat._id}`)}
                 >
                   <div className={styles.avatarContainer}>
-                    {otheravatarUrl ? (
-                      <img src={otheravatarUrl} alt={otherPersonName} />
+                    {otherPerson.avatarUrl ? (
+                      <img src={otherPerson.avatarUrl} alt={otherPerson.name} />
                     ) : (
                       <div className={styles.avatarPlaceholder}>
-                        {otherPersonName}
+                        {otherPerson.name?.charAt(0) || '?'}
                       </div>
                     )}
                   </div>
 
                   <div className={styles.conversationContent}>
                     <div className={styles.conversationHeader}>
-                      <h3>{otherPersonName || "Ukjent bruker"}</h3>
+                      <h3>{otherPerson.name || "Ukjent bruker"}</h3>
                       <span className={styles.timestamp}>
-                        {formatTime(conv.updatedAt)}
+                        {formatTime(chat.updatedAt)}
                       </span>
                     </div>
-                    <p className={styles.jobTitle}>{}</p>
                     <p className={styles.lastMessage}>
-                      {conv.lastMessage || "Ingen meldinger ennå"}
+                      {chat.lastMessage || "Ingen meldinger ennå"}
                     </p>
                   </div>
-
-                  {conv.unreadCount && conv.unreadCount > 0 && (
-                    <div className={styles.unreadBadge}>{conv.unreadCount}</div>
-                  )}
                 </div>
               );
             })

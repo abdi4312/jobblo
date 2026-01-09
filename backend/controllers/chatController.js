@@ -25,7 +25,7 @@ exports.createOrGetChat = async (req, res) => {
         .json({ message: "Invalid provider: role mismatch." });
     }
     let chat = await Chat.findOne({
-      id,
+      clientId: id,
       providerId,
     })
       .populate("clientId", "name")
@@ -50,11 +50,11 @@ exports.createOrGetChat = async (req, res) => {
 exports.getMyChats = async (req, res) => {
   try {
     const { id } = req.user;
-    const { role } = req.user;
 
-    const filter = role === "user" ? { clientId: id } : { providerId: id };
-
-    const chats = await Chat.find(filter)
+    // Get ALL chats where user is either client or provider
+    const chats = await Chat.find({
+      $or: [{ clientId: id }, { providerId: id }]
+    })
       .populate("clientId", "name role avatarUrl")
       .populate("providerId", "name role avatarUrl")
       .sort({ updatedAt: -1 });
