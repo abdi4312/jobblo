@@ -71,6 +71,11 @@
   font-weight: 600;
   cursor: pointer;
   margin-bottom: 12px;
+  transition: background-color 0.2s;
+}
+
+.registerBtnActive {
+  background-color: var(--color-primary);
 }
 
 .registerBtnDisabled {

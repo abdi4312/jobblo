@@ -38,6 +38,11 @@ const chatSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    serviceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Service",
+      required: true,
+    },
 
     messages: [messageSchema],
 

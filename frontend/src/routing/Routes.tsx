@@ -18,8 +18,7 @@ import AnnonsereglerPage from "../pages/AnnonsereglerPage/AnnonsereglerPage.tsx"
 import MineAnnonser from "../pages/MyJobsPage/MineAnnonser.tsx";
 import JobListingDetailPage from "../pages/JobListingDetailPage/JobListingDetailPage.tsx";
 import CoinsPage from "../pages/CoinsPage/CoinsPage.tsx";
-import { MessagesPage } from "../pages/MessagesPage/MessagesPage.tsx";
-import { ConversationView } from "../pages/ConversationView/ConversationView.tsx";
+import { MessagesPageSplit } from "../pages/MessagesPage/MessagesPageSplit.tsx";
 import MinInntekt from "../pages/MinInntekt/MinInntekt.tsx";
 import OAuthSuccess from "../pages/OAuthSuccess.tsx";
 import { PublicRoute } from "../components/shared/PublicRoute.tsx";
@@ -153,7 +152,7 @@ export const routes: RouteObject[] = [
         path: "messages",
         element: (
           <ProtectedRoute>
-            <MessagesPage />
+            <MessagesPageSplit />
           </ProtectedRoute>
         ),
       },
@@ -161,7 +160,7 @@ export const routes: RouteObject[] = [
         path: "messages/:conversationId",
         element: (
           <ProtectedRoute>
-            <ConversationView />
+            <MessagesPageSplit />
           </ProtectedRoute>
         ),
       },

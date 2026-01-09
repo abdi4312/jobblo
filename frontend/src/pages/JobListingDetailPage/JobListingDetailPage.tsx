@@ -162,18 +162,29 @@ const JobListingDetailPage = () => {
       navigate("/login");
       return;
     }
+    
+    if (!job?._id) {
+      console.error("Job ID is missing:", job);
+      toast.error("Kunne ikke finne jobb-ID");
+      return;
+    }
+    
+    console.log("Creating chat with:", { providerId, serviceId: job._id });
+    
     try {
       const response = await mainLink.post("/api/chats/create", {
         providerId,
+        serviceId: job._id,
       });
       if (!response.data) {
         throw new Error(`Failed to create/get chat: ${response.status}`);
       }
       // Navigate directly to the chat conversation
       navigate(`/messages/${response.data._id}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error creating/getting chat:", err);
-      toast.error("Kunne ikke opprette samtale");
+      console.error("Error response:", err.response?.data);
+      toast.error(err.response?.data?.message || "Kunne ikke opprette samtale");
     }
   };
 

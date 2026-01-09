@@ -1,0 +1,126 @@
+.contractContainer {
+  background: white;
+  border: 2px solid #ea7e15;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 12px 0;
+  max-width: 500px;
+}
+
+.contractHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.contractHeader h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.contractContent {
+  margin-bottom: 16px;
+}
+
+.contractText {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+}
+
+.priceSection,
+.dateSection {
+  font-size: 14px;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.priceSection strong,
+.dateSection strong {
+  color: #ea7e15;
+  margin-right: 8px;
+}
+
+.signaturesSection {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.signature {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #666;
+}
+
+.signature .material-symbols-outlined {
+  font-size: 20px;
+  color: #ccc;
+}
+
+.signature .material-symbols-outlined.signed {
+  color: #4caf50;
+}
+
+.signButton {
+  width: 100%;
+  padding: 12px;
+  background: #ea7e15;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.signButton:hover:not(:disabled) {
+  background: #d16d0f;
+}
+
+.signButton:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.waitingMessage {
+  text-align: center;
+  padding: 12px;
+  background: #fff3e0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #e65100;
+  font-style: italic;
+}
+
+.completedBanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.completedBanner .material-symbols-outlined {
+  font-size: 20px;
+}

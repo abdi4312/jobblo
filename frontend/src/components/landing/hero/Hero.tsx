@@ -69,7 +69,9 @@ export function Hero() {
             minHeight: "500px", 
           }}
         >
-          <Spin size="large" tip="Laster..." />
+          <Spin size="large" tip="Laster...">
+            <div style={{ minHeight: "100px" }} />
+          </Spin>
         </div>
       </div>
     );

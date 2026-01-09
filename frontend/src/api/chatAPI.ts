@@ -21,10 +21,17 @@ export interface Chat {
     role?: string;
     avatarUrl?: string;
   };
+  serviceId?: {
+    _id: string;
+    title?: string;
+    description?: string;
+  };
   messages: ChatMessage[];
   lastMessage?: string;
   updatedAt?: string;
   deletedFor?: string[];
+  orderId?: string;
+  contractId?: string;
 }
 
 /**

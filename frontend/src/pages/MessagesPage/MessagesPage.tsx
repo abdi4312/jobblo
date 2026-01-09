@@ -152,37 +152,41 @@ export function MessagesPage() {
               return (
                 <div
                   key={chat._id}
-                  className={styles.conversationItem}
+                  className={styles.chatCard}
                   onClick={() => navigate(`/messages/${chat._id}`)}
                 >
-                  <div className={styles.avatarContainer}>
-                    {otherPerson.avatarUrl ? (
-                      <img src={otherPerson.avatarUrl} alt={otherPerson.name} />
-                    ) : (
-                      <div className={styles.avatarPlaceholder}>
-                        {otherPerson.name?.charAt(0) || '?'}
+                  <div className={styles.chatHeader}>
+                    <div className={styles.userBadge}>
+                      <div className={styles.userAvatar}>
+                        {otherPerson.avatarUrl ? (
+                          <img src={otherPerson.avatarUrl} alt={otherPerson.name} />
+                        ) : (
+                          <span>{otherPerson.name?.charAt(0) || '?'}</span>
+                        )}
                       </div>
-                    )}
-                  </div>
-
-                  <div className={styles.conversationContent}>
-                    <div className={styles.conversationHeader}>
-                      <h3>{otherPerson.name || "Ukjent bruker"}</h3>
-                      <span className={styles.timestamp}>
-                        {formatTime(chat.updatedAt)}
+                      <span className={styles.userName}>
+                        {otherPerson.name || "Ukjent bruker"}
                       </span>
                     </div>
-                    <p className={styles.lastMessage}>
-                      {chat.lastMessage || "Ingen meldinger ennå"}
-                    </p>
+                    <span className={styles.timeAgo}>
+                      {formatTime(chat.updatedAt)}
+                    </span>
                   </div>
 
+                  <h3 className={styles.jobHeading}>
+                    {chat.serviceId?.title || "Jobb"}
+                  </h3>
+
+                  <p className={styles.messagePreview}>
+                    {chat.lastMessage || "Start samtalen..."}
+                  </p>
+
                   <button
-                    className={styles.deleteButton}
+                    className={styles.deleteBtn}
                     onClick={(e) => handleDeleteChat(e, chat._id)}
                     aria-label="Slett samtale"
                   >
-                    <span className="material-symbols-outlined">delete</span>
+                    <span className="material-symbols-outlined">close</span>
                   </button>
                 </div>
               );

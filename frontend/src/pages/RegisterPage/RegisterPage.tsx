@@ -41,6 +41,7 @@ export default function RegisterPage() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
+        phone: "", // Send empty phone field to satisfy backend
       });
 
       toast.success("Registrering vellykket!");
@@ -48,8 +49,12 @@ export default function RegisterPage() {
     } catch (error) {
       console.error("Error registering:", error);
       if (axios.isAxiosError(error)) {
-        if (error.response?.status === 401)
+        const errorMsg = error.response?.data?.error || "Kunne ikke registrere bruker";
+        if (error.response?.status === 400 && errorMsg.includes("already exists")) {
           toast.error("En bruker med denne e-posten eksisterer allerede");
+        } else {
+          toast.error(errorMsg);
+        }
       } else {
         toast.error("Kunne ikke registrere bruker");
       }
@@ -57,6 +62,13 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+  const isFormValid =
+    formData.name.trim() &&
+    formData.email.trim() &&
+    formData.password.trim() &&
+    formData.confirmPassword.trim() &&
+    formData.password === formData.confirmPassword;
 
   return (
     <div className={styles.container}>
@@ -123,7 +135,9 @@ export default function RegisterPage() {
         <button
           onClick={handleRegister}
           disabled={loading}
-          className={`${styles.registerBtn} ${loading ? styles.registerBtnDisabled : ""}`}
+          className={`${styles.registerBtn} ${
+            isFormValid ? styles.registerBtnActive : ""
+          } ${loading ? styles.registerBtnDisabled : ""}`}
         >
           {loading ? "Registrerer..." : "Registrer deg"}
         </button>

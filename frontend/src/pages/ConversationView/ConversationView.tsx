@@ -72,6 +72,16 @@ export function ConversationView() {
 
     const onReceiveMessage = (data: ReceiveMessagePayload) => {
       if (data.chatId === conversationId) {
+        // Don't add message if it's from current user (already added optimistically)
+        const messageSenderId = typeof data.message.senderId === 'string' 
+          ? data.message.senderId 
+          : data.message.senderId._id;
+          
+        if (messageSenderId === userId) {
+          console.log('Skipping own message from socket (already added optimistically)');
+          return;
+        }
+        
         setMessages((prev) => [...prev, data.message]);
         setChat((prevChat) => prevChat ? { ...prevChat, lastMessage: data.message.text } : null);
       }
@@ -166,6 +176,19 @@ export function ConversationView() {
     <div className={styles.pageContainer}>
       <ProfileTitleWrapper title={otherUser?.name || "Chat"} buttonText="Tilbake" />
 
+      {/* Job Context */}
+      {chat.serviceId && (
+        <div style={{
+          padding: "12px 20px",
+          backgroundColor: "#f5f5f5",
+          borderBottom: "1px solid #e0e0e0",
+          fontSize: "14px",
+          color: "#666"
+        }}>
+          <strong>Angående:</strong> {chat.serviceId.title || "Jobb"}
+        </div>
+      )}
+
       <div className={styles.chatContainer}>
         <div className={styles.messagesArea}>
           {messages.length === 0 ? (
@@ -192,16 +215,25 @@ export function ConversationView() {
                   const senderName = typeof msg.senderId === 'object' ? msg.senderId.name : 'Unknown';
                   const senderAvatar = typeof msg.senderId === 'object' ? msg.senderId.avatarUrl : undefined;
                   
+                  const isSentByMe = senderId === userId;
+                  
+                  console.log('Message render:', {
+                    senderId,
+                    userId,
+                    isSentByMe,
+                    text: msg.text
+                  });
+                  
                   return (
                     <div
                       key={msg._id || index}
                       className={`${styles.messageWrapper} ${
-                        senderId === userId
+                        isSentByMe
                           ? styles.sent
                           : styles.received
                       }`}
                     >
-                      {senderId !== userId && (
+                      {!isSentByMe && (
                         <div className={styles.avatar}>
                           {senderAvatar ? (
                             <img

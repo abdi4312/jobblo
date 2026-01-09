@@ -6,8 +6,12 @@ const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 exports.createOrGetChat = async (req, res) => {
   try {
-    const { providerId } = req.body;
+    const { providerId, serviceId } = req.body;
     let { id } = req.user;
+
+    if (!serviceId) {
+      return res.status(400).json({ message: "Service ID is required." });
+    }
 
     if (id === providerId) {
       return res
@@ -19,25 +23,30 @@ exports.createOrGetChat = async (req, res) => {
     if (!provider) {
       return res.status(404).json({ message: "Provider not found." });
     }
-    if (provider.role !== "provider") {
-      return res
-        .status(403)
-        .json({ message: "Invalid provider: role mismatch." });
-    }
+    
     let chat = await Chat.findOne({
       clientId: id,
       providerId,
+      serviceId,
     })
       .populate("clientId", "name")
-      .populate("providerId", "name");
+      .populate("providerId", "name")
+      .populate("serviceId", "title description");
 
     if (chat) {
+      // If user previously deleted this chat, restore it by removing from deletedFor
+      if (chat.deletedFor && chat.deletedFor.includes(id)) {
+        await Chat.findByIdAndUpdate(chat._id, {
+          $pull: { deletedFor: id },
+        });
+      }
       return res.status(200).json(chat);
     }
 
     chat = await Chat.create({
       clientId: id,
       providerId,
+      serviceId,
       messages: [],
     });
 
@@ -57,8 +66,7 @@ exports.getMyChats = async (req, res) => {
       deletedFor: { $ne: id }
     })
       .populate("clientId", "name role avatarUrl")
-      .populate("providerId", "name role avatarUrl")
-      .sort({ updatedAt: -1 });
+      .populate("providerId", "name role avatarUrl")      .populate("serviceId", "title description")      .sort({ updatedAt: -1 });
 
     res.json(chats);
   } catch (error) {
@@ -77,6 +85,7 @@ exports.getChatById = async (req, res) => {
     const chat = await Chat.findById(chatId)
       .populate("clientId", "name avatarUrl")
       .populate("providerId", "name avatarUrl")
+      .populate("serviceId", "title description")
       .populate("messages.senderId", "name avatarUrl");
 
     if (!chat) {
@@ -134,6 +143,15 @@ exports.sendMessage = async (req, res) => {
     chat.lastMessage = text;
 
     await chat.save();
+
+    // Emit socket event to notify users in the chat room
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`chat-${chatId}`).emit("receive-message", {
+        chatId,
+        message,
+      });
+    }
 
     res.status(201).json(message);
   } catch (error) {

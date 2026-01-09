@@ -81,6 +81,7 @@ export const useUserStore = create<UserState>()(
           set({
             user: null,
             tokens: null,
+            isAuthenticated: false,
           });
         }
       },

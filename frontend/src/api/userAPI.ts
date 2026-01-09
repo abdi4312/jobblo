@@ -20,6 +20,7 @@ export async function registerUser(userData: {
   name: string;
   email: string;
   password: string;
+  phone?: string;
 }) {
   try {
     const res = await mainLink.post("/api/auth/register", userData);

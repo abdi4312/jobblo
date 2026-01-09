@@ -20,6 +20,24 @@
   justify-self: center;
 }
 
+.iconWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.notificationBadge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background-color: #EA1717;
+  border-radius: 50%;
+  border: 1.5px solid #fcf9eb;
+}
+
 .jobbloIcon {
   cursor: pointer;
 }
