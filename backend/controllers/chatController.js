@@ -147,10 +147,10 @@ exports.sendMessage = async (req, res) => {
 
 exports.deleteForMe = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { chatId } = req.params;
     const userId = req.user.id;
 
-    await Chat.findByIdAndUpdate(id, {
+    await Chat.findByIdAndUpdate(chatId, {
       $addToSet: { deletedFor: userId },
     });
 
@@ -169,12 +169,12 @@ exports.deleteChat = async (req, res) => {
     const userId = req.user.id;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-    const { id } = req.params;
+    const { chatId } = req.params;
 
-    if (!isValidId(id))
+    if (!isValidId(chatId))
       return res.status(400).json({ error: "Invalid chat ID format" });
 
-    const chat = await Chat.findById(id);
+    const chat = await Chat.findById(chatId);
     if (!chat) return res.status(404).json({ error: "Chat not found" });
 
     if (
@@ -183,7 +183,7 @@ exports.deleteChat = async (req, res) => {
     )
       return res.status(403).json({ error: "Not allowed" });
 
-    await Chat.findByIdAndDelete(id);
+    await Chat.findByIdAndDelete(chatId);
 
     res.status(204).end();
   } catch (error) {
