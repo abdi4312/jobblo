@@ -1,7 +1,6 @@
 import styles from "./Hero.module.css";
 import { Button, Input, Spin } from "antd";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { toast } from "react-toastify";
 import jobbloSwipe from "../../../assets/images/gardening.png";
 
