@@ -1,35 +1,57 @@
-const contractSchema = new mongoose.Schema({
-    orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true },
+const mongoose = require("mongoose");
+
+const contractSchema = new mongoose.Schema(
+  {
+    serviceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Service",
+      required: true,
+    },
 
     // selve kontrakten
     content: { type: String, required: true },
+    price: { type: Number, required: true },
+    ScheduledDate: { type: Date },
+    address: { type: String },
     version: { type: Number, default: 1 },
-    previousVersions: [{
+    clientId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    providerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    previousVersions: [
+      {
         content: String,
         timestamp: Date,
-    }],
+      },
+    ],
 
     // snapshots for juridisk bevis
     serviceSnapshot: {
-        title: String,
-        description: String,
-        category: String
+      title: String,
+      description: String,
+      category: String,
     },
 
-    orderSnapshot: {
-        price: Number,
-        scheduledDate: Date,
-        address: String
-    },
+    // orderSnapshot: {
+    //     price: Number,
+    //     scheduledDate: Date,
+    //     address: String
+    // },
 
     customerSnapshot: {
-        userId: String,
-        name: String
+      userId: String,
+      name: String,
     },
 
     providerSnapshot: {
-        userId: String,
-        name: String
+      userId: String,
+      name: String,
     },
 
     // signering
@@ -45,13 +67,14 @@ const contractSchema = new mongoose.Schema({
 
     // status
     status: {
-        type: String,
-        enum: ['draft', 'pending_signatures', 'signed', 'cancelled'],
-        default: 'draft'
+      type: String,
+      enum: ["draft", "pending_signatures", "signed", "cancelled"],
+      default: "draft",
     },
 
     // PDF-versjon
     pdfUrl: String,
-
-}, { timestamps: true });
-module.exports = mongoose.model('Contract', contractSchema);
+  },
+  { timestamps: true }
+);
+module.exports = mongoose.model("Contract", contractSchema);
