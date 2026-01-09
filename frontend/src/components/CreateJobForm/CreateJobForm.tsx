@@ -129,6 +129,8 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
             width: "90%",
             padding: "12px",
             borderRadius: "8px",
+            fontFamily: "inherit",
+            fontSize: "16px",
             border: "1px solid var(--color-icon)",
           }}
         />
@@ -147,6 +149,8 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
           style={{
             width: "90%",
             padding: "12px",
+            fontFamily: "inherit",
+            fontSize: "16px",
             borderRadius: "8px",
             border: "1px solid var(--color-icon)",
             resize: "vertical",
@@ -168,6 +172,8 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
             width: "90%",
             padding: "12px",
             borderRadius: "8px",
+            fontFamily: "inherit",
+            fontSize: "16px",
             border: "1px solid var(--color-icon)",
           }}
         />
@@ -186,6 +192,7 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
           style={{
             width: "90%",
             padding: "12px",
+            fontFamily: "inherit",
             borderRadius: "8px",
             border: "1px solid var(--color-icon)",
           }}
@@ -206,6 +213,8 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
             width: "90%",
             padding: "12px",
             borderRadius: "8px",
+            fontFamily: "inherit",
+            fontSize: "16px",
             border: "1px solid var(--color-icon)",
           }}
         />
@@ -287,6 +296,8 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
               flex: 1,
               padding: "12px",
               borderRadius: "8px",
+              fontFamily: "inherit",
+              fontSize: "16px",
               border: "1px solid var(--color-icon)",
             }}
           />
@@ -297,6 +308,8 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
               flex: 1,
               padding: "12px",
               borderRadius: "8px",
+              fontFamily: "inherit",
+              fontSize: "16px",
               border: "1px solid var(--color-icon)",
             }}
           >
@@ -320,6 +333,8 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
             width: "90%",
             padding: "12px",
             borderRadius: "8px",
+            fontFamily: "inherit",
+            fontSize: "16px",
             border: "1px solid var(--color-icon)",
           }}
         />
@@ -338,6 +353,8 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
             width: "90%",
             padding: "12px",
             borderRadius: "8px",
+            fontFamily: "inherit",
+            fontSize: "16px",
             border: "1px solid var(--color-icon)",
           }}
         />
