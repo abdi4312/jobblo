@@ -93,7 +93,10 @@ export function Search({ onSearchChange, value }: SearchProps) {
             borderRadius: "10px", 
             border: "2px solid #eee",
             position: "relative",
-            paddingLeft: "10px"}} 
+            fontFamily: "inherit",
+            fontSize: "16px",
+            height: "38px",
+            paddingLeft: "10px"}}
             type="text" 
             placeholder="Søk etter oppdrag"
             value={searchQuery}
