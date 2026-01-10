@@ -149,10 +149,9 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
       </div>
 
       {/* Title */}
-      <h3
+      <h2
         style={{
-          marginLeft: "12px",
-          marginBottom: "4px",
+          margin: "12px 12px 8px 12px", // top, right, bottom, left
           color: "var(--color-text)",
           whiteSpace: "nowrap",
           overflow: "hidden",
@@ -160,17 +159,19 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
         }}
       >
         {job.title}
-      </h3>
+      </h2>
 
       {/* Categories */}
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
+          flexDirection: "row",
           fontSize: "16px",
           gap: "8px",
           color: "var(--color-white)",
           padding: "0 12px",
+          marginBottom: "12px", // luftigere mellom badges og job details
+          flexWrap: "wrap", // gjør at badges ikke kuttes på små skjermer
         }}
       >
         {job.categories && job.categories.length > 0 ? (
@@ -307,13 +308,11 @@ export const JobCard = ({ job, gridColumns }: JobCardProps) => {
           display: "flex",
           justifyContent: "center",
           width: "80%",
-          marginTop: "12px",
-          marginLeft: "auto",
-          marginRight: "auto",
-          marginBottom: "12px",
-          padding: "8px 0",
+          margin: "30px auto 16px",
+          padding: "10px 0",
           backgroundColor: "var(--color-muted-gray)",
-          borderRadius: "10px",
+          borderRadius: "12px",
+          boxShadow: "inset 0 0 4px rgba(0,0,0,0.05)",
         }}
       >
         <span

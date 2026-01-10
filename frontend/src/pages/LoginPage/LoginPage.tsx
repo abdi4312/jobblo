@@ -95,9 +95,13 @@ export default function LoginPage() {
         </button>
 
         {/* Cancel Link */}
-        <button onClick={() => navigate(-1)} className={styles.cancelBtn}>
+        {/*<button onClick={() => navigate(-1)} className={styles.cancelBtn}>
           Cancel
-        </button>
+        </button>*/}
+
+        <div className={styles.orSeparator}>
+          <span>eller</span>
+        </div>
 
 
         {/* Social Auth Buttons */}

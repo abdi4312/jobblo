@@ -3,7 +3,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 50vh;
   padding: 20px;
 }
 
@@ -22,6 +22,29 @@
   width: 80%;
   max-width: 380px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.orSeparator {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* mellom linje og tekst */
+  margin: 24px 0;
+  width: 100%;
+}
+
+.orSeparator::before,
+.orSeparator::after {
+  content: "";
+  flex-grow: 1;
+  height: 1px;
+  background-color: #ccc; /* lys grå linje */
+}
+
+.orSeparator span {
+  font-size: 14px;
+  font-weight: 500;
+  color: #555; 
+  white-space: nowrap;
 }
 
 .title {
