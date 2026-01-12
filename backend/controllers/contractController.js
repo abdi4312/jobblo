@@ -13,36 +13,34 @@ const getUserRole = (order, userId) => {
 };
 
 /**
- * GET /api/contracts/:id
+ * GET /api/contracts/:serviceId
  * Retrieve contract by ID
  */
-exports.getContractById = async (req, res) => {
+exports.getMyContracts = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { serviceId } = req.params;
+    const userId = req.userId;
 
-    if (!isValidId(id)) {
-      return res.status(400).json({ error: "Invalid contract ID format" });
+    if (!serviceId) {
+      return res.status(400).json({ message: "ServiceId is required" });
     }
 
-    const contract = await Contract.findById(id).populate("orderId");
-    if (!contract) return res.status(404).json({ error: "Contract not found" });
+    const contracts = await Contract.find({
+      serviceId,
+      $or: [
+        { clientId: userId },
+        { providerId: userId }
+      ]
+    }).sort({ createdAt: -1 });
 
-    const order = contract.orderId;
-    const role = getUserRole(order, req.userId);
-
-    if (!role) {
-      return res
-        .status(403)
-        .json({ error: "Not authorized to view this contract" });
-    }
-
-    return res.json({
+    return res.status(200).json({
       success: true,
-      contract,
+      contracts
     });
+
   } catch (error) {
-    console.error("GET CONTRACT ERROR:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("GET MY CONTRACTS ERROR:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -52,9 +50,9 @@ exports.getContractById = async (req, res) => {
  */
 exports.createContract = async (req, res) => {
   try {
-    const { serviceId, content, price, ScheduledDate, address } = req.body;
+    const { serviceId, content, price, scheduledDate, address } = req.body;
     const userId = req.userId;
-    console.log(serviceId, content, price, ScheduledDate, address);
+    console.log(serviceId, content, price, scheduledDate, address);
     if (!serviceId || !content || !price) {
       return res
         .status(400)
@@ -90,7 +88,7 @@ exports.createContract = async (req, res) => {
       serviceId,
       content,
       price,
-      ScheduledDate,
+      scheduledDate,
       address,
     });
     await contract.populate("serviceId");
@@ -113,45 +111,59 @@ exports.createContract = async (req, res) => {
 exports.signContract = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.userId;
 
     if (!isValidId(id)) {
       return res.status(400).json({ error: "Invalid contract ID format" });
     }
 
-    const contract = await Contract.findById(id).populate("orderId");
-    if (!contract) return res.status(404).json({ error: "Contract not found" });
-
-    const order = contract.orderId;
-    const role = getUserRole(order, req.userId);
-
-    if (!role) {
-      return res
-        .status(403)
-        .json({ error: "Not authorized to sign this contract" });
+    const contract = await Contract.findById(id);
+    if (!contract) {
+      return res.status(404).json({ error: "Contract not found" });
     }
 
-    // Role-based signing rules
-    if (role === "customer") {
+    const isClient = contract.clientId.toString() === userId;
+    const isProvider = contract.providerId.toString() === userId;
+
+    if (!isClient && !isProvider) {
+      return res.status(403).json({
+        error: "You are not authorized to sign this contract",
+      });
+    }
+
+    // CLIENT SIGN
+    if (isClient) {
       if (contract.signedByCustomer) {
-        return res.status(400).json({ error: "Customer already signed" });
+        return res.status(400).json({
+          error: "Client has already signed this contract",
+        });
       }
       contract.signedByCustomer = true;
     }
 
-    if (role === "provider") {
+    // PROVIDER SIGN
+    if (isProvider) {
       if (contract.signedByProvider) {
-        return res.status(400).json({ error: "Provider already signed" });
+        return res.status(400).json({
+          error: "Provider has already signed this contract",
+        });
       }
       contract.signedByProvider = true;
     }
 
+    // If both signed → update status
+    if (contract.signedByCustomer && contract.signedByProvider) {
+      contract.status = "signed";
+    }
+
     await contract.save();
 
-    return res.json({
+    return res.status(200).json({
       success: true,
-      message: `${role} signed the contract successfully`,
+      message: "Contract signed successfully",
       contract,
     });
+
   } catch (error) {
     console.error("SIGN CONTRACT ERROR:", error);
     return res.status(500).json({ error: "Internal server error" });
@@ -160,31 +172,40 @@ exports.signContract = async (req, res) => {
 
 /**
  * DELETE /api/contracts/:id
- * Remove contract (allowed for customer or provider)
+ * Remove contract (allowed only for client or provider)
  */
 exports.deleteContract = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.userId; // Auth middleware se aata hai
 
+    // Validate ID
     if (!isValidId(id)) {
       return res.status(400).json({ error: "Invalid contract ID format" });
     }
 
-    const contract = await Contract.findById(id).populate("orderId");
-    if (!contract) return res.status(404).json({ error: "Contract not found" });
-
-    const order = contract.orderId;
-    const role = getUserRole(order, req.userId);
-
-    if (!role) {
-      return res
-        .status(403)
-        .json({ error: "Not authorized to delete this contract" });
+    const contract = await Contract.findById(id);
+    if (!contract) {
+      return res.status(404).json({ error: "Contract not found" });
     }
 
+    // Check if user is either client or provider of this contract
+    const isClient = contract.clientId.toString() === userId;
+    const isProvider = contract.providerId.toString() === userId;
+
+    if (!isClient && !isProvider) {
+      return res.status(403).json({
+        error: "You are not authorized to delete this contract",
+      });
+    }
+
+    // Delete the contract
     await Contract.findByIdAndDelete(id);
 
-    return res.status(204).end();
+    return res.status(200).json({
+      success: true,
+      message: "Contract deleted successfully",
+    });
   } catch (error) {
     console.error("DELETE CONTRACT ERROR:", error);
     return res.status(500).json({ error: "Internal server error" });

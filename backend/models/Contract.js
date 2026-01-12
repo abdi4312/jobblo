@@ -11,7 +11,7 @@ const contractSchema = new mongoose.Schema(
     // selve kontrakten
     content: { type: String, required: true },
     price: { type: Number, required: true },
-    ScheduledDate: { type: Date },
+    scheduledDate: { type: Date },
     address: { type: String },
     version: { type: Number, default: 1 },
     clientId: {

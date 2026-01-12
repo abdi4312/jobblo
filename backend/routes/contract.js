@@ -42,14 +42,14 @@ const { authenticate } = require('../middleware/auth');
 
 /**
  * @swagger
- * /api/contracts/{id}:
+ * /api/contracts/{serviceId}:
  *   get:
  *     summary: Hent en kontrakt
  *     tags: [Contracts]
  *     security:
  *       - bearerAuth: []
  */
-router.get('/:id', authenticate, contractController.getContractById);
+router.get('/:serviceId', authenticate, contractController.getMyContracts);
 
 /**
  * @swagger
