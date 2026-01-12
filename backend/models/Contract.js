@@ -45,12 +45,18 @@ const contractSchema = new mongoose.Schema(
     // },
 
     customerSnapshot: {
-      userId: String,
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
       name: String,
     },
 
     providerSnapshot: {
-      userId: String,
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
       name: String,
     },
 

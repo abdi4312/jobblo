@@ -1,3 +1,4 @@
+const Order = require("../models/Order");
 const Contract = require("../models/Contract");
 const Service = require("../models/Service");
 const mongoose = require("mongoose");
@@ -27,17 +28,13 @@ exports.getMyContracts = async (req, res) => {
 
     const contracts = await Contract.find({
       serviceId,
-      $or: [
-        { clientId: userId },
-        { providerId: userId }
-      ]
+      $or: [{ clientId: userId }, { providerId: userId }],
     }).sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
-      contracts
+      contracts,
     });
-
   } catch (error) {
     console.error("GET MY CONTRACTS ERROR:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -52,14 +49,11 @@ exports.createContract = async (req, res) => {
   try {
     const { serviceId, content, price, scheduledDate, address } = req.body;
     const userId = req.userId;
-    console.log(serviceId, content, price, scheduledDate, address);
+
     if (!serviceId || !content || !price) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "serviceId, content, and price are required",
-        });
+      return res.status(400).json({
+        error: "serviceId, content, and price are required",
+      });
     }
 
     if (!isValidId(serviceId)) {
@@ -67,40 +61,55 @@ exports.createContract = async (req, res) => {
     }
 
     const service = await Service.findById(serviceId);
-    if (!service) return res.status(404).json({ error: "Service not found" });
+    if (!service || !service.userId) {
+      return res.status(404).json({ error: "Service not found" });
+    }
 
-    // const role = getUserRole(service, req.userId);
-    // if (!role) {
-    //     return res.status(403).json({ error: "Not authorized to create a contract for this service" });
-    // }
+    if (userId === service.userId.toString()) {
+      return res.status(400).json({
+        error: "Providers cannot create contracts for themselves",
+      });
+    }
 
-    // Ensure only one contract per service
     const existing = await Contract.findOne({ serviceId });
     if (existing) {
-      return res
-        .status(400)
-        .json({ error: "Contract already exists for this service" });
+      return res.status(400).json({
+        error: "Contract already exists for this service",
+      });
     }
 
     const contract = await Contract.create({
+      serviceId,
       clientId: userId,
       providerId: service.userId,
-      serviceId,
       content,
       price,
       scheduledDate,
       address,
-    });
-    await contract.populate("serviceId");
+      status: "draft",
 
-    return res.status(201).json({
+      serviceSnapshot: {
+        title: service.title,
+        description: service.description,
+        category: service.category,
+      },
+
+      customerSnapshot: {
+        userId,
+      },
+      providerSnapshot: {
+        userId: service.userId,
+      },
+    });
+
+    res.status(201).json({
       success: true,
       message: "Contract created successfully",
       contract,
     });
-  } catch (error) {
-    console.error("CREATE CONTRACT ERROR:", error);
-    return res.status(500).json({ error: "Internal server error" });
+  } catch (err) {
+    console.error("CREATE CONTRACT ERROR:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -126,47 +135,67 @@ exports.signContract = async (req, res) => {
     const isProvider = contract.providerId.toString() === userId;
 
     if (!isClient && !isProvider) {
-      return res.status(403).json({
-        error: "You are not authorized to sign this contract",
-      });
+      return res.status(403).json({ error: "Not authorized" });
     }
 
-    // CLIENT SIGN
     if (isClient) {
       if (contract.signedByCustomer) {
-        return res.status(400).json({
-          error: "Client has already signed this contract",
-        });
+        return res.status(400).json({ error: "Client already signed" });
       }
       contract.signedByCustomer = true;
+      contract.signedByCustomerAt = new Date();
     }
 
-    // PROVIDER SIGN
     if (isProvider) {
       if (contract.signedByProvider) {
-        return res.status(400).json({
-          error: "Provider has already signed this contract",
-        });
+        return res.status(400).json({ error: "Provider already signed" });
       }
       contract.signedByProvider = true;
+      contract.signedByProviderAt = new Date();
     }
 
-    // If both signed → update status
+    // ✅ STATUS FLOW
     if (contract.signedByCustomer && contract.signedByProvider) {
       contract.status = "signed";
+    } else {
+      contract.status = "pending_signatures";
+    }
+
+    if (contract.status === "signed") {
+      const order = await Order.findOne({ contractId: contract._id });
+      if (order) {
+        return res.status(400).json({ error: "Order already exists" });
+      }
+
+      const service = await Service.findById(contract.serviceId);
+      if (!service) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+
+      await Order.create({
+        serviceId: contract.serviceId,
+        customerId: contract.clientId,
+        providerId: contract.providerId,
+        contractId: contract._id,
+        scheduledDate: contract.scheduledDate,
+        price: contract.price,
+        status: "pending",
+        location: {
+          address: contract.address || service?.location?.address,
+        },
+      });
     }
 
     await contract.save();
 
-    return res.status(200).json({
+    res.json({
       success: true,
       message: "Contract signed successfully",
       contract,
     });
-
-  } catch (error) {
-    console.error("SIGN CONTRACT ERROR:", error);
-    return res.status(500).json({ error: "Internal server error" });
+  } catch (err) {
+    console.error("SIGN CONTRACT ERROR:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -177,7 +206,7 @@ exports.signContract = async (req, res) => {
 exports.deleteContract = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.userId; // Auth middleware se aata hai
+    const userId = req.userId;
 
     // Validate ID
     if (!isValidId(id)) {
