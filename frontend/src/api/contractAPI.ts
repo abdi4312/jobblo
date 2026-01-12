@@ -31,9 +31,13 @@ export type CreateContractPayload = {
 /**
  * Get contract by ID
  */
-export const getContractById = async (contractId: string): Promise<Contract> => {
-  const response = await mainLink.get(`/api/contracts/${contractId}`);
-  return response.data.contract;
+export const getContractById = async (serviceId: string): Promise<Contract> => {
+  const response = await mainLink.get(`/api/contracts/${serviceId}`);
+    const contractsArray = response.data.contracts;
+    if (Array.isArray(contractsArray) && contractsArray.length > 0) {
+      return contractsArray[0];
+    }
+    return null;
 };
 
 /**
