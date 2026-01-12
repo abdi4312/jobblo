@@ -23,7 +23,7 @@ exports.getMyContracts = async (req, res) => {
     const userId = req.userId;
 
     if (!serviceId) {
-      return res.status(400).json({ message: "ServiceId is required" });
+      return res.status(400).json({ success: false, message: "ServiceId is required" });
     }
 
     const contracts = await Contract.find({
@@ -31,13 +31,24 @@ exports.getMyContracts = async (req, res) => {
       $or: [{ clientId: userId }, { providerId: userId }],
     }).sort({ createdAt: -1 });
 
+    // AGER FIND NA HO TOH YEH BLOCK CHALEGA
+    if (!contracts || contracts.length === 0) {
+      return res.status(200).json({
+        // success: true,
+        message: "No contracts found for this service",
+      });
+    }
+
+    // Ager data mil jaye
     return res.status(200).json({
       success: true,
+      count: contracts.length,
       contracts,
     });
+
   } catch (error) {
     console.error("GET MY CONTRACTS ERROR:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 };
 
