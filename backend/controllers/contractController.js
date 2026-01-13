@@ -23,7 +23,9 @@ exports.getMyContracts = async (req, res) => {
     const userId = req.userId;
 
     if (!serviceId) {
-      return res.status(400).json({ success: false, message: "ServiceId is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "ServiceId is required" });
     }
 
     const contracts = await Contract.find({
@@ -31,21 +33,21 @@ exports.getMyContracts = async (req, res) => {
       $or: [{ clientId: userId }, { providerId: userId }],
     }).sort({ createdAt: -1 });
 
-    // AGER FIND NA HO TOH YEH BLOCK CHALEGA
+    const io = req.app.get("io");
+    io.to(`service_${serviceId}`).emit("contracts_updated", {
+      contracts,
+    });
     if (!contracts || contracts.length === 0) {
       return res.status(200).json({
-        // success: true,
         message: "No contracts found for this service",
       });
     }
 
-    // Ager data mil jaye
     return res.status(200).json({
       success: true,
       count: contracts.length,
       contracts,
     });
-
   } catch (error) {
     console.error("GET MY CONTRACTS ERROR:", error);
     res.status(500).json({ success: false, error: "Internal server error" });
@@ -98,20 +100,18 @@ exports.createContract = async (req, res) => {
       scheduledDate,
       address,
       status: "draft",
-
       serviceSnapshot: {
         title: service.title,
         description: service.description,
         category: service.category,
       },
-
-      customerSnapshot: {
-        userId,
-      },
-      providerSnapshot: {
-        userId: service.userId,
-      },
+      customerSnapshot: { userId },
+      providerSnapshot: { userId: service.userId },
     });
+
+    // --- SOCKET EMIT ---
+    const io = req.app.get("io");
+    io.to(`service_${serviceId}`).emit("contract_created", { contract });
 
     res.status(201).json({
       success: true,
@@ -191,13 +191,17 @@ exports.signContract = async (req, res) => {
         scheduledDate: contract.scheduledDate,
         price: contract.price,
         status: "pending",
-        location: {
-          address: contract.address || service?.location?.address,
-        },
+        location: { address: contract.address || service?.location?.address },
       });
     }
 
     await contract.save();
+
+    // --- SOCKET EMIT ---
+    const io = req.app.get("io");
+    io.to(`service_${contract.serviceId}`).emit("contract_signed", {
+      contract,
+    });
 
     res.json({
       success: true,
@@ -219,7 +223,6 @@ exports.deleteContract = async (req, res) => {
     const { id } = req.params;
     const userId = req.userId;
 
-    // Validate ID
     if (!isValidId(id)) {
       return res.status(400).json({ error: "Invalid contract ID format" });
     }
@@ -229,18 +232,22 @@ exports.deleteContract = async (req, res) => {
       return res.status(404).json({ error: "Contract not found" });
     }
 
-    // Check if user is either client or provider of this contract
     const isClient = contract.clientId.toString() === userId;
     const isProvider = contract.providerId.toString() === userId;
 
     if (!isClient && !isProvider) {
-      return res.status(403).json({
-        error: "You are not authorized to delete this contract",
-      });
+      return res
+        .status(403)
+        .json({ error: "You are not authorized to delete this contract" });
     }
 
-    // Delete the contract
     await Contract.findByIdAndDelete(id);
+
+    // --- SOCKET EMIT ---
+    const io = req.app.get("io");
+    io.to(`service_${contract.serviceId}`).emit("contract_deleted", {
+      contractId: contract._id,
+    });
 
     return res.status(200).json({
       success: true,

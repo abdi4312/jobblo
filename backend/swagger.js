@@ -1,15 +1,16 @@
 const swaggerJSDoc = require('swagger-jsdoc');
 
+
 const swaggerDefinition = {
     openapi: '3.0.0',
     info: {
         title: 'Jobblo API',
         version: '1.0.0',
-        description: 'Swagger-dokumentasjon for Jobblo',
+        description: 'Swagger documentation for Jobblo',
     },
     servers: [
         {
-            url: 'http://localhost:5000',
+            url: process.env.PORT || 'http://localhost:5000',
         },
     ],
     components: {
@@ -18,20 +19,26 @@ const swaggerDefinition = {
                 type: 'http',
                 scheme: 'bearer',
                 bearerFormat: 'JWT',
+                description: 'Enter JWT token with Bearer prefix, e.g. "Bearer eyJhb..."',
+            },
+            cookieAuth: {
+                type: 'apiKey',
+                in: 'cookie',
+                name: 'token',
+                description: 'Use cookie named "token" for authentication',
             },
         },
     },
-
+    // Global security applies to all routes unless overridden
     security: [
-        {
-            bearerAuth: [],
-        },
+        { bearerAuth: [] },
+        { cookieAuth: [] }
     ],
 };
 
 const options = {
     swaggerDefinition,
-    apis: ['./routes/*.js'], // Leser kommentarer i dine route-filer
+    apis: ['./routes/*.js'], // Reads JSDoc comments in route files
 };
 
 module.exports = swaggerJSDoc(options);
