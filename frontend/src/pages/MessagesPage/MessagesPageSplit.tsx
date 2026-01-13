@@ -1,7 +1,14 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { initSocket, disconnectSocket } from "../../socket/socket";
-import { getMyChats, deleteChatForMe, getChatById, sendMessage, type Chat, type ChatMessage } from "../../api/chatAPI";
+import {
+  getMyChats,
+  deleteChatForMe,
+  getChatById,
+  sendMessage,
+  type Chat,
+  type ChatMessage,
+} from "../../api/chatAPI";
 import { useUserStore } from "../../stores/userStore";
 import styles from "./MessagesPageSplit.module.css";
 import { toast } from "react-toastify";
@@ -27,27 +34,27 @@ export function MessagesPageSplit() {
   const location = useLocation();
   const { conversationId } = useParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterType>("Alle");
   const { user } = useUserStore();
   const userId = user?._id;
-  
+
   // Track window width for responsive layout
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1200);
-  
+
   // Track where user came from when first entering messages page
   const [returnPath] = useState(() => {
     // If coming from another page (not within messages), save that path
     const state = location.state as { from?: string } | null;
-    return state?.from || sessionStorage.getItem('beforeMessages') || '/';
+    return state?.from || sessionStorage.getItem("beforeMessages") || "/";
   });
-  
+
   // Save current path before navigating to messages
   useEffect(() => {
-    if (!location.pathname.startsWith('/messages')) {
-      sessionStorage.setItem('beforeMessages', location.pathname);
+    if (!location.pathname.startsWith("/messages")) {
+      sessionStorage.setItem("beforeMessages", location.pathname);
     }
   }, [location.pathname]);
 
@@ -62,15 +69,15 @@ export function MessagesPageSplit() {
   const [contract, setContract] = useState<Contract | null>(null);
   const [loadingContract, setLoadingContract] = useState(false);
   const [showCreateContract, setShowCreateContract] = useState(false);
-  
+
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 1200);
     };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // Fetch all chats
@@ -102,9 +109,12 @@ export function MessagesPageSplit() {
 
     // Mark this chat as read when opening it
     if (userId) {
-      localStorage.setItem(`lastChatCheck_${userId}_${conversationId}`, new Date().toISOString());
+      localStorage.setItem(
+        `lastChatCheck_${userId}_${conversationId}`,
+        new Date().toISOString()
+      );
       // Notify Header to re-check unread status
-      window.dispatchEvent(new CustomEvent('chat-read'));
+      window.dispatchEvent(new CustomEvent("chat-read"));
     }
 
     const fetchChat = async () => {
@@ -113,10 +123,9 @@ export function MessagesPageSplit() {
         const chatData = await getChatById(conversationId);
         setActiveChat(chatData);
         setMessages(chatData.messages || []);
-        
         // Load contract if exists
-        if (chatData.contractId) {
-          loadContract(chatData.contractId);
+        if (chatData.serviceId?._id) {
+          loadContract(chatData.serviceId?._id);
         } else {
           setContract(null);
         }
@@ -138,16 +147,19 @@ export function MessagesPageSplit() {
 
     const onReceiveMessage = (data: ReceiveMessagePayload) => {
       if (data.chatId === conversationId) {
-        const messageSenderId = typeof data.message.senderId === 'string' 
-          ? data.message.senderId 
-          : (data.message.senderId as any)?._id;
-          
+        const messageSenderId =
+          typeof data.message.senderId === "string"
+            ? data.message.senderId
+            : (data.message.senderId as any)?._id;
+
         if (messageSenderId === userId) {
           return; // Skip own message (already added optimistically)
         }
-        
+
         setMessages((prev) => [...prev, data.message]);
-        setActiveChat((prevChat) => prevChat ? { ...prevChat, lastMessage: data.message.text } : null);
+        setActiveChat((prevChat) =>
+          prevChat ? { ...prevChat, lastMessage: data.message.text } : null
+        );
       }
     };
 
@@ -167,7 +179,13 @@ export function MessagesPageSplit() {
     const handleReceiveMessage = (data: MessageData) => {
       setChats((prev) =>
         prev.map((c) =>
-          c._id === data.chatId ? { ...c, lastMessage: data.message.text, updatedAt: new Date().toISOString() } : c
+          c._id === data.chatId
+            ? {
+                ...c,
+                lastMessage: data.message.text,
+                updatedAt: new Date().toISOString(),
+              }
+            : c
         )
       );
     };
@@ -184,17 +202,56 @@ export function MessagesPageSplit() {
     if (messages.length > 0) {
       // Use a slight delay to ensure the DOM has updated
       const timer = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        messagesEndRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
       }, 100);
       return () => clearTimeout(timer);
     }
   }, [messages.length]); // Only trigger when message count changes, not on every message update
 
-  const loadContract = async (contractId: string) => {
+  // Load contract + setup real-time updates
+  const loadContract = async (serviceId: string) => {
     try {
       setLoadingContract(true);
-      const contractData = await getContractById(contractId);
+
+      // Initial fetch
+      const contractData = await getContractById(serviceId);
       setContract(contractData);
+
+      // Real-time updates
+      const socket = initSocket();
+      if (!socket) return;
+
+      const roomId = typeof serviceId === "string" ? serviceId : serviceId._id;
+      socket.emit("join_service", roomId);
+
+      const handleContractCreated = ({
+        contract: newContract,
+      }: {
+        contract: Contract;
+      }) => {
+        setContract(newContract);
+      };
+
+      const handleContractSigned = ({
+        contract: updatedContract,
+      }: {
+        contract: Contract;
+      }) => {
+        if (contract?._id === updatedContract._id) {
+          setContract(updatedContract);
+        }
+      };
+
+      socket.on("contract_created", handleContractCreated);
+      socket.on("contract_signed", handleContractSigned);
+
+      return () => {
+        socket.off("contract_created", handleContractCreated);
+        socket.off("contract_signed", handleContractSigned);
+      };
     } catch (error) {
       console.error("Load contract error:", error);
     } finally {
@@ -203,15 +260,15 @@ export function MessagesPageSplit() {
   };
 
   const handleContractUpdated = () => {
-    if (activeChat?.contractId) {
-      loadContract(activeChat.contractId);
+    if (activeChat?.serviceId?._id) {
+      loadContract(activeChat.serviceId?._id);
     }
     if (conversationId) {
       // Refresh the chat to get updated contract info
-      getChatById(conversationId).then(chatData => {
+      getChatById(conversationId).then((chatData) => {
         setActiveChat(chatData);
-        if (chatData.contractId) {
-          loadContract(chatData.contractId);
+        if (chatData.serviceId?._id) {
+          loadContract(chatData.serviceId?._id);
         }
       });
     }
@@ -225,9 +282,15 @@ export function MessagesPageSplit() {
     const hours = diff / (1000 * 60 * 60);
 
     if (hours < 24) {
-      return date.toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" });
+      return date.toLocaleTimeString("nb-NO", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     } else {
-      return date.toLocaleDateString("nb-NO", { day: "2-digit", month: "2-digit" });
+      return date.toLocaleDateString("nb-NO", {
+        day: "2-digit",
+        month: "2-digit",
+      });
     }
   };
 
@@ -271,16 +334,18 @@ export function MessagesPageSplit() {
 
   const isUnread = (chat: Chat) => {
     if (!userId || !chat.updatedAt) return false;
-    
-    const lastCheckedTime = localStorage.getItem(`lastChatCheck_${userId}_${chat._id}`);
-    
+
+    const lastCheckedTime = localStorage.getItem(
+      `lastChatCheck_${userId}_${chat._id}`
+    );
+
     // If never checked before, only mark as unread if updated in last 7 days
     if (!lastCheckedTime) {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       return new Date(chat.updatedAt) > weekAgo;
     }
-    
+
     const lastChecked = new Date(lastCheckedTime);
     const chatUpdated = new Date(chat.updatedAt);
     return chatUpdated > lastChecked;
@@ -290,7 +355,7 @@ export function MessagesPageSplit() {
 
   const handleDeleteChat = async (e: React.MouseEvent, chatId: string) => {
     e.stopPropagation();
-    
+
     if (!confirm("Er du sikker på at du vil slette denne samtalen?")) {
       return;
     }
@@ -314,9 +379,11 @@ export function MessagesPageSplit() {
     try {
       setSending(true);
       const msg = await sendMessage(conversationId, newMessage.trim());
-      
+
       setMessages((prev) => [...prev, msg]);
-      setActiveChat((prevChat) => prevChat ? { ...prevChat, lastMessage: msg.text } : null);
+      setActiveChat((prevChat) =>
+        prevChat ? { ...prevChat, lastMessage: msg.text } : null
+      );
       setNewMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
@@ -335,10 +402,13 @@ export function MessagesPageSplit() {
   const messageGroups = groupMessagesByDate();
 
   return (
-    <div className={styles.pageContainer} style={{ minHeight: "100vh", background: "#fcf9eb" }}>
+    <div
+      className={styles.pageContainer}
+      style={{ minHeight: "100vh", background: "#fcf9eb" }}
+    >
       {/* Back button to leave messages page */}
       <div className={styles.backButtonContainer}>
-        <button 
+        <button
           className={styles.pageBackButton}
           onClick={() => navigate(returnPath)}
           aria-label="Gå tilbake"
@@ -347,14 +417,14 @@ export function MessagesPageSplit() {
           Tilbake
         </button>
       </div>
-      
+
       <div className={styles.splitContainer} style={{ minHeight: "600px" }}>
         {/* LEFT SIDEBAR - Chat List */}
-        <div 
+        <div
           className={styles.sidebar}
-          style={{ 
+          style={{
             display: conversationId && isMobile ? "none" : "flex",
-            minHeight: "400px"
+            minHeight: "400px",
           }}
         >
           {/* Filter Tabs */}
@@ -382,10 +452,17 @@ export function MessagesPageSplit() {
               </div>
             ) : filteredChats.length === 0 ? (
               <div className={styles.empty}>
-                <span className="material-symbols-outlined" style={{ fontSize: "36px", color: "#ccc" }}>
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: "36px", color: "#ccc" }}
+                >
                   chat_bubble_outline
                 </span>
-                <p style={{ fontSize: "14px", color: "#666", marginTop: "8px" }}>Ingen meldinger</p>
+                <p
+                  style={{ fontSize: "14px", color: "#666", marginTop: "8px" }}
+                >
+                  Ingen meldinger
+                </p>
               </div>
             ) : (
               filteredChats.map((chat) => {
@@ -395,26 +472,33 @@ export function MessagesPageSplit() {
                     : chat.clientId;
 
                 const hasUnread = isUnread(chat);
-                
+
                 return (
                   <div
                     key={chat._id}
-                    className={`${styles.chatCard} ${conversationId === chat._id ? styles.activeChatCard : ""}`}
+                    className={`${styles.chatCard} ${
+                      conversationId === chat._id ? styles.activeChatCard : ""
+                    }`}
                     onClick={() => navigate(`/messages/${chat._id}`)}
                   >
                     <div className={styles.chatHeader}>
                       <div className={styles.userBadge}>
                         <div className={styles.userAvatar}>
                           {otherPerson.avatarUrl ? (
-                            <img src={otherPerson.avatarUrl} alt={otherPerson.name} />
+                            <img
+                              src={otherPerson.avatarUrl}
+                              alt={otherPerson.name}
+                            />
                           ) : (
-                            <span>{otherPerson.name?.charAt(0) || '?'}</span>
+                            <span>{otherPerson.name?.charAt(0) || "?"}</span>
                           )}
                         </div>
                         <span className={styles.userName}>
                           {otherPerson.name || "Ukjent bruker"}
                         </span>
-                        {hasUnread && <span className={styles.unreadBadge}></span>}
+                        {hasUnread && (
+                          <span className={styles.unreadBadge}></span>
+                        )}
                       </div>
                       <span className={styles.timeAgo}>
                         {formatTime(chat.updatedAt)}
@@ -444,16 +528,19 @@ export function MessagesPageSplit() {
         </div>
 
         {/* RIGHT SIDE - Conversation View */}
-        <div 
+        <div
           className={styles.conversationPanel}
-          style={{ 
+          style={{
             display: !conversationId && isMobile ? "none" : "flex",
-            minHeight: "400px"
+            minHeight: "400px",
           }}
         >
           {!conversationId ? (
             <div className={styles.emptyConversation}>
-              <span className="material-symbols-outlined" style={{ fontSize: "64px", color: "#ccc" }}>
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: "64px", color: "#ccc" }}
+              >
                 chat
               </span>
               <p style={{ fontSize: "16px", color: "#666", marginTop: "16px" }}>
@@ -474,21 +561,23 @@ export function MessagesPageSplit() {
               <div className={styles.conversationHeader}>
                 {/* Back button for mobile */}
                 {isMobile && (
-                  <button 
+                  <button
                     className={styles.backButton}
-                    onClick={() => navigate('/messages')}
+                    onClick={() => navigate("/messages")}
                     aria-label="Tilbake til samtaler"
                   >
-                    <span className="material-symbols-outlined">arrow_back</span>
+                    <span className="material-symbols-outlined">
+                      arrow_back
+                    </span>
                   </button>
                 )}
-                
+
                 <div className={styles.headerUser}>
                   <div className={styles.headerAvatar}>
                     {otherUser?.avatarUrl ? (
                       <img src={otherUser.avatarUrl} alt={otherUser.name} />
                     ) : (
-                      <span>{otherUser?.name?.charAt(0) || '?'}</span>
+                      <span>{otherUser?.name?.charAt(0) || "?"}</span>
                     )}
                   </div>
                   <div className={styles.headerInfo}>
@@ -500,14 +589,16 @@ export function MessagesPageSplit() {
                     )}
                   </div>
                 </div>
-                
+
                 {/* Send Contract Button */}
-                {!activeChat.contractId && activeChat.serviceId && (
-                  <button 
+                {!contract?._id && (
+                  <button
                     className={styles.contractButton}
                     onClick={() => setShowCreateContract(true)}
                   >
-                    <span className="material-symbols-outlined">description</span>
+                    <span className="material-symbols-outlined">
+                      description
+                    </span>
                     Send Contract
                   </button>
                 )}
@@ -516,7 +607,7 @@ export function MessagesPageSplit() {
               {/* Contract Display */}
               {contract && userId && (
                 <div className={styles.contractSection}>
-                  <ContractMessage 
+                  <ContractMessage
                     contract={contract}
                     currentUserId={userId}
                     onContractUpdated={handleContractUpdated}
@@ -528,11 +619,20 @@ export function MessagesPageSplit() {
               <div className={styles.messagesArea}>
                 {messages.length === 0 ? (
                   <div className={styles.emptyMessages}>
-                    <span className="material-symbols-outlined" style={{ fontSize: "48px", color: "#ccc" }}>
+                    <span
+                      className="material-symbols-outlined"
+                      style={{ fontSize: "48px", color: "#ccc" }}
+                    >
                       chat
                     </span>
                     <p>Ingen meldinger ennå</p>
-                    <p style={{ fontSize: "14px", color: "#999", marginTop: "8px" }}>
+                    <p
+                      style={{
+                        fontSize: "14px",
+                        color: "#999",
+                        marginTop: "8px",
+                      }}
+                    >
                       Send en melding for å starte samtalen
                     </p>
                   </div>
@@ -543,11 +643,20 @@ export function MessagesPageSplit() {
                         {formatDate(msgs[0].createdAt)}
                       </div>
                       {msgs.map((msg, index) => {
-                        const senderId = typeof msg.senderId === 'string' ? msg.senderId : (msg.senderId as any)?._id;
-                        const senderName = typeof msg.senderId === 'object' ? (msg.senderId as any)?.name : 'Unknown';
-                        const senderAvatar = typeof msg.senderId === 'object' ? (msg.senderId as any)?.avatarUrl : undefined;
+                        const senderId =
+                          typeof msg.senderId === "string"
+                            ? msg.senderId
+                            : (msg.senderId as any)?._id;
+                        const senderName =
+                          typeof msg.senderId === "object"
+                            ? (msg.senderId as any)?.name
+                            : "Unknown";
+                        const senderAvatar =
+                          typeof msg.senderId === "object"
+                            ? (msg.senderId as any)?.avatarUrl
+                            : undefined;
                         const isSentByMe = senderId === userId;
-                        
+
                         return (
                           <div
                             key={msg._id || index}
@@ -561,7 +670,7 @@ export function MessagesPageSplit() {
                                   <img src={senderAvatar} alt={senderName} />
                                 ) : (
                                   <div className={styles.avatarPlaceholder}>
-                                    {senderName?.charAt(0) || '?'}
+                                    {senderName?.charAt(0) || "?"}
                                   </div>
                                 )}
                               </div>
@@ -611,8 +720,8 @@ export function MessagesPageSplit() {
       </div>
 
       {/* Create Contract Modal */}
-      {activeChat && activeChat.serviceId && userId && otherUser && (
-        <CreateContractModal 
+      {userId && otherUser && (
+        <CreateContractModal
           isOpen={showCreateContract}
           onClose={() => setShowCreateContract(false)}
           serviceId={activeChat.serviceId._id}
