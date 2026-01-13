@@ -33,7 +33,19 @@ const io = new Server(server, {
 // Make io accessible to routes
 app.set('io', io);
 chatSocket(io);
+io.on('connection', (socket) => {
+  console.log(`Socket connected: ${socket.id}`);
 
+  // Join service room
+  socket.on('join_service', (serviceId) => {
+    socket.join(`service_${serviceId}`);
+    console.log(`Socket ${socket.id} joined room service_${serviceId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log(`Socket disconnected: ${socket.id}`);
+  });
+});
 // io.on('connection', (socket) => {
 //   console.log(`Socket.io connected: ${socket.id}`);
 

@@ -13,13 +13,19 @@ interface ContractMessageProps {
 export function ContractMessage({ contract, currentUserId, onContractUpdated }: ContractMessageProps) {
   const [signing, setSigning] = useState(false);
 
-  const order = typeof contract.orderId === 'object' ? contract.orderId : null;
-  const isCustomer = order?.customerId?._id === currentUserId || order?.customerId === currentUserId;
-  const isProvider = order?.providerId?._id === currentUserId || order?.providerId === currentUserId;
+  // 1. SAFEGUARD: Agar contract undefined hai toh kuch render na karein
+  if (!contract || !contract._id) {
+    return null; 
+  }
+
+  // 2. Optional Chaining use ki hai taake properties safe rahein
+  const isCustomer = contract?.customerSnapshot?.userId === currentUserId || contract?.clientId === currentUserId;
+  const isProvider = contract?.providerSnapshot?.userId === currentUserId || contract?.providerId === currentUserId;
   
-  const userHasSigned = isCustomer ? contract.signedByCustomer : (isProvider ? contract.signedByProvider : false);
-  const otherPartySigned = isCustomer ? contract.signedByProvider : (isProvider ? contract.signedByCustomer : false);
-  const bothSigned = contract.signedByCustomer && contract.signedByProvider;
+  // Is line par error fixed:
+  const userHasSigned = isCustomer ? contract?.signedByCustomer : (isProvider ? contract?.signedByProvider : false);
+  const otherPartySigned = isCustomer ? contract?.signedByProvider : (isProvider ? contract?.signedByCustomer : false);
+  const bothSigned = contract?.signedByCustomer && contract?.signedByProvider;
 
   const handleSign = async () => {
     try {
@@ -45,33 +51,33 @@ export function ContractMessage({ contract, currentUserId, onContractUpdated }: 
       </div>
 
       <div className={styles.contractContent}>
-        <p className={styles.contractText}>{contract.content}</p>
+        <p className={styles.contractText}>{contract?.content}</p>
         
-        {order?.agreedPrice && (
+        {contract?.price && (
           <div className={styles.priceSection}>
-            <strong>Agreed Price:</strong> {order.agreedPrice} kr
+            <strong>Agreed Price:</strong> {contract.price} kr
           </div>
         )}
         
-        {order?.scheduledDate && (
+        {contract?.scheduledDate && (
           <div className={styles.dateSection}>
-            <strong>Scheduled:</strong> {new Date(order.scheduledDate).toLocaleDateString('nb-NO')}
+            <strong>Scheduled:</strong> {new Date(contract.scheduledDate).toLocaleDateString('nb-NO')}
           </div>
         )}
       </div>
 
       <div className={styles.signaturesSection}>
         <div className={styles.signature}>
-          <span className={`material-symbols-outlined ${contract.signedByCustomer ? styles.signed : ''}`}>
-            {contract.signedByCustomer ? 'check_circle' : 'radio_button_unchecked'}
+          <span className={`material-symbols-outlined ${contract?.signedByCustomer ? styles.signed : ''}`}>
+            {contract?.signedByCustomer ? 'check_circle' : 'radio_button_unchecked'}
           </span>
-          <span>Customer {contract.signedByCustomer && '✓'}</span>
+          <span>Customer {contract?.signedByCustomer && '✓'}</span>
         </div>
         <div className={styles.signature}>
-          <span className={`material-symbols-outlined ${contract.signedByProvider ? styles.signed : ''}`}>
-            {contract.signedByProvider ? 'check_circle' : 'radio_button_unchecked'}
+          <span className={`material-symbols-outlined ${contract?.signedByProvider ? styles.signed : ''}`}>
+            {contract?.signedByProvider ? 'check_circle' : 'radio_button_unchecked'}
           </span>
-          <span>Provider {contract.signedByProvider && '✓'}</span>
+          <span>Provider {contract?.signedByProvider && '✓'}</span>
         </div>
       </div>
 

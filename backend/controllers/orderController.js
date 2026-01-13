@@ -82,7 +82,7 @@ exports.getOrderById = async (req, res) => {
  */
 exports.createOrder = async (req, res) => {
     try {
-        const { serviceId, price } = req.body;
+        const { serviceId} = req.body;
         const customerId = req.userId;
 
         if (!serviceId)
@@ -104,7 +104,7 @@ exports.createOrder = async (req, res) => {
             serviceId,
             customerId,
             providerId,
-            price: price || service.price,
+            price:service.price,
             status: 'pending'
         });
 

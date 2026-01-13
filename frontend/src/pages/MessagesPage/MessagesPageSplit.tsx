@@ -112,11 +112,10 @@ export function MessagesPageSplit() {
         setLoadingChat(true);
         const chatData = await getChatById(conversationId);
         setActiveChat(chatData);
-        setMessages(chatData.messages || []);
-        
+        setMessages(chatData.messages || []);        
         // Load contract if exists
-        if (chatData.contractId) {
-          loadContract(chatData.contractId);
+        if (chatData.serviceId?._id) {
+          loadContract(chatData.serviceId?._id);
         } else {
           setContract(null);
         }
@@ -190,28 +189,27 @@ export function MessagesPageSplit() {
     }
   }, [messages.length]); // Only trigger when message count changes, not on every message update
 
-  const loadContract = async (contractId: string) => {
+  const loadContract = async (serviceId: string) => {
     try {
       setLoadingContract(true);
-      const contractData = await getContractById(contractId);
+      const contractData = await getContractById(serviceId);
       setContract(contractData);
     } catch (error) {
       console.error("Load contract error:", error);
     } finally {
       setLoadingContract(false);
     }
-  };
-
+  };  
   const handleContractUpdated = () => {
-    if (activeChat?.contractId) {
-      loadContract(activeChat.contractId);
+    if (activeChat?.serviceId?._id) {
+      loadContract(activeChat.serviceId?._id);
     }
     if (conversationId) {
-      // Refresh the chat to get updated contract info
+      // Refresh the chat to get updated contract info 
       getChatById(conversationId).then(chatData => {
         setActiveChat(chatData);
-        if (chatData.contractId) {
-          loadContract(chatData.contractId);
+        if (chatData.serviceId?._id) {
+          loadContract(chatData.serviceId?._id);
         }
       });
     }
@@ -502,7 +500,7 @@ export function MessagesPageSplit() {
                 </div>
                 
                 {/* Send Contract Button */}
-                {!activeChat.contractId && activeChat.serviceId && (
+                {!contract?._id && (
                   <button 
                     className={styles.contractButton}
                     onClick={() => setShowCreateContract(true)}
@@ -611,7 +609,7 @@ export function MessagesPageSplit() {
       </div>
 
       {/* Create Contract Modal */}
-      {activeChat && activeChat.serviceId && userId && otherUser && (
+      {userId && otherUser && (
         <CreateContractModal 
           isOpen={showCreateContract}
           onClose={() => setShowCreateContract(false)}

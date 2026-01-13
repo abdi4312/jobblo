@@ -46,17 +46,21 @@ export function CreateContractModal({
       setCreating(true);
 
       // First create the order
-      const order = await createOrder({
-        serviceId,
-        price: parseFloat(price),
-        scheduledDate: scheduledDate || undefined,
-        address: address || undefined
-      });
+      // const order = await createOrder({
+      //   serviceId,
+      //   price: parseFloat(price),
+      //   scheduledDate: scheduledDate || undefined,
+      //   address: address || undefined
+      // });
 
       // Then create the contract for the order
       await createContract({
-        orderId: order._id,
-        content: content.trim()
+        serviceId,
+        content: content.trim(),
+        price: parseFloat(price),
+        scheduledDate: scheduledDate || undefined,
+        address: address || undefined
+
       });
 
       toast.success("Contract sent successfully!");
