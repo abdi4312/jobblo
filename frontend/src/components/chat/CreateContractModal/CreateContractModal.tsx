@@ -1,8 +1,8 @@
 import { useState } from "react";
 import styles from "./CreateContractModal.module.css";
 import { createContract } from "../../../api/contractAPI";
-import { createOrder } from "../../../api/orderAPI";
 import { toast } from "react-toastify";
+import { initSocket } from "../../../socket/socket";
 
 interface CreateContractModalProps {
   isOpen: boolean;
@@ -45,24 +45,25 @@ export function CreateContractModal({
     try {
       setCreating(true);
 
-      // First create the order
-      const order = await createOrder({
+      // Create contract API call
+      const contract = await createContract({
         serviceId,
+        content: content.trim(),
         price: parseFloat(price),
         scheduledDate: scheduledDate || undefined,
         address: address || undefined
       });
 
-      // Then create the contract for the order
-      await createContract({
-        orderId: order._id,
-        content: content.trim()
-      });
-
       toast.success("Contract sent successfully!");
-      onContractCreated();
+      onContractCreated(); // Notify parent to reload contract
+
+      // --- SOCKET EMIT TO UPDATE CHAT IN REAL-TIME ---
+      const socket = initSocket();
+      socket.emit("join_service", serviceId); // Ensure joined to service room
+      socket.emit("contract_created", { contract });
+
       onClose();
-      
+
       // Reset form
       setContent("");
       setPrice("");
