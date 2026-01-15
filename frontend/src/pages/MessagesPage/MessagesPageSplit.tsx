@@ -67,7 +67,6 @@ export function MessagesPageSplit() {
 
   // Contract state
   const [contract, setContract] = useState<Contract | null>(null);
-  const [loadingContract, setLoadingContract] = useState(false);
   const [showCreateContract, setShowCreateContract] = useState(false);
 
   // Handle window resize
@@ -214,8 +213,6 @@ export function MessagesPageSplit() {
   // Load contract + setup real-time updates
   const loadContract = async (serviceId: string) => {
     try {
-      setLoadingContract(true);
-
       // Initial fetch
       const contractData = await getContractById(serviceId);
       setContract(contractData);
@@ -224,8 +221,7 @@ export function MessagesPageSplit() {
       const socket = initSocket();
       if (!socket) return;
 
-      const roomId = typeof serviceId === "string" ? serviceId : serviceId._id;
-      socket.emit("join_service", roomId);
+      socket.emit("join_service", serviceId);
 
       const handleContractCreated = ({
         contract: newContract,
@@ -254,8 +250,6 @@ export function MessagesPageSplit() {
       };
     } catch (error) {
       console.error("Load contract error:", error);
-    } finally {
-      setLoadingContract(false);
     }
   };
 
@@ -720,7 +714,7 @@ export function MessagesPageSplit() {
       </div>
 
       {/* Create Contract Modal */}
-      {userId && otherUser && (
+      {userId && otherUser && activeChat && (
         <CreateContractModal
           isOpen={showCreateContract}
           onClose={() => setShowCreateContract(false)}

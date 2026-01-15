@@ -11,16 +11,57 @@ interface ContractOrder {
 
 export type Contract = {
   _id: string;
-  orderId: string | ContractOrder;
+  serviceId: {
+    _id: string;
+    title?: string;
+    description?: string;
+    category?: string;
+  };
   content: string;
+  price: number;
+  scheduledDate?: string;
+  address?: string;
   version: number;
+  clientId: {
+    _id: string;
+    name?: string;
+  };
+  providerId: {
+    _id: string;
+    name?: string;
+  };
+  previousVersions?: Array<{
+    content: string;
+    timestamp: string;
+  }>;
+  serviceSnapshot?: {
+    title?: string;
+    description?: string;
+    category?: string;
+  };
+  customerSnapshot?: {
+    userId: string;
+    name?: string;
+  };
+  providerSnapshot?: {
+    userId: string;
+    name?: string;
+  };
   signedByCustomer: boolean;
   signedByProvider: boolean;
   signedByCustomerAt?: string;
   signedByProviderAt?: string;
+  customerSignature?: string;
+  providerSignature?: string;
+  customerIp?: string;
+  providerIp?: string;
   status: 'draft' | 'pending_signatures' | 'signed' | 'cancelled';
+  pdfUrl?: string;
   createdAt: string;
   updatedAt: string;
+  // Legacy field for backwards compatibility
+  orderId?: string | ContractOrder;
+  contract?: string; // Legacy field
 }
 
 export type CreateContractPayload = {
@@ -31,7 +72,7 @@ export type CreateContractPayload = {
 /**
  * Get contract by ID
  */
-export const getContractById = async (serviceId: string): Promise<Contract> => {
+export const getContractById = async (serviceId: string): Promise<Contract | null> => {
   const response = await mainLink.get(`/api/contracts/${serviceId}`);
     const contractsArray = response.data.contracts;
     if (Array.isArray(contractsArray) && contractsArray.length > 0) {

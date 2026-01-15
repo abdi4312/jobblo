@@ -21,7 +21,7 @@ export interface Chat {
     role?: string;
     avatarUrl?: string;
   };
-  serviceId?: {
+  serviceId: {
     _id: string;
     title?: string;
     description?: string;

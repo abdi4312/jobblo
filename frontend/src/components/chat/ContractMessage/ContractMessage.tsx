@@ -26,11 +26,11 @@ export function ContractMessage({
 
   const isCustomer =
     contract?.customerSnapshot?.userId === currentUserId ||
-    contract?.clientId === currentUserId;
+    contract?.clientId?._id === currentUserId;
 
   const isProvider =
     contract?.providerSnapshot?.userId === currentUserId ||
-    contract?.providerId === currentUserId;
+    contract?.providerId?._id === currentUserId;
 
   const userHasSigned = isCustomer
     ? contract?.signedByCustomer
@@ -77,8 +77,8 @@ export function ContractMessage({
 
     try {
       setSigning(true);
-      const { contract: updatedContract } = await signContract(contract._id); // ensure API returns updated contract
-      setContract(updatedContract); // optimistic UI update
+      const updatedContract = await signContract(contract._id);
+      setContract(updatedContract);
       toast.success("Contract signed successfully!");
       onContractUpdated?.();
     } catch (err: any) {

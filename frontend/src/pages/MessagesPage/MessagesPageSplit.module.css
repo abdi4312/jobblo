@@ -564,10 +564,6 @@
   }
 }
 
-.hideOnMobile {
-  /* No styling on desktop - element shows normally */
-}
-
 @media (max-width: 1200px) {
   .hideOnMobile {
     display: none !important;
@@ -718,6 +714,7 @@
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
