@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const { getAllPlans } = require("../controllers/subscriptionPlanController");
-const { authorizeUser } = require("../middleware/auth");
+const { authenticate } = require("../middleware/auth");
 
 // GET /api/plans
-router.get("/", authorizeUser, getAllPlans);
+router.get("/", authenticate, getAllPlans);
 
 module.exports = router;

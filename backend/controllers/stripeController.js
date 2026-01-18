@@ -1,45 +1,54 @@
+const Subscription = require("../models/Subscription");
+const User = require("../models/User");
 const stripe = require("../config/stripe");
+const SubscriptionPlan = require("../models/SubscriptionPlan");
 
 exports.createCheckoutSession = async (req, res) => {
   try {
-    const { items } = req.body; // items from frontend
-    const userId = req.user._id;
+    const { planId } = req.body;
+    const user = req.user;
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ message: "No items provided" });
-    }
+    const plan = await SubscriptionPlan.findById(planId);
+    if (!plan) return res.status(404).json({ message: "Plan not found" });
 
-    // Map items to Stripe line_items
-    const line_items = items.map((item) => ({
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: item.name,
-        },
-        unit_amount: item.price * 100, // amount in cents
-      },
-      quantity: item.quantity,
-    }));
+    const customer = await stripe.customers.create({
+      email: user.email,
+      name: user.name,
+      metadata: { userId: String(user._id) },
+    });
 
-    // Create Stripe Checkout session
+    // 2. Checkout Session banayein
     const session = await stripe.checkout.sessions.create({
+      customer: customer.id, 
       payment_method_types: ["card"],
-      line_items, // this was missing
-      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "nok",
+            product_data: { name: String(plan.name) },
+            unit_amount: Math.round(plan.price * 100),
+            recurring: { interval: "month" },
+          },
+          quantity: 1,
+        },
+      ],
+      mode: "subscription",
       success_url: `${process.env.FRONTEND_URL}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL}/subscription/cancel`,
       metadata: {
-        userId: userId.toString(),
+        userId: String(user._id),
+        planId: String(planId),
+        planName: String(plan.name),
+        planPrice: Math.round(plan.price * 100),
+        planType: String(plan.type),
+        autoRenew: String(plan.autoRenew),
       },
     });
-    console.log("Stripe session created:", session);
-    res.status(200).json({ url: session.url, sessionId: session.id });
+
+    res.json({ url: session.url });
   } catch (error) {
-    console.error("Stripe checkout error:", error);
-    res.status(500).json({
-      message: "Failed to create checkout session",
-      error: error.message,
-    });
+    console.error("STRIPE ERROR:", error.message);
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -47,12 +56,43 @@ exports.checkoutSessionStatus = async (req, res) => {
   try {
     const { sessionId } = req.params;
     const session = await stripe.checkout.sessions.retrieve(sessionId);
-    console.log("Stripe session:", session);
+
+    if (session.payment_status === "paid") {
+      // 1. Duplicate check
+      const existingSub = await Subscription.findOne({
+        stripeSubscriptionId: session.subscription,
+      });
+
+      if (!existingSub) {
+        // 2. Dates setup
+        const now = new Date();
+        const nextMonth = new Date();
+        nextMonth.setMonth(now.getMonth() + 1);
+
+        await Subscription.create({
+          userId: session.metadata.userId,
+          planId: session.metadata.planId,
+          plan: session.metadata.planName,
+          stripeSubscriptionId: session.subscription,
+          startDate: now,
+          endDate: nextMonth,
+          renewalDate: nextMonth,
+          planPrice: Number(session.metadata.planPrice), 
+          planType: session.metadata.planType,
+          autoRenew: session.metadata.autoRenew === "true",
+          status: "active",
+        });
+
+        await User.findByIdAndUpdate(session.metadata.userId, {
+          subscription: session.metadata.planName,
+          planType: session.metadata.planType,
+        });
+      }
+    }
+
     res.json({ payment_status: session.payment_status });
   } catch (error) {
-    res.status(500).json({
-      message: "Failed to retrieve checkout session status",
-      error: error.message,
-    });
+    console.error("Status Error:", error);
+    res.status(500).json({ message: error.message });
   }
 };
