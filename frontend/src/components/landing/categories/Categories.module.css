@@ -11,25 +11,23 @@
   margin: 0;
   padding: 0 20px;
 }
+.categoryContainer::-webkit-scrollbar {
+  display: none;
+}
 
 .categoryContainer {
   display: flex;
   gap: 16px;
   padding: 20px;
-  flex-wrap: nowrap;           /* én rad */
-  justify-content: space-between;
-  overflow-x: hidden;          /* ingen scroll */
+  flex-wrap: nowrap;       /* én rad */
+  /*overflow-x: auto;*/        /* horisontal scroll hvis plass ikke holder */
+  justify-content: center
 }
 
-
-.categoryContainer::-webkit-scrollbar {
-  display: none;
-}
 .categoryCard {
   cursor: pointer;
-  height: 140px;       /* fast høyde */
-  flex: 1;             /* kortene tar like mye plass */
-  max-width: 200px;    /* maks størrelse */
+  flex: 0 0 150px;        /* bredde = 220px, ikke krymp eller grow */
+  height: 180px;           /* høyde */
   border-radius: 16px;
   background-size: cover;
   background-position: center;
@@ -41,10 +39,30 @@
   font-weight: 600;
   font-size: 16px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-  transition: all 0.2s ease;
-   background-image:
-    linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0)),
+  transition: all 0.3s ease;
+  background-image: linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0)), url('/images/default.jpg');
+  position: relative;
 }
+
+
+.categoryCardLabel {
+  background-color: rgba(0,0,0,0.4); /* default bakgrunn */
+  width: 100%;
+  text-align: center;
+  padding: 4px 0;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: white; /* default tekstfarge */
+  transition: all 0.3s ease;
+}
+
+/* Hover på kortet påvirker labelen */
+.categoryCard:hover .categoryCardLabel {
+  background-color: #EA7E15; /* varm oransje */
+  color: white;              /* hvit tekst */
+}
+
 
 
 
@@ -59,7 +77,7 @@
 }
 
 .categoryCardLabel {
-  background-color: rgba(0,0,0,0.4);
+  background-color: #183A1D;
   width: 100%;
   text-align: center;
   padding: 4px 0;
