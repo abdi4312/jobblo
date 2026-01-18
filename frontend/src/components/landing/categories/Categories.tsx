@@ -36,6 +36,15 @@ export function Categories({
     void fetchCategories();
   }, []);
 
+    const categoryImages: Record<string, string> = {
+    "Rengjøring": "src/assets/images/cleaning.jpg",
+    "Hagearbeid": "src/assets/images/woman-full-gardening.png",
+    "Flytting": "src/assets/images/courier-moving-out.png",
+    "Rørlegger": "src/assets/images/male-constructionworker.png",
+    "Maling": "src/assets/images/painting-wall.jpg",
+  };
+
+
   // Notify parent when selected categories change
   useEffect(() => {
     if (allowMultiSelect && onCategoriesChange) {
@@ -80,11 +89,11 @@ export function Categories({
       <div className={styles.categoriesContainer}>
         <div style={{ maxWidth: "800px", margin: "0 auto" }}>
           {showTitle && (
+          <div style={{ textAlign: "center", marginBottom: "32px" }}>
             <h2
               style={{
                 fontSize: "42px",
-                marginBottom: "32px",
-                textAlign: "center",
+                marginBottom: "12px",
               }}
             >
               <style>
@@ -92,14 +101,23 @@ export function Categories({
                   @media (max-width: 768px) {
                     h2 {
                       font-size: 28px !important;
-                      margin-bottom: 20px !important;
                     }
                   }
                 `}
               </style>
-              Kategorier
+              Oppgaver nær deg.
             </h2>
-          )}
+            <p
+              style={{
+                fontSize: "18px",
+                color: "var(--color-text-muted)",
+                margin: 0,
+              }}
+            >
+              Velg en kategori og se tilgjengelige jobber i nærheten av deg.
+            </p>
+          </div>
+        )}
 
           {/* Selected Categories Filter Bar */}
           {allowMultiSelect && selectedCategories.length > 0 && (
@@ -177,6 +195,7 @@ export function Categories({
           )}
 
           <div style={{ position: "relative", padding: "0 20px" }}>
+            {/*
             <button
               onClick={() => scroll("left")}
               style={{
@@ -202,33 +221,29 @@ export function Categories({
               >
                 chevron_left
               </span>
-            </button>
+            </button>*/}
+            
 
-            <div ref={scrollContainerRef} className={styles.categoryContainer}>
+            <div className={styles.categoryContainer}>
               {category.map((item) => (
                 <div
                   key={item._id}
                   onClick={() => handleCategoryClick(item.name)}
+                  className={`${styles.categoryCard} ${
+                    selectedCategories.includes(item.name) ? styles.selected : ""
+                  }`}
                   style={{
-                    cursor: "pointer",
-                    flexShrink: 0,
-                    opacity:
-                      allowMultiSelect &&
-                      selectedCategories.length > 0 &&
-                      !selectedCategories.includes(item.name)
-                        ? 0.5
-                        : 1,
-                    transform: selectedCategories.includes(item.name)
-                      ? "scale(1.05)"
-                      : "scale(1)",
-                    transition: "all 0.2s ease",
+                    backgroundImage: ` linear-gradient(to top, #4d970894, rgba(234, 128, 21, 0) 50%), 
+                    url(${
+                      categoryImages[item.name] || "/images/default.jpg"
+                    })`,
                   }}
                 >
-                  <Category category={item.name} categoryIcon={item.icon} />
+                  <div className={styles.categoryCardLabel}>{item.name}</div>
                 </div>
               ))}
             </div>
-
+            {/*
             <button
               onClick={() => scroll("right")}
               style={{
@@ -254,7 +269,7 @@ export function Categories({
               >
                 chevron_right
               </span>
-            </button>
+            </button>*/}
           </div>
         </div>
       </div>
