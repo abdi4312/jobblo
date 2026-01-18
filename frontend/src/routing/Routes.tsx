@@ -24,6 +24,7 @@ import OAuthSuccess from "../pages/OAuthSuccess.tsx";
 import { PublicRoute } from "../components/shared/PublicRoute.tsx";
 import SaleSubscriptionTermsPage from "../pages/SaleSubscriptionTermsPage/SaleSubscriptionTermsPage.tsx";
 import JobbloUserTerm from "../pages/UserTerm/UserTerm.tsx";
+import SuccessPage from "../components/subscription/success.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -119,6 +120,10 @@ export const routes: RouteObject[] = [
       {
         path: "favoritter",
         element: <FavoritesPage />,
+      },
+      {
+        path: "/subscription/success",
+        element: <SuccessPage />,
       },
       {
         path: "coins",
