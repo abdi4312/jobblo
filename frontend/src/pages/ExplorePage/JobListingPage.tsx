@@ -24,7 +24,7 @@ export default function JobListingPage() {
   }, []);
 
   return <>
-  <div style={{maxWidth:"900px", margin:"0 auto", paddingBottom:"80px"}}>
+  <div style={{maxWidth:"1000px", margin:"0 auto", paddingBottom:"80px"}}>
         <Search onSearchChange={setSearchQuery} value={searchQuery} />
         <div style={{paddingTop:"20px"}}/>
         <Categories 

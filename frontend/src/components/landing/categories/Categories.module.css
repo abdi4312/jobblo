@@ -5,25 +5,84 @@
   padding: 0;
   overflow: hidden;
   box-sizing: border-box;
+  margin-bottom: 20px;
 }
 
 .categoriesContainer h2 {
   margin: 0;
   padding: 0 20px;
 }
+.categoryContainer::-webkit-scrollbar {
+  display: none;
+}
 
 .categoryContainer {
   display: flex;
-  overflow-x: auto;
-  overflow-y: hidden;
-  gap: 12px;
-  padding: 20px 0;
-  margin: 0 20px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  scroll-behavior: smooth;
+  gap: 16px;
+  padding: 20px;
+  flex-wrap: nowrap;       /* én rad */
+  /*overflow-x: auto;*/        /* horisontal scroll hvis plass ikke holder */
+  justify-content: center
 }
 
-.categoryContainer::-webkit-scrollbar {
-  display: none;
+.categoryCard {
+  cursor: pointer;
+  flex: 0 0 150px;        /* bredde = 220px, ikke krymp eller grow */
+  height: 180px;           /* høyde */
+  border-radius: 16px;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 10px;
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+  background-image: linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0)), url('/images/default.jpg');
+  position: relative;
+}
+
+
+.categoryCardLabel {
+  background-color: rgba(0,0,0,0.4); /* default bakgrunn */
+  width: 100%;
+  text-align: center;
+  padding: 4px 0;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: white; /* default tekstfarge */
+  transition: all 0.3s ease;
+}
+
+/* Hover på kortet påvirker labelen */
+.categoryCard:hover .categoryCardLabel {
+  background-color: #EA7E15; /* varm oransje */
+  color: white;              /* hvit tekst */
+}
+
+
+
+
+.categoryCard:hover {
+  transform: scale(1.08);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.categoryCard.selected {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+
+.categoryCardLabel {
+  background-color: #183A1D;
+  width: 100%;
+  text-align: center;
+  padding: 4px 0;
+  border-radius: 12px;
+    font-size: 16px;
+  font-weight: 700;
 }
