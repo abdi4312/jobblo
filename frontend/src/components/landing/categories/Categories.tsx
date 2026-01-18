@@ -36,6 +36,15 @@ export function Categories({
     void fetchCategories();
   }, []);
 
+    const categoryImages: Record<string, string> = {
+    "Rengjøring": "src/assets/images/cleaning.jpg",
+    "Hagearbeid": "src/assets/images/woman-full-gardening.png",
+    "Flytting": "src/assets/images/courier-moving-out.png",
+    "Rørlegger": "src/assets/images/male-constructionworker.png",
+    "Maling": "src/assets/images/painting-wall.jpg",
+  };
+
+
   // Notify parent when selected categories change
   useEffect(() => {
     if (allowMultiSelect && onCategoriesChange) {
@@ -177,6 +186,7 @@ export function Categories({
           )}
 
           <div style={{ position: "relative", padding: "0 20px" }}>
+            {/*
             <button
               onClick={() => scroll("left")}
               style={{
@@ -202,33 +212,28 @@ export function Categories({
               >
                 chevron_left
               </span>
-            </button>
+            </button>*/}
+            
 
-            <div ref={scrollContainerRef} className={styles.categoryContainer}>
+            <div className={styles.categoryContainer}>
               {category.map((item) => (
                 <div
                   key={item._id}
                   onClick={() => handleCategoryClick(item.name)}
+                  className={`${styles.categoryCard} ${
+                    selectedCategories.includes(item.name) ? styles.selected : ""
+                  }`}
                   style={{
-                    cursor: "pointer",
-                    flexShrink: 0,
-                    opacity:
-                      allowMultiSelect &&
-                      selectedCategories.length > 0 &&
-                      !selectedCategories.includes(item.name)
-                        ? 0.5
-                        : 1,
-                    transform: selectedCategories.includes(item.name)
-                      ? "scale(1.05)"
-                      : "scale(1)",
-                    transition: "all 0.2s ease",
+                    backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0)), url(${
+                      categoryImages[item.name] || "/images/default.jpg"
+                    })`,
                   }}
                 >
-                  <Category category={item.name} categoryIcon={item.icon} />
+                  <div className={styles.categoryCardLabel}>{item.name}</div>
                 </div>
               ))}
             </div>
-
+            {/*
             <button
               onClick={() => scroll("right")}
               style={{
@@ -254,7 +259,7 @@ export function Categories({
               >
                 chevron_right
               </span>
-            </button>
+            </button>*/}
           </div>
         </div>
       </div>
