@@ -1,15 +1,27 @@
 .container {
   background-color: #fcf9eb;
-  max-width: 1000px;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
+  width: 100%;
+  position: fixed; /* gjør header fast */
+  top: 0;
+  left: 0;
+  right: 0;
   height: 70px;
-  padding: 0 20px;
-  position: relative;
-  z-index: 1;
-  margin: 0 auto;
+  z-index: 1000;
+  transition: transform 0.3s ease;
+  display: flex;
+  justify-content: center; /* sentrer innhold */
 }
+
+.inner {
+  max-width: 1000px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* logo venstre, ikoner midt, knapp høyre */
+  padding: 0 20px;
+}
+
+
 
 .iconContainer {
   align-items: center;
@@ -78,5 +90,23 @@ button {
 
 .iconWithLabel:hover .iconLabel {
   color: var(--color-primary); /* litt farge ved hover */
+}
+
+
+/* Skjult når man scroller ned */
+.headerHidden {
+  transform: translateY(-100%);
+}
+
+/* Synlig */
+.headerVisible {
+  transform: translateY(0);
+}
+
+/* Desktop: alltid synlig */
+@media (min-width: 1024px) {
+  .container {
+    transform: translateY(0) !important;
+  }
 }
 

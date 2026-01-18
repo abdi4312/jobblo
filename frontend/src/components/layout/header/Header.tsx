@@ -14,12 +14,20 @@ export default function Header() {
   const location = useLocation();
   const user = useUserStore((state) => state.user);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const [showHeader, setShowHeader] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+
+  
+
 
   useEffect(() => {
     if (!user) {
       setHasUnreadMessages(false);
       return;
     }
+  
+  
 
     const checkUnreadMessages = async () => {
       try {
@@ -123,9 +131,35 @@ export default function Header() {
     handleProtectedNavigation("/messages");
   };
 
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY < lastScrollY) {
+        // Bruker scroller opp
+        setShowHeader(true);
+      } else {
+        // Bruker scroller ned
+        setShowHeader(false);
+      }
+      setLastScrollY(window.scrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [lastScrollY]);
+
+
   return (
     <>
-      <div className={styles.container}>
+      <div
+          className={`${styles.container} ${
+            showHeader ? styles.headerVisible : styles.headerHidden
+          }`}
+        >
+        <div className={styles.inner}>
         <div className={styles.jobbloIcon} onClick={() => navigate("/")}>
           <Icons.JobbloIcon />
         </div>
@@ -161,6 +195,7 @@ export default function Header() {
 
         <div className={styles.buttonContainer}>
           <VippsButton />
+        </div>
         </div>
       </div>
     </>
