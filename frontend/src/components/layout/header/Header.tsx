@@ -14,12 +14,20 @@ export default function Header() {
   const location = useLocation();
   const user = useUserStore((state) => state.user);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const [showHeader, setShowHeader] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+
+  
+
 
   useEffect(() => {
     if (!user) {
       setHasUnreadMessages(false);
       return;
     }
+  
+  
 
     const checkUnreadMessages = async () => {
       try {
@@ -123,26 +131,71 @@ export default function Header() {
     handleProtectedNavigation("/messages");
   };
 
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY < lastScrollY) {
+        // Bruker scroller opp
+        setShowHeader(true);
+      } else {
+        // Bruker scroller ned
+        setShowHeader(false);
+      }
+      setLastScrollY(window.scrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [lastScrollY]);
+
+
   return (
     <>
-      <div className={styles.container}>
+      <div
+          className={`${styles.container} ${
+            showHeader ? styles.headerVisible : styles.headerHidden
+          }`}
+        >
+        <div className={styles.inner}>
         <div className={styles.jobbloIcon} onClick={() => navigate("/")}>
           <Icons.JobbloIcon />
         </div>
 
         <div className={styles.iconContainer}>
-          <Icons.BellIcon onClick={() => handleProtectedNavigation("/Alert")} />
-          <VerticalDivider />
-          <Icons.PlusIcon onClick={() => handleProtectedNavigation("/publish-job")} />
-          <VerticalDivider />
+        <div
+          className={styles.iconWithLabel}
+          onClick={() => handleProtectedNavigation("/Alert")}
+        >
+          <Icons.BellIcon />
+          <span className={styles.iconLabel}>Notifikasjoner</span>
+        </div>
+
+        <div
+          className={styles.iconWithLabel}
+          onClick={() => handleProtectedNavigation("/publish-job")}
+        >
+          <Icons.PlusIcon />
+          <span className={styles.iconLabel}>Legg til annonse</span>
+        </div>
+
+        <div
+          className={styles.iconWithLabel}
+          onClick={handleMessagesClick}
+        >
           <div className={styles.iconWrapper}>
-            <Icons.MessageIcon onClick={handleMessagesClick} />
+            <Icons.MessageIcon />
             {hasUnreadMessages && <span className={styles.notificationBadge}></span>}
           </div>
+          <span className={styles.iconLabel}>Meldinger</span>
         </div>
+      </div>
 
         <div className={styles.buttonContainer}>
           <VippsButton />
+        </div>
         </div>
       </div>
     </>
