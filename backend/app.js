@@ -29,6 +29,7 @@ const contractsRouter = require('./routes/contract');
 const heroSelectRouter = require('./routes/Herojs');
 const chatRouter = require('./routes/chat');
 const couponRouter = require('./routes/coupon');
+const subscriptionPlanRouter = require('./routes/subscriptionPlan')
 const stripeRouter = require('./routes/stripe');
 
 const swaggerUi = require('swagger-ui-express');
@@ -86,6 +87,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api', reviewsRouter);
 app.use('/api/categories', categoryRouter);
 app.use('/api/feed', feedRouter);
+app.use('/api/plans', subscriptionPlanRouter);
 app.use('/api/filter', filterRouter);
 app.use('/api/contracts', contractsRouter);
 app.use('/api/hero', heroSelectRouter);
