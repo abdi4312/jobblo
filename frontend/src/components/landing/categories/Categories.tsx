@@ -233,7 +233,7 @@ export function Categories({
                     selectedCategories.includes(item.name) ? styles.selected : ""
                   }`}
                   style={{
-                    backgroundImage: ` linear-gradient(to top, #879e31a8, rgba(234, 128, 21, 0) 50%), 
+                    backgroundImage: ` linear-gradient(to top, #4d970894, rgba(234, 128, 21, 0) 50%), 
                     url(${
                       categoryImages[item.name] || "/images/default.jpg"
                     })`,
