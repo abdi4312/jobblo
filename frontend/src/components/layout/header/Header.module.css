@@ -6,11 +6,13 @@
   left: 0;
   right: 0;
   height: 70px;
+  margin: 0 auto;
   z-index: 1000;
   transition: transform 0.3s ease;
   display: flex;
   justify-content: center; /* sentrer innhold */
 }
+
 
 .inner {
   max-width: 1000px;
