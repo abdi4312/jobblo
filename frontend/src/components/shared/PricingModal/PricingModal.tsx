@@ -1,6 +1,7 @@
 import { Modal, Radio, Button } from "antd";
 import { useEffect, useState } from "react";
 import { getSubscriptionPlans } from "../../../api/subscriptionPlanApi";
+import mainLink from "../../../api/mainURLs";
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -39,8 +40,18 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
     void fetchPlans();
   }, []);
 
-  const handlePlanSelection = (planId: string) => {
+  const handlePlanSelection = async(planId: string) => {
     console.log("Selected plan ID:", planId);
+    try {
+      const res = await mainLink.post("/api/stripe/create-checkout-session", {
+        planId,
+      });
+      console.log(res.data);
+      
+        window.location.href = res.data.url;
+    } catch (error) {
+      console.error("Failed to create checkout session:", error);
+    }
   };
 
   // Filter plans based on selected user type
