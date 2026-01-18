@@ -89,11 +89,11 @@ export function Categories({
       <div className={styles.categoriesContainer}>
         <div style={{ maxWidth: "800px", margin: "0 auto" }}>
           {showTitle && (
+          <div style={{ textAlign: "center", marginBottom: "32px" }}>
             <h2
               style={{
                 fontSize: "42px",
-                marginBottom: "32px",
-                textAlign: "center",
+                marginBottom: "12px",
               }}
             >
               <style>
@@ -101,14 +101,23 @@ export function Categories({
                   @media (max-width: 768px) {
                     h2 {
                       font-size: 28px !important;
-                      margin-bottom: 20px !important;
                     }
                   }
                 `}
               </style>
-              Kategorier
+              Oppgaver nær deg.
             </h2>
-          )}
+            <p
+              style={{
+                fontSize: "18px",
+                color: "var(--color-text-muted)",
+                margin: 0,
+              }}
+            >
+              Velg en kategori og se tilgjengelige jobber i nærheten av deg.
+            </p>
+          </div>
+        )}
 
           {/* Selected Categories Filter Bar */}
           {allowMultiSelect && selectedCategories.length > 0 && (
