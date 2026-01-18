@@ -5,7 +5,7 @@
   align-items: center;
   background-color: var(--color-bg-dark);
   color: var(--color-white);
-  padding: 50px 0;
+  padding: 50px 20px; /* litt padding horisontalt også */
 }
 
 .title {
@@ -18,26 +18,18 @@
 a {
   color: white;
   font-weight: 200;
-  font-size: 20px;
+  font-size: 16px; /* mindre på mobil */
 }
 a:hover {
   color: #c4c4c4;
 }
 
-.company {
-}
-
-.knowMore {
-}
-
 .company,
-.knowMore, 
+.knowMore,
 .rights {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  display: flex;
-  flex-direction: column;
 }
 
 .columns {
@@ -52,7 +44,19 @@ a:hover {
   position: relative;
 }
 
-
+/* Responsiv for mobil */
+@media (max-width: 768px) {
+  .columns {
+    grid-template-rows: 1fr; /* stable kolonnene vertikalt */
+    gap: 20px;
+  }
+  a {
+    font-size: 14px;
+  }
+  .title {
+    font-size: 20px;
+  }
+}
 
 .bottom {
   margin-top: 40px;
