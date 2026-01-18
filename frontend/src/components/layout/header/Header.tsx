@@ -131,15 +131,33 @@ export default function Header() {
         </div>
 
         <div className={styles.iconContainer}>
-          <Icons.BellIcon onClick={() => handleProtectedNavigation("/Alert")} />
-          <VerticalDivider />
-          <Icons.PlusIcon onClick={() => handleProtectedNavigation("/publish-job")} />
-          <VerticalDivider />
+        <div
+          className={styles.iconWithLabel}
+          onClick={() => handleProtectedNavigation("/Alert")}
+        >
+          <Icons.BellIcon />
+          <span className={styles.iconLabel}>Notifikasjoner</span>
+        </div>
+
+        <div
+          className={styles.iconWithLabel}
+          onClick={() => handleProtectedNavigation("/publish-job")}
+        >
+          <Icons.PlusIcon />
+          <span className={styles.iconLabel}>Legg til annonse</span>
+        </div>
+
+        <div
+          className={styles.iconWithLabel}
+          onClick={handleMessagesClick}
+        >
           <div className={styles.iconWrapper}>
-            <Icons.MessageIcon onClick={handleMessagesClick} />
+            <Icons.MessageIcon />
             {hasUnreadMessages && <span className={styles.notificationBadge}></span>}
           </div>
+          <span className={styles.iconLabel}>Meldinger</span>
         </div>
+      </div>
 
         <div className={styles.buttonContainer}>
           <VippsButton />

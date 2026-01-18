@@ -18,6 +18,7 @@
 a {
   color: white;
   font-weight: 200;
+  font-size: 20px;
 }
 a:hover {
   color: #c4c4c4;
@@ -30,7 +31,32 @@ a:hover {
 }
 
 .company,
-.knowMore {
+.knowMore, 
+.rights {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.columns {
+  width: 100%;
+  max-width: 1100px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 60px;
+  text-align: left;
+  border-top: 1px solid #444;
+  padding-top: 30px;
+  position: relative;
+}
+
+
+
+.bottom {
+  margin-top: 40px;
+  text-align: center;
+  font-size: 14px;
+  color: #aaa;
 }

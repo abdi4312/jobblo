@@ -1,12 +1,10 @@
 .container {
   background-color: #fcf9eb;
-  max-width: 1300px;
-
+  max-width: 1000px;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-
-  height: 60px;
+  height: 70px;
   padding: 0 20px;
   position: relative;
   z-index: 1;
@@ -16,7 +14,7 @@
 .iconContainer {
   align-items: center;
   display: flex;
-  gap: 8px;
+  gap: 30px;
   justify-self: center;
 }
 
@@ -31,8 +29,8 @@
   position: absolute;
   top: -2px;
   right: -2px;
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   background-color: #EA1717;
   border-radius: 50%;
   border: 1.5px solid #fcf9eb;
@@ -46,6 +44,13 @@
   display: flex;
   gap: 10px;
   justify-self: end;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.jobbloIcon svg {
+  width: 100px;
+  height: 32px; /* gjør logoen litt større */
 }
 
 button {
@@ -54,3 +59,24 @@ button {
   border-radius: 6px;
   gap: 4px;
 }
+
+.iconWithLabel {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  cursor: pointer;
+  gap: 4px;
+  position: relative; 
+}
+
+.iconLabel {
+  font-size: 12px;
+  font-weight: 800;
+  color: #555; /* mørk grå tekst */
+  white-space: nowrap; /* hindrer at teksten brytes */
+}
+
+.iconWithLabel:hover .iconLabel {
+  color: var(--color-primary); /* litt farge ved hover */
+}
+
