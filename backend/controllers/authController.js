@@ -1,3 +1,5 @@
+const Subscription = require('../models/Subscription');
+
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -24,7 +26,19 @@ exports.register = async (req, res) => {
         if (token) {
             res.cookie('token', token, cookieOptions);
         }
-        
+
+        await Subscription.create({
+        userId: user._id,
+
+        currentPlan: {
+            plan: "Free",
+            planType: "private",
+            startDate: new Date(),
+            status: "active",
+            autoRenew: false,
+        }
+        });
+
         res.status(201).json({ user, token });
     } catch (error) {
         if (error.name === 'ValidationError') {

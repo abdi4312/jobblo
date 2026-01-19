@@ -1,5 +1,36 @@
 const mongoose = require("mongoose");
 
+const planHistorySchema = new mongoose.Schema(
+  {
+    planId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SubscriptionPlan",
+    },
+    plan: {
+      type: String,
+      enum: ["Free", "Start", "Pro", "Premium", "Fleksibel", "Job Plus"],
+      required: true,
+    },
+    planType: {
+      type: String,
+      enum: ["business", "private"],
+      required: true,
+    },
+    startDate: Date,
+    endDate: Date,
+    stripeSubscriptionId: String,
+    status: {
+      type: String,
+      enum: ["active", "cancelled", "expired"],
+    },
+    changedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+);
+
 const subscriptionSchema = new mongoose.Schema(
   {
     userId: {
@@ -8,34 +39,37 @@ const subscriptionSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    planId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "SubscriptionPlan",
-      required: true,
+
+    // 🔹 CURRENT PLAN
+    currentPlan: {
+      planId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "SubscriptionPlan",
+      },
+      plan: {
+        type: String,
+        enum: ["Free", "Start", "Pro", "Premium", "Fleksibel", "Job Plus"],
+        required: true,
+      },
+      planType: {
+        type: String,
+        enum: ["business", "private"],
+        required: true,
+      },
+      stripeSubscriptionId: String,
+      startDate: Date,
+      endDate: Date,
+      renewalDate: Date,
+      autoRenew: { type: Boolean, default: false },
+      status: {
+        type: String,
+        enum: ["active", "inactive", "cancelled", "expired"],
+        default: "active",
+      },
     },
-    plan: {
-      type: String,
-      enum: ["free", "Start", "Pro", "Premium", "Fleksibel", "Job Plus"],
-      required: true,
-    },
-    planType: {
-      type: String,
-      enum: ["business", "private"],
-      required: true,
-    },
-    stripeSubscriptionId: {
-      type: String,
-      required: true,
-    },
-    startDate: { type: Date },
-    endDate: { type: Date },
-    renewalDate: { type: Date },
-    autoRenew: { type: Boolean, default: false },
-    status: {
-      type: String,
-      enum: ["active", "inactive", "cancelled", "expired"],
-      default: "active",
-    },
+
+    // 🔹 PLAN HISTORY
+    planHistory: [planHistorySchema],
   },
   { timestamps: true }
 );
