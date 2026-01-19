@@ -13,9 +13,9 @@ const cookieOptions = {
 
 exports.register = async (req, res) => {
     try {
-        const { name, lastName, email, password, phone } = req.body;
+        const { name, lastName, email, password, } = req.body;
         const hashed = await bcrypt.hash(password, 10);
-        const user = await User.create({ name, lastName, email, password: hashed, phone });
+        const user = await User.create({ name, lastName, email, password: hashed});
         
         let token = null;
         if (process.env.JWT_SECRET) {
