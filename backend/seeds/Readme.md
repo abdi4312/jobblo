@@ -34,13 +34,16 @@ Notifications
 3️⃣ Run individual seeders
 
 For Conversations:
-node seeds/conversations.seed.js
+node seeds/run-conversations.js
 
 For Favourties:
-node seeds/favorites.seed.js
+node seeds/run-favorites.js
 
 For Filters:
-node seeds/filters.seed.js
+node seeds/run-filters.js
+
+For Plans:
+node seeds/run-plans.js
 
 5️⃣ Notes
 
