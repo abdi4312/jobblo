@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const contractController = require("../controllers/contractController");
 const { authenticate } = require("../middleware/auth");
+const {checkSubscription} = require("../middleware/checkSubscription");
 
 /**
  * @swagger
@@ -136,7 +137,7 @@ router.get("/:serviceId", authenticate, contractController.getMyContracts);
  *       403:
  *         description: Provider cannot create contract for own service
  */
-router.post("/", authenticate, contractController.createContract);
+router.post("/", authenticate,checkSubscription, contractController.createContract);
 
 /**
  * @swagger
