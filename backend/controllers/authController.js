@@ -1,3 +1,5 @@
+const Subscription = require('../models/Subscription');
+
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -11,9 +13,9 @@ const cookieOptions = {
 
 exports.register = async (req, res) => {
     try {
-        const { name, lastName, email, password, phone } = req.body;
+        const { name, lastName, email, password, } = req.body;
         const hashed = await bcrypt.hash(password, 10);
-        const user = await User.create({ name, lastName, email, password: hashed, phone });
+        const user = await User.create({ name, lastName, email, password: hashed});
         
         let token = null;
         if (process.env.JWT_SECRET) {
@@ -24,7 +26,19 @@ exports.register = async (req, res) => {
         if (token) {
             res.cookie('token', token, cookieOptions);
         }
-        
+
+        await Subscription.create({
+        userId: user._id,
+
+        currentPlan: {
+            plan: "Free",
+            planType: "private",
+            startDate: new Date(),
+            status: "active",
+            autoRenew: false,
+        }
+        });
+
         res.status(201).json({ user, token });
     } catch (error) {
         if (error.name === 'ValidationError') {

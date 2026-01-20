@@ -3,6 +3,10 @@ const User = require("../models/User");
 const stripe = require("../config/stripe");
 const SubscriptionPlan = require("../models/SubscriptionPlan");
 
+const now = new Date();
+const nextMonth = new Date();
+nextMonth.setMonth(now.getMonth() + 1);
+
 exports.createCheckoutSession = async (req, res) => {
   try {
     const { planId } = req.body;
@@ -19,7 +23,7 @@ exports.createCheckoutSession = async (req, res) => {
 
     // 2. Checkout Session banayein
     const session = await stripe.checkout.sessions.create({
-      customer: customer.id, 
+      customer: customer.id,
       payment_method_types: ["card"],
       line_items: [
         {
@@ -55,42 +59,76 @@ exports.createCheckoutSession = async (req, res) => {
 exports.checkoutSessionStatus = async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-    if (session.payment_status === "paid") {
-      // 1. Duplicate check
-      const existingSub = await Subscription.findOne({
-        stripeSubscriptionId: session.subscription,
-      });
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ["subscription"],
+    });
 
-      if (!existingSub) {
-        // 2. Dates setup
-        const now = new Date();
-        const nextMonth = new Date();
-        nextMonth.setMonth(now.getMonth() + 1);
-
-        await Subscription.create({
-          userId: session.metadata.userId,
-          planId: session.metadata.planId,
-          plan: session.metadata.planName,
-          stripeSubscriptionId: session.subscription,
-          startDate: now,
-          endDate: nextMonth,
-          renewalDate: nextMonth,
-          planPrice: Number(session.metadata.planPrice), 
-          planType: session.metadata.planType,
-          autoRenew: session.metadata.autoRenew === "true",
-          status: "active",
-        });
-
-        await User.findByIdAndUpdate(session.metadata.userId, {
-          subscription: session.metadata.planName,
-          planType: session.metadata.planType,
-        });
-      }
+    if (session.payment_status !== "paid") {
+      return res.json({ payment_status: session.payment_status });
     }
 
-    res.json({ payment_status: session.payment_status });
+    const stripeSub = session.subscription;
+    const userId = session.metadata.userId;
+
+    // 🔁 Get or create user subscription doc
+    let subscription = await Subscription.findOne({ userId });
+
+    if (!subscription) {
+      subscription = await Subscription.create({
+        userId,
+        currentPlan: null,
+        planHistory: [],
+      });
+    }
+
+    const newPlanName = session.metadata.planName;
+    const newPlanType = session.metadata.planType;
+
+    const now = new Date();
+    const nextMonth = new Date(now);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+    // ✅ Only push to history if plan actually changes
+    const isPlanChanged =
+      !subscription.currentPlan ||
+      subscription.currentPlan.plan !== newPlanName;
+
+    if (isPlanChanged && subscription.currentPlan) {
+      subscription.planHistory.push({
+        planId: subscription.currentPlan.planId || null,
+        plan: subscription.currentPlan.plan,
+        planType: subscription.currentPlan.planType,
+        startDate: subscription.currentPlan.startDate || now,
+        endDate: now,
+        stripeSubscriptionId:
+          subscription.currentPlan.stripeSubscriptionId || null,
+        status: "expired",
+      });
+    }
+
+    // 🆕 Set / Update current plan
+    subscription.currentPlan = {
+      planId: session.metadata.planId,
+      plan: newPlanName,
+      planType: newPlanType,
+      stripeSubscriptionId: stripeSub.id,
+      startDate: now,
+      endDate: nextMonth,
+      renewalDate: nextMonth,
+      autoRenew: session.metadata.autoRenew === "true",
+      status: "active",
+    };
+
+    await subscription.save();
+    await User.findByIdAndUpdate(session.metadata.userId, {
+      subscription: session.metadata.planName,
+      planType: session.metadata.planType,
+    });
+    res.json({
+      payment_status: "paid",
+      plan: subscription.currentPlan.plan,
+    });
   } catch (error) {
     console.error("Status Error:", error);
     res.status(500).json({ message: error.message });
