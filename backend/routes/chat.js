@@ -2,8 +2,9 @@ const express = require("express");
 const router = express.Router();
 const chatController = require("../controllers/chatController");
 const { authenticate } = require('../middleware/auth');
+const {checkSubscription} = require("../middleware/checkSubscription");
 
-router.post("/create", authenticate, chatController.createOrGetChat);
+router.post("/create", authenticate,checkSubscription, chatController.createOrGetChat);
 router.get("/get", authenticate, chatController.getMyChats);
 router.get("/:chatId", authenticate, chatController.getChatById);
 router.post("/:chatId/message", authenticate, chatController.sendMessage);

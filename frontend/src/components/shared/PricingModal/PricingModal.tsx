@@ -151,7 +151,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                     <span style={{ fontSize: '12px', fontWeight: 400, color: '#666', display: 'block' }}>/ måned</span>
                   </div>
                   <p style={{ color: '#666', marginBottom: '12px', fontSize: '12px' }}>
-                    {plan.freeViews} gratis visninger
+                    {plan.entitlements.freeContact} gratis visninger
                   </p>
                   <ul style={{
                     textAlign: 'left',
@@ -161,7 +161,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                     paddingLeft: '18px',
                     minHeight: '80px'
                   }}>
-                    {plan.features.map((feature, i) => (
+                    {plan.featuresText.map((feature, i) => (
                       <li key={i} style={{ marginBottom: '4px' }}>{feature}</li>
                     ))}
                   </ul>

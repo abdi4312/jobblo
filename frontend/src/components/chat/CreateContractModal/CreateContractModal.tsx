@@ -70,8 +70,8 @@ export function CreateContractModal({
       setScheduledDate("");
       setAddress("");
     } catch (error: any) {
-      console.error("Create contract error:", error);
-      toast.error(error.response?.data?.error || "Failed to create contract");
+      console.error("Create contract error:", error.response);
+      toast.error( error.response?.data?.message || "Failed to create contract" );
     } finally {
       setCreating(false);
     }
