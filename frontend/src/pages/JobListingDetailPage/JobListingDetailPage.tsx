@@ -1,17 +1,21 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import styles from '../../styles/JobListingDetailPage.module.css';
-import JobHeader from '../../components/job/JobHeader/JobHeader';
-import JobImageCarousel from '../../components/job/JobImageCarousel/JobImageCarousel';
-import JobDetails from '../../components/job/JobDetails/JobDetails';
-import JobDescription from '../../components/job/JobDescription/JobDescription';
-import JobLocation from '../../components/job/JobLocation/JobLocation';
-import RelatedJobs from '../../components/job/RelatedJobs/RelatedJobs';
-import  mainLink  from '../../api/mainURLs';
-import { getFavorites, setFavorites, deleteFavorites } from '../../api/favoriteAPI';
-import { useUserStore } from '../../stores/userStore';
-import { toast } from 'react-toastify';
-import { ProfileTitleWrapper } from '../../components/layout/body/profile/ProfileTitleWrapper';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import styles from "../../styles/JobListingDetailPage.module.css";
+import JobHeader from "../../components/job/JobHeader/JobHeader";
+import JobImageCarousel from "../../components/job/JobImageCarousel/JobImageCarousel";
+import JobDetails from "../../components/job/JobDetails/JobDetails";
+import JobDescription from "../../components/job/JobDescription/JobDescription";
+import JobLocation from "../../components/job/JobLocation/JobLocation";
+import RelatedJobs from "../../components/job/RelatedJobs/RelatedJobs";
+import mainLink from "../../api/mainURLs";
+import {
+  getFavorites,
+  setFavorites,
+  deleteFavorites,
+} from "../../api/favoriteAPI";
+import { useUserStore } from "../../stores/userStore";
+import { toast } from "react-toastify";
+import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 
 interface Service {
   _id: string;
@@ -162,15 +166,15 @@ const JobListingDetailPage = () => {
       navigate("/login");
       return;
     }
-    
+
     if (!job?._id) {
       console.error("Job ID is missing:", job);
       toast.error("Kunne ikke finne jobb-ID");
       return;
     }
-    
+
     console.log("Creating chat with:", { providerId, serviceId: job._id });
-    
+
     try {
       const response = await mainLink.post("/api/chats/create", {
         providerId,
@@ -179,9 +183,23 @@ const JobListingDetailPage = () => {
       if (!response.data) {
         throw new Error(`Failed to create/get chat: ${response.status}`);
       }
+
       // Navigate directly to the chat conversation
       navigate(`/messages/${response.data._id}`);
     } catch (err: any) {
+      const status = err.response?.status;
+      const data = err.response?.data;
+      if (status === 402 && data?.paymentRequired) {
+        
+        console.log("Payment required:", data);
+        const { amount, currency } = data;
+        const paymentSession = await mainLink.post(
+          "/api/stripe/create-extra-contact-payment",
+          { amount: data.amount, providerId, serviceId: job._id },
+        );
+        window.location.href = paymentSession.data.url;
+        return;
+      }
       console.error("Error creating/getting chat:", err);
       console.error("Error response:", err.response?.data);
       toast.error(err.response?.data?.message || "Kunne ikke opprette samtale");
@@ -260,7 +278,11 @@ const JobListingDetailPage = () => {
 
       <div className={styles.content}>
         <JobDetails job={job} />
-        <JobDescription description={job?.description} price={job?.price} urgent={job?.urgent} />
+        <JobDescription
+          description={job?.description}
+          price={job?.price}
+          urgent={job?.urgent}
+        />
         <JobLocation location={job?.location} />
 
         <RelatedJobs
