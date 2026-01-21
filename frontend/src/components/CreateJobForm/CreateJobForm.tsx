@@ -1,6 +1,92 @@
 import { useState, useEffect } from "react";
-import ImageUpload from "../ImageUpload/ImageUpload";
-import mainLink from "../../api/mainURLs";
+
+// Working ImageUpload component
+const ImageUpload = ({ onImagesChange }: { onImagesChange: (files: File[]) => void }) => {
+  const [previews, setPreviews] = useState<string[]>([]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    onImagesChange(files);
+    
+    // Create preview URLs
+    const previewUrls = files.map(file => URL.createObjectURL(file));
+    setPreviews(previewUrls);
+  };
+
+  const handleClick = () => {
+    const input = document.getElementById('file-upload') as HTMLInputElement;
+    input?.click();
+  };
+
+  return (
+    <div>
+      <input
+        id="file-upload"
+        type="file"
+        multiple
+        accept="image/*"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
+      <div 
+        onClick={handleClick}
+        style={{
+          border: "2px dashed #ddd",
+          borderRadius: "12px",
+          padding: "40px 20px",
+          textAlign: "center",
+          backgroundColor: "#f9f9f9",
+          cursor: "pointer",
+          transition: "all 0.3s ease"
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = "#4CAF50";
+          e.currentTarget.style.backgroundColor = "#f0f9f0";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = "#ddd";
+          e.currentTarget.style.backgroundColor = "#f9f9f9";
+        }}>
+        <p style={{ margin: 0, color: "#666", fontSize: "16px" }}>📸 Last opp bilder</p>
+        <p style={{ margin: "8px 0 0 0", color: "#999", fontSize: "13px" }}>
+          Klikk for å velge bilder
+        </p>
+      </div>
+      
+      {previews.length > 0 && (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
+          gap: "12px",
+          marginTop: "16px"
+        }}>
+          {previews.map((preview, index) => (
+            <div key={index} style={{
+              position: "relative",
+              paddingTop: "100%",
+              borderRadius: "8px",
+              overflow: "hidden",
+              border: "2px solid #e0e0e0"
+            }}>
+              <img 
+                src={preview} 
+                alt={`Preview ${index + 1}`}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover"
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface CreateJobFormProps {
   onSubmit: (jobData: any) => void;
@@ -36,24 +122,7 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
   const [durationValue, setDurationValue] = useState(initialData?.durationValue || "");
   const [durationUnit, setDurationUnit] = useState(initialData?.durationUnit || "hours");
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        // const response = await fetch(`${mainLink}/api/categories`);
-        const response = await mainLink.get('/api/categories')
-        if (response.data) {
-          const data = await response.data;
-          setAvailableCategories(data.map((cat: any) => cat.name || cat));
-        }
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-      }
-    };
-    
-    fetchCategories();
-  }, []);
+  const [availableCategories] = useState<string[]>(["Flytting", "Rengjøring", "Maling", "Hagearbeid", "Transport"]);
 
   const handleImagesChange = (images: File[]) => {
     setSelectedImages(images);
@@ -70,21 +139,18 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
         type: 'Point',
         address,
         city,
-        coordinates: [10.7461, 59.9127] // Default Oslo coordinates
+        coordinates: [10.7461, 59.9127]
       },
       categories: categories.split(',').map(cat => cat.trim()).filter(cat => cat.length > 0),
       urgent,
     };
 
-    // Only include userId when creating a new job (not editing)
     if (!isEditMode && userId) {
       jobData.userId = userId;
     }
 
-    // Equipment is now required
     jobData.equipment = equipment;
 
-    // Only include dates if they're filled
     if (fromDate) {
       jobData.fromDate = fromDate;
     }
@@ -92,7 +158,6 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
       jobData.toDate = toDate;
     }
 
-    // Include duration if value is provided
     if (durationValue && Number(durationValue) > 0) {
       jobData.duration = {
         value: Number(durationValue),
@@ -100,292 +165,285 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
       };
     }
 
-    // TODO: Uncomment when backend is ready to accept File objects
-    // jobData.images = selectedImages;
-
     onSubmit(jobData);
   };
 
+  const containerStyle: React.CSSProperties = {
+    maxWidth: "800px",
+    margin: "0 auto",
+    padding: "20px",
+    paddingBottom: "100px",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+  };
+
+  const fieldStyle: React.CSSProperties = {
+    marginBottom: "24px"
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: "block",
+    marginBottom: "8px",
+    fontWeight: "600",
+    fontSize: "15px",
+    color: "#2c3e50"
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "14px 16px",
+    borderRadius: "12px",
+    fontFamily: "inherit",
+    fontSize: "16px",
+    border: "2px solid #e0e0e0",
+    outline: "none",
+    transition: "all 0.3s ease",
+    boxSizing: "border-box",
+    backgroundColor: "#fff"
+  };
+
+  const selectStyle: React.CSSProperties = {
+    ...inputStyle,
+    cursor: "pointer",
+    appearance: "none",
+    backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E\")",
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 16px center",
+    paddingRight: "40px"
+  };
+
+  const textareaStyle: React.CSSProperties = {
+    ...inputStyle,
+    resize: "vertical",
+    minHeight: "120px"
+  };
+
+  const buttonStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "16px 24px",
+    backgroundColor: "#4CAF50",
+    color: "white",
+    border: "none",
+    borderRadius: "12px",
+    cursor: "pointer",
+    fontSize: "17px",
+    fontWeight: "600",
+    transition: "all 0.3s ease",
+    boxShadow: "0 4px 12px rgba(76, 175, 80, 0.3)"
+  };
+
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: "800px", margin: "auto", paddingBottom: "80px" }}>
-      <div style={{ marginBottom: "24px" }}>
-        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-          Bilder *
-        </label>
-        <ImageUpload onImagesChange={handleImagesChange} />
-      </div>
+    <div style={containerStyle}>
+      <style>{`
+        input:focus, select:focus, textarea:focus {
+          border-color: #4CAF50 !important;
+          box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        }
+        
+        button:hover {
+          background-color: #45a049 !important;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4) !important;
+        }
+        
+        button:active {
+          transform: translateY(0);
+        }
 
-      <div style={{ marginBottom: "24px" }}>
-        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-          Tittel *
-        </label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-          placeholder="F.eks. Flyttehjelp ønskes"
-          style={{
-            width: "90%",
-            padding: "12px",
-            borderRadius: "8px",
-            fontFamily: "inherit",
-            fontSize: "16px",
-            border: "1px solid var(--color-icon)",
-          }}
-        />
-      </div>
+        @media (max-width: 768px) {
+          input, select, textarea {
+            font-size: 16px !important;
+          }
+        }
+      `}</style>
 
-      <div style={{ marginBottom: "24px" }}>
-        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-          Beskrivelse *
-        </label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          required
-          rows={5}
-          placeholder="Beskriv oppdraget i detalj..."
-          style={{
-            width: "90%",
-            padding: "12px",
-            fontFamily: "inherit",
-            fontSize: "16px",
-            borderRadius: "8px",
-            border: "1px solid var(--color-icon)",
-            resize: "vertical",
-          }}
-        />
-      </div>
+      <div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            📸 Bilder *
+          </label>
+          <ImageUpload onImagesChange={handleImagesChange} />
+        </div>
 
-      <div style={{ marginBottom: "24px" }}>
-        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-          Pris (NOK) *
-        </label>
-        <input
-          type="number"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          required
-          placeholder="2000"
-          style={{
-            width: "90%",
-            padding: "12px",
-            borderRadius: "8px",
-            fontFamily: "inherit",
-            fontSize: "16px",
-            border: "1px solid var(--color-icon)",
-          }}
-        />
-      </div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            📝 Tittel *
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            placeholder="F.eks. Flyttehjelp ønskes"
+            style={inputStyle}
+          />
+        </div>
 
-      <div style={{ marginBottom: "24px" }}>
-        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-          Adresse *
-        </label>
-        <input
-          type="text"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          required
-          placeholder="Dronningens gate 10"
-          style={{
-            width: "90%",
-            padding: "12px",
-            fontFamily: "inherit",
-            borderRadius: "8px",
-            border: "1px solid var(--color-icon)",
-          }}
-        />
-      </div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            📄 Beskrivelse *
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+            placeholder="Beskriv oppdraget i detalj..."
+            style={textareaStyle}
+          />
+        </div>
 
-      <div style={{ marginBottom: "24px" }}>
-        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-          By *
-        </label>
-        <input
-          type="text"
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          required
-          placeholder="Trondheim"
-          style={{
-            width: "90%",
-            padding: "12px",
-            borderRadius: "8px",
-            fontFamily: "inherit",
-            fontSize: "16px",
-            border: "1px solid var(--color-icon)",
-          }}
-        />
-      </div>
-
-      <div style={{ marginBottom: "24px" }}>
-        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-          Kategorier *
-        </label>
-        <select
-          value={categories}
-          onChange={(e) => setCategories(e.target.value)}
-          required
-          size={1}
-          style={{
-            width: "calc(90% + 24px)",
-            padding: "12px",
-            borderRadius: "8px",
-            border: "1px solid var(--color-icon)",
-            fontSize: "16px",
-            fontFamily: "inherit",
-            color: "var(--color-text)",
-            cursor: "pointer",
-            maxHeight: "200px",
-            overflow: "auto",
-          }}
-        >
-          <option value="">Velg kategori...</option>
-          {availableCategories.map((category) => (
-            <option key={category} value={category}>
-              {category}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div style={{ marginBottom: "24px" }}>
-        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-          Utstyr
-        </label>
-        <select
-          value={equipment}
-          onChange={(e) => setEquipment(e.target.value)}
-          size={1}
-          required
-          style={{
-            width: "calc(90% + 24px)",
-            padding: "12px",
-            borderRadius: "8px",
-            border: "1px solid var(--color-icon)",
-            fontSize: "16px",
-            fontFamily: "inherit",
-            color: "var(--color-text)",
-            cursor: "pointer",
-            maxHeight: "200px",
-            overflow: "auto",
-          }}
-        >
-          <option value="">Velg...</option>
-          <option value="utstyrfri">Utstyrfri</option>
-          <option value="delvis utstyr">Delvis utstyr</option>
-          <option value="trengs utstyr">Trengs utstyr</option>
-        </select>
-      </div>
-
-      <div style={{ marginBottom: "24px" }}>
-        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-          Varighet
-        </label>
-        <div style={{ display: "flex", gap: "12px" }}>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            💰 Pris (NOK) *
+          </label>
           <input
             type="number"
-            value={durationValue}
-            onChange={(e) => setDurationValue(e.target.value)}
-            min="0"
-            step="0.5"
-            placeholder="2"
-            style={{
-              flex: 1,
-              padding: "12px",
-              borderRadius: "8px",
-              fontFamily: "inherit",
-              fontSize: "16px",
-              border: "1px solid var(--color-icon)",
-            }}
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            required
+            placeholder="2000"
+            style={inputStyle}
           />
+        </div>
+
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            📍 Adresse *
+          </label>
+          <input
+            type="text"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            required
+            placeholder="Dronningens gate 10"
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            🏙️ By *
+          </label>
+          <input
+            type="text"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            required
+            placeholder="Trondheim"
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            🏷️ Kategorier *
+          </label>
           <select
-            value={durationUnit}
-            onChange={(e) => setDurationUnit(e.target.value)}
-            style={{
-              flex: 1,
-              padding: "12px",
-              borderRadius: "8px",
-              fontFamily: "inherit",
-              fontSize: "16px",
-              border: "1px solid var(--color-icon)",
-            }}
+            value={categories}
+            onChange={(e) => setCategories(e.target.value)}
+            required
+            style={selectStyle}
           >
-            <option value="minutes">Minutter</option>
-            <option value="hours">Timer</option>
-            <option value="days">Dager</option>
+            <option value="">Velg kategori...</option>
+            {availableCategories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
           </select>
         </div>
-      </div>
 
-      <div style={{ marginBottom: "24px" }}>
-        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-          Fra dato *
-        </label>
-        <input
-          type="date"
-          value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
-          required
-          style={{
-            width: "90%",
-            padding: "12px",
-            borderRadius: "8px",
-            fontFamily: "inherit",
-            fontSize: "16px",
-            border: "1px solid var(--color-icon)",
-          }}
-        />
-      </div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            🔧 Utstyr *
+          </label>
+          <select
+            value={equipment}
+            onChange={(e) => setEquipment(e.target.value)}
+            required
+            style={selectStyle}
+          >
+            <option value="">Velg...</option>
+            <option value="utstyrfri">Utstyrfri</option>
+            <option value="delvis utstyr">Delvis utstyr</option>
+            <option value="trengs utstyr">Trengs utstyr</option>
+          </select>
+        </div>
 
-      <div style={{ marginBottom: "24px" }}>
-        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-          Til dato *
-        </label>
-        <input
-          type="date"
-          value={toDate}
-          onChange={(e) => setToDate(e.target.value)}
-          required
-          style={{
-            width: "90%",
-            padding: "12px",
-            borderRadius: "8px",
-            fontFamily: "inherit",
-            fontSize: "16px",
-            border: "1px solid var(--color-icon)",
-          }}
-        />
-      </div>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            ⏱️ Varighet
+          </label>
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+            <input
+              type="number"
+              value={durationValue}
+              onChange={(e) => setDurationValue(e.target.value)}
+              min="0"
+              step="0.5"
+              placeholder="2"
+              style={{ ...inputStyle, flex: "1", minWidth: "120px" }}
+            />
+            <select
+              value={durationUnit}
+              onChange={(e) => setDurationUnit(e.target.value)}
+              style={{ ...selectStyle, flex: "1", minWidth: "120px" }}
+            >
+              <option value="minutes">Minutter</option>
+              <option value="hours">Timer</option>
+              <option value="days">Dager</option>
+            </select>
+          </div>
+        </div>
 
-      <div style={{ marginBottom: "24px" }}>
-        <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            📅 Fra dato *
+          </label>
           <input
-            type="checkbox"
-            checked={urgent}
-            onChange={(e) => setUrgent(e.target.checked)}
-            style={{ width: "20px", height: "20px" }}
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            required
+            style={inputStyle}
           />
-          <span style={{ fontWeight: "bold", color: "var(--color-icon)" }}>Haster?</span>
-        </label>
-      </div>
+        </div>
 
-      <button
-        type="submit"
-        style={{
-          padding: "12px 24px",
-          backgroundColor: "var(--color-primary)",
-          color: "white",
-          border: "var(--color-icon)",
-          borderRadius: "8px",
-          cursor: "pointer",
-          fontSize: "16px",
-        }}
-      >
-        {initialData ? "Oppdater oppdrag" : "Publiser oppdrag"}
-      </button>
-    </form>
+        <div style={fieldStyle}>
+          <label style={labelStyle}>
+            📅 Til dato *
+          </label>
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            required
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ ...fieldStyle, backgroundColor: "#fff3cd", padding: "16px", borderRadius: "12px", border: "2px solid #ffc107" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer", margin: 0 }}>
+            <input
+              type="checkbox"
+              checked={urgent}
+              onChange={(e) => setUrgent(e.target.checked)}
+              style={{ 
+                width: "24px", 
+                height: "24px", 
+                cursor: "pointer",
+                accentColor: "#ff9800"
+              }}
+            />
+            <span style={{ fontWeight: "600", color: "#f57c00", fontSize: "16px" }}>
+              ⚡ Haster?
+            </span>
+          </label>
+        </div>
+
+        <button onClick={handleSubmit} type="button" style={buttonStyle}>
+          {initialData ? "✅ Oppdater oppdrag" : "🚀 Publiser oppdrag"}
+        </button>
+      </div>
+    </div>
   );
 }
