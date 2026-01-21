@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema({
     postNumber:{type:String},
     postSted:{type:String},
     country:{type:String},
-    subscription: { type: String, enum: ["Free", "Start", "Pro", "Premium","Fleksibel","Job Plus"], default: 'free' },
+    subscription: { type: String, enum: ["Free", "Start", "Pro", "Premium","Fleksibel","Job Plus"], default: 'Free' },
     planType: {type: String, enum: ["business", "private"],default: "private",required: true},
     verified: { type: Boolean, default: false },
     lastLogin: { type: Date },
