@@ -1,65 +1,117 @@
-const Contract = require("../models/Contract");
-
+const Chat = require("../models/ChatMessage");
 const SubscriptionPlan = require("../models/SubscriptionPlan");
 const Subscription = require("../models/Subscription");
-
-const onMonthAge = new Date();
+const Transaction = require("../models/Transaction");
+const stripe = require('../config/stripe')
 
 exports.checkSubscription = async (req, res, next) => {
   try {
-    const user = req.user;
     const userId = req.user._id;
-    console.log("userId", user);
-    
-    const subscription = await Subscription.findOne({ userId: userId });
-    console.log("subscription.plan", subscription.currentPlan);
+    const { serviceId, sessionId } = req.body; 
 
-    if (!user.subscription) {
+    // --- STRIPE SESSION VERIFICATION (Bypass all limits if just paid) ---
+    if (sessionId) {
+      try {
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        if (session.payment_status === "paid") {
+          await Transaction.findOneAndUpdate(
+            { stripeSessionId: sessionId },
+            {
+              userId: userId,
+              serviceId: serviceId,
+              stripeSessionId: sessionId,
+              amount: session.amount_total / 100,
+              status: "succeeded",
+              type: "extra_contact",
+            },
+            { upsert: true, new: true },
+          );
+          return next(); 
+        }
+      } catch (stripeErr) {
+        console.error("Stripe verification error:", stripeErr.message);
+      }
+    }
+
+    // 1. Check Subscription Plan
+    const subscription = await Subscription.findOne({ userId });
+    if (!subscription || !subscription.currentPlan) {
       return res.status(403).json({ message: "No subscription found" });
     }
 
-    if (user.subscription !== subscription.currentPlan.plan) {
-      return res.status(403).json({ message: "Subscription does not match" });
-    }
+    const { plan, endDate, planType, startDate } = subscription.currentPlan; // 👈 startDate nikalein
 
-    if (
-      user.subscription.plan !== "Free" &&
-      subscription.currentPlan.endDate < Date.now()
-    ) {
+    if (plan !== "Free" && new Date(endDate) < new Date()) {
       return res.status(403).json({ message: "Subscription expired" });
     }
 
-    if (subscription.currentPlan.plan === "Free") {
-      const freePlan = await SubscriptionPlan.findOne({
-        name: subscription.currentPlan.plan,
-      });
+    const planDoc = await SubscriptionPlan.findOne({
+      name: plan,
+      type: planType,
+      isActive: true,
+    });
 
-      console.log("freePlan", freePlan);
-
-      onMonthAge.setMonth(onMonthAge.getMonth() - 1);
-
-      const ContractsLastMonth = await Contract.countDocuments({
-        clientId: userId,
-        createdAt: { $gte: onMonthAge },
-      });
-
-      console.log("Contracts in last month:", ContractsLastMonth);
-
-      if (ContractsLastMonth >= freePlan.freeViews) {
-        return res.status(403).json({ message: "Upgrade to get access" });
-      }
-      //   const chat = await ChatMessage.find({ clientId: user._id });
-      //   console.log("chat", chat);
-      //   console.log("freePlan", freePlan);
-
-      // if(freePlan.maxJobsPerMonth < user.jobsCreatedThisMonth){
-      //     return res.status(403).json({ message: "Free plan limit reached" });
-      // }
+    if (!planDoc) {
+      return res.status(403).json({ message: "Invalid subscription plan" });
     }
 
-    if (!subscription)
-      return res.status(403).json({ message: "No subscription found" });
-    next();
+    const { freeContact, perContactPrice, maxContact, ContactUnlock } =
+      planDoc.entitlements;
+
+    // 2. Count used contacts (Reset Logic)
+    // Hum sirf wahi chats count karenge jo current plan ke startDate ke baad hui hain
+    const countFilterDate = new Date(startDate) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) 
+      ? new Date(startDate) 
+      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const usedContacts = await Chat.countDocuments({
+      clientId: userId,
+      createdAt: { $gte: countFilterDate }, // 👈 Limit reset here
+    });
+
+    // 3. Check if user already paid for THIS specific contact
+    if (serviceId) {
+      const paidContact = await Transaction.findOne({
+        userId: userId,
+        serviceId: serviceId,
+        status: "succeeded",
+        type: "extra_contact",
+      });
+      if (paidContact) return next();
+    }
+
+    // 🚫 Limits Check
+    if (usedContacts >= maxContact) {
+      return res.status(403).json({ message: "Maximum monthly contacts reached" });
+    }
+
+    if (usedContacts < freeContact) { // 👈 Change: < instead of <= to be precise
+      return next();
+    }
+
+    // ⏱ Unlock time check
+    const lastChat = await Chat.findOne(
+      { clientId: userId },
+      { createdAt: 1 },
+      { sort: { createdAt: -1 } },
+    );
+
+    if (lastChat) {
+      const unlockAt = new Date(lastChat.createdAt.getTime() + ContactUnlock * 60 * 1000);
+      if (new Date() < unlockAt) {
+        return res.status(403).json({
+          message: `Next contact unlocks in ${ContactUnlock} minutes`,
+        });
+      }
+    }
+
+    // 💳 PAYMENT REQUIRED
+    return res.status(402).json({
+      message: "Free contacts finished",
+      paymentRequired: true,
+      amount: perContactPrice,
+      currency: "NOK",
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

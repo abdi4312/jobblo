@@ -134,3 +134,55 @@ exports.checkoutSessionStatus = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.createExtraContactPayment = async (req, res) => {
+  try {
+    const user = req.user;
+    const { amount, serviceId, providerId } = req.body;
+    
+    // Validate required fields
+    if (!amount || !serviceId || !providerId) {
+      return res.status(400).json({ message: "Amount, serviceId, and providerId are required" });
+    }
+
+    let stripeCustomerId = user.stripeCustomerId;
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.name,
+        metadata: { userId: String(user._id) },
+      });
+      stripeCustomerId = customer.id;
+      await User.findByIdAndUpdate(user._id, { stripeCustomerId });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      customer: stripeCustomerId,
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "nok",
+            product_data: { name: "Extra Contact" },
+            unit_amount: amount * 100,
+          },
+          quantity: 1,
+        },
+      ],
+     
+      success_url: `${process.env.FRONTEND_URL}contact/success?session_id={CHECKOUT_SESSION_ID}&serviceId=${serviceId}&providerId=${providerId}`,
+      cancel_url: `${process.env.FRONTEND_URL}contact/cancel`,
+      metadata: {
+        userId: String(user._id),
+        type: "extra_contact",
+        serviceId,
+        providerId,
+      },
+    });
+
+    res.json({ url: session.url });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
