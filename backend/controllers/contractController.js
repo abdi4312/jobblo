@@ -1,3 +1,5 @@
+const Notification = require("../models/Notification");
+
 const Order = require("../models/Order");
 const Contract = require("../models/Contract");
 const Service = require("../models/Service");
@@ -183,16 +185,34 @@ exports.signContract = async (req, res) => {
         return res.status(404).json({ error: "Service not found" });
       }
 
-      await Order.create({
-        serviceId: contract.serviceId,
-        customerId: contract.clientId,
-        providerId: contract.providerId,
-        contractId: contract._id,
-        scheduledDate: contract.scheduledDate,
-        price: contract.price,
-        status: "pending",
-        location: { address: contract.address || service?.location?.address },
-      });
+    const orderCreate = await Order.create({
+      serviceId: contract.serviceId,
+      customerId: contract.clientId,
+      providerId: contract.providerId,
+      contractId: contract._id,
+      scheduledDate: contract.scheduledDate,
+      price: contract.price,
+      status: "pending",
+      location: { address: contract.address || service?.location?.address },
+    });
+
+
+      await Notification.insertMany([
+      {
+        userId: contract.clientId,
+        type: "order",
+        referenceId: orderCreate._id,
+        content: `Your order for ${service.title} has been created.`,
+      },
+      {
+        userId: contract.providerId,
+        type: "order",
+        referenceId: orderCreate._id,
+        content: `You received a new order for ${service.title}.`,
+      },
+    ]);
+
+
     }
 
     await contract.save();
