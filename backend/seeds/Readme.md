@@ -43,7 +43,7 @@ For Filters:
 node seeds/run-filters.js
 
 For Plans:
-node seeds/run-plans.js
+node seeds/run-plan.js
 
 5️⃣ Notes
 

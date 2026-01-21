@@ -25,6 +25,7 @@ import { PublicRoute } from "../components/shared/PublicRoute.tsx";
 import SaleSubscriptionTermsPage from "../pages/SaleSubscriptionTermsPage/SaleSubscriptionTermsPage.tsx";
 import JobbloUserTerm from "../pages/UserTerm/UserTerm.tsx";
 import SuccessPage from "../components/subscription/success.tsx";
+import ContactSuccessPage from "../pages/ContactSuccessPage.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -143,7 +144,10 @@ export const routes: RouteObject[] = [
       },
       {
         path: "team",
-        element: <TeamPage />,
+        element: <TeamPage />},
+      {
+        path: "contact/success",
+        element: <ContactSuccessPage />,
       },
       {
         path: "support",
