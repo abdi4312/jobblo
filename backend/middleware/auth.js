@@ -84,7 +84,7 @@ const requireAdmin = (req, res, next) => {
     });
   }
 
-  if (req.user.role !== "admin") {
+  if (req.user.role !== "superAdmin") {
     return res.status(403).json({
       error: "Access denied",
       message: "Admin privileges required",

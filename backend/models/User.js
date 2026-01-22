@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
     phone: { type: String, unique: true, sparse: true },
     avatarUrl: { type: String },
     bio: { type: String },
-    role: { type: String, enum: ['user', 'admin', 'provider'], default: 'user' },
+    role: { type: String, enum: ['user', 'superAdmin', 'provider'], default: 'user' },
     birthDate:{type:String},
     gender:{type:String},
     address:{type: String},

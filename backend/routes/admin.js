@@ -49,6 +49,16 @@ router.get('/users', authenticate, requireAdmin, adminController.getAllUsers);
  */
 router.get('/orders', authenticate, requireAdmin, adminController.getAllOrders);
 
+router.get('/services', authenticate, requireAdmin, adminController.getAllServices);
+
+router.get('/hero', authenticate, requireAdmin, adminController.getAllHeroItems);
+
+router.put('/hero/:id', authenticate, requireAdmin, adminController.UpdateHero);
+
+router.delete('/hero/:id', authenticate, requireAdmin, adminController.DeleteHero);
+
+
+
 /**
  * @swagger
  * /api/admin/users/{id}/role:
