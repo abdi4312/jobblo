@@ -15,17 +15,17 @@ const HeroSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-// 🔁 Auto active / expire logic
-HeroSchema.pre("save", function (next) {
+
+// 🔁 Auto active / expire logic (Fixed Version)
+HeroSchema.pre("save", async function () {
   const now = new Date();
 
-  if (now >= this.activeFrom && now <= this.expireAt) {
-    this.isActive = true;
-  } else {
-    this.isActive = false;
+  // "this" keyword current document ko refer karta hai
+  if (this.activeFrom && this.expireAt) {
+    this.isActive = now >= this.activeFrom && now <= this.expireAt;
   }
-
-  next();
+  
+  // Async hook mein next() ki zaroorat nahi hoti, Mongoose khud handle kar leta hai
 });
-// ⚠️ Dette er den viktige linjen du mangler
+
 module.exports = mongoose.model("Hero", HeroSchema);

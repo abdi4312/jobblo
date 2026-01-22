@@ -15,7 +15,7 @@ module.exports = async () => {
 
             phone: `+47900000${i + 1}`,
 
-            role: i === 0 ? 'admin' : i < 5 ? 'provider' : 'user',
+            role: i === 0 ? 'superAdmin' : i < 5 ? 'provider' : 'user',
             avatarUrl: avatars[i % avatars.length],
             bio: 'Dette er en testprofil for Jobblo',
             accountStatus: 'verified',

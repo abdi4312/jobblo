@@ -2,19 +2,28 @@ const Hero = require("../models/Hero");
 // const {uploadBufferToAzure,deleteFromAzureByUrl,} = require("../utils/azureUpload");
 
 exports.CreateHero = async (req, res) => {
-  try {
+try {
     const {
       title,
       subtitle,
       subtitleSecondary,
       description,
-      image,
+      image, // Abhi ke liye hum assume kar rahe hain ke URL direct body mein aa raha hai
       activeFrom,
       expireAt,
     } = req.body;
 
+    // 1. Validation
     if (!title) {
       return res.status(400).json({ error: "Title er påkrevd" });
+    }
+
+    if (!image) {
+      return res.status(400).json({ error: "Bilde-URL er påkrevd" });
+    }
+
+    if (!activeFrom || !expireAt) {
+      return res.status(400).json({ error: "activeFrom og expireAt er påkrevd" });
     }
 
     // if (!req.file) {
@@ -30,23 +39,28 @@ exports.CreateHero = async (req, res) => {
     // const imageUrl = await uploadBufferToAzure(req.file, "hero");
 
     // console.log(imageUrl);
+// 2. Dates parsing
+    const startDate = new Date(activeFrom);
+    const endDate = new Date(expireAt);
 
-    if (!activeFrom || !expireAt) {
-      return res
-        .status(400)
-        .json({ error: "activeFrom og expireAt er påkrevd" });
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: "Ugyldig datoformat" });
     }
-    // ✅ auto active logic
+
+    // 3. Auto-active logic
     const now = new Date();
-    const isActive = now >= new Date(activeFrom) && now <= new Date(expireAt);
+    // isActive tab true hoga agar 'now' in dates ke darmiyan hai
+    const isActive = now >= startDate && now <= endDate;
+
+    // 4. Database Entry
     const hero = await Hero.create({
       title,
       subtitle,
       subtitleSecondary,
       description,
-      image,
-      activeFrom,
-      expireAt,
+      image, // Direct URL string
+      activeFrom: startDate,
+      expireAt: endDate,
       isActive,
     });
 
@@ -79,58 +93,6 @@ exports.GetHero = async (req, res) => {
  * UPDATE HERO
  * optional image
  */
-exports.UpdateHero = async (req, res) => {
-  try {
-    const hero = await Hero.findById(req.params.id);
-    if (!hero) {
-      return res.status(404).json({ error: "Hero ikke funnet" });
-    }
-
-    // update text fields
-    hero.title = req.body.title ?? hero.title;
-    hero.subtitle = req.body.subtitle ?? hero.subtitle;
-    hero.subtitleSecondary =
-      req.body.subtitleSecondary ?? hero.subtitleSecondary;
-    hero.description = req.body.description ?? hero.description;
-
-    // update image if exists
-    if (req.file) {
-      if (!req.file.mimetype.startsWith("image/")) {
-        return res.status(400).json({ error: "Kun bildefiler er tillatt" });
-      }
-
-      // delete old image from Azure
-      await deleteFromAzureByUrl(hero.image);
-
-      // upload new image
-      hero.image = await uploadBufferToAzure(req.file, "hero");
-    }
-
-    await hero.save();
-    res.status(200).json(hero);
-  } catch (err) {
-    console.error("Update hero error:", err);
-    res.status(500).json({ error: "Kunne ikke oppdatere hero" });
-  }
-};
-
 /**
- * DELETE HERO
+ * UPDATE HERO
  */
-exports.DeleteHero = async (req, res) => {
-  try {
-    const hero = await Hero.findById(req.params.id);
-    if (!hero) {
-      return res.status(404).json({ error: "Hero ikke funnet" });
-    }
-
-    // delete image from Azure
-    await deleteFromAzureByUrl(hero.image);
-
-    await hero.deleteOne();
-    res.status(200).json({ message: "Hero slettet" });
-  } catch (err) {
-    console.error("Delete hero error:", err);
-    res.status(500).json({ error: "Kunne ikke slette hero" });
-  }
-};

@@ -26,6 +26,12 @@ import SaleSubscriptionTermsPage from "../pages/SaleSubscriptionTermsPage/SaleSu
 import JobbloUserTerm from "../pages/UserTerm/UserTerm.tsx";
 import SuccessPage from "../components/subscription/success.tsx";
 import ContactSuccessPage from "../pages/ContactSuccessPage.tsx";
+import DashboardLayout from "../pages/SuperAdminDashboard/DashboardLayout.tsx";
+import UsersPage from "../pages/SuperAdminDashboard/UsersPage.tsx";
+import ServicesPage from "../pages/SuperAdminDashboard/ServicesPage.tsx";
+import VoucherPage from "../pages/SuperAdminDashboard/VoucherPage.tsx";
+import CarouselPage from "../pages/SuperAdminDashboard/CarouselPage.tsx";
+import { AdminProtectedRoute } from "../components/shared/AdminProtectedRoute.tsx";
 
 export const routes: RouteObject[] = [
   {
@@ -144,7 +150,8 @@ export const routes: RouteObject[] = [
       },
       {
         path: "team",
-        element: <TeamPage />},
+        element: <TeamPage />,
+      },
       {
         path: "contact/success",
         element: <ContactSuccessPage />,
@@ -181,6 +188,56 @@ export const routes: RouteObject[] = [
       {
         path: "user-term",
         element: <JobbloUserTerm />,
+      },
+    ],
+  },
+  {
+    path: "dashboard",
+    element: (
+      <AdminProtectedRoute>
+        <DashboardLayout />
+      </AdminProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: (
+          <AdminProtectedRoute>
+            <UsersPage />
+          </AdminProtectedRoute>
+        ),
+      },
+      {
+        path: "users",
+        element: (
+          <AdminProtectedRoute>
+            <UsersPage />
+          </AdminProtectedRoute>
+        ),
+      },
+      {
+        path: "services",
+        element: (
+          <AdminProtectedRoute>
+            <ServicesPage />
+          </AdminProtectedRoute>
+        ),
+      },
+      {
+        path: "voucher",
+        element: (
+          <AdminProtectedRoute>
+            <VoucherPage />
+          </AdminProtectedRoute>
+        ),
+      },
+      {
+        path: "carousel",
+        element: (
+          <AdminProtectedRoute>
+            <CarouselPage />
+          </AdminProtectedRoute>
+        ),
       },
     ],
   },
