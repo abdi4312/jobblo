@@ -31,6 +31,7 @@ const { authenticate, requireAdmin } = require('../middleware/auth');
  */
 router.get('/users', authenticate, requireAdmin, adminController.getAllUsers);
 
+router.post('/users', authenticate, requireAdmin, adminController.createUser);
 /**
  * @swagger
  * /api/admin/orders:
@@ -50,6 +51,8 @@ router.get('/users', authenticate, requireAdmin, adminController.getAllUsers);
 router.get('/orders', authenticate, requireAdmin, adminController.getAllOrders);
 
 router.get('/services', authenticate, requireAdmin, adminController.getAllServices);
+
+router.get('/system-history', authenticate, requireAdmin, adminController.getSystemNotificationsHistory);
 
 router.get('/hero', authenticate, requireAdmin, adminController.getAllHeroItems);
 

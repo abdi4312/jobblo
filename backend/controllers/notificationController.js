@@ -5,29 +5,46 @@ const mongoose = require('mongoose');
 // GET /api/notifications - Get all notifications for a user
 exports.getAllNotifications = async (req, res) => {
     try {
-        const { userId } = req.query;
+        const { userId, page = 1, limit = 5 } = req.query;
         
-        // If no userId in query, return error
         if (!userId) {
             return res.status(400).json({ error: 'userId query parameter is required' });
         }
         
-        // Validate ObjectId format
         if (!mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ error: 'Invalid user ID format' });
         }
-        
-        // Check if user exists
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-        
-        // Get all notifications for user 
-        const notifications = await Notification.find({ userId })
+
+        // Pagination calculation
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // Filter criteria
+        const query = {
+            $or: [
+                { userId: userId }, 
+                { userId: null, isSystem: true }
+            ]
+        };
+
+        // 1. Get total count for frontend pagination controls
+        const total = await Notification.countDocuments(query);
+
+        // 2. Fetch paginated notifications
+        const notifications = await Notification.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit))
             .populate('userId', 'name email');
         
-        res.json(notifications);
+        // Response format with metadata
+        res.json({
+            success: true,
+            total,
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(total / limit),
+            data: notifications
+        });
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -104,43 +121,27 @@ exports.createTestNotification = async (req, res) => {
 
 // POST /api/notifications/system - Create system notification for all users (admin only)
 exports.createSystemNotification = async (req, res) => {
-    try {
-        const { type, content } = req.body;
+  try {
+    const { type, content } = req.body;
 
-        // Validate required fields
-        if (!type) {
-            return res.status(400).json({ error: 'Type is required' });
-        }
-        if (!content) {
-            return res.status(400).json({ error: 'Content is required' });
-        }
-
-        // Fetch all users (only _id)
-        const users = await User.find().select('_id');
-
-        if (users.length === 0) {
-            return res.status(400).json({ error: 'No users found in system' });
-        }
-
-        // Build notification documents for bulk insert
-        const notifications = users.map(user => ({
-            userId: user._id,
-            type,
-            content
-        }));
-
-        // Bulk insert notifications
-        const createdNotifications = await Notification.insertMany(notifications);
-
-        res.status(201).json({
-            success: true,
-            count: createdNotifications.length,
-            message: `System notification sent to ${createdNotifications.length} users`
-        });
-    } catch (error) {
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({ error: error.message });
-        }
-        res.status(500).json({ error: error.message });
+    if (!type || !content) {
+      return res.status(400).json({ error: 'Type & content required' });
     }
+
+    const notification = await Notification.create({
+      type,
+      content,
+      isSystem: true,
+      userId: null,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'System notification created',
+      data: notification,
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };

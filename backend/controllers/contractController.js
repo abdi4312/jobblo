@@ -80,11 +80,11 @@ exports.createContract = async (req, res) => {
       return res.status(404).json({ error: "Service not found" });
     }
 
-    if (userId === service.userId.toString()) {
-      return res.status(400).json({
-        error: "Providers cannot create contracts for themselves",
-      });
-    }
+    // if (userId === service.userId.toString()) {
+    //   return res.status(400).json({
+    //     error: "Providers cannot create contracts for themselves",
+    //   });
+    // }
 
     const existing = await Contract.findOne({ serviceId });
     if (existing) {

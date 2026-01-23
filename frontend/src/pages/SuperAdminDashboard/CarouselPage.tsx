@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from "react";
 import {
-  Trash2 as TrashIcon,
   Upload as UploadIcon,
   CheckCircle2 as ActiveIcon,
-  X as CloseIcon,
   AlertCircle as ExpiredIcon,
   Clock as SoonIcon,
   ChevronLeft as PrevIcon,
   ChevronRight as NextIcon,
-  Pencil as EditIcon,
 } from "lucide-react";
 import mainLink from "../../api/mainURLs";
 import Swal from "sweetalert2";
+import HeroTable from "../../components/SuperAdminDashboard/Carousel/HeroTable";
+import HeroModal from "../../components/SuperAdminDashboard/Carousel/HeroModal";
 
 const CarouselPage: React.FC = () => {
   const [heroes, setHeroes] = useState([]);
@@ -19,7 +18,7 @@ const CarouselPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [editingId, setEditingId] = useState<string | null>(null); // To track edit mode
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -49,7 +48,6 @@ const CarouselPage: React.FC = () => {
     fetchHeroes();
   }, [currentPage]);
 
-  // Function to open modal for editing
   const handleEdit = (item: any) => {
     setEditingId(item._id);
     setFormData({
@@ -67,7 +65,6 @@ const CarouselPage: React.FC = () => {
     setShowModal(true);
   };
 
-  // Helper to reset and close modal
   const closeModal = () => {
     setShowModal(false);
     setEditingId(null);
@@ -125,11 +122,9 @@ const CarouselPage: React.FC = () => {
     e.preventDefault();
     try {
       if (editingId) {
-        // Edit Logic
         await mainLink.put(`/api/admin/hero/${editingId}`, formData);
         Swal.fire("Suksess!", "Hero banner er oppdatert", "success");
       } else {
-        // Create Logic
         await mainLink.post("/api/hero", formData);
         Swal.fire("Suksess!", "Hero banner er opprettet", "success");
       }
@@ -189,73 +184,13 @@ const CarouselPage: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-gray-50 overflow-hidden">
-        <div className="overflow-x-auto no-scrollbar">
-          <table className="w-full text-left min-w-[800px]">
-            <thead>
-              <tr className="text-gray-400 text-xs font-bold uppercase tracking-widest border-b border-gray-50">
-                <th className="pb-6 px-4">Preview</th>
-                <th className="pb-6 px-4">Title / Info</th>
-                <th className="pb-6 px-4 text-center">Status</th>
-                <th className="pb-6 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50/50">
-              {heroes.map((item: any) => {
-                const status = getStatus(item.activeFrom, item.expireAt);
-                return (
-                  <tr
-                    key={item._id}
-                    className="group hover:bg-gray-50/30 transition-all"
-                  >
-                    <td className="py-5 px-4">
-                      <div className="w-32 h-20 rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-                        <img
-                          src={item.image}
-                          alt="Hero"
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                      </div>
-                    </td>
-                    <td className="py-5 px-4">
-                      <p className="text-gray-800 font-bold">{item.title}</p>
-                      <p
-                        className={`text-[11px] font-bold mt-1 ${status.dateTextColor}`}
-                      >
-                        {status.dateInfo}
-                      </p>
-                    </td>
-                    <td className="py-5 px-4 text-center">
-                      <span
-                        className={`${status.color} text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 shadow-sm`}
-                      >
-                        {status.icon} {status.label}
-                      </span>
-                    </td>
-                    <td className="py-5 px-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(item)}
-                          className="bg-blue-50 text-blue-500 p-2.5 rounded-xl hover:bg-blue-500 hover:text-white transition-all shadow-sm active:scale-90"
-                        >
-                          <EditIcon size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item._id)}
-                          className="bg-red-50 text-red-500 p-2.5 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm active:scale-90"
-                        >
-                          <TrashIcon size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {heroes.length === 0 && !loading && (
-            <p className="text-center py-10 text-gray-400">No data found</p>
-          )}
-        </div>
+        <HeroTable
+          heroes={heroes}
+          getStatus={getStatus}
+          handleEdit={handleEdit}
+          handleDelete={handleDelete}
+          loading={loading}
+        />
 
         {/* Pagination */}
         {totalPages > 1 && (
@@ -267,7 +202,6 @@ const CarouselPage: React.FC = () => {
             >
               <PrevIcon size={20} />
             </button>
-
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
               <button
                 key={num}
@@ -281,7 +215,6 @@ const CarouselPage: React.FC = () => {
                 {num}
               </button>
             ))}
-
             <button
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage((p) => p + 1)}
@@ -294,112 +227,13 @@ const CarouselPage: React.FC = () => {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-2xl p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            <button
-              onClick={closeModal}
-              className="absolute top-6 right-6 text-gray-400 hover:text-gray-600"
-            >
-              <CloseIcon />
-            </button>
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-              {editingId ? "Update Hero Banner" : "Add New Hero Banner"}
-            </h2>
-
-            <form
-              onSubmit={handleSubmit}
-              className="grid grid-cols-1 md:grid-cols-2 gap-6"
-            >
-              <div className="col-span-2">
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
-                  Title
-                </label>
-                <input
-                  required
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#2d4a3e] outline-none transition-all"
-                  placeholder="E.g. Summer Sale"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
-                  Subtitle
-                </label>
-                <input
-                  value={formData.subtitle}
-                  onChange={(e) =>
-                    setFormData({ ...formData, subtitle: e.target.value })
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#2d4a3e] outline-none transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
-                  Image URL
-                </label>
-                <input
-                  required
-                  value={formData.image}
-                  onChange={(e) =>
-                    setFormData({ ...formData, image: e.target.value })
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#2d4a3e] outline-none transition-all"
-                  placeholder="https://..."
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
-                  Active From
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={formData.activeFrom}
-                  onChange={(e) =>
-                    setFormData({ ...formData, activeFrom: e.target.value })
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none focus:border-[#2d4a3e]"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
-                  Expire At
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={formData.expireAt}
-                  onChange={(e) =>
-                    setFormData({ ...formData, expireAt: e.target.value })
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none focus:border-[#2d4a3e]"
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
-                  Description
-                </label>
-                <textarea
-                  rows={3}
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#2d4a3e] outline-none transition-all resize-none"
-                />
-              </div>
-              <button
-                type="submit"
-                className="col-span-2 mt-2 bg-[#2d4a3e] text-white py-4 rounded-2xl font-bold hover:bg-[#233b31] transition-all shadow-lg active:scale-95"
-              >
-                {editingId ? "Update Hero Banner" : "Create Hero Banner"}
-              </button>
-            </form>
-          </div>
-        </div>
+        <HeroModal
+          editingId={editingId}
+          formData={formData}
+          setFormData={setFormData}
+          handleSubmit={handleSubmit}
+          closeModal={closeModal}
+        />
       )}
     </div>
   );
