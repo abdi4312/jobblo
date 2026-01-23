@@ -67,7 +67,7 @@ const { authenticate, requireAdmin } = require('../middleware/auth');
  *       500:
  *         description: Server-feil
  */
-router.get('/', notificationController.getAllNotifications);
+router.get('/', authenticate, notificationController.getAllNotifications);
 
 /**
  * @swagger
@@ -96,7 +96,7 @@ router.get('/', notificationController.getAllNotifications);
  *       500:
  *         description: Server-feil
  */
-router.put('/:id/read', notificationController.markAsRead);
+router.put('/:id/read', authenticate, notificationController.markAsRead);
 
 /**
  * @swagger
