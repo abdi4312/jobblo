@@ -10,23 +10,21 @@ import {
   Search,
   Menu,
   X,
+  Bell,
 } from "lucide-react";
 import { useUserStore } from "../../stores/userStore";
-import { toast } from 'react-toastify';
+import { toast } from "react-toastify";
 const DashboardLayout: React.FC = () => {
   const user = useUserStore((state) => state.user);
   const logout = useUserStore((state) => state.logout);
   const navigate = useNavigate();
   const isSuperAdmin = user?.role === "superAdmin"; // Check for superAdmin
-  
-  
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const handleLogout = () => {
-
-        logout();
-        toast.success("Du har blitt logget ut");
-        navigate("/");
-
+    logout();
+    toast.success("Du har blitt logget ut");
+    navigate("/");
   };
   return (
     <div className="flex !mt-[-70px]">
@@ -85,7 +83,7 @@ const DashboardLayout: React.FC = () => {
             label="Services"
             to="/dashboard/services"
           />
-          
+
           <SidebarItem
             icon={<ImageIcon size={20} />}
             label="Carousel"
@@ -100,10 +98,18 @@ const DashboardLayout: React.FC = () => {
               to="/dashboard/voucher"
             />
           )}
+          <SidebarItem
+            icon={<Bell size={20} />}
+            label="Notifications"
+            to="/dashboard/notifications"
+          />
         </nav>
 
         {/* Logout Button */}
-        <button className="flex items-center gap-3 text-gray-400 hover:text-red-600 font-medium p-3 transition-colors mt-auto border-t pt-6" onClick={handleLogout}>
+        <button
+          className="flex items-center gap-3 text-gray-400 hover:text-red-600 font-medium p-3 transition-colors mt-auto border-t pt-6"
+          onClick={handleLogout}
+        >
           <LogOut size={20} />
           Logout
         </button>
@@ -123,7 +129,10 @@ const DashboardLayout: React.FC = () => {
             </div>
             {/* Search Bar */}
             <div className="relative w-full max-w-md hidden sm:block">
-              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              />
               <input
                 placeholder="Search anything..."
                 className="w-full pl-12 pr-4 py-2.5 rounded-full border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-500/10 focus:border-green-800 outline-none transition-all shadow-sm"
@@ -134,14 +143,16 @@ const DashboardLayout: React.FC = () => {
           {/* User Profile Info */}
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-gray-800">{user?.name || "Admin"}</p>
+              <p className="text-sm font-bold text-gray-800">
+                {user?.name || "Admin"}
+              </p>
               <p className="text-[10px] text-gray-400 font-medium capitalize">
                 {user?.role || "Administrator"}
               </p>
             </div>
             <div className="w-10 h-10 rounded-full border-2 border-green-800/20 p-0.5">
               <img
-                src={`https://ui-avatars.com/api/?name=${user?.name || 'Admin'}&background=2d4a3e&color=fff`}
+                src={`https://ui-avatars.com/api/?name=${user?.name || "Admin"}&background=2d4a3e&color=fff`}
                 className="rounded-full"
                 alt="profile"
               />
