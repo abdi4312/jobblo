@@ -32,6 +32,16 @@ import ServicesPage from "../pages/SuperAdminDashboard/ServicesPage.tsx";
 import VoucherPage from "../pages/SuperAdminDashboard/VoucherPage.tsx";
 import CarouselPage from "../pages/SuperAdminDashboard/CarouselPage.tsx";
 import { AdminProtectedRoute } from "../components/shared/AdminProtectedRoute.tsx";
+import { FirstVisitRedirect } from "../components/shared/FirstVisitRedirect.tsx";
+
+const LandingPageWithRedirect = () => {
+  return (
+    <>
+      <FirstVisitRedirect />
+      <LandingPage />
+    </>
+  );
+};
 
 export const routes: RouteObject[] = [
   {
@@ -40,7 +50,7 @@ export const routes: RouteObject[] = [
     children: [
       {
         index: true,
-        element: <LandingPage />,
+        element: <LandingPageWithRedirect />,
       },
       {
         path: "oauth-success",
