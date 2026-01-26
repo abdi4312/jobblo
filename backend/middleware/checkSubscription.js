@@ -75,7 +75,7 @@ exports.checkSubscription = async (req, res, next) => {
 
     // 2. Count used contacts (Reset Logic)
     // Hum sirf wahi chats count karenge jo current plan ke startDate ke baad hui hain
-    const countFilterDate = new Date(startDate) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) 
+    const countFilterDate = new Date(startDate) > new Date(Date.now() - 72 * 60 * 60 * 1000) 
       ? new Date(startDate) 
       : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 

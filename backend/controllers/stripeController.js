@@ -1,7 +1,9 @@
+const Coupon = require("../models/Coupon");
 const Subscription = require("../models/Subscription");
 const User = require("../models/User");
 const stripe = require("../config/stripe");
 const SubscriptionPlan = require("../models/SubscriptionPlan");
+const calculateDiscount = require("../utils/calculateDiscount");
 
 const now = new Date();
 const nextMonth = new Date();
@@ -9,19 +11,41 @@ nextMonth.setMonth(now.getMonth() + 1);
 
 exports.createCheckoutSession = async (req, res) => {
   try {
-    const { planId } = req.body;
+    const { planId, couponCode } = req.body;
     const user = req.user;
 
+    // 1️⃣ Get plan
     const plan = await SubscriptionPlan.findById(planId);
     if (!plan) return res.status(404).json({ message: "Plan not found" });
 
+    // 2️⃣ Determine final price
+    let finalPrice = plan.price; // default price
+    let appliedCoupon = null;
+    let couponId = null; // ✅ declare here
+
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
+      if (!coupon) return res.status(404).json({ message: "Coupon not found" });
+      if (!coupon.active)
+        return res.status(400).json({ message: "Coupon is not active" });
+      if (coupon.expiresDate < new Date())
+        return res.status(400).json({ message: "Coupon expired" });
+
+      // calculate discounted price
+      const pricing = calculateDiscount(plan.price, coupon);
+      finalPrice = pricing.finalPrice;
+      appliedCoupon = coupon.code;
+      couponId = coupon._id; // ✅ store coupon ObjectId
+    }
+
+    // 3️⃣ Create Stripe customer
     const customer = await stripe.customers.create({
       email: user.email,
       name: user.name,
       metadata: { userId: String(user._id) },
     });
 
-    // 2. Checkout Session banayein
+    // 4️⃣ Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
       payment_method_types: ["card"],
@@ -29,8 +53,8 @@ exports.createCheckoutSession = async (req, res) => {
         {
           price_data: {
             currency: "nok",
-            product_data: { name: String(plan.name) },
-            unit_amount: Math.round(plan.price * 100),
+            product_data: { name: plan.name },
+            unit_amount: Math.round(finalPrice * 100),
             recurring: { interval: "month" },
           },
           quantity: 1,
@@ -42,16 +66,19 @@ exports.createCheckoutSession = async (req, res) => {
       metadata: {
         userId: String(user._id),
         planId: String(planId),
-        planName: String(plan.name),
-        planPrice: Math.round(plan.price * 100),
-        planType: String(plan.type),
+        planName: plan.name,
+        planPrice: plan.price,
+        discountAmount: plan.price - finalPrice,
+        planType: plan.type,
         autoRenew: String(plan.autoRenew),
+        coupon: appliedCoupon || "",
+        couponId: couponId ? String(couponId) : "", // ✅ safe
       },
     });
 
     res.json({ url: session.url });
   } catch (error) {
-    console.error("STRIPE ERROR:", error.message);
+    console.error("STRIPE ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -68,11 +95,19 @@ exports.checkoutSessionStatus = async (req, res) => {
       return res.json({ payment_status: session.payment_status });
     }
 
+    console.log("Session Metadata:", session.metadata);
+
     const stripeSub = session.subscription;
     const userId = session.metadata.userId;
     const newPlanName = session.metadata.planName;
     const newPlanType = session.metadata.planType;
 
+    // ✅ Safe parsing with defaults
+    const discountAmount = Number(session.metadata?.discountAmount || 0);
+    const discountCoupon = session.metadata.coupon || null;
+    const couponID = session.metadata.couponId || null;
+    const autoRenew = session.metadata.autoRenew === "true";
+    console.log("Coupon ID:", couponID);
     const now = new Date();
     const nextMonth = new Date(now);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
@@ -81,7 +116,6 @@ exports.checkoutSessionStatus = async (req, res) => {
     let subscription = await Subscription.findOne({ userId });
 
     if (!subscription) {
-      // Create new subscription with currentPlan already set
       subscription = new Subscription({
         userId,
         currentPlan: {
@@ -92,32 +126,37 @@ exports.checkoutSessionStatus = async (req, res) => {
           startDate: now,
           endDate: nextMonth,
           renewalDate: nextMonth,
-          autoRenew: session.metadata.autoRenew === "true",
+          autoRenew: autoRenew,
           status: "active",
+          discountAmount: discountAmount,
+          discountCoupon: discountCoupon,
+          coupon: couponID, // ✅ safe
         },
         planHistory: [],
       });
     } else {
-      // ✅ Only push to history if plan actually changes
       const isPlanChanged =
         !subscription.currentPlan ||
         !subscription.currentPlan.plan ||
         subscription.currentPlan.plan !== newPlanName;
 
       if (isPlanChanged && subscription.currentPlan && subscription.currentPlan.plan) {
+        // Push current plan to history
         subscription.planHistory.push({
           planId: subscription.currentPlan.planId || null,
           plan: subscription.currentPlan.plan,
           planType: subscription.currentPlan.planType,
           startDate: subscription.currentPlan.startDate || now,
           endDate: now,
-          stripeSubscriptionId:
-            subscription.currentPlan.stripeSubscriptionId || null,
+          stripeSubscriptionId: subscription.currentPlan.stripeSubscriptionId || null,
           status: "expired",
+          discountAmount: subscription.currentPlan.discountAmount || 0,
+          discountCoupon: subscription.currentPlan.discountCoupon || null,
+          coupon: subscription.currentPlan.coupon || null,
         });
       }
 
-      // 🆕 Update current plan
+      // Update current plan
       subscription.currentPlan = {
         planId: session.metadata.planId,
         plan: newPlanName,
@@ -126,16 +165,27 @@ exports.checkoutSessionStatus = async (req, res) => {
         startDate: now,
         endDate: nextMonth,
         renewalDate: nextMonth,
-        autoRenew: session.metadata.autoRenew === "true",
+        autoRenew: autoRenew,
         status: "active",
+        discountAmount: discountAmount,
+        discountCoupon: discountCoupon,
+        coupon: couponID,
       };
     }
 
     await subscription.save();
-    await User.findByIdAndUpdate(session.metadata.userId, {
-      subscription: session.metadata.planName,
-      planType: session.metadata.planType,
+
+    await User.findByIdAndUpdate(userId, {
+      subscription: newPlanName,
+      planType: newPlanType,
     });
+
+    if (couponID) {
+      await Coupon.findByIdAndUpdate(couponID, {
+        $push: { usedBy: userId },
+      });
+    }
+
     res.json({
       payment_status: "paid",
       plan: subscription.currentPlan.plan,
@@ -146,14 +196,17 @@ exports.checkoutSessionStatus = async (req, res) => {
   }
 };
 
+
 exports.createExtraContactPayment = async (req, res) => {
   try {
     const user = req.user;
     const { amount, serviceId, providerId } = req.body;
-    
+
     // Validate required fields
     if (!amount || !serviceId || !providerId) {
-      return res.status(400).json({ message: "Amount, serviceId, and providerId are required" });
+      return res
+        .status(400)
+        .json({ message: "Amount, serviceId, and providerId are required" });
     }
 
     let stripeCustomerId = user.stripeCustomerId;
@@ -181,7 +234,7 @@ exports.createExtraContactPayment = async (req, res) => {
           quantity: 1,
         },
       ],
-     
+
       success_url: `${process.env.FRONTEND_URL}contact/success?session_id={CHECKOUT_SESSION_ID}&serviceId=${serviceId}&providerId=${providerId}`,
       cancel_url: `${process.env.FRONTEND_URL}contact/cancel`,
       metadata: {
