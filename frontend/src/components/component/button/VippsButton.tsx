@@ -1,5 +1,5 @@
 import * as Icon from "../../../assets/icons";
-import styles from "./VippsButton.module.css";
+// import styles from "./VippsButton.module.css";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../../../stores/userStore.ts";
 
@@ -15,14 +15,14 @@ export function VippsButton() {
     <>
       {isAuth ? (
         <button
-          className={styles.buttonContainer}
+          className="bg-[#ff5b24] text-white p-[6px] rounded-[6px] gap-1 flex !text-[12px] sm:!text-[14px]"
           onClick={() => navigate("profile")}
         >
-          <Icon.VippsIcon />
+          <Icon.VippsIcon/>
           Min side
         </button>
       ) : (
-        <button className={styles.buttonContainer} onClick={handleLogin}>
+        <button className="bg-[#ff5b24] text-white p-[6px] rounded-[6px] gap-1 flex !text-[12px] sm:!text-[14px]" onClick={handleLogin}>
           <Icon.VippsIcon />
           Logg inn
         </button>
