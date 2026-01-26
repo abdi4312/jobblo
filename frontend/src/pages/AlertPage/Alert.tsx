@@ -1,28 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useUserStore } from "../../stores/userStore";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 import { getNotifications } from "../../api/notificationAPI.ts";
 
-interface Alert {
-  _id: string;
-  userId: {
-    _id: string;
-    name: string;
-    email: string;
-  } | null; 
-  type: string;
-  content: string;
-  read: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export default function Alert() {
   const [activeTab, setActiveTab] = useState("nyheter");
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Pagination States
+  const [moreLoading, setMoreLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
 
@@ -34,144 +19,131 @@ export default function Alert() {
     { id: "lagrede", label: "Lagrede" },
   ];
 
-  const fetchAlerts = async (pageNum: number, isInitial: boolean = false) => {
+  const fetchAlerts = useCallback(async (pageNum: number, isInitial: boolean = false) => {
     if (!userId) {
       setLoading(false);
       return;
     }
 
     try {
-      if (isInitial) setLoading(true);
-      
-      const response = await getNotifications(userId, pageNum);
-      
-      // Backend ab { data: [...], totalPages: X } bhej raha hai
-      const newNotifications = response.data; 
-      
       if (isInitial) {
-        setAlerts(newNotifications);
+        setLoading(true);
       } else {
-        setAlerts((prev) => [...prev, ...newNotifications]);
+        setMoreLoading(true);
       }
 
-      // Check if there are more pages
+      const response = await getNotifications(userId, pageNum);
+      
+      setAlerts((prev) => (isInitial ? response.data : [...prev, ...response.data]));
       setHasMore(pageNum < response.totalPages);
     } catch (error) {
-      console.error("Error fetching:", error);
-      alert("Kunne ikke hente varsler");
+      console.error("Error fetching notifications:", error);
     } finally {
       setLoading(false);
+      setMoreLoading(false);
     }
-  };
-
-  useEffect(() => {
-    setPage(1); // Reset page on user change
-    void fetchAlerts(1, true);
   }, [userId]);
 
-  const loadMore = () => {
+  // Initial Load
+  useEffect(() => {
+    setPage(1);
+    fetchAlerts(1, true);
+  }, [userId, fetchAlerts]);
+
+  const handleLoadMore = () => {
     const nextPage = page + 1;
     setPage(nextPage);
-    void fetchAlerts(nextPage);
+    fetchAlerts(nextPage, false);
   };
 
-  const nyheter = alerts.filter((alert) => !alert.read);
-  const lagrede = alerts.filter((alert) => alert.read);
-
-  const renderAlerts = (data: Alert[]) => (
-    data.map((alert) => (
-      <div
-        key={alert._id}
-        style={{
-          backgroundColor: alert.read ? "var(--color-surface)" : "var(--color-white)",
-          padding: "15px",
-          borderRadius: "8px",
-          marginBottom: "10px",
-          border: alert.read ? "none" : "2px solid var(--color-muted-gray)",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-          <strong style={{ color: !alert.userId ? "var(--color-primary)" : "inherit" }}>
-            {alert.userId?.name || "📢 System"}
-          </strong>
-          <span style={{ fontSize: "12px", color: "var(--color-icon)" }}>
-            {new Date(alert.createdAt).toLocaleDateString("no-NO", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            })}
-          </span>
-        </div>
-        <p style={{ margin: 0 }}>{alert.content}</p>
-        <div style={{ marginTop: "8px" }}>
-            <span style={{ fontSize: "11px", color: "var(--color-primary)", fontWeight: "bold", textTransform: "uppercase" }}>
-              {alert.type.replace('_', ' ')}
-            </span>
-        </div>
-      </div>
-    ))
-  );
+  // Memoized filtered data to prevent re-filtering on every render
+  const filteredData = useMemo(() => {
+    return activeTab === "nyheter" 
+      ? alerts.filter(a => !a.read) 
+      : alerts.filter(a => a.read);
+  }, [alerts, activeTab]);
 
   return (
-    <>
-      <div style={{ padding: "20px 30px", maxWidth: "800px", margin: "0 auto" }}>
-        <ProfileTitleWrapper title="Varslinger" buttonText="Tilbake" />
+    <div className="py-8 px-4 md:px-8 max-w-[800px] mx-auto min-h-screen bg-[var(--color-bg)]">
+      <ProfileTitleWrapper title="Varslinger" buttonText="Tilbake" />
 
-        {/* Tab Headers */}
-        <div style={{ backgroundColor: "var(--color-surface)", display: "flex", justifyContent: "space-around", borderRadius: "16px", marginBottom: "20px" }}>
-          {tabs.map((tab) => (
-            <h4
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                cursor: "pointer",
-                color: activeTab === tab.id ? "var(--color-white)" : "var(--color-text)",
-                backgroundColor: activeTab === tab.id ? "var(--color-primary)" : "var(--color-surface)",
-                padding: "10px 20px",
-                borderRadius: "8px",
-                margin: "8px",
-                flex: 1,
-                textAlign: "center",
-              }}
-            >
-              {tab.label}
-            </h4>
-          ))}
-        </div>
-
-        {/* Tab Content */}
-        {loading && page === 1 ? (
-          <p>Laster varsler...</p>
-        ) : (
-          <div>
-            {activeTab === "nyheter" ? (
-              nyheter.length === 0 ? <p>Ingen nyheter ennå</p> : renderAlerts(nyheter)
-            ) : (
-              lagrede.length === 0 ? <p>Ingen lagrede varsler</p> : renderAlerts(lagrede)
-            )}
-
-            {/* LOAD MORE BUTTON */}
-            {hasMore && (
-              <button
-                onClick={loadMore}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  marginTop: "10px",
-                  backgroundColor: "transparent",
-                  border: "1px solid var(--color-primary)",
-                  color: "var(--color-primary)",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontWeight: "bold"
-                }}
-              >
-                {loading ? "Laster..." : "Se mer"}
-              </button>
-            )}
-          </div>
-        )}
+      {/* Tabs */}
+      <div className="bg-[var(--color-surface)] flex p-1.5 rounded-2xl mb-8 border border-[var(--color-muted-gray)] shadow-sm">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all duration-300 transform-gpu ${
+              activeTab === tab.id 
+                ? "bg-[var(--color-primary)] text-white shadow-md scale-[1.01]" 
+                : "text-[var(--color-text)] hover:bg-white/40"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
-    </>
+
+      {loading && page === 1 ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <div className="w-10 h-10 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[var(--color-icon)] animate-pulse font-medium">Laster varsler...</p>
+        </div>
+      ) : (
+        <div className="space-y-4 animate-in fade-in duration-500">
+          {filteredData.length === 0 ? (
+            <div className="text-center py-20 opacity-60">
+              <span className="material-symbols-outlined text-5xl mb-2">notifications_off</span>
+              <p className="italic">Ingen {activeTab === "nyheter" ? "nye" : "lagrede"} varsler</p>
+            </div>
+          ) : (
+            filteredData.map((alert) => (
+              <div
+                key={alert._id}
+                className={`p-5 rounded-2xl border-2 transition-all duration-300 hover:shadow-lg transform-gpu ${
+                  alert.read 
+                    ? "bg-[var(--color-surface)] border-transparent opacity-75" 
+                    : "bg-white border-[var(--color-muted-gray)] shadow-sm hover:border-[var(--color-primary)]"
+                }`}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2">
+                    {!alert.read && <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full animate-pulse" />}
+                    <strong className="text-[var(--color-accent)] font-extrabold tracking-tight">
+                      {alert.userId?.name || "📢 System"}
+                    </strong>
+                  </div>
+                  <span className="text-[12px] font-bold text-[var(--color-icon)] opacity-60">
+                    {new Date(alert.createdAt).toLocaleDateString("no-NO", {
+                      day: "numeric", month: "short"
+                    })}
+                  </span>
+                </div>
+                
+                <p className="text-[var(--color-text-strong)] leading-relaxed mb-3">
+                  {alert.content}
+                </p>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-black uppercase tracking-[0.1em] bg-[var(--color-bg)] text-[var(--color-primary)] px-2 py-1 rounded-md border border-[var(--color-muted-gray)]">
+                    {alert.type.replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+
+          {hasMore && (
+            <button
+              disabled={moreLoading}
+              onClick={handleLoadMore}
+              className="w-full py-4 mt-6 bg-transparent border-2 border-[var(--color-primary)] text-[var(--color-primary)] rounded-2xl font-black transition-all hover:bg-[var(--color-primary)] hover:text-white active:scale-[0.98] disabled:opacity-50"
+            >
+              {moreLoading ? "Laster..." : "SE MER"}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
