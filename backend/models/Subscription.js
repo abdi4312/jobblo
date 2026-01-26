@@ -8,7 +8,7 @@ const planHistorySchema = new mongoose.Schema(
     },
     plan: {
       type: String,
-      enum: ["Free", "Start", "Pro", "Premium", "Fleksibel", "Job Plus"],
+      enum: ["Free", "Start", "Pro", "Premium", "Fleksibel", "Job Plus", "Jobblo Pluss"],
       required: true,
     },
     planType: {
@@ -48,7 +48,7 @@ const subscriptionSchema = new mongoose.Schema(
       },
       plan: {
         type: String,
-        enum: ["Free", "Start", "Pro", "Premium", "Fleksibel", "Job Plus"],
+        enum: ["Free", "Start", "Pro", "Premium", "Fleksibel", "Job Plus", "Jobblo Pluss"],
         required: true,
       },
       planType: {

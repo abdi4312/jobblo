@@ -70,18 +70,6 @@ exports.checkoutSessionStatus = async (req, res) => {
 
     const stripeSub = session.subscription;
     const userId = session.metadata.userId;
-
-    // 🔁 Get or create user subscription doc
-    let subscription = await Subscription.findOne({ userId });
-
-    if (!subscription) {
-      subscription = await Subscription.create({
-        userId,
-        currentPlan: null,
-        planHistory: [],
-      });
-    }
-
     const newPlanName = session.metadata.planName;
     const newPlanType = session.metadata.planType;
 
@@ -89,36 +77,59 @@ exports.checkoutSessionStatus = async (req, res) => {
     const nextMonth = new Date(now);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
 
-    // ✅ Only push to history if plan actually changes
-    const isPlanChanged =
-      !subscription.currentPlan ||
-      subscription.currentPlan.plan !== newPlanName;
+    // 🔁 Get or create user subscription doc
+    let subscription = await Subscription.findOne({ userId });
 
-    if (isPlanChanged && subscription.currentPlan) {
-      subscription.planHistory.push({
-        planId: subscription.currentPlan.planId || null,
-        plan: subscription.currentPlan.plan,
-        planType: subscription.currentPlan.planType,
-        startDate: subscription.currentPlan.startDate || now,
-        endDate: now,
-        stripeSubscriptionId:
-          subscription.currentPlan.stripeSubscriptionId || null,
-        status: "expired",
+    if (!subscription) {
+      // Create new subscription with currentPlan already set
+      subscription = new Subscription({
+        userId,
+        currentPlan: {
+          planId: session.metadata.planId,
+          plan: newPlanName,
+          planType: newPlanType,
+          stripeSubscriptionId: stripeSub.id,
+          startDate: now,
+          endDate: nextMonth,
+          renewalDate: nextMonth,
+          autoRenew: session.metadata.autoRenew === "true",
+          status: "active",
+        },
+        planHistory: [],
       });
-    }
+    } else {
+      // ✅ Only push to history if plan actually changes
+      const isPlanChanged =
+        !subscription.currentPlan ||
+        !subscription.currentPlan.plan ||
+        subscription.currentPlan.plan !== newPlanName;
 
-    // 🆕 Set / Update current plan
-    subscription.currentPlan = {
-      planId: session.metadata.planId,
-      plan: newPlanName,
-      planType: newPlanType,
-      stripeSubscriptionId: stripeSub.id,
-      startDate: now,
-      endDate: nextMonth,
-      renewalDate: nextMonth,
-      autoRenew: session.metadata.autoRenew === "true",
-      status: "active",
-    };
+      if (isPlanChanged && subscription.currentPlan && subscription.currentPlan.plan) {
+        subscription.planHistory.push({
+          planId: subscription.currentPlan.planId || null,
+          plan: subscription.currentPlan.plan,
+          planType: subscription.currentPlan.planType,
+          startDate: subscription.currentPlan.startDate || now,
+          endDate: now,
+          stripeSubscriptionId:
+            subscription.currentPlan.stripeSubscriptionId || null,
+          status: "expired",
+        });
+      }
+
+      // 🆕 Update current plan
+      subscription.currentPlan = {
+        planId: session.metadata.planId,
+        plan: newPlanName,
+        planType: newPlanType,
+        stripeSubscriptionId: stripeSub.id,
+        startDate: now,
+        endDate: nextMonth,
+        renewalDate: nextMonth,
+        autoRenew: session.metadata.autoRenew === "true",
+        status: "active",
+      };
+    }
 
     await subscription.save();
     await User.findByIdAndUpdate(session.metadata.userId, {
