@@ -42,7 +42,7 @@ exports.checkSubscription = async (req, res, next) => {
 
     const { plan, endDate, planType, startDate } = subscription.currentPlan; // 👈 startDate nikalein
 
-    if (plan !== "Free" && new Date(endDate) < new Date()) {
+    if (plan !== "Standard" && new Date(endDate) < new Date()) {
       return res.status(403).json({ message: "Subscription expired" });
     }
 
