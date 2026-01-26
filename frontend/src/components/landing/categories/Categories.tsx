@@ -1,27 +1,30 @@
-import { Category } from "../../component/category/Category.tsx";
-import styles from "./Categories.module.css";
-import { getCategories } from "../../../api/categoryAPI.ts";
-import { useEffect, useState, useRef } from "react";
-import type { CategoryType } from "../../../types/categoryTypes.ts";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-
-interface CategoriesProps {
-  showTitle?: boolean;
-  onCategoriesChange?: (categories: string[]) => void;
-  allowMultiSelect?: boolean;
-  searchQuery?: string;
-  onSearchClear?: () => void;
-}
+import { getCategories } from "../../../api/categoryAPI.ts";
+import type { CategoryType } from "../../../types/categoryTypes.ts";
 
 export function Categories({
   showTitle = true,
   onCategoriesChange,
   allowMultiSelect = false,
-}: CategoriesProps) {
+}: any) {
   const [category, setCategory] = useState<CategoryType[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const navigate = useNavigate();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const getItemsPerView = useCallback(() => {
+    if (windowWidth >= 1200) return 5;
+    if (windowWidth >= 1042) return 4;
+    if (windowWidth >= 962) return 3;
+    if (windowWidth >= 717) return 2;
+    return 1;
+  }, [windowWidth]);
+
+  const itemsPerView = getItemsPerView();
+  const totalPages = Math.ceil(category.length / itemsPerView);
 
   useEffect(() => {
     async function fetchCategories() {
@@ -29,250 +32,140 @@ export function Categories({
         const data = await getCategories();
         setCategory(data);
       } catch (err) {
-        console.error("Failed to catch categories", err);
+        console.error("Failed to fetch", err);
       }
     }
+    fetchCategories();
 
-    void fetchCategories();
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-    const categoryImages: Record<string, string> = {
-    "Rengjøring": "src/assets/images/cleaning.jpg",
-    "Hagearbeid": "src/assets/images/woman-full-gardening.png",
-    "Flytting": "src/assets/images/courier-moving-out.png",
-    "Rørlegger": "src/assets/images/male-constructionworker.png",
-    "Maling": "src/assets/images/painting-wall.jpg",
+  const categoryImages: Record<string, string> = {
+    Rengjøring: "src/assets/images/cleaning.jpg",
+    Hagearbeid: "src/assets/images/woman-full-gardening.png",
+    Flytting: "src/assets/images/courier-moving-out.png",
+    Rørlegger: "src/assets/images/male-constructionworker.png",
+    Maling: "src/assets/images/painting-wall.jpg",
   };
 
-
-  // Notify parent when selected categories change
-  useEffect(() => {
-    if (allowMultiSelect && onCategoriesChange) {
-      console.log("Selected categories (names):", selectedCategories);
-      onCategoriesChange(selectedCategories);
+  const handleScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, offsetWidth } = scrollContainerRef.current;
+      const index = Math.round(scrollLeft / (offsetWidth / itemsPerView));
+      const currentPage = Math.floor(index / itemsPerView);
+      if (activeSlide !== currentPage) {
+        setActiveSlide(currentPage);
+      }
     }
-  }, [selectedCategories, allowMultiSelect, onCategoriesChange]);
+  };
+
+  const scrollToSlide = (pageIndex: number) => {
+    if (scrollContainerRef.current) {
+      const containerWidth = scrollContainerRef.current.offsetWidth;
+      scrollContainerRef.current.scrollTo({
+        left: containerWidth * pageIndex,
+        behavior: "smooth",
+      });
+    }
+  };
 
   const handleCategoryClick = (categoryName: string) => {
-    if (allowMultiSelect && onCategoriesChange) {
-      // Multi-select mode - toggle category in selection
-      setSelectedCategories((prev) =>
-        prev.includes(categoryName)
-          ? prev.filter((c) => c !== categoryName)
-          : [...prev, categoryName],
+    if (allowMultiSelect) {
+      setSelectedCategories(prev =>
+        prev.includes(categoryName) ? prev.filter(c => c !== categoryName) : [...prev, categoryName]
       );
     } else {
-      // Single select mode - navigate to job listing page with selected category
       navigate("/job-listing", { state: { selectedCategory: categoryName } });
     }
   };
 
-  const scroll = (direction: "left" | "right") => {
-    if (scrollContainerRef.current) {
-      const firstChild = scrollContainerRef.current
-        .firstElementChild as HTMLElement;
-      if (firstChild) {
-        const scrollAmount = firstChild.offsetWidth + 12; // category width + gap
-        const newScrollPosition =
-          scrollContainerRef.current.scrollLeft +
-          (direction === "left" ? -scrollAmount : scrollAmount);
-        scrollContainerRef.current.scrollTo({
-          left: newScrollPosition,
-          behavior: "smooth",
-        });
-      }
-    }
-  };
-
   return (
-    <>
-      <div className={styles.categoriesContainer}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-          {showTitle && (
-          <div style={{ textAlign: "center", marginBottom: "32px" }}>
-            <h2
-              style={{
-                fontSize: "42px",
-                marginBottom: "12px",
-              }}
-            >
-              <style>
-                {`
-                  @media (max-width: 768px) {
-                    h2 {
-                      font-size: 28px !important;
-                    }
-                  }
-                `}
-              </style>
+    <div className="w-full py-10 px-4 overflow-hidden bg-white">
+      {/* Set exactly to 1000px as requested */}
+      <div className="max-w-[1000px] mx-auto">
+        
+        {showTitle && (
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-black text-[#183A1D] tracking-tight">
               Oppgaver nær deg.
             </h2>
-            <p
-              style={{
-                fontSize: "18px",
-                color: "var(--color-text-muted)",
-                margin: 0,
-              }}
-            >
-              Velg en kategori og se tilgjengelige jobber i nærheten av deg.
-            </p>
+            <p className="text-gray-500 mt-2 font-medium">Finn din neste jobb i dag</p>
           </div>
         )}
 
-          {/* Selected Categories Filter Bar */}
-          {allowMultiSelect && selectedCategories.length > 0 && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "12px 20px",
-                backgroundColor: "var(--color-surface)",
-                borderRadius: "8px",
-                marginBottom: "16px",
-                flexWrap: "wrap",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-              }}
-            >
-              <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                Filtre:
-              </span>
-              {selectedCategories.map((cat) => (
-                <div
-                  key={cat}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "6px 12px",
-                    backgroundColor: "var(--color-accent)",
-                    color: "white",
-                    borderRadius: "16px",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                  }}
-                >
-                  <span>{cat}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCategoryClick(cat);
-                    }}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "white",
-                      cursor: "pointer",
-                      padding: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      fontSize: "18px",
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() => {
-                  setSelectedCategories([]);
-                }}
-                style={{
-                  padding: "6px 12px",
-                  backgroundColor: "#ff4444",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "16px",
-                  fontSize: "13px",
-                  fontWeight: "500",
-                  cursor: "pointer",
-                  marginLeft: "auto",
-                }}
-              >
-                Fjern alle
-              </button>
-            </div>
-          )}
-
-          <div style={{ position: "relative", padding: "0 20px" }}>
-            {/*
-            <button
-              onClick={() => scroll("left")}
-              style={{
-                position: "absolute",
-                left: "0px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                zIndex: 10,
-                backgroundColor: "transparent",
-                border: "none",
-                width: "32px",
-                height: "32px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                padding: 0,
-              }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: "24px" }}
-              >
-                chevron_left
-              </span>
-            </button>*/}
-            
-
-            <div className={styles.categoryContainer}>
-              {category.map((item) => (
+        <div className="relative">
+          {/* Added pt-4 to prevent hover scale from cutting at the top */}
+          <div
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
+            className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth gap-4 no-scrollbar pb-8 pt-4"
+          >
+            {category.map((item) => {
+              const isSelected = selectedCategories.includes(item.name);
+              const bgImg = categoryImages[item.name] || '/images/default.jpg';
+              
+              return (
                 <div
                   key={item._id}
                   onClick={() => handleCategoryClick(item.name)}
-                  className={`${styles.categoryCard} ${
-                    selectedCategories.includes(item.name) ? styles.selected : ""
-                  }`}
                   style={{
-                    backgroundImage: ` linear-gradient(to top, #4d970894, rgba(234, 128, 21, 0) 50%), 
-                    url(${
-                      categoryImages[item.name] || "/images/default.jpg"
-                    })`,
+                    minWidth: `calc(${100 / itemsPerView}% - ${(16 * (itemsPerView - 1)) / itemsPerView}px)`,
                   }}
+                  className="snap-start shrink-0"
                 >
-                  <div className={styles.categoryCardLabel}>{item.name}</div>
+                  <div 
+                    className={`group relative h-60 md:h-64 rounded-[2rem] overflow-visible cursor-pointer shadow-lg transition-all duration-300 transform-gpu hover:z-50 ${
+                      isSelected ? 'ring-4 ring-orange-500 scale-95 shadow-inner' : 'hover:-translate-y-1 hover:scale-[1.03]'
+                    }`}
+                  >
+                    {/* Inner wrapper for overflow control (so zoom effect works inside rounded corners) */}
+                    <div className="absolute inset-0 rounded-2xl overflow-hidden">
+                        <div 
+                        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
+                        style={{ 
+                            backgroundImage: `linear-gradient(to top, rgba(24, 58, 29, 0.95) 0%, rgba(0,0,0,0) 60%), url(${bgImg})`,
+                        }}
+                        />
+
+                        <div className="absolute bottom-5 inset-x-4">
+                            <div className={`w-full py-3 rounded-2xl text-center text-xs font-black uppercase tracking-widest text-white transition-all duration-300 ${
+                                isSelected ? 'bg-orange-500' : 'bg-[#183A1D]/90 backdrop-blur-sm group-hover:bg-[#EA7E15]'
+                            }`}>
+                                {item.name}
+                            </div>
+                        </div>
+                    </div>
+                  </div>
                 </div>
+              );
+            })}
+          </div>
+
+          {/* Dots */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-2">
+              {Array.from({ length: totalPages }).map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => scrollToSlide(index)}
+                  className={`transition-all duration-300 rounded-full h-2 ${
+                    index === activeSlide
+                      ? "w-8 bg-orange-500"
+                      : "w-2 bg-gray-200"
+                  }`}
+                />
               ))}
             </div>
-            {/*
-            <button
-              onClick={() => scroll("right")}
-              style={{
-                position: "absolute",
-                right: "0px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                zIndex: 10,
-                backgroundColor: "transparent",
-                border: "none",
-                width: "32px",
-                height: "32px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                padding: 0,
-              }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: "24px" }}
-              >
-                chevron_right
-              </span>
-            </button>*/}
-          </div>
+          )}
         </div>
       </div>
-    </>
+
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+    </div>
   );
 }
