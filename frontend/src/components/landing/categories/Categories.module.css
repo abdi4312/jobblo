@@ -20,15 +20,16 @@
   display: flex;
   gap: 16px;
   padding: 20px;
-  flex-wrap: nowrap;       /* én rad */
-  /*overflow-x: auto;*/        /* horisontal scroll hvis plass ikke holder */
-  justify-content: center
+  flex-wrap: nowrap;
+  overflow-x: auto;          
+  -webkit-overflow-scrolling: touch;
+  justify-content: flex-start; 
 }
 
 .categoryCard {
   cursor: pointer;
-  flex: 0 0 150px;        /* bredde = 220px, ikke krymp eller grow */
-  height: 180px;           /* høyde */
+  flex: 0 0 140px;        /* bredde = 220px, ikke krymp eller grow */
+  height: 170px;           /* høyde */
   border-radius: 16px;
   background-size: cover;
   background-position: center;
