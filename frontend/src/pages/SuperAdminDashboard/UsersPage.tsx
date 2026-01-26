@@ -48,8 +48,8 @@ const UsersPage = () => {
       await mainLink.post("/api/admin/users", newUser);
       Swal.fire("Success!", "New user has been created.", "success");
       setIsModalOpen(false);
-      setNewUser({ name: "", email: "", phone: "", password: "", role: "user" });
       fetchUsers();
+      setNewUser({ name: "", email: "", phone: "", password: "", role: "user" });
     } catch (err: any) { Swal.fire("Error", err.response?.data?.message || "Failed to create user", "error"); }
     finally { setIsSubmitting(false); }
   };
