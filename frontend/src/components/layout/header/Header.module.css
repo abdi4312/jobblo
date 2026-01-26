@@ -28,7 +28,7 @@
 .iconContainer {
   align-items: center;
   display: flex;
-  gap: 30px;
+  gap: 16px;
   justify-self: center;
 }
 
@@ -111,4 +111,28 @@ button {
     transform: translateY(0) !important;
   }
 }
+
+@media (max-width: 768px) {
+  .iconWithLabel {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .iconLabel {
+    font-size: 10px;
+    font-weight: 700;
+  }
+}
+
+@media (max-width: 480px) {
+  .iconLabel {
+    display: none;
+  }
+
+  .iconContainer {
+    gap: 20px;
+  }
+}
+
+
 
