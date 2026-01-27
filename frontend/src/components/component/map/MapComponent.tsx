@@ -1,6 +1,7 @@
 import styles from "./MapComponent.module.css";
 import { Circle, MapContainer, TileLayer } from "react-leaflet";
 import type { LatLngLiteral } from "leaflet";
+import { useMemo } from "react";
 
 const EARTH_RADIUS_METERS = 6371000;
 
@@ -30,9 +31,15 @@ export function MapComponent({
   coordinates: [number, number];
   circleRadius: number;
 }) {
-  const coord: LatLngLiteral = { lng: coordinates[0], lat: coordinates[1] };
-  const randomCenter = randomPointInCircle(coord, circleRadius);
+  const [lng, lat] = coordinates;
 
+  const randomCenter = useMemo(() => {
+    const center: LatLngLiteral = { lng, lat };
+    return randomPointInCircle(center, circleRadius);
+  }, [lng, lat, circleRadius]);
+
+  console.log("a", randomCenter);
+  console.log("b", randomCenter);
   return (
     <>
       <div className={styles.container}>
@@ -46,7 +53,7 @@ export function MapComponent({
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <Circle center={coord} radius={circleRadius} />
+          <Circle center={randomCenter} radius={circleRadius} />
         </MapContainer>
       </div>
     </>
