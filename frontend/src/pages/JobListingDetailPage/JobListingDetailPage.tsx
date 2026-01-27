@@ -16,6 +16,7 @@ import {
 import { useUserStore } from "../../stores/userStore";
 import { toast } from "react-toastify";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
+import { MapComponent } from "../../components/component/map/MapComponent.tsx";
 
 interface Service {
   _id: string;
@@ -190,7 +191,6 @@ const JobListingDetailPage = () => {
       const status = err.response?.status;
       const data = err.response?.data;
       if (status === 402 && data?.paymentRequired) {
-        
         console.log("Payment required:", data);
         const { amount, currency } = data;
         const paymentSession = await mainLink.post(
@@ -284,6 +284,13 @@ const JobListingDetailPage = () => {
           urgent={job?.urgent}
         />
         <JobLocation location={job?.location} />
+
+        <MapComponent
+          coordinates={[
+            job?.location?.coordinates[0],
+            job?.location?.coordinates[1],
+          ]}
+        ></MapComponent>
 
         <RelatedJobs
           coordinates={job?.location?.coordinates}
