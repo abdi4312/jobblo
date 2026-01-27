@@ -52,13 +52,17 @@ const TransactionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "succeeded", "failed"],
+      enum: ["pending", "succeeded", "failed", "refunded"],
       default: "pending",
     },
     type: {
       type: String,
       enum: ["extra_contact", "subscription"],
       required: true,
+    },
+    refunded: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true },
