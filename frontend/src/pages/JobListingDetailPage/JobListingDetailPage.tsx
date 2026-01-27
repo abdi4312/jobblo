@@ -282,6 +282,7 @@ const JobListingDetailPage = () => {
             job?.location?.coordinates[0],
             job?.location?.coordinates[1],
           ]}
+          circleRadius={200}
         />
       )}
 
