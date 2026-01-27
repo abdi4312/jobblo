@@ -2,6 +2,7 @@ const Chat = require("../models/ChatMessage");
 const SubscriptionPlan = require("../models/SubscriptionPlan");
 const Subscription = require("../models/Subscription");
 const Transaction = require("../models/Transaction");
+const Service = require("../models/Service");
 const stripe = require('../config/stripe')
 
 exports.checkSubscription = async (req, res, next) => {
@@ -41,7 +42,7 @@ exports.checkSubscription = async (req, res, next) => {
 
     const { plan, endDate, planType, startDate } = subscription.currentPlan; // 👈 startDate nikalein
 
-    if (plan !== "Free" && new Date(endDate) < new Date()) {
+    if (plan !== "Standard" && new Date(endDate) < new Date()) {
       return res.status(403).json({ message: "Subscription expired" });
     }
 
@@ -58,9 +59,23 @@ exports.checkSubscription = async (req, res, next) => {
     const { freeContact, perContactPrice, maxContact, ContactUnlock } =
       planDoc.entitlements;
 
+    // 1a. Per-service unlock window: wait ContactUnlock minutes after job posted
+    if (serviceId && typeof ContactUnlock === "number") {
+      const service = await Service.findById(serviceId).select("createdAt");
+      if (!service) {
+        return res.status(404).json({ message: "Service not found" });
+      }
+
+      const unlockAt = new Date(service.createdAt.getTime() + ContactUnlock * 60 * 1000);
+      if (Date.now() < unlockAt.getTime()) {
+        const minutesLeft = Math.ceil((unlockAt.getTime() - Date.now()) / 60000);
+        return res.status(403).json({ message: `Contact unlocks in ${minutesLeft} minutes` });
+      }
+    }
+
     // 2. Count used contacts (Reset Logic)
     // Hum sirf wahi chats count karenge jo current plan ke startDate ke baad hui hain
-    const countFilterDate = new Date(startDate) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) 
+    const countFilterDate = new Date(startDate) > new Date(Date.now() - 72 * 60 * 60 * 1000) 
       ? new Date(startDate) 
       : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
@@ -89,21 +104,20 @@ exports.checkSubscription = async (req, res, next) => {
       return next();
     }
 
-    // ⏱ Unlock time check
-    const lastChat = await Chat.findOne(
-      { clientId: userId },
-      { createdAt: 1 },
-      { sort: { createdAt: -1 } },
-    );
-
-    if (lastChat) {
-      const unlockAt = new Date(lastChat.createdAt.getTime() + ContactUnlock * 60 * 1000);
-      if (new Date() < unlockAt) {
-        return res.status(403).json({
-          message: `Next contact unlocks in ${ContactUnlock} minutes`,
-        });
-      }
-    }
+    // (Optional) keep legacy last-chat unlock? Commented out to prioritize per-service unlock
+    // const lastChat = await Chat.findOne(
+    //   { clientId: userId },
+    //   { createdAt: 1 },
+    //   { sort: { createdAt: -1 } },
+    // );
+    // if (lastChat) {
+    //   const unlockAt = new Date(lastChat.createdAt.getTime() + ContactUnlock * 60 * 1000);
+    //   if (new Date() < unlockAt) {
+    //     return res.status(403).json({
+    //       message: `Next contact unlocks in ${ContactUnlock} minutes`,
+    //     });
+    //   }
+    // }
 
     // 💳 PAYMENT REQUIRED
     return res.status(402).json({

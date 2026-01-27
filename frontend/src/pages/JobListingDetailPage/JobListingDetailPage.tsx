@@ -200,6 +200,10 @@ const JobListingDetailPage = () => {
         window.location.href = paymentSession.data.url;
         return;
       }
+      if (status === 403 && data?.message === "No subscription found") {
+        toast.error("Du trenger et aktivt abonnement for å sende meldinger. Du kan justere det på profilsiden.");
+        return;
+      }
       console.error("Error creating/getting chat:", err);
       console.error("Error response:", err.response?.data);
       toast.error(err.response?.data?.message || "Kunne ikke opprette samtale");
@@ -290,6 +294,7 @@ const JobListingDetailPage = () => {
           currentJobId={job?._id}
         />
       </div>
+
     </div>
   );
 };
