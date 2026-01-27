@@ -393,6 +393,9 @@ export function MessagesPageSplit() {
       : activeChat.clientId
     : null;
 
+  const serviceDescription = activeChat?.serviceId?.description || "";
+  const serviceAddress = (activeChat as any)?.serviceId?.location?.address || "";
+
   const messageGroups = groupMessagesByDate();
 
   return (
@@ -720,6 +723,8 @@ export function MessagesPageSplit() {
           onClose={() => setShowCreateContract(false)}
           serviceId={activeChat.serviceId._id}
           serviceTitle={activeChat.serviceId.title || "Service"}
+          serviceDescription={serviceDescription}
+          serviceAddress={serviceAddress}
           otherUserId={otherUser._id}
           currentUserId={userId}
           onContractCreated={handleContractUpdated}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./CreateContractModal.module.css";
 import { createContract } from "../../../api/contractAPI";
 import { toast } from "react-toastify";
@@ -9,6 +9,8 @@ interface CreateContractModalProps {
   onClose: () => void;
   serviceId: string;
   serviceTitle: string;
+  serviceDescription?: string;
+  serviceAddress?: string;
   otherUserId: string;
   currentUserId: string;
   onContractCreated: () => void;
@@ -19,6 +21,8 @@ export function CreateContractModal({
   onClose,
   serviceId,
   serviceTitle,
+  serviceDescription,
+  serviceAddress,
   onContractCreated
 }: CreateContractModalProps) {
   const [content, setContent] = useState("");
@@ -26,6 +30,14 @@ export function CreateContractModal({
   const [scheduledDate, setScheduledDate] = useState("");
   const [address, setAddress] = useState("");
   const [creating, setCreating] = useState(false);
+
+  // Prefill with known service info when opening
+  useEffect(() => {
+    if (isOpen) {
+      setContent((prev) => prev || serviceDescription || "");
+      setAddress((prev) => prev || serviceAddress || "");
+    }
+  }, [isOpen, serviceDescription, serviceAddress]);
 
   if (!isOpen) return null;
 
@@ -39,6 +51,11 @@ export function CreateContractModal({
 
     if (!price || parseFloat(price) <= 0) {
       toast.error("Valid price is required");
+      return;
+    }
+
+    if (!scheduledDate) {
+      toast.error("Scheduled date is required");
       return;
     }
 
@@ -120,12 +137,13 @@ export function CreateContractModal({
           </div>
 
           <div className={styles.formGroup}>
-            <label>Scheduled Date</label>
+            <label>Scheduled Date *</label>
             <input
               type="date"
               className={styles.input}
               value={scheduledDate}
               onChange={(e) => setScheduledDate(e.target.value)}
+              required
             />
           </div>
 

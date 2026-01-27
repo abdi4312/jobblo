@@ -1,3 +1,6 @@
+const SubscriptionPlan = require("../models/SubscriptionPlan");
+const calculateDiscount = require("../utils/calculateDiscount");
+
 const Coupon = require("../models/Coupon");
 
 // =========================
@@ -149,24 +152,43 @@ exports.deleteCoupon = async (req, res) => {
 // =========================
 // Redeem Coupon (User)
 // =========================
-exports.redeemCoupon = async (req, res) => {
+exports.validateCoupon = async (req, res) => {
   try {
-    const { code } = req.body;
+    const { code, planId } = req.body;
+    console.log(code, planId);
     const userId = req.user._id;
 
-    const coupon = await Coupon.findOne({ code });
-    if (!coupon) return res.status(404).json({ error: "Coupon not found" });
-    if (!coupon.active) return res.status(400).json({ error: "Coupon inactive or expired" });
+    const coupon = await Coupon.findOne({ code: code.toUpperCase() });
+    
+    if (!coupon || !coupon.active)
+      return res.status(400).json({ error: "Invalid coupon" });
 
-    if (coupon.usedBy.includes(userId))
-      return res.status(400).json({ error: "You have already used this coupon" });
+    if (coupon.expiresDate < new Date())
+      return res.status(400).json({ error: "Coupon expired" });
 
-    // Mark coupon as used by user
-    coupon.usedBy.push(userId);
-    await coupon.save();
+    const used = coupon.usedBy.some(
+      (id) => id.toString() === userId.toString()
+    );
+    if (used)
+      return res.status(400).json({ error: "Coupon already used" });
 
-    res.json({ message: "Coupon applied successfully", coupon });
+    const plan = await SubscriptionPlan.findById(planId);
+    if (!plan) return res.status(404).json({ error: "Plan not found" });
+
+    // 🔥 DISCOUNT CALCULATION
+    const pricing = calculateDiscount(plan.price, coupon);
+
+    res.json({
+      success: true,
+      coupon: coupon.code,
+      discountPercent:
+      coupon.amount <= 100 ? coupon.amount : null,
+      originalPrice: pricing.originalPrice,
+      discountAmount: pricing.discountAmount,
+      finalPrice: pricing.finalPrice,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
