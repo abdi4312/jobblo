@@ -24,6 +24,6 @@ router.delete("/:id", authenticate, requireAdmin, CouponController.deleteCoupon)
 // =========================
 
 // Redeem coupon (User only)
-router.post("/redeem", authenticate, CouponController.redeemCoupon);
+router.post("/validate", authenticate, CouponController.validateCoupon);
 
 module.exports = router;
