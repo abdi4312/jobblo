@@ -2,6 +2,7 @@ import { Modal, Radio, Button } from "antd";
 import { useEffect, useState } from "react";
 import { getSubscriptionPlans } from "../../../api/subscriptionPlanApi";
 import mainLink from "../../../api/mainURLs";
+import Swal from "sweetalert2";
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -40,22 +41,125 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
     void fetchPlans();
   }, []);
 
-  const handlePlanSelection = async(planId: string) => {
-    console.log("Selected plan ID:", planId);
-    try {
-      const res = await mainLink.post("/api/stripe/create-checkout-session", {
-        planId,
+  const handlePlanSelection = async (planId: string) => {
+    const { value: action } = await Swal.fire({
+      title: '<span style="color: #2d4a3e">Rabattkode?</span>',
+      html: "Vil du legge til en kupongkode for å få rabatt?",
+      icon: "info",
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: "Ja, bruk kupong",
+      denyButtonText: "Nei, fortsett",
+      cancelButtonText: "Avbryt",
+      confirmButtonColor: "#2d4a3e",
+      denyButtonColor: "#6e7881",
+    });
+
+    /* =======================
+     WITH COUPON
+  ======================== */
+    if (action === true) {
+      const { value: couponCode } = await Swal.fire({
+        title: "Bruk kupongkode",
+        input: "text",
+        inputPlaceholder: "F.eks: SAVE20",
+        showCancelButton: true,
+        confirmButtonText: "Bruk kupong",
+        confirmButtonColor: "#2d4a3e",
+        inputValidator: (value) => {
+          if (!value) return "Kupongkode er påkrevd";
+        },
       });
-      console.log(res.data);
-      
+
+      if (!couponCode) return;
+
+      try {
+        // 🔄 Loading start
+        Swal.fire({
+          title: "Sjekker kupong...",
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          },
+        });
+
+        const res = await mainLink.post("/api/coupons/validate", {
+          planId,
+          code: couponCode,
+        });
+
+        Swal.close(); // ✅ stop loader
+
+        const { originalPrice, discountPercent, finalPrice } = res.data;
+
+        const { isConfirmed } = await Swal.fire({
+          title: "Rabatt brukt 🎉",
+          html: `
+          <p>Original pris: <b>${originalPrice} kr</b></p>
+          <p>Rabatt: <b>${discountPercent}%</b></p>
+          <hr/>
+          <p style="font-size:18px">
+            Ny pris: <b>${finalPrice} kr / måned</b>
+          </p>
+        `,
+          icon: "success",
+          confirmButtonText: "Fortsett til betaling",
+          confirmButtonColor: "#2d4a3e",
+        });
+
+        if (isConfirmed) {
+          Swal.fire({
+            title: "Omdirigerer til betaling...",
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            },
+          });
+
+          const checkout = await mainLink.post(
+            "/api/stripe/create-checkout-session",
+            { planId, couponCode },
+          );
+
+          window.location.href = checkout.data.url;
+        }
+      } catch (error) {
+        Swal.close();
+        Swal.fire({
+          icon: "error",
+          title: "Ugyldig kupong",
+          text: "Kupongkoden er ikke gyldig eller er utløpt",
+        });
+      }
+    }
+
+    /* =======================
+     WITHOUT COUPON
+  ======================== */
+    if (action === false) {
+      try {
+        Swal.fire({
+          title: "Omdirigerer til betaling...",
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          },
+        });
+
+        const res = await mainLink.post("/api/stripe/create-checkout-session", {
+          planId,
+        });
+
         window.location.href = res.data.url;
-    } catch (error) {
-      console.error("Failed to create checkout session:", error);
+      } catch (error) {
+        Swal.close();
+        console.error("Failed to create checkout session:", error);
+      }
     }
   };
 
   // Filter plans based on selected user type
-  const currentPlans = plans.filter(plan => plan.type === userType);
+  const currentPlans = plans.filter((plan) => plan.type === userType);
 
   // Determine which plan is popular (Premium for business, Job Plus for private)
   const getIsPopular = (plan: Plan) => {
@@ -67,19 +171,23 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
 
   return (
     <Modal
-      title={<div style={{ fontSize: '24px', fontWeight: 700, textAlign: 'center' }}>Våre Priser</div>}
+      title={
+        <div style={{ fontSize: "24px", fontWeight: 700, textAlign: "center" }}>
+          Våre Priser
+        </div>
+      }
       open={isOpen}
       onCancel={onClose}
       footer={[
         <Button key="close" type="primary" onClick={onClose} size="large">
           Lukk
-        </Button>
+        </Button>,
       ]}
       width="90%"
-      style={{ maxWidth: '900px' }}
+      style={{ maxWidth: "900px" }}
     >
-      <div style={{ padding: '20px 0' }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+      <div style={{ padding: "20px 0" }}>
+        <div style={{ textAlign: "center", marginBottom: "32px" }}>
           <Radio.Group
             value={userType}
             onChange={(e) => setUserType(e.target.value)}
@@ -92,14 +200,18 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px' }}>Laster planer...</div>
+          <div style={{ textAlign: "center", padding: "40px" }}>
+            Laster planer...
+          </div>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '16px',
-            marginBottom: '24px'
-          }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: "16px",
+              marginBottom: "24px",
+            }}
+          >
             {currentPlans.map((plan) => {
               const isPopular = getIsPopular(plan);
 
@@ -107,69 +219,96 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                 <div
                   key={plan._id}
                   style={{
-                    border: isPopular ? '2px solid var(--color-primary)' : '1px solid #e0e0e0',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    position: 'relative',
-                    backgroundColor: isPopular ? '#f8f9ff' : 'white',
-                    transition: 'transform 0.2s',
-                    minWidth: '0',
+                    border: isPopular
+                      ? "2px solid var(--color-primary)"
+                      : "1px solid #e0e0e0",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    position: "relative",
+                    backgroundColor: isPopular ? "#f8f9ff" : "white",
+                    transition: "transform 0.2s",
+                    minWidth: "0",
                   }}
                 >
                   {isPopular && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '-12px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      background: 'var(--color-primary)',
-                      color: 'white',
-                      padding: '4px 12px',
-                      borderRadius: '12px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      whiteSpace: 'nowrap',
-                    }}>
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "-12px",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        background: "var(--color-primary)",
+                        color: "white",
+                        padding: "4px 12px",
+                        borderRadius: "12px",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       POPULÆR
                     </div>
                   )}
-                  <h3 style={{
-                    fontSize: '16px',
-                    marginBottom: '8px',
-                    color: isPopular ? 'var(--color-primary)' : '#333',
-                    fontWeight: 700
-                  }}>
+                  <h3
+                    style={{
+                      fontSize: "16px",
+                      marginBottom: "8px",
+                      color: isPopular ? "var(--color-primary)" : "#333",
+                      fontWeight: 700,
+                    }}
+                  >
                     {plan.name}
                   </h3>
-                  <div style={{
-                    fontSize: '24px',
-                    fontWeight: 700,
-                    color: 'var(--color-text-strong)',
-                    marginBottom: '4px'
-                  }}>
+                  <div
+                    style={{
+                      fontSize: "24px",
+                      fontWeight: 700,
+                      color: "var(--color-text-strong)",
+                      marginBottom: "4px",
+                    }}
+                  >
                     {plan.price} kr
-                    <span style={{ fontSize: '12px', fontWeight: 400, color: '#666', display: 'block' }}>/ måned</span>
+                    <span
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 400,
+                        color: "#666",
+                        display: "block",
+                      }}
+                    >
+                      / måned
+                    </span>
                   </div>
-                  <p style={{ color: '#666', marginBottom: '12px', fontSize: '12px' }}>
+                  <p
+                    style={{
+                      color: "#666",
+                      marginBottom: "12px",
+                      fontSize: "12px",
+                    }}
+                  >
                     {plan.entitlements.freeContact} gratis visninger
                   </p>
-                  <ul style={{
-                    textAlign: 'left',
-                    fontSize: '12px',
-                    lineHeight: '1.6',
-                    marginBottom: '12px',
-                    paddingLeft: '18px',
-                    minHeight: '80px'
-                  }}>
+                  <ul
+                    style={{
+                      textAlign: "left",
+                      fontSize: "12px",
+                      lineHeight: "1.6",
+                      marginBottom: "12px",
+                      paddingLeft: "18px",
+                      minHeight: "80px",
+                    }}
+                  >
                     {plan.featuresText.map((feature, i) => (
-                      <li key={i} style={{ marginBottom: '4px' }}>{feature}</li>
+                      <li key={i} style={{ marginBottom: "4px" }}>
+                        {feature}
+                      </li>
                     ))}
                   </ul>
                   <Button
                     type={isPopular ? "primary" : "default"}
                     size="small"
                     block
-                    style={isPopular ? {} : { borderColor: '#d0d0d0' }}
+                    style={isPopular ? {} : { borderColor: "#d0d0d0" }}
                     onClick={() => handlePlanSelection(plan._id)}
                   >
                     Velg {plan.name}
@@ -180,29 +319,42 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
           </div>
         )}
 
-        <div style={{
-          backgroundColor: '#f5f5f5',
-          padding: '12px',
-          borderRadius: '8px',
-          fontSize: '12px',
-          lineHeight: '1.5',
-          color: '#666'
-        }}>
-          <p style={{ margin: '0 0 6px 0', fontWeight: 600, color: '#333' }}>Viktig informasjon:</p>
-          <ul style={{ margin: 0, paddingLeft: '18px' }}>
+        <div
+          style={{
+            backgroundColor: "#f5f5f5",
+            padding: "12px",
+            borderRadius: "8px",
+            fontSize: "12px",
+            lineHeight: "1.5",
+            color: "#666",
+          }}
+        >
+          <p style={{ margin: "0 0 6px 0", fontWeight: 600, color: "#333" }}>
+            Viktig informasjon:
+          </p>
+          <ul style={{ margin: 0, paddingLeft: "18px" }}>
             <li>Løpende abonnement, må sies opp innen siste dagen i måneden</li>
             <li>Transaksjonsgebyr: 2% på alle oppdrag</li>
             {userType === "private" && (
-              <li>Privatperson-abonnementer gjelder for oppdrag estimert under 15 000 kr</li>
+              <li>
+                Privatperson-abonnementer gjelder for oppdrag estimert under 15
+                000 kr
+              </li>
             )}
             {userType === "business" && (
               <>
                 <li>Premium-kunder kommer øverst når kunder søker på jobber</li>
-                <li>Start og Pro kommer øverst etter at kunde har sendt forespørsel</li>
+                <li>
+                  Start og Pro kommer øverst etter at kunde har sendt
+                  forespørsel
+                </li>
               </>
             )}
             {userType === "private" && (
-              <li>Privatpersoner vises under bedrifter når det gjelder forespørsler</li>
+              <li>
+                Privatpersoner vises under bedrifter når det gjelder
+                forespørsler
+              </li>
             )}
           </ul>
         </div>

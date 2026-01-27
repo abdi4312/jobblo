@@ -65,8 +65,11 @@ export type Contract = {
 }
 
 export type CreateContractPayload = {
-  orderId: string;
+  serviceId: string;
   content: string;
+  price: number;
+  scheduledDate?: string;
+  address?: string;
 }
 
 /**
