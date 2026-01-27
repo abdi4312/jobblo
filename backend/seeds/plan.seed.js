@@ -10,7 +10,7 @@ module.exports = async () => {
       price: 199,
       type: "business",
       entitlements: {
-        freeContact: 5,
+        freeContact: 0,
         perContactPrice: 49,
         ContactUnlock: 120, // minutes
         radius: 75,
@@ -29,7 +29,7 @@ module.exports = async () => {
       price: 399,
       type: "business",
       entitlements: {
-        freeContact: 10,
+        freeContact: 0,
         perContactPrice: 29,
         ContactUnlock: 30, // minutes
         radius: 50,
@@ -47,7 +47,7 @@ module.exports = async () => {
       price: 639,
       type: "business",
       entitlements: {
-        freeContact: 20,
+        freeContact: 0,
         perContactPrice: 19,
         ContactUnlock: 0, // real-time
         radius: 15,
