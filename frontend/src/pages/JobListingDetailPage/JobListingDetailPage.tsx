@@ -276,6 +276,15 @@ const JobListingDetailPage = () => {
         </button>
       </div>
 
+      {job?.location?.coordinates && (
+        <MapComponent
+          coordinates={[
+            job?.location?.coordinates[0],
+            job?.location?.coordinates[1],
+          ]}
+        />
+      )}
+
       <div className={styles.content}>
         <JobDetails job={job} />
         <JobDescription
@@ -284,13 +293,6 @@ const JobListingDetailPage = () => {
           urgent={job?.urgent}
         />
         <JobLocation location={job?.location} />
-
-        <MapComponent
-          coordinates={[
-            job?.location?.coordinates[0],
-            job?.location?.coordinates[1],
-          ]}
-        ></MapComponent>
 
         <RelatedJobs
           coordinates={job?.location?.coordinates}
