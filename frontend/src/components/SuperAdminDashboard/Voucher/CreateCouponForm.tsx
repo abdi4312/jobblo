@@ -1,10 +1,31 @@
 import React, { useState, useEffect } from "react";
 import { X, Tag, Calendar, DollarSign, Hash } from "lucide-react";
 
+interface CouponFormData {
+  name: string;
+  code: string;
+  price: string;
+  activeAt?: string;
+  expiresAt: string;
+  status: "Active" | "InActive";
+}
+
 interface CreateCouponFormProps {
   onClose: () => void;
-  onSubmit: (data: any) => void;
-  initialData?: any; // Edit ke liye naya prop
+  onSubmit: (data: {
+    name: string;
+    code: string;
+    amount: number;
+    expiresDate: string;
+  }) => void;
+  initialData?: {
+    name?: string;
+    code?: string;
+    amount?: number;
+    activeAt?: string;
+    expiresDate?: string;
+    active?: boolean;
+  };
 }
 
 const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
@@ -12,7 +33,7 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
   onSubmit,
   initialData,
 }) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CouponFormData>({
     name: "",
     code: "",
     price: "",
@@ -21,14 +42,14 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
     status: "Active",
   });
 
-  // Jab Edit button dabaen, to purana data fields mein bhar jaye
+  // Edit mode mein data populate karein
   useEffect(() => {
     if (initialData) {
       setFormData({
         name: initialData.name || "",
         code: initialData.code || "",
-        price: initialData.amount || "", // backend 'amount' bhejta hai
-        activeAt: "", // Agar backend activeAt bhej raha hai to yahan map karein
+        price: initialData.amount?.toString() || "",
+        activeAt: initialData.activeAt || "",
         expiresAt: initialData.expiresDate
           ? new Date(initialData.expiresDate).toISOString().split("T")[0]
           : "",
@@ -45,7 +66,6 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
       amount: Number(formData.price),
       expiresDate: formData.expiresAt,
     });
-    // Note: onClose() ab VoucherPage handle kar raha hai resp ke baad
   };
 
   const inputClass =
@@ -146,7 +166,7 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {/* Placeholder for Active At (Optional) */}
+            {/* Active From */}
             <div>
               <label className={labelClass}>Active From</label>
               <div className="relative">
@@ -187,17 +207,17 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-3 pt-4">
+          <div className="flex items-center gap-3 pt-4 w-full justify-between">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3.5 rounded-2xl border border-gray-100 font-bold text-gray-400 hover:bg-gray-50 transition-all text-sm"
+              className="flex-1 px-6 py-3.5 rounded-2xl border border-gray-100 font-bold text-gray-400 hover:bg-gray-50 transition-all text-sm items-center justify-center"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-2 px-10 py-3.5 rounded-2xl bg-[#2d4a3e] text-white font-bold hover:bg-[#233b31] transition-all text-sm shadow-lg shadow-[#2d4a3e]/20 active:scale-95"
+              className="flex-1 px-10 py-3.5 rounded-2xl bg-[#2d4a3e] text-white font-bold hover:bg-[#233b31] transition-all text-sm shadow-lg shadow-[#2d4a3e]/20 active:scale-95 items-center justify-center"
             >
               {initialData ? "Update Coupon" : "Create Coupon"}
             </button>

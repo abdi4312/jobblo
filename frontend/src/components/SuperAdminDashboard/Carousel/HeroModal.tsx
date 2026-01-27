@@ -9,7 +9,13 @@ interface HeroModalProps {
   closeModal: () => void;
 }
 
-const HeroModal: React.FC<HeroModalProps> = ({ editingId, formData, setFormData, handleSubmit, closeModal }) => {
+const HeroModal: React.FC<HeroModalProps> = ({
+  editingId,
+  formData,
+  setFormData,
+  handleSubmit,
+  closeModal,
+}) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-[2.5rem] w-full max-w-2xl p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -28,68 +34,103 @@ const HeroModal: React.FC<HeroModalProps> = ({ editingId, formData, setFormData,
           className="grid grid-cols-1 md:grid-cols-2 gap-6"
         >
           <div className="col-span-2">
-            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Title</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
+              Title
+            </label>
             <input
               required
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
               className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#2d4a3e] outline-none transition-all"
               placeholder="E.g. Summer Sale"
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Subtitle</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
+              Subtitle
+            </label>
             <input
               value={formData.subtitle}
-              onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, subtitle: e.target.value })
+              }
               className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#2d4a3e] outline-none transition-all"
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Image URL</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
+              Image URL
+            </label>
             <input
               required
               value={formData.image}
-              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, image: e.target.value })
+              }
               className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#2d4a3e] outline-none transition-all"
               placeholder="https://..."
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Active From</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
+              Active From
+            </label>
             <input
               type="date"
               required
               value={formData.activeFrom}
-              onChange={(e) => setFormData({ ...formData, activeFrom: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, activeFrom: e.target.value })
+              }
               className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none focus:border-[#2d4a3e]"
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Expire At</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
+              Expire At
+            </label>
             <input
               type="date"
               required
               value={formData.expireAt}
-              onChange={(e) => setFormData({ ...formData, expireAt: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, expireAt: e.target.value })
+              }
               className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none focus:border-[#2d4a3e]"
             />
           </div>
           <div className="col-span-2">
-            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Description</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">
+              Description
+            </label>
             <textarea
               rows={3}
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#2d4a3e] outline-none transition-all resize-none"
             />
           </div>
-          <button
-            type="submit"
-            className="col-span-2 mt-2 bg-[#2d4a3e] text-white py-4 rounded-2xl font-bold hover:bg-[#233b31] transition-all shadow-lg active:scale-95"
-          >
-            {editingId ? "Update Hero Banner" : "Create Hero Banner"}
-          </button>
+
+          {/* Action Buttons */}
+          <div className="col-span-2 flex flex-col items-center w-full gap-3 pt-4 justify-between :flex-row">
+            <button
+              type="button"
+              onClick={closeModal}
+              className="px-6 py-3.5 w-full rounded-2xl border border-gray-100 font-bold text-gray-400 hover:bg-gray-50 transition-all text-sm items-center justify-center"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="f px-10 py-3.5 w-full rounded-2xl bg-[#2d4a3e] text-white font-bold hover:bg-[#233b31] transition-all text-sm shadow-lg shadow-[#2d4a3e]/20 active:scale-95 items-center justify-center"
+            >
+              {editingId ? "Update Hero Banner" : "Create Hero Banner"}
+            </button>
+          </div>
         </form>
       </div>
     </div>
