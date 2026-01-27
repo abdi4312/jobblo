@@ -31,7 +31,7 @@ exports.register = async (req, res) => {
         userId: user._id,
 
         currentPlan: {
-            plan: "Free",
+            plan: "Standard",
             planType: "private",
             startDate: new Date(),
             status: "active",

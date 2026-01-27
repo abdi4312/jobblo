@@ -1,9 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const { getAllPlans } = require("../controllers/subscriptionPlanController");
-const { authenticate } = require("../middleware/auth");
 
-// GET /api/plans
-router.get("/", authenticate, getAllPlans);
+// GET /api/plans (public)
+router.get("/", getAllPlans);
 
 module.exports = router;
