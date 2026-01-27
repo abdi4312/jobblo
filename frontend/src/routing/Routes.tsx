@@ -33,6 +33,9 @@ import VoucherPage from "../pages/SuperAdminDashboard/VoucherPage.tsx";
 import CarouselPage from "../pages/SuperAdminDashboard/CarouselPage.tsx";
 import NotificationsPage from "../pages/SuperAdminDashboard/NotificationsPage.tsx";
 import { AdminProtectedRoute } from "../components/shared/AdminProtectedRoute.tsx";
+import TransactionsPage from "../pages/SuperAdminDashboard/TransactionsPage.tsx";
+
+
 
 export const routes: RouteObject[] = [
   {
@@ -237,6 +240,14 @@ export const routes: RouteObject[] = [
         element: (
           <AdminProtectedRoute>
             <CarouselPage />
+          </AdminProtectedRoute>
+        ),
+      },
+      {
+        path: "transactions",
+        element: (
+          <AdminProtectedRoute>
+            <TransactionsPage />
           </AdminProtectedRoute>
         ),
       },
