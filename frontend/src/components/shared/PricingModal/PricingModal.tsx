@@ -41,8 +41,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
     void fetchPlans();
   }, []);
 
-  const handlePlanSelection = async (planId) => {
-    // Pehle Step: Option puchen (Coupon use karna hai ya nahi)
+  const handlePlanSelection = async (planId: string) => {
     const { value: action } = await Swal.fire({
       title: '<span style="color: #2d4a3e">Rabattkode?</span>',
       html: "Vil du legge til en kupongkode for å få rabatt?",
@@ -52,73 +51,80 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
       confirmButtonText: "Ja, bruk kupong",
       denyButtonText: "Nei, fortsett",
       cancelButtonText: "Avbryt",
-      confirmButtonColor: "#2d4a3e", // Aapka theme color
+      confirmButtonColor: "#2d4a3e",
       denyButtonColor: "#6e7881",
-      borderRadius: "20px",
-      customClass: {
-        popup: "rounded-3xl shadow-xl",
-      },
     });
 
-    // Agar user "Ja, bruk kupong" (Yes) par click kare
+    /* =======================
+     WITH COUPON
+  ======================== */
     if (action === true) {
-      // Step 2: Coupon input + price preview
       const { value: couponCode } = await Swal.fire({
         title: "Bruk kupongkode",
         input: "text",
-        inputLabel: "Skriv inn kupongkoden din",
         inputPlaceholder: "F.eks: SAVE20",
         showCancelButton: true,
         confirmButtonText: "Bruk kupong",
-        cancelButtonText: "Avbryt",
         confirmButtonColor: "#2d4a3e",
         inputValidator: (value) => {
-          if (!value) {
-            return "Kupongkode er påkrevd";
-          }
+          if (!value) return "Kupongkode er påkrevd";
         },
       });
 
       if (!couponCode) return;
 
       try {
-        // Step 3: Validate coupon + get discount price
+        // 🔄 Loading start
+        Swal.fire({
+          title: "Sjekker kupong...",
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          },
+        });
+
         const res = await mainLink.post("/api/coupons/validate", {
           planId,
           code: couponCode,
         });
 
+        Swal.close(); // ✅ stop loader
+
         const { originalPrice, discountPercent, finalPrice } = res.data;
 
-        // Step 4: Show price breakdown
         const { isConfirmed } = await Swal.fire({
           title: "Rabatt brukt 🎉",
           html: `
-        <p>Original pris: <b>${originalPrice} kr</b></p>
-        <p>Rabatt: <b>${discountPercent}%</b></p>
-        <hr/>
-        <p style="font-size:18px">
-          Ny pris: <b>${finalPrice} kr / måned</b>
-        </p>
-      `,
+          <p>Original pris: <b>${originalPrice} kr</b></p>
+          <p>Rabatt: <b>${discountPercent}%</b></p>
+          <hr/>
+          <p style="font-size:18px">
+            Ny pris: <b>${finalPrice} kr / måned</b>
+          </p>
+        `,
           icon: "success",
           confirmButtonText: "Fortsett til betaling",
           confirmButtonColor: "#2d4a3e",
         });
 
         if (isConfirmed) {
-          // Step 5: Stripe checkout with coupon
+          Swal.fire({
+            title: "Omdirigerer til betaling...",
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            },
+          });
+
           const checkout = await mainLink.post(
             "/api/stripe/create-checkout-session",
-            {
-              planId,
-              couponCode,
-            },
+            { planId, couponCode },
           );
 
           window.location.href = checkout.data.url;
         }
       } catch (error) {
+        Swal.close();
         Swal.fire({
           icon: "error",
           title: "Ugyldig kupong",
@@ -127,14 +133,26 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
       }
     }
 
+    /* =======================
+     WITHOUT COUPON
+  ======================== */
     if (action === false) {
       try {
+        Swal.fire({
+          title: "Omdirigerer til betaling...",
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          },
+        });
+
         const res = await mainLink.post("/api/stripe/create-checkout-session", {
           planId,
         });
 
         window.location.href = res.data.url;
       } catch (error) {
+        Swal.close();
         console.error("Failed to create checkout session:", error);
       }
     }
