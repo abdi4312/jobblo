@@ -4,6 +4,8 @@ const User = require("../models/User");
 const stripe = require("../config/stripe");
 const SubscriptionPlan = require("../models/SubscriptionPlan");
 const calculateDiscount = require("../utils/calculateDiscount");
+const { upsertTransaction } = require("../utils/transaction");
+const { upsertSubscription } = require("../utils/subscription");
 
 const now = new Date();
 const nextMonth = new Date();
@@ -95,94 +97,70 @@ exports.checkoutSessionStatus = async (req, res) => {
       return res.json({ payment_status: session.payment_status });
     }
 
-    console.log("Session Metadata:", session.metadata);
-
+    const metadata = session.metadata || {};
     const stripeSub = session.subscription;
-    const userId = session.metadata.userId;
-    const newPlanName = session.metadata.planName;
-    const newPlanType = session.metadata.planType;
 
-    // ✅ Safe parsing with defaults
-    const discountAmount = Number(session.metadata?.discountAmount || 0);
-    const discountCoupon = session.metadata.coupon || null;
-    const couponID = session.metadata.couponId || null;
-    const autoRenew = session.metadata.autoRenew === "true";
-    console.log("Coupon ID:", couponID);
-    const now = new Date();
-    const nextMonth = new Date(now);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const userId = metadata.userId;
+    const planId = metadata.planId;
+    const planName = metadata.planName;
+    const planType = metadata.planType;
 
-    // 🔁 Get or create user subscription doc
-    let subscription = await Subscription.findOne({ userId });
+    const discountAmount = Number(metadata.discountAmount || 0);
+    const discountCoupon = metadata.coupon || null;
+    const couponId = metadata.couponId || null;
+    const autoRenew = metadata.autoRenew === "true";
 
-    if (!subscription) {
-      subscription = new Subscription({
-        userId,
-        currentPlan: {
-          planId: session.metadata.planId,
-          plan: newPlanName,
-          planType: newPlanType,
-          stripeSubscriptionId: stripeSub.id,
-          startDate: now,
-          endDate: nextMonth,
-          renewalDate: nextMonth,
-          autoRenew: autoRenew,
-          status: "active",
-          discountAmount: discountAmount,
-          discountCoupon: discountCoupon,
-          coupon: couponID, // ✅ safe
-        },
-        planHistory: [],
-      });
-    } else {
-      const isPlanChanged =
-        !subscription.currentPlan ||
-        !subscription.currentPlan.plan ||
-        subscription.currentPlan.plan !== newPlanName;
+    const amount = session.amount_total
+      ? session.amount_total / 100
+      : 0;
 
-      if (isPlanChanged && subscription.currentPlan && subscription.currentPlan.plan) {
-        // Push current plan to history
-        subscription.planHistory.push({
-          planId: subscription.currentPlan.planId || null,
-          plan: subscription.currentPlan.plan,
-          planType: subscription.currentPlan.planType,
-          startDate: subscription.currentPlan.startDate || now,
-          endDate: now,
-          stripeSubscriptionId: subscription.currentPlan.stripeSubscriptionId || null,
-          status: "expired",
-          discountAmount: subscription.currentPlan.discountAmount || 0,
-          discountCoupon: subscription.currentPlan.discountCoupon || null,
-          coupon: subscription.currentPlan.coupon || null,
-        });
-      }
-
-      // Update current plan
-      subscription.currentPlan = {
-        planId: session.metadata.planId,
-        plan: newPlanName,
-        planType: newPlanType,
-        stripeSubscriptionId: stripeSub.id,
-        startDate: now,
-        endDate: nextMonth,
-        renewalDate: nextMonth,
-        autoRenew: autoRenew,
-        status: "active",
-        discountAmount: discountAmount,
-        discountCoupon: discountCoupon,
-        coupon: couponID,
-      };
-    }
-
-    await subscription.save();
-
-    await User.findByIdAndUpdate(userId, {
-      subscription: newPlanName,
-      planType: newPlanType,
+    // ===============================
+    // 🔹 TRANSACTION (UTIL)
+    // ===============================
+    await upsertTransaction({
+      userId,
+      planId,
+      planName,
+      planType,
+      stripeSessionId: sessionId,
+      amount,
+      currency: session.currency || "nok",
+      status: "succeeded",
+      type: "subscription",
+      discountAmount,
+      discountCoupon,
+      coupon: couponId,
     });
 
-    if (couponID) {
-      await Coupon.findByIdAndUpdate(couponID, {
-        $push: { usedBy: userId },
+    // ===============================
+    // 🔹 SUBSCRIPTION (UTIL)
+    // ===============================
+    const subscription = await upsertSubscription({
+      userId,
+      planId,
+      planName,
+      planType,
+      stripeSubscriptionId: stripeSub.id,
+      autoRenew,
+      discountAmount,
+      discountCoupon,
+      couponId,
+    });
+
+    // ===============================
+    // 🔹 USER UPDATE
+    // ===============================
+    await User.findByIdAndUpdate(userId, {
+      subscription: planName,
+      planType,
+    });
+
+    // ===============================
+    // 🔹 COUPON USAGE (SAFE)
+    // ===============================
+    if (couponId) {
+      await Coupon.findByIdAndUpdate(couponId, {
+        $addToSet: { usedBy: userId },
       });
     }
 
@@ -195,7 +173,6 @@ exports.checkoutSessionStatus = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 exports.createExtraContactPayment = async (req, res) => {
   try {
@@ -236,7 +213,7 @@ exports.createExtraContactPayment = async (req, res) => {
       ],
 
       success_url: `${process.env.FRONTEND_URL}contact/success?session_id={CHECKOUT_SESSION_ID}&serviceId=${serviceId}&providerId=${providerId}`,
-      cancel_url: `${process.env.FRONTEND_URL}contact/cancel`,
+      cancel_url: `${process.env.FRONTEND_URL}`,
       metadata: {
         userId: String(user._id),
         type: "extra_contact",
