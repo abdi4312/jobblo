@@ -50,7 +50,7 @@ export function ProfileMenuSection() {
         />
         <ProfileMenuItem
           icon={<span className="material-symbols-outlined" style={iconStyle}>sell</span>}
-          text="Se våre priser"
+          text="Endre abonnement"
           showDivider={false}
           onClick={() => setIsPricingModalOpen(true)}
         />
