@@ -8,7 +8,14 @@ const planHistorySchema = new mongoose.Schema(
     },
     plan: {
       type: String,
-      enum: ["Free", "Start", "Pro", "Premium", "Fleksibel", "Job Plus", "Jobblo Pluss"],
+      enum: [
+        "Standard",
+        "Start",
+        "Pro",
+        "Premium",
+        "Fleksibel",
+        "Jobblo Pluss",
+      ],
       required: true,
     },
     planType: {
@@ -27,8 +34,13 @@ const planHistorySchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    discountAmount: Number,
+    coupon: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Coupon",
+    },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const subscriptionSchema = new mongoose.Schema(
@@ -48,7 +60,14 @@ const subscriptionSchema = new mongoose.Schema(
       },
       plan: {
         type: String,
-        enum: ["Free", "Start", "Pro", "Premium", "Fleksibel", "Job Plus", "Jobblo Pluss"],
+        enum: [
+          "Standard",
+          "Start",
+          "Pro",
+          "Premium",
+          "Fleksibel",
+          "Jobblo Pluss",
+        ],
         required: true,
       },
       planType: {
@@ -66,12 +85,17 @@ const subscriptionSchema = new mongoose.Schema(
         enum: ["active", "inactive", "cancelled", "expired"],
         default: "active",
       },
+      discountAmount: Number,
+      coupon: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Coupon",
+      },
     },
 
     // 🔹 PLAN HISTORY
     planHistory: [planHistorySchema],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("Subscription", subscriptionSchema);
