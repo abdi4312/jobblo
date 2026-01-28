@@ -6,23 +6,26 @@ import { Categories } from "../../components/landing/categories/Categories.tsx";
 import { Subscription } from "../../components/landing/subscription/Subscription.tsx";
 import { Testimonials } from "../../components/landing/testemonials/Testimonials.tsx";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     // Check if user has visited before
     const hasVisited = localStorage.getItem('hasVisitedLanding');
+    // Check if they came from internal navigation (location.state will be set)
+    const isInternalNavigation = location.state?.fromInternal;
     
-    if (hasVisited) {
-      // Redirect to job listing page if they've visited before
+    // Only redirect if they've visited before AND NOT from internal navigation
+    if (hasVisited && !isInternalNavigation) {
       navigate('/job-listing');
-    } else {
-      // Mark as visited for future visits
+    } else if (!hasVisited) {
+      // Mark as visited on first visit
       localStorage.setItem('hasVisitedLanding', 'true');
     }
-  }, [navigate]);
+  }, [navigate, location]);
 
   return (
     <>
