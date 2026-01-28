@@ -24,22 +24,40 @@ export default function LeggUtOppdrag() {
     console.log('Sending job data:', jobData); // Log the data being sent
     
     try {
+      // If urgent is checked, store form data and redirect to payment FIRST
+      if (jobData.urgent) {
+        // Store job data in localStorage
+        localStorage.setItem('pendingUrgentJob', JSON.stringify(jobData));
+        
+        // Redirect to payment (we'll create the service after payment)
+        const paymentResponse = await mainLink.post("/api/stripe/create-urgent-payment-initial", {
+          userId: user._id
+        });
+        
+        if (paymentResponse.data?.url) {
+          window.location.href = paymentResponse.data.url;
+          return;
+        } else {
+          toast.error('Kunne ikke starte betalingsprosessen');
+          return;
+        }
+      }
+      
+      // If not urgent, create service normally
       const response = await mainLink.post("/api/services", jobData);
 
       if (response.data) {
         console.log('Job created successfully');
-        const result = response.data;
-        console.log(result);
         toast.success('Oppdrag publisert!');
         navigate(-1);
       } else {
-        // const errorText = await response.json();
         console.error('Failed to create job. Status:', response.status, 'Error:');
         toast.error(`Kunne ikke publisere oppdrag. Status: ${response.status}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating job:', error);
-      toast.error('Det oppstod en feil ved kommunikasjon med serveren');
+      console.error('Error response:', error.response?.data);
+      toast.error(error.response?.data?.error || 'Det oppstod en feil ved kommunikasjon med serveren');
     }
   };
 

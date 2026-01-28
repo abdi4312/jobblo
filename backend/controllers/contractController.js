@@ -86,10 +86,25 @@ exports.createContract = async (req, res) => {
     //   });
     // }
 
-    const existing = await Contract.findOne({ serviceId });
-    if (existing) {
+    // Cancel any existing pending contracts (allow new proposals during negotiation)
+    await Contract.updateMany(
+      { 
+        serviceId, 
+        status: "pending_signatures",
+        clientId: userId 
+      },
+      { status: "cancelled" }
+    );
+
+    // Prevent creating new contracts if one is already fully signed
+    const signedContract = await Contract.findOne({ 
+      serviceId, 
+      status: "signed",
+      clientId: userId 
+    });
+    if (signedContract) {
       return res.status(400).json({
-        error: "Contract already exists for this service",
+        error: "A signed contract already exists for this service",
       });
     }
 
@@ -101,7 +116,9 @@ exports.createContract = async (req, res) => {
       price,
       scheduledDate,
       address,
-      status: "draft",
+      status: "pending_signatures",
+      signedByCustomer: true, // Creator (customer) automatically signs when sending
+      signedByProvider: false,
       serviceSnapshot: {
         title: service.title,
         description: service.description,
@@ -151,18 +168,23 @@ exports.signContract = async (req, res) => {
       return res.status(403).json({ error: "Not authorized" });
     }
 
+    // Check if already signed
+    if (isClient && contract.signedByCustomer) {
+      return res.status(400).json({ error: "You already signed this contract when you sent it" });
+    }
+
+    if (isProvider && contract.signedByProvider) {
+      return res.status(400).json({ error: "You already signed this contract" });
+    }
+
+    // Only the provider can sign (customer already signed when creating)
     if (isClient) {
-      if (contract.signedByCustomer) {
-        return res.status(400).json({ error: "Client already signed" });
-      }
-      contract.signedByCustomer = true;
-      contract.signedByCustomerAt = new Date();
+      return res.status(400).json({ 
+        error: "You already signed this contract when you sent it. Waiting for provider to accept." 
+      });
     }
 
     if (isProvider) {
-      if (contract.signedByProvider) {
-        return res.status(400).json({ error: "Provider already signed" });
-      }
       contract.signedByProvider = true;
       contract.signedByProviderAt = new Date();
     }
