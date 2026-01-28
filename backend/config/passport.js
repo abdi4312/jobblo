@@ -1,6 +1,8 @@
 const passport = require('passport');
+const VippsStrategy = require('passport-vipps').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
+
 
 console.log('Loading passport config...');
 console.log('Google Client ID:', process.env.GOOGLE_CLIENT_ID ? 'Present' : 'Missing');
@@ -123,5 +125,56 @@ passport.deserializeUser(async (id, done) => {
         done(error, null);
     }
 });
+
+// ---------------------------
+//  Vipps Login
+// ---------------------------
+
+passport.use(
+  new VippsStrategy(
+    {
+      clientID: process.env.VIPPS_CLIENT_ID,
+      clientSecret: process.env.VIPPS_CLIENT_SECRET,
+      callbackURL: process.env.VIPPS_REDIRECT_URI,
+      scope: ["openid", "name", "phoneNumber"],
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        // Vipps unique identifier
+        const vippsSub = profile.id;
+
+        // 1️⃣ Check if user already exists with this Vipps sub
+        let user = await User.findOne({ vippsSub });
+
+        // 2️⃣ If not, check if phone number exists (merge existing account)
+        if (!user && profile.phoneNumber) {
+          user = await User.findOne({ phoneNumber: profile.phoneNumber });
+        }
+
+        // 3️⃣ If still not found, create new user
+        if (!user) {
+          user = await User.create({
+            username: profile.name || "Vipps User",
+            phoneNumber: profile.phoneNumber,
+            provider: "vipps",
+            isVerified: true,
+            vippsSub,
+          });
+        } else if (!user.vippsSub) {
+          // 4️⃣ Existing user, link Vipps account
+          user.vippsSub = vippsSub;
+          if (!user.provider.includes("vipps")) {
+            user.provider = "vipps";
+          }
+          await user.save();
+        }
+
+        return done(null, user);
+      } catch (err) {
+        return done(err, null);
+      }
+    }
+  )
+);
 
 module.exports = passport;

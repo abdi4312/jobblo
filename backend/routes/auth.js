@@ -199,6 +199,26 @@ router.get('/profile', authenticate, async(req, res) => {
     }
 });
 
+
+router.get(
+  '/vipps',
+  passport.authenticate('vipps', { session: false })
+);
+
+router.get(
+  '/vipps/callback',
+  passport.authenticate('vipps', { session: false, failureRedirect: '/login' }),
+  (req, res) => {
+    // Generate JWT
+    const token = jwt.sign({ userId: req.user._id }, process.env.JWT_SECRET, {
+      expiresIn: '7d',
+    });
+
+    // Redirect to frontend with token
+    res.redirect(`${process.env.FRONTEND_URL}/auth/success?token=${token}`);
+  }
+);
+
 /**
  * @swagger
  * /api/auth/logout:
