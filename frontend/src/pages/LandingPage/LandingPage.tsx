@@ -5,8 +5,25 @@ import { Guide } from "../../components/landing/guide/Guide.tsx";
 import { Categories } from "../../components/landing/categories/Categories.tsx";
 import { Subscription } from "../../components/landing/subscription/Subscription.tsx";
 import { Testimonials } from "../../components/landing/testemonials/Testimonials.tsx";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user has visited before
+    const hasVisited = localStorage.getItem('hasVisitedLanding');
+    
+    if (hasVisited) {
+      // Redirect to job listing page if they've visited before
+      navigate('/job-listing');
+    } else {
+      // Mark as visited for future visits
+      localStorage.setItem('hasVisitedLanding', 'true');
+    }
+  }, [navigate]);
+
   return (
     <>
       <div className={styles.landingPageContent}>
