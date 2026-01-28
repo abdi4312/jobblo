@@ -276,16 +276,6 @@ const JobListingDetailPage = () => {
         </button>
       </div>
 
-      {job?.location?.coordinates && (
-        <MapComponent
-          coordinates={[
-            job?.location?.coordinates[0],
-            job?.location?.coordinates[1],
-          ]}
-          circleRadius={200}
-        />
-      )}
-
       <div className={styles.content}>
         <JobDetails job={job} />
         <JobDescription
@@ -294,6 +284,15 @@ const JobListingDetailPage = () => {
           urgent={job?.urgent}
         />
         <JobLocation location={job?.location} />
+        {job?.location?.coordinates && (
+          <MapComponent
+            coordinates={[
+              job?.location?.coordinates[0],
+              job?.location?.coordinates[1],
+            ]}
+            circleRadius={200}
+          />
+        )}
 
         <RelatedJobs
           coordinates={job?.location?.coordinates}
