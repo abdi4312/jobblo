@@ -197,3 +197,132 @@ exports.createExtraContactPayment = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.createUrgentPayment = async (req, res) => {
+  try {
+    const { serviceId } = req.body;
+    const user = req.user;
+
+    if (!serviceId) {
+      return res.status(400).json({ message: "Service ID is required" });
+    }
+
+    const customer = await stripe.customers.create({
+      email: user.email,
+      name: user.name,
+      metadata: { userId: String(user._id) },
+    });
+
+    const session = await stripe.checkout.sessions.create({
+      customer: customer.id,
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: "nok",
+            product_data: { 
+              name: "Haster - Umiddelbar kontakt",
+              description: "Lås opp øyeblikkelig kontakt for alle brukere"
+            },
+            unit_amount: 2000, // 20 NOK
+          },
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      success_url: `${process.env.FRONTEND_URL}service/urgent/success?session_id={CHECKOUT_SESSION_ID}&serviceId=${serviceId}`,
+      cancel_url: `${process.env.FRONTEND_URL}mine-annonser`,
+      metadata: {
+        userId: String(user._id),
+        type: "urgent_feature",
+        serviceId,
+      },
+    });
+
+    res.json({ url: session.url });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// New endpoint for initial urgent payment (before service creation)
+exports.createUrgentPaymentInitial = async (req, res) => {
+  try {
+    const user = req.user;
+
+    const customer = await stripe.customers.create({
+      email: user.email,
+      name: user.name,
+      metadata: { userId: String(user._id) },
+    });
+
+    const session = await stripe.checkout.sessions.create({
+      customer: customer.id,
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: "nok",
+            product_data: { 
+              name: "Haster - Umiddelbar kontakt",
+              description: "Lås opp øyeblikkelig kontakt for alle brukere"
+            },
+            unit_amount: 2000, // 20 NOK
+          },
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      success_url: `${process.env.FRONTEND_URL}service/urgent/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}mine-annonser`,
+      metadata: {
+        userId: String(user._id),
+        type: "urgent_feature_initial",
+      },
+    });
+
+    res.json({ url: session.url });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.urgentPaymentSuccess = async (req, res) => {
+  try {
+    const { session_id } = req.query;
+    const jobData = req.body;
+
+    if (!session_id) {
+      return res.status(400).json({ message: "Missing session_id" });
+    }
+
+    if (!jobData || Object.keys(jobData).length === 0) {
+      return res.status(400).json({ message: "Missing job data" });
+    }
+
+    // Verify payment with Stripe
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+
+    if (session.payment_status === "paid") {
+      // Create the service with urgent flag
+      const Service = require("../models/Service");
+      const newService = new Service({
+        ...jobData,
+        urgent: true // Mark as urgent since payment is complete
+      });
+      
+      await newService.save();
+
+      return res.json({ 
+        success: true, 
+        message: "Service created and marked as urgent successfully",
+        serviceId: newService._id
+      });
+    }
+
+    res.status(400).json({ message: "Payment not completed" });
+  } catch (error) {
+    console.error("Urgent payment success error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};

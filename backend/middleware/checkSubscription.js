@@ -60,16 +60,20 @@ exports.checkSubscription = async (req, res, next) => {
       planDoc.entitlements;
 
     // 1a. Per-service unlock window: wait ContactUnlock minutes after job posted
+    // UNLESS service is marked as urgent (paid feature that bypasses this)
     if (serviceId && typeof ContactUnlock === "number") {
-      const service = await Service.findById(serviceId).select("createdAt");
+      const service = await Service.findById(serviceId).select("createdAt urgent");
       if (!service) {
         return res.status(404).json({ message: "Service not found" });
       }
 
-      const unlockAt = new Date(service.createdAt.getTime() + ContactUnlock * 60 * 1000);
-      if (Date.now() < unlockAt.getTime()) {
-        const minutesLeft = Math.ceil((unlockAt.getTime() - Date.now()) / 60000);
-        return res.status(403).json({ message: `Contact unlocks in ${minutesLeft} minutes` });
+      // Skip unlock window check if service is urgent
+      if (!service.urgent) {
+        const unlockAt = new Date(service.createdAt.getTime() + ContactUnlock * 60 * 1000);
+        if (Date.now() < unlockAt.getTime()) {
+          const minutesLeft = Math.ceil((unlockAt.getTime() - Date.now()) / 60000);
+          return res.status(403).json({ message: `Contact unlocks in ${minutesLeft} minutes` });
+        }
       }
     }
 

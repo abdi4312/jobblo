@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styles from "../../styles/JobListingDetailPage.module.css";
-import JobHeader from "../../components/job/JobHeader/JobHeader";
 import JobImageCarousel from "../../components/job/JobImageCarousel/JobImageCarousel";
 import JobDetails from "../../components/job/JobDetails/JobDetails";
 import JobDescription from "../../components/job/JobDescription/JobDescription";
@@ -54,42 +53,6 @@ const JobListingDetailPage = () => {
   const currentUser = useUserStore((state) => state.user);
 
   const isOwnJob = job?.userId?._id === currentUser?._id;
-
-  const getStatusConfig = (status: string) => {
-    const normalizedStatus = status?.toLowerCase();
-    if (normalizedStatus === "open" || normalizedStatus === "åpen") {
-      return {
-        text: "Åpen",
-        bgColor: "#E8F5E9",
-        textColor: "#2E7D32",
-        icon: "✓",
-      };
-    } else if (normalizedStatus === "closed" || normalizedStatus === "lukket") {
-      return {
-        text: "Lukket",
-        bgColor: "#FFEBEE",
-        textColor: "#C62828",
-        icon: "✕",
-      };
-    } else if (
-      normalizedStatus === "in progress" ||
-      normalizedStatus === "pågår"
-    ) {
-      return {
-        text: "Pågår",
-        bgColor: "#FFF3E0",
-        textColor: "#E65100",
-        icon: "⟳",
-      };
-    } else {
-      return {
-        text: status || "Ukjent",
-        bgColor: "#F5F5F5",
-        textColor: "#616161",
-        icon: "?",
-      };
-    }
-  };
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -192,7 +155,6 @@ const JobListingDetailPage = () => {
       if (status === 402 && data?.paymentRequired) {
         
         console.log("Payment required:", data);
-        const { amount, currency } = data;
         const paymentSession = await mainLink.post(
           "/api/stripe/create-extra-contact-payment",
           { amount: data.amount, providerId, serviceId: job._id },
@@ -219,7 +181,7 @@ const JobListingDetailPage = () => {
   }
   return (
     <div className={styles.container}>
-      <ProfileTitleWrapper title="Tilbake" buttonText="Tilbake" />
+      <ProfileTitleWrapper title="" buttonText="Tilbake" />
 
       <JobImageCarousel images={job?.images} />
 
@@ -256,7 +218,7 @@ const JobListingDetailPage = () => {
           {isFavorited ? "Fjern favoritt" : "Legg til favoritt"}
         </button>
         <button
-          onClick={() => handleSendMessage(job?.userId._id)}
+          onClick={() => job?.userId?._id && handleSendMessage(job.userId._id)}
           disabled={isOwnJob}
           style={{
             flex: 1,

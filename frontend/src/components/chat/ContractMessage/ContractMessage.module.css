@@ -1,10 +1,25 @@
+/* Wrapper to position contract in chat flow */
+.messageWrapper {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.messageWrapper.sent {
+  justify-content: flex-end;
+}
+
+.messageWrapper.received {
+  justify-content: flex-start;
+}
+
 .contractContainer {
   background: white;
   border: 2px solid #ea7e15;
   border-radius: 12px;
   padding: 16px;
-  margin: 12px 0;
   max-width: 500px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .contractHeader {
@@ -33,6 +48,9 @@
   color: #333;
   margin-bottom: 12px;
   white-space: pre-wrap;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .priceSection,
@@ -124,3 +142,5 @@
 .completedBanner .material-symbols-outlined {
   font-size: 20px;
 }
+
+

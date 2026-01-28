@@ -42,9 +42,9 @@ export function Hero() {
     try {
       setLoading(true);
       const res = await mainLink.get<HeroItem[]>(`/api/hero`);
-      console.log("Hero API Response:", res.data[0].subtitle);
       
       if (res.data && res.data.length > 0) {
+        console.log("Hero API Response:", res.data[0]?.subtitle);
         setHero(res.data);
       }
     } catch (error) {
