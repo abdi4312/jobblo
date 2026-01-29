@@ -25,10 +25,6 @@ export interface Chat {
     _id: string;
     title?: string;
     description?: string;
-    price?: number;
-    location?: {
-      address?: string;
-    };
   };
   messages: ChatMessage[];
   lastMessage?: string;

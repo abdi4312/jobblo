@@ -434,14 +434,9 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
                 accentColor: "#ff9800"
               }}
             />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: "600", color: "#f57c00", fontSize: "16px" }}>
-                ⚡ Haster?
-              </div>
-              <div style={{ fontSize: "13px", color: "#666", marginTop: "4px" }}>
-                20 kr - Lås opp øyeblikkelig kontakt for alle brukere (hopper over ventetiden)
-              </div>
-            </div>
+            <span style={{ fontWeight: "600", color: "#f57c00", fontSize: "16px" }}>
+              ⚡ Haster?
+            </span>
           </label>
         </div>
 

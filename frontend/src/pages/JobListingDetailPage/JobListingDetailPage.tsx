@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styles from "../../styles/JobListingDetailPage.module.css";
+import { TailSpin } from "react-loader-spinner";
 import JobImageCarousel from "../../components/job/JobImageCarousel/JobImageCarousel";
 import JobDetails from "../../components/job/JobDetails/JobDetails";
 import JobDescription from "../../components/job/JobDescription/JobDescription";
@@ -49,11 +50,48 @@ const JobListingDetailPage = () => {
   const navigate = useNavigate();
   const [job, setJob] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const currentUser = useUserStore((state) => state.user);
 
   const isOwnJob = job?.userId?._id === currentUser?._id;
+
+  const getStatusConfig = (status: string) => {
+    const normalizedStatus = status?.toLowerCase();
+    if (normalizedStatus === "open" || normalizedStatus === "åpen") {
+      return {
+        text: "Åpen",
+        bgColor: "#E8F5E9",
+        textColor: "#2E7D32",
+        icon: "✓",
+      };
+    } else if (normalizedStatus === "closed" || normalizedStatus === "lukket") {
+      return {
+        text: "Lukket",
+        bgColor: "#FFEBEE",
+        textColor: "#C62828",
+        icon: "✕",
+      };
+    } else if (
+      normalizedStatus === "in progress" ||
+      normalizedStatus === "pågår"
+    ) {
+      return {
+        text: "Pågår",
+        bgColor: "#FFF3E0",
+        textColor: "#E65100",
+        icon: "⟳",
+      };
+    } else {
+      return {
+        text: status || "Ukjent",
+        bgColor: "#F5F5F5",
+        textColor: "#616161",
+        icon: "?",
+      };
+    }
+  };
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -154,17 +192,20 @@ const JobListingDetailPage = () => {
       const status = err.response?.status;
       const data = err.response?.data;
       if (status === 402 && data?.paymentRequired) {
-        
-        console.log("Payment required:", data);
+        const { amount, currency } = data;
+        setIsLoading(true);
         const paymentSession = await mainLink.post(
           "/api/stripe/create-extra-contact-payment",
           { amount: data.amount, providerId, serviceId: job._id },
         );
         window.location.href = paymentSession.data.url;
+        setIsLoading(false);
         return;
       }
       if (status === 403 && data?.message === "No subscription found") {
-        toast.error("Du trenger et aktivt abonnement for å sende meldinger. Du kan justere det på profilsiden.");
+        toast.error(
+          "Du trenger et aktivt abonnement for å sende meldinger. Du kan justere det på profilsiden.",
+        );
         return;
       }
       console.error("Error creating/getting chat:", err);
@@ -182,7 +223,7 @@ const JobListingDetailPage = () => {
   }
   return (
     <div className={styles.container}>
-      <ProfileTitleWrapper title="" buttonText="Tilbake" />
+      <ProfileTitleWrapper title="Tilbake" buttonText="Tilbake" />
 
       <JobImageCarousel images={job?.images} />
 
@@ -219,7 +260,7 @@ const JobListingDetailPage = () => {
           {isFavorited ? "Fjern favoritt" : "Legg til favoritt"}
         </button>
         <button
-          onClick={() => job?.userId?._id && handleSendMessage(job.userId._id)}
+          onClick={() => handleSendMessage(job?.userId._id)}
           disabled={isOwnJob}
           style={{
             flex: 1,
@@ -238,8 +279,19 @@ const JobListingDetailPage = () => {
             opacity: isOwnJob ? 0.6 : 1,
           }}
         >
-          <span className="material-symbols-outlined">send</span>
-          {isOwnJob ? "Din egen annonse" : "Send melding"}
+          {isLoading ? (
+            <TailSpin height={30} width={30} color="#fff" ariaLabel="loading" />
+          ) : (
+            <>
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: "20px", marginRight: "8px" }}
+              >
+                send
+              </span>
+              {isOwnJob ? "Din egen annonse" : "Send melding"}
+            </>
+          )}
         </button>
       </div>
 
@@ -266,7 +318,6 @@ const JobListingDetailPage = () => {
           currentJobId={job?._id}
         />
       </div>
-
     </div>
   );
 };
