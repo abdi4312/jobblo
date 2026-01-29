@@ -11,9 +11,8 @@ import { Autoplay, Navigation, Pagination } from "swiper/modules";
 // Swiper styles - using bundle which includes all module styles
 import "swiper/swiper-bundle.css";
 
-import mainLink from "../../../api/mainURLs";
+import  mainLink  from "../../../api/mainURLs";
 import { useEffect, useState, useCallback } from "react";
-import { RevolvingDot } from "react-loader-spinner";
 
 // Hero item type
 interface HeroItem {
@@ -26,13 +25,13 @@ interface HeroItem {
 
 export function Hero() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [hero, setHero] = useState<HeroItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (value: string) => {
     if (value.trim()) {
-      navigate("/job-listing", { state: { searchQuery: value.trim() } });
+      navigate('/job-listing', { state: { searchQuery: value.trim() } });
     } else {
       toast.warning("Vennligst skriv inn et søkeord");
     }
@@ -43,7 +42,9 @@ export function Hero() {
     try {
       setLoading(true);
       const res = await mainLink.get<HeroItem[]>(`/api/hero`);
+      
       if (res.data && res.data.length > 0) {
+        console.log("Hero API Response:", res.data[0]?.subtitle);
         setHero(res.data);
       }
     } catch (error) {
@@ -60,32 +61,32 @@ export function Hero() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[600px] w-full">
-        <RevolvingDot
-          visible={true}
-          height="80"
-          width="80"
-          color="#ff8a00"
-          ariaLabel="revolving-dot-loading"
-        />
+      <div className={styles.heroBackground}>
+        <div
+          className={styles.heroOverlay}
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "500px", 
+          }}
+        >
+          <Spin size="large" tip="Laster...">
+            <div style={{ minHeight: "100px" }} />
+          </Spin>
+        </div>
       </div>
     );
   }
 
   // Default data if API returns empty
-  const heroData =
-    hero.length > 0
-      ? hero
-      : [
-          {
-            image: jobbloSwipe,
-            title: "Jobblo AS",
-            subtitle: "Små jobber.",
-            subtitleSecondary: "Store Muligheter",
-            description:
-              "Finn kvalitetssertifisert fagfolk for alle dine prosjekter: oppussing, hagearbeid og annet alt på et sted.",
-          },
-        ];
+  const heroData = hero.length > 0 ? hero : [{
+    image: jobbloSwipe,
+    title: "Jobblo AS",
+    subtitle: "Små jobber.",
+    subtitleSecondary: "Store Muligheter",
+    description: "Finn kvalitetssertifisert fagfolk for alle dine prosjekter: oppussing, hagearbeid og annet alt på et sted."
+  }];
 
   return (
     <div className={styles.heroBackground}>

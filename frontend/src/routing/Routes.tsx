@@ -26,6 +26,7 @@ import SaleSubscriptionTermsPage from "../pages/SaleSubscriptionTermsPage/SaleSu
 import JobbloUserTerm from "../pages/UserTerm/UserTerm.tsx";
 import SuccessPage from "../components/subscription/success.tsx";
 import ContactSuccessPage from "../pages/ContactSuccessPage.tsx";
+import UrgentPaymentSuccess from "../pages/UrgentPaymentSuccess/UrgentPaymentSuccess.tsx";
 import DashboardLayout from "../pages/SuperAdminDashboard/DashboardLayout.tsx";
 import UsersPage from "../pages/SuperAdminDashboard/UsersPage.tsx";
 import ServicesPage from "../pages/SuperAdminDashboard/ServicesPage.tsx";
@@ -159,6 +160,10 @@ export const routes: RouteObject[] = [
       {
         path: "contact/success",
         element: <ContactSuccessPage />,
+      },
+      {
+        path: "service/urgent/success",
+        element: <UrgentPaymentSuccess />,
       },
       {
         path: "support",

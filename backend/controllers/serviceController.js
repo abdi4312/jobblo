@@ -173,6 +173,30 @@ exports.createService = async (req, res) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
 
+        // Validate required fields
+        const missingFields = [];
+        if (!serviceData.title || serviceData.title.trim() === '') {
+            missingFields.push('tittel');
+        }
+        if (!serviceData.description || serviceData.description.trim() === '') {
+            missingFields.push('beskrivelse');
+        }
+        if (!serviceData.price || serviceData.price <= 0) {
+            missingFields.push('pris');
+        }
+        if (!serviceData.location?.address || serviceData.location.address.trim() === '') {
+            missingFields.push('adresse');
+        }
+        if (!serviceData.categories || serviceData.categories.length === 0) {
+            missingFields.push('kategorier');
+        }
+
+        if (missingFields.length > 0) {
+            return res.status(400).json({ 
+                error: `Følgende felt er påkrevd: ${missingFields.join(', ')}` 
+            });
+        }
+
         // Normalize address
         if (serviceData.location?.address && !serviceData.location.city) {
             const [addr, city] = serviceData.location.address.split(',').map(s => s.trim());
