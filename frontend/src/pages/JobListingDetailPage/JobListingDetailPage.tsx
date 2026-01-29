@@ -16,6 +16,7 @@ import {
 import { useUserStore } from "../../stores/userStore";
 import { toast } from "react-toastify";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
+import { MapComponent } from "../../components/component/map/MapComponent.tsx";
 
 interface Service {
   _id: string;
@@ -302,6 +303,15 @@ const JobListingDetailPage = () => {
           urgent={job?.urgent}
         />
         <JobLocation location={job?.location} />
+        {job?.location?.coordinates && (
+          <MapComponent
+            coordinates={[
+              job?.location?.coordinates[0],
+              job?.location?.coordinates[1],
+            ]}
+            circleRadius={200}
+          />
+        )}
 
         <RelatedJobs
           coordinates={job?.location?.coordinates}
