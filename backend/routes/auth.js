@@ -1,5 +1,5 @@
 const {iduraCallback} = require('../controllers/iduraAuthcontroller');
-
+const vippsController = require('../controllers/vippsController');
 const User = require('../models/User');
 
 const {authenticate} = require('../middleware/auth');
@@ -149,7 +149,7 @@ router.get('/google/callback',
             );
 
            const cookieOptions = {
-                httpOnly: true,         
+               httpOnly: true,         
                 secure: false,           
                 sameSite: 'lax',         
                 maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
@@ -200,24 +200,11 @@ router.get('/profile', authenticate, async(req, res) => {
 });
 
 
-router.get(
-  '/vipps',
-  passport.authenticate('vipps', { session: false })
-);
+// Redirect to Vipps login
+router.get('/vipps', vippsController.redirectToVipps);
 
-router.get(
-  '/vipps/callback',
-  passport.authenticate('vipps', { session: false, failureRedirect: '/login' }),
-  (req, res) => {
-    // Generate JWT
-    const token = jwt.sign({ userId: req.user._id }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
-    });
-
-    // Redirect to frontend with token
-    res.redirect(`${process.env.FRONTEND_URL}/auth/success?token=${token}`);
-  }
-);
+// Callback URL
+router.get('/vipps/callback', vippsController.vippsCallback);
 
 /**
  * @swagger
