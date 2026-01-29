@@ -1,7 +1,11 @@
+const Coupon = require("../models/Coupon");
 const Subscription = require("../models/Subscription");
 const User = require("../models/User");
 const stripe = require("../config/stripe");
 const SubscriptionPlan = require("../models/SubscriptionPlan");
+const calculateDiscount = require("../utils/calculateDiscount");
+const { upsertTransaction } = require("../utils/transaction");
+const { upsertSubscription } = require("../utils/subscription");
 
 const now = new Date();
 const nextMonth = new Date();
@@ -9,19 +13,41 @@ nextMonth.setMonth(now.getMonth() + 1);
 
 exports.createCheckoutSession = async (req, res) => {
   try {
-    const { planId } = req.body;
+    const { planId, couponCode } = req.body;
     const user = req.user;
 
+    // 1️⃣ Get plan
     const plan = await SubscriptionPlan.findById(planId);
     if (!plan) return res.status(404).json({ message: "Plan not found" });
 
+    // 2️⃣ Determine final price
+    let finalPrice = plan.price; // default price
+    let appliedCoupon = null;
+    let couponId = null; // ✅ declare here
+
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
+      if (!coupon) return res.status(404).json({ message: "Coupon not found" });
+      if (!coupon.active)
+        return res.status(400).json({ message: "Coupon is not active" });
+      if (coupon.expiresDate < new Date())
+        return res.status(400).json({ message: "Coupon expired" });
+
+      // calculate discounted price
+      const pricing = calculateDiscount(plan.price, coupon);
+      finalPrice = pricing.finalPrice;
+      appliedCoupon = coupon.code;
+      couponId = coupon._id; // ✅ store coupon ObjectId
+    }
+
+    // 3️⃣ Create Stripe customer
     const customer = await stripe.customers.create({
       email: user.email,
       name: user.name,
       metadata: { userId: String(user._id) },
     });
 
-    // 2. Checkout Session banayein
+    // 4️⃣ Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
       payment_method_types: ["card"],
@@ -29,8 +55,8 @@ exports.createCheckoutSession = async (req, res) => {
         {
           price_data: {
             currency: "nok",
-            product_data: { name: String(plan.name) },
-            unit_amount: Math.round(plan.price * 100),
+            product_data: { name: plan.name },
+            unit_amount: Math.round(finalPrice * 100),
             recurring: { interval: "month" },
           },
           quantity: 1,
@@ -42,16 +68,19 @@ exports.createCheckoutSession = async (req, res) => {
       metadata: {
         userId: String(user._id),
         planId: String(planId),
-        planName: String(plan.name),
-        planPrice: Math.round(plan.price * 100),
-        planType: String(plan.type),
+        planName: plan.name,
+        planPrice: plan.price,
+        discountAmount: plan.price - finalPrice,
+        planType: plan.type,
         autoRenew: String(plan.autoRenew),
+        coupon: appliedCoupon || "",
+        couponId: couponId ? String(couponId) : "", // ✅ safe
       },
     });
 
     res.json({ url: session.url });
   } catch (error) {
-    console.error("STRIPE ERROR:", error.message);
+    console.error("STRIPE ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -68,74 +97,73 @@ exports.checkoutSessionStatus = async (req, res) => {
       return res.json({ payment_status: session.payment_status });
     }
 
+    const metadata = session.metadata || {};
     const stripeSub = session.subscription;
-    const userId = session.metadata.userId;
-    const newPlanName = session.metadata.planName;
-    const newPlanType = session.metadata.planType;
 
-    const now = new Date();
-    const nextMonth = new Date(now);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const userId = metadata.userId;
+    const planId = metadata.planId;
+    const planName = metadata.planName;
+    const planType = metadata.planType;
 
-    // 🔁 Get or create user subscription doc
-    let subscription = await Subscription.findOne({ userId });
+    const discountAmount = Number(metadata.discountAmount || 0);
+    const discountCoupon = metadata.coupon || null;
+    const couponId = metadata.couponId || null;
+    const autoRenew = metadata.autoRenew === "true";
 
-    if (!subscription) {
-      // Create new subscription with currentPlan already set
-      subscription = new Subscription({
-        userId,
-        currentPlan: {
-          planId: session.metadata.planId,
-          plan: newPlanName,
-          planType: newPlanType,
-          stripeSubscriptionId: stripeSub.id,
-          startDate: now,
-          endDate: nextMonth,
-          renewalDate: nextMonth,
-          autoRenew: session.metadata.autoRenew === "true",
-          status: "active",
-        },
-        planHistory: [],
+    const amount = session.amount_total
+      ? session.amount_total / 100
+      : 0;
+
+    // ===============================
+    // 🔹 TRANSACTION (UTIL)
+    // ===============================
+    await upsertTransaction({
+      userId,
+      planId,
+      planName,
+      planType,
+      stripeSessionId: sessionId,
+      amount,
+      currency: session.currency || "nok",
+      status: "succeeded",
+      type: "subscription",
+      discountAmount,
+      discountCoupon,
+      coupon: couponId,
+    });
+
+    // ===============================
+    // 🔹 SUBSCRIPTION (UTIL)
+    // ===============================
+    const subscription = await upsertSubscription({
+      userId,
+      planId,
+      planName,
+      planType,
+      stripeSubscriptionId: stripeSub.id,
+      autoRenew,
+      discountAmount,
+      discountCoupon,
+      couponId,
+    });
+
+    // ===============================
+    // 🔹 USER UPDATE
+    // ===============================
+    await User.findByIdAndUpdate(userId, {
+      subscription: planName,
+      planType,
+    });
+
+    // ===============================
+    // 🔹 COUPON USAGE (SAFE)
+    // ===============================
+    if (couponId) {
+      await Coupon.findByIdAndUpdate(couponId, {
+        $addToSet: { usedBy: userId },
       });
-    } else {
-      // ✅ Only push to history if plan actually changes
-      const isPlanChanged =
-        !subscription.currentPlan ||
-        !subscription.currentPlan.plan ||
-        subscription.currentPlan.plan !== newPlanName;
-
-      if (isPlanChanged && subscription.currentPlan && subscription.currentPlan.plan) {
-        subscription.planHistory.push({
-          planId: subscription.currentPlan.planId || null,
-          plan: subscription.currentPlan.plan,
-          planType: subscription.currentPlan.planType,
-          startDate: subscription.currentPlan.startDate || now,
-          endDate: now,
-          stripeSubscriptionId:
-            subscription.currentPlan.stripeSubscriptionId || null,
-          status: "expired",
-        });
-      }
-
-      // 🆕 Update current plan
-      subscription.currentPlan = {
-        planId: session.metadata.planId,
-        plan: newPlanName,
-        planType: newPlanType,
-        stripeSubscriptionId: stripeSub.id,
-        startDate: now,
-        endDate: nextMonth,
-        renewalDate: nextMonth,
-        autoRenew: session.metadata.autoRenew === "true",
-        status: "active",
-      };
     }
 
-    await subscription.save();
-    await User.findByIdAndUpdate(session.metadata.userId, {
-      subscription: session.metadata.planName,
-      planType: session.metadata.planType,
-    });
     res.json({
       payment_status: "paid",
       plan: subscription.currentPlan.plan,
@@ -150,10 +178,12 @@ exports.createExtraContactPayment = async (req, res) => {
   try {
     const user = req.user;
     const { amount, serviceId, providerId } = req.body;
-    
+
     // Validate required fields
     if (!amount || !serviceId || !providerId) {
-      return res.status(400).json({ message: "Amount, serviceId, and providerId are required" });
+      return res
+        .status(400)
+        .json({ message: "Amount, serviceId, and providerId are required" });
     }
 
     let stripeCustomerId = user.stripeCustomerId;
@@ -181,9 +211,9 @@ exports.createExtraContactPayment = async (req, res) => {
           quantity: 1,
         },
       ],
-     
+
       success_url: `${process.env.FRONTEND_URL}contact/success?session_id={CHECKOUT_SESSION_ID}&serviceId=${serviceId}&providerId=${providerId}`,
-      cancel_url: `${process.env.FRONTEND_URL}contact/cancel`,
+      cancel_url: `${process.env.FRONTEND_URL}`,
       metadata: {
         userId: String(user._id),
         type: "extra_contact",
@@ -194,135 +224,6 @@ exports.createExtraContactPayment = async (req, res) => {
 
     res.json({ url: session.url });
   } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-exports.createUrgentPayment = async (req, res) => {
-  try {
-    const { serviceId } = req.body;
-    const user = req.user;
-
-    if (!serviceId) {
-      return res.status(400).json({ message: "Service ID is required" });
-    }
-
-    const customer = await stripe.customers.create({
-      email: user.email,
-      name: user.name,
-      metadata: { userId: String(user._id) },
-    });
-
-    const session = await stripe.checkout.sessions.create({
-      customer: customer.id,
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price_data: {
-            currency: "nok",
-            product_data: { 
-              name: "Haster - Umiddelbar kontakt",
-              description: "Lås opp øyeblikkelig kontakt for alle brukere"
-            },
-            unit_amount: 2000, // 20 NOK
-          },
-          quantity: 1,
-        },
-      ],
-      mode: "payment",
-      success_url: `${process.env.FRONTEND_URL}service/urgent/success?session_id={CHECKOUT_SESSION_ID}&serviceId=${serviceId}`,
-      cancel_url: `${process.env.FRONTEND_URL}mine-annonser`,
-      metadata: {
-        userId: String(user._id),
-        type: "urgent_feature",
-        serviceId,
-      },
-    });
-
-    res.json({ url: session.url });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// New endpoint for initial urgent payment (before service creation)
-exports.createUrgentPaymentInitial = async (req, res) => {
-  try {
-    const user = req.user;
-
-    const customer = await stripe.customers.create({
-      email: user.email,
-      name: user.name,
-      metadata: { userId: String(user._id) },
-    });
-
-    const session = await stripe.checkout.sessions.create({
-      customer: customer.id,
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price_data: {
-            currency: "nok",
-            product_data: { 
-              name: "Haster - Umiddelbar kontakt",
-              description: "Lås opp øyeblikkelig kontakt for alle brukere"
-            },
-            unit_amount: 2000, // 20 NOK
-          },
-          quantity: 1,
-        },
-      ],
-      mode: "payment",
-      success_url: `${process.env.FRONTEND_URL}service/urgent/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}mine-annonser`,
-      metadata: {
-        userId: String(user._id),
-        type: "urgent_feature_initial",
-      },
-    });
-
-    res.json({ url: session.url });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-exports.urgentPaymentSuccess = async (req, res) => {
-  try {
-    const { session_id } = req.query;
-    const jobData = req.body;
-
-    if (!session_id) {
-      return res.status(400).json({ message: "Missing session_id" });
-    }
-
-    if (!jobData || Object.keys(jobData).length === 0) {
-      return res.status(400).json({ message: "Missing job data" });
-    }
-
-    // Verify payment with Stripe
-    const session = await stripe.checkout.sessions.retrieve(session_id);
-
-    if (session.payment_status === "paid") {
-      // Create the service with urgent flag
-      const Service = require("../models/Service");
-      const newService = new Service({
-        ...jobData,
-        urgent: true // Mark as urgent since payment is complete
-      });
-      
-      await newService.save();
-
-      return res.json({ 
-        success: true, 
-        message: "Service created and marked as urgent successfully",
-        serviceId: newService._id
-      });
-    }
-
-    res.status(400).json({ message: "Payment not completed" });
-  } catch (error) {
-    console.error("Urgent payment success error:", error);
     res.status(500).json({ message: error.message });
   }
 };

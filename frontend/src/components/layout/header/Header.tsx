@@ -160,7 +160,7 @@ export default function Header() {
           }`}
         >
         <div className={styles.inner}>
-        <div className={styles.jobbloIcon} onClick={() => navigate("/", { state: { fromInternal: true } })}>
+        <div className={styles.jobbloIcon} onClick={() => navigate("/")}>
           <Icons.JobbloIcon />
         </div>
 

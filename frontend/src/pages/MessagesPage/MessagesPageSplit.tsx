@@ -66,7 +66,7 @@ export function MessagesPageSplit() {
   const [loadingChat, setLoadingChat] = useState(false);
 
   // Contract state
-  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [contract, setContract] = useState<Contract | null>(null);
   const [showCreateContract, setShowCreateContract] = useState(false);
 
   // Handle window resize
@@ -102,7 +102,7 @@ export function MessagesPageSplit() {
     if (!conversationId) {
       setActiveChat(null);
       setMessages([]);
-      setContracts([]);
+      setContract(null);
       return;
     }
 
@@ -126,7 +126,7 @@ export function MessagesPageSplit() {
         if (chatData.serviceId?._id) {
           loadContract(chatData.serviceId?._id);
         } else {
-          setContracts([]);
+          setContract(null);
         }
       } catch (err) {
         console.error("Fetch chat error:", err);
@@ -215,7 +215,7 @@ export function MessagesPageSplit() {
     try {
       // Initial fetch
       const contractData = await getContractById(serviceId);
-      setContracts(contractData);
+      setContract(contractData);
 
       // Real-time updates
       const socket = initSocket();
@@ -228,7 +228,7 @@ export function MessagesPageSplit() {
       }: {
         contract: Contract;
       }) => {
-        setContracts(prev => [...prev, newContract]);
+        setContract(newContract);
       };
 
       const handleContractSigned = ({
@@ -236,7 +236,9 @@ export function MessagesPageSplit() {
       }: {
         contract: Contract;
       }) => {
-        setContracts(prev => prev.map(c => c._id === updatedContract._id ? updatedContract : c));
+        if (contract?._id === updatedContract._id) {
+          setContract(updatedContract);
+        }
       };
 
       socket.on("contract_created", handleContractCreated);
@@ -392,8 +394,7 @@ export function MessagesPageSplit() {
     : null;
 
   const serviceDescription = activeChat?.serviceId?.description || "";
-  const serviceAddress = activeChat?.serviceId?.location?.address || "";
-  const servicePrice = activeChat?.serviceId?.price || 0;
+  const serviceAddress = (activeChat as any)?.serviceId?.location?.address || "";
 
   const messageGroups = groupMessagesByDate();
 
@@ -587,7 +588,7 @@ export function MessagesPageSplit() {
                 </div>
 
                 {/* Send Contract Button */}
-                {activeChat.serviceId && (
+                {!contract?._id && (
                   <button
                     className={styles.contractButton}
                     onClick={() => setShowCreateContract(true)}
@@ -600,9 +601,20 @@ export function MessagesPageSplit() {
                 )}
               </div>
 
+              {/* Contract Display */}
+              {contract && userId && (
+                <div className={styles.contractSection}>
+                  <ContractMessage
+                    contract={contract}
+                    currentUserId={userId}
+                    onContractUpdated={handleContractUpdated}
+                  />
+                </div>
+              )}
+
               {/* Messages Area */}
               <div className={styles.messagesArea}>
-                {messages.length === 0 && contracts.length === 0 ? (
+                {messages.length === 0 ? (
                   <div className={styles.emptyMessages}>
                     <span
                       className="material-symbols-outlined"
@@ -622,81 +634,56 @@ export function MessagesPageSplit() {
                     </p>
                   </div>
                 ) : (
-                  Object.entries(messageGroups).map(([date, msgs]) => {
-                    // Insert contracts into messages based on timestamp
-                    const contractsForDate = contracts.filter(c => 
-                      new Date(c.createdAt).toDateString() === new Date(date).toDateString()
-                    );
-                    const messagesWithContracts = contractsForDate.length > 0
-                      ? [...msgs, ...contractsForDate.map(c => ({ _id: c._id, createdAt: c.createdAt, isContract: true, contractData: c }))]
-                          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-                      : msgs;
-
-                    return (
-                      <div key={date}>
-                        <div className={styles.dateLabel}>
-                          {formatDate(msgs[0].createdAt)}
-                        </div>
-                        {messagesWithContracts.map((msg, index) => {
-                          // Render contract inline
-                          if ((msg as any).isContract && (msg as any).contractData && userId) {
-                            return (
-                              <ContractMessage
-                                key={(msg as any).contractData._id}
-                                contract={(msg as any).contractData}
-                                currentUserId={userId}
-                                onContractUpdated={handleContractUpdated}
-                              />
-                            );
-                          }
-
-                          // Regular message rendering - cast to ChatMessage
-                          const chatMessage = msg as ChatMessage;
-                          const senderId =
-                            typeof chatMessage.senderId === "string"
-                              ? chatMessage.senderId
-                              : (chatMessage.senderId as any)?._id;
-                          const senderName =
-                            typeof chatMessage.senderId === "object"
-                              ? (chatMessage.senderId as any)?.name
-                              : "Unknown";
-                          const senderAvatar =
-                            typeof chatMessage.senderId === "object"
-                              ? (chatMessage.senderId as any)?.avatarUrl
-                              : undefined;
-                          const isSentByMe = senderId === userId;
-
-                          return (
-                            <div
-                              key={chatMessage._id || index}
-                              className={`${styles.messageWrapper} ${
-                                isSentByMe ? styles.sent : styles.received
-                              }`}
-                            >
-                              {!isSentByMe && (
-                                <div className={styles.avatar}>
-                                  {senderAvatar ? (
-                                    <img src={senderAvatar} alt={senderName} />
-                                  ) : (
-                                    <div className={styles.avatarPlaceholder}>
-                                      {senderName?.charAt(0) || "?"}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              <div className={styles.messageBubble}>
-                                <p className={styles.messageText}>{chatMessage.text}</p>
-                                <span className={styles.messageTime}>
-                                  {formatTime(chatMessage.createdAt)}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
+                  Object.entries(messageGroups).map(([date, msgs]) => (
+                    <div key={date}>
+                      <div className={styles.dateLabel}>
+                        {formatDate(msgs[0].createdAt)}
                       </div>
-                    );
-                  })
+                      {msgs.map((msg, index) => {
+                        const senderId =
+                          typeof msg.senderId === "string"
+                            ? msg.senderId
+                            : (msg.senderId as any)?._id;
+                        const senderName =
+                          typeof msg.senderId === "object"
+                            ? (msg.senderId as any)?.name
+                            : "Unknown";
+                        const senderAvatar =
+                          typeof msg.senderId === "object"
+                            ? (msg.senderId as any)?.avatarUrl
+                            : undefined;
+                        const isSentByMe = senderId === userId;
+
+                        return (
+                          <div
+                            key={msg._id || index}
+                            className={`${styles.messageWrapper} ${
+                              isSentByMe ? styles.sent : styles.received
+                            }`}
+                          >
+                            {!isSentByMe && (
+                              <div className={styles.avatar}>
+                                {senderAvatar ? (
+                                  <img src={senderAvatar} alt={senderName} />
+                                ) : (
+                                  <div className={styles.avatarPlaceholder}>
+                                    {senderName?.charAt(0) || "?"}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            <div className={styles.messageBubble}>
+                              <p className={styles.messageText}>{msg.text}</p>
+                              <span className={styles.messageTime}>
+                                {formatTime(msg.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -738,7 +725,6 @@ export function MessagesPageSplit() {
           serviceTitle={activeChat.serviceId.title || "Service"}
           serviceDescription={serviceDescription}
           serviceAddress={serviceAddress}
-          servicePrice={servicePrice}
           otherUserId={otherUser._id}
           currentUserId={userId}
           onContractCreated={handleContractUpdated}
