@@ -12,6 +12,31 @@ const TransactionSchema = new mongoose.Schema(
       ref: "Service",
       required: true,
     },
+    planId: {
+      type: String,
+      required: true,
+    },
+    planType: {
+      type: String,
+      required: true,
+    },
+    planName: {
+      type: String,
+      required: true,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+    },
+    discountCoupon: {
+      type: String,
+      default: null,
+    },
+    coupon: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Coupon",
+      default: null,
+    },
     stripeSessionId: {
       type: String,
       required: true,
@@ -27,15 +52,20 @@ const TransactionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "succeeded", "failed"],
+      enum: ["pending", "succeeded", "failed", "refunded"],
       default: "pending",
     },
     type: {
       type: String,
-      default: "extra_contact",
+      enum: ["extra_contact", "subscription"],
+      required: true,
+    },
+    refunded: {
+      type: Boolean,
+      default: false,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("Transaction", TransactionSchema);

@@ -1,5 +1,5 @@
 const {iduraCallback} = require('../controllers/iduraAuthcontroller');
-
+const vippsController = require('../controllers/vippsController');
 const User = require('../models/User');
 
 const {authenticate} = require('../middleware/auth');
@@ -149,7 +149,7 @@ router.get('/google/callback',
             );
 
            const cookieOptions = {
-                httpOnly: true,         
+               httpOnly: true,         
                 secure: false,           
                 sameSite: 'lax',         
                 maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
@@ -198,6 +198,13 @@ router.get('/profile', authenticate, async(req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
+
+
+// Redirect to Vipps login
+router.get('/vipps', vippsController.redirectToVipps);
+
+// Callback URL
+router.get('/vipps/callback', vippsController.vippsCallback);
 
 /**
  * @swagger

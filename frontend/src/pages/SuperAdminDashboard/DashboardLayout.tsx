@@ -83,6 +83,11 @@ const DashboardLayout: React.FC = () => {
             label="Services"
             to="/dashboard/services"
           />
+          <SidebarItem
+            icon={<Briefcase size={20} />}
+            label="Transactions"
+            to="/dashboard/transactions"
+          />
 
           <SidebarItem
             icon={<ImageIcon size={20} />}
