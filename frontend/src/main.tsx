@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./styles/index.css";
-
+import "leaflet/dist/leaflet.css";
 import { ConfigProvider } from "antd";
 import "@ant-design/v5-patch-for-react-19";
 import { routes } from "./routing/Routes.tsx";
