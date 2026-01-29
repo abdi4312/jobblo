@@ -11,7 +11,6 @@ interface CreateContractModalProps {
   serviceTitle: string;
   serviceDescription?: string;
   serviceAddress?: string;
-  servicePrice?: number;
   otherUserId: string;
   currentUserId: string;
   onContractCreated: () => void;
@@ -24,7 +23,6 @@ export function CreateContractModal({
   serviceTitle,
   serviceDescription,
   serviceAddress,
-  servicePrice,
   onContractCreated
 }: CreateContractModalProps) {
   const [content, setContent] = useState("");
@@ -36,11 +34,10 @@ export function CreateContractModal({
   // Prefill with known service info when opening
   useEffect(() => {
     if (isOpen) {
-      setContent(serviceDescription || "");
-      setAddress(serviceAddress || "");
-      setPrice(servicePrice ? servicePrice.toString() : "");
+      setContent((prev) => prev || serviceDescription || "");
+      setAddress((prev) => prev || serviceAddress || "");
     }
-  }, [isOpen, serviceDescription, serviceAddress, servicePrice]);
+  }, [isOpen, serviceDescription, serviceAddress]);
 
   if (!isOpen) return null;
 
@@ -147,6 +144,17 @@ export function CreateContractModal({
               value={scheduledDate}
               onChange={(e) => setScheduledDate(e.target.value)}
               required
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label>Address</label>
+            <input
+              type="text"
+              className={styles.input}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Service location address"
             />
           </div>
 

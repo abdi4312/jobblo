@@ -89,90 +89,84 @@ export function ContractMessage({
   };
 
   if (!contract?._id) return null;
-  
-  const isCustomerMessage = currentUserId === contract.clientId?._id || 
-                            currentUserId === contract.customerSnapshot?.userId;
-
   return (
-    <div className={`${styles.messageWrapper} ${isCustomerMessage ? styles.sent : styles.received}`}>
-      <div className={styles.contractContainer}>
-        <div className={styles.contractHeader}>
-          <span
-            className="material-symbols-outlined"
-            style={{ color: "#ea7e15" }}
-          >
-            description
-          </span>
-          <h4>Contract Agreement</h4>
-        </div>
+    <div className={styles.contractContainer}>
+      <div className={styles.contractHeader}>
+        <span
+          className="material-symbols-outlined"
+          style={{ color: "#ea7e15" }}
+        >
+          description
+        </span>
+        <h4>Contract Agreement</h4>
+      </div>
 
-        <div className={styles.contractContent}>
-          <p className={styles.contractText}>{contract?.content}</p>
+      <div className={styles.contractContent}>
+        <p className={styles.contractText}>{contract?.content}</p>
 
-          {contract?.price && (
-            <div className={styles.priceSection}>
-              <strong>Agreed Price:</strong> {contract.price} kr
-            </div>
-          )}
-
-          {contract?.scheduledDate && (
-            <div className={styles.dateSection}>
-              <strong>Scheduled:</strong>{" "}
-              {new Date(contract.scheduledDate).toLocaleDateString("nb-NO")}
-            </div>
-          )}
-        </div>
-
-        <div className={styles.signaturesSection}>
-          <div className={styles.signature}>
-            <span
-              className={`material-symbols-outlined ${
-                contract?.signedByCustomer ? styles.signed : ""
-              }`}
-            >
-              {contract?.signedByCustomer
-                ? "check_circle"
-                : "radio_button_unchecked"}
-            </span>
-            <span>Customer {contract?.signedByCustomer && "✓"}</span>
-          </div>
-          <div className={styles.signature}>
-            <span
-              className={`material-symbols-outlined ${
-                contract?.signedByProvider ? styles.signed : ""
-              }`}
-            >
-              {contract?.signedByProvider
-                ? "check_circle"
-                : "radio_button_unchecked"}
-            </span>
-            <span>Provider {contract?.signedByProvider && "✓"}</span>
-          </div>
-        </div>
-
-        {bothSigned && (
-          <div className={styles.completedBanner}>
-            <span className="material-symbols-outlined">verified</span>
-            Contract Fully Signed - Order Created
+        {contract?.price && (
+          <div className={styles.priceSection}>
+            <strong>Agreed Price:</strong> {contract.price} kr
           </div>
         )}
 
-        {!userHasSigned && !bothSigned && (
-          <button
-            className={styles.signButton}
-            onClick={handleSign}
-            disabled={signing}
-          >
-            {signing ? "Signing..." : "Sign Contract"}
-          </button>
-        )}
-
-        {userHasSigned && !otherPartySigned && (
-          <div className={styles.waitingMessage}>
-            Waiting for other party to sign...
+        {contract?.scheduledDate && (
+          <div className={styles.dateSection}>
+            <strong>Scheduled:</strong>{" "}
+            {new Date(contract.scheduledDate).toLocaleDateString("nb-NO")}
           </div>
         )}
       </div>
+
+      <div className={styles.signaturesSection}>
+        <div className={styles.signature}>
+          <span
+            className={`material-symbols-outlined ${
+              contract?.signedByCustomer ? styles.signed : ""
+            }`}
+          >
+            {contract?.signedByCustomer
+              ? "check_circle"
+              : "radio_button_unchecked"}
+          </span>
+          <span>Customer {contract?.signedByCustomer && "✓"}</span>
+        </div>
+        <div className={styles.signature}>
+          <span
+            className={`material-symbols-outlined ${
+              contract?.signedByProvider ? styles.signed : ""
+            }`}
+          >
+            {contract?.signedByProvider
+              ? "check_circle"
+              : "radio_button_unchecked"}
+          </span>
+          <span>Provider {contract?.signedByProvider && "✓"}</span>
+        </div>
+      </div>
+
+      {bothSigned && (
+        <div className={styles.completedBanner}>
+          <span className="material-symbols-outlined">verified</span>
+          Contract Fully Signed - Order Created
+        </div>
+      )}
+
+      {!userHasSigned && !bothSigned && (
+        <button
+          className={styles.signButton}
+          onClick={handleSign}
+          disabled={signing}
+        >
+          {signing ? "Signing..." : "Sign Contract"}
+        </button>
+      )}
+
+      {userHasSigned && !otherPartySigned && (
+        <div className={styles.waitingMessage}>
+          Waiting for other party to sign...
+        </div>
+      )}
     </div>
   );
 }
