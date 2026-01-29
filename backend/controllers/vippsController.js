@@ -1,3 +1,5 @@
+const Subscription = require("../models/Subscription");
+
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
@@ -113,6 +115,16 @@ exports.vippsCallback = async (req, res) => {
       }
     }
 
+    await Subscription.create({
+      userId: user._id,
+    
+      currentPlan: {
+        plan: "Standard",
+        planType: "private",
+        startDate: new Date(),
+        status: "active",
+      }    
+    })      
     // 6️⃣ Clear session state
     if (req.session) delete req.session.vippsState;
 
