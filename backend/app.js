@@ -32,6 +32,7 @@ const couponRouter = require('./routes/coupon');
 const subscriptionPlanRouter = require('./routes/subscriptionPlan')
 const stripeRouter = require('./routes/stripe');
 const transactionRoutes = require('./routes/transaction');
+const jobbloShopRouter = require('./routes/shop');
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
@@ -96,6 +97,7 @@ app.use("/api/chats", chatRouter);
 app.use('/api/stripe', stripeRouter);
 app.use('/api/coupons', couponRouter);
 app.use("/api/admin/transactions", transactionRoutes);
+app.use("/api/jobbloShop", jobbloShopRouter);
 
 
 // Error handler
