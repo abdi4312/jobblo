@@ -45,6 +45,11 @@ node seeds/run-filters.js
 For Plans:
 node seeds/run-plan.js
 
+For JobbloShop:
+node seeds/run-jobbloShop.js
+
+
+
 5️⃣ Notes
 
 Running a seeder will overwrite data in its collection

@@ -59,6 +59,7 @@ const userSchema = new mongoose.Schema({
         reason: String,
         orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
         serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service' },
+        shopItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'JobbloShop' },
         createdAt: { type: Date, default: Date.now }
     }]
 }, { timestamps: true });

@@ -9,6 +9,7 @@ const seedReviews = require('./reviews.seed');
 const seedNotifications = require('./notifications.seed');
 const seedPlans = require("./plan.seed");
 const seedConversations = require('./conversations.seed');
+const seedJobbloShop = require("./jobbloShop..seed");
 
 async function run() {
     try {
@@ -32,6 +33,9 @@ async function run() {
 
         const plans = await seedPlans();
         console.log(`💳 Plans: ${plans.length}`);
+
+        const jobbloShop = await seedJobbloShop();
+        console.log(`💳 JobbloShop: ${jobbloShop.length}`);
 
         await seedReviews(orders);
         console.log('⭐ Reviews seeded');
