@@ -1,0 +1,16 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx,vue}"
+  ],
+theme: {
+  extend: {
+    fontFamily: {
+      display: ['Inter Display', 'sans-serif'], // global display font
+    },
+  },
+},
+
+  plugins: [],
+};

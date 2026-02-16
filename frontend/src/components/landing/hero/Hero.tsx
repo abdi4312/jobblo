@@ -1,169 +1,74 @@
-import styles from "./Hero.module.css";
-import { Button, Input, Spin } from "antd";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
-import jobbloSwipe from "../../../assets/images/gardening.png";
+import HeroImage from "../../../assets/images/Hero/hero_img.png";
+import { Input as AppInput } from "../../Ui/Input";
+import { Button as AppButton } from "../../Ui/Button";
+import { MapPin, Search } from "lucide-react";
 
-// Swiper
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay, Navigation, Pagination } from "swiper/modules";
-
-// Swiper styles - using bundle which includes all module styles
-import "swiper/swiper-bundle.css";
-
-import mainLink from "../../../api/mainURLs";
-import { useEffect, useState, useCallback } from "react";
-import { RevolvingDot } from "react-loader-spinner";
-
-// Hero item type
-interface HeroItem {
-  image: string;
-  title: string;
-  subtitle: string;
-  subtitleSecondary?: string;
-  description: string;
-}
 
 export function Hero() {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [hero, setHero] = useState<HeroItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const handleSearch = (value: string) => {
-    if (value.trim()) {
-      navigate("/job-listing", { state: { searchQuery: value.trim() } });
-    } else {
-      toast.warning("Vennligst skriv inn et søkeord");
-    }
-  };
-
-  // Improved getHero with useCallback
-  const getHero = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await mainLink.get<HeroItem[]>(`/api/hero`);
-      if (res.data && res.data.length > 0) {
-        setHero(res.data);
-      }
-    } catch (error) {
-      console.error("Error fetching hero data:", error);
-      // Optional: toast.error("Kunne ikke laste inn data");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    getHero();
-  }, [getHero]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[600px] w-full">
-        <RevolvingDot
-          visible={true}
-          height="80"
-          width="80"
-          color="#ff8a00"
-          ariaLabel="revolving-dot-loading"
-        />
-      </div>
-    );
-  }
-
-  // Default data if API returns empty
-  const heroData =
-    hero.length > 0
-      ? hero
-      : [
-          {
-            image: jobbloSwipe,
-            title: "Jobblo AS",
-            subtitle: "Små jobber.",
-            subtitleSecondary: "Store Muligheter",
-            description:
-              "Finn kvalitetssertifisert fagfolk for alle dine prosjekter: oppussing, hagearbeid og annet alt på et sted.",
-          },
-        ];
 
   return (
-    <div className={styles.heroBackground}>
-      <div className={styles.heroOverlay}>
-        <Swiper
-          modules={[Autoplay, Navigation, Pagination]}
-          autoplay={{ delay: 3500, disableOnInteraction: false }}
-          navigation
-          pagination={{ clickable: true }}
-          loop={heroData.length > 1}
-          className={styles.heroSwiper}
-        >
-          {heroData.map((item, index) => (
-            <SwiperSlide key={index}>
-              <div
-                className={styles.slideContainer}
-                style={{
-                  backgroundImage: `url(${item?.image || jobbloSwipe})`,
-                }}
-              >
-                <div className={styles.slideOverlay}>
-                  <div className={styles.heroContainer}>
-                    <h1 className={styles.heroTitle}>
-                      <span className={styles.smallText}>
-                        {item?.subtitle || "Små jobber"}
-                      </span>{" "}
-                      <span className={styles.highlight}>
-                        {item?.subtitleSecondary || "Store muligheter"}
-                      </span>
-                    </h1>
-                    <p className={styles.heroDescription}>
-                      {item?.description}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </SwiperSlide>
-          ))}
-        </Swiper>
+    <div className=" max-w-300 mx-auto relative overflow-hidden min-h-150 lg:min-h-0">
+      {/* Background Image for Mobile and Desktop */}
+      <div className="absolute right-0 bottom-0 w-full lg:w-auto ">
+        <img
+          src={HeroImage}
+          alt="Hero image"
+          className="w-full max-w-140.75 h-auto object-contain ml-auto"
+        />
+      </div>
 
-        {/* Search & buttons */}
-        <div className={styles.heroSearchContainer}>
-          <div className={styles.searchActionContainer}>
-            <Button
-              icon={<span className="material-symbols-outlined">map</span>}
-              size="large"
-              shape="circle"
+      {/* Content Overlay */}
+      <div className=" flex relative z-10 pt-15.75 px-4 pb-10">
+        <div className="pt-11.25 flex flex-col gap-10 md:gap-16 w-full lg:w-auto">
+
+          {/* Text Section */}
+          <div>
+            <h2 className="text-[32px] font-medium text-[#0A0A0A] tracking-[2px]">
+              Små jobber.
+            </h2>
+            <h2 className="text-[48px] md:text-[64px] text-[#2F7E47] font-semibold tracking-[2px] leading-tight">
+              Store muligheter.
+            </h2>
+
+            <p className="text-base text-[#0A0A0A] font-light max-w-131.75 mt-4">
+              Finn eller tilby hjelp til hagearbeid, flytting, maling og mer –
+              raskt og enkelt i ditt nærområde
+            </p>
+          </div>
+
+          {/* Search Bar - Desktop and Mobile Overlay */}
+          <div className="flex flex-col md:flex-row gap-3 p-3 bg-white/60 backdrop-blur-md rounded-2xl shadow-xl border border-white/20">
+            <AppInput
+              placeholder="Hvor?"
+              icon={<MapPin size={15} color="#0A0A0A9E" />}
+              iconPosition="left"
+              containerClassName="flex-1 min-w-[200px]"
             />
-            <Input.Search
-              className={styles.antSearchBar}
-              placeholder="Søk etter oppdrag"
-              size="large"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onSearch={handleSearch}
-              enterButton
+            <AppInput
+              placeholder="Hva trenger du hjelp til?"
+              icon={<Search size={15} color="#0A0A0A9E" />}
+              iconPosition="left"
+              containerClassName="flex-1 min-w-[280px]"
+            />
+            <AppButton
+              label="Søk"
+              className="py-3 px-10 rounded-2xl bg-[#E48A3C] text-white font-bold"
+              size="lg"
             />
           </div>
 
-          <div className={styles.heroButtonContainer}>
-            <Button
-              onClick={() => navigate("/job-listing")}
-              size="large"
-              className={styles.secondaryButton}
-              style={{ height: "48px", fontSize: "16px", padding: "0 32px" }}
-            >
-              Utforsk Jobblo
-            </Button>
-
-            <Button
-              type="primary"
-              onClick={() => navigate("/publish-job")}
-              size="large"
-              style={{ height: "48px", fontSize: "16px", padding: "0 32px" }}
-            >
-              Legg ut annonse
-            </Button>
+          {/* Stats Section */}
+          <div className="flex text-center gap-3">
+            <div className="p-3 bg-white/40 backdrop-blur-sm rounded-xl border border-white/20 min-w-35">
+              <h2 className="text-[#2F7E47] text-[24px] font-bold">5000+</h2>
+              <p className="text-[#676767] font-light">Aktive oppdrag</p>
+            </div>
+            <div className="p-3 bg-white/40 backdrop-blur-sm rounded-xl border border-white/20 min-w-35">
+              <h2 className="text-[#2F7E47] text-[24px] font-bold">5000+</h2>
+              <p className="text-[#676767] font-light">Aktive oppdrag</p>
+            </div>
           </div>
+
         </div>
       </div>
     </div>

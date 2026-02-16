@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@fontsource/inter": "^5.2.8",
     "@tailwindcss/vite": "^4.1.18",
     "antd": "^5.27.6",
     "axios": "^1.13.2",
