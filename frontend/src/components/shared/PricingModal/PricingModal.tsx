@@ -6,6 +6,7 @@ import Swal from "sweetalert2";
 import { Check, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { Button as AppButton } from "../../Ui/Button"
+import { useQuery } from "@tanstack/react-query";
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -244,29 +245,58 @@ function CouponModal({ isOpen, onClose, onApply, loading }: CouponModalProps) {
 
 export function PricingModal({ isOpen, onClose }: PricingModalProps) {
   const [userType, setUserType] = useState<"business" | "private">("business");
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [loading, setLoading] = useState(true);
+  // const [plans, setPlans] = useState<Plan[]>([]);
+  // const [isLoading, setLoading] = useState(true);
 
   // Coupon modal state
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
   const [couponLoading, setCouponLoading] = useState(false);
 
-  const fetchPlans = async () => {
-    try {
-      setLoading(true);
-      const data = await getSubscriptionPlans();
-      setPlans(data.filter((plan: Plan) => plan.isActive));
-    } catch (error) {
-      console.error("Failed to fetch plans:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const fetchPlans = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const data = await getSubscriptionPlans();
+  //     setPlans(data.filter((plan: Plan) => plan.isActive));
 
-  useEffect(() => {
-    void fetchPlans();
-  }, []);
+  //   } catch (error) {
+  //     console.error("Failed to fetch plans:", error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   void fetchPlans();
+  // }, []);
+
+  // useQuery({
+  //   queryKey:['plans'],
+  //   queryFn: fetchPlans
+  // })
+
+const { data: plans, isLoading } = useQuery({
+  // Unique key used for caching and identifying this specific query
+  queryKey: ['plans'],
+
+  // The function that fetches data from the backend/database
+  queryFn: getSubscriptionPlans,
+
+  // Prevents the data from ever becoming "stale" since plans are static
+  staleTime: Infinity,
+
+  // Keeps the data in memory for 1 hour after the component unmounts
+  gcTime: 1000 * 60 * 60,
+
+  // Disables background fetching when switching browser tabs
+  refetchOnWindowFocus: false,
+
+  // Disables automatic refetching when the component remounts
+  refetchOnMount: false,
+
+  // Transforms the data to return only active plans to the component
+  select: (data) => data?.filter((plan: any) => plan.isActive),
+});
 
   const handlePlanSelection = async (planId: string) => {
     setSelectedPlanId(planId);
@@ -355,7 +385,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
     }
   };
 
-  const currentPlans = plans.filter((plan) => plan.type === userType);
+  const currentPlans = plans?.filter((plan) => plan.type === userType);
 
   const getIsPopular = (plan: Plan) => {
     if (plan.type === "business") {
@@ -372,7 +402,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
           onClick={onClose}
         >
           <div
-            className="bg-[#F2F2F2] rounded-xl w-[90%] max-w-280 max-h-[90vh] overflow-y-auto p-10"
+            className="bg-[#F2F2F2] rounded-xl w-[98%] max-w-280 max-h-[99vh] overflow-y-auto p-10"
             onClick={(e) => e.stopPropagation()}
           >
 
@@ -439,7 +469,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                 </div>
               </div>
 
-              {loading ? (
+              {isLoading ? (
                 <div className="text-center p-10">
                   <p>Laster planer...</p>
                 </div>
