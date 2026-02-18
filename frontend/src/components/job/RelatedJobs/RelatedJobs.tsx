@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import styles from "./RelatedJobs.module.css";
-import { JobCard } from "../../Explore/jobs/JobCard/JobCard";
+import { JobCard } from "../../Explore/jobs/JobCard.tsx";
 import type { Jobs } from "../../../types/Jobs";
 import { getNearbyJobs } from "../../../api/servicesAPI.ts";
 

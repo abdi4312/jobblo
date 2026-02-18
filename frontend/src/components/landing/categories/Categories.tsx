@@ -1,8 +1,5 @@
-import { Category } from "../../component/category/Category.tsx";
-import styles from "./Categories.module.css";
-import { getCategories } from "../../../api/categoryAPI.ts";
 import { useEffect, useState, useRef } from "react";
-import type { CategoryType } from "../../../types/categoryTypes.ts";
+import { useCategories } from "../../../features/categories/hooks.ts";
 import { useNavigate } from "react-router-dom";
 
 interface CategoriesProps {
@@ -18,258 +15,90 @@ export function Categories({
   onCategoriesChange,
   allowMultiSelect = false,
 }: CategoriesProps) {
-  const [category, setCategory] = useState<CategoryType[]>([]);
+  const { data: category = [], isLoading, error } = useCategories();
+
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const navigate = useNavigate();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const data = await getCategories();
-        setCategory(data);
-      } catch (err) {
-        console.error("Failed to catch categories", err);
-      }
-    }
+  interface CategoryStyle {
+    icon: string;
+    color: string;
+    active: string;
+  }
 
-    void fetchCategories();
-  }, []);
-
-    const categoryImages: Record<string, string> = {
-    "Rengjøring": "src/assets/images/cleaning.jpg",
-    "Hagearbeid": "src/assets/images/woman-full-gardening.png",
-    "Flytting": "src/assets/images/courier-moving-out.png",
-    "Rørlegger": "src/assets/images/male-constructionworker.png",
-    "Maling": "src/assets/images/painting-wall.jpg",
+  // FIXED: Har category ke liye aapka bataya hua custom icon aur color config
+  const categoryStyles: Record<string, CategoryStyle> = {
+    "Rengjøring": { icon: "cleaning_services", color: "#EF7909", active: "#EF790933" },
+    "Rørlegger": { icon: "plumbing", color: "#2F7E47", active: "#2F7E4733" },
+    "Maling": { icon: "format_paint", color: "#238CEB", active: "#238CEB33" },
+    "Flytting": { icon: "local_shipping", color: "#EF7909", active: "#EF790933" },
+    "Hagearbeid": { icon: "yard", color: "#2F7E47", active: "#2F7E4733" },
   };
 
-
-  // Notify parent when selected categories change
   useEffect(() => {
     if (allowMultiSelect && onCategoriesChange) {
-      console.log("Selected categories (names):", selectedCategories);
       onCategoriesChange(selectedCategories);
     }
   }, [selectedCategories, allowMultiSelect, onCategoriesChange]);
 
   const handleCategoryClick = (categoryName: string) => {
-    if (allowMultiSelect && onCategoriesChange) {
-      // Multi-select mode - toggle category in selection
+    if (allowMultiSelect) {
       setSelectedCategories((prev) =>
         prev.includes(categoryName)
           ? prev.filter((c) => c !== categoryName)
           : [...prev, categoryName],
       );
     } else {
-      // Single select mode - navigate to job listing page with selected category
       navigate("/job-listing", { state: { selectedCategory: categoryName } });
-    }
-  };
-
-  const scroll = (direction: "left" | "right") => {
-    if (scrollContainerRef.current) {
-      const firstChild = scrollContainerRef.current
-        .firstElementChild as HTMLElement;
-      if (firstChild) {
-        const scrollAmount = firstChild.offsetWidth + 12; // category width + gap
-        const newScrollPosition =
-          scrollContainerRef.current.scrollLeft +
-          (direction === "left" ? -scrollAmount : scrollAmount);
-        scrollContainerRef.current.scrollTo({
-          left: newScrollPosition,
-          behavior: "smooth",
-        });
-      }
     }
   };
 
   return (
     <>
-      <div className={styles.categoriesContainer}>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-          {showTitle && (
-          <div style={{ textAlign: "center", marginBottom: "32px" }}>
-            <h2
-              style={{
-                fontSize: "42px",
-                marginBottom: "12px",
-              }}
-            >
-              <style>
-                {`
-                  @media (max-width: 768px) {
-                    h2 {
-                      font-size: 28px !important;
-                    }
-                  }
-                `}
-              </style>
-              Oppgaver nær deg.
-            </h2>
-            <p
-              style={{
-                fontSize: "18px",
-                color: "var(--color-text-muted)",
-                margin: 0,
-              }}
-            >
-              Velg en kategori og se tilgjengelige jobber i nærheten av deg.
-            </p>
-          </div>
-        )}
+      <div className="pb-6">
+        <div>
+          {/* FIXED: added flex-wrap or overflow handling for clean look */}
+          <div className="flex gap-3.5 max-w-[896px] overflow-auto">
+            {category.map((item) => {
+              // FIXED: Fetching style from config with a fallback
+              const style = categoryStyles[item.name] || {
+                icon: "help_outline",
+                color: "#000",
+                active: "#F3F4F6"
+              };
 
-          {/* Selected Categories Filter Bar */}
-          {allowMultiSelect && selectedCategories.length > 0 && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "12px 20px",
-                backgroundColor: "var(--color-surface)",
-                borderRadius: "8px",
-                marginBottom: "16px",
-                flexWrap: "wrap",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-              }}
-            >
-              <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                Filtre:
-              </span>
-              {selectedCategories.map((cat) => (
-                <div
-                  key={cat}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "6px 12px",
-                    backgroundColor: "var(--color-accent)",
-                    color: "white",
-                    borderRadius: "16px",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                  }}
-                >
-                  <span>{cat}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCategoryClick(cat);
-                    }}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "white",
-                      cursor: "pointer",
-                      padding: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      fontSize: "18px",
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() => {
-                  setSelectedCategories([]);
-                }}
-                style={{
-                  padding: "6px 12px",
-                  backgroundColor: "#ff4444",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "16px",
-                  fontSize: "13px",
-                  fontWeight: "500",
-                  cursor: "pointer",
-                  marginLeft: "auto",
-                }}
-              >
-                Fjern alle
-              </button>
-            </div>
-          )}
+              // Check if currently selected (for active state)
+              const isSelected = selectedCategories.includes(item.name);
 
-          <div style={{ position: "relative", padding: "0 20px" }}>
-            {/*
-            <button
-              onClick={() => scroll("left")}
-              style={{
-                position: "absolute",
-                left: "0px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                zIndex: 10,
-                backgroundColor: "transparent",
-                border: "none",
-                width: "32px",
-                height: "32px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                padding: 0,
-              }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: "24px" }}
-              >
-                chevron_left
-              </span>
-            </button>*/}
-            
-
-            <div className={styles.categoryContainer}>
-              {category.map((item) => (
+              return (
                 <div
                   key={item._id}
-                  onClick={() => handleCategoryClick(item.name)}
-                  className={`${styles.categoryCard} ${
-                    selectedCategories.includes(item.name) ? styles.selected : ""
-                  }`}
+                  className="min-w-42 min-h-34.75 p-6 flex items-center rounded-xl"
                   style={{
-                    backgroundImage: ` linear-gradient(to top, #4d970894, rgba(234, 128, 21, 0) 50%), 
-                    url(${
-                      categoryImages[item.name] || "/images/default.jpg"
-                    })`,
+                    // Agar select ho to active color dikhe, warna white/default
+                    backgroundColor: isSelected || !allowMultiSelect ? style.active : "#FFFFFF",
+                    border: `1px solid ${isSelected ? style.color : "transparent"}`
                   }}
+                  onClick={() => handleCategoryClick(item.name)}
                 >
-                  <div className={styles.categoryCardLabel}>{item.name}</div>
+                  <div className="flex flex-col gap-6 w-full">
+                    <div>
+                      {/* Icon with Dynamic Color */}
+                      <span className="material-symbols-outlined text-5xl!" style={{ color: style.color }}>
+                        {style.icon}
+                      </span>
+                    </div>
+                    <div>
+                      {/* Category Name */}
+                      <span className="text-xl font-bold text-[#0A0A0A] block">
+                        {item.name}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-            {/*
-            <button
-              onClick={() => scroll("right")}
-              style={{
-                position: "absolute",
-                right: "0px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                zIndex: 10,
-                backgroundColor: "transparent",
-                border: "none",
-                width: "32px",
-                height: "32px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                padding: 0,
-              }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: "24px" }}
-              >
-                chevron_right
-              </span>
-            </button>*/}
+              )
+            })}
           </div>
         </div>
       </div>
