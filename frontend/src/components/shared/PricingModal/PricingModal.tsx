@@ -1,12 +1,12 @@
 import { Modal, Radio, Button, Input } from "antd";
-import { useEffect, useState } from "react";
-import { getSubscriptionPlans } from "../../../api/subscriptionPlanApi";
+import { useState } from "react";
+// import { getSubscriptionPlans } from "../../../api/subscriptionPlanApi";
 import mainLink from "../../../api/mainURLs";
 import Swal from "sweetalert2";
 import { Check, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { Button as AppButton } from "../../Ui/Button"
-import { useQuery } from "@tanstack/react-query";
+import { usePlans } from "../../../features/plans/hooks";
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -275,28 +275,8 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
   //   queryFn: fetchPlans
   // })
 
-const { data: plans, isLoading } = useQuery({
-  // Unique key used for caching and identifying this specific query
-  queryKey: ['plans'],
+  const { data: plans, isLoading } = usePlans();
 
-  // The function that fetches data from the backend/database
-  queryFn: getSubscriptionPlans,
-
-  // Prevents the data from ever becoming "stale" since plans are static
-  staleTime: Infinity,
-
-  // Keeps the data in memory for 1 hour after the component unmounts
-  gcTime: 1000 * 60 * 60,
-
-  // Disables background fetching when switching browser tabs
-  refetchOnWindowFocus: false,
-
-  // Disables automatic refetching when the component remounts
-  refetchOnMount: false,
-
-  // Transforms the data to return only active plans to the component
-  select: (data) => data?.filter((plan: any) => plan.isActive),
-});
 
   const handlePlanSelection = async (planId: string) => {
     setSelectedPlanId(planId);
@@ -385,7 +365,7 @@ const { data: plans, isLoading } = useQuery({
     }
   };
 
-  const currentPlans = plans?.filter((plan) => plan.type === userType);
+  const currentPlans = plans?.filter((plan) => plan.type === userType) || [];
 
   const getIsPopular = (plan: Plan) => {
     if (plan.type === "business") {
