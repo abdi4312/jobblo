@@ -2,6 +2,7 @@ import { SlidersHorizontal } from "lucide-react";
 import { useJobs } from "../../../features/jobsList/hooks";
 import { Button } from "../../Ui/Button";
 import { JobCard } from "./JobCard";
+import { InfinitySpin } from "react-loader-spinner";
 
 interface JobsContainerProps {
   selectedCategories?: string[];
@@ -45,7 +46,32 @@ export default function JobsContainer({
       </div>
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 justify-center mx-auto w-full">
         {isLoading ? (
-          <p>Loading...</p>
+          Array.from({ length: 2 }).map((_, index) => (
+            <div
+              key={index}
+              className="mx-auto bg-[#FFFFFF1A] sm:w-110 rounded-xl shadow-md cursor-pointer overflow-hidden border border-gray-100"
+            >
+              {/* Image Section Placeholder */}
+              <div className="relative w-full h-45 bg-[#f0f0f0] flex items-center justify-center">
+                <InfinitySpin
+                  width="150"
+                  color="#4fa94d"
+                />
+              </div>
+
+              {/* Content Placeholder */}
+              <div className="gap-3 p-4 animate-pulse">
+                <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-full"></div>
+              </div>
+
+              {/* Footer Placeholder */}
+              <div className="flex justify-between items-center p-4">
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-10 bg-gray-200 rounded w-1/3"></div>
+              </div>
+            </div>
+          ))
         ) : (
           jobs.map((job) => <JobCard key={job._id} job={job} />)
         )}

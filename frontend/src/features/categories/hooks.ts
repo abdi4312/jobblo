@@ -7,8 +7,8 @@ export const useCategories = () => {
     queryKey: ["categories"],
     queryFn: getCategories,
 
-    staleTime: Infinity,
-    gcTime: 1000 * 60 * 60,
+    staleTime: 1000 * 60 * 60 * 5,
+    gcTime: 1000 * 60 * 60 * 5,
 
     refetchOnWindowFocus: false,
     refetchOnMount: false,

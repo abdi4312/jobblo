@@ -27,7 +27,7 @@ export const JobCard = ({ job }: JobCardProps) => {
   return (
     <div
       onClick={handleCardClick}
-      className={`mx-auto bg-[#FFFFFF1A] sm:min-w-110 rounded-xl shadow-md cursor-pointer overflow-hidden`}
+      className={`mx-auto bg-[#FFFFFF1A] sm:w-110 rounded-xl shadow-md cursor-pointer overflow-hidden`}
     >
       {/* Image Section */}
       <div className="relative w-full h-45 bg-[#f0f0f0] flex items-center justify-center">
