@@ -9,11 +9,11 @@ interface RelatedJobsProps {
 }
 
 const categoryColorMap: Record<string, string> = {
-  "Rørlegger": "#EF7909",   // Orange
-  "Renhold": "#2F7E47",     // Green
-  "Maling": "#238CEB",      // Blue
-  "Hagearbeid": "#EF7909",  // Purple
-  "Flytting": "#2F7E47",    // Red
+  "Rørlegger": "#EF7909",  
+  "Renhold": "#2F7E47",    
+  "Maling": "#238CEB",      
+  "Hagearbeid": "#EF7909", 
+  "Flytting": "#2F7E47",    
 };
 
 const RelatedJobs: React.FC<RelatedJobsProps> = ({
@@ -60,7 +60,7 @@ const RelatedJobs: React.FC<RelatedJobsProps> = ({
   }
 
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-1 gap-2.5">
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 m-2 gap-2.5">
       {nearbyJobs.map((job) => {
         // Map ke andar in variables ko define karna zaroori hai
         const catName = Array.isArray(job.categories) ? job.categories[0] : job.categories;

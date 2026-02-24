@@ -17,7 +17,7 @@ const JobProvider: React.FC<JobProviderProps> = ({ job }) => {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Lønn Section */}
-            <div className='flex flex-col max-w-82 max-h-33.75 text-[#0A0A0A] gap-2 rounded-[14px] bg-amber-100 p-6'>
+            <div className='flex flex-col max-h-33.75 text-[#0A0A0A] gap-2 rounded-[14px] bg-white shadow-[0px_2px_4px_0px_rgba(0,0,0,0.08)] p-6'>
                 <p className='text-base font-medium'>Lønn</p>
                 <p className='text-[36px] font-bold text-end'>
                     {job?.price ? `${job?.price.toLocaleString('nb-NO')} kr` : 'N/A'}
@@ -25,7 +25,7 @@ const JobProvider: React.FC<JobProviderProps> = ({ job }) => {
             </div>
 
             {/* Provider Section */}
-            <div className='flex flex-col max-w-82 max-h-33.75 gap-2 rounded-[14px] bg-[linear-gradient(111.15deg,#2BFF00_-59.46%,#A9FF98_100%)] p-6'>
+            <div className='flex flex-col max-h-33.75 gap-2 rounded-[14px] bg-[linear-gradient(111.15deg,#2BFF00_-59.46%,#A9FF98_100%)] p-6'>
                 <p className='text-base font-bold text-[#0A0A0A]'>Om oppdragsgiveren</p>
                 <div className='flex gap-3 items-center'>
                     <div className='size-14 shadow-[0px_0px_0px_3px_#FFFFFF] rounded-full overflow-hidden bg-white'>

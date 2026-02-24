@@ -107,11 +107,11 @@ const JobListingDetailPage = () => {
   const isMessageLoading = sendMessageMutation.isPending || stripeMutation.isPending;
 
   return (
-    <div className="flex flex-col lg:flex-row max-w-300 gap-10 mx-auto mt-15.5">
+    <div className="flex flex-col max-w-300 gap-10 mx-auto mt-15.5">
       {isJobLoading ? (
         <JobDetailSkeleton />
       ) : (
-        <div className="w-full sm:min-w-180 md:max-w-180 h-full pb-6 bg-white mx-auto">
+        <div className="w-full sm:min-w-180 h-full pb-6 bg-white mx-auto">
           <JobImageCarousel images={job?.images} />
           <div className="px-6">
             <JobDetails job={job} />
@@ -130,7 +130,7 @@ const JobListingDetailPage = () => {
 
         </div>
       )}
-      <div className="w-full lg:max-w-110">
+      <div className="w-full">
         {isJobLoading ? (
           <JobCardSkeleton />
         ) : (
