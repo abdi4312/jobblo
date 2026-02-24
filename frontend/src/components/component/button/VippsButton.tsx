@@ -1,7 +1,7 @@
 import * as Icon from "../../../assets/icons";
-import styles from "./VippsButton.module.css";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../../../stores/userStore.ts";
+import { Button } from "../../Ui/Button.tsx";
 
 export function VippsButton() {
   const isAuth = useUserStore((state) => state.isAuthenticated);
@@ -14,18 +14,9 @@ export function VippsButton() {
   return (
     <>
       {isAuth ? (
-        <button
-          className={styles.buttonContainer}
-          onClick={() => navigate("profile")}
-        >
-          <Icon.VippsIcon />
-          Min side
-        </button>
+        <Button label="Min Side" size="lg" icon={<Icon.VippsIcon />} onClick={() => navigate("profile")}></Button>
       ) : (
-        <button className={styles.buttonContainer} onClick={handleLogin}>
-          <Icon.VippsIcon />
-          Logg inn
-        </button>
+        <Button label="Logg inn/Registrer deg" size="lg" onClick={handleLogin} ></Button>
       )}
     </>
   );

@@ -1,45 +1,29 @@
-import styles from "./Footer.module.css";
-import { Link } from "react-router-dom";
-import { useState } from "react";
-import { PricingModal } from "../../shared/PricingModal/PricingModal";
+import CtaBanner from "../../Footer/CtaBanner";
+import Content from "../../Footer/Content";
+import NewLetter from "../../Footer/NewLetter";
 
-export default function Footer() {
-  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
 
+const Footer = () => {
   return (
     <>
-      <footer className={styles.container}>
-        <div className={styles.columns}>
-          {/* Kolonne 1 – Jobblo */}
-          <div className={styles.company}>
-            <p className={styles.title}>Jobblo</p>
-            <Link to="/om-oss">Om oss</Link>
-            <Link to="/tjenester">Tjenester</Link>
-            <Link to="/team">Vårt team</Link>
-            <a onClick={() => setIsPricingModalOpen(true)} style={{ cursor: 'pointer' }}>Se våre priser</a>
-          </div>
+      <div className="w-full bg-[#2F7E47] relative pt-5 mt-20">
 
-          {/* Kolonne 2 – Kundeservice */}
-          <div className={styles.knowMore}>
-            <p className={styles.title}>Kundeservice</p>
-            <Link to="/support">Support</Link>
-            <Link to="/annonseregler">Annonseregler</Link>
-          </div>
+        {/* CTA Banner */}
+        <CtaBanner />
 
-          {/* Kolonne 3 – Rettigheter */}
-          <div className={styles.rights}>
-            <p className={styles.title}>Rettigheter</p>
-            <Link to="/user-term">Brukervilkår</Link>
-            <Link to="/sale-subscription-terms">
-              Vilkår for bruk og abonnement
-            </Link>
-          </div>
+        {/* Main Footer Content */}
+        <div className="relative max-w-300 mx-auto px-6 lg:px-8 pt-25">
+          <Content />
+          {/* Newsletter Section */}
         </div>
-        <div className={styles.bottom}>
-          <p>© 2026 Jobblo. All rights reserved.</p>
-        </div>
-      </footer>
-      <PricingModal isOpen={isPricingModalOpen} onClose={() => setIsPricingModalOpen(false)} />
+
+        {/* <div className="flex max-w-[1300px] mx-auto max-h-[271px] overflow-hidden"> */}
+          <NewLetter />
+
+      </div>
     </>
+
   );
-}
+};
+
+export default Footer;
