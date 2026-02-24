@@ -21,7 +21,7 @@ import JobContainer from "../../components/job/JobContainer.tsx";
 import JobProvider from "../../components/job/JobProvider.tsx";
 import JobButton from "../../components/job/JobButton.tsx";
 import { JobDetailSkeleton } from "../../components/Loading/JobDetailSkeleton.tsx";
-import { JobCardSkeleton } from "../../components/Loading/JobCardSkeleton.tsx";
+import { JobDetailCardSkeleton } from "../../components/Loading/JobDetailCardSkeleton.tsx";
 
 const JobListingDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -132,7 +132,7 @@ const JobListingDetailPage = () => {
       )}
       <div className="w-full">
         {isJobLoading ? (
-          <JobCardSkeleton />
+          <JobDetailCardSkeleton />
         ) : (
           <RelatedJobs
             coordinates={job?.location?.coordinates}
