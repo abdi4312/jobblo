@@ -21,7 +21,7 @@ import JobContainer from "../../components/job/JobContainer.tsx";
 import JobProvider from "../../components/job/JobProvider.tsx";
 import JobButton from "../../components/job/JobButton.tsx";
 import { JobDetailSkeleton } from "../../components/Loading/JobDetailSkeleton.tsx";
-import { JobCardSkeleton } from "../../components/Loading/JobCardSkeleton.tsx";
+import { JobDetailCardSkeleton } from "../../components/Loading/JobDetailCardSkeleton.tsx";
 
 const JobListingDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -107,11 +107,11 @@ const JobListingDetailPage = () => {
   const isMessageLoading = sendMessageMutation.isPending || stripeMutation.isPending;
 
   return (
-    <div className="flex flex-col lg:flex-row max-w-300 gap-10 mx-auto mt-15.5">
+    <div className="flex flex-col max-w-300 gap-10 mx-auto mt-15.5">
       {isJobLoading ? (
         <JobDetailSkeleton />
       ) : (
-        <div className="w-full sm:min-w-180 md:max-w-180 h-full pb-6 bg-white mx-auto">
+        <div className="w-full sm:min-w-180 h-full pb-6 bg-white mx-auto">
           <JobImageCarousel images={job?.images} />
           <div className="px-6">
             <JobDetails job={job} />
@@ -130,9 +130,9 @@ const JobListingDetailPage = () => {
 
         </div>
       )}
-      <div className="w-full lg:max-w-110">
+      <div className="w-full">
         {isJobLoading ? (
-          <JobCardSkeleton />
+          <JobDetailCardSkeleton />
         ) : (
           <RelatedJobs
             coordinates={job?.location?.coordinates}

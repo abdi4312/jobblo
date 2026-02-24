@@ -1,14 +1,11 @@
 import { Spinner } from "../Ui/Spinner";
 
 export const JobDetailSkeleton = () => (
-    // <div className="min-w-42 min-h-34.75 p-6 flex items-center justify-center rounded-xl bg-white border border-gray-100">
-    //     <Spinner size={200} />
-    // </div>
-    <div className="w-full sm:min-w-180 md:max-w-180 h-full pb-6 bg-white mx-auto">
-        {/* <JobImageCarousel images={job?.images} loading={isJobLoading} /> */}
-        <div className="relative w-full p-3">
+
+    <div className="w-full sm:min-w-180 h-full pb-6 bg-white mx-auto">
+        <div className="relative w-full p-3 pt-0">
             <div className="h-2 w-px"></div>
-            <div className="relative w-full h-58.5 md:h-74.25 overflow-hidden rounded-t-lg bg-gray-200 animate-pulse flex items-center justify-center">
+            <div className="relative w-full h-58.5 md:h-125.25 overflow-hidden rounded-t-lg bg-gray-200 animate-pulse flex items-center justify-center">
                 <Spinner size={150} />
             </div>
         </div>
@@ -36,9 +33,9 @@ export const JobDetailSkeleton = () => (
             <div className="pt-6">
                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                     {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className='flex flex-col max-w-82 h-23.75 gap-2 rounded-[14px] bg-gray-100 p-6 animate-pulse'>
+                        <div key={i} className='flex flex-col h-23.75 gap-2 rounded-[14px] bg-gray-100 p-6 animate-pulse'>
                             <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                            <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                            <div className="h-6 bg-gray-200 rounded w-1/2"></div>
                         </div>
                     ))}
                 </div>
@@ -80,20 +77,6 @@ export const JobDetailSkeleton = () => (
                 <div className="w-full h-12.5 bg-gray-200 rounded-xl"></div>
                 <div className="w-32 h-12.5 bg-gray-200 rounded-xl"></div>
             </div>
-
-            {/* <JobDetails job={job} loading={isJobLoading} /> */}
-            {/* <JobDescription description={job?.description} loading={isJobLoading} /> */}
-            {/* <JobContainer job={job} loading={isJobLoading} /> */}
-            {/* <JobLocation location={job?.location} loading={isJobLoading} /> */}
-            {/* <JobProvider job={job} loading={isJobLoading} /> */}
-            {/* <JobButton
-                handleSendMessage={() => handleSendMessage(job?.userId?._id)}
-                handleFavoriteClick={handleFavoriteClick}
-                isFavorited={!!isFavorited}
-                isOwnJob={isOwnJob}
-                isLoading={isMessageLoading}
-                loading={isJobLoading}
-            /> */}
         </div>
     </div>
 );
