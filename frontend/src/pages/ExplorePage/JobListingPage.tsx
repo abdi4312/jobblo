@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 // import { Search } from "../../components/Explore/Search/search.tsx";
-import { Categories } from "../../components/landing/categories/Categories.tsx";
+import { Categories } from "../../components/Explore/jobs/Categories.tsx";
 import Jobs from "../../components/Explore/jobs/Jobs.tsx";
 import Jobimg from "../../assets/images/job-listing/job-img.png"
 
 export default function JobListingPage() {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const categoryFromUrl = searchParams.get("category");
   // Initialize state directly from navigation state
   const initialState = location.state as { selectedCategory?: string; searchQuery?: string } | null;
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
@@ -18,13 +20,22 @@ export default function JobListingPage() {
 
   // Clear navigation state on mount
   useEffect(() => {
+    if (categoryFromUrl) {
+      // Agar URL mein category hai toh usay array mein daal dein
+      setSelectedCategories([categoryFromUrl]);
+    } else if (initialState?.selectedCategory) {
+      // Fallback agar state se aa raha hai
+      setSelectedCategories([initialState.selectedCategory]);
+    }
+  }, [categoryFromUrl, initialState?.selectedCategory]);
+  useEffect(() => {
     if (location.state) {
       window.history.replaceState({}, document.title);
     }
   }, []);
 
   return <>
-    <div className="max-w-300 mx-auto flex gap-10 pt-15">
+    <div className="max-w-300 mx-auto flex gap-10 pt-15 overflow-hidden">
       {/* <Search onSearchChange={setSearchQuery} value={searchQuery} /> */}
       <div>
 

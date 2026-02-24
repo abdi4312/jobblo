@@ -1,25 +1,12 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import React, { useState } from 'react';
-import { InfinitySpin } from 'react-loader-spinner';
 
 interface JobImageCarouselProps {
   images?: string[];
-  loading?: boolean;
 }
 
-const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images, loading }) => {
+const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-
-  if (loading) {
-    return (
-      <div className="relative w-full p-3">
-        <div className="h-2 w-px"></div>
-        <div className="relative w-full h-58.5 md:h-74.25 overflow-hidden rounded-t-lg bg-gray-200 animate-pulse flex items-center justify-center">
-          <InfinitySpin width="150" color="#4fa94d" />
-        </div>
-      </div>
-    );
-  }
 
   const jobImages = images && images.length > 0
     ? images
@@ -34,7 +21,7 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images, loading }) 
   };
 
   return (
-    <div className={`relative w-full overflow-visible p-3 ${loading ? 'opacity-50' : ''}`}>
+    <div className={`relative w-full overflow-visible p-3`}>
       {/* Spacer div from your original code */}
       <div className="h-2 w-px"></div>
 
@@ -90,7 +77,6 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images, loading }) 
             className="p-1 bg-[#FFFFFF] rounded-full flex items-center justify-center shadow-md"
             style={{ opacity: jobImages.length <= 1 ? 0.4 : 1 }}
           >
-            {/* <path d="M6 4L10 8L6 12" stroke="var(--color-icon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /> */}
             <ChevronRight />
           </div>
         </button>

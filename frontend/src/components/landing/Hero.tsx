@@ -1,6 +1,6 @@
-import HeroImage from "../../../assets/images/Hero/hero_img.png";
-import { Input as AppInput } from "../../Ui/Input";
-import { Button as AppButton } from "../../Ui/Button";
+import HeroImage from "../../assets/images/Hero/hero_img.png";
+import { Input as AppInput } from "../Ui/Input";
+import { Button as AppButton } from "../Ui/Button";
 import { MapPin, Search } from "lucide-react";
 
 

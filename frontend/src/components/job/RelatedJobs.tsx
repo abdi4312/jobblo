@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Clock4, MapPin } from "lucide-react";
 import { Button } from "../Ui/Button.tsx";
-import { InfinitySpin } from "react-loader-spinner";
 import { useNearbyJobsQuery } from "../../features/jobDetail/hook.ts";
 
 interface RelatedJobsProps {
@@ -23,35 +22,12 @@ const RelatedJobs: React.FC<RelatedJobsProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  const { data: nearbyJobs = [], isLoading: loading } = useNearbyJobsQuery(
+
+  const { data: nearbyJobs = [], } = useNearbyJobsQuery(
     coordinates,
     currentJobId || ""
   );
 
-  if (loading) {
-    return (
-      <div className="grid sm:grid-cols-2 lg:grid-cols-1 gap-2.5">
-        {Array.from({ length: 2 }).map((_, index) => (
-          <div
-            key={index}
-            className="mx-auto bg-[#FFFFFF1A] w-full rounded-xl shadow-md overflow-hidden border border-gray-100"
-          >
-            <div className="relative w-full h-45 bg-[#f0f0f0] flex items-center justify-center">
-              <InfinitySpin width="150" color="#4fa94d" />
-            </div>
-            <div className="gap-3 p-4 animate-pulse">
-              <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-full"></div>
-            </div>
-            <div className="flex justify-between items-center p-4">
-              <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-              <div className="h-10 bg-gray-200 rounded w-1/3"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
 
   if (nearbyJobs.length === 0) {
     return (
@@ -68,7 +44,7 @@ const RelatedJobs: React.FC<RelatedJobsProps> = ({
             Ingen jobber funnet
           </h4>
 
-          <p className="text-gray-500 text-center max-w-[250px] text-sm leading-relaxed">
+          <p className="text-gray-500 text-center max-w-62.5 text-sm leading-relaxed">
             Vi fant dessverre ingen jobber i nærheten av din posisjon akkurat nå.
           </p>
 

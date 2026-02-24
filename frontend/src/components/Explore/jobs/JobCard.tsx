@@ -8,11 +8,11 @@ interface JobCardProps {
 }
 
 const categoryColorMap: Record<string, string> = {
-  "Rørlegger": "#EF7909",   // Orange
-  "Renhold": "#2F7E47",     // Green
-  "Maling": "#238CEB",      // Blue
-  "Hagearbeid": "#EF7909",  // Purple
-  "Flytting": "#2F7E47",    // Red
+  "Rørlegger": "bg-[#EF7909]",
+  "Renhold": "bg-[#2F7E47]",
+  "Maling": "bg-[#238CEB]",
+  "Hagearbeid": "bg-[#EF7909]",
+  "Flytting": "bg-[#2F7E47]",
 };
 
 export const JobCard = ({ job }: JobCardProps) => {
@@ -22,41 +22,29 @@ export const JobCard = ({ job }: JobCardProps) => {
   };
 
   const catName = Array.isArray(job.categories) ? job.categories[0] : job.categories;
-  const badgeColor = categoryColorMap[catName] || "#EF7909";
+  const badgeColor = categoryColorMap[catName] || "bg-[#EF7909]";
 
   return (
-    <div
-      onClick={handleCardClick}
-      className={`mx-auto bg-[#FFFFFF1A] sm:w-110 rounded-xl shadow-md cursor-pointer overflow-hidden`}
-    >
+    <div className={`mx-auto bg-[#FFFFFF1A] sm:w-110 rounded-xl shadow-md cursor-pointer overflow-hidden`} onClick={handleCardClick}>
       {/* Image Section */}
       <div className="relative w-full h-45 bg-[#f0f0f0] flex items-center justify-center">
+
         {job.images[0] ? (
-          <img
-            src={job.images[0]}
-            alt={job.title}
-            className="w-full h-full p-2 object-cover rounded-t-2xl"
-          />
+          <img src={job.images[0]} alt={job.title} className="w-full h-full p-2 object-cover rounded-t-2xl" />
         ) : (
           <span className="text-[#666] text-base">No image available</span>
         )}
 
-        <div
-          className="absolute top-4 right-2 bg-[#EF7909] px-3 py-1.5 text-white rounded-[20px] flex items-center justify-center"
-          style={{ backgroundColor: badgeColor }}
-        >
+        <div className={`absolute top-4 right-2 px-3 py-1.5 text-white rounded-[20px] flex items-center justify-center ${badgeColor}`} >
           <span className="text-[12px]">
             {catName || "Rørlegger"}
           </span>
         </div>
 
-        <div
-          className="absolute text-[#0A0A0A] bottom-4 left-4.5 bg-[#D9D9D9]/80 px-3 py-1.5 rounded-[20px] flex items-center justify-center gap-1.5"
-        >
+        <div className="absolute text-[#0A0A0A] bottom-4 left-4.5 bg-[#D9D9D9]/80 px-3 py-1.5 rounded-[20px] flex items-center justify-center gap-1.5">
           <MapPin size={13} />
           <span className="text-[12px] font-normal">
             {job.location.city}
-            {/* {"Rørlegger"} */}
           </span>
         </div>
       </div>
@@ -76,7 +64,6 @@ export const JobCard = ({ job }: JobCardProps) => {
       <div className="flex justify-between p-4">
 
         <div className="flex items-center gap-1">
-          {/* <span className="material-symbols-outlined text-[12.5px] text-[#4A5565]">Schedule</span> */}
           <Clock4 size={13} />
           <h3 className="m-0 whitespace-nowrap overflow-hidden text-ellipsis text-[12px] font-normal">
             {job.duration.value

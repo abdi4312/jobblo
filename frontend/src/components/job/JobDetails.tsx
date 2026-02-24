@@ -5,27 +5,10 @@ interface JobDetailsProps {
     title: string;
     tags?: string[];
   } | null;
-  loading?: boolean;
 }
 
-const JobDetails: React.FC<JobDetailsProps> = ({ job, loading }) => {
-  if (loading) {
-    return (
-      <div className="animate-pulse">
-        <div className="">
-          {/* Title Skeleton */}
-          <div className="h-8 bg-gray-200 rounded-md w-3/4"></div>
+const JobDetails: React.FC<JobDetailsProps> = ({ job }) => {
 
-          {/* Tags Skeleton */}
-          <div className="flex gap-2 pt-4">
-            <div className="h-6 bg-gray-200 rounded-xl w-16"></div>
-            <div className="h-6 bg-gray-200 rounded-xl w-20"></div>
-            <div className="h-6 bg-gray-200 rounded-xl w-14"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
   return (
     <div className="">
       <div className=''>

@@ -1,5 +1,4 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { TailSpin } from "react-loader-spinner";
 import { toast } from "react-toastify";
 import { useUserStore } from "../../stores/userStore";
 import { setFavorites, deleteFavorites } from "../../api/favoriteAPI";
@@ -15,12 +14,14 @@ import {
 // Components
 import JobImageCarousel from "../../components/job/JobImageCarousel.tsx";
 import JobDetails from "../../components/job/JobDetails.tsx";
-import JobDescription from "../../components/job/JobDescription/JobDescription";
-import JobLocation from "../../components/job/JobLocation/JobLocation";
+import JobDescription from "../../components/job/JobDescription.tsx";
+import JobLocation from "../../components/job/JobLocation.tsx";
 import RelatedJobs from "../../components/job/RelatedJobs.tsx";
 import JobContainer from "../../components/job/JobContainer.tsx";
 import JobProvider from "../../components/job/JobProvider.tsx";
 import JobButton from "../../components/job/JobButton.tsx";
+import { JobDetailSkeleton } from "../../components/Loading/JobDetailSkeleton.tsx";
+import { JobCardSkeleton } from "../../components/Loading/JobCardSkeleton.tsx";
 
 const JobListingDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,7 +35,7 @@ const JobListingDetailPage = () => {
   const currentUser = useUserStore((state) => state.user);
 
   // TanStack Queries 
-  const { data: job, isLoading: isJobLoading, refetch: refetchJob } = useJobDetailQuery(id!);
+  const { data: job, isLoading: isJobLoading } = useJobDetailQuery(id!);
   const { data: isFavorited, refetch: refetchFavStatus } = useFavoriteStatusQuery(id!, isAuth);
 
   const isOwnJob = job?.userId?._id === currentUser?._id;
@@ -103,43 +104,43 @@ const JobListingDetailPage = () => {
     );
   };
 
-  // if (isJobLoading) {
-  //   return (
-  //     <div className="flex justify-center items-center h-screen">
-  //       <TailSpin height={50} width={50} color="#2F7E47" ariaLabel="loading" />
-  //     </div>
-  //   );
-  // }
-
-  // Combine loading states for the button
   const isMessageLoading = sendMessageMutation.isPending || stripeMutation.isPending;
 
   return (
     <div className="flex flex-col lg:flex-row max-w-300 gap-10 mx-auto mt-15.5">
-      <div className="w-full sm:min-w-180 md:max-w-180 h-full pb-6 bg-white mx-auto">
-        <JobImageCarousel images={job?.images} loading={isJobLoading} />
-        <div className="px-6">
-          <JobDetails job={job} loading={isJobLoading}/>
-          <JobDescription description={job?.description} loading={isJobLoading}/>
-          <JobContainer job={job} loading={isJobLoading}/>
-          <JobLocation location={job?.location} loading={isJobLoading}/>
-          <JobProvider job={job} loading={isJobLoading}/>
-          <JobButton
-            handleSendMessage={() => handleSendMessage(job?.userId?._id)}
-            handleFavoriteClick={handleFavoriteClick}
-            isFavorited={!!isFavorited}
-            isOwnJob={isOwnJob}
-            isLoading={isMessageLoading}
-            loading={isJobLoading}
-          />
+      {isJobLoading ? (
+        <JobDetailSkeleton />
+      ) : (
+        <div className="w-full sm:min-w-180 md:max-w-180 h-full pb-6 bg-white mx-auto">
+          <JobImageCarousel images={job?.images} />
+          <div className="px-6">
+            <JobDetails job={job} />
+            <JobDescription description={job?.description} />
+            <JobContainer job={job} />
+            <JobLocation location={job?.location} />
+            <JobProvider job={job} />
+            <JobButton
+              handleSendMessage={() => handleSendMessage(job?.userId?._id)}
+              handleFavoriteClick={handleFavoriteClick}
+              isFavorited={!!isFavorited}
+              isOwnJob={isOwnJob}
+              isLoading={isMessageLoading}
+            />
+          </div>
+
         </div>
-      </div>
+      )}
       <div className="w-full lg:max-w-110">
-        <RelatedJobs
-          coordinates={job?.location?.coordinates}
-          currentJobId={job?._id}
-        />
+        {isJobLoading ? (
+          <JobCardSkeleton />
+        ) : (
+          <RelatedJobs
+            coordinates={job?.location?.coordinates}
+            currentJobId={job?._id}
+          />
+        )}
       </div>
+
     </div>
   );
 };

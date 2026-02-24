@@ -9,7 +9,6 @@ interface JobButtonProps {
     isFavorited: boolean;
     isOwnJob: boolean;
     isLoading: boolean; // Button action loading (spinner)
-    loading?: boolean;   // Page/Data initial loading (skeleton)
 }
 
 const JobButton: React.FC<JobButtonProps> = ({
@@ -18,18 +17,9 @@ const JobButton: React.FC<JobButtonProps> = ({
     isFavorited,
     isOwnJob,
     isLoading,
-    loading
 }) => {
 
     // Agar pure page ka loading true hai, toh skeleton buttons dikhao
-    if (loading) {
-        return (
-            <div className="mt-10 flex gap-4 animate-pulse">
-                <div className="w-full h-[50px] bg-gray-200 rounded-xl"></div>
-                <div className="w-32 h-[50px] bg-gray-200 rounded-xl"></div>
-            </div>
-        );
-    }
 
     return (
         <div className="mt-10">

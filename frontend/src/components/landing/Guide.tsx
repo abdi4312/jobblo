@@ -1,6 +1,5 @@
-import React from "react";
-import ChooseImage from "../../../assets/images/Hero/choose_img.png";
-import * as Icons from "../../../assets/icons";
+import ChooseImage from "../../assets/images/Hero/choose_img.png";
+import * as Icons from "../../assets/icons";
 // Backend se data isi format mein map hoga
 const features = [
   {
