@@ -21,11 +21,11 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
   };
 
   return (
-    <div className={`relative w-full overflow-visible p-3`}>
+    <div className={`relative w-full overflow-visible p-3 pt-0`}>
       {/* Spacer div from your original code */}
       <div className="h-2 w-px"></div>
 
-      <div className="relative w-full h-58.5 md:h-74.25 overflow-hidden rounded-t-lg">
+      <div className="relative w-full h-58.5 md:h-125.5 overflow-hidden rounded-t-lg">
         <img
           src={jobImages[currentIndex]}
           alt={`Job image ${currentIndex + 1}`}
@@ -34,9 +34,9 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
       </div>
 
       {/* Navigation Dots */}
-      <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-10">
+      {/* <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-10">
         <div
-          className="min-w-16] h-4 bg-[rgba(251,236,213,0.9)] rounded-[50px] border-[0.2px] border-[var(--color-text)] flex items-center justify-center gap-2 px-2 py-1 transition-opacity"
+          className="min-w-16 h-4 bg-[rgba(251,236,213,0.9)] rounded-[50px] border-[0.2px] border-[var(--color-text)] flex items-center justify-center gap-2 px-2 py-1 transition-opacity"
           style={{ opacity: jobImages.length <= 1 ? 0.4 : 1 }}
         >
           {jobImages.map((_, index) => (
@@ -49,7 +49,7 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
             ></div>
           ))}
         </div>
-      </div>
+      </div> */}
 
       {/* Navigation Buttons */}
       <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 flex justify-between px-1.25 pointer-events-none z-10 w-full">
