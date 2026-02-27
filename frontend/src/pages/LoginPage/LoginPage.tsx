@@ -1,138 +1,126 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import * as Icons from "../../assets/icons";
+import LoginIcon from "../../assets/images/Login/login-icon.png";
 import { toast } from "react-toastify";
-import styles from "./loginPage.module.css";
-import { userLogin } from "../../api/userAPI.ts";
-import axios from "axios";
 import SocialAuthButtons from "../../components/SocialAuthButtons/AuthButton.tsx";
+import { Input } from "../../components/Ui/Input.tsx";
+import { Button } from "../../components/Ui/Button.tsx";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import Auth from "../../components/Auth/Auth.tsx";
+import { useLogin } from "../../features/auth/hook/useLogin.ts";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = async () => {
+  // TanStack Hook ka istemal
+  const { mutate: login, isPending } = useLogin();
+
+  const handleLogin = () => {
     if (!email || !password) {
       toast.error("Vennligst fyll ut alle feltene");
       return;
     }
 
-    setLoading(true);
-    try {
-      const response = await userLogin(email, password);
-
-      const data = response.data;
-      toast.success("Innlogging vellykket!");
-      navigate("/");
-    } catch (error) {
-      console.error("Error logging in:", error);
-
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 401) {
-          toast.error("Feil e-post eller passord");
-        } else {
-          toast.error("Kunne ikke logge inn");
-        }
-      } else {
-        toast.error("Kunne ikke koble til server");
-      }
-    } finally {
-      setLoading(false);
-    }
+    // Hook se mutate function call karein
+    login({ email, password });
   };
 
   return (
-    <div className={styles.page}>
-      <div className={styles.leftSide}>
-          <img
-            className={styles.loginnimg}
-            src="src/assets/images/loginnstandardimg.png"
-            alt="Jobblo logo with tools in the background"
-          />
-        </div>
-        
-        <div className={styles.rightSide}>
-          <div className={styles.wrapper}>
-            {/* Vipps Logo */}
-            <div className={styles.vippsLogo}>Velkommen</div>
+    <>
+      <div className="bg-white min-h-screen">
+        <div className="flex max-w-390.5 mx-auto">
+          <div className='w-[50%] relative 2xl:mix-h-236 min-h-screen overflow-hidden hidden lg:block'>
+            <Auth />
+          </div>
 
-            {/* Login Card */}
-            <div className={styles.card}>
-              {/* Title */}
-              <h2 className={styles.title}>Log in to</h2>
-
-              {/* Jobblo Logo */}
-              <div className={styles.jobbloLogo}>
-                <Icons.JobbloIcon />
+          <div className=" w-full lg:w-[50%] 2xl:mt-29.25 mt-7 mx-3 lg:mx-0">
+            <div className="flex flex-col text-center justify-center mb-2 2xl:mb-8.5">
+              <div className="flex items-center justify-center">
+                <img src={LoginIcon} alt="Login_icon" className="max-w-22.5 max-h-9.75 object-cover" />
               </div>
 
-              {/* Email Input */}
-              <input
-                type="email"
-                placeholder="E-post"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={styles.input}
-              />
-
-              {/* Password Input */}
-              <input
-                type="password"
-                placeholder="Passord"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={styles.input}
-              />
-
-              {/* Info Text */}
-              <p className={styles.infoText}>
-                Ved å logge inn godtar du våre{" "}
-                <a href="#" className={styles.link}>
-                  vilkår og betingelser
-                </a>
-                .
-              </p>
-
-              {/* Login Button */}
-              <button
-                onClick={handleLogin}
-                disabled={loading || !email || !password}
-                className={styles.loginBtn}
-              >
-                {loading ? "Logger inn..." : "Logg inn"}
-              </button>
-
-              {/* Cancel Link */}
-              {/*<button onClick={() => navigate(-1)} className={styles.cancelBtn}>
-                Cancel
-              </button>*/}
-
-              <div className={styles.orSeparator}>
-                <span>eller</span>
+              <div>
+                <h1 className="text-3xl font-bold text-[#0E2A22]">Velkommen</h1>
+                <p className="text-base font-normal text-[#4A5565]">Logg inn til din Jobblo-konto</p>
+              </div>
+            </div>
+            <div className="max-w-md mx-auto">
+              <div className="flex flex-col gap-4 2xl:gap-6">
+                <Input
+                  label="E-post"
+                  type="email"
+                  value={email}
+                  icon={<Mail size={20} className="text-[#99A1AF]" />}
+                  placeholder="user1@jobblo.no"
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="max-w-md"
+                />
+                <Input
+                  label="Passord"
+                  // Dynamic type toggle
+                  type={showPassword ? "text" : "password"}
+                  icon={<Lock size={20} className="text-[#99A1AF]" />}
+                  value={password}
+                  placeholder="••••••••"
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="max-w-md"
+                  // Right side icon logic
+                  rightIcon={
+                    <div
+                      className="cursor-pointer text-[#99A1AF] hover:text-gray-700 transition-colors"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </div>
+                  }
+                />
               </div>
 
+              <div className="flex flex-col gap-6.5 2xl:mt-6.5">
+                <Button
+                  // onClick={handleLogin}
+                  // loading={loading}
+                  className="bg-transparent text-[#83A790]! text-[14px]! py-0! font-normal! hover:bg-transparent"
+                  label="Glemt passord? Klikk her"
+                />
+                <Button
+                  onClick={handleLogin}
+                  disabled={isPending}
+                  className="w-full max-w-md bg-[#3F8F6B]! rounded-[14px] text-base! font-normal!"
+                  label={isPending ? "Logger inn..." : "Logg inn"}
+                />
+              </div>
 
-              {/* Social Auth Buttons */}
-              <SocialAuthButtons />
-              
+              <div className="relative flex py-5 items-center">
+                <div className="grow border-t border-[#E5E7EB]"></div>
 
-              {/* Register Section */}
-              <div className={styles.registerSection}>
-                <p className={styles.registerText}>Har du ikke en konto?</p>
-                <button
+                <span className="shrink mx-4 text-gray-400 text-sm font-normal">
+                  eller
+                </span>
+
+                <div className="grow border-t border-[#E5E7EB]"></div>
+              </div>
+
+              <div>
+                <SocialAuthButtons />
+              </div>
+
+              <div className="flex justify-center items-center pt-6 2xl:pt-11.5">
+                <p>Har du ikke konto?</p>
+                <Button
                   onClick={() => navigate("/register")}
-                  className={styles.registerBtn}
-                >
-                  Registrer deg
-                </button>
+                  className="bg-transparent! text-[#3F8F6B]! p-0! text-base! font-normal!"
+                  label="Registrer deg"
+                />
               </div>
             </div>
           </div>
         </div>
-    </div>
+      </div>
+    </>
 
-            
   );
 }

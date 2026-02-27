@@ -105,22 +105,6 @@ export const routes: RouteObject[] = [
         ),
       },
       {
-        path: "login",
-        element: (
-          <PublicRoute>
-            <LoginPage />
-          </PublicRoute>
-        ),
-      },
-      {
-        path: "register",
-        element: (
-          <PublicRoute>
-            <RegisterPage />
-          </PublicRoute>
-        ),
-      },
-      {
         path: "Innstillinger",
         element: <InstillingerPage />,
       },
@@ -194,6 +178,23 @@ export const routes: RouteObject[] = [
         element: <JobbloUserTerm />,
       },
     ],
+
+  },
+  {
+    path: "login",
+    element: (
+      <PublicRoute>
+        <LoginPage />
+      </PublicRoute>
+    ),
+  },
+  {
+    path: "register",
+    element: (
+      <PublicRoute>
+        <RegisterPage />
+      </PublicRoute>
+    ),
   },
   {
     path: "dashboard",
