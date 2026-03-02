@@ -21,15 +21,19 @@ export default function JobsContainer({ selectedCategories = [], searchQuery = "
     <div>
       <div className="flex justify-between pb-6">
         <div className="flex gap-2 items-center">
-          <p className="text-[24px] font-bold">{totalJobs}</p>
-          <span className="font-normal text-base text-[#4A5565]">oppdrag</span>
+          <p className="text-[20px] md:text-[24px] font-bold">{totalJobs}</p>
+          <span className="font-normal text-[12px] md:text-base text-[#4A5565]">oppdrag</span>
         </div>
 
         <div>
           <Button icon={<SlidersHorizontal size={16} />} label="Filter"
             className="bg-transparent text-[#D67E2B]! font-medium!
-            border border-[#D67E2B]! rounded-xl! hover:bg-[#D67E2B]! hover:text-white!" size="lg" />
+            border border-[#D67E2B]! rounded-xl! hover:bg-[#D67E2B]! hover:text-white! hidden! md:flex!" size="lg" />
+          <Button
+            icon={<SlidersHorizontal size={16} />}
+            className="bg-transparent text-[#D67E2B]! md:hidden!" />
         </div>
+
       </div>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 justify-center items-center mx-auto w-full">

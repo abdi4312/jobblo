@@ -25,7 +25,7 @@ export const JobCard = ({ job }: JobCardProps) => {
   const badgeColor = categoryColorMap[catName] || "bg-[#EF7909]";
 
   return (
-    <div className={`mx-auto bg-[#FFFFFF1A] sm:w-110 rounded-xl shadow-md cursor-pointer overflow-hidden`} onClick={handleCardClick}>
+    <div className={`mx-auto bg-[#FFFFFF1A] w-full max-w-110 lg:min-w-100 rounded-xl shadow-md cursor-pointer overflow-hidden`} onClick={handleCardClick}>
       {/* Image Section */}
       <div className="relative w-full h-45 bg-[#f0f0f0] flex items-center justify-center">
 

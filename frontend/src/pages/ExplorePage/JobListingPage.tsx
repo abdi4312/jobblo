@@ -3,7 +3,6 @@ import { useLocation, useSearchParams } from "react-router-dom";
 // import { Search } from "../../components/Explore/Search/search.tsx";
 import { Categories } from "../../components/Explore/jobs/Categories.tsx";
 import Jobs from "../../components/Explore/jobs/Jobs.tsx";
-import Jobimg from "../../assets/images/job-listing/job-img.png"
 
 export default function JobListingPage() {
   const location = useLocation();
@@ -35,26 +34,42 @@ export default function JobListingPage() {
   }, []);
 
   return <>
-    <div className="max-w-300 mx-auto flex gap-10 pt-15 overflow-hidden">
-      {/* <Search onSearchChange={setSearchQuery} value={searchQuery} /> */}
-      <div>
+    <div className="max-w-300 mx-auto px-4 py-10">
+      {/* Grid container: Mobile pe 1 column, Desktop pe 12 columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-        <div className="text-[40px] font-bold pb-10">
-          <h1>Finn ditt neste oppdrag</h1>
+        {/* LEFT SIDE: Jobs & Categories (Takes 9 columns on desktop) */}
+        <div className="lg:col-span-9 w-full order-2 lg:order-1">
+          <div className="text-[28px] md:text-[40px] font-bold pb-6 md:pb-10">
+            <h1 className="leading-tight">Finn ditt neste oppdrag</h1>
+          </div>
+
+          {/* Categories Horizontal Scroll */}
+          <div className="mb-10">
+            <Categories
+              showTitle={false}
+              allowMultiSelect={true}
+              onCategoriesChange={setSelectedCategories}
+              searchQuery={searchQuery}
+              onSearchClear={() => setSearchQuery("")}
+            />
+          </div>
+
+          {/* Jobs Listing */}
+          <div className="w-full">
+            <Jobs selectedCategories={selectedCategories} searchQuery={searchQuery} />
+          </div>
         </div>
 
-        <Categories
-          showTitle={false}
-          allowMultiSelect={true}
-          onCategoriesChange={setSelectedCategories}
-          searchQuery={searchQuery}
-          onSearchClear={() => setSearchQuery("")}
-        />
-        <Jobs selectedCategories={selectedCategories} searchQuery={searchQuery} />
-      </div>
+        {/* RIGHT SIDE: Sidebar (Takes 3 columns on desktop) */}
+        <div className="lg:col-span-3 w-full order-1 lg:order-2">
+          <div className="bg-[#1b5cdd] w-full min-h-35.75 lg:h-154.5 rounded-lg border-4 border-white sticky top-24 flex items-center justify-center p-6 shadow-lg">
+            <span className="text-white font-semibold text-lg text-center">
+              Annonse / Sidebar
+            </span>
+          </div>
+        </div>
 
-      <div className="hidden lg:block">
-        <img src={Jobimg} alt="" />
       </div>
     </div>
 
