@@ -1,15 +1,9 @@
 const Subscription = require('../models/Subscription');
+const { setCookie } = require("../utils/setCookie.js");
 
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-
-const cookieOptions = {
-  httpOnly: true,          // JS se access nahi hoga, secure
-  secure: false,           // true in production with HTTPS
-  sameSite: 'lax',         // CSRF protection
-  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-};
 
 exports.register = async (req, res) => {
     try {
@@ -24,7 +18,7 @@ exports.register = async (req, res) => {
         
         // Set token in cookie if it exists
         if (token) {
-            res.cookie('token', token, cookieOptions);
+            setCookie(res, token);
         }
 
         await Subscription.create({
@@ -66,7 +60,7 @@ exports.login = async (req, res) => {
         
         // Set token in cookie if it exists
         if (token) {
-            res.cookie('token', token, cookieOptions);
+            setCookie(res, token);
         }
         
         res.json({ user, token });
