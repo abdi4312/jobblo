@@ -6,20 +6,10 @@ import { HowItWorks } from "../../components/landing/HowItWorks.tsx";
 export default function LandingPage() {
   return (
     <>
-      <div>
-        <div >
-          <Hero />
-          <div />
-        </div>
-        <Info />
-        <Guide />
-        <div className="">
-          <HowItWorks />
-        </div>
-        {/* <Categories /> */}
-        {/* <Subscription /> */}
-        {/* <Testimonials /> */}
-      </div>
+      <Hero />
+      <Info />
+      <Guide />
+      <HowItWorks />
     </>
   );
 }
