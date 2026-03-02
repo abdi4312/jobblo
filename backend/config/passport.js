@@ -1,3 +1,5 @@
+const Subscription = require('../models/Subscription');
+
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
@@ -64,7 +66,7 @@ passport.use(new GoogleStrategy({
                 avatarUrl: profile.photos[0]?.value,
                 verified: true,
                 role: 'user',
-                subscription: 'free',
+                subscription: 'Standard',
                 followers: [],
                 following: [],
                 earnings: 0,
@@ -75,8 +77,18 @@ passport.use(new GoogleStrategy({
                     providerId: profile.id
                 }]
             });
-
             await user.save();
+            console.log('User saved successfully:', user);
+         await Subscription.create({
+              userId: user._id,
+            
+              currentPlan: {
+                plan: "Standard",
+                planType: "private",
+                startDate: new Date(),
+                status: "active",
+              }    
+            })
             console.log('New user created successfully:', user.email);
         } catch (createError) {
             console.log('User creation failed (likely duplicate email):', createError.message);
@@ -100,8 +112,7 @@ passport.use(new GoogleStrategy({
                 });
                 await user.save();
             }
-        }
-
+        } 
         console.log('User operation completed for:', user?.email);
         return done(null, user);
     } catch (error) {
