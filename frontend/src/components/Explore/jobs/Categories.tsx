@@ -56,56 +56,58 @@ export function Categories({
 
   return (
     <>
-      <div className="pb-6 overflow-hidden">
-        {/* FIXED: added flex-wrap or overflow handling for clean look */}
-        <div className="flex gap-3.5 max-w-4xl mx-auto overflow-x-scroll">
-          {isLoading ? (
-            // Jab data load ho raha ho, InfinitySpin dikhao
-            Array.from({ length: 4 }).map((_, index) => (
-              <CategoriesSkeleton key={index} />
-            ))
-          ) :
-            (
-              category.map((item) => {
-                // FIXED: Fetching style from config with a fallback
-                const style = categoryStyles[item.name] || {
-                  icon: "help_outline",
-                  color: "#000",
-                  active: "#F3F4F6"
-                };
+      <div className="w-full md:max">
+        <div className="pb-6 overflow-auto">
+          {/* FIXED: added flex-wrap or overflow handling for clean look */}
+          <div className="flex gap-3.5 max-w-4xl mx-auto">
+            {isLoading ? (
+              // Jab data load ho raha ho, InfinitySpin dikhao
+              Array.from({ length: 4 }).map((_, index) => (
+                <CategoriesSkeleton key={index} />
+              ))
+            ) :
+              (
+                category.map((item) => {
+                  // FIXED: Fetching style from config with a fallback
+                  const style = categoryStyles[item.name] || {
+                    icon: "help_outline",
+                    color: "#000",
+                    active: "#F3F4F6"
+                  };
 
-                // Check if currently selected (for active state)
-                const isSelected = selectedCategories.includes(item.name);
+                  // Check if currently selected (for active state)
+                  const isSelected = selectedCategories.includes(item.name);
 
-                return (
-                  <div
-                    key={item._id}
-                    className="min-w-42 min-h-34.75 p-6 flex items-center rounded-xl"
-                    style={{
-                      // Agar select ho to active color dikhe, warna white/default
-                      backgroundColor: isSelected || !allowMultiSelect ? style.active : "#FFFFFF",
-                      border: `1px solid ${isSelected ? style.color : "transparent"}`
-                    }}
-                    onClick={() => handleCategoryClick(item.name)}
-                  >
-                    <div className="flex flex-col gap-6 w-full">
-                      <div>
-                        {/* Icon with Dynamic Color */}
-                        <span className="material-symbols-outlined text-5xl!" style={{ color: style.color }}>
-                          {style.icon}
-                        </span>
-                      </div>
-                      <div>
-                        {/* Category Name */}
-                        <span className="text-xl font-bold text-[#0A0A0A] block">
-                          {item.name}
-                        </span>
+                  return (
+                    <div
+                      key={item._id}
+                      className="min-w-23.25 min-h-15.75 md:min-w-42 md:min-h-34.75 p-2 sm:p-4 md:p-6 flex items-center rounded-xl"
+                      style={{
+                        // Agar select ho to active color dikhe, warna white/default
+                        backgroundColor: isSelected || !allowMultiSelect ? style.active : "#FFFFFF",
+                        border: `1px solid ${isSelected ? style.color : "transparent"}`
+                      }}
+                      onClick={() => handleCategoryClick(item.name)}
+                    >
+                      <div className="flex flex-col gap-2 md:gap-6 w-full items-center md:items-start">
+                        <div>
+                          {/* Icon with Dynamic Color */}
+                          <span className="material-symbols-outlined text-[24px]! sm:text-[32px]! md:text-5xl!" style={{ color: style.color }}>
+                            {style.icon}
+                          </span>
+                        </div>
+                        <div>
+                          {/* Category Name */}
+                          <span className="text-[12px] sm:text-[15px] md:text-xl font-bold text-[#0A0A0A] block">
+                            {item.name}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })
-            )}
+                  )
+                })
+              )}
+          </div>
         </div>
       </div>
     </>
