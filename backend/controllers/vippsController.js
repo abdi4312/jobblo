@@ -1,3 +1,4 @@
+const setCookie = require("../utils/setCookie.js");
 const Subscription = require("../models/Subscription");
 
 const axios = require("axios");
@@ -133,12 +134,7 @@ exports.vippsCallback = async (req, res) => {
       expiresIn: "24h",
     });
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setCookie.setCookie(res, token);
 
     // 8️⃣ Redirect to frontend success page
     const frontendBase = process.env.FRONTEND_URL.endsWith("/")
