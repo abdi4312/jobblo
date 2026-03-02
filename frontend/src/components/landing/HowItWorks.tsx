@@ -33,11 +33,11 @@ export function HowItWorks() {
     <section className="px-6 font-sans pb-15">
       <div className="max-w-300 mx-auto">
         {/* Main Title */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-[40px] font-bold text-[#0A0A0A] mb-4">
+        <div className="text-center mb-8 md:mb-16">
+          <h2 className="text-[28px] md:text-4xl md:text-[40px] font-bold text-[#0A0A0A] mb-4">
             Kom i gang med <span className="text-[#2F7E47]">4 trinn</span>
           </h2>
-          <p className="text-[#0A0A0A] text-base font-light">
+          <p className="text-[#0A0A0A] text-[12px] md:text-base font-light">
             Enkelt, raskt og trygt – slik finner du ditt neste oppdrag
           </p>
         </div>
@@ -53,7 +53,7 @@ export function HowItWorks() {
               >
                 {/* Top Right Green Badge */}
                 <div
-                  className="absolute top-0 right-4 w-10 h-14 bg-[#2F7E47] text-white font-bold flex items-center justify-center text-sm"
+                  className="absolute top-0 right-7.5 md:right-4 w-10 h-14 bg-[#2F7E47] text-white font-bold flex items-center justify-center text-sm"
                   style={{
                     clipPath: "polygon(0 0, 100% 0, 100% 100%, 50% 85%, 0 100%)",
                   }}

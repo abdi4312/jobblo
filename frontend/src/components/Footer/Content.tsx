@@ -1,5 +1,6 @@
 import { Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import FooterImg from "../../assets/images/Footer/footer-img.png";
 
 const SocialIcon = [
     { Icon: Facebook, href: "#" },
@@ -35,17 +36,17 @@ const Legal = [
 
 export default function Content() {
     return (
-        <div className="max-w-300 mx-auto flex justify-between gap-12 mb-16">
+        <div className="max-w-300 mx-auto flex flex-col lg:flex-row justify-between gap-12 mb-16 overflow-hidden">
             <div className="lg:col-span-2">
                 <div className="mb-8 lg:max-w-106.25">
-                    <p className="text-white text-[32px] font-normal italic tracking-[-1px]">
+                    <p className="text-white text-[20px] sm:text-[26px] text-center md:text-[32px] font-normal italic tracking-[-1px] lg:text-left">
                         Norges ledende plattform for fleksibelt arbeid og spennende
                         oppdrag.
                     </p>
                 </div>
 
                 {/* Social Icons */}
-                <div className="flex gap-4">
+                <div className="flex gap-4 justify-center lg:justify-start">
                     {SocialIcon.map(({ Icon, href }, index) => (
                         <a
                             key={index}
@@ -58,8 +59,12 @@ export default function Content() {
                 </div>
             </div>
 
-            <div className='flex gap-16'>
-                <div className='max-w-20'>
+            <div className="flex justify-center items-center lg:hidden">
+                <img src={FooterImg} alt="Footer Image" className="w-45.75 h-[78.1px] sm:w-52 sm:h-25" />
+            </div>
+
+            <div className='flex justify-between gap-6 md:gap-16'>
+                <div className='max-w-14 md:max-w-20'>
                     <h4 className="text-white font-medium mb-4 text-base">
                         Produkt
                     </h4>
@@ -77,7 +82,7 @@ export default function Content() {
                     </ul>
                 </div>
 
-                <div className='max-w-20'>
+                <div className='max-w-14 md:max-w-20'>
                     <h4 className="text-white font-medium mb-4 text-base">
                         Ressurser
                     </h4>
@@ -97,7 +102,7 @@ export default function Content() {
                     </ul>
                 </div>
 
-                <div className='max-w-20'>
+                <div className='max-w-14 md:max-w-20'>
                     <h4 className="text-white font-medium mb-4 text-base">
                         Selskap
                     </h4>
@@ -115,7 +120,7 @@ export default function Content() {
                     </ul>
                 </div>
 
-                <div className='max-w-20'>
+                <div className='max-w-14 md:max-w-20'>
                     <h4 className="text-white font-medium mb-4 text-base">
                         Juridisk
                     </h4>

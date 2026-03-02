@@ -16,6 +16,7 @@ export default function Header() {
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [showHeader, setShowHeader] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -161,33 +162,94 @@ export default function Header() {
   return (
     <>
       {/* <header className={`${showHeader ? "translate-y-0" : "-translate-y-full"} bg-white transition-transform duration-300 fixed top-0 left-0 right-0 z-50`}> */}
-      <header className={`bg-white`}>
-        <div className="h-22.75 max-w-300 mx-auto flex justify-between items-center">
-          <div className="h-10.75 w-53.5" onClick={() => navigate("/")}>
+      <header className="bg-white relative mb-5 md:mb-16">
+        <div className="h-14 md:h-22.75 max-w-300 mx-auto flex justify-between items-center px-4 lg:px-0">
+
+          {/* LOGO */}
+          <div
+            className="h-10.75 w-40 sm:w-53.5 cursor-pointer"
+            onClick={() => navigate("/")}
+          >
             <Icons.JobbloIcon />
           </div>
+
+          {/* NAV LINKS (DESKTOP) */}
           <div>
-            <div>
-              <ul className="flex gap-8 list-none">
-                {navLinks.map((link: NavLink, index: number) => (
-                  <li key={index}>
-                    <NavLink
-                      to={link.path}
-                      className={({ isActive }) =>
-                        `transition-all font-light text-[16px]! text-[#0A0A0A9E]! cursor-pointer ${isActive
-                          ? "text-black"
-                          : "text-[#4b4b4b] hover:text-black"
-                        }`
-                      }
-                    >
-                      {link.name}
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
+            <ul className="hidden md:flex gap-8 list-none">
+              {navLinks.map((link: NavLink, index: number) => (
+                <li key={index}>
+                  <NavLink
+                    to={link.path}
+                    className={({ isActive }) =>
+                      `transition-all font-light text-[16px]! text-[#0A0A0A9E]! cursor-pointer ${isActive
+                        ? "text-black"
+                        : "text-[#4b4b4b] hover:text-black"
+                      }`
+                    }
+                  >
+                    {link.name}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* RIGHT SIDE */}
+          <div className="flex items-center gap-4">
+
+            {/* HAMBURGER */}
+            <button
+              className="md:hidden text-2xl"
+              onClick={() => setMenuOpen(true)}
+            >
+              ☰
+            </button>
+
+            {/* VIPPS BUTTON */}
+            <div className="hidden md:block">
+              <VippsButton />
             </div>
           </div>
-          <VippsButton />
+        </div>
+
+        {/* BACKDROP */}
+        {menuOpen && (
+          <div
+            className="fixed inset-0 bg-black/40 z-40 md:hidden"
+            onClick={() => setMenuOpen(false)}
+          />
+        )}
+
+        {/* SIDEBAR */}
+        <div
+          className={`fixed top-0 left-0 h-full w-64 bg-white z-50 transform transition-transform duration-300 md:hidden ${menuOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
+        >
+          {/* HEADER */}
+          <div className="flex justify-between items-center p-4 border-b">
+            <span className="font-semibold">Menu</span>
+            <button onClick={() => setMenuOpen(false)}>✕</button>
+          </div>
+
+          {/* LINKS */}
+          <ul className="flex flex-col gap-4 p-4">
+            {navLinks.map((link: NavLink, index: number) => (
+              <li key={index}>
+                <NavLink
+                  to={link.path}
+                  onClick={() => setMenuOpen(false)}
+                  className="block text-gray-700! hover:text-black!"
+                >
+                  {link.name}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+
+          {/* BUTTON */}
+          <div className="p-4 border-t">
+            <VippsButton />
+          </div>
         </div>
       </header>
     </>

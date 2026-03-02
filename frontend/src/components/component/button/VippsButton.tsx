@@ -16,7 +16,7 @@ export function VippsButton() {
       {isAuth ? (
         <Button label="Min Side" size="lg" icon={<Icon.VippsIcon />} onClick={() => navigate("profile")}></Button>
       ) : (
-        <Button label="Logg inn/Registrer deg" size="lg" onClick={handleLogin} ></Button>
+        <Button label="Logg inn" size="lg" onClick={handleLogin} ></Button>
       )}
     </>
   );

@@ -86,7 +86,7 @@ export function Guide() {
     <section className="py-20 px-6 lg:px-20">
       <div className="max-w-300 mx-auto">
         {/* Header - Center aligned with Jobblo Logo touch */}
-        <h2 className="text-[40px] font-bold text-center leading-10 mb-16 text-[#0A0A0A]">
+        <h2 className="text-[28px] md:text-[40px] font-bold text-center leading-10 mb-[28px] md:mb-16 text-[#0A0A0A]">
           Hvorfor velge
           <span className="inline-flex items-center">
             <Icons.JobbloIcon className="w-full h-full" />
@@ -96,22 +96,22 @@ export function Guide() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left: Image Side */}
-          <div className="relative">
+          <div className="relative flex justify-center">
             {/* Custom Arched Shape Container */}
             <div className="relative ">
               <img
                 src={ChooseImage}
                 alt="Worker"
-                className="max-w-145 max-h-140.75 object-cover"
+                className="w-145 max-h-140.75 object-cover"
               />
 
               {/* Glassmorphism Badge */}
               <div className="absolute max-w-45 max-h-20 bottom-7 left-7 backdrop-blur-[17.6px] p-3 rounded-t-xl rounded-r-xl flex gap-3">
-                <span className="text-[40px] font-semibold items-center text-[#2F7E47]">
+                <span className="text-[32px] md:text-[40px] font-semibold items-center text-[#2F7E47]">
                   250
                 </span>
                 <div className="flex flex-col justify-end">
-                  <span className="text-base font-light text-[#0A0A0A]">
+                  <span className="text-[14px] md:text-base font-light text-[#0A0A0A]">
                     Jobs/Day
                   </span>
                 </div>
@@ -135,7 +135,7 @@ export function Guide() {
                   <h3 className="text-xl font-bold text-[#0A0A0A]">
                     {feature.title}
                   </h3>
-                  <p className="text-[#0A0A0A] text-sm md:text-base font-light max-w-[439px]">
+                  <p className="text-[#0A0A0A] text-sm md:text-base font-light max-w-109.75">
                     {feature.description}
                   </p>
                 </div>
