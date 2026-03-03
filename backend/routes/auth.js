@@ -1,6 +1,7 @@
 const {iduraCallback} = require('../controllers/iduraAuthcontroller');
 const vippsController = require('../controllers/vippsController');
 const User = require('../models/User');
+const { setCookie } = require("../utils/setCookie.js");
 
 const {authenticate} = require('../middleware/auth');
 
@@ -148,14 +149,8 @@ router.get('/google/callback',
                 { expiresIn: '24h' }
             );
 
-           const cookieOptions = {
-               httpOnly: true,         
-                secure: false,           
-                sameSite: 'lax',         
-                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-            };
             // Token ko cookie mein set karein
-            res.cookie('token', token, cookieOptions);
+            setCookie(res, token);
 
             return res.redirect(process.env.FRONTEND_URL + 'oauth-success');
 
