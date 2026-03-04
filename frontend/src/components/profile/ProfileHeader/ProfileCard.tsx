@@ -17,7 +17,7 @@ interface ProfileCardProps {
 const ProfileCard: React.FC<ProfileCardProps> = ({ user, activeJobs, completedJobs }) => {
     return (
         <>
-            <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 my-12.25'>
+            <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 my-4 md:my-12.25'>
                 <div className='flex flex-col bg-[#FFFFFF1A] shadow-md py-5.25 rounded-[14px] px-6 gap-2.5'>
                     <div className='flex items-center text-[#2F7E47] gap-2'>
                         <span><CircleCheck size={18} /></span>
