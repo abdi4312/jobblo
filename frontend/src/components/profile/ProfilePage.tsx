@@ -28,24 +28,29 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.content}>
-        <ProfileHeader />
-        <Verified/>
-        <CoinsSection />
-        <ProfileMenuSection />
+    <>
+      <div className="max-w-300 mx-auto">
+        <div className=" bg-white p-6">
+          <ProfileHeader handlelogout={handleLogout} />
+          {/* <Verified /> */}
+          <CoinsSection />
+        </div>
 
-        {/* Logout Button */}
-        <button
-          onClick={handleLogout}
-          className={styles.logoutButton}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
-            logout
-          </span>
-          Logg ut
-        </button>
+        <div className="p-6 bg-white mt-6">
+          <ProfileMenuSection />
+        </div>
       </div>
-    </div>
+
+      {/* Logout Button */}
+      {/* <button
+        onClick={handleLogout}
+        className={styles.logoutButton}
+      >
+        <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+          logout
+        </span>
+        Logg ut
+      </button> */}
+    </>
   );
 }
