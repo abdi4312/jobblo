@@ -1,4 +1,3 @@
-import styles from "./ProfilePage.module.css";
 import { ProfileHeader } from "./ProfileHeader/ProfileHeader";
 import { CoinsSection } from "./CoinsSection/CoinsSection";
 import { ProfileMenuSection } from "./ProfileMenuSection/ProfileMenuSection";
@@ -6,7 +5,6 @@ import { useUserStore } from "../../stores/userStore";
 import { useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
 import { App } from 'antd';
-import Verified from "../verified/Verified";
 
 export default function ProfilePage() {
   const logout = useUserStore((state) => state.logout);
@@ -30,27 +28,16 @@ export default function ProfilePage() {
   return (
     <>
       <div className="max-w-300 mx-auto">
-        <div className=" bg-white p-6">
+        <div className=" bg-white p-4 md:p-6">
           <ProfileHeader handlelogout={handleLogout} />
           {/* <Verified /> */}
           <CoinsSection />
         </div>
-
-        <div className="p-6 bg-white mt-6">
+        
+        <div className="p-4 md:p-6 bg-white mt-6">
           <ProfileMenuSection />
         </div>
       </div>
-
-      {/* Logout Button */}
-      {/* <button
-        onClick={handleLogout}
-        className={styles.logoutButton}
-      >
-        <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
-          logout
-        </span>
-        Logg ut
-      </button> */}
     </>
   );
 }
