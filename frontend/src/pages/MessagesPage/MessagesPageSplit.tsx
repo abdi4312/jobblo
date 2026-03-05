@@ -16,10 +16,14 @@ import type { Contract } from "../../api/contractAPI";
 import { getContractById } from "../../api/contractAPI";
 import { ContractMessage } from "../../components/chat/ContractMessage/ContractMessage";
 import { CreateContractModal } from "../../components/chat/CreateContractModal/CreateContractModal";
+import ChatHeader from "../../components/chat/ChatHeader";
+import MessageList from "../../components/chat/MessageList";
+import MessageInput from "../../components/chat/MessageInput";
+import ConversationList from "../../components/chat/ConversationList";
 
 interface MessageData {
   chatId: string;
-  message: { text: string; [key: string]: any };
+  message: { text: string;[key: string]: any };
 }
 
 interface ReceiveMessagePayload {
@@ -180,10 +184,10 @@ export function MessagesPageSplit() {
         prev.map((c) =>
           c._id === data.chatId
             ? {
-                ...c,
-                lastMessage: data.message.text,
-                updatedAt: new Date().toISOString(),
-              }
+              ...c,
+              lastMessage: data.message.text,
+              updatedAt: new Date().toISOString(),
+            }
             : c
         )
       );
@@ -268,24 +272,33 @@ export function MessagesPageSplit() {
     }
   };
 
-  const formatTime = (dateString?: string) => {
+  const formatTime = (dateString?: string): string => {
     if (!dateString) return "";
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const hours = diff / (1000 * 60 * 60);
 
-    if (hours < 24) {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
+
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+
+    if (diffMs < 0) return "";
+
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+
+    // Same day → show time
+    if (diffHours < 24) {
       return date.toLocaleTimeString("nb-NO", {
         hour: "2-digit",
         minute: "2-digit",
       });
-    } else {
-      return date.toLocaleDateString("nb-NO", {
-        day: "2-digit",
-        month: "2-digit",
-      });
     }
+
+    // Older → show date + year
+    return date.toLocaleDateString("nb-NO", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",   // 👈 year add kiya
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -400,11 +413,11 @@ export function MessagesPageSplit() {
 
   return (
     <div
-      className={styles.pageContainer}
-      style={{ minHeight: "100vh", background: "#fcf9eb" }}
+      className=""
+      style={{ minHeight: "100vh" }}
     >
       {/* Back button to leave messages page */}
-      <div className={styles.backButtonContainer}>
+      {/* <div className={styles.backButtonContainer}>
         <button
           className={styles.pageBackButton}
           onClick={() => navigate(returnPath)}
@@ -413,197 +426,82 @@ export function MessagesPageSplit() {
           <span className="material-symbols-outlined">arrow_back</span>
           Tilbake
         </button>
-      </div>
+      </div> */}
 
-      <div className={styles.splitContainer} style={{ minHeight: "600px" }}>
+      {/* <div className={`styles.splitContainer`} style={{ minHeight: "600px" }}> */}
+      <div className={`max-w-300 max-h-195.25 mx-auto flex bg-[#FFFFFF1A] p-6 rounded-xl shadow-md`} style={{ minHeight: "600px" }}>
         {/* LEFT SIDEBAR - Chat List */}
         <div
-          className={styles.sidebar}
-          style={{
-            display: conversationId && isMobile ? "none" : "flex",
-            minHeight: "400px",
-          }}
+          className={`${conversationId && isMobile ? "hidden" : "flex"
+            } flex-col w-full xl:w-[380px] xl:min-w-[380px] xl:max-w-[380px] border-r border-[#e8e8e8] bg-[#FFFFFF1A] overflow-hidden transition-all`}
+          style={{ minHeight: "400px" }}
         >
           {/* Filter Tabs */}
-          <div className={styles.filterTabs}>
-            {(["Alle", "Mine Oppdrag", "Forespørsler"] as FilterType[]).map(
-              (filter) => (
-                <button
-                  key={filter}
-                  className={`${styles.filterTab} ${
-                    activeFilter === filter ? styles.active : ""
+          <div className="flex gap-2 p-4 bg-[#FFFFFF1A] border-bottom flex-wrap">
+            {(["Alle", "Mine Oppdrag", "Forespørsler"] as FilterType[]).map((filter) => (
+              <button
+                key={filter}
+                className={`flex-1 py-2 px-3 rounded-full border text-[11px] sm:text-[14px] whitespace-nowrap overflow-hidden text-ellipsis transition-all duration-200 ${activeFilter === filter
+                  ? "bg-[#ea7e15] text-white border-[#ea7e15]"
+                  : "bg-[#FFFFFF1A] shadow-md hover:bg-[#2F7E4740] hover:text-white text-[#2B2B2B]"
                   }`}
-                  onClick={() => setActiveFilter(filter)}
-                >
-                  {filter}
-                </button>
-              )
-            )}
+                onClick={() => setActiveFilter(filter)}
+              >
+                {filter}
+              </button>
+            ))}
           </div>
 
           {/* Conversations List */}
-          <div className={styles.conversationsList}>
-            {loading ? (
-              <div className={styles.empty}>
-                <p>Laster...</p>
-              </div>
-            ) : filteredChats.length === 0 ? (
-              <div className={styles.empty}>
-                <span
-                  className="material-symbols-outlined"
-                  style={{ fontSize: "36px", color: "#ccc" }}
-                >
-                  chat_bubble_outline
-                </span>
-                <p
-                  style={{ fontSize: "14px", color: "#666", marginTop: "8px" }}
-                >
-                  Ingen meldinger
-                </p>
-              </div>
-            ) : (
-              filteredChats.map((chat) => {
-                const otherPerson =
-                  chat.clientId._id === user?._id
-                    ? chat.providerId
-                    : chat.clientId;
-
-                const hasUnread = isUnread(chat);
-
-                return (
-                  <div
-                    key={chat._id}
-                    className={`${styles.chatCard} ${
-                      conversationId === chat._id ? styles.activeChatCard : ""
-                    }`}
-                    onClick={() => navigate(`/messages/${chat._id}`)}
-                  >
-                    <div className={styles.chatHeader}>
-                      <div className={styles.userBadge}>
-                        <div className={styles.userAvatar}>
-                          {otherPerson.avatarUrl ? (
-                            <img
-                              src={otherPerson.avatarUrl}
-                              alt={otherPerson.name}
-                            />
-                          ) : (
-                            <span>{otherPerson.name?.charAt(0) || "?"}</span>
-                          )}
-                        </div>
-                        <span className={styles.userName}>
-                          {otherPerson.name || "Ukjent bruker"}
-                        </span>
-                        {hasUnread && (
-                          <span className={styles.unreadBadge}></span>
-                        )}
-                      </div>
-                      <span className={styles.timeAgo}>
-                        {formatTime(chat.updatedAt)}
-                      </span>
-                    </div>
-
-                    <h3 className={styles.jobHeading}>
-                      {chat.serviceId?.title || "Jobb"}
-                    </h3>
-
-                    <p className={styles.messagePreview}>
-                      {chat.lastMessage || "Start samtalen..."}
-                    </p>
-
-                    <button
-                      className={styles.deleteBtn}
-                      onClick={(e) => handleDeleteChat(e, chat._id)}
-                      aria-label="Slett samtale"
-                    >
-                      <span className="material-symbols-outlined">close</span>
-                    </button>
-                  </div>
-                );
-              })
-            )}
-          </div>
+          <ConversationList
+            loading={loading}
+            filteredChats={filteredChats}
+            user={user}
+            conversationId={conversationId}
+            isUnread={isUnread}
+            formatTime={formatTime}
+          />
         </div>
 
         {/* RIGHT SIDE - Conversation View */}
         <div
-          className={styles.conversationPanel}
-          style={{
-            display: !conversationId && isMobile ? "none" : "flex",
-            minHeight: "400px",
-          }}
+          className={`flex-1 flex flex-col min-w-0 max-w-full bg-[#FFFFFFB2] shadow-md rounded-[14px] ml-4 overflow-hidden xl:static xl:h-auto ${!conversationId && isMobile ? "hidden" : "flex"
+            }`}
+          style={{ minHeight: "400px" }}
         >
           {!conversationId ? (
-            <div className={styles.emptyConversation}>
+            <div className="flex flex-col items-center justify-center h-full text-[#999]">
               <span
-                className="material-symbols-outlined"
-                style={{ fontSize: "64px", color: "#ccc" }}
+                className="material-symbols-outlined text-[64px] text-[#ccc]"
               >
                 chat
               </span>
-              <p style={{ fontSize: "16px", color: "#666", marginTop: "16px" }}>
+              <p className="text-[16px] text-[#666] mt-4">
                 Velg en samtale for å se meldinger
               </p>
             </div>
           ) : loadingChat ? (
-            <div className={styles.emptyConversation}>
-              <p>Laster samtale...</p>
+            <div className="flex flex-col items-center justify-center h-full text-[#999]">
+              <p className="animate-pulse">Laster samtale...</p>
             </div>
           ) : !activeChat ? (
-            <div className={styles.emptyConversation}>
+            <div className="flex flex-col items-center justify-center h-full text-[#999]">
               <p>Samtale ikke funnet</p>
             </div>
           ) : (
             <>
               {/* Chat Header */}
-              <div className={styles.conversationHeader}>
-                {/* Back button for mobile */}
-                {isMobile && (
-                  <button
-                    className={styles.backButton}
-                    onClick={() => navigate("/messages")}
-                    aria-label="Tilbake til samtaler"
-                  >
-                    <span className="material-symbols-outlined">
-                      arrow_back
-                    </span>
-                  </button>
-                )}
-
-                <div className={styles.headerUser}>
-                  <div className={styles.headerAvatar}>
-                    {otherUser?.avatarUrl ? (
-                      <img src={otherUser.avatarUrl} alt={otherUser.name} />
-                    ) : (
-                      <span>{otherUser?.name?.charAt(0) || "?"}</span>
-                    )}
-                  </div>
-                  <div className={styles.headerInfo}>
-                    <h3>{otherUser?.name || "Chat"}</h3>
-                    {activeChat.serviceId && (
-                      <p className={styles.jobContext}>
-                        Angående: {activeChat.serviceId.title || "Jobb"}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Send Contract Button */}
-                {!contract?._id && (
-                  <button
-                    className={styles.contractButton}
-                    onClick={() => setShowCreateContract(true)}
-                  >
-                    <span className="material-symbols-outlined">
-                      description
-                    </span>
-                    Send Contract
-                  </button>
-                )}
-              </div>
+              <ChatHeader
+                isMobile={isMobile}
+                otherUser={otherUser}
+                activeChat={activeChat}
+                contract={contract}
+                setShowCreateContract={setShowCreateContract}
+              />
 
               {/* Contract Display */}
               {contract && userId && (
-                <div className={styles.contractSection}>
+                <div className="px-4 bg-[#FFFFFFB2]">
                   <ContractMessage
                     contract={contract}
                     currentUserId={userId}
@@ -613,107 +511,29 @@ export function MessagesPageSplit() {
               )}
 
               {/* Messages Area */}
-              <div className={styles.messagesArea}>
-                {messages.length === 0 ? (
-                  <div className={styles.emptyMessages}>
-                    <span
-                      className="material-symbols-outlined"
-                      style={{ fontSize: "48px", color: "#ccc" }}
-                    >
-                      chat
-                    </span>
-                    <p>Ingen meldinger ennå</p>
-                    <p
-                      style={{
-                        fontSize: "14px",
-                        color: "#999",
-                        marginTop: "8px",
-                      }}
-                    >
-                      Send en melding for å starte samtalen
-                    </p>
-                  </div>
-                ) : (
-                  Object.entries(messageGroups).map(([date, msgs]) => (
-                    <div key={date}>
-                      <div className={styles.dateLabel}>
-                        {formatDate(msgs[0].createdAt)}
-                      </div>
-                      {msgs.map((msg, index) => {
-                        const senderId =
-                          typeof msg.senderId === "string"
-                            ? msg.senderId
-                            : (msg.senderId as any)?._id;
-                        const senderName =
-                          typeof msg.senderId === "object"
-                            ? (msg.senderId as any)?.name
-                            : "Unknown";
-                        const senderAvatar =
-                          typeof msg.senderId === "object"
-                            ? (msg.senderId as any)?.avatarUrl
-                            : undefined;
-                        const isSentByMe = senderId === userId;
-
-                        return (
-                          <div
-                            key={msg._id || index}
-                            className={`${styles.messageWrapper} ${
-                              isSentByMe ? styles.sent : styles.received
-                            }`}
-                          >
-                            {!isSentByMe && (
-                              <div className={styles.avatar}>
-                                {senderAvatar ? (
-                                  <img src={senderAvatar} alt={senderName} />
-                                ) : (
-                                  <div className={styles.avatarPlaceholder}>
-                                    {senderName?.charAt(0) || "?"}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            <div className={styles.messageBubble}>
-                              <p className={styles.messageText}>{msg.text}</p>
-                              <span className={styles.messageTime}>
-                                {formatTime(msg.createdAt)}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))
-                )}
-                <div ref={messagesEndRef} />
-              </div>
+              <MessageList
+                messages={messages}
+                messageGroups={messageGroups}
+                userId={userId}
+                formatDate={formatDate}
+                formatTime={formatTime}
+                messagesEndRef={messagesEndRef}
+              />
 
               {/* Message Input */}
-              <div className={styles.inputArea}>
-                <div className={styles.inputContainer}>
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Skriv en melding..."
-                    onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                    className={styles.messageInput}
-                    disabled={sending}
-                  />
-
-                  <button
-                    type="submit"
-                    className={styles.sendButton}
-                    disabled={!newMessage.trim() || sending}
-                    onClick={handleSend}
-                  >
-                    <span className="material-symbols-outlined">send</span>
-                  </button>
-                </div>
-              </div>
+              <MessageInput
+                newMessage={newMessage}
+                setNewMessage={setNewMessage}
+                handleSend={handleSend}
+                sending={sending}
+              />
             </>
           )}
         </div>
+      </div>
+
+      <div>
+
       </div>
 
       {/* Create Contract Modal */}
