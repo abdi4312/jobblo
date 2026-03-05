@@ -4,6 +4,7 @@ import type { Contract } from "../../../api/contractAPI";
 import { signContract } from "../../../api/contractAPI";
 import { toast } from "react-toastify";
 import { initSocket } from "../../../socket/socket";
+import { ReceiptText, X } from "lucide-react";
 
 interface ContractMessageProps {
   contract: Contract;
@@ -18,6 +19,7 @@ export function ContractMessage({
 }: ContractMessageProps) {
   const [contract, setContract] = useState<Contract | null>(propContract);
   const [signing, setSigning] = useState(false);
+  const [showContract, setShowContract] = useState(false);
 
   // Sync prop changes
   useEffect(() => {
@@ -35,14 +37,14 @@ export function ContractMessage({
   const userHasSigned = isCustomer
     ? contract?.signedByCustomer
     : isProvider
-    ? contract?.signedByProvider
-    : false;
+      ? contract?.signedByProvider
+      : false;
 
   const otherPartySigned = isCustomer
     ? contract?.signedByProvider
     : isProvider
-    ? contract?.signedByCustomer
-    : false;
+      ? contract?.signedByCustomer
+      : false;
 
   const bothSigned =
     Boolean(contract?.signedByCustomer) && Boolean(contract?.signedByProvider);
@@ -90,83 +92,115 @@ export function ContractMessage({
 
   if (!contract?._id) return null;
   return (
-    <div className={styles.contractContainer}>
-      <div className={styles.contractHeader}>
-        <span
-          className="material-symbols-outlined"
-          style={{ color: "#ea7e15" }}
-        >
-          description
-        </span>
-        <h4>Contract Agreement</h4>
-      </div>
+    <>
+      {!showContract && (
+        <div>
+          <div className="flex justify-center  -mt-3">
+            <div className="w-full bg-[#E0883526] border border-[#E0883526] rounded-[6px] py-1 px-4 flex items-center justify-between">
 
-      <div className={styles.contractContent}>
-        <p className={styles.contractText}>{contract?.content}</p>
+              {/* Left Side: Icon & Text */}
+              <div className="flex items-center gap-3 truncate">
+                <span className="text-[#ea7e15] text-[20px] shrink-0">
+                  <ReceiptText size={14} />
+                </span>
+                <p className="m-0 text-[13px] text-[#444] font-medium truncate">
+                  Contract Agreement: <span className="text-[#1a1a1a]">{"Tjenesteavtale"}</span>
+                </p>
+              </div>
 
-        {contract?.price && (
-          <div className={styles.priceSection}>
-            <strong>Agreed Price:</strong> {contract.price} kr
+              {/* Right Side: Detail Button */}
+              <button
+                onClick={() => setShowContract(true)} // Aapka state handler
+                className="flex items-center gap-0.5 pl-2 py-0.5 bg-[#ea7e151a] text-[#ea7e15] border-none rounded-lg text-[12px] font-bold cursor-pointer hover:bg-[#ea7e15] hover:text-white transition-all shrink-0"
+              >
+                Se detaljer
+                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+              </button>
+            </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {contract?.scheduledDate && (
-          <div className={styles.dateSection}>
-            <strong>Scheduled:</strong>{" "}
-            {new Date(contract.scheduledDate).toLocaleDateString("nb-NO")}
+      {showContract && (
+        <div className="bg-[] border border-[#E08835] rounded-xl p-4 mb-3 max-w-106.5">
+          {/* Header */}
+          <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-[#e0e0e0]">
+            <div className="flex items-center gap-2">
+              <span className="">
+                <ReceiptText size={24} />
+              </span>
+              <h4 className="m-0 text-base font-semibold text-[#000000]">
+                Contract Agreement
+              </h4>
+            </div>
+            <div className="bg-[#E0883526] p-2 rounded-[7px] cursor-pointer text-[#E08835] hover:bg-[#E08835] hover:text-white transition-colors" onClick={() => setShowContract(false)}>
+              <X size={18} />
+            </div>
           </div>
-        )}
-      </div>
 
-      <div className={styles.signaturesSection}>
-        <div className={styles.signature}>
-          <span
-            className={`material-symbols-outlined ${
-              contract?.signedByCustomer ? styles.signed : ""
-            }`}
-          >
-            {contract?.signedByCustomer
-              ? "check_circle"
-              : "radio_button_unchecked"}
-          </span>
-          <span>Customer {contract?.signedByCustomer && "✓"}</span>
-        </div>
-        <div className={styles.signature}>
-          <span
-            className={`material-symbols-outlined ${
-              contract?.signedByProvider ? styles.signed : ""
-            }`}
-          >
-            {contract?.signedByProvider
-              ? "check_circle"
-              : "radio_button_unchecked"}
-          </span>
-          <span>Provider {contract?.signedByProvider && "✓"}</span>
-        </div>
-      </div>
+          {/* Content */}
+          <div className="mb-4">
+            <p className="text-sm leading-relaxed text-[#333] mb-3 whitespace-pre-wrap">
+              {contract?.content}
+            </p>
 
-      {bothSigned && (
-        <div className={styles.completedBanner}>
-          <span className="material-symbols-outlined">verified</span>
-          Contract Fully Signed - Order Created
-        </div>
-      )}
+            {contract?.price && (
+              <div className="text-sm p-[8px_12px] bg-[#E0883526] rounded-md mb-2">
+                <strong className="text-[#E08835] mr-2">Agreed Price:</strong> {contract.price} kr
+              </div>
+            )}
 
-      {!userHasSigned && !bothSigned && (
-        <button
-          className={styles.signButton}
-          onClick={handleSign}
-          disabled={signing}
-        >
-          {signing ? "Signing..." : "Sign Contract"}
-        </button>
-      )}
+            {contract?.scheduledDate && (
+              <div className="text-sm p-[8px_12px] bg-[#E0883526] rounded-md mb-2">
+                <strong className="text-[#E08835] mr-2">Scheduled:</strong>{" "}
+                {new Date(contract.scheduledDate).toLocaleDateString("nb-NO")}
+              </div>
+            )}
+          </div>
 
-      {userHasSigned && !otherPartySigned && (
-        <div className={styles.waitingMessage}>
-          Waiting for other party to sign...
-        </div>
-      )}
-    </div>
+          {/* Signatures Section */}
+          <div className="flex gap-4 mb-4 p-3 bg-[#fafafa] rounded-lg">
+            <div className="flex items-center gap-2 text-sm text-[#666]">
+              <span className={`material-symbols-outlined text-[20px] ${contract?.signedByCustomer ? "text-[#4caf50]" : "text-[#ccc]"
+                }`}>
+                {contract?.signedByCustomer ? "check_circle" : "radio_button_unchecked"}
+              </span>
+              <span>Customer {contract?.signedByCustomer && "✓"}</span>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm text-[#666]">
+              <span className={`material-symbols-outlined text-[20px] ${contract?.signedByProvider ? "text-[#4caf50]" : "text-[#ccc]"
+                }`}>
+                {contract?.signedByProvider ? "check_circle" : "radio_button_unchecked"}
+              </span>
+              <span>Provider {contract?.signedByProvider && "✓"}</span>
+            </div>
+          </div>
+
+          {/* Status Banners / Buttons */}
+          {bothSigned && (
+            <div className="flex items-center justify-center gap-2 p-3 bg-gradient-to-br from-[#4caf50] to-[#45a049] text-white rounded-lg font-semibold text-sm">
+              <span className="material-symbols-outlined text-[20px]">verified</span>
+              Contract Fully Signed - Order Created
+            </div>
+          )}
+
+          {!userHasSigned && !bothSigned && (
+            <button
+              className="w-full p-3 bg-[#ea7e15] text-white border-none rounded-lg text-[15px] font-semibold cursor-pointer transition-colors hover:bg-[#d16d0f] disabled:bg-[#ccc] disabled:cursor-not-allowed"
+              onClick={handleSign}
+              disabled={signing}
+            >
+              {signing ? "Signing..." : "Sign Contract"}
+            </button>
+          )}
+
+          {userHasSigned && !otherPartySigned && (
+            <div className="text-center p-3 bg-[#fff3e0] rounded-lg text-sm text-[#e65100] italic">
+              Waiting for other party to sign...
+            </div>
+          )}
+        </div>)}
+    </>
   );
 }
