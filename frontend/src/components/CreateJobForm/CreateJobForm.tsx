@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ImageUpload } from "./ImageUpload"; // Path sahi check kar lein
+import { ImageUpload } from "./ImageUpload";
 import { Image } from "lucide-react";
 import { BasicInformation } from "./BasicInformation";
 import { TimeAndPlace } from "./TimeAndPlace";
@@ -19,13 +19,12 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
   const [toDate, setToDate] = useState(initialData?.toDate || "");
   const [durationValue, setDurationValue] = useState(initialData?.durationValue || "");
   const [durationUnit, setDurationUnit] = useState(initialData?.durationUnit || "hours");
-  const [paymentType, setPaymentType] = useState("Fastpris");
+  const [paymentType, setPaymentType] = useState(initialData?.paymentType || "Fastpris");
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
 
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const jobData = {
+  const handleFinalSubmit = () => {
+    // Form validation ya extra logic yahan aa sakta hai
+    const jobData: any = {
       title,
       description,
       price: Number(price),
@@ -35,83 +34,99 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
         type: 'Point',
         address,
         city,
-        coordinates: [10.7461, 59.9127] // Default for Oslo, aap isse dynamic bana sakte hain
+        coordinates: [10.7461, 59.9127]
       },
-      categories: [categories].filter(Boolean), // Single selection ko array mein convert kar raha hai
+      categories: [categories].filter(Boolean),
       fromDate,
       toDate,
       duration: durationValue ? { value: Number(durationValue), unit: durationUnit } : null,
-      images: selectedImages
+      images: selectedImages,
+      paymentType
     };
 
     if (!isEditMode && userId) jobData.userId = userId;
+
     onSubmit(jobData);
   };
-
-
+  const handleCancel = () => {
+    // Form reset logic ya redirect logic yahan aa sakta hai
+    setTitle("");
+    setDescription("");
+    setPrice("");
+    setAddress("");
+    setCity("");
+    setCategories("");
+    setUrgent(false);
+    setEquipment("");
+    setFromDate("");
+    setToDate("");
+    setDurationValue("");
+    setDurationUnit("hours");
+    setPaymentType("Fastpris");
+    setSelectedImages([]);
+  }
   return (
-
-    <form onSubmit={handleSubmit}>
-      <div className="bg-[#FFFFFF1A] rounded-xl shadow-md p-6">
+    // yahan e.preventDefault FormActions handle kar lega
+    <form onSubmit={(e) => e.preventDefault()}>
+      <div className="space-y-6">
         {/* 1. Image Upload Section */}
-        <div className="bg-[#FFFFFFB2] p-6 rounded-xl">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-[#2F7E47]"><Image size={20} /></span>
-            <h2 className="font-bold text-[20px] text-[#0A0A0A]">Bilder</h2>
-            <p className="text-[#6A7282] font-normal text-[14px]">(Valgfritt, maks 6)</p>
+        <div className="bg-[#FFFFFF1A] rounded-xl shadow-md p-6">
+          <div className="bg-[#FFFFFFB2] p-6 rounded-xl border border-[#0A0A0A1A]">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-[#2F7E47]"><Image size={20} /></span>
+              <h2 className="font-bold text-[20px] text-[#0A0A0A]">Bilder</h2>
+              <p className="text-[#6A7282] font-normal text-[14px]">(Valgfritt, maks 6)</p>
+            </div>
+            <ImageUpload onImagesChange={(files) => setSelectedImages(files)} />
           </div>
-          <ImageUpload onImagesChange={(files) => setSelectedImages(files)} />
+
+          <BasicInformation
+            title={title}
+            setTitle={setTitle}
+            description={description}
+            setDescription={setDescription}
+            categories={categories}
+            setCategories={setCategories}
+          />
         </div>
 
-        <BasicInformation
-          title={title}
-          setTitle={setTitle}
-          description={description}
-          setDescription={setDescription}
-          categories={categories}
-          setCategories={setCategories}
-        />
-      </div>
+        {/* 2. Time and Place Section */}
+        <div className="bg-[#FFFFFF1A] rounded-xl shadow-md p-6">
+          <TimeAndPlace
+            address={address}
+            setAddress={setAddress}
+            city={city}
+            setCity={setCity}
+            durationValue={durationValue}
+            setDurationValue={setDurationValue}
+            durationUnit={durationUnit}
+            setDurationUnit={setDurationUnit}
+            fromDate={fromDate}
+            setFromDate={setFromDate}
+            toDate={toDate}
+            setToDate={setToDate}
+          />
+        </div>
 
-      <div className="bg-[#FFFFFF1A] rounded-xl shadow-md p-6 mt-6">
-        <TimeAndPlace
-          address={address}
-          setAddress={setAddress}
-          city={city}
-          setCity={setCity}
-          durationValue={durationValue}
-          setDurationValue={setDurationValue}
-          durationUnit={durationUnit}
-          setDurationUnit={setDurationUnit}
-          fromDate={fromDate}
-          setFromDate={setFromDate}
-          toDate={toDate}
-          setToDate={setToDate}
-        />
-      </div>
+        {/* 3. Payment Section */}
+        <div className="bg-[#FFFFFF1A] rounded-xl shadow-md p-6">
+          <PaymentInformation
+            paymentType={paymentType}
+            setPaymentType={setPaymentType}
+            price={price}
+            setPrice={setPrice}
+            urgent={urgent}
+            setUrgent={setUrgent}
+          />
+        </div>
 
-      <div className="bg-[#FFFFFF1A] rounded-xl shadow-md p-6 mt-6">
-        <PaymentInformation
-          paymentType={paymentType}
-          setPaymentType={setPaymentType}
-          price={price}
-          setPrice={setPrice}
-          urgent={urgent}
-          setUrgent={setUrgent}
+        {/* 4. Action Buttons (Responsive & Fixed) */}
+        <FormActions
+          onCancel={handleCancel}
+          onPreview={() => console.log("Previewing:")}
+          onSubmit={handleFinalSubmit}
         />
       </div>
-      {/* 10. Submit Button */}
-      <FormActions
-        onCancel={() => console.log("Cancelled")}
-        onPreview={() => console.log("Preview Mode")}
-        onSubmit={() => console.log("Form Submitted")}
-      />
-      {/* <button
-        type="submit"
-        className="w-full p-[18px] bg-[#4CAF50] text-white rounded-[12px] border-none font-bold text-[18px] cursor-pointer shadow-[0_4px_12px_rgba(76,175,80,0.3)] transition-transform duration-200 hover:bg-[#45a049] active:scale-95"
-      >
-        {isEditMode || initialData ? "✅ Oppdater oppdrag" : "🚀 Publiser oppdrag"}
-      </button> */}
     </form>
   );
 }
