@@ -10,7 +10,6 @@ import {
   type ChatMessage,
 } from "../../api/chatAPI";
 import { useUserStore } from "../../stores/userStore";
-import styles from "./MessagesPageSplit.module.css";
 import { toast } from "react-toastify";
 import type { Contract } from "../../api/contractAPI";
 import { getContractById } from "../../api/contractAPI";
