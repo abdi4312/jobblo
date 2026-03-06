@@ -1,9 +1,10 @@
 import CreateJobForm from "../../components/CreateJobForm/CreateJobForm";
-import mainLink  from "../../api/mainURLs";
+import mainLink from "../../api/mainURLs";
 import { useUserStore } from "../../stores/userStore";
 import { useNavigate } from "react-router-dom";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 import { toast } from 'react-toastify';
+import { BriefcaseBusiness } from "lucide-react";
 
 export default function LeggUtOppdrag() {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export default function LeggUtOppdrag() {
 
   const handleFormSubmit = async (jobData: any) => {
     console.log('Sending job data:', jobData); // Log the data being sent
-    
+
     try {
       const response = await mainLink.post("/api/services", jobData);
 
@@ -45,15 +46,32 @@ export default function LeggUtOppdrag() {
 
   return (
     <>
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        <ProfileTitleWrapper title="Oppdrag" buttonText="Tilbake" />
+      <div className="max-w-300 mx-auto">
+        {/* <ProfileTitleWrapper title="Oppdrag" buttonText="Tilbake" /> */}
+        <div className="flex flex-col gap-4 px-4 md:px-6">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            {/* Icon Container */}
+            <span className="p-4.5 shadow-md text-[#2F7E47] bg-[#FFFFFF1A] rounded-[14px] inline-flex items-center justify-center">
+              <BriefcaseBusiness size={20} />
+            </span>
+
+            {/* Heading - Responsive text size */}
+            <h2 className="text-[28px] md:text-[42px] font-bold leading-tight">
+              Legg ut oppdrag
+            </h2>
+          </div>
+
+          {/* Description - Responsive text size */}
+          <p className="text-[#4A5565] text-[16px] md:text-[18px] font-normal leading-relaxed">
+            Fyll ut informasjonen under for å legge ut ditt oppdrag
+          </p>
+        </div>
+
+        <div >
+          <CreateJobForm onSubmit={handleFormSubmit} userId={userId} />
+        </div>
       </div>
 
-      <div style={{height:"2px", width:"90vw", backgroundColor:"var(--color-muted-gray)", margin:"auto"}}></div>
-
-      <div style={{ padding: "20px", maxWidth:"900px", margin:"auto", paddingBottom:"80px" }}>
-        <CreateJobForm onSubmit={handleFormSubmit} userId={userId} />
-      </div>
     </>
   );
 }
