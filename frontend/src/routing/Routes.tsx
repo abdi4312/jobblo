@@ -85,7 +85,7 @@ export const routes: RouteObject[] = [
         ),
       },
       {
-        path: "Alert",
+        path: "alerts",
         element: (
           <ProtectedRoute>
             <Alert />,
