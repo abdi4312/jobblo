@@ -145,8 +145,8 @@ export function MessagesPageSplit() {
               <button
                 key={filter}
                 className={`flex-1 py-2 px-3 rounded-full border text-[11px] sm:text-[14px] whitespace-nowrap overflow-hidden text-ellipsis transition-all duration-200 ${activeFilter === filter
-                    ? "bg-[#ea7e15] text-white border-[#ea7e15]"
-                    : "bg-[#FFFFFF1A] shadow-md hover:bg-[#2F7E4740] hover:text-white text-[#2B2B2B]"
+                  ? "bg-[#ea7e15] text-white border-[#ea7e15]"
+                  : "bg-[#FFFFFF1A] shadow-md hover:bg-[#2F7E4740] hover:text-white text-[#2B2B2B]"
                   }`}
                 onClick={() => setActiveFilter(filter)}
               >
@@ -161,6 +161,9 @@ export function MessagesPageSplit() {
             user={user}
             conversationId={conversationId}
             isUnread={(chat: any) => {
+              if (chat.clientId._id === userId) {
+                return false;
+              }
               const lastCheck = localStorage.getItem(`lastChatCheck_${userId}_${chat._id}`);
               return lastCheck ? new Date(chat.updatedAt) > new Date(lastCheck) : true;
             }}
