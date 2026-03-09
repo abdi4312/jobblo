@@ -56,7 +56,7 @@ export default function RegisterPage() {
   return (
     <>
       <div className="bg-[#FFFFFF]! min-h-screen">
-        <div className="flex max-w-390.5 mx-auto">
+        <div className="flex mx-auto">
           <div className='w-[50%] relative 2xl:mix-h-236 min-h-screen overflow-hidden hidden lg:block'>
             <Auth />
           </div>
