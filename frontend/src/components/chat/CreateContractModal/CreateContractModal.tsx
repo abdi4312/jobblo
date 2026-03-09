@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import styles from "./CreateContractModal.module.css";
-import { createContract } from "../../../api/contractAPI";
 import { toast } from "react-toastify";
-import { initSocket } from "../../../socket/socket";
+// Sahi Hook import
+import { useContractActions } from "../../../features/contracts/hooks/useContractActions"; 
 
 interface CreateContractModalProps {
   isOpen: boolean;
@@ -29,9 +29,11 @@ export function CreateContractModal({
   const [price, setPrice] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
   const [address, setAddress] = useState("");
-  const [creating, setCreating] = useState(false);
 
-  // Prefill with known service info when opening
+  // Hook se createMutation nikalna (Aapke naye hook ke mutabiq)
+  const { createMutation } = useContractActions(serviceId);
+
+  // Prefill logic (Aapka original logic)
   useEffect(() => {
     if (isOpen) {
       setContent((prev) => prev || serviceDescription || "");
@@ -44,54 +46,38 @@ export function CreateContractModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validations (Aapki original validations)
     if (!content.trim()) {
       toast.error("Contract terms are required");
       return;
     }
-
     if (!price || parseFloat(price) <= 0) {
       toast.error("Valid price is required");
       return;
     }
-
     if (!scheduledDate) {
       toast.error("Scheduled date is required");
       return;
     }
 
-    try {
-      setCreating(true);
-
-      // Create contract API call
-      const contract = await createContract({
-        serviceId,
-        content: content.trim(),
-        price: parseFloat(price),
-        scheduledDate: scheduledDate || undefined,
-        address: address || undefined
-      });
-
-      toast.success("Contract sent successfully!");
-      onContractCreated(); // Notify parent to reload contract
-
-      // --- SOCKET EMIT TO UPDATE CHAT IN REAL-TIME ---
-      const socket = initSocket();
-      socket.emit("join_service", serviceId); // Ensure joined to service room
-      socket.emit("contract_created", { contract });
-
-      onClose();
-
-      // Reset form
-      setContent("");
-      setPrice("");
-      setScheduledDate("");
-      setAddress("");
-    } catch (error: any) {
-      console.error("Create contract error:", error.response.data.error);
-      toast.error( error.response.data.error || "Failed to create contract" );
-    } finally {
-      setCreating(false);
-    }
+    // TanStack Mutation Call
+    createMutation.mutate({
+      serviceId,
+      content: content.trim(),
+      price: parseFloat(price),
+      scheduledDate: scheduledDate || undefined,
+      address: address || undefined
+    }, {
+      onSuccess: () => {
+        // Form Reset aur Modal Close (Success hone par)
+        onContractCreated();
+        onClose();
+        setContent("");
+        setPrice("");
+        setScheduledDate("");
+        setAddress("");
+      }
+    });
   };
 
   return (
@@ -163,16 +149,16 @@ export function CreateContractModal({
               type="button" 
               className={styles.cancelButton}
               onClick={onClose}
-              disabled={creating}
+              disabled={createMutation.isPending} // 'creating' ki jagah TanStack loading
             >
               Cancel
             </button>
             <button 
               type="submit" 
               className={styles.submitButton}
-              disabled={creating}
+              disabled={createMutation.isPending} // 'creating' ki jagah TanStack loading
             >
-              {creating ? "Sending..." : "Send Contract"}
+              {createMutation.isPending ? "Sending..." : "Send Contract"}
             </button>
           </div>
         </form>

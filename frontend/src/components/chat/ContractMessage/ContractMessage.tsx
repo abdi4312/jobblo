@@ -1,101 +1,69 @@
 import { useState, useEffect } from "react";
-import styles from "./ContractMessage.module.css";
-import type { Contract } from "../../../api/contractAPI";
-import { signContract } from "../../../api/contractAPI";
-import { toast } from "react-toastify";
-import { initSocket } from "../../../socket/socket";
 import { ReceiptText, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { initSocket } from "../../../socket/socket";
+import { useContractActions } from "../../../features/contracts/hooks/useContractActions"; 
+import type { Contract } from "../../../features/contracts/types/contract.types";
 
 interface ContractMessageProps {
   contract: Contract;
   currentUserId: string;
-  onContractUpdated?: () => void;
 }
 
 export function ContractMessage({
   contract: propContract,
   currentUserId,
-  onContractUpdated,
 }: ContractMessageProps) {
-  const [contract, setContract] = useState<Contract | null>(propContract);
-  const [signing, setSigning] = useState(false);
+  const queryClient = useQueryClient();
   const [showContract, setShowContract] = useState(false);
+  
+  // Extract Service ID for TanStack Query
+  const serviceId = typeof propContract.serviceId === "string" 
+    ? propContract.serviceId 
+    : propContract.serviceId?._id;
 
-  // Sync prop changes
+  // TanStack Action Hook
+  const { signMutation } = useContractActions(serviceId);
+
+  // Real-time socket sync
   useEffect(() => {
-    setContract(propContract);
-  }, [propContract]);
+    if (!serviceId) return;
 
-  const isCustomer =
-    contract?.customerSnapshot?.userId === currentUserId ||
-    contract?.clientId?._id === currentUserId;
-
-  const isProvider =
-    contract?.providerSnapshot?.userId === currentUserId ||
-    contract?.providerId?._id === currentUserId;
-
-  const userHasSigned = isCustomer
-    ? contract?.signedByCustomer
-    : isProvider
-      ? contract?.signedByProvider
-      : false;
-
-  const otherPartySigned = isCustomer
-    ? contract?.signedByProvider
-    : isProvider
-      ? contract?.signedByCustomer
-      : false;
-
-  const bothSigned =
-    Boolean(contract?.signedByCustomer) && Boolean(contract?.signedByProvider);
-
-  // Real-time socket (one-time init)
-  useEffect(() => {
-    if (!propContract?.serviceId) return;
     const socket = initSocket();
-    const serviceId =
-      typeof propContract.serviceId === "string"
-        ? propContract.serviceId
-        : propContract.serviceId._id;
-
     socket.emit("join_service", serviceId);
 
     const handleContractSigned = (data: { contract: Contract }) => {
       if (data.contract._id !== propContract._id) return;
-      setContract(data.contract); // update UI
-      onContractUpdated?.();
+      // TanStack cache update taake page refresh na karna pare
+      queryClient.setQueryData(["contract", serviceId], data.contract);
     };
 
     socket.on("contract_signed", handleContractSigned);
+    return () => { socket.off("contract_signed", handleContractSigned); };
+  }, [propContract._id, serviceId, queryClient]);
 
-    return () => {
-      socket.off("contract_signed", handleContractSigned);
-    };
-  }, [propContract._id]);
+  // Derived Logic (Aapka original UI logic)
+  const contract = propContract;
+  const isCustomer = contract?.customerSnapshot?.userId === currentUserId || contract?.clientId?._id === currentUserId;
+  const isProvider = contract?.providerSnapshot?.userId === currentUserId || contract?.providerId?._id === currentUserId;
 
-  const handleSign = async () => {
-    if (!contract) return;
-    if (userHasSigned || bothSigned) return;
+  const userHasSigned = isCustomer ? contract?.signedByCustomer : isProvider ? contract?.signedByProvider : false;
+  const otherPartySigned = isCustomer ? contract?.signedByProvider : isProvider ? contract?.signedByCustomer : false;
+  const bothSigned = Boolean(contract?.signedByCustomer) && Boolean(contract?.signedByProvider);
 
-    try {
-      setSigning(true);
-      const updatedContract = await signContract(contract._id);
-      setContract(updatedContract);
-      toast.success("Contract signed successfully!");
-      onContractUpdated?.();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Failed to sign contract");
-    } finally {
-      setSigning(false);
-    }
+  // Sign Function
+  const handleSign = () => {
+    if (!contract?._id || userHasSigned || bothSigned) return;
+    signMutation.mutate(contract._id);
   };
 
   if (!contract?._id) return null;
+
   return (
     <>
       {!showContract && (
         <div>
-          <div className="flex justify-center  -mt-3">
+          <div className="flex justify-center -mt-3">
             <div className="w-full bg-[#E0883526] border border-[#E0883526] rounded-[6px] py-1 px-4 flex items-center justify-between">
 
               {/* Left Side: Icon & Text */}
@@ -110,7 +78,7 @@ export function ContractMessage({
 
               {/* Right Side: Detail Button */}
               <button
-                onClick={() => setShowContract(true)} // Aapka state handler
+                onClick={() => setShowContract(true)} 
                 className="flex items-center gap-0.5 pl-2 py-0.5 bg-[#ea7e151a] text-[#ea7e15] border-none rounded-lg text-[12px] font-bold cursor-pointer hover:bg-[#ea7e15] hover:text-white transition-all shrink-0"
               >
                 Se detaljer
@@ -189,9 +157,9 @@ export function ContractMessage({
             <button
               className="w-full p-3 bg-[#ea7e15] text-white border-none rounded-lg text-[15px] font-semibold cursor-pointer transition-colors hover:bg-[#d16d0f] disabled:bg-[#ccc] disabled:cursor-not-allowed"
               onClick={handleSign}
-              disabled={signing}
+              disabled={signMutation.isPending}
             >
-              {signing ? "Signing..." : "Sign Contract"}
+              {signMutation.isPending ? "Signing..." : "Sign Contract"}
             </button>
           )}
 

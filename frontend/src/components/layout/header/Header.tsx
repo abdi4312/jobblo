@@ -136,7 +136,7 @@ export default function Header() {
   const navLinks: NavLink[] = [
     { name: "Om oss", path: "/om-oss" },
     { name: "Slik fungerer det", path: "/slik-fungerer-det" },
-    { name: "Tjenester", path: "/tjenester" },
+    { name: "Tjenester", path: "/job-listing" },
     { name: "Priser", path: "/priser" },
   ];
 
