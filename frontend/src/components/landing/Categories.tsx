@@ -1,6 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { useCategories } from "../../features/categories/hooks";
 import { LandingCategoriesSkeleton } from "../Loading/LandingCategoriesSkeketon";
+import CleaningImg from "../../assets/images/cleaning.jpg";
+import GardeningImg from "../../assets/images/woman-full-gardening.png";
+import MovingImg from "../../assets/images/courier-moving-out.png";
+import PlumbingImg from "../../assets/images/male-constructionworker.png";
+import PaintingImg from "../../assets/images/painting-wall.jpg";
+
 
 
 export function Info() {
@@ -16,11 +22,11 @@ export function Info() {
 
   // FIXED: Har category ke liye aapka bataya hua custom icon aur color config
   const categoryImage: Record<string, categoryImage> = {
-    "Rengjøring": { Image: "src/assets/images/cleaning.jpg", color: "#EF7909", active: "#EF790933" },
-    "Hagearbeid": { Image: "src/assets/images/woman-full-gardening.png", color: "#2F7E47", active: "#2F7E4733" },
-    "Flytting": { Image: "src/assets/images/courier-moving-out.png", color: "#238CEB", active: "#238CEB33" },
-    "Rørlegger": { Image: "src/assets/images/male-constructionworker.png", color: "#EF7909", active: "#EF790933" },
-    "Maling": { Image: "src/assets/images/painting-wall.jpg", color: "#2F7E47", active: "#2F7E4733" },
+    "Rengjøring": { Image: CleaningImg, color: "#EF7909", active: "#EF790933" },
+    "Hagearbeid": { Image: GardeningImg, color: "#2F7E47", active: "#2F7E4733" },
+    "Flytting": { Image: MovingImg, color: "#238CEB", active: "#238CEB33" },
+    "Rørlegger": { Image: PlumbingImg, color: "#EF7909", active: "#EF790933" },
+    "Maling": { Image: PaintingImg, color: "#2F7E47", active: "#2F7E4733" },
   };
 
   // Click handler function
