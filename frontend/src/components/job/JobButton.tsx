@@ -2,24 +2,27 @@ import React from 'react';
 import { Button } from '../Ui/Button';
 import { Heart, MessageCircle } from 'lucide-react';
 import { TailSpin } from "react-loader-spinner";
+import { useFavoriteToggle } from '../../features/favorites/hook/useFavoriteToggle';
+import { useUserStore } from '../../stores/userStore';
 
 interface JobButtonProps {
     handleSendMessage: () => void;
     handleFavoriteClick: () => void;
     isFavorited: boolean;
     isOwnJob: boolean;
-    isLoading: boolean; // Button action loading (spinner)
+    isMsgLoading: boolean; // Button action loading (spinner)
+    id: string
 }
 
 const JobButton: React.FC<JobButtonProps> = ({
+    id,
     handleSendMessage,
-    handleFavoriteClick,
-    isFavorited,
     isOwnJob,
-    isLoading,
-}) => {
-
-    // Agar pure page ka loading true hai, toh skeleton buttons dikhao
+    isMsgLoading
+}
+) => {
+    const isAuth = useUserStore((state) => state.isAuthenticated);
+    const { isFavorited, handleFavoriteClick, isLoading } = useFavoriteToggle(id, isAuth);
 
     return (
         <div className="mt-10">
@@ -28,8 +31,8 @@ const JobButton: React.FC<JobButtonProps> = ({
                 <Button
                     onClick={handleSendMessage}
                     disabled={isOwnJob || isLoading}
-                    label={isLoading ? '' : (isOwnJob ? "Din egen annonse" : "Søk på oppdraget")}
-                    icon={isLoading ? <TailSpin height={20} width={20} color="#ffffff" /> : <MessageCircle size={20} />}
+                    label={isMsgLoading ? '' : (isOwnJob ? "Din egen annonse" : "Søk på oppdraget")}
+                    icon={isMsgLoading ? <TailSpin height={20} width={20} color="#ffffff" /> : <MessageCircle size={20} />}
                     className={`w-full text-[12px]! sm:text-[16px]! rounded-xl font-semibold! transition-all!
                         ${isOwnJob
                             ? 'bg-gray-300! text-gray-500! cursor-not-allowed!'

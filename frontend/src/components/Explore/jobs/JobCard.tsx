@@ -1,7 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import type { Jobs } from "../../../types/Jobs.ts";
 import { Button } from "../../Ui/Button.tsx";
-import { Clock4, MapPin } from "lucide-react";
+import { Clock4, Heart, MapPin } from "lucide-react";
+import { useFavoriteActions, useFavorites } from "../../../features/favorites/hook/useFavorites.ts";
+import { useUserStore } from "../../../stores/userStore.ts";
 
 interface JobCardProps {
   job: Jobs;
@@ -17,8 +19,33 @@ const categoryColorMap: Record<string, string> = {
 
 export const JobCard = ({ job }: JobCardProps) => {
   const navigate = useNavigate();
+
+  const isAuth = useUserStore((state) => state.isAuthenticated);
+
+  const { data: favoritesData, isLoading } = useFavorites();
+  const { addFavorite, removeFavorite } = useFavoriteActions()
+
   const handleCardClick = () => {
     navigate(`/job-listing/${job._id}`);
+  };
+
+  // Favorite check logic
+  const isFavorite = favoritesData?.data?.some((item: any) =>
+    item.service?._id === job._id || item.jobId === job._id
+  ) || false;
+
+  const handleFavClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Card navigation ko rokne ke liye
+    if (!isAuth) {
+      navigate("/login");
+      return;
+    }
+
+    if (isFavorite) {
+      removeFavorite(job._id);
+    } else {
+      addFavorite(job._id);
+    }
   };
 
   const catName = Array.isArray(job.categories) ? job.categories[0] : job.categories;
@@ -41,11 +68,38 @@ export const JobCard = ({ job }: JobCardProps) => {
           </span>
         </div>
 
-        <div className="absolute text-[#0A0A0A] bottom-4 left-4.5 bg-[#D9D9D9]/80 px-3 py-1.5 rounded-[20px] flex items-center justify-center gap-1.5">
+        {/* <div className="absolute text-[#0A0A0A] bottom-4 left-4.5 bg-[#D9D9D9]/80 px-3 py-1.5 rounded-[20px] flex items-center justify-center gap-1.5">
           <MapPin size={13} />
           <span className="text-[12px] font-normal">
             {job.location.city}
           </span>
+        </div> */}
+        <div
+          className="absolute flex justify-between items-center text-[#0A0A0A] bottom-4 left-4.5 right-4.5"
+        >
+          {/* Left Side: Location Badge */}
+          <div className="bg-[#D9D9D9]/80 px-3 py-1.5 rounded-[20px] flex items-center justify-center gap-1.5 backdrop-blur-sm">
+            <MapPin size={13} />
+            <span className="text-[12px] font-normal">
+              {job.location.city}
+            </span>
+          </div>
+
+          {/* Right Side: Heart Icon */}
+          <div
+            className="px-2 py-1.5 bg-[#D9D9D9]/80 backdrop-blur-sm rounded-2xl cursor-pointer"
+            onClick={handleFavClick}
+          >
+            {isLoading ? (
+              <div className="animate-spin w-5 h-5 border-2 border-gray-300 border-t-[#2F7E47] rounded-full" />
+            ) : (
+              <Heart
+                size={20}
+                className={isFavorite ? "text-red-500 fill-red-500" : "text-[#0A0A0A]"}
+              />
+            )}
+          </div>
+
         </div>
       </div>
 
