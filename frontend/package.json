@@ -17,6 +17,7 @@
     "@tanstack/react-query-devtools": "^5.91.3",
     "antd": "^5.27.6",
     "axios": "^1.13.2",
+    "date-fns": "^4.1.0",
     "leaflet": "^1.9.4",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.562.0",
