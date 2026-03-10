@@ -1,7 +1,7 @@
 import mainLink from "./mainURLs";
 
 export async function getJobbloShop() {
-  const res = await mainLink.get("/api/jobbloShop");
+  const res = await mainLink.get("/api/jobbloShop/all");
   return res.data;
 }
 
