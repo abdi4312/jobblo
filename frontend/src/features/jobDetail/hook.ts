@@ -1,19 +1,11 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { getJobDetail, checkIsFavorited,createChat, createStripeSession, getNearbyJobs} from "./jobApi";
+import { getJobDetail ,createChat, createStripeSession, getNearbyJobs} from "./jobApi";
 
 export const useJobDetailQuery = (id: string) => {
   return useQuery({
     queryKey: ["jobDetail", id],
     queryFn: () => getJobDetail(id),
     enabled: !!id,
-  });
-};
-
-export const useFavoriteStatusQuery = (id: string, isAuth: boolean) => {
-  return useQuery({
-    queryKey: ["favoriteStatus", id],
-    queryFn: () => checkIsFavorited(id),
-    enabled: !!id && isAuth,
   });
 };
 

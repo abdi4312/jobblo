@@ -1,12 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useUserStore } from "../../stores/userStore";
-import { setFavorites, deleteFavorites } from "../../api/favoriteAPI";
-
 // TanStack Hooks (Inhe update kiya gaya hai mutations ke liye)
 import {
   useJobDetailQuery,
-  useFavoriteStatusQuery,
   useSendMessageMutation,
   useStripeMutation
 } from "../../features/jobDetail/hook.ts";
@@ -22,6 +19,7 @@ import JobProvider from "../../components/job/JobProvider.tsx";
 import JobButton from "../../components/job/JobButton.tsx";
 import { JobDetailSkeleton } from "../../components/Loading/JobDetailSkeleton.tsx";
 import { JobDetailCardSkeleton } from "../../components/Loading/JobDetailCardSkeleton.tsx";
+import { useFavoriteToggle } from "../../features/favorites/hook/useFavoriteToggle.ts";
 
 const JobListingDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -35,34 +33,10 @@ const JobListingDetailPage = () => {
   const currentUser = useUserStore((state) => state.user);
 
   // TanStack Queries 
+  const { isFavorited, handleFavoriteClick, isLoading } = useFavoriteToggle(id!, isAuth);
   const { data: job, isLoading: isJobLoading } = useJobDetailQuery(id!);
-  const { data: isFavorited, refetch: refetchFavStatus } = useFavoriteStatusQuery(id!, isAuth);
 
   const isOwnJob = job?.userId?._id === currentUser?._id;
-
-  // Aapki original handleFavoriteClick logic (Bina kisi change ke)
-  const handleFavoriteClick = async () => {
-    if (!isAuth) {
-      toast.error("Du må logge inn for å legge til favoritter");
-      navigate("/login");
-      return;
-    }
-    if (!id) return;
-
-    try {
-      if (isFavorited) {
-        await deleteFavorites(id);
-        toast.success("Fjernet fra favoritter");
-      } else {
-        await setFavorites(id);
-        toast.success("Lagt til i favoritter");
-      }
-      refetchFavStatus();
-    } catch (err) {
-      console.error("Failed to update favorites", err);
-      toast.error("Kunne ikke oppdatere favoritter");
-    }
-  };
 
   // handleSendMessage logic edited to use mutation while keeping original flow
   const handleSendMessage = async (providerId: string) => {
@@ -121,10 +95,9 @@ const JobListingDetailPage = () => {
             <JobProvider job={job} />
             <JobButton
               handleSendMessage={() => handleSendMessage(job?.userId?._id)}
-              handleFavoriteClick={handleFavoriteClick}
-              isFavorited={!!isFavorited}
+              id={job._id}
               isOwnJob={isOwnJob}
-              isLoading={isMessageLoading}
+              isMsgLoading={isMessageLoading}
             />
           </div>
 

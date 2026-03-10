@@ -6,11 +6,6 @@ export const getJobDetail = async (id: string) => {
   return response.data;
 };
 
-export const checkIsFavorited = async (id: string) => {
-  const res = await getFavorites();
-  return res.data.some((fav: any) => fav.service._id === id);
-};
-
 export const getNearbyJobs = async (lat: number, lng: number, radius: number = 50000) => {
   const { data } = await mainLink.get(`/api/services/nearby`, {
     params: { lat, lng, radius },
