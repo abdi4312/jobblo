@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import StjerneIcon from "../../assets/icons/stjerne.svg?react";
-import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
-
+import { Star } from "lucide-react";
 interface DisplayReview {
   id: string;
   reviewerName: string;
@@ -22,7 +21,7 @@ export default function AnmeldelserPage() {
   const [totalReviews, setTotalReviews] = useState<number>(0);
 
   useEffect(() => {
-    // Using fake data for design purposes
+    // Fake data logic remains exactly the same
     const fakeReceivedReviews: DisplayReview[] = [
       {
         id: "1",
@@ -72,203 +71,112 @@ export default function AnmeldelserPage() {
     setLoading(false);
   }, []);
 
-
-
   const currentReviews = activeTab === "received" ? receivedReviews : givenReviews;
 
   return (
-    <div style={{ minHeight: "70vh", maxWidth: "800px", margin: "0 auto" }}>
-      <ProfileTitleWrapper title="Anmeldelser" buttonText="Tilbake til Min Side" />
-
+    <div className="min-h-[70vh] max-w-300 mx-auto p-2 ms:p-5 overflow-hidden">
       {/* Rating Summary */}
-      {!loading && totalReviews > 0 && (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "16px 20px",
-            margin: "0 20px 20px",
-            backgroundColor: "#F5F5F5",
-            borderRadius: "8px"
-          }}
-        >
-          <div style={{ fontSize: "36px", fontWeight: "700", color: "var(--color-accent)" }}>
-            {averageRating.toFixed(1)}
+      <div className="bg-[#FFFFFF1A] flex flex-col gap-6 shadow-sm py-6">
+        <h1 className="text-[30px] font-bold text-[#101828] text-center">Amneldenser</h1>
+        {!loading && totalReviews > 0 && (
+          <div className="text-center py-4 px-5 mx-5 mb-5 bg-[#FFFFFFB2] rounded-lg">
+            <div className="text-[28px] font-semibold text-[#4A5565]">
+              {averageRating.toFixed(1)}
+            </div>
+            <div className="text-[14px] font-normal text-[#6A7282] mt-1">
+              Basert på {totalReviews} anmeldelser
+            </div>
           </div>
-          <div style={{ fontSize: "12px", color: "#666", marginTop: "4px" }}>
-            Basert på {totalReviews} anmeldelser
-          </div>
-        </div>
-      )}
+        )}
 
-      {/* Tabs */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          gap: "8px",
-          padding: "0 20px",
-          marginBottom: "20px"
-        }}
-      >
-        <button
-          onClick={() => setActiveTab("received")}
-          style={{
-            flex: 1,
-            maxWidth: "200px",
-            padding: "12px 20px",
-            backgroundColor: activeTab === "received" ? "#E0E0E0" : "transparent",
-            color: "var(--color-text)",
-            border: "none",
-            borderRadius: "20px",
-            cursor: "pointer",
-            fontSize: "14px",
-            fontWeight: activeTab === "received" ? "600" : "400",
-            transition: "all 0.2s"
-          }}
-        >
-          Anmelder fått
-        </button>
-        <button
-          onClick={() => setActiveTab("given")}
-          style={{
-            flex: 1,
-            maxWidth: "200px",
-            padding: "12px 20px",
-            backgroundColor: activeTab === "given" ? "#E0E0E0" : "transparent",
-            color: "var(--color-text)",
-            border: "none",
-            borderRadius: "20px",
-            cursor: "pointer",
-            fontSize: "14px",
-            fontWeight: activeTab === "given" ? "600" : "400",
-            transition: "all 0.2s"
-          }}
-        >
-          Anmeldelser gitt
-        </button>
+        {/* Tabs */}
+        <div className="flex justify-center flex-wrap gap-2 px-5 ">
+          <button
+            onClick={() => setActiveTab("received")}
+            className={`flex-1 max-w-50 py-3 px-5 rounded-[14px] shadow-sm text-[#364153] text-[16px] font-medium transition-all duration-200 border-none text-nowrap cursor-pointer
+            ${activeTab === "received" ? "bg-[#2F7E4740]" : "bg-[#FFFFFF1A]"}`}
+          >
+            Anmelder fått
+          </button>
+          <button
+            onClick={() => setActiveTab("given")}
+            className={`flex-1 max-w-50 py-3 px-5 rounded-[14px] shadow-sm text-[16px] text-[#364153] font-medium transition-all duration-200 border-none text-nowrap cursor-pointer
+            ${activeTab === "given" ? "bg-[#2F7E4740]" : "bg-[#FFFFFF1A]"}`}
+          >
+            Anmeldelser gitt
+          </button>
+        </div>
       </div>
 
+
       {/* Reviews List */}
-      <div style={{ padding: "0 20px" }}>
+      <div className="py-10 flex gap-6 flex-col">
         {loading ? (
-          <p style={{ textAlign: "center", color: "#666", padding: "40px 0" }}>
-            Laster anmeldelser...
-          </p>
+          <p className="text-center text-gray-500 py-10">Laster anmeldelser...</p>
         ) : error ? (
-          <p style={{ textAlign: "center", color: "#D32F2F", padding: "40px 0" }}>
-            {error}
-          </p>
+          <p className="text-center text-red-600 py-10">{error}</p>
         ) : currentReviews.length === 0 ? (
-          <p style={{ textAlign: "center", color: "#666", fontStyle: "italic", padding: "40px 0" }}>
-            Ingen anmeldelser ennå
-          </p>
+          <p className="text-center text-gray-500 italic py-10">Ingen anmeldelser ennå</p>
         ) : (
           currentReviews.map((review) => (
-            <div key={review.id} style={{ marginBottom: "16px" }}>
+            <div key={review.id} className="bg-[#FFFFFF1A] p-6 shadow-sm rounded-xl flex justify-between flex-wrap">
               {/* Section Header */}
-              <div style={{ 
-                fontSize: "12px", 
-                fontWeight: "600", 
-                color: "#666",
-                marginBottom: "8px",
-              }}>
-                Du {activeTab === "received" ? "la ut" : "la ut"}
-              </div>
-              <div style={{ 
-                fontSize: "16px", 
-                fontWeight: "600", 
-                marginBottom: "12px"
-              }}>
-                {review.jobTitle}
+              <div>
+                <div className="text-[12px] font-semibold text-[#000000 ] mb-2">
+                  Du {activeTab === "received" ? "la ut" : "la ut"}
+                </div>
+                <div className="text-[16px] md:text-[20px] font-semibold mb-3 text-[#0A0A0A]">
+                  {review.jobTitle}
+                </div>
               </div>
 
               {/* Review Card */}
-              <div
-                style={{
-                  padding: "16px",
-                  backgroundColor: "#FFFFFF",
-                  borderRadius: "12px",
-                  border: "1px solid #E0E0E0",
-                  marginBottom: "8px"
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "12px" }}>
+              <div className="p-4 w-full max-w-182.5 bg-[#FFFFFF1A] rounded-xl mb-2 shadow-sm">
+                <div className="flex items-start gap-3 mb-3">
                   {/* Star Icon with Rating Number */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                      position: "relative"
-                    }}
-                  >
-                    <StjerneIcon />
-                    <span
-                      style={{
-                        position: "absolute",
-                        fontSize: "18px",
-                        fontWeight: "700",
-                        paddingTop: "2px" //fjern om mås er for å fikse rating
-                      }}
-                    >
+                  <div className="relative flex text-[#2F7E47] p-3 bg-[#FFFFFF1A] shadow-sm rounded-[14px] items-center justify-center shrink-0">
+                    <Star size={45} />
+                    <span className="absolute text-[18px] font-bold pt-0.5">
                       {review.rating}
                     </span>
                   </div>
 
                   {/* Name and Role */}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: "600", fontSize: "16px", marginBottom: "2px" }}>
+                  <div className="flex-1">
+                    <div className="font-semibold text-[16px] md:text-[20px] md:font-bold mb-0.5 text-[#0A0A0A]">
                       {review.reviewerName}
                     </div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>
+                    <div className="text-[12px] font-light text-[#000000]">
                       Oppdragstaker
                     </div>
                   </div>
 
                   {/* Date */}
-                  <div style={{ fontSize: "12px", color: "#666" }}>
+                  <div className="text-[12px] font-light text-[#000000]">
                     {review.date}
                   </div>
                 </div>
 
                 {/* Comment */}
-                <div style={{ fontSize: "14px", lineHeight: "1.5", marginBottom: "12px" }}>
+                <div className="text-[14px] font-medium text-[#6A7282] mb-3">
                   {review.comment}
                 </div>
 
                 {/* Report Button */}
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                  <button
-                    style={{
-                      padding: "6px 16px",
-                      backgroundColor: "transparent",
-                      color: "#666",
-                      border: "1px solid #E0E0E0",
-                      borderRadius: "16px",
-                      cursor: "pointer",
-                      fontSize: "12px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px"
-                    }}
-                  >
+                <div className="flex gap-6 justify-end">
+                  {/* <button className="flex items-center gap-1 py-1.5 px-4 bg-transparent text-gray-500 border border-[#E0E0E0] rounded-[16px] cursor-pointer text-[12px] hover:bg-gray-50 transition-colors">
                     Rapporter
-                    <span
-                      style={{
-                        padding: "2px 8px",
-                        backgroundColor: "#FFFFFF",
-                        border: "1px solid #E0E0E0",
-                        borderRadius: "12px",
-                        fontSize: "11px"
-                      }}
-                    >
+                    <span className="py-0.5 px-2 bg-white border border-[#E0E0E0] rounded-[12px] text-[11px] ml-1">
                       Svar
                     </span>
-                  </button>
+                  </button> */}
+                  <button className="px-3 py-1.5 bg-[#FFFFFF1A] text-[16px] text-[#212121] font-medium shadow-sm rounded-[14px] hover:bg-[#2F7E4740]">Rapporter</button>
+                  <button className="px-3 py-1.5 bg-[#FFFFFF1A] text-[16px] text-[#212121] font-medium shadow-sm rounded-[14px] hover:bg-[#2F7E4740]">svar</button>
                 </div>
               </div>
+
             </div>
+
           ))
         )}
       </div>

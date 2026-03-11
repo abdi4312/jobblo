@@ -42,7 +42,7 @@ export function ProfileHeader({ handlelogout }: { handlelogout: () => void }) {
 
   return (
     <>
-      <div className="flex flex-col md:flex-row md:justify-between bg-[#FFFFFFB2] px-4 md:px-6 py-4 md:py-14">
+      <div className="flex flex-col sm:flex-row sm:justify-between bg-[#FFFFFFB2] px-4 md:px-6 py-4 md:py-14">
         <div className="flex md:justify-center md:items-center gap-6">
           <div className="relative w-fit">
             <img
@@ -100,11 +100,11 @@ export function ProfileHeader({ handlelogout }: { handlelogout: () => void }) {
           </div>
         </div>
 
-        <div className="flex flex-row md:flex-col gap-6 pt-4 md:pt-0">
-          <button className="text-[16px] w-full font-medium text-[#364153] flex justify-center items-center gap-2 shadow-md px-3 py-1.5 rounded-4xl cursor-pointer">
+        <div className="flex flex-row sm:flex-col justify-center sm:justify-start  flex-wrap gap-6 pt-4 md:pt-0">
+          <button className="text-[16px] font-medium text-[#364153] flex justify-center items-center gap-2 shadow-md px-3 py-1.5 rounded-4xl cursor-pointer">
             <Pencil size={16} className="text-[#3F8F6B]" />
             Rediger profil</button>
-          <button className="text-[16px] w-full font-medium text-[#EA1717] flex gap-2 shadow-md px-3 py-1.5
+          <button className="text-[16px]  font-medium text-[#EA1717] flex gap-2 shadow-md px-3 py-1.5
             rounded-4xl justify-center items-center cursor-pointer hover:bg-[#EA1717] hover:text-[#FFFFFF] transition-all duration-300" onClick={handlelogout}>
             <LogOut size={16} className="" />
             Log Out</button>
