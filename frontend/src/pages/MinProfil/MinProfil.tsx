@@ -1,29 +1,19 @@
 import { useState, useEffect } from "react";
 import { useUserStore } from "../../stores/userStore";
-import mainLink from "../../api/mainURLs";
 import { PricingModal } from "../../components/shared/PricingModal/PricingModal";
-import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 import { toast } from 'react-toastify';
-import styles from "./MinProfil.module.css";
-
-interface ProfileData {
-  email: string;
-  password: string;
-  phoneNumber: string;
-  name: string;
-  lastName: string;
-  birthDate: string;
-  gender: string;
-  address: string;
-  postNumber: string;
-  postSted: string;
-  country: string;
-  profileImage: string;
-}
+import { UserStats } from "../../components/MinProfile/UserStats";
+import { ProfileImage } from "../../components/MinProfile/ProfileImage";
+import { ProfileField } from "../../components/MinProfile/ProfileField";
+import { House, User } from "lucide-react";
+import { useUpdateUser } from "../../features/profile/hooks";
+import type { ProfileData } from "../../features/profile/types/user";
 
 export default function MinProfil() {
   const user = useUserStore((state) => state.user);
+  const updateUserMutation = useUpdateUser();
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
+  const [editingField, setEditingField] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<ProfileData>({
     email: "",
@@ -33,6 +23,7 @@ export default function MinProfil() {
     lastName: "",
     birthDate: "",
     gender: "",
+    bio: "",
     address: "",
     postNumber: "",
     postSted: "",
@@ -40,10 +31,8 @@ export default function MinProfil() {
     profileImage: "",
   });
 
-  // Load user data when component mounts
   useEffect(() => {
     if (user) {
-      // Convert birthDate from YYYY-MM-DD to DD/MM/YYYY for display
       let displayBirthDate = "";
       if (user.birthDate) {
         const dateMatch = user.birthDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -57,10 +46,10 @@ export default function MinProfil() {
 
       setFormData(prev => ({
         ...prev,
-        // ✅ Real data from backend
         email: user.email || "",
         phoneNumber: user.phone || "",
         name: user.name || "",
+        bio: user.bio || "",
         profileImage: user.avatarUrl || "",
         lastName: user.lastName || "",
         birthDate: displayBirthDate,
@@ -73,305 +62,129 @@ export default function MinProfil() {
     }
   }, [user]);
 
-  const [editingField, setEditingField] = useState<string | null>(null);
-
-  const handleEdit = (field: string) => {
-    setEditingField(field);
-  };
+  const handleEdit = (field: string) => setEditingField(field);
 
   const handleSave = async (field: string) => {
     if (!user?._id) {
       toast.error('Du må være logget inn');
       return;
     }
-    try {
-      // Map form fields to API fields
-      const fieldMapping: Record<string, string> = {
-        phoneNumber: 'phone',
-        name: 'name',
-        email: 'email',
-        lastName: 'lastName',
-        birthDate: 'birthDate',
-        gender: 'gender',
-        address: 'address',
-        postNumber: 'postNumber',
-        postSted: 'postSted',
-        country: 'country',
-      };
 
-      const apiField = fieldMapping[field] || field;
-      let fieldValue = formData[field as keyof ProfileData];
+    const fieldMapping: Record<string, string> = {
+      phoneNumber: 'phone',
+      name: 'name',
+      email: 'email',
+      lastName: 'lastName',
+      birthDate: 'birthDate',
+      gender: 'gender',
+      bio: 'bio',
+      address: 'address',
+      postNumber: 'postNumber',
+      postSted: 'postSted',
+      country: 'country',
+    };
 
-      // Convert DD/MM/YYYY to YYYY-MM-DD for birthDate
-      if (field === 'birthDate' && fieldValue) {
-        const dateMatch = fieldValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-        if (dateMatch) {
-          const [, day, month, year] = dateMatch;
-          fieldValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-        }
+    const apiField = fieldMapping[field] || field;
+    let fieldValue = formData[field as keyof ProfileData];
+
+    // Date formatting logic
+    if (field === 'birthDate' && fieldValue) {
+      const dateMatch = fieldValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (dateMatch) {
+        const [, day, month, year] = dateMatch;
+        fieldValue = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
       }
-
-      const updateData = {
-        [apiField]: fieldValue
-      };
-
-      console.log(`Updating ${field} (${apiField}):`, updateData);
-
-      const respones = await mainLink.put(`/api/users/${user._id}`, updateData);
-
-      if (!respones.data) {
-        const errorData = await respones.data;
-        console.error('Backend error:', errorData);
-        
-        // Check for duplicate key error
-        if (errorData.error && errorData.error.includes('dup key')) {
-          throw new Error('Dette telefonnummeret er allerede i bruk');
-        }
-        
-        throw new Error(errorData.message || errorData.error || 'Kunne ikke oppdatere');
-      }
-
-      const updatedUser = await respones.data;
-      console.log('Updated user:', updatedUser);
-      
-      // Update Zustand store with new data
-      useUserStore.getState().setUser(updatedUser);
-      
-      toast.success('Oppdatert!');
-      setEditingField(null);
-    } catch (error) {
-      console.error('Error updating user:', error);
-      toast.error(error instanceof Error ? error.message : 'Kunne ikke oppdatere');
     }
+
+    // Call Mutation
+    updateUserMutation.mutate({
+      userId: user._id,
+      data: { [apiField]: fieldValue }
+    }, {
+      onSuccess: () => setEditingField(null)
+    });
   };
 
-  const handleInputChange = (field: string, value: string) => {    // Format birthDate with slashes DD/MM/YYYY
+  const handleInputChange = (field: string, value: string) => {
     if (field === 'birthDate') {
-      // Remove all non-digits
       let cleaned = value.replace(/\D/g, '');
-      
-      // Add slashes automatically
-      if (cleaned.length >= 2) {
-        cleaned = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
-      }
-      if (cleaned.length >= 5) {
-        cleaned = cleaned.slice(0, 5) + '/' + cleaned.slice(5, 9);
-      }
-      
+      if (cleaned.length >= 2) cleaned = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
+      if (cleaned.length >= 5) cleaned = cleaned.slice(0, 5) + '/' + cleaned.slice(5, 9);
       value = cleaned;
     }
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const ProfileField = ({ 
-    label, 
-    field, 
-    value, 
-    type = "text" 
-  }: { 
-    label: string; 
-    field: keyof ProfileData; 
-    value: string; 
-    type?: string;
-  }) => (
-    <div className={styles.field}>
-      <span className={styles.fieldLabel}>{label}</span>
-      
-      {editingField === field ? (
-        <div className={styles.fieldActions}>
-          {field === "gender" ? (
-            <select
-              value={value}
-              onChange={(e) => handleInputChange(field, e.target.value)}
-              className={styles.fieldInput}
-              autoFocus
-            >
-              <option value="">Velg kjønn</option>
-              <option value="male">Mann</option>
-              <option value="female">Kvinne</option>
-              <option value="unisex">Unisex</option>
-            </select>
-          ) : (
-            <input
-              type={type}
-              value={value}
-              onChange={(e) => handleInputChange(field, e.target.value)}
-              className={styles.fieldInput}
-              autoFocus
-              placeholder={field === "birthDate" ? "DD/MM/YYYY" : type === "date" ? "YYYY-MM-DD" : ""}
-              maxLength={field === "birthDate" ? 10 : undefined}
-            />
-          )}
-          <button
-            onClick={() => handleSave(field)}
-            className={styles.saveButton}
-          >
-            Lagre
-          </button>
-        </div>
-      ) : (
-        <>
-          <span className={styles.fieldValue}>
-            {field === "password" 
-              ? "************" 
-              : field === "gender" && value
-                ? value === "male" 
-                  ? "Mann" 
-                  : value === "female" 
-                    ? "Kvinne" 
-                    : value === "unisex"
-                      ? "Unisex"
-                      : value
-                : value}
-          </span>
-          <span 
-            className="material-symbols-outlined"
-            onClick={() => handleEdit(field)}
-            style={{
-              fontSize: "20px",
-              color: "var(--color-accent)",
-              cursor: "pointer",
-            }}
-          >
-            edit
-          </span>
-        </>
-      )}
-    </div>
-  );
+  const sections = [
+    {
+      title: "Personlig informasjon", icon: <User size={24} />, fields: [
+        { label: "Epost", field: "email", type: "email" },
+        { label: "Passord", field: "password", type: "password" },
+        { label: "Mobil", field: "phoneNumber", type: "tel" },
+        { label: "Fornavn", field: "name" },
+        { label: "Etternavn", field: "lastName" },
+        { label: "Født", field: "birthDate" },
+        { label: "Kjønn", field: "gender" },
+        { label: "bio", field: "bio" }
+      ]
+    },
+    {
+      title: "Adresse", icon: <House size={24} />, fields: [
+        { label: "Adresse", field: "address" },
+        { label: "Postnummer", field: "postNumber" },
+        { label: "Poststed", field: "postSted" },
+        { label: "Land", field: "country" }
+      ]
+    }
+  ];
 
   return (
-    <div className={styles.container}>
-      <div className={styles.content}>
-        <ProfileTitleWrapper title="Min profil" buttonText="Tilbake" />
+    <div className="min-h-screen max-w-300 mx-auto px-4 py-5 flex flex-col items-center overflow-x-hidden">
+      <div className="w-full flex flex-col gap-6">
+        <div className="bg-[#FFFFFF40] rounded-xl p-6 shadow-sm flex flex-col items-center gap-4">
+          <h1 className="text-[#101828] text-[30px] font-bold">Min profill</h1>
+          <ProfileImage
+            imageUrl={formData.profileImage}
+            name={formData.name}
+            onImageChange={() => console.log("Upload logic here")}
+          />
+          <UserStats user={user} />
+        </div>
 
-        {/* Profile Picture Section */}
-        <div className={styles.profileSection}>
-          <div className={styles.profileImageContainer}>
-            {formData.profileImage ? (
-              <img 
-                src={formData.profileImage} 
-                alt="Profile"
-                className={styles.profileImage}
-              />
-            ) : (
-              <span className={styles.profileInitial}>
-                {formData.name ? formData.name.charAt(0).toUpperCase() : "?"}
-              </span>
-            )}
-          </div>
-          <button className={styles.changePhotoButton}>
-            Endre bilde
-          </button>
-
-          {/* User Stats */}
-          {user && (
-            <>
-              {/* ✅ All stats below come from real backend data */}
-              <div className={styles.statsGrid}>
-                <div className={styles.statCard}>
-                  <div className={`${styles.statValue} ${styles.primary}`}>
-                    {user.averageRating || 0}⭐
-                  </div>
-                  <div className={styles.statLabel}>Rating</div>
-                </div>
-                <div className={styles.statCard}>
-                  <div className={`${styles.statValue} ${styles.primary}`}>
-                    {user.reviewCount || 0}
-                  </div>
-                  <div className={styles.statLabel}>Anmeldelser</div>
-                </div>
-                <div className={styles.statCard}>
-                  <div className={`${styles.statValue} ${styles.accent}`}>
-                    {user.earnings || 0} kr
-                  </div>
-                  <div className={styles.statLabel}>Tjent</div>
-                </div>
-                <div className={styles.statCard}>
-                  <div className={`${styles.statValue} ${styles.accent}`}>
-                    {user.spending || 0} kr
-                  </div>
-                  <div className={styles.statLabel}>Brukt</div>
-                </div>
+        {sections.map((section, idx) => (
+          <div key={idx} className="bg-[#FFFFFF40] rounded-xl p-5 shadow-sm">
+            <div className="text-[#000000] mb-4 flex items-center gap-4">
+              <span>{section.icon}</span>
+              <span className="text-[24px] font-semibold">{section.title}</span>
+            </div>
+            {section.fields.map((f: any) => (
+              <div key={f.field}>
+                {f.label === "Fornavn" && <div className="h-[1px] bg-black/5 my-2" />}
+                <ProfileField
+                  label={f.label}
+                  field={f.field}
+                  value={(formData as any)[f.field]}
+                  initialValue={(user as any)[f.field === 'phoneNumber' ? 'phone' : f.field] || ""}
+                  type={f.type}
+                  isEditing={editingField === f.field}
+                  onEdit={handleEdit}
+                  onSave={handleSave}
+                  onChange={handleInputChange}
+                  isLoading={updateUserMutation.isPending && editingField === f.field}
+                />
               </div>
-
-              {/* ✅ Real data: user.bio from backend */}
-              {user.bio && (
-                <div className={styles.bioSection}>
-                  <div className={styles.bioLabel}>Bio:</div>
-                  <div className={styles.bioText}>{user.bio}</div>
-                </div>
-              )}
-
-              {/* ✅ Real data: user.role and user.subscription from backend */}
-              <div className={styles.badges}>
-                <span className={`${styles.badge} ${styles.role}`}>
-                  {user.role}
-                </span>
-                <span className={`${styles.badge} ${styles.subscription}`}>
-                  {user.subscription}
-                </span>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Personal Information */}
-        <div className={styles.fieldsSection}>
-          <div className={styles.sectionTitle}>
-            <span className="material-symbols-outlined" style={{ fontSize: 22, color: 'var(--color-accent)' }}>
-              person
-            </span>
-            Personlig informasjon
+            ))}
           </div>
-          {/* ✅ Real data from backend */}
-          <ProfileField label="Epost" field="email" value={formData.email} type="email" />
-          {/* ⚠️ Password always shows asterisks for security - not editable here */}
-          <ProfileField label="Passord" field="password" value={formData.password} type="password" />
-          {/* ✅ Real data from backend (user.phone) */}
-          <ProfileField label="Mobil" field="phoneNumber" value={formData.phoneNumber} type="tel" />
-          <div className={styles.divider} />
-          {/* ✅ Real data from backend (user.name) */}
-          <ProfileField label="Fornavn" field="name" value={formData.name} />
-          {/* ✅ Real data from backend (user.lastName) */}
-          <ProfileField label="Etternavn" field="lastName" value={formData.lastName} />
-          {/* ✅ Real data from backend (user.birthDate) */}
-          <ProfileField label="Født" field="birthDate" value={formData.birthDate} type="text" />
-          {/* ✅ Real data from backend (user.gender) */}
-          <ProfileField label="Kjønn" field="gender" value={formData.gender} />
-        </div>
+        ))}
 
-        {/* Address Information */}
-        <div className={styles.fieldsSection}>
-          <div className={styles.sectionTitle}>
-            <span className="material-symbols-outlined" style={{ fontSize: 22, color: 'var(--color-accent)' }}>
-              home
-            </span>
-            Adresse
-          </div>
-          {/* ✅ Real data from backend (user.address) */}
-          <ProfileField label="Adresse" field="address" value={formData.address} />
-          {/* ✅ Real data from backend (user.postNumber) */}
-          <ProfileField label="Postnummer" field="postNumber" value={formData.postNumber} />
-          {/* ✅ Real data from backend (user.postSted) */}
-          <ProfileField label="Poststed" field="postSted" value={formData.postSted} />
-          {/* ✅ Real data from backend (user.country) */}
-          <ProfileField label="Land" field="country" value={formData.country} />
-        </div>
-
-        {/* Pricing Button */}
         <button
           onClick={() => setIsPricingModalOpen(true)}
-          className={styles.pricingButton}
+          className="w-full p-4 bg-gradient-to-r from-[#2F7E47] to-[#153014] text-white rounded-xl text-lg font-semibold flex items-center justify-center gap-2 shadow-lg hover:-translate-y-0.5 transition-all"
         >
           <span className="material-symbols-outlined">payments</span>
           Se våre priser
         </button>
       </div>
-
       <PricingModal isOpen={isPricingModalOpen} onClose={() => setIsPricingModalOpen(false)} />
     </div>
   );
