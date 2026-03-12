@@ -136,7 +136,7 @@
 }
 
 .category {
-  background-color: var(--color-primary);
+  background-color: #F97316;
   color: white;
   padding: 4px 12px;
   border-radius: 20px;
@@ -148,7 +148,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background-color: var(--color-campaign);
+  background-color: #F97316;
   padding: 6px 12px;
   border-radius: 20px;
 }
@@ -160,7 +160,7 @@
 }
 
 .coinSymbol {
-  color: var(--color-price);
+  color: #ffff;
   font-size: 18px;
   font-weight: 800;
   font-style: italic;
@@ -184,7 +184,7 @@
 .redeemButton {
   width: 100%;
   padding: 12px;
-  background-color: var(--color-primary);
+  background-color: #F97316;
   color: white;
   border: none;
   border-radius: 8px;
