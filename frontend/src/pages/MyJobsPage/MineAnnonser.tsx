@@ -1,171 +1,56 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CreateJobForm from "../../components/CreateJobForm/CreateJobForm";
-import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
-import {
-  deleteService,
-  getMyPostedServices,
-  updateService,
-} from "../../api/servicesAPI.ts";
-import axios from "axios";
-
-interface Location {
-  coordinates: [number, number];
-  address: string;
-  city: string;
-  type: string;
-}
-
-interface Duration {
-  value: number;
-  unit: string;
-}
-
-interface UserId {
-  _id: string;
-  name: string;
-  email: string;
-}
-
-interface Service {
-  _id: string;
-  userId: UserId;
-  title: string;
-  description: string;
-  price: number;
-  location: Location;
-  categories: string[];
-  images: string[];
-  urgent: boolean;
-  status: string;
-  tags: string[];
-  equipment: string;
-  imageMetadata: any[];
-  timeEntries: any[];
-  duration: Duration;
-  fromDate?: string;
-  toDate?: string;
-  createdAt: string;
-  updatedAt: string;
-  __v: number;
-}
+import { Clock4, MapPin, Pencil } from "lucide-react";
+import { Button } from "../../components/Ui/Button";
+import { useMyServices } from "../../features/services/hooks";
+import { useServiceActions } from "../../features/services/hooks";
+import type { Service } from "../../features/services/types";
+import { JobDetailCardSkeleton } from "../../components/Loading/JobDetailCardSkeleton";
 
 export default function MineAnnonser() {
   const navigate = useNavigate();
-  
-  const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
   const [editingService, setEditingService] = useState<Service | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    void fetchMyServices();
-  }, []);
+  // TanStack Hooks
+  const { data: services = [], isLoading, error } = useMyServices();
+  const { deleteMutation, updateMutation } = useServiceActions();
 
-  const fetchMyServices = async () => {
-    try {
-      const data = await getMyPostedServices();
-      setServices(data);
-      setError(null);
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("Error fetching services:", error);
-      }
-    } finally {
-      setLoading(false);
-    }
+  const categoryColorMap: Record<string, string> = {
+    Rørlegger: "#EF7909",
+    Renhold: "#2F7E47",
+    Maling: "#238CEB",
+    Hagearbeid: "#EF7909",
+    Flytting: "#2F7E47",
   };
 
   const handleEdit = (service: Service) => {
     setEditingService(service);
   };
 
-  const handleDelete = async (serviceId: string) => {
-    if (!confirm("Er du sikker på at du vil slette denne annonsen?")) {
-      return;
-    }
-
-    try {
-      await deleteService(serviceId);
-      alert("Annonse slettet!");
-      void fetchMyServices();
-    } catch (error) {
-      console.error("Error deleting service:", error);
-      const message = axios.isAxiosError(error)
-        ? error.response?.data?.message
-        : "Det oppstod en feil";
-      alert(message || "Kunne ikke slette annonse");
+  const handleDelete = (serviceId: string) => {
+    if (confirm("Er du sikker på at du vil slette denne annonsen?")) {
+      deleteMutation.mutate(serviceId);
     }
   };
 
-  const handleFormSubmit = async (jobData: any) => {
-    // ... existing code ...
-    try {
-      await updateService(editingService!._id, jobData);
-      alert("Oppdrag oppdatert!");
-      setEditingService(null);
-      void fetchMyServices();
-    } catch (error) {
-      console.error("Failed to update job:", error);
-      let message = "Det oppstod en feil ved oppdatering";
-      if (axios.isAxiosError(error)) {
-        message =
-          error.response?.data?.error ||
-          error.response?.data?.message ||
-          message;
-      }
-      alert(`Kunne ikke oppdatere oppdrag: ${message}`);
+  const handleFormSubmit = (jobData: any) => {
+    if (editingService) {
+      updateMutation.mutate(
+        { id: editingService._id, data: jobData },
+        { onSuccess: () => setEditingService(null) },
+      );
     }
   };
+
+  if (isLoading) return <JobDetailCardSkeleton />;
+  if (error) return <div>Feil ved henting av annonser</div>;
 
   if (editingService) {
     return (
       <>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            padding: "20px",
-          }}
-        >
-          <button
-            onClick={() => setEditingService(null)}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ fontSize: "32px" }}
-            >
-              arrow_left
-            </span>
-          </button>
-          <h2 style={{ margin: 0 }}>Rediger Oppdrag</h2>
-        </div>
-
-        <div
-          style={{
-            height: "2px",
-            width: "90vw",
-            backgroundColor: "var(--color-muted-gray)",
-            margin: "auto",
-          }}
-        ></div>
-
-        <div
-          style={{
-            padding: "20px",
-            maxWidth: "900px",
-            margin: "auto",
-            paddingBottom: "80px",
-          }}
-        >
+        {/* Form Container */}
+        <div className="p-2 max-w-300 mx-auto">
           <CreateJobForm
             onSubmit={handleFormSubmit}
             isEditMode={true}
@@ -194,364 +79,124 @@ export default function MineAnnonser() {
   }
 
   return (
-    <div
-      style={{
-        padding: "0",
-        maxWidth: "900px",
-        margin: "0 auto",
-        minHeight: "100vh",
-      }}
-    >
-      <ProfileTitleWrapper title="Mine Annonser" buttonText="Tilbake" />
-
-      {loading ? (
-        <div style={{ textAlign: "center", padding: "40px" }}>Laster...</div>
-      ) : error ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "40px",
-            color: "red",
-            backgroundColor: "#ffe6e6",
-            margin: "20px",
-            borderRadius: "8px",
-          }}
-        >
-          {error}
-        </div>
-      ) : services.length === 0 ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "40px",
-            color: "var(--color-icon)",
-          }}
-        >
-          Du har ingen annonser ennå
+    <div className="p-0 max-w-300 mx-auto min-h-screen">
+      {services.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+          <div className="bg-gray-100 p-6 rounded-full mb-4">
+            <Pencil size={40} className="text-gray-400" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-800 mb-2">
+            Du har ingen annonser
+          </h3>
+          <p className="text-gray-500 mb-6">
+            Det ser ut som du ikke har lagt ut noen tjenester ennå.
+          </p>
+          <Button
+            label="Lag din første annonse"
+            onClick={() => navigate("/publish-job")}
+            className="bg-[#EF7909] text-white px-6 py-2 rounded-xl"
+          />
         </div>
       ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            gap: "20px",
-            padding: "20px",
-          }}
-        >
-          {services.map((service) => (
-            <div
-              key={service._id}
-              onClick={() => navigate(`/job-listing/${service._id}`)}
-              style={{
-                borderRadius: "16px",
-                backgroundColor: "var(--color-surface)",
-                boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                position: "relative",
-                cursor: "pointer",
-                transition: "transform 0.2s ease, box-shadow 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 6px 12px rgba(0,0,0,0.15)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 4px 6px rgba(0,0,0,0.1)";
-              }}
-            >
-              {/* Image Section */}
-              <div
-                style={{
-                  width: "100%",
-                  height: "150px",
-                  borderRadius: "16px 16px 0 0",
-                  backgroundColor: "#f0f0f0",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  position: "relative",
-                }}
-              >
-                {service.images && service.images[0] ? (
-                  <img
-                    src={service.images[0]}
-                    alt={service.title}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      borderRadius: "16px 16px 0 0",
-                    }}
-                  />
-                ) : (
-                  <span style={{ color: "#666", fontSize: "16px" }}>
-                    Ingen bilde
-                  </span>
-                )}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 m-2 gap-2.5">
+          {services.map((job: any) => {
+            const catName = Array.isArray(job.categories)
+              ? job.categories[0]
+              : job.categories;
+            const badgeColor = categoryColorMap[catName as string] || "#EF7909";
+            const handleCardClick = () => {
+              navigate(`/job-listing/${job._id}`);
+            };
 
-                {/* Status Badge */}
-                {service.urgent && (
+            return (
+              <div
+                key={job._id}
+                onClick={handleCardClick}
+                className={`mx-auto bg-[#FFFFFF1A] w-full rounded-xl shadow-md cursor-pointer overflow-hidden`}
+              >
+                {/* Image Section */}
+                <div className="relative w-full h-45 bg-[#f0f0f0] flex items-center justify-center">
+                  {job.images[0] ? (
+                    <img
+                      src={job.images[0]}
+                      alt={job.title}
+                      className="w-full h-full p-2 object-cover rounded-t-2xl"
+                    />
+                  ) : (
+                    <span className="text-[#666] text-base">
+                      No image available
+                    </span>
+                  )}
+
                   <div
-                    style={{
-                      position: "absolute",
-                      top: "8px",
-                      left: "8px",
-                      background: "#ff4444",
-                      color: "white",
-                      padding: "4px 12px",
-                      borderRadius: "12px",
-                      fontSize: "12px",
-                      fontWeight: "bold",
-                    }}
+                    className="absolute top-4 right-2 bg-[#EF7909] px-3 py-1.5 text-white rounded-[20px] flex items-center justify-center"
+                    style={{ backgroundColor: badgeColor }}
                   >
-                    ⚡ Haster
+                    <span className="text-[12px]">
+                      {catName || "Rørlegger"}
+                    </span>
                   </div>
-                )}
-              </div>
 
-              {/* Title */}
-              <h3
-                style={{
-                  marginLeft: "12px",
-                  marginBottom: "4px",
-                  marginTop: "12px",
-                  color: "var(--color-text)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {service.title}
-              </h3>
+                  <div className="absolute flex justify-between items-center text-[#0A0A0A] bottom-4 left-4.5 right-4.5">
+                    {/* Left Side: Location Badge */}
+                    <div className="bg-[#D9D9D9]/80 px-3 py-1.5 rounded-[20px] flex items-center justify-center gap-1.5 backdrop-blur-sm">
+                      <MapPin size={13} />
+                      <span className="text-[12px] font-normal">
+                        {job.location.city}
+                      </span>
+                    </div>
 
-              {/* Categories & Equipment */}
-              <div
-                style={{
-                  display: "flex",
-                  fontSize: "14px",
-                  gap: "8px",
-                  padding: "0 12px",
-                  flexWrap: "wrap",
-                }}
-              >
-                {service.categories.map((cat, index) => (
-                  <h4
-                    key={index}
-                    style={{
-                      padding: "2px 8px",
-                      backgroundColor: "var(--color-accent)",
-                      color: "var(--color-white)",
-                      margin: "0",
-                      borderRadius: "4px",
-                      fontSize: "12px",
-                    }}
-                  >
-                    {cat}
-                  </h4>
-                ))}
-
-                {service.equipment && (
-                  <h4
-                    style={{
-                      padding: "2px 8px",
-                      backgroundColor:
-                        service.equipment === "utstyrfri"
-                          ? "#22c55e"
-                          : service.equipment === "delvis utstyr"
-                            ? "#ea7e15"
-                            : "#6b7280",
-                      color: "white",
-                      margin: "0",
-                      borderRadius: "4px",
-                      fontSize: "12px",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {service.equipment === "utstyrfri"
-                      ? "Utstyrfri"
-                      : service.equipment === "delvis utstyr"
-                        ? "Noe utstyr"
-                        : "Utstyr kreves"}
-                  </h4>
-                )}
-              </div>
-
-              {/* Job Details */}
-              <div
-                style={{
-                  fontSize: "14px",
-                  fontWeight: "lighter",
-                  padding: "8px 16px",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    marginBottom: "4px",
-                  }}
-                >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: "18px" }}
-                  >
-                    location_on
-                  </span>
-                  <h3
-                    style={{
-                      margin: 0,
-                      fontSize: "14px",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {service.location.address}, {service.location.city}
-                  </h3>
+                    {/* Right Side: Heart Icon */}
+                    <div
+                      className="px-2 py-1.5 bg-[#D9D9D9]/80 backdrop-blur-sm rounded-2xl cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(job);
+                      }}
+                    >
+                      <Pencil size={20} className="text-[#EF7909]" />
+                    </div>
+                  </div>
                 </div>
 
-                {service.duration && (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    <span
-                      className="material-symbols-outlined"
-                      style={{ fontSize: "18px" }}
-                    >
-                      schedule
-                    </span>
-                    <h3 style={{ margin: 0, fontSize: "14px" }}>
-                      {service.duration.value
-                        ? `${service.duration.value} ${service.duration.unit}`
+                {/* Title */}
+                <div className="gap-3 p-4">
+                  <h2 className="text-[#0A0A0A] whitespace-nowrap overflow-hidden text-ellipsis font-bold text-[20px]">
+                    {job.title}
+                  </h2>
+
+                  <p className="text-[#0A0A0A] text-base font-light">
+                    {job.description}
+                  </p>
+                </div>
+
+                {/* Job Details */}
+                <div className="flex justify-between p-4">
+                  <div className="flex items-center gap-1">
+                    {/* <span className="material-symbols-outlined text-[12.5px] text-[#4A5565]">Schedule</span> */}
+                    <Clock4 size={13} />
+                    <h3 className="m-0 whitespace-nowrap overflow-hidden text-ellipsis text-[12px] font-normal">
+                      {job.duration.value
+                        ? `${job.duration.value} ${job.duration.unit}`
                         : "Ikke angitt"}
                     </h3>
                   </div>
-                )}
 
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "4px" }}
-                >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: "18px" }}
-                  >
-                    info
-                  </span>
-                  <h3
-                    style={{
-                      margin: 0,
-                      fontSize: "14px",
-                      color: service.status === "open" ? "#22c55e" : "#ea7e15",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {service.status === "open" ? "Aktiv" : service.status}
-                  </h3>
+                  <div className="flex items-center gap-6">
+                    <p className="text-[24px] font-bold">{job.price}Kr</p>
+                    <Button
+                      label="Delete"
+                      className="bg-red-500! rounded-xl"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(job._id);
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
-
-              {/* Price */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  width: "80%",
-                  marginTop: "8px",
-                  marginLeft: "auto",
-                  marginRight: "auto",
-                  padding: "8px 0",
-                  backgroundColor: "var(--color-muted-gray)",
-                  borderRadius: "10px",
-                }}
-              >
-                <span
-                  style={{
-                    fontWeight: 900,
-                    color: "var(--color-price)",
-                    fontSize: "17px",
-                  }}
-                >
-                  {service.price}kr
-                </span>
-              </div>
-
-              {/* Action Buttons */}
-              <div
-                style={{
-                  display: "flex",
-                  gap: "8px",
-                  padding: "12px",
-                  borderTop: "1px solid #e0e0e0",
-                  marginTop: "12px",
-                }}
-              >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEdit(service);
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: "10px",
-                    backgroundColor: "var(--color-primary)",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "4px",
-                  }}
-                >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: "18px" }}
-                  >
-                    edit
-                  </span>
-                  Rediger
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(service._id);
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: "10px",
-                    backgroundColor: "#ff4444",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "4px",
-                  }}
-                >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: "18px" }}
-                  >
-                    delete
-                  </span>
-                  Slett
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
