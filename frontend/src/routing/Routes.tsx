@@ -34,6 +34,7 @@ import CarouselPage from "../pages/SuperAdminDashboard/CarouselPage.tsx";
 import NotificationsPage from "../pages/SuperAdminDashboard/NotificationsPage.tsx";
 import { AdminProtectedRoute } from "../components/shared/AdminProtectedRoute.tsx";
 import TransactionsPage from "../pages/SuperAdminDashboard/TransactionsPage.tsx";
+import ServiceListingPage from "../pages/ServiceListingPage/ServiceListing.tsx";
 
 
 
@@ -53,6 +54,10 @@ export const routes: RouteObject[] = [
       {
         path: "job-listing",
         element: <JobListingPage />,
+      },
+      {
+        path: "/search/job/:categoryName",
+        element: <ServiceListingPage />,
       },
       {
         path: "job-listing/:id",

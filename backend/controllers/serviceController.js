@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 
 exports.getAllServices = async (req, res) => {
     try {
-        const { category, search, page = 1, limit = 25 } = req.query;
+        const { category, search, minPrice, maxPrice, sort, page = 1, limit = 25 } = req.query;
 
         const query = {};
 
@@ -21,11 +21,27 @@ exports.getAllServices = async (req, res) => {
             ];
         }
 
+        if (minPrice || maxPrice) {
+            query.price = {};
+            if (minPrice) query.price.$gte = Number(minPrice);
+            if (maxPrice) query.price.$lte = Number(maxPrice);
+        }
+
+        // Construct sort object
+        let sortOption = { createdAt: -1 };
+        if (sort) {
+            if (sort.startsWith('-')) {
+                sortOption = { [sort.substring(1)]: -1 };
+            } else {
+                sortOption = { [sort]: 1 };
+            }
+        }
+
         const services = await Service.find(query)
             .populate('userId', 'name')
             .skip((page - 1) * limit)
             .limit(parseInt(limit))
-            .sort({ createdAt: -1 });
+            .sort(sortOption);
 
         const total = await Service.countDocuments(query);
 
