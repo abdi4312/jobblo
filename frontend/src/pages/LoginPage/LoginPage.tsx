@@ -16,15 +16,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   // TanStack Hook ka istemal
-  const { mutate: login, isPending } = useLogin();
+  const { mutate: login, isPending, error } = useLogin();
 
   const handleLogin = () => {
     if (!email || !password) {
       toast.error("Vennligst fyll ut alle feltene");
       return;
     }
-
-    // Hook se mutate function call karein
     login({ email, password });
   };
 
@@ -77,6 +75,7 @@ export default function LoginPage() {
                     </div>
                   }
                 />
+                <p className="text-red-500">{error?.response?.data?.error}</p>
               </div>
 
               <div className="flex flex-col gap-6.5 2xl:mt-6.5">

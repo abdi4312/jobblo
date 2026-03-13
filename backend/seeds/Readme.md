@@ -33,6 +33,9 @@ Notifications
 
 3️⃣ Run individual seeders
 
+For Categories:
+node seeds/run-categories.js
+
 For Conversations:
 node seeds/run-conversations.js
 

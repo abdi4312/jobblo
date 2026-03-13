@@ -14,11 +14,14 @@ module.exports = async () => {
     await Category.deleteMany();
 
     const categories = [
-        { name: 'Rengjøring', icon: 'cleaning_services' },
-        { name: 'Rørlegger', icon: 'plumbing' },
-        { name: 'Maling', icon: 'format_paint' },
-        { name: 'Flytting', icon: 'local_shipping' },
-        { name: 'Hagearbeid', icon: 'yard' }
+        { name: 'Rengjøring', icon: 'BrushCleaning' },
+        { name: 'Rørlegger', icon: 'Wrench' },
+        { name: 'Maling', icon: 'Paintbrush' },
+        { name: 'Flytting', icon: 'Truck' },
+        { name: 'Hagearbeid', icon: 'Flower2' },
+        // { name: 'Child & baby', icon: 'Flower2' },
+        { name: 'Outdoor & sports', icon: 'Mountain' },
+        { name: 'Art/Painting', icon: 'Presentation' }
     ];
 
     return await Category.insertMany(

@@ -1,6 +1,4 @@
-import { SlidersHorizontal } from "lucide-react";
 import { useJobs } from "../../../features/jobsList/hooks";
-import { Button } from "../../Ui/Button";
 import { JobCard } from "./JobCard";
 import { JobCardSkeleton } from "../../Loading/JobCardSkeleton";
 
@@ -13,13 +11,13 @@ export default function JobsContainer({ selectedCategories = [], searchQuery = "
     search: searchQuery,
   });
 
-  const totalJobs = data?.pages[0].pagination.total || 0;
+  // const totalJobs = data?.pages[0].pagination.total || 0;
   const jobs = data?.pages.flatMap((page) => page.data) || [];
 
 
   return (
     <div>
-      <div className="flex justify-between pb-6">
+      {/* <div className="flex justify-between pb-6">
         <div className="flex gap-2 items-center">
           <p className="text-[20px] md:text-[24px] font-bold">{totalJobs}</p>
           <span className="font-normal text-[12px] md:text-base text-[#4A5565]">oppdrag</span>
@@ -34,10 +32,9 @@ export default function JobsContainer({ selectedCategories = [], searchQuery = "
             className="bg-transparent text-[#D67E2B]! md:hidden!" />
         </div>
 
-      </div>
+      </div> */}
 
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 justify-center items-center mx-auto w-full">
-
+      <div className="grid gap-x-4 gap-y-8 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 justify-start items-start mx-auto w-full">
         {isLoading ? (
           Array.from({ length: 2 }).map((_, index) => (
             <JobCardSkeleton key={index} />
