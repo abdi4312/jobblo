@@ -17,22 +17,13 @@ export default function JobsContainer({ selectedCategories = [], searchQuery = "
 
   return (
     <div>
-      {/* <div className="flex justify-between pb-6">
-        <div className="flex gap-2 items-center">
-          <p className="text-[20px] md:text-[24px] font-bold">{totalJobs}</p>
-          <span className="font-normal text-[12px] md:text-base text-[#4A5565]">oppdrag</span>
-        </div>
-
+      {/* Header Section */}
+      <div className="flex justify-between items-end mb-8">
         <div>
-          <Button icon={<SlidersHorizontal size={16} />} label="Filter"
-            className="bg-transparent text-[#D67E2B]! font-medium!
-            border border-[#D67E2B]! rounded-xl! hover:bg-[#D67E2B]! hover:text-white! hidden! md:flex!" size="lg" />
-          <Button
-            icon={<SlidersHorizontal size={16} />}
-            className="bg-transparent text-[#D67E2B]! md:hidden!" />
+          <h2 className="text-2xl md:text-3xl font-bold text-[#0A0A0A] tracking-tight">Explore Jobs</h2>
+          <p className="text-gray-500 mt-2 text-[15px]">Find your next opportunity from our latest listings</p>
         </div>
-
-      </div> */}
+      </div>
 
       <div className="grid gap-x-4 gap-y-8 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 justify-start items-start mx-auto w-full">
         {isLoading ? (
