@@ -4,16 +4,18 @@ import { fetchJobs } from "./jobListingAPI";
 interface UseJobsParams {
   categories?: string[];
   search?: string;
+  sort?: string;
   limit?: number;
 }
 
 export const useJobs = ({
   categories = [],
   search = "",
+  sort = "",
   limit = 16,
 }: UseJobsParams) => {
   return useInfiniteQuery({
-    queryKey: ["jobs", categories, search],
+    queryKey: ["jobs", categories, search, sort],
 
     // TanStack Query v5 mein pageParam ko queryFn ke andar destruct karte hain
     queryFn: ({ pageParam }) =>
@@ -22,6 +24,7 @@ export const useJobs = ({
         limit,
         categories,
         search,
+        sort,
       }),
 
     // FIXED: Yeh property add karna zaroori hai

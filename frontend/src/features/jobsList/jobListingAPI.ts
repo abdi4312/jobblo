@@ -6,6 +6,7 @@ interface FetchJobsParams {
   limit?: number;
   categories?: string[];
   search?: string;
+  sort?: string;
 }
 
 export interface JobsResponse {
@@ -21,6 +22,7 @@ export const fetchJobs = async ({
   limit = 16,
   categories = [],
   search = "",
+  sort = "",
 }: FetchJobsParams): Promise<JobsResponse> => {
   const res = await mainLink.get("/api/services", {
     params: {
@@ -28,6 +30,7 @@ export const fetchJobs = async ({
       limit,
       category: categories.length ? categories.join(",") : undefined,
       search: search || undefined,
+      sort: sort || undefined,
     },
   });
 
