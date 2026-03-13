@@ -3,6 +3,8 @@ import { useLocation, useSearchParams } from "react-router-dom";
 // import { Search } from "../../components/Explore/Search/search.tsx";
 import { Categories } from "../../components/Explore/jobs/Categories.tsx";
 import Jobs from "../../components/Explore/jobs/Jobs.tsx";
+import { Banner } from "../../components/Explore/jobs/banners.tsx";
+import { Favourites } from "../../components/Explore/jobs/Favourites.tsx";
 
 export default function JobListingPage() {
   const location = useLocation();
@@ -39,10 +41,10 @@ export default function JobListingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
         {/* LEFT SIDE: Jobs & Categories (Takes 9 columns on desktop) */}
-        <div className="lg:col-span-9 w-full order-2 lg:order-1">
-          <div className="text-[28px] md:text-[40px] font-bold pb-6 md:pb-10">
+        <div className="lg:col-span-12 w-full order-2 lg:order-1">
+          {/* <div className="text-[28px] md:text-[40px] font-bold pb-6 md:pb-10">
             <h1 className="leading-tight">Finn ditt neste oppdrag</h1>
-          </div>
+          </div> */}
 
           {/* Categories Horizontal Scroll */}
           <div className="mb-10">
@@ -54,6 +56,8 @@ export default function JobListingPage() {
               onSearchClear={() => setSearchQuery("")}
             />
           </div>
+          <Banner />
+          <Favourites />
 
           {/* Jobs Listing */}
           <div className="w-full">
@@ -62,13 +66,13 @@ export default function JobListingPage() {
         </div>
 
         {/* RIGHT SIDE: Sidebar (Takes 3 columns on desktop) */}
-        <div className="lg:col-span-3 w-full order-1 lg:order-2">
+        {/* <div className="lg:col-span-3 w-full order-1 lg:order-2 hidden">
           <div className="bg-[#1b5cdd] w-full min-h-35.75 lg:h-154.5 rounded-lg border-4 border-white sticky top-24 flex items-center justify-center p-6 shadow-lg">
             <span className="text-white font-semibold text-lg text-center">
               Annonse / Sidebar
             </span>
           </div>
-        </div>
+        </div> */}
 
       </div>
     </div>

@@ -10,9 +10,9 @@ export async function userLogin(email: string, password: string) {
     await fetchProfile();
 
     return res.data;
-  } catch (err: any) {
-    console.error("Login failed:", err.response?.data || err.message);
-    throw err;
+  } catch (error: any) {
+    console.error("Login failed:", error.response?.data || error.message);
+    throw error;
   }
 }
 

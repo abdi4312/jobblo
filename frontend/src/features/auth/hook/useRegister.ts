@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { registerUser } from "../Api";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import axios from "axios";
 
 export const useRegister = () => {
@@ -9,8 +9,8 @@ export const useRegister = () => {
 
   return useMutation({
     mutationFn: registerUser,
-    onSuccess: () => {
-      toast.success("Registrering vellykket!");
+    onSuccess: (response) => {
+      toast.success(`Velkommen ${response.user.name}!`);
       navigate("/");
     },
     onError: (error: any) => {
