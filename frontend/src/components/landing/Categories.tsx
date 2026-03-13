@@ -33,7 +33,7 @@ export function Info() {
   const handleCategoryClick = (categoryName: string) => {
     // Navigate karein aur URL mein category name bhejein
     // Example: /jobs?category=Maling
-    navigate(`/job-listing?category=${encodeURIComponent(categoryName)}`);
+    navigate(`/job-listing`);
   };
 
   if (isLoading) {

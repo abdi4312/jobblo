@@ -46,6 +46,7 @@ export function Categories({
           ? prev.filter((c) => c !== categoryName)
           : [...prev, categoryName],
       );
+      navigate(`/search/job/${categoryName}`)
     } else {
       navigate("/job-listing", { state: { selectedCategory: categoryName } });
     }
@@ -54,7 +55,7 @@ export function Categories({
   return (
     <>
       <div className="max-w-[1200px] mx-auto px-1">
-        <div className="flex justify-between items-end mb-8 mt-4">
+        <div className="flex justify-between items-end mb-8 mt-4 max-w-4xl mx-auto">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold text-[#0A0A0A] tracking-tight">Categories</h2>
             <p className="text-gray-500 mt-2 text-[15px]">Find your next opportunity from our latest listings</p>
