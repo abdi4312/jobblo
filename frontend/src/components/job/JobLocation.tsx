@@ -12,7 +12,7 @@ const JobLocation: React.FC<JobLocationProps> = ({ location }) => {
   return (
     <div className='border border-amber-200 my-6 rounded-[14px]'>
       <div className='flex flex-col justify-center items-center gap-3 py-6'>
-        
+
         <span className='pl-2.5 pt-3.25 pr-3.5 pb-2.75 text-[#2F7E47]! bg-[#CBDBD0]! rounded-full'>
           <Navigation size={24} />
         </span>

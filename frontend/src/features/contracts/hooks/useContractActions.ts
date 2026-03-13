@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { signContract, createContract } from "../api"; // Dono functions import kar lein
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import { initSocket } from "../../../socket/socket";
 
 export const useContractActions = (serviceId: string) => {
@@ -14,10 +14,10 @@ export const useContractActions = (serviceId: string) => {
       // TanStack Query ka cache update
       queryClient.setQueryData(["contract", serviceId], updatedContract);
       queryClient.invalidateQueries({ queryKey: ["chats"] });
-      toast.success("Contract signed successfully!");
+      toast.success("Kontrakten er signert!");
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.error || "Failed to sign contract");
+      toast.error(err?.response?.data?.error || "Kunne ikke signere kontrakten");
     },
   });
 

@@ -1,9 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import type { Jobs } from "../../../types/Jobs.ts";
-import { Button } from "../../Ui/Button.tsx";
-import { Clock4, Heart, MapPin } from "lucide-react";
 import { useFavoriteActions, useFavorites } from "../../../features/favorites/hook/useFavorites.ts";
 import { useUserStore } from "../../../stores/userStore.ts";
+import { Bookmark } from "lucide-react";
 
 interface JobCardProps {
   job: Jobs;
@@ -19,9 +18,7 @@ const categoryColorMap: Record<string, string> = {
 
 export const JobCard = ({ job }: JobCardProps) => {
   const navigate = useNavigate();
-
   const isAuth = useUserStore((state) => state.isAuthenticated);
-
   const { data: favoritesData, isLoading } = useFavorites();
   const { addFavorite, removeFavorite } = useFavoriteActions()
 
@@ -29,13 +26,12 @@ export const JobCard = ({ job }: JobCardProps) => {
     navigate(`/job-listing/${job._id}`);
   };
 
-  // Favorite check logic
   const isFavorite = favoritesData?.data?.some((item: any) =>
     item.service?._id === job._id || item.jobId === job._id
   ) || false;
 
   const handleFavClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Card navigation ko rokne ke liye
+    e.stopPropagation();
     if (!isAuth) {
       navigate("/login");
       return;
@@ -52,86 +48,56 @@ export const JobCard = ({ job }: JobCardProps) => {
   const badgeColor = categoryColorMap[catName] || "bg-[#EF7909]";
 
   return (
-    <div className={`mx-auto bg-[#FFFFFF1A] w-full max-w-110 lg:min-w-100 rounded-xl shadow-md cursor-pointer overflow-hidden`} onClick={handleCardClick}>
+    <div className="flex flex-col gap-2 w-full cursor-pointer group" onClick={handleCardClick}>
       {/* Image Section */}
-      <div className="relative w-full h-45 bg-[#f0f0f0] flex items-center justify-center">
-
-        {job.images[0] ? (
-          <img src={job.images[0]} alt={job.title} className="w-full h-full p-2 object-cover rounded-t-2xl" />
+      <div className="relative aspect-4/5 w-full bg-[#f6f6f6] rounded-[20px] overflow-hidden">
+        {job.images && job.images[0] ? (
+          <img
+            src={job.images[0]}
+            alt={job.title}
+            className="w-full h-full object-cover"
+          />
         ) : (
-          <span className="text-[#666] text-base">No image available</span>
+          <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-200">
+            No image
+          </div>
         )}
 
-        <div className={`absolute top-4 right-2 px-3 py-1.5 text-white rounded-[20px] flex items-center justify-center ${badgeColor}`} >
-          <span className="text-[12px]">
-            {catName || "Rørlegger"}
-          </span>
-        </div>
-
-        {/* <div className="absolute text-[#0A0A0A] bottom-4 left-4.5 bg-[#D9D9D9]/80 px-3 py-1.5 rounded-[20px] flex items-center justify-center gap-1.5">
-          <MapPin size={13} />
-          <span className="text-[12px] font-normal">
-            {job.location.city}
-          </span>
-        </div> */}
-        <div
-          className="absolute flex justify-between items-center text-[#0A0A0A] bottom-4 left-4.5 right-4.5"
+        {/* Favorite Icon (Bottom Right on Hover) */}
+        <button
+          className="absolute bottom-3 right-3 w-10 h-10 flex items-center justify-center bg-white rounded-[14px] shadow-md transition-all duration-300 z-10 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0"
+          onClick={handleFavClick}
         >
-          {/* Left Side: Location Badge */}
-          <div className="bg-[#D9D9D9]/80 px-3 py-1.5 rounded-[20px] flex items-center justify-center gap-1.5 backdrop-blur-sm">
-            <MapPin size={13} />
-            <span className="text-[12px] font-normal">
-              {job.location.city}
-            </span>
-          </div>
+          {isLoading ? (
+            <div className="animate-spin w-4 h-4 border-[1.5px] border-gray-300 border-t-[#2F7E47] rounded-full" />
+          ) : (
+            <Bookmark size={22} className={isFavorite ? "fill-[#0A0A0A] text-[#0A0A0A]" : "text-[#0A0A0A]"} />
+          )}
+        </button>
 
-          {/* Right Side: Heart Icon */}
-          <div
-            className="px-2 py-1.5 bg-[#D9D9D9]/80 backdrop-blur-sm rounded-2xl cursor-pointer"
-            onClick={handleFavClick}
-          >
-            {isLoading ? (
-              <div className="animate-spin w-5 h-5 border-2 border-gray-300 border-t-[#2F7E47] rounded-full" />
-            ) : (
-              <Heart
-                size={20}
-                className={isFavorite ? "text-red-500 fill-red-500" : "text-[#0A0A0A]"}
-              />
-            )}
+        {/* Promoted / Category Badge (Bottom Left) */}
+        {catName && (
+          <div className={`absolute bottom-3 left-3 ${badgeColor} text-white px-3 py-1.5 rounded-full font-bold text-[12px] shadow-xs tracking-wide`}>
+            {catName}
           </div>
-
-        </div>
+        )}
       </div>
 
-      {/* Title */}
-      <div className="gap-3 p-4">
-        <h2 className="text-[#0A0A0A] whitespace-nowrap overflow-hidden text-ellipsis font-bold text-[20px]">
+      {/* Info Section */}
+      <div className="flex flex-col gap-0.5 mt-1 px-1">
+        <h2 className="text-[#0A0A0A] font-bold text-[15px] leading-tight truncate">
           {job.title}
         </h2>
-
-        <p className="text-[#0A0A0A] text-base font-light">
-          {job.description}
-        </p>
-      </div>
-
-      {/* Job Details */}
-      <div className="flex justify-between p-4">
-
-        <div className="flex items-center gap-1">
-          <Clock4 size={13} />
-          <h3 className="m-0 whitespace-nowrap overflow-hidden text-ellipsis text-[12px] font-normal">
-            {job.duration.value
-              ? `${job.duration.value} ${job.duration.unit}`
-              : "Ikke angitt"}
-          </h3>
-        </div>
-
-        <div className="flex items-center gap-6">
-          <p className="text-[24px] font-bold">{job.price}Kr</p>
-          <Button label="Søk nå" className="bg-[#2F7E47]! rounded-xl" />
+        <div className="text-[#6A6A6A] text-[14px] font-medium flex items-center justify-start max-w-full">
+          {job.location?.city && (
+            <span className="truncate flex-1 min-w-0 mr-1 text-left">
+              {job.location.city}
+            </span>
+          )}
+          {job.location?.city && <span className="flex-none mr-1">·</span>}
+          <span className="flex-none whitespace-nowrap">NOK {job.price}</span>
         </div>
       </div>
-
     </div>
   );
 };

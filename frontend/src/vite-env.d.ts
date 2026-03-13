@@ -7,3 +7,6 @@ declare module "*.svg?react" {
 
   export default ReactComponent;
 }
+
+declare module "swiper/css";
+declare module "swiper/css/*";
