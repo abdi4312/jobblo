@@ -71,6 +71,7 @@ export default function MineAnnonser() {
                 : "",
               durationValue: editingService.duration?.value?.toString() || "",
               durationUnit: editingService.duration?.unit || "hours",
+              images: editingService.images || [],
             }}
           />
         </div>

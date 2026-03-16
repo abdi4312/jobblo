@@ -22,11 +22,11 @@ const JobContainer: React.FC<JobContainerProps> = ({ job }) => {
     };
 
     const renderBox = (icon: React.ReactNode, label: string, value: string) => (
-        <div className='flex flex-col max-h-23.75 gap-2 rounded-[14px] bg-white shadow-[0px_2px_4px_0px_rgba(0,0,0,0.08)] p-6'>
-            <p className='flex gap-2 items-center text-[14px] font-normal text-[#0A0A0A9E]'>
+        <div className='flex flex-col gap-1.5 rounded-[14px] bg-white shadow-[0px_2px_4px_0px_rgba(0,0,0,0.08)] px-4 py-4'>
+            <p className='flex gap-1.5 items-center text-[13px] font-normal text-[#0A0A0A9E]'>
                 <span>{icon}</span> {label}
             </p>
-            <p className='text-[#0A0A0A]! text-base! font-medium! text-end'>{value}</p>
+            <p className='text-[#0A0A0A] text-[15px] font-semibold text-end'>{value}</p>
         </div>
     );
 
