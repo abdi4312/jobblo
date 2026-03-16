@@ -19,16 +19,16 @@ module.exports = async () => {
         { name: 'Maling', icon: 'Paintbrush' },
         { name: 'Flytting', icon: 'Truck' },
         { name: 'Hagearbeid', icon: 'Flower2' },
-        // { name: 'Child & baby', icon: 'Flower2' },
-        { name: 'Outdoor & sports', icon: 'Mountain' },
-        { name: 'Art/Painting', icon: 'Presentation' }
+        { name: 'Oppussing', icon: 'Hammer' },
+        { name: 'Transport', icon: 'Box' },
+        { name: 'Småjobber', icon: 'Handshake' }
     ];
 
     return await Category.insertMany(
         categories.map(({ name, icon }, index) => ({
             name,
             icon,
-            slug: slugify(name),     
+            slug: slugify(name),
             sortOrder: index,
             isActive: true
         }))
