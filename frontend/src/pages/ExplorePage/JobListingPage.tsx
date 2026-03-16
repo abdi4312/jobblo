@@ -47,15 +47,13 @@ export default function JobListingPage() {
           </div> */}
 
           {/* Categories Horizontal Scroll */}
-          <div className="mb-10">
-            <Categories
-              showTitle={false}
-              allowMultiSelect={true}
-              onCategoriesChange={setSelectedCategories}
-              searchQuery={searchQuery}
-              onSearchClear={() => setSearchQuery("")}
-            />
-          </div>
+          <Categories
+            showTitle={false}
+            allowMultiSelect={true}
+            onCategoriesChange={setSelectedCategories}
+            searchQuery={searchQuery}
+            onSearchClear={() => setSearchQuery("")}
+          />
           <Banner />
           <Favourites />
 

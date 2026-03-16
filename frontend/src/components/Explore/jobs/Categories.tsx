@@ -29,8 +29,9 @@ export function Categories({
     "Maling": { color: "#238CEB", active: "#238CEB15" },
     "Flytting": { color: "#EF7909", active: "#EF790915" },
     "Hagearbeid": { color: "#2F7E47", active: "#2F7E4715" },
-    "Outdoor & sports": { color: "#2F7E47", active: "#2F7E4715" },
-    "Art/Painting": { color: "#2F7E47", active: "#2F7E4715" },
+    "Oppussing": { color: "#2F7E47", active: "#2F7E4715" },
+    "Transport": { color: "#2F7E47", active: "#2F7E4715" },
+    "Småjobber": { color: "#2F7E47", active: "#2F7E4715" },
   };
 
   useEffect(() => {
@@ -54,8 +55,8 @@ export function Categories({
 
   return (
     <>
-      <div className="max-w-[1200px] mx-auto px-1">
-        <div className="flex justify-between items-end mb-8 mt-4 max-w-4xl mx-auto">
+      <div className="max-w-[1050px] mx-auto px-1">
+        <div className="flex justify-between items-end mb-8 mt-4 max-w-[1200px] mx-auto">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold text-[#0A0A0A] tracking-tight">Categories</h2>
             <p className="text-gray-500 mt-2 text-[15px]">Find your next opportunity from our latest listings</p>
@@ -63,7 +64,7 @@ export function Categories({
         </div>
         <div className="pb-6 overflow-auto custom-scrollbar">
           {/* FIXED: added flex-wrap or overflow handling for clean look */}
-          <div className="flex gap-2 max-w-4xl mx-auto">
+          <div className="flex gap-2 max-w-[1050px] mx-auto">
             {isLoading ? (
               // Jab data load ho raha ho, InfinitySpin dikhao
               Array.from({ length: 4 }).map((_, index) => (

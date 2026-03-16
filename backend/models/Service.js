@@ -12,7 +12,7 @@ const serviceSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     title: { type: String, required: true },
     description: { type: String },
-    price: { type: Number, min: 0 },
+    price: { type: Number, min: 0, required: true },
 
     // Lokasjon
     location: {
@@ -23,7 +23,7 @@ const serviceSchema = new mongoose.Schema({
     },
 
     // Faktiske kategorinavn
-    categories: [{ type: String }],
+    categories: [{ type: String, required: true }],
 
     // Liste over bilde-URLer (Azure URLs)
     images: [{ type: String }],
