@@ -1,29 +1,40 @@
-import { Spinner } from "../Ui/Spinner";
-
 export const JobDetailCardSkeleton = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 overflow-hidden">
-        {Array(6).fill(0).map((_, i) => (
-            <div
-                key={i}
-                className="mx-auto bg-[#FFFFFF1A] w-full rounded-xl shadow-md cursor-pointer overflow-hidden border border-gray-100"
-            >
-                {/* Image Section Placeholder */}
-                <div className="relative w-full h-45 bg-[#f0f0f0] flex items-center justify-center">
-                    <Spinner size={150} />
-                </div>
+  <aside className="w-full space-y-4">
+    {/* Price CTA Card Skeleton */}
+    <div className="bg-white rounded-[20px] overflow-hidden shadow-[0px_2px_8px_0px_rgba(0,0,0,0.07)]">
+      {/* Green top accent bar placeholder */}
+      <div className="h-1.5 bg-gray-100 animate-pulse" />
+      <div className="p-6 space-y-5">
+        <div className="space-y-2">
+          <div className="h-3 bg-gray-100 rounded w-16 animate-pulse"></div>
+          <div className="flex items-baseline gap-1.5 animate-pulse">
+            <div className="h-10 bg-gray-200 rounded w-24"></div>
+            <div className="h-5 bg-gray-200 rounded w-8"></div>
+          </div>
+        </div>
 
-                {/* Content Placeholder */}
-                <div className="gap-3 p-4 animate-pulse">
-                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-full"></div>
-                </div>
+        {/* Buttons Skeleton */}
+        <div className="flex gap-3 animate-pulse">
+          <div className="flex-1 h-12 bg-gray-200 rounded-xl"></div>
+          <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
+        </div>
 
-                {/* Footer Placeholder */}
-                <div className="flex justify-between items-center p-4">
-                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                    <div className="h-10 bg-gray-200 rounded w-1/3"></div>
-                </div>
-            </div>
-        ))}
+        <div className="h-3 bg-gray-100 rounded w-3/4 mx-auto animate-pulse"></div>
+      </div>
     </div>
+
+    {/* Job Info Summary Card Skeleton */}
+    <div className="bg-white rounded-[20px] p-6 shadow-[0px_2px_8px_0px_rgba(0,0,0,0.07)]">
+      <div className="h-3 bg-gray-100 rounded w-24 mb-6 animate-pulse"></div>
+      
+      <div className="grid grid-cols-2 gap-3">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-20 bg-gray-50 rounded-[14px] p-4 flex flex-col justify-between animate-pulse">
+            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            <div className="h-4 bg-gray-200 rounded w-3/4 self-end"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </aside>
 );

@@ -21,33 +21,64 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
   const [durationUnit, setDurationUnit] = useState(initialData?.durationUnit || "hours");
   const [paymentType, setPaymentType] = useState(initialData?.paymentType || "Fastpris");
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [currentImages, setCurrentImages] = useState<string[]>(initialData?.images || []);
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
 
   const handleFinalSubmit = () => {
-    // Form validation ya extra logic yahan aa sakta hai
-    const jobData: any = {
-      title,
-      description,
-      price: Number(price),
-      urgent,
-      equipment,
-      location: {
-        type: 'Point',
-        address,
-        city,
-        coordinates: [10.7461, 59.9127]
-      },
-      categories: [categories].filter(Boolean),
-      fromDate,
-      toDate,
-      duration: durationValue ? { value: Number(durationValue), unit: durationUnit } : null,
-      images: selectedImages,
-      paymentType
-    };
+    const formData = new FormData();
 
-    if (!isEditMode && userId) jobData.userId = userId;
+    formData.append("title", title);
+    formData.append("description", description);
+    formData.append("price", price.toString());
+    formData.append("urgent", urgent.toString());
+    formData.append("equipment", equipment);
+    formData.append("paymentType", paymentType);
 
-    onSubmit(jobData);
+    if (fromDate) formData.append("fromDate", fromDate);
+    if (toDate) formData.append("toDate", toDate);
+
+    // Location
+    formData.append("location[address]", address);
+    formData.append("location[city]", city);
+    formData.append("location[type]", "Point");
+    formData.append("location[coordinates][0]", "10.7461");
+    formData.append("location[coordinates][1]", "59.9127");
+
+    // Categories
+    if (categories) {
+      // Assuming categories is a string based on state, but backend expects array
+      const catArray = [categories].filter(Boolean);
+      catArray.forEach(cat => formData.append("categories", cat));
+    }
+
+    // Duration
+    if (durationValue) {
+      formData.append("duration[value]", durationValue.toString());
+      formData.append("duration[unit]", durationUnit);
+    }
+
+    // Images
+    selectedImages.forEach((file) => {
+      formData.append("images", file);
+    });
+
+    // Images to delete
+    imagesToDelete.forEach((url) => {
+      formData.append("imagesToDelete", url);
+    });
+
+    if (!isEditMode && userId) {
+      formData.append("userId", userId);
+    }
+
+    onSubmit(formData);
   };
+
+  const handleExistingImageRemove = (url: string) => {
+    setCurrentImages((prev) => prev.filter((img) => img !== url));
+    setImagesToDelete((prev) => [...prev, url]);
+  };
+
   const handleCancel = () => {
     // Form reset logic ya redirect logic yahan aa sakta hai
     setTitle("");
@@ -77,7 +108,11 @@ export default function CreateJobForm({ onSubmit, userId, initialData, isEditMod
               <h2 className="font-bold text-[20px] text-[#0A0A0A]">Bilder</h2>
               <p className="text-[#6A7282] font-normal text-[14px]">(Valgfritt, maks 6)</p>
             </div>
-            <ImageUpload onImagesChange={(files) => setSelectedImages(files)} />
+            <ImageUpload 
+              onImagesChange={(files) => setSelectedImages(files)} 
+              existingImages={currentImages}
+              onExistingImageRemove={handleExistingImageRemove}
+            />
           </div>
 
           <BasicInformation
