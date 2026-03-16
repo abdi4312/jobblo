@@ -4,13 +4,13 @@ import { useUserStore } from "../../stores/userStore";
 import { toast } from "react-toastify";
 
 export const useUpdateUser = () => {
-  const setUser = useUserStore((state) => state.setUser);
+  const { fetchProfile } = useUserStore((state) => state);
 
   return useMutation({
     mutationFn: ({ userId, data }: { userId: string; data: any }) => 
       updateUser(userId, data),
-    onSuccess: (updatedUser) => {
-      setUser(updatedUser);
+    onSuccess: () => {
+      fetchProfile();
       toast.success('Oppdatert!');
     },
     onError: (error: any) => {
