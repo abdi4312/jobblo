@@ -138,6 +138,18 @@ export default function MinProfil() {
     }
   ];
 
+  const handleImageChange = async (file: File) => {
+    if (!user?._id) return;
+
+    const formDataUpload = new FormData();
+    formDataUpload.append("avatar", file);
+
+    updateUserMutation.mutate({
+      userId: user._id,
+      data: formDataUpload
+    });
+  };
+
   return (
     <div className="min-h-screen max-w-300 mx-auto px-4 py-5 flex flex-col items-center overflow-x-hidden">
       <div className="w-full flex flex-col gap-6">
@@ -146,7 +158,8 @@ export default function MinProfil() {
           <ProfileImage
             imageUrl={formData.profileImage}
             name={formData.name}
-            onImageChange={() => console.log("Upload logic here")}
+            onImageChange={handleImageChange}
+            isUploading={updateUserMutation.isPending}
           />
           <UserStats user={user} />
         </div>

@@ -8,10 +8,10 @@ const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 // Helper to authorize user 
 function authorizeUser(req, targetUserId) {
   const currentUserId = req.userId;       
-  const currentUserRole = req.user.role;
+  const currentUserRole = req.user?.role;
 
-  // Only admin OR the same user can proceed
-  if (currentUserRole !== "admin" && currentUserId !== targetUserId) {
+  // Only superAdmin OR the same user can proceed
+  if (currentUserRole !== "superAdmin" && currentUserId !== targetUserId) {
     return false;
   }
   return true;
@@ -118,31 +118,44 @@ exports.updateUser = async (req, res) => {
         const allowedUpdates = ["name", "email", "phone", "lastName", "bio", "birthDate","gender",
             "address","postNumber","postSted","country"];
 
-        if (req.user.role === "admin") {
+        if (req.user.role === "superAdmin") {
             allowedUpdates.push("role");
         }
 
         const updates = {};
-         for (const key of allowedUpdates) {
-           if (req.body[key] !== undefined) {
-            updates[key] = req.body[key];
+        for (const key of allowedUpdates) {
+            if (req.body[key] !== undefined) {
+                updates[key] = req.body[key];
+            }
         }
-         }
 
-         if (updates.length === 0) {
-            return res.status(400).json({ error: "No fields provided for update" });
+        // ⭐ HANDLE AVATAR UPLOAD
+        if (req.file) {
+            updates.avatarUrl = req.file.path;
+            updates.avatarPublicId = req.file.filename;
         }
-        // Prevent normal user from changing 'role'
-            // ❌ If nothing to update, return early
+
         if (Object.keys(updates).length === 0) {
-        return res.status(400).json({ error: "No valid fields provided for update" });
+            return res.status(400).json({ error: "No valid fields provided for update" });
         }
 
-        const user = await User.findByIdAndUpdate(id, updates, { new: true });
+        const user = await User.findById(id);
+        if (!user) return res.status(404).json({ error: "User not found" });
 
-        if (!user) return res.status(404).json({ error: 'User not found' });
-        res.json(user);
+        // Delete old avatar if a new one is uploaded
+        if (req.file && user.avatarPublicId) {
+            const cloudinary = require("../config/cloudinary");
+            try {
+                await cloudinary.uploader.destroy(user.avatarPublicId);
+            } catch (err) {
+                console.error("Old avatar deletion error:", err);
+            }
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(id, updates, { new: true });
+        res.json(updatedUser);
     } catch (err) {
+        console.error("updateUser Error:", err);
         res.status(400).json({ error: err.message });
     }
 };

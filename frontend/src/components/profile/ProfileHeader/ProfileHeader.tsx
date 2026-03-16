@@ -1,10 +1,12 @@
 import { useUserStore } from "../../../stores/userStore";
 import { useState, useEffect } from "react";
 import mainLink from "../../../api/mainURLs";
-import { Calendar, CircleCheck, LogOut, MapPin, Pencil, ShieldCheck, ShieldX } from "lucide-react";
+import { Calendar, LogOut, MapPin, Pencil, ShieldCheck, ShieldX } from "lucide-react";
 import ProfileCard from "./ProfileCard";
+import { useNavigate } from "react-router-dom";
 
 export function ProfileHeader({ handlelogout }: { handlelogout: () => void }) {
+  const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
   const [activeJobs, setActiveJobs] = useState(0);
   const [completedJobs, setCompletedJobs] = useState(0);
@@ -48,7 +50,7 @@ export function ProfileHeader({ handlelogout }: { handlelogout: () => void }) {
             <img
               src={user?.avatarUrl || "https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332"}
               alt="Profile"
-              className="max-w-17 max-h-17 sm:max-w-32 md:max-h-32 sm:min-w-25 sm:min-h-25 rounded-full object-cover border-[5px] bg-white border-white shadow-md"
+              className="w-17 h-17 min-w-17 min-h-17 sm:w-28 sm:h-28 rounded-full object-cover border-[5px] bg-white border-white shadow-md"
             />
           </div>
 
@@ -101,7 +103,7 @@ export function ProfileHeader({ handlelogout }: { handlelogout: () => void }) {
         </div>
 
         <div className="flex flex-row sm:flex-col justify-center sm:justify-start  flex-wrap gap-6 pt-4 md:pt-0">
-          <button className="text-[16px] font-medium text-[#364153] flex justify-center items-center gap-2 shadow-md px-3 py-1.5 rounded-4xl cursor-pointer">
+          <button className="text-[16px] font-medium text-[#364153] flex justify-center items-center gap-2 shadow-md px-3 py-1.5 rounded-4xl cursor-pointer" onClick={() => navigate('/Min-profil')}>
             <Pencil size={16} className="text-[#3F8F6B]" />
             Rediger profil</button>
           <button className="text-[16px]  font-medium text-[#EA1717] flex gap-2 shadow-md px-3 py-1.5

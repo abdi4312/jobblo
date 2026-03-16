@@ -135,6 +135,8 @@ router.post('/', authenticate, requireAdmin ,userController.createUser);
  */
 router.get('/:id',authenticate, userController.getUserById);
 
+const upload = require('../middleware/upload');
+
 /**
  * @swagger
  * /api/users/{id}:
@@ -151,22 +153,26 @@ router.get('/:id',authenticate, userController.getUserById);
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
- *             $ref: '#/components/schemas/User'
+ *             type: object
+ *             properties:
+ *               avatar:
+ *                 type: string
+ *                 format: binary
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Brukeren ble oppdatert
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
  *       400:
  *         description: Ugyldig forespørsel
  *       404:
  *         description: Brukeren ble ikke funnet
  */
-router.put('/:id', authenticate ,userController.updateUser);
+router.put('/:id', authenticate, upload.single('avatar'), userController.updateUser);
 
 /**
  * @swagger
@@ -249,36 +255,6 @@ router.get('/:id/services',authenticate, userController.getUserServices);
  */
 router.get('/:id', userController.getUserById);
 
-/**
- * @swagger
- * /api/users/{id}:
- *   put:
- *     summary: Oppdater en bruker
- *     tags: [Brukere]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for brukeren
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/User'
- *     responses:
- *       200:
- *         description: Brukeren ble oppdatert
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
- *       404:
- *         description: Brukeren ble ikke funnet
- */
-router.put('/:id', userController.updateUser);
 
 /**
  * @swagger
