@@ -20,21 +20,22 @@ export default function LeggUtOppdrag() {
 
   const userId = user._id;
 
-  const handleFormSubmit = async (jobData: any) => {
-    console.log('Sending job data:', jobData); // Log the data being sent
+  const handleFormSubmit = async (formData: FormData) => {
+    console.log('Sending job data (FormData)');
 
     try {
-      const response = await mainLink.post("/api/services", jobData);
+      const response = await mainLink.post("/api/services", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       if (response.data) {
         console.log('Job created successfully');
-        const result = response.data;
-        console.log(result);
         toast.success('Oppdrag publisert!');
         navigate(-1);
       } else {
-        // const errorText = await response.json();
-        console.error('Failed to create job. Status:', response.status, 'Error:');
+        console.error('Failed to create job. Status:', response.status);
         toast.error(`Kunne ikke publisere oppdrag. Status: ${response.status}`);
       }
     } catch (error) {

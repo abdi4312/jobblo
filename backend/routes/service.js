@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const serviceController = require('../controllers/serviceController');
 const { authenticate } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 
 /**
  * -------------------------------------------------------
@@ -268,7 +269,7 @@ router.put('/:id/location', authenticate, serviceController.updateLocation);
  *       401:
  *         description: Ikke autorisert
  */
-router.post('/', authenticate, serviceController.createService);
+router.post('/', authenticate, upload.array('images', 5), serviceController.createService);
 
 
 /**
@@ -300,7 +301,7 @@ router.get('/:id', serviceController.getServiceById);
  *     summary: Update a service
  *     tags: [Tjenester]
  */
-router.put('/:id', authenticate, serviceController.updateService);
+router.put('/:id', authenticate, upload.array('images', 5), serviceController.updateService);
 
 
 /**

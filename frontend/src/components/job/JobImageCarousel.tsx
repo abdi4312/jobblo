@@ -7,80 +7,108 @@ interface JobImageCarouselProps {
 
 const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-  const jobImages = images && images.length > 0
-    ? images
-    : ['https://api.dicebear.com/7.x/avataaars/svg?seed=default'];
+  const jobImages =
+    images && images.length > 0
+      ? images
+      : ['https://api.dicebear.com/7.x/avataaars/svg?seed=default'];
 
-  const handlePrevious = () => {
+  const handlePrevious = () =>
     setCurrentIndex((prev) => (prev === 0 ? jobImages.length - 1 : prev - 1));
+
+  const handleNext = () =>
+    setCurrentIndex((prev) => (prev === jobImages.length - 1 ? 0 : prev + 1));
+
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
   };
 
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev === jobImages.length - 1 ? 0 : prev + 1));
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      handleNext();
+    } else if (isRightSwipe) {
+      handlePrevious();
+    }
   };
 
   return (
-    <div className={`relative w-full overflow-visible p-3 pt-0`}>
-      {/* Spacer div from your original code */}
-      <div className="h-2 w-px"></div>
+    <div 
+      className="relative w-full overflow-hidden group bg-gray-100 aspect-4/3 sm:aspect-16/8 md:aspect-16/7"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      <img
+        key={currentIndex}
+        src={jobImages[currentIndex]}
+        alt={`Bilde ${currentIndex + 1}`}
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+      />
 
-      <div className="relative w-full h-58.5 md:h-125.5 overflow-hidden rounded-t-lg">
-        <img
-          src={jobImages[currentIndex]}
-          alt={`Job image ${currentIndex + 1}`}
-          className="absolute top-0 left-0 w-full h-58.5 md:h-112.5 object-cover"
-        />
-      </div>
+      {/* Gradient overlay */}
+      <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
 
-      {/* Navigation Dots */}
-      {/* <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-10">
-        <div
-          className="min-w-16 h-4 bg-[rgba(251,236,213,0.9)] rounded-[50px] border-[0.2px] border-[var(--color-text)] flex items-center justify-center gap-2 px-2 py-1 transition-opacity"
-          style={{ opacity: jobImages.length <= 1 ? 0.4 : 1 }}
+      {/* Prev button */}
+      {jobImages.length > 1 && (
+        <button
+          onClick={handlePrevious}
+          aria-label="Forrige bilde"
+          className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-10 p-2 sm:p-2.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white hover:text-[#0A0A0A] hover:scale-110"
         >
-          {jobImages.map((_, index) => (
-            <div
-              key={index}
-              onClick={() => jobImages.length > 1 && setCurrentIndex(index)}
-              className={`w-[7px] h-[7px] rounded-full transition-all duration-300 
-            ${index === currentIndex ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-fbe)]'}
-            ${jobImages.length > 1 ? 'cursor-pointer' : 'cursor-default'}`}
-            ></div>
+          <ChevronLeft size={18} strokeWidth={2.5} />
+        </button>
+      )}
+
+      {/* Next button */}
+      {jobImages.length > 1 && (
+        <button
+          onClick={handleNext}
+          aria-label="Neste bilde"
+          className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-10 p-2 sm:p-2.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white hover:text-[#0A0A0A] hover:scale-110"
+        >
+          <ChevronRight size={18} strokeWidth={2.5} />
+        </button>
+      )}
+
+      {/* Dot indicators */}
+      {jobImages.length > 1 && (
+        <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-1.5 items-center">
+          {jobImages.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setCurrentIndex(idx)}
+              aria-label={`Gå til bilde ${idx + 1}`}
+              className={`rounded-full transition-all duration-300 cursor-pointer ${
+                idx === currentIndex
+                  ? 'w-5 h-1.5 sm:w-6 sm:h-2 bg-[#2F7E47]'
+                  : 'w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/60 hover:bg-white'
+              }`}
+            />
           ))}
         </div>
-      </div> */}
+      )}
 
-      {/* Navigation Buttons */}
-      <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 flex justify-between px-1.25 pointer-events-none z-10 w-full">
-        {/* Previous Button */}
-        <button
-          className="group pointer-events-auto cursor-pointer transition-transform duration-200 hover:scale-110 disabled:cursor-not-allowed"
-          onClick={handlePrevious}
-          disabled={jobImages.length <= 1}
-        >
-          <div
-            className="p-1 bg-[#FFFFFF] rounded-full flex items-center justify-center shadow-md"
-            style={{ opacity: jobImages.length <= 1 ? 0.4 : 1 }}
-          >
-            <ChevronLeft />
-          </div>
-        </button>
-
-        {/* Next Button */}
-        <button
-          className="group pointer-events-auto cursor-pointer transition-transform duration-200 hover:scale-110 disabled:cursor-not-allowed"
-          onClick={handleNext}
-          disabled={jobImages.length <= 1}
-        >
-          <div
-            className="p-1 bg-[#FFFFFF] rounded-full flex items-center justify-center shadow-md"
-            style={{ opacity: jobImages.length <= 1 ? 0.4 : 1 }}
-          >
-            <ChevronRight />
-          </div>
-        </button>
-      </div>
+      {/* Counter badge */}
+      {jobImages.length > 1 && (
+        <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-10 px-2.5 py-0.5 rounded-full bg-black/35 backdrop-blur-sm text-[10px] sm:text-[11px] font-semibold text-white">
+          {currentIndex + 1} / {jobImages.length}
+        </div>
+      )}
     </div>
   );
 };

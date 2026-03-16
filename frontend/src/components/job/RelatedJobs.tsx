@@ -1,68 +1,50 @@
 import { useNavigate } from "react-router-dom";
-import { Clock4, Heart, MapPin } from "lucide-react";
-import { Button } from "../Ui/Button.tsx";
+import { MapPin } from "lucide-react";
 import { useNearbyJobsQuery } from "../../features/jobDetail/hook.ts";
-import { useUserStore } from "../../stores/userStore.ts";
-import { useFavoriteActions, useFavorites } from "../../features/favorites/hook/useFavorites.ts";
+import { JobCard } from "../Explore/jobs/JobCard.tsx";
+import { JobCardSkeleton } from "../Loading/JobCardSkeleton.tsx";
 
 interface RelatedJobsProps {
   coordinates?: [number, number];
   currentJobId?: string;
 }
 
-const categoryColorMap: Record<string, string> = {
-  "Rørlegger": "#EF7909",
-  "Renhold": "#2F7E47",
-  "Maling": "#238CEB",
-  "Hagearbeid": "#EF7909",
-  "Flytting": "#2F7E47",
-};
-
-const RelatedJobs: React.FC<RelatedJobsProps> = ({
-  coordinates,
-  currentJobId,
-}) => {
+const RelatedJobs: React.FC<RelatedJobsProps> = ({ coordinates, currentJobId }) => {
   const navigate = useNavigate();
 
-
-  const { data: nearbyJobs = [], } = useNearbyJobsQuery(
+  const { data: nearbyJobs = [], isLoading: isNearbyLoading } = useNearbyJobsQuery(
     coordinates,
     currentJobId || ""
   );
-  const isAuth = useUserStore((state) => state.isAuthenticated);
-  const { data: favoritesData, isLoading } = useFavorites();
-  const { addFavorite, removeFavorite } = useFavoriteActions();
-  const checkIsFav = (jobId: string) => {
-    return favoritesData?.data?.some((item: any) =>
-      item.service?._id === jobId || item.jobId === jobId
-    ) || false;
-  };
 
+  if (isNearbyLoading) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <JobCardSkeleton key={i} />
+        ))}
+      </div>
+    );
+  }
 
   if (nearbyJobs.length === 0) {
     return (
-      <div className="w-full max-w-2xl mx-auto py-12 px-6">
-        <h3 className="text-xl font-bold text-[#0A0A0A] mb-6">Jobber i nærheten</h3>
-
-        <div className="flex flex-col items-center justify-center p-10 bg-gray-50/50 border-2 border-dashed border-gray-200 rounded-2xl">
-          {/* Search Icon or Illustration */}
+      <div className="py-10 px-4">
+        <div className="flex flex-col items-center justify-center p-10 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl">
           <div className="bg-white p-4 rounded-full shadow-sm mb-4">
-            <MapPin size={32} className="text-gray-400" />
+            <MapPin size={28} className="text-gray-400" />
           </div>
-
-          <h4 className="text-lg font-semibold text-gray-900 mb-1">
+          <h4 className="text-base font-semibold text-gray-800 mb-1">
             Ingen jobber funnet
           </h4>
-
-          <p className="text-gray-500 text-center max-w-62.5 text-sm leading-relaxed">
-            Vi fant dessverre ingen jobber i nærheten av din posisjon akkurat nå.
+          <p className="text-gray-500 text-center text-sm leading-relaxed">
+            Vi fant ingen jobber i nærheten akkurat nå.
           </p>
-
           <button
             onClick={() => navigate("/job-listing")}
-            className="mt-6 text-sm font-medium text-[#2F7E47] hover:underline"
+            className="mt-5 text-sm font-semibold text-[#2F7E47] hover:underline"
           >
-            Se alle tilgjengelige jobber
+            Se alle tilgjengelige jobber →
           </button>
         </div>
       </div>
@@ -70,114 +52,10 @@ const RelatedJobs: React.FC<RelatedJobsProps> = ({
   }
 
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 m-2 gap-2.5">
-      {nearbyJobs.map((job: any) => {
-        const isFavorite = checkIsFav(job._id);
-        // Map ke andar in variables ko define karna zaroori hai
-        const catName = Array.isArray(job.categories) ? job.categories[0] : job.categories;
-        const badgeColor = categoryColorMap[catName as string] || "#EF7909";
-
-        const handleFavClick = (e: React.MouseEvent) => {
-          e.stopPropagation(); // Card click event rokhne ke liye
-          if (!isAuth) return navigate("/login");
-
-          if (isFavorite) {
-            removeFavorite(job._id);
-          } else {
-            addFavorite(job._id);
-          }
-        };
-
-        const handleCardClick = () => {
-          navigate(`/job-listing/${job._id}`);
-        };
-
-        return (
-          <div
-            key={job._id}
-            onClick={handleCardClick}
-            className={`mx-auto bg-[#FFFFFF1A] w-full rounded-xl shadow-md cursor-pointer overflow-hidden`}
-          >
-            {/* Image Section */}
-            <div className="relative w-full h-45 bg-[#f0f0f0] flex items-center justify-center">
-              {job.images[0] ? (
-                <img
-                  src={job.images[0]}
-                  alt={job.title}
-                  className="w-full h-full p-2 object-cover rounded-t-2xl"
-                />
-              ) : (
-                <span className="text-[#666] text-base">No image available</span>
-              )}
-
-              <div
-                className="absolute top-4 right-2 bg-[#EF7909] px-3 py-1.5 text-white rounded-[20px] flex items-center justify-center"
-                style={{ backgroundColor: badgeColor }}
-              >
-                <span className="text-[12px]">
-                  {catName || "Rørlegger"}
-                </span>
-              </div>
-
-              <div
-                className="absolute flex justify-between items-center text-[#0A0A0A] bottom-4 left-4.5 right-4.5"
-              >
-                {/* Left Side: Location Badge */}
-                <div className="bg-[#D9D9D9]/80 px-3 py-1.5 rounded-[20px] flex items-center justify-center gap-1.5 backdrop-blur-sm">
-                  <MapPin size={13} />
-                  <span className="text-[12px] font-normal">
-                    {job.location.city}
-                  </span>
-                </div>
-
-                {/* Right Side: Heart Icon */}
-                <div
-                  className="px-2 py-1.5 bg-[#D9D9D9]/80 backdrop-blur-sm rounded-2xl cursor-pointer"
-                  onClick={handleFavClick}
-                >
-                  {isLoading ? (<div className="animate-spin w-5 h-5 border-2 border-gray-300 border-t-[#2F7E47] rounded-full" />) :
-                    (<Heart
-                      size={20}
-                      className={isFavorite ? "text-red-500 fill-red-500" : "text-[#0A0A0A]"}
-                    />)}
-                </div>
-
-              </div>
-            </div>
-
-            {/* Title */}
-            <div className="gap-3 p-4">
-              <h2 className="text-[#0A0A0A] whitespace-nowrap overflow-hidden text-ellipsis font-bold text-[20px]">
-                {job.title}
-              </h2>
-
-              <p className="text-[#0A0A0A] text-base font-light">
-                {job.description}
-              </p>
-            </div>
-
-            {/* Job Details */}
-            <div className="flex justify-between p-4">
-
-              <div className="flex items-center gap-1">
-                {/* <span className="material-symbols-outlined text-[12.5px] text-[#4A5565]">Schedule</span> */}
-                <Clock4 size={13} />
-                <h3 className="m-0 whitespace-nowrap overflow-hidden text-ellipsis text-[12px] font-normal">
-                  {job.duration.value
-                    ? `${job.duration.value} ${job.duration.unit}`
-                    : "Ikke angitt"}
-                </h3>
-              </div>
-
-              <div className="flex items-center gap-6">
-                <p className="text-[24px] font-bold">{job.price}Kr</p>
-                <Button label="Søk nå" className="bg-[#2F7E47]! rounded-xl" />
-              </div>
-            </div>
-
-          </div>
-        );
-      })}
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+      {nearbyJobs.map((job: any) => (
+        <JobCard key={job._id} job={job} />
+      ))}
     </div>
   );
 };
