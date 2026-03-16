@@ -1,43 +1,36 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCategories } from "../../features/categories/hooks";
 import { LandingCategoriesSkeleton } from "../Loading/LandingCategoriesSkeketon";
-import CleaningImg from "../../assets/images/cleaning.jpg";
-import GardeningImg from "../../assets/images/woman-full-gardening.png";
-import MovingImg from "../../assets/images/courier-moving-out.png";
-import PlumbingImg from "../../assets/images/male-constructionworker.png";
-import PaintingImg from "../../assets/images/painting-wall.jpg";
-
-
+import * as Icons from "lucide-react";
 
 export function Info() {
-
   const { data: category = [], isLoading } = useCategories();
   const navigate = useNavigate();
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
-  interface categoryImage {
-    Image: string;
-    color: string;
-    active: string;
-  }
-
-  // FIXED: Har category ke liye aapka bataya hua custom icon aur color config
-  const categoryImage: Record<string, categoryImage> = {
-    "Rengjøring": { Image: CleaningImg, color: "#EF7909", active: "#EF790933" },
-    "Hagearbeid": { Image: GardeningImg, color: "#2F7E47", active: "#2F7E4733" },
-    "Flytting": { Image: MovingImg, color: "#238CEB", active: "#238CEB33" },
-    "Rørlegger": { Image: PlumbingImg, color: "#EF7909", active: "#EF790933" },
-    "Maling": { Image: PaintingImg, color: "#2F7E47", active: "#2F7E4733" },
+  const categoryStyles: Record<string, { color: string; active: string }> = {
+    "Rengjøring": { color: "#EF7909", active: "#EF790915" },
+    "Rørlegger": { color: "#2F7E47", active: "#2F7E4715" },
+    "Maling": { color: "#238CEB", active: "#238CEB15" },
+    "Flytting": { color: "#EF7909", active: "#EF790915" },
+    "Hagearbeid": { color: "#2F7E47", active: "#2F7E4715" },
+    "Oppussing": { color: "#2F7E47", active: "#2F7E4715" },
+    "Transport": { color: "#2F7E47", active: "#2F7E4715" },
+    "Småjobber": { color: "#2F7E47", active: "#2F7E4715" },
   };
 
-  // Click handler function
   const handleCategoryClick = (categoryName: string) => {
-    // Navigate karein aur URL mein category name bhejein
-    // Example: /jobs?category=Maling
-    navigate(`/job-listing`);
+    setSelectedCategories((prev) =>
+      prev.includes(categoryName)
+        ? prev.filter((c) => c !== categoryName)
+        : [...prev, categoryName]
+    );
+    navigate(`/search/job/${categoryName}`);
   };
 
   if (isLoading) {
-    return <LandingCategoriesSkeleton />
+    return <LandingCategoriesSkeleton />;
   }
 
   return (
@@ -47,33 +40,40 @@ export function Info() {
           Populære <span className="text-[#2F7E47]">kategorier</span>
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 ">
-          {category.map((cat, index) => {
-            const categoryStyle = categoryImage[cat.name] || categoryImage["Rengjøring"];
-            return (
+        {/* Exact same structure as Explore/jobs/Categories.tsx */}
+        <div className="pb-6 overflow-auto custom-scrollbar px-0.5">
+          <div className="flex gap-2 max-w-[1050px] mx-auto">
+            {category.map((item) => {
+              const style = categoryStyles[item.name] || { color: "#000", active: "#F3F4F6" };
+              const isSelected = selectedCategories.includes(item.name);
+              const LucideIcon = (Icons as any)[item.icon] || Icons.HelpCircle;
 
-              <div
-                key={index}
-                onClick={() => handleCategoryClick(cat.name)}
-                className={`relative overflow-hidden rounded-2xl shadow-lg h-60 cursor-pointer ${index === 2 ? "md:row-span-2 md:h-full" : ""
-                  }`}
-              >
-                <img
-                  src={categoryStyle.Image}
-                  alt={cat.name}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-
-                <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent" />
-
-                <div className="absolute bottom-0 p-6 text-white">
-                  <h3 className="text-xl font-bold">{cat.name}</h3>
-                  {/* <p className="text-sm opacity-80">{cat.description}</p> */}
+              return (
+                <div
+                  key={item._id}
+                  className="min-w-30.75 p-6.5 flex items-center shadow rounded-[20px] bg-[rgb(255,255,255)]"
+                  style={{
+                    backgroundColor: isSelected ? style.active : "rgb(255,255,255)",
+                    border: `1px solid ${isSelected ? style.color : "transparent"}`,
+                  }}
+                  onClick={() => handleCategoryClick(item.name)}
+                >
+                  <div className="flex flex-col gap-2 w-full py-2 items-center">
+                    <div>
+                      <span className="">
+                        <LucideIcon size={42} strokeWidth={1} />
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[12px] sm:text-[14px] font-medium text-center text-[#0A0A0A] block">
+                        {item.name}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )
-          }
-          )}
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>
