@@ -35,6 +35,8 @@ import NotificationsPage from "../pages/SuperAdminDashboard/NotificationsPage.ts
 import { AdminProtectedRoute } from "../components/shared/AdminProtectedRoute.tsx";
 import TransactionsPage from "../pages/SuperAdminDashboard/TransactionsPage.tsx";
 import ServiceListingPage from "../pages/ServiceListingPage/ServiceListing.tsx";
+import UpcomingFeatures from "../pages/UpcomingFeaturesPage/UpcomingFeatures.tsx";
+import RoadmapAdminPage from "../pages/SuperAdminDashboard/RoadmapAdminPage.tsx";
 
 
 
@@ -182,6 +184,10 @@ export const routes: RouteObject[] = [
         path: "user-term",
         element: <JobbloUserTerm />,
       },
+      {
+        path: "upcoming",
+        element: <UpcomingFeatures />,
+      },
     ],
 
   },
@@ -262,6 +268,14 @@ export const routes: RouteObject[] = [
         element: (
           <AdminProtectedRoute>
             <NotificationsPage />
+          </AdminProtectedRoute>
+        ),
+      },
+      {
+        path: "roadmap",
+        element: (
+          <AdminProtectedRoute>
+            <RoadmapAdminPage />
           </AdminProtectedRoute>
         ),
       },
