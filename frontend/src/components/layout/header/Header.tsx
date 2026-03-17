@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { getMyChats } from "../../../api/chatAPI";
 import { initSocket } from "../../../socket/socket";
 import { NavLink } from "react-router-dom";
-import { Bell, Heart, MessageCircle, Plus, User } from "lucide-react";
+import { Bell, Heart, Home, MessageCircle, Plus, User } from "lucide-react";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -169,6 +169,7 @@ export default function Header() {
 
   const navLinkUse: NavLinkItem[] = [
     { name: "Legg ut oppdrag", icon: <Plus size={20} />, path: "/publish-job" },
+    { name: "Home", icon: <Home size={25} />, path: "home" },
     { name: "Meldinger", icon: <MessageCircle size={18} />, path: "/messages", badgeCount: unreadCount },
     { name: "Varsler", icon: <Bell size={18} />, path: "/alerts" },
     { name: "Favoritter", icon: <Heart size={18} />, path: "/favoritter" },
@@ -226,18 +227,34 @@ export default function Header() {
           {Auth && (
             <div className="hidden md:flex items-center gap-6 px-4 py-3">
               {navLinkUse.map((link, index) => {
-                const isButton = link.path === "/publish-job";
-                if (isButton) {
+                const homeButton = link.path === "/home";
+                const isHomeButtonActive = homeButton && location.pathname === link.path;
+
+                if (homeButton) {
                   return (
                     <button
                       key={index}
                       onClick={() => handleProtectedNavigation(link.path)}
-                      className="flex items-center gap-2 bg-[#3F8F6B] text-white px-5 py-2.5 rounded-full font-medium transition-hover hover:bg-[#387a5d]"
+                      className={`flex items-center mx-auto ${isHomeButtonActive ? "text-[#3F8F6B]" : "hover:text-[#3F8F6B]"}`}
                     >
-                      {link.icon} <span className="text-sm font-semibold">{link.name}</span>
+                      {link.icon}
                     </button>
                   );
                 }
+                const jobButton = link.path === "/publish-job";
+                const isJobButtonActive = jobButton && location.pathname === link.path;
+                if (jobButton) {
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => handleProtectedNavigation(link.path)}
+                      className={`flex items-center mx-auto ${isJobButtonActive ? "bg-[#3F8F6B]" : "bg-[#3F8F6B]"} text-white px-4 py-2 rounded-full font-medium transition-hover hover:bg-[#387a5d]`}
+                    >
+                      {link.icon}
+                    </button>
+                  );
+                }
+
                 return (
                   <NavLink
                     key={index}

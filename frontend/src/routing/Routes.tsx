@@ -54,7 +54,7 @@ export const routes: RouteObject[] = [
         element: <OAuthSuccess />,
       },
       {
-        path: "job-listing",
+        path: "home",
         element: <JobListingPage />,
       },
       {

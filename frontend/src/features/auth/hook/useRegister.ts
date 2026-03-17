@@ -11,7 +11,7 @@ export const useRegister = () => {
     mutationFn: registerUser,
     onSuccess: (response) => {
       toast.success(`Velkommen ${response.user.name}!`);
-      navigate("/");
+      navigate("/home");
     },
     onError: (error: any) => {
       console.error("Error registering:", error);
