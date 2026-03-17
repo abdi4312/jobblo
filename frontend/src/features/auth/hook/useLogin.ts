@@ -17,7 +17,7 @@ export const useLogin = () => {
       console.log("response",response.user.name);
       
       toast.success(`Velkommen tilbake, ${response.user.name}!`);
-      navigate("/");
+      navigate("/home");
     },
     
     // onError: (error: any) => {

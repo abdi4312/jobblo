@@ -36,7 +36,7 @@ export default function JobListingPage() {
   }, []);
 
   return <>
-    <div className="max-w-300 mx-auto px-4 py-10">
+    <div className="max-w-300 mx-auto px-4 pb-10">
       {/* Grid container: Mobile pe 1 column, Desktop pe 12 columns */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
