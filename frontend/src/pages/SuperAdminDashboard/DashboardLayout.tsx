@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   Bell,
+  Rocket,
 } from "lucide-react";
 import { useUserStore } from "../../stores/userStore";
 import { toast } from "react-toastify";
@@ -108,6 +109,13 @@ const DashboardLayout: React.FC = () => {
             label="Notifications"
             to="/dashboard/notifications"
           />
+          {isSuperAdmin && (
+            <SidebarItem
+              icon={<Rocket size={20} />}
+              label="Roadmap"
+              to="/dashboard/roadmap"
+            />
+          )}
         </nav>
 
         {/* Logout Button */}
@@ -189,10 +197,9 @@ const SidebarItem = ({ icon, label, to, end = false }: SidebarItemProps) => (
     end={end}
     className={({ isActive }) => `
       flex items-center gap-3 p-3.5 rounded-xl transition-all duration-200 group
-      ${
-        isActive
-          ? "bg-[#2d4a3e] text-white shadow-md shadow-green-900/20"
-          : "!text-black hover:bg-gray-50 hover:text-green-900"
+      ${isActive
+        ? "bg-[#2d4a3e] text-white shadow-md shadow-green-900/20"
+        : "!text-black hover:bg-gray-50 hover:text-green-900"
       }
     `}
   >
