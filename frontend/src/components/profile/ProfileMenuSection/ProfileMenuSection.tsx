@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { PricingModal } from "../../shared/PricingModal/PricingModal";
-import { ChevronRight, Headset, Heart, Megaphone, Settings, Star, Tag, User, Wallet } from "lucide-react";
+import { ChevronRight, Headset, Heart, Megaphone, Rocket, Settings, Star, Tag, User, Wallet } from "lucide-react";
 
 export function ProfileMenuSection() {
   const navigate = useNavigate();
@@ -15,6 +15,7 @@ export function ProfileMenuSection() {
     { icon: Star, text: "Anmeldelser", des: "Se og endre dine anmeldelser", path: "/Anmeldelser" },
     { icon: Headset, text: "Kundeservice", des: "Kontakt oss for hjelp", path: "/Support" },
     { icon: Settings, text: "Innstillinger", des: "Se og endre dine generelle innstillinger", path: "/Innstillinger" },
+    { icon: Rocket, text: "Upcoming", des: "Se hva vi jobber med", path: "/Upcoming" },
     { icon: Tag, text: "Se våre priser", des: "Se våre priser for ulike tjenester", isModal: true },
   ];
 
@@ -23,8 +24,14 @@ export function ProfileMenuSection() {
       <div className="flex flex-col gap-4">
         {menuItems.map((item, index) => {
           return (
-            <div key={index} className="flex justify-between items-center bg-white p-4.5 rounded-xl shadow-md"
-              onClick={() => item.isModal ? setIsPricingModalOpen(true) : navigate(item.path)}>
+            <div key={index} className="flex justify-between items-center bg-white p-4.5 rounded-xl shadow-md cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => {
+                if (item.isModal) {
+                  setIsPricingModalOpen(true);
+                } else if (item.path) {
+                  navigate(item.path);
+                }
+              }}>
               <div className="flex items-center gap-8">
                 <div className="bg-white text-[#2F7E47] rounded-[14px] shadow-md flex items-center justify-center p-4.5">
                   <item.icon size={20} />
