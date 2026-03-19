@@ -4,8 +4,10 @@ const HeroSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     subtitle: { type: String },
-    subtitleSecondary: { type: String },
-    description: { type: String },
+    buttonText: { type: String },
+    buttonUrl: { type: String },
+    footerText: { type: String },
+    bgColor: { type: String },
     image: { type: String, required: true },
 
     activeFrom: { type: Date, required: true },
@@ -13,7 +15,7 @@ const HeroSchema = new mongoose.Schema(
 
     isActive: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // 🔁 Auto active / expire logic (Fixed Version)
@@ -24,7 +26,7 @@ HeroSchema.pre("save", async function () {
   if (this.activeFrom && this.expireAt) {
     this.isActive = now >= this.activeFrom && now <= this.expireAt;
   }
-  
+
   // Async hook mein next() ki zaroorat nahi hoti, Mongoose khud handle kar leta hai
 });
 
