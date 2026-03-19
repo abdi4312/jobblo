@@ -1,14 +1,32 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BANNERS_DATA } from "../../../data/banners";
 import { Swiper, SwiperSlide } from "swiper/react";
-// 1. Autoplay module ko import karein
 import { Navigation, Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
+import { useNavigate } from "react-router-dom";
+import { usePublicHeroes } from "../../../features/hero/hooks";
 
 export function Banner() {
+  const navigate = useNavigate();
+  const { data: heroes, isLoading: loading } = usePublicHeroes();
+
+  // Fallback banners agar API se data na mile ya loading ho rahi ho
+  const banners = heroes && heroes.length > 0 ? heroes : BANNERS_DATA;
+
+  const handleButtonClick = (url: string) => {
+    if (!url) return;
+    if (url.startsWith("http")) {
+      window.open(url, "_blank");
+    } else {
+      navigate(url);
+    }
+  };
+
+  if (loading) return null;
+
   return (
-    <div className="w-full max-w-[1200px] mx-auto py-8 px-2 md:px-4 overflow-hidden">
+    <div className="w-full max-w-300 mx-auto py-8 px-2 md:px-4 overflow-hidden">
       <div className="flex items-center justify-between gap-3 md:gap-8">
 
         {/* Left Arrow */}
@@ -22,7 +40,7 @@ export function Banner() {
         </button>
 
         {/* Banner Card */}
-        <div className="flex-1 min-w-0 bg-white p-2 md:p-4 rounded-[30px] md:rounded-[48px] shadow-sm border border-gray-100 overflow-hidden relative h-[380px] md:h-[500px]">
+        <div className="flex-1 min-w-0 bg-white p-2 md:p-4 rounded-[30px] md:rounded-[48px] shadow-sm border border-gray-100 overflow-hidden relative h-95 md:h-125">
 
           <Swiper
             // 2. Modules mein Autoplay add karein
@@ -38,13 +56,13 @@ export function Banner() {
             }}
             speed={700}
 
-            loop={true}
+            loop={banners.length > 1}
             spaceBetween={16}
             slidesPerView={1}
             className="w-full h-full rounded-[22px] md:rounded-[36px]"
           >
-            {BANNERS_DATA.map((data) => (
-              <SwiperSlide key={data.id}>
+            {banners.map((data) => (
+              <SwiperSlide key={data._id || data.id}>
                 <div
                   className="w-full h-full relative overflow-hidden flex items-center"
                   style={{ backgroundColor: data.bgColor }}
@@ -78,13 +96,15 @@ export function Banner() {
                         {data.subtitle}
                       </p>
 
-                      <button className="bg-[#F5F1EB] text-[#132A22] font-semibold text-sm md:text-lg py-3 px-6 md:py-4 md:px-10
+                      <button
+                        onClick={() => handleButtonClick(data.buttonUrl)}
+                        className="bg-[#F5F1EB] text-[#132A22] font-semibold text-sm md:text-lg py-3 px-6 md:py-4 md:px-10
                       rounded-xl md:rounded-[20px] w-max hover:bg-white hover:scale-105 transition-all duration-300">
                         {data.buttonText}
                       </button>
                     </div>
 
-                    <p className="text-[#F5F1EB] text-[10px] md:text-sm font-light opacity-80 pb-6 md:pb-8 max-w-[250px] md:max-w-xl">
+                    <p className="text-[#F5F1EB] text-[10px] md:text-sm font-light opacity-80 pb-6 md:pb-8 max-w-62.5 md:max-w-xl">
                       {data.footerText}
                     </p>
                   </div>

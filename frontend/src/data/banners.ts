@@ -4,6 +4,7 @@ export const BANNERS_DATA = [
     title: "Gratis frakt",
     subtitle: "på alle jakker",
     buttonText: "Gå til liste",
+    buttonUrl: "/explore",
     footerText: "Tilbudet varer fra 9. mars til og med 15. mars og gjelder alt i jakker-kategorien",
     image: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6", // Aap apni image yahan laga sakte hain
     bgColor: "#132A22", // Dark green shade
@@ -13,6 +14,7 @@ export const BANNERS_DATA = [
     title: "Ny Kolleksjon",
     subtitle: "Oppdag vårens nyheter",
     buttonText: "Se mer",
+    buttonUrl: "/explore",
     footerText: "Gjelder så langt lageret rekker",
     image: "https://images.unsplash.com/photo-1434389677669-e08b4cac3105",
     bgColor: "#2D4239",

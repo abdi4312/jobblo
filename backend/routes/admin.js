@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
 const { authenticate, requireAdmin } = require('../middleware/auth');
+const heroController = require('../controllers/heroController');
+const upload = require('../middleware/multer');
 
 /**
  * @swagger
@@ -54,11 +56,10 @@ router.get('/services', authenticate, requireAdmin, adminController.getAllServic
 
 router.get('/system-history', authenticate, requireAdmin, adminController.getSystemNotificationsHistory);
 
-router.get('/hero', authenticate, requireAdmin, adminController.getAllHeroItems);
-
-router.put('/hero/:id', authenticate, requireAdmin, adminController.UpdateHero);
-
-router.delete('/hero/:id', authenticate, requireAdmin, adminController.DeleteHero);
+router.get('/hero', authenticate, requireAdmin, heroController.GetAllHeroes);
+router.post('/hero', authenticate, requireAdmin, upload.single('image'), heroController.CreateHero);
+router.put('/hero/:id', authenticate, requireAdmin, upload.single('image'), heroController.UpdateHero);
+router.delete('/hero/:id', authenticate, requireAdmin, heroController.DeleteHero);
 
 
 
