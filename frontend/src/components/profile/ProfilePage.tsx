@@ -1,15 +1,16 @@
 import { ProfileHeader } from "./ProfileHeader/ProfileHeader";
-import { CoinsSection } from "./CoinsSection/CoinsSection";
-import { ProfileMenuSection } from "./ProfileMenuSection/ProfileMenuSection";
+import { ItemsGrid } from "./ProfileHeader/ItemsGrid";
 import { useUserStore } from "../../stores/userStore";
 import { useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
 import { App } from 'antd';
+import { useState } from 'react';
 
 export default function ProfilePage() {
   const logout = useUserStore((state) => state.logout);
   const navigate = useNavigate();
   const { modal } = App.useApp();
+  const [activeTab, setActiveTab] = useState('Likes');
 
   const handleLogout = () => {
     modal.confirm({
@@ -27,16 +28,16 @@ export default function ProfilePage() {
 
   return (
     <>
-      <div className="max-w-300 mx-auto">
-        <div className=" bg-white p-4 md:p-6">
-          <ProfileHeader handlelogout={handleLogout} />
-          {/* <Verified /> */}
-          <CoinsSection />
+      <div className="">
+        <div className="bg-white border-b border-gray-100">
+          <ProfileHeader
+            handlelogout={handleLogout}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
         </div>
-        
-        <div className="p-4 md:p-6 bg-white mt-6">
-          <ProfileMenuSection />
-        </div>
+
+        <ItemsGrid activeTab={activeTab} />
       </div>
     </>
   );

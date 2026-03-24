@@ -172,7 +172,7 @@ export default function Header() {
     { name: "Home", icon: <Home size={25} />, path: "home" },
     { name: "Meldinger", icon: <MessageCircle size={18} />, path: "/messages", badgeCount: unreadCount },
     { name: "Varsler", icon: <Bell size={18} />, path: "/alerts" },
-    { name: "Favoritter", icon: <Heart size={18} />, path: "/favoritter" },
+    { name: "Favoritter", icon: <Heart size={18} />, path: "/favorites" },
     { name: "Profil", icon: <User size={18} />, path: "/profile" },
   ];
   useEffect(() => {
