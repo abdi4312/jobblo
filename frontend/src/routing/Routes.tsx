@@ -1,6 +1,7 @@
 import type { RouteObject } from "react-router-dom";
 import App from "../App.tsx";
-import { JobListingPage, LandingPage, ProfilePage } from "../pages";
+import { JobListingPage, LandingPage, ProfilePage, SettingsPage } from "../pages";
+import { SettingsLayout } from "../components/layout/SettingsLayout/SettingsLayout.tsx";
 import LeggUtOppdrag from "../pages/LeggUtOppdragPage/LeggUtOppdrag.tsx";
 import Alert from "../pages/AlertPage/Alert.tsx";
 import MinProfil from "../pages/MinProfil/MinProfil.tsx";
@@ -38,6 +39,23 @@ import TransactionsPage from "../pages/SuperAdminDashboard/TransactionsPage.tsx"
 import ServiceListingPage from "../pages/ServiceListingPage/ServiceListing.tsx";
 import UpcomingFeatures from "../pages/UpcomingFeaturesPage/UpcomingFeatures.tsx";
 import RoadmapAdminPage from "../pages/SuperAdminDashboard/RoadmapAdminPage.tsx";
+import { 
+  UsernameView, 
+  NameView, 
+  BioView, 
+  PictureView, 
+  EmailView, 
+  PhoneView, 
+  AddressesView, 
+  PasswordView, 
+  DeleteAccountView, 
+  LocationView, 
+  UpcomingPreviewView, 
+  VisibilityView, 
+  BlockedUsersView, 
+  CookiesView, 
+  AboutView 
+} from "../components/profile/SettingsViews";
 
 
 
@@ -111,6 +129,37 @@ export const routes: RouteObject[] = [
             <MinInntekt />
           </ProtectedRoute>
         ),
+      },
+      {
+        path: "settings",
+        element: (
+          <ProtectedRoute>
+            <SettingsLayout />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            path: "",
+            element: <SettingsPage />,
+            children: [
+              { index: true, element: <UsernameView /> },
+              { path: "name", element: <NameView /> },
+              { path: "bio", element: <BioView /> },
+              { path: "picture", element: <PictureView /> },
+              { path: "email", element: <EmailView /> },
+              { path: "phone", element: <PhoneView /> },
+              { path: "addresses", element: <AddressesView /> },
+              { path: "password", element: <PasswordView /> },
+              { path: "delete-account", element: <DeleteAccountView /> },
+              { path: "location", element: <LocationView /> },
+              { path: "upcoming", element: <UpcomingPreviewView /> },
+              { path: "visibility", element: <VisibilityView /> },
+              { path: "blocked", element: <BlockedUsersView /> },
+              { path: "cookies", element: <CookiesView /> },
+              { path: "about", element: <AboutView /> },
+            ]
+          },
+        ]
       },
       {
         path: "Innstillinger",
