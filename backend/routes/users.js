@@ -1,8 +1,8 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const userController = require('../controllers/userController');
-const {authenticate,requireAdmin } = require('../middleware/auth');
-
+const userController = require("../controllers/userController");
+const { authenticate, requireAdmin } = require("../middleware/auth");
+const upload = require("../middleware/upload");
 
 /**
  * @swagger
@@ -85,7 +85,6 @@ const {authenticate,requireAdmin } = require('../middleware/auth');
  *           description: OAuth-leverandører
  */
 
-
 /**
  * @swagger
  * /api/users:
@@ -108,7 +107,7 @@ const {authenticate,requireAdmin } = require('../middleware/auth');
  *       400:
  *         description: Ugyldig forespørsel eller e-post/telefon finnes allerede
  */
-router.post('/', authenticate, requireAdmin ,userController.createUser);
+router.post("/", authenticate, requireAdmin, userController.createUser);
 
 /**
  * @swagger
@@ -133,235 +132,17 @@ router.post('/', authenticate, requireAdmin ,userController.createUser);
  *       404:
  *         description: Brukeren ble ikke funnet
  */
-router.get('/:id',authenticate, userController.getUserById);
-
-const upload = require('../middleware/upload');
-
-/**
- * @swagger
- * /api/users/{id}:
- *   put:
- *     summary: Oppdater en bruker
- *     tags: [Brukere]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for brukeren
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               avatar:
- *                 type: string
- *                 format: binary
- *               name:
- *                 type: string
- *               email:
- *                 type: string
- *     responses:
- *       200:
- *         description: Brukeren ble oppdatert
- *       400:
- *         description: Ugyldig forespørsel
- *       404:
- *         description: Brukeren ble ikke funnet
- */
-router.put('/:id', authenticate, upload.single('avatar'), userController.updateUser);
-
-/**
- * @swagger
- * /api/users/{id}:
- *   delete:
- *     summary: Slett en bruker
- *     tags: [Brukere]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for brukeren
- *     responses:
- *       200:
- *         description: Brukeren ble slettet
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: User deleted
- *       404:
- *         description: Brukeren ble ikke funnet
- */
-router.delete('/:id', authenticate, userController.deleteUser);
-
-/**
- * @swagger
- * /api/users/{id}/services:
- *   get:
- *     summary: Hent alle serviceber for en spesifikk bruker
- *     tags: [Brukere]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for brukeren
- *     responses:
- *       200:
- *         description: Liste over brukerens serviceber
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Job'
- *       404:
- *         description: Brukeren ble ikke funnet
- */
-router.get('/:id/services',authenticate, userController.getUserServices);
-
-/**
- * @swagger
- * /api/users/{id}:
- *   get:
- *     summary: Hent en spesifikk bruker
- *     tags: [Brukere]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for brukeren
- *     responses:
- *       200:
- *         description: En bruker
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
- *       404:
- *         description: Brukeren ble ikke funnet
- */
-router.get('/:id', userController.getUserById);
-
-
-/**
- * @swagger
- * /api/users/{id}:
- *   delete:
- *     summary: Slett en bruker
- *     tags: [Brukere]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for brukeren
- *     responses:
- *       204:
- *         description: Brukeren ble slettet
- *       404:
- *         description: Brukeren ble ikke funnet
- */
-router.delete('/:id', userController.deleteUser);
-
-/**
- * @swagger
- * /api/users/{id}/services:
- *   get:
- *     summary: Hent alle serviceber for en spesifikk bruker
- *     tags: [Brukere]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID for brukeren
- *     responses:
- *       200:
- *         description: Liste over brukerens serviceber
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Job'
- */
-router.get('/:id/services', userController.getUserServices);
-
-/**
- * @swagger
- * /api/users:
- *   get:
- *     summary: Hent alle brukere
- *     tags: [Brukere]
- *     responses:
- *       200:
- *         description: Liste over alle brukere
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/User'
- */
-router.get('/', authenticate, requireAdmin, userController.getAllUsers);
-
-/**
- * @swagger
- * /api/users/{id}/follow:
- *   post:
- *     summary: Følg eller slutte å følge en bruker
- *     tags: [Brukere]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID til brukeren som skal følges/unfollowes
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - userId
- *             properties:
- *               userId:
- *                 type: string
- *                 description: ID til brukeren som følger
- *     responses:
- *       200:
- *         description: Følger status oppdatert
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 isFollowing:
- *                   type: boolean
- *       400:
- *         description: Ugyldig input eller kan ikke følge seg selv
- *       404:
- *         description: Bruker ikke funnet
- */
-router.post('/:id/follow', authenticate, userController.followUser);
+router.get("/search", authenticate, userController.searchUsers);
+router.get("/:id", authenticate, userController.getUserById);
+router.put(
+  "/:id",
+  authenticate,
+  upload.single("avatar"),
+  userController.updateUser,
+);
+router.delete("/:id", authenticate, userController.deleteUser);
+router.get("/:id/services", authenticate, userController.getUserServices);
+router.get("/", authenticate, requireAdmin, userController.getAllUsers);
+router.post("/:id/follow", authenticate, userController.followUser);
 
 module.exports = router;

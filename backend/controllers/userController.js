@@ -1,13 +1,13 @@
-const User = require('../models/User');
-const Service = require('../models/Service');
-const mongoose = require('mongoose');
+const User = require("../models/User");
+const Service = require("../models/Service");
+const mongoose = require("mongoose");
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
-// Helper to authorize user 
+// Helper to authorize user
 function authorizeUser(req, targetUserId) {
-  const currentUserId = req.userId;       
+  const currentUserId = req.userId;
   const currentUserRole = req.user?.role;
 
   // Only superAdmin OR the same user can proceed
@@ -19,145 +19,188 @@ function authorizeUser(req, targetUserId) {
 
 // Create a new user
 exports.createUser = async (req, res) => {
-    try {
-        const {
-            name,
-            lastName,
-            email,
-            phone,
-            avatarUrl,
-            bio,
-            role,
-            birthDate,
-            gender,
-            address,
-            postNumber,
-            postSted,
-            country,
-            subscription,
-            verified,
-            lastLogin,
-            followers,
-            following,
-            availability,
-            earnings,
-            spending,
-            oauthProviders
-        } = req.body;
+  try {
+    const {
+      name,
+      lastName,
+      email,
+      phone,
+      avatarUrl,
+      bio,
+      role,
+      birthDate,
+      gender,
+      address,
+      postNumber,
+      postSted,
+      country,
+      subscription,
+      verified,
+      lastLogin,
+      followers,
+      following,
+      availability,
+      earnings,
+      spending,
+      oauthProviders,
+    } = req.body;
 
-        const user = new User({
-            name,
-            lastName,
-            email,
-            phone,
-            avatarUrl,
-            bio,
-            role,
-            birthDate,
-            gender,
-            address,
-            postNumber,
-            postSted,
-            country,
-            subscription,
-            verified,
-            lastLogin,
-            followers,
-            following,
-            availability,
-            earnings,
-            spending,
-            oauthProviders
-        });
-        await user.save();
-        res.status(201).json(user);
-    } catch (err) {
-        if (err.code === 11000) {
-            // Duplicate key error
-            return res.status(400).json({ error: 'Email or phone already exists' });
-        }
-        res.status(400).json({ error: err.message });
+    const user = new User({
+      name,
+      lastName,
+      email,
+      phone,
+      avatarUrl,
+      bio,
+      role,
+      birthDate,
+      gender,
+      address,
+      postNumber,
+      postSted,
+      country,
+      subscription,
+      verified,
+      lastLogin,
+      followers,
+      following,
+      availability,
+      earnings,
+      spending,
+      oauthProviders,
+    });
+    await user.save();
+    res.status(201).json(user);
+  } catch (err) {
+    if (err.code === 11000) {
+      // Duplicate key error
+      return res.status(400).json({ error: "Email or phone already exists" });
     }
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// Search users
+exports.searchUsers = async (req, res) => {
+  try {
+
+    const { query } = req.query;
+    console.log("Search query:", query);
+    if (!query || query.length < 2) {
+      return res.status(200).json([]);
+    }
+
+    const users = await User.find({
+      $or: [
+        { name: { $regex: query, $options: "i" } },
+        { lastName: { $regex: query, $options: "i" } },
+        { email: { $regex: query, $options: "i" } },
+      ],
+      _id: { $ne: req.userId }, // Exclude current user
+    })
+      .select("name lastName email avatarUrl")
+      .limit(10);
+
+    res.status(200).json(users);
+  } catch (error) {
+    console.error("Search error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
 };
 
 exports.getUserById = async (req, res) => {
-    try {
-        const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-        if (!isValidId(id)) {
-            return res.status(400).json({ error: "Invalid user ID format" });
-        }
-
-        // Authorization check
-       if (!authorizeUser(req, id)) {
-          return res.status(403).json({ error: "Not authorized" });
-       }
-
-        const user = await User.findById(id).select('-password');
-        if (!user) return res.status(404).json({ error: 'User not found' });
-        res.json(user);
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+    if (!isValidId(id)) {
+      return res.status(400).json({ error: "Invalid user ID format" });
     }
+
+    // Authorization check
+    if (!authorizeUser(req, id)) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    const user = await User.findById(id).select("-password");
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
 };
 
 exports.updateUser = async (req, res) => {
-    try {
-        const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-        if (!isValidId(id)) {
-            return res.status(400).json({ error: "Invalid user ID format" });
-        }
-
-        // Authorization check
-        if (!authorizeUser(req, id)) {
-          return res.status(403).json({ error: "Not authorized" });
-        }
-
-         // Allowed fields for normal user
-        const allowedUpdates = ["name", "email", "phone", "lastName", "bio", "birthDate","gender",
-            "address","postNumber","postSted","country"];
-
-        if (req.user.role === "superAdmin") {
-            allowedUpdates.push("role");
-        }
-
-        const updates = {};
-        for (const key of allowedUpdates) {
-            if (req.body[key] !== undefined) {
-                updates[key] = req.body[key];
-            }
-        }
-
-        // ⭐ HANDLE AVATAR UPLOAD
-        if (req.file) {
-            updates.avatarUrl = req.file.path;
-            updates.avatarPublicId = req.file.filename;
-        }
-
-        if (Object.keys(updates).length === 0) {
-            return res.status(400).json({ error: "No valid fields provided for update" });
-        }
-
-        const user = await User.findById(id);
-        if (!user) return res.status(404).json({ error: "User not found" });
-
-        // Delete old avatar if a new one is uploaded
-        if (req.file && user.avatarPublicId) {
-            const cloudinary = require("../config/cloudinary");
-            try {
-                await cloudinary.uploader.destroy(user.avatarPublicId);
-            } catch (err) {
-                console.error("Old avatar deletion error:", err);
-            }
-        }
-
-        const updatedUser = await User.findByIdAndUpdate(id, updates, { new: true });
-        res.json(updatedUser);
-    } catch (err) {
-        console.error("updateUser Error:", err);
-        res.status(400).json({ error: err.message });
+    if (!isValidId(id)) {
+      return res.status(400).json({ error: "Invalid user ID format" });
     }
+
+    // Authorization check
+    if (!authorizeUser(req, id)) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    // Allowed fields for normal user
+    const allowedUpdates = [
+      "name",
+      "email",
+      "phone",
+      "lastName",
+      "bio",
+      "birthDate",
+      "gender",
+      "address",
+      "postNumber",
+      "postSted",
+      "country",
+    ];
+
+    if (req.user.role === "superAdmin") {
+      allowedUpdates.push("role");
+    }
+
+    const updates = {};
+    for (const key of allowedUpdates) {
+      if (req.body[key] !== undefined) {
+        updates[key] = req.body[key];
+      }
+    }
+
+    // ⭐ HANDLE AVATAR UPLOAD
+    if (req.file) {
+      updates.avatarUrl = req.file.path;
+      updates.avatarPublicId = req.file.filename;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res
+        .status(400)
+        .json({ error: "No valid fields provided for update" });
+    }
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Delete old avatar if a new one is uploaded
+    if (req.file && user.avatarPublicId) {
+      const cloudinary = require("../config/cloudinary");
+      try {
+        await cloudinary.uploader.destroy(user.avatarPublicId);
+      } catch (err) {
+        console.error("Old avatar deletion error:", err);
+      }
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(id, updates, {
+      new: true,
+    });
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("updateUser Error:", err);
+    res.status(400).json({ error: err.message });
+  }
 };
 
 exports.deleteUser = async (req, res) => {
@@ -174,10 +217,10 @@ exports.deleteUser = async (req, res) => {
 
     const user = await User.findByIdAndDelete(id);
 
-        if (!user) return res.status(404).json({ error: 'User not found' });
-        res.json({ message: 'User deleted' });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json({ message: "User deleted" });
   } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: "Server error" });
   }
 };
 
@@ -195,17 +238,17 @@ exports.getUserServices = async (req, res) => {
     const services = await Service.find({ userId: id });
     res.json(services);
   } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: "Server error" });
   }
 };
 
 // List all users
 exports.getAllUsers = async (req, res) => {
   try {
-        const users = await User.find().select('-password');
+    const users = await User.find().select("-password");
     res.json(users);
   } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: "Server error" });
   }
 };
 
@@ -213,7 +256,7 @@ exports.getAllUsers = async (req, res) => {
 exports.followUser = async (req, res) => {
   try {
     const currentUserId = req.userId;
-        const targetUserId = req.params.id
+    const targetUserId = req.params.id;
 
     // Validate IDs
     if (!isValidId(currentUserId) || !isValidId(targetUserId)) {
@@ -228,8 +271,8 @@ exports.followUser = async (req, res) => {
     // Fetch users
     const [currentUser, targetUser] = await Promise.all([
       User.findById(currentUserId),
-            User.findById(targetUserId)
-        ])
+      User.findById(targetUserId),
+    ]);
 
     if (!currentUser || !targetUser) {
       return res.status(404).json({ error: "User not found" });
@@ -240,22 +283,22 @@ exports.followUser = async (req, res) => {
     if (isFollowing) {
       // Unfollow
       await User.findByIdAndUpdate(currentUserId, {
-                $pull: { following: targetUserId }
+        $pull: { following: targetUserId },
       });
 
       await User.findByIdAndUpdate(targetUserId, {
-                $pull: { followers: currentUserId }
+        $pull: { followers: currentUserId },
       });
 
       return res.json({ message: "Unfollowed", isFollowing: false });
     } else {
       // Follow
       await User.findByIdAndUpdate(currentUserId, {
-                $addToSet: { following: targetUserId }
+        $addToSet: { following: targetUserId },
       });
 
       await User.findByIdAndUpdate(targetUserId, {
-                $addToSet: { followers: currentUserId }
+        $addToSet: { followers: currentUserId },
       });
 
       return res.json({ message: "Followed", isFollowing: true });

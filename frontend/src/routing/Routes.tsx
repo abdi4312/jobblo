@@ -1,6 +1,7 @@
 import type { RouteObject } from "react-router-dom";
 import App from "../App.tsx";
-import { JobListingPage, LandingPage, ProfilePage } from "../pages";
+import { JobListingPage, LandingPage, ProfilePage, SettingsPage } from "../pages";
+import { SettingsLayout } from "../components/layout/SettingsLayout/SettingsLayout.tsx";
 import LeggUtOppdrag from "../pages/LeggUtOppdragPage/LeggUtOppdrag.tsx";
 import Alert from "../pages/AlertPage/Alert.tsx";
 import MinProfil from "../pages/MinProfil/MinProfil.tsx";
@@ -10,6 +11,7 @@ import { ProtectedRoute } from "../components/shared/ProtectedRoute.tsx";
 import InstillingerPage from "../pages/InstillingerPage/InstillingerPage.tsx";
 import AnmeldelserPage from "../pages/AnmeldelserPage/AnmeldelserPage.tsx";
 import { FavoritesPage } from "../pages/FavoritesPage/FavoritesPage.tsx";
+import { ListDetailPage } from "../pages/FavoritesPage/ListDetail/ListDetailPage.tsx";
 import OmOssPage from "../pages/OmOssPage/OmOssPage.tsx";
 import TjenesterPage from "../pages/TjenesterPage/TjenesterPage.tsx";
 import TeamPage from "../pages/TeamPage/TeamPage.tsx";
@@ -37,6 +39,23 @@ import TransactionsPage from "../pages/SuperAdminDashboard/TransactionsPage.tsx"
 import ServiceListingPage from "../pages/ServiceListingPage/ServiceListing.tsx";
 import UpcomingFeatures from "../pages/UpcomingFeaturesPage/UpcomingFeatures.tsx";
 import RoadmapAdminPage from "../pages/SuperAdminDashboard/RoadmapAdminPage.tsx";
+import { 
+  UsernameView, 
+  NameView, 
+  BioView, 
+  PictureView, 
+  EmailView, 
+  PhoneView, 
+  AddressesView, 
+  PasswordView, 
+  DeleteAccountView, 
+  LocationView, 
+  UpcomingPreviewView, 
+  VisibilityView, 
+  BlockedUsersView, 
+  CookiesView, 
+  AboutView 
+} from "../components/profile/SettingsViews";
 
 
 
@@ -112,6 +131,37 @@ export const routes: RouteObject[] = [
         ),
       },
       {
+        path: "settings",
+        element: (
+          <ProtectedRoute>
+            <SettingsLayout />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            path: "",
+            element: <SettingsPage />,
+            children: [
+              { index: true, element: <UsernameView /> },
+              { path: "name", element: <NameView /> },
+              { path: "bio", element: <BioView /> },
+              { path: "picture", element: <PictureView /> },
+              { path: "email", element: <EmailView /> },
+              { path: "phone", element: <PhoneView /> },
+              { path: "addresses", element: <AddressesView /> },
+              { path: "password", element: <PasswordView /> },
+              { path: "delete-account", element: <DeleteAccountView /> },
+              { path: "location", element: <LocationView /> },
+              { path: "upcoming", element: <UpcomingPreviewView /> },
+              { path: "visibility", element: <VisibilityView /> },
+              { path: "blocked", element: <BlockedUsersView /> },
+              { path: "cookies", element: <CookiesView /> },
+              { path: "about", element: <AboutView /> },
+            ]
+          },
+        ]
+      },
+      {
         path: "Innstillinger",
         element: <InstillingerPage />,
       },
@@ -120,8 +170,20 @@ export const routes: RouteObject[] = [
         element: <AnmeldelserPage />,
       },
       {
-        path: "favoritter",
-        element: <FavoritesPage />,
+        path: "favorites",
+        element: (
+          <ProtectedRoute>
+            <FavoritesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "favorites/list/:listId",
+        element: (
+          <ProtectedRoute>
+            <ListDetailPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/subscription/success",

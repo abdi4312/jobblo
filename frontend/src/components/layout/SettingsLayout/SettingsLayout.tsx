@@ -1,0 +1,97 @@
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { AtSign, Image, MapPin, PenLine, Phone, User } from "lucide-react";
+
+export function SettingsLayout() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const publicProfileLinks = [
+    { name: "Username", path: "/settings", icon: AtSign },
+    { name: "First and last name", path: "/settings/name", icon: User },
+    { name: "Bio", path: "/settings/bio", icon: PenLine },
+    { name: "Upload profile picture", path: "/settings/picture", icon: Image },
+  ];
+
+  const personalInfoLinks = [
+    { name: "Email address", path: "/settings/email", icon: AtSign },
+    { name: "Phone number", path: "/settings/phone", icon: Phone },
+    { name: "My addresses", path: "/settings/addresses", icon: MapPin },
+    { name: "Change password", path: "/settings/password", icon: User },
+    { name: "Delete my profile", path: "/settings/delete-account", icon: User },
+  ];
+
+  const otherLinks = [
+    { name: "Location", path: "/settings/location", icon: MapPin },
+    { name: "Upcoming", path: "/settings/upcoming", icon: AtSign },
+  ];
+
+  const privacyLinks = [
+    { name: "Search engine visibility", path: "/settings/visibility", icon: AtSign },
+    { name: "Blocked users", path: "/settings/blocked", icon: User },
+    { name: "Cookie settings", path: "/settings/cookies", icon: AtSign },
+    { name: "About us", path: "/settings/about", icon: PenLine },
+  ];
+
+  const currentPath = location.pathname;
+  
+  // Find current active tab name
+  const allLinks = [...publicProfileLinks, ...personalInfoLinks, ...otherLinks, ...privacyLinks];
+  const activeTab = allLinks.find(link => link.path === currentPath)?.name || "Settings";
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-0 flex justify-center">
+      <div className="w-full max-w-5xl bg-white md:rounded-2xl shadow-sm md:border border-gray-200 overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row border-b border-gray-100">
+          <div className="w-full sm:w-64 p-4 sm:p-6 font-bold text-xl sm:text-lg text-gray-900 sm:border-r border-gray-100 flex items-center justify-center sm:justify-start">
+            Settings
+          </div>
+          <div className="flex-1 p-4 sm:p-6 font-semibold text-lg text-gray-800 flex items-center justify-center bg-gray-50 sm:bg-white border-t sm:border-t-0 border-gray-100">
+            {activeTab}
+          </div>
+        </div>
+
+        <div className="flex flex-col md:flex-row flex-1 min-h-[400px] md:min-h-[600px]">
+          {/* Sidebar */}
+          <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-gray-100 p-2 md:p-4 flex flex-row md:flex-col gap-4 md:gap-6 overflow-x-auto md:overflow-x-visible no-scrollbar">
+            <div className="flex flex-row md:flex-col gap-4 md:gap-6 shrink-0 px-2 md:px-0">
+              {[
+                { title: "Public Profile", links: publicProfileLinks },
+                { title: "Personal Information", links: personalInfoLinks },
+                { title: "OTHER", links: otherLinks },
+                { title: "PRIVACY AND TERMS", links: privacyLinks }
+              ].map((group) => (
+                <div key={group.title} className="flex flex-row md:flex-col gap-2 md:gap-1 shrink-0">
+                  <div className="hidden md:block text-xs font-bold text-gray-400 uppercase mb-2 px-4 whitespace-nowrap">{group.title}</div>
+                  {group.links.map((link) => {
+                    const isActive = currentPath === link.path;
+                    const Icon = link.icon;
+                    return (
+                      <button
+                        key={link.path}
+                        onClick={() => navigate(link.path)}
+                        className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${
+                          isActive
+                            ? "bg-rose-50 text-rose-600 md:text-gray-900 shadow-sm md:shadow-none border border-rose-100 md:border-0"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent"
+                        }`}
+                      >
+                        <Icon size={18} className={isActive ? "text-rose-500 md:text-gray-900" : "text-gray-500"} />
+                        {link.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </aside>
+
+          {/* Main Content Area */}
+          <main className="flex-1 p-4 sm:p-8 overflow-y-auto">
+            <Outlet />
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}
