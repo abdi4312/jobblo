@@ -11,7 +11,7 @@ export function ProfileMenuSection() {
     { icon: User, text: "Min profil", des: "Se og endre dine personlige innstillinger", path: "/Min-profil" },
     { icon: Wallet, text: "Min inntekt", des: "Se og endre dine økonomiske innstillinger", path: "/min-inntekt" },
     { icon: Megaphone, text: "Mine annonser", des: "Se og endre dine annonser", path: "/Mine-annonser" },
-    { icon: Heart, text: "Favoritter", des: "Se og endre dine favoritt-jobber", path: "/favoritter" },
+    { icon: Heart, text: "Favoritter", des: "Se og endre dine favoritt-jobber", path: "/favorites" },
     { icon: Star, text: "Anmeldelser", des: "Se og endre dine anmeldelser", path: "/Anmeldelser" },
     { icon: Headset, text: "Kundeservice", des: "Kontakt oss for hjelp", path: "/Support" },
     { icon: Settings, text: "Innstillinger", des: "Se og endre dine generelle innstillinger", path: "/Innstillinger" },

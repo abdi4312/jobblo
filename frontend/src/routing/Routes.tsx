@@ -10,6 +10,7 @@ import { ProtectedRoute } from "../components/shared/ProtectedRoute.tsx";
 import InstillingerPage from "../pages/InstillingerPage/InstillingerPage.tsx";
 import AnmeldelserPage from "../pages/AnmeldelserPage/AnmeldelserPage.tsx";
 import { FavoritesPage } from "../pages/FavoritesPage/FavoritesPage.tsx";
+import { ListDetailPage } from "../pages/FavoritesPage/ListDetail/ListDetailPage.tsx";
 import OmOssPage from "../pages/OmOssPage/OmOssPage.tsx";
 import TjenesterPage from "../pages/TjenesterPage/TjenesterPage.tsx";
 import TeamPage from "../pages/TeamPage/TeamPage.tsx";
@@ -120,8 +121,20 @@ export const routes: RouteObject[] = [
         element: <AnmeldelserPage />,
       },
       {
-        path: "favoritter",
-        element: <FavoritesPage />,
+        path: "favorites",
+        element: (
+          <ProtectedRoute>
+            <FavoritesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "favorites/list/:listId",
+        element: (
+          <ProtectedRoute>
+            <ListDetailPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/subscription/success",

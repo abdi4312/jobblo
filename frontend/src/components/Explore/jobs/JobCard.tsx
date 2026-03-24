@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import type { Jobs } from "../../../types/Jobs.ts";
-import { useFavoriteActions, useFavorites } from "../../../features/favorites/hook/useFavorites.ts";
 import { useUserStore } from "../../../stores/userStore.ts";
 import { Bookmark } from "lucide-react";
+import React, { useState } from "react";
+import AddToListModal from "./AddToListModal.tsx";
+import { useFavoriteLists } from "../../../features/favoriteLists/hooks";
 
 interface JobCardProps {
   job: Jobs;
@@ -19,16 +21,17 @@ const categoryColorMap: Record<string, string> = {
 export const JobCard = ({ job }: JobCardProps) => {
   const navigate = useNavigate();
   const isAuth = useUserStore((state) => state.isAuthenticated);
-  const { data: favoritesData, isLoading } = useFavorites();
-  const { addFavorite, removeFavorite } = useFavoriteActions()
+  const { data: lists = [], isLoading } = useFavoriteLists();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleCardClick = () => {
     navigate(`/job-listing/${job._id}`);
   };
 
-  const isFavorite = favoritesData?.data?.some((item: any) =>
-    item.service?._id === job._id || item.jobId === job._id
-  ) || false;
+  // Check if job is in ANY of the user's lists
+  const isInAnyList = lists.some((list: any) =>
+    list.services?.some((s: any) => (typeof s === 'string' ? s === job._id : s._id === job._id))
+  );
 
   const handleFavClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -36,12 +39,7 @@ export const JobCard = ({ job }: JobCardProps) => {
       navigate("/login");
       return;
     }
-
-    if (isFavorite) {
-      removeFavorite(job._id);
-    } else {
-      addFavorite(job._id);
-    }
+    setIsModalOpen(true);
   };
 
   const catName = Array.isArray(job.categories) ? job.categories[0] : job.categories;
@@ -71,7 +69,7 @@ export const JobCard = ({ job }: JobCardProps) => {
           {isLoading ? (
             <div className="animate-spin w-4 h-4 border-[1.5px] border-gray-300 border-t-[#2F7E47] rounded-full" />
           ) : (
-            <Bookmark size={22} className={isFavorite ? "fill-[#0A0A0A] text-[#0A0A0A]" : "text-[#0A0A0A]"} />
+            <Bookmark size={22} className={isInAnyList ? "fill-[#0A0A0A] text-[#0A0A0A]" : "text-[#0A0A0A]"} />
           )}
         </button>
 
@@ -82,6 +80,13 @@ export const JobCard = ({ job }: JobCardProps) => {
           </div>
         )}
       </div>
+
+      {/* Add To List Modal */}
+      <AddToListModal
+        job={job}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
 
       {/* Info Section */}
       <div className="flex flex-col gap-0.5 mt-1 px-1">

@@ -136,6 +136,7 @@ const JobListingDetailPage = () => {
                     <JobButton
                       handleSendMessage={() => handleSendMessage(job?.userId?._id)}
                       id={job._id}
+                      job={job}
                       isOwnJob={isOwnJob}
                       isMsgLoading={isMessageLoading}
                     />
