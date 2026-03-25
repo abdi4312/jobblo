@@ -6,6 +6,7 @@ interface UseJobsParams {
   search?: string;
   sort?: string;
   limit?: number;
+  userId?: string;
 }
 
 export const useJobs = ({
@@ -13,9 +14,10 @@ export const useJobs = ({
   search = "",
   sort = "",
   limit = 16,
+  userId = "",
 }: UseJobsParams) => {
   return useInfiniteQuery({
-    queryKey: ["jobs", categories, search, sort],
+    queryKey: ["jobs", categories, search, sort, userId],
 
     // TanStack Query v5 mein pageParam ko queryFn ke andar destruct karte hain
     queryFn: ({ pageParam }) =>
@@ -25,6 +27,7 @@ export const useJobs = ({
         categories,
         search,
         sort,
+        userId,
       }),
 
     // FIXED: Yeh property add karna zaroori hai

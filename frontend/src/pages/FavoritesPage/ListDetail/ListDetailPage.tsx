@@ -11,10 +11,11 @@ import {
   Edit3,
   ArrowLeft
 } from "lucide-react";
-import { useFavoriteList, useUpdateFavoriteList, useDeleteFavoriteList } from "../../../features/favoriteLists/hooks";
+import { useFavoriteList, useUpdateFavoriteList, useDeleteFavoriteList, useToggleFollowList } from "../../../features/favoriteLists/hooks";
 import { useUserStore } from "../../../stores/userStore";
 import { JobCard } from "../../../components/Explore/jobs/JobCard";
 import Swal from "sweetalert2";
+import { toast } from "react-hot-toast";
 import EditListModal from "./EditListModal";
 import AddContributorModal from "./AddContributorModal";
 import ContributorsModal from "./ContributorsModal";
@@ -25,10 +26,14 @@ export const ListDetailPage: React.FC = () => {
   const { data: list, isLoading } = useFavoriteList(listId!);
   const updateListMutation = useUpdateFavoriteList();
   const deleteListMutation = useDeleteFavoriteList();
+  const toggleFollowMutation = useToggleFollowList();
   const currentUser = useUserStore((state) => state.user);
 
-  // Check if current user is owner by matching their ID with list.user array
-  const isOwner = list?.user?.some((u: any) => u._id === currentUser?._id);
+  // Check if current user is owner (it's an array in the model)
+  const isOwner = list?.user?.some((u: any) => (u._id || u) === currentUser?._id);
+
+  // Check if following
+  const isFollowing = list?.followers?.some((u: any) => (u._id || u) === currentUser?._id);
 
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -72,6 +77,14 @@ export const ListDetailPage: React.FC = () => {
       listId: list._id,
       data: { public: !list.public }
     });
+  };
+
+  const handleFollowToggle = async () => {
+    if (!currentUser) {
+      toast.error("Please login to follow lists");
+      return;
+    }
+    await toggleFollowMutation.mutateAsync(list._id);
   };
 
   const handleDelete = async () => {
@@ -119,15 +132,6 @@ export const ListDetailPage: React.FC = () => {
         onClose={() => setShowEditModal(false)}
       />
 
-      {/* Back Button */}
-      {/* <button
-        onClick={() => navigate("/favorites")}
-        className="mb-6 flex items-center gap-2 text-gray-500 hover:text-black transition-colors"
-      >
-        <ArrowLeft size={20} />
-        <span className="font-medium">Back to favorites</span>
-      </button> */}
-
       {/* Header Section */}
       <div className="flex flex-col bg-white p-6 rounded-3xl md:flex-row gap-8 items-start md:items-center ">
         {/* List Thumbnail */}
@@ -147,35 +151,33 @@ export const ListDetailPage: React.FC = () => {
 
           <div className="flex items-center gap-6 text-sm text-gray-500 font-medium">
             <span>{list.services?.length || 0} items</span>
-            <span>0 followers</span>
+            <span>{list.followers?.length || 0} followers</span>
             <span>{(list.user?.length || 0) + (list.contributors?.length || 0)} contributors</span>
           </div>
 
           <div className="flex items-center gap-3">
-            {isOwner && (
-              <button
-                onClick={handleMakePublic}
-                className={`px-6 py-2.5 rounded-xl font-bold transition-all active:scale-95 ${list.public
-                  ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  : "bg-[#FF8A71] text-white hover:bg-[#ff7659]"
-                  }`}
-              >
-                {list.public ? "Make private" : "Make public"}
-              </button>
-            )}
+            {isOwner ? (
+              <>
+                <button
+                  onClick={handleMakePublic}
+                  className={`px-6 py-2.5 rounded-xl font-bold transition-all active:scale-95 ${list.public
+                    ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    : "bg-[#FF8A71] text-white hover:bg-[#ff7659]"
+                    }`}
+                >
+                  {list.public ? "Make private" : "Make public"}
+                </button>
 
-            <div className="relative">
-              <button
-                onClick={() => setShowMoreMenu(!showMoreMenu)}
-                className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200 rounded-xl font-bold hover:bg-gray-50 transition-all active:scale-95"
-              >
-                More <ChevronDown size={18} className={`transition-transform ${showMoreMenu ? 'rotate-180' : ''}`} />
-              </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowMoreMenu(!showMoreMenu)}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200 rounded-xl font-bold hover:bg-gray-50 transition-all active:scale-95"
+                  >
+                    More <ChevronDown size={18} className={`transition-transform ${showMoreMenu ? 'rotate-180' : ''}`} />
+                  </button>
 
-              {showMoreMenu && (
-                <div className="absolute top-full mt-2 left-0 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
-                  {isOwner && (
-                    <>
+                  {showMoreMenu && (
+                    <div className="absolute top-full mt-2 left-0 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
                       <button onClick={handleDelete} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-red-500 font-semibold transition-colors">
                         <Trash2 size={18} /> Delete list
                       </button>
@@ -201,20 +203,31 @@ export const ListDetailPage: React.FC = () => {
                       >
                         <UserPlus size={18} /> Add contributor
                       </button>
-                    </>
+                      <button
+                        onClick={() => {
+                          setShowContributorsModal(true);
+                          setShowMoreMenu(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 font-semibold transition-colors"
+                      >
+                        <Users size={18} /> Contributors
+                      </button>
+                    </div>
                   )}
-                  <button
-                    onClick={() => {
-                      setShowContributorsModal(true);
-                      setShowMoreMenu(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 font-semibold transition-colors"
-                  >
-                    <Users size={18} /> Contributors
-                  </button>
                 </div>
-              )}
-            </div>
+              </>
+            ) : (
+              <button
+                onClick={handleFollowToggle}
+                disabled={toggleFollowMutation.isPending}
+                className={`px-8 py-2.5 rounded-xl font-bold transition-all active:scale-95 shadow-sm ${isFollowing
+                  ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  : "bg-[#FF8A71] text-white hover:bg-[#ff7659]"
+                  }`}
+              >
+                {toggleFollowMutation.isPending ? "..." : (isFollowing ? "Following" : "Follow")}
+              </button>
+            )}
           </div>
         </div>
       </div>

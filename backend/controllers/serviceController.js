@@ -11,11 +11,16 @@ exports.getAllServices = async (req, res) => {
       minPrice,
       maxPrice,
       sort,
+      userId,
       page = 1,
       limit = 25,
     } = req.query;
 
     const query = {};
+
+    if (userId) {
+      query.userId = userId;
+    }
 
     if (category) {
       const categoriesArray = category.split(",").map((c) => c.trim());

@@ -83,7 +83,6 @@ exports.createUser = async (req, res) => {
 // Search users
 exports.searchUsers = async (req, res) => {
   try {
-
     const { query } = req.query;
     console.log("Search query:", query);
     if (!query || query.length < 2) {
@@ -114,11 +113,6 @@ exports.getUserById = async (req, res) => {
 
     if (!isValidId(id)) {
       return res.status(400).json({ error: "Invalid user ID format" });
-    }
-
-    // Authorization check
-    if (!authorizeUser(req, id)) {
-      return res.status(403).json({ error: "Not authorized" });
     }
 
     const user = await User.findById(id).select("-password");
@@ -231,10 +225,6 @@ exports.getUserServices = async (req, res) => {
       return res.status(400).json({ error: "Invalid user ID format" });
     }
 
-    // Authorization check
-    if (!authorizeUser(req, id)) {
-      return res.status(403).json({ error: "Not authorized" });
-    }
     const services = await Service.find({ userId: id });
     res.json(services);
   } catch (err) {
@@ -302,6 +292,89 @@ exports.followUser = async (req, res) => {
       });
 
       return res.json({ message: "Followed", isFollowing: true });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get blocked users list (More Reliable Version)
+exports.getBlockedUsers = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    // Fetch the user and populate blockedUsers
+    const user = await User.findById(req.userId).populate(
+      "blockedUsers",
+      "name lastName avatarUrl",
+    );
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Filter out any null entries (in case some IDs in the array don't exist in the database)
+    const allBlocked = (user.blockedUsers || []).filter((u) => u !== null);
+
+    const totalCount = allBlocked.length;
+    const startIndex = (page - 1) * limit;
+    const paginatedBlocked = allBlocked.slice(startIndex, startIndex + limit);
+
+    res.json({
+      data: paginatedBlocked,
+      pagination: {
+        total: totalCount,
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Block/Unblock a user
+exports.blockUser = async (req, res) => {
+  try {
+    const currentUserId = req.userId;
+    const targetUserId = req.params.id;
+
+    if (!isValidId(currentUserId) || !isValidId(targetUserId)) {
+      return res.status(400).json({ error: "Invalid user ID format" });
+    }
+
+    if (currentUserId === targetUserId) {
+      return res.status(400).json({ error: "You cannot block yourself" });
+    }
+
+    const currentUser = await User.findById(currentUserId);
+    if (!currentUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const isBlocked = currentUser.blockedUsers?.includes(targetUserId);
+
+    if (isBlocked) {
+      // Unblock
+      await User.findByIdAndUpdate(currentUserId, {
+        $pull: { blockedUsers: targetUserId },
+      });
+      return res.json({ message: "User unblocked", isBlocked: false });
+    } else {
+      // Block
+      await User.findByIdAndUpdate(currentUserId, {
+        $addToSet: { blockedUsers: targetUserId },
+      });
+
+      // Also unfollow automatically if blocking
+      await User.findByIdAndUpdate(currentUserId, {
+        $pull: { following: targetUserId, followers: targetUserId },
+      });
+      await User.findByIdAndUpdate(targetUserId, {
+        $pull: { followers: currentUserId, following: currentUserId },
+      });
+
+      return res.json({ message: "User blocked", isBlocked: true });
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
