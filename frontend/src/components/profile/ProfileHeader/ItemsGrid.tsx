@@ -3,41 +3,58 @@ import { EmptyState } from './EmptyState';
 import { useFavoriteLists } from "../../../features/favoriteLists/hooks";
 import { JobDetailCardSkeleton } from "../../Loading/JobDetailCardSkeleton.tsx";
 import { useNavigate } from "react-router-dom";
+import { useJobs } from "../../../features/jobsList/hooks";
 
-export function ItemsGrid({ activeTab }: { activeTab: string }) {
+export function ItemsGrid({ activeTab, userId }: { activeTab: string, userId?: string }) {
   const navigate = useNavigate();
-  const { data: lists = [], isLoading, isError } = useFavoriteLists();
+  const { data: lists = [], isLoading: isListsLoading, isError: isListsError } = useFavoriteLists(userId);
+
+  const {
+    data: jobsData,
+    isLoading: isJobsLoading,
+    isError: isJobsError
+  } = useJobs({ userId });
+
+  const jobs = jobsData?.pages.flatMap(page => page.data) || [];
 
   // Empty states content mapping
   const emptyStateContent: Record<string, { title: string; description: string }> = {
-    'Tises': {
-      title: "You haven't posted any tises yet",
-      description: "Start selling by posting your first tise!"
+    'Jobs': {
+      title: "Brukeren har ikke lagt ut noen oppdrag ennå",
+      description: "Når brukeren legger ut oppdrag, vil de vises her"
     },
     'Likes': {
-      title: "You haven't liked any items yet",
-      description: "Items you like will appear here"
+      title: "Ingen likte elementer ennå",
+      description: "Elementer som er likt vil vises her"
     },
     'Lists': {
-      title: "Your lists are currently empty",
-      description: "Saved items and collections will appear here"
+      title: "Listene er for øyeblikket tomme",
+      description: "Lagrede elementer aur samlinger yahan nazar aayenge"
     },
     'Your wardrobe': {
-      title: "Your wardrobe is currently empty",
-      description: "When you buy something through a Tise bid, it appears here"
+      title: "Garderoben din er for øyeblikket tom",
+      description: "Når du kjøper noe gjennom et Tise-bud, vises det her"
     },
     'Seller Hub': {
-      title: "Seller Hub is currently empty",
-      description: "Your sales and insights will appear here"
+      title: "Selgerhub er for øyeblikket tom",
+      description: "Salgene og innsikten din vil vises her"
     }
   };
 
-  const currentEmptyState = emptyStateContent[activeTab] || emptyStateContent['Tises'];
+  const currentEmptyState = emptyStateContent[activeTab] || emptyStateContent['Jobs'];
 
-  if (isLoading && activeTab === 'Lists') return <JobDetailCardSkeleton />;
-  if (isError && activeTab === 'Lists') return <p className="text-center py-20 text-red-500">Kunne ikke laste lister.</p>;
+  if (activeTab === 'Lists') {
+    if (isListsLoading) return <JobDetailCardSkeleton />;
+    if (isListsError) return <p className="text-center py-20 text-red-500">Kunne ikke laste lister.</p>;
+  }
+
+  if (activeTab === 'Jobs') {
+    if (isJobsLoading) return <JobDetailCardSkeleton />;
+    if (isJobsError) return <p className="text-center py-20 text-red-500">Kunne ikke laste oppdrag.</p>;
+  }
 
   const showLists = activeTab === 'Lists' && lists.length > 0;
+  const showJobs = activeTab === 'Jobs' && jobs.length > 0;
 
   return (
     <div className="bg-[#f5f5f5] min-h-screen p-4 md:p-6">
@@ -76,6 +93,34 @@ export function ItemsGrid({ activeTab }: { activeTab: string }) {
                 </div>
               );
             })}
+          </div>
+        ) : showJobs ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {jobs.map((job: any) => (
+              <div
+                key={job._id}
+                onClick={() => navigate(`/job-listing/${job._id}`)}
+                className="relative aspect-4/5 w-full rounded-3xl overflow-hidden cursor-pointer group shadow-sm"
+              >
+                {job.images?.[0] ? (
+                  <img
+                    src={job.images[0]}
+                    alt={job.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-300">
+                    <span className="text-sm">Ingen bilder</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
+                <div className="absolute bottom-6 left-6 right-6">
+                  <h2 className="text-white font-bold text-lg md:text-xl drop-shadow-md truncate">
+                    {job.title}
+                  </h2>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="flex items-center justify-center">

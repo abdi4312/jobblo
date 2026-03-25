@@ -1,10 +1,12 @@
 import { CircleCheck, Star } from 'lucide-react';
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface JobProviderProps {
     job: {
         price?: number;
         userId?: {
+            _id: string;
             avatarUrl: string;
             name: string;
             verified: boolean;
@@ -14,6 +16,8 @@ interface JobProviderProps {
 }
 
 const JobProvider: React.FC<JobProviderProps> = ({ job }) => {
+    const navigate = useNavigate();
+
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Lønn Section */}
@@ -25,7 +29,10 @@ const JobProvider: React.FC<JobProviderProps> = ({ job }) => {
             </div>
 
             {/* Provider Section */}
-            <div className='flex flex-col max-h-33.75 gap-2 rounded-[14px] bg-[linear-gradient(111.15deg,#2BFF00_-59.46%,#A9FF98_100%)] p-6'>
+            <div 
+                onClick={() => job?.userId?._id && navigate(`/profile/${job.userId._id}`)}
+                className='flex flex-col max-h-33.75 gap-2 rounded-[14px] bg-[linear-gradient(111.15deg,#2BFF00_-59.46%,#A9FF98_100%)] p-6 cursor-pointer hover:opacity-90 transition-opacity'
+            >
                 <p className='text-base font-bold text-[#0A0A0A]'>Om oppdragsgiveren</p>
                 <div className='flex gap-3 items-center'>
                     <div className='size-14 shadow-[0px_0px_0px_3px_#FFFFFF] rounded-full overflow-hidden bg-white'>

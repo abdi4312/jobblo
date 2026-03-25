@@ -133,6 +133,7 @@ router.post("/", authenticate, requireAdmin, userController.createUser);
  *         description: Brukeren ble ikke funnet
  */
 router.get("/search", authenticate, userController.searchUsers);
+router.get("/blocked", authenticate, userController.getBlockedUsers);
 router.get("/:id", authenticate, userController.getUserById);
 router.put(
   "/:id",
@@ -144,5 +145,6 @@ router.delete("/:id", authenticate, userController.deleteUser);
 router.get("/:id/services", authenticate, userController.getUserServices);
 router.get("/", authenticate, requireAdmin, userController.getAllUsers);
 router.post("/:id/follow", authenticate, userController.followUser);
+router.post("/:id/block", authenticate, userController.blockUser);
 
 module.exports = router;

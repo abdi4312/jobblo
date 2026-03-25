@@ -3,10 +3,27 @@ const List = require("../models/List");
 // Get all lists for a user (where they are owner or contributor)
 exports.getUserLists = async (req, res) => {
   try {
-    // Check both 'user' (owner array) and 'contributors' array
-    const lists = await List.find({
-      $or: [{ user: req.userId }, { contributors: req.userId }],
-    }).populate("services");
+    const { userId } = req.query;
+    const currentUserId = req.userId;
+
+    let query = {};
+
+    if (userId && userId !== currentUserId) {
+      // If requesting another user's lists, only show public ones
+      query = {
+        $or: [{ user: userId }, { contributors: userId }],
+        public: true,
+      };
+    } else {
+      // Show all lists for current user
+      query = {
+        $or: [{ user: currentUserId }, { contributors: currentUserId }],
+      };
+    }
+
+    const lists = await List.find(query)
+      .populate("services")
+      .populate("followers", "name lastName avatarUrl email");
     res.status(200).json(lists);
   } catch (error) {
     res
@@ -171,23 +188,26 @@ exports.removeContributor = async (req, res) => {
   }
 };
 
-// Get list by ID (Owner and contributors can access)
+// Get list by ID (Owners, contributors, and anyone if public)
 exports.getListById = async (req, res) => {
   try {
     const { listId } = req.params;
-    // Check if user is owner or contributor
+    // Check if user is owner, contributor, OR if the list is public
     const list = await List.findOne({
       _id: listId,
-      $or: [{ user: req.userId }, { contributors: req.userId }],
+      $or: [
+        { user: req.userId },
+        { contributors: req.userId },
+        { public: true },
+      ],
     })
       .populate("services")
       .populate("user", "name lastName avatarUrl email")
-      .populate("contributors", "name lastName avatarUrl email");
+      .populate("contributors", "name lastName avatarUrl email")
+      .populate("followers", "name lastName avatarUrl email");
 
     if (!list) {
-      return res
-        .status(404)
-        .json({ message: "List not found or permission denied" });
+      return res.status(404).json({ message: "List not found" });
     }
 
     res.status(200).json(list);
@@ -213,5 +233,54 @@ exports.deleteList = async (req, res) => {
     res
       .status(500)
       .json({ message: "Error deleting list", error: error.message });
+  }
+};
+
+// Toggle Follow a list
+exports.toggleFollowList = async (req, res) => {
+  try {
+    const { listId } = req.params;
+    const userId = req.userId;
+
+    const list = await List.findById(listId);
+    if (!list) {
+      return res.status(404).json({ message: "List not found" });
+    }
+
+    if (!list.public) {
+      // Only public lists can be followed, unless you are a contributor
+      const isContributor = list.contributors.some(
+        (id) => id.toString() === userId,
+      );
+      const isOwner = list.user.some((id) => id.toString() === userId);
+      if (!isContributor && !isOwner) {
+        return res
+          .status(403)
+          .json({ message: "Cannot follow a private list" });
+      }
+    }
+
+    const isFollowing = list.followers.some((id) => id.toString() === userId);
+
+    if (isFollowing) {
+      // Unfollow
+      list.followers = list.followers.filter((id) => id.toString() !== userId);
+    } else {
+      // Follow
+      list.followers.push(userId);
+    }
+
+    await list.save();
+    res.status(200).json({
+      message: isFollowing
+        ? "Unfollowed successfully"
+        : "Followed successfully",
+      isFollowing: !isFollowing,
+      followersCount: list.followers.length,
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error toggling follow", error: error.message });
   }
 };

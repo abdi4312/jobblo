@@ -79,6 +79,15 @@ export const JobCard = ({ job }: JobCardProps) => {
             {catName}
           </div>
         )}
+
+        {/* Sold Ribbon (Top Right) */}
+        {job.status === 'closed' && (
+          <div className="absolute top-0 right-0 overflow-hidden w-24 h-24 pointer-events-none">
+            <div className="bg-[#FF8A71] text-white font-black text-[12px] py-1.5 w-[140%] text-center rotate-45 translate-x-[20%] translate-y-[25%] shadow-md uppercase tracking-widest">
+              Sold
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add To List Modal */}

@@ -1,9 +1,11 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AtSign, Image, MapPin, PenLine, Phone, User } from "lucide-react";
+import { useUserStore } from "../../../stores/userStore";
 
 export function SettingsLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const user = useUserStore((state) => state.user);
 
   const publicProfileLinks = [
     { name: "Username", path: "/settings", icon: AtSign },
@@ -33,10 +35,15 @@ export function SettingsLayout() {
   ];
 
   const currentPath = location.pathname;
-  
+
   // Find current active tab name
   const allLinks = [...publicProfileLinks, ...personalInfoLinks, ...otherLinks, ...privacyLinks];
-  const activeTab = allLinks.find(link => link.path === currentPath)?.name || "Settings";
+  let activeTab = allLinks.find(link => link.path === currentPath)?.name || "Settings";
+
+  // Special case for Blocked users to show count in header
+  if (currentPath === "/settings/blocked" && user?.blockedUsers?.length > 0) {
+    activeTab = `Blocked users (${user.blockedUsers.length})`;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-0 flex justify-center">
@@ -70,11 +77,10 @@ export function SettingsLayout() {
                       <button
                         key={link.path}
                         onClick={() => navigate(link.path)}
-                        className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${
-                          isActive
+                        className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${isActive
                             ? "bg-[#EF790933] text-rose-600 md:text-gray-900 shadow-sm md:shadow-none border border-rose-100 md:border-0"
                             : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent"
-                        }`}
+                          }`}
                       >
                         <Icon size={18} className={isActive ? "text-rose-500 md:text-gray-900" : "text-gray-500"} />
                         {link.name}
