@@ -2,12 +2,18 @@ import { useOutletContext } from "react-router-dom";
 import type { SettingsContextType } from "../../../pages/SettingsPage";
 
 export const BioView = () => {
-  const { form, handleChange, handleUpdate } = useOutletContext<SettingsContextType>();
+  const { form, handleChange, handleUpdate, updateUser, user } = useOutletContext<SettingsContextType>();
+
+  // Logic: Check agar bio wahi hai jo pehle se profile mein thi
+  const isUnchanged = form.bio === user?.bio;
+  const isDisabled = isUnchanged || updateUser?.isPending;
 
   return (
     <section className="flex flex-col gap-6 max-w-2xl">
       <div className="relative group">
-        <label htmlFor="bio" className="absolute left-4 top-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-tight">Bio</label>
+        <label htmlFor="bio" className="absolute left-4 top-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-tight">
+          Bio
+        </label>
         <textarea
           id="bio"
           rows={6}
@@ -16,7 +22,19 @@ export const BioView = () => {
           onChange={(event) => handleChange("bio", event.target.value)}
         />
       </div>
-      <button type="button" onClick={handleUpdate} className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold text-lg py-4.5 rounded-2xl shadow-sm transition-all">Update bio</button>
+
+      <button
+        type="button"
+        onClick={handleUpdate}
+        disabled={isDisabled}
+        className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
+          ${isDisabled
+            ? "bg-[#EF790993] cursor-not-allowed opacity-80"
+            : "bg-[#EF7909] hover:bg-[#D66A08] active:scale-[0.98]"
+          }`}
+      >
+        {updateUser?.isPending ? "Saving..." : "Update bio"}
+      </button>
     </section>
   );
 };
