@@ -24,5 +24,6 @@ router.delete(
   listController.removeServiceFromList,
 );
 router.delete("/:listId", authenticate, listController.deleteList);
+router.post("/:listId/follow", authenticate, listController.toggleFollowList);
 
 module.exports = router;

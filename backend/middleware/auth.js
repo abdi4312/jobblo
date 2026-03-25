@@ -28,7 +28,10 @@ const authenticate = async (req, res, next) => {
 
     const token = req.cookies.token;
     if (!token) {
-      return res.json({ message: "Not logging" });
+      return res.status(401).json({ 
+        error: "Authentication required",
+        message: "Please log in" 
+      });
     }
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);

@@ -94,6 +94,10 @@ export const routes: RouteObject[] = [
         ),
       },
       {
+        path: "profile/:userId",
+        element: <ProfilePage />,
+      },
+      {
         path: "mine-annonser",
 
         element: (
