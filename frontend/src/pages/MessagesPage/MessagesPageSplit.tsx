@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { initSocket, disconnectSocket } from "../../socket/socket";
+import { initSocket } from "../../socket/socket";
 import { useUserStore } from "../../stores/userStore";
 import { useChatQueries } from "../../features/chat/hook";
 
@@ -16,8 +16,6 @@ import { CreateContractModal } from "../../components/chat/CreateContractModal/C
 type FilterType = "Alle" | "Mine Oppdrag" | "Forespørsler";
 
 export function MessagesPageSplit() {
-  const navigate = useNavigate();
-  const location = useLocation();
   const { conversationId } = useParams();
   const queryClient = useQueryClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -41,7 +39,7 @@ export function MessagesPageSplit() {
 
   // Window Resize
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 12800);
+    const handleResize = () => setIsMobile(window.innerWidth < 1200);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -57,23 +55,27 @@ export function MessagesPageSplit() {
       window.dispatchEvent(new CustomEvent("chat-read"));
     }
 
-    socket.on("receive-message", (data) => {
+    const handleReceiveMessage = (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["chat", data.chatId] });
       queryClient.invalidateQueries({ queryKey: ["chats"] });
-    });
+    };
+
+    const handleContractCreated = () => queryClient.invalidateQueries({ queryKey: ["contract"] });
+    const handleContractSigned = () => queryClient.invalidateQueries({ queryKey: ["contract"] });
+
+    socket.on("receive-message", handleReceiveMessage);
 
     if (activeChat?.serviceId?._id) {
       socket.emit("join_service", activeChat.serviceId._id);
-      socket.on("contract_created", () => queryClient.invalidateQueries({ queryKey: ["contract"] }));
-      socket.on("contract_signed", () => queryClient.invalidateQueries({ queryKey: ["contract"] }));
+      socket.on("contract_created", handleContractCreated);
+      socket.on("contract_signed", handleContractSigned);
     }
 
     return () => {
-      socket.off("receive-message");
-      socket.off("contract_created");
-      socket.off("contract_signed");
+      socket.off("receive-message", handleReceiveMessage);
+      socket.off("contract_created", handleContractCreated);
+      socket.off("contract_signed", handleContractSigned);
       if (conversationId) socket.emit("leave-chat", conversationId);
-      disconnectSocket();
     };
   }, [conversationId, userId, queryClient, activeChat?.serviceId?._id]);
 
@@ -114,16 +116,6 @@ export function MessagesPageSplit() {
     return date.toLocaleDateString("nb-NO", { day: "numeric", month: "long" });
   };
 
-  const groupMessagesByDate = () => {
-    const groups: any = {};
-    messages.forEach((msg: any) => {
-      const date = new Date(msg.createdAt).toDateString();
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(msg);
-    });
-    return groups;
-  };
-
   const filteredChats = chats.filter((chat: any) => {
     if (activeFilter === "Alle") return true;
     if (activeFilter === "Mine Oppdrag") return chat.providerId._id === userId;
@@ -134,13 +126,13 @@ export function MessagesPageSplit() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-300 min-h-150 max-h-screen mx-auto flex bg-[#FFFFFF1A] p-6 rounded-xl shadow-md">
+      <div className="max-w-[1200px] min-h-[600px] max-h-screen mx-auto flex bg-[#FFFFFF1A] p-6 rounded-xl shadow-md">
 
         {/* LEFT SIDEBAR */}
         <div className={`${conversationId && isMobile ? "hidden" : "flex"} flex-col w-full xl:w-[380px] xl:min-w-[380px] xl:max-w-[380px] border-r border-[#e8e8e8] bg-[#FFFFFF1A] overflow-hidden transition-all`}>
 
-          {/* FILTER BUTTONS - EXACT ORIGINAL CSS */}
-          <div className="flex gap-2 p-4 bg-[#FFFFFF1A] border-bottom flex-wrap">
+          {/* FILTER BUTTONS */}
+          <div className="flex gap-2 p-4 bg-[#FFFFFF1A] border-b flex-wrap">
             {(["Alle", "Mine Oppdrag", "Forespørsler"] as FilterType[]).map((filter) => (
               <button
                 key={filter}
@@ -161,7 +153,7 @@ export function MessagesPageSplit() {
             user={user}
             conversationId={conversationId}
             isUnread={(chat: any) => {
-              if (chat.clientId._id === userId) {
+              if (chat.clientId?._id === userId) {
                 return false;
               }
               const lastCheck = localStorage.getItem(`lastChatCheck_${userId}_${chat._id}`);
@@ -196,19 +188,17 @@ export function MessagesPageSplit() {
                 <div className="px-4 bg-[#FFFFFFB2]">
                   <ContractMessage
                     contract={contract}
-                    currentUserId={userId}
-                    onContractUpdated={() => queryClient.invalidateQueries({ queryKey: ['contract'] })}
+                    currentUserId={String(userId)}
                   />
                 </div>
               )}
 
               <MessageList
                 messages={messages}
-                messageGroups={groupMessagesByDate()}
-                userId={userId}
+                userId={String(userId)}
                 formatDate={formatDate}
                 formatTime={formatTime}
-                messagesEndRef={messagesEndRef}
+                messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
               />
 
               <MessageInput
@@ -229,7 +219,7 @@ export function MessagesPageSplit() {
           serviceId={activeChat.serviceId._id}
           serviceTitle={activeChat.serviceId.title || "Service"}
           otherUserId={otherUser._id}
-          currentUserId={userId}
+          currentUserId={String(userId)}
           onContractCreated={() => queryClient.invalidateQueries({ queryKey: ['contract'] })}
         />
       )}

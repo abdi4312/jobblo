@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import styles from "./CreateContractModal.module.css";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
 // Sahi Hook import
 import { useContractActions } from "../../../features/contracts/hooks/useContractActions"; 
 

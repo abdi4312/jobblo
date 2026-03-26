@@ -1,12 +1,10 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Session = require("../models/Session");
 
 /**
  * Middleware to authenticate JWT tokens
- * Compatible with OAuth-only authentication
- *
- * Extracts and verifies JWT token from Authorization header,
- * attaches user object to req.user and user ID to req.userId
+ * Extracts and verifies JWT token from cookies or Authorization header
  *
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -14,27 +12,69 @@ const User = require("../models/User");
  */
 const authenticate = async (req, res, next) => {
   try {
-    // Extract token from Authorization header
-    // const authHeader = req.headers.authorization;
+    // Try to get token from cookie first, then from Authorization header
+    let token = req.cookies.accessToken || req.cookies.token;
+    const refreshToken = req.cookies.refreshToken;
 
-    // if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    //     return res.status(401).json({
-    //         error: 'Authentication required',
-    //         message: 'Please provide a valid authorization token'
-    //     });
-    // }
+    if (
+      !token &&
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer ")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
+    }
 
-    // const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
-    const token = req.cookies.token;
     if (!token) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: "Authentication required",
-        message: "Please log in" 
+        message: "Please log in",
+        code: "TOKEN_MISSING",
       });
     }
+
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      if (err.name === "TokenExpiredError") {
+        return res.status(401).json({
+          error: "Token expired",
+          message: "Please log in again or refresh token",
+          code: "TOKEN_EXPIRED",
+        });
+      }
+      throw err;
+    }
+
+    // CRITICAL: Check if the session still exists in DB using the session ID (sid) from token
+    const sessionId = decoded.sid;
+    if (!sessionId) {
+      return res.status(401).json({
+        error: "Invalid token",
+        message: "Session information missing from token",
+      });
+    }
+
+    const sessionExists = await Session.findOne({
+      _id: sessionId,
+      userId: decoded.id,
+    });
+
+    if (!sessionExists) {
+      // Clear cookies if session is invalid or revoked
+      res.clearCookie("accessToken");
+      res.clearCookie("refreshToken");
+      return res.status(401).json({
+        error: "Session revoked",
+        message: "Your session has been terminated or is invalid",
+        code: "SESSION_REVOKED",
+      });
+    }
+
+    // Update session lastUsed
+    sessionExists.lastUsed = new Date();
+    await sessionExists.save();
 
     // Fetch user from database
     const user = await User.findById(decoded.id).select("-password");
@@ -49,19 +89,15 @@ const authenticate = async (req, res, next) => {
     // Attach user to request object
     req.user = user;
     req.userId = user._id.toString();
+    req.sessionId = sessionId;
 
     next();
   } catch (error) {
+    // Already handled special cases above, only handle others here
     if (error.name === "JsonWebTokenError") {
       return res.status(401).json({
         error: "Invalid token",
         message: "Authentication token is malformed",
-      });
-    }
-    if (error.name === "TokenExpiredError") {
-      return res.status(401).json({
-        error: "Token expired",
-        message: "Please log in again",
       });
     }
     return res.status(500).json({

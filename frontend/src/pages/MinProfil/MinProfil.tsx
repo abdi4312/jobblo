@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useUserStore } from "../../stores/userStore";
 import { PricingModal } from "../../components/shared/PricingModal/PricingModal";
-import { toast } from 'react-toastify';
+import { toast } from 'react-hot-toast';
 import { UserStats } from "../../components/MinProfile/UserStats";
 import { ProfileImage } from "../../components/MinProfile/ProfileImage";
 import { ProfileField } from "../../components/MinProfile/ProfileField";

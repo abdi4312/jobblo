@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useUserStore } from "../../stores/userStore";
 import { getChatById, sendMessage, type Chat, type ChatMessage } from "../../api/chatAPI";
-import { initSocket, disconnectSocket } from "../../socket/socket";
-import { toast } from "react-toastify";
+import { initSocket } from "../../socket/socket";
+import { toast } from "react-hot-toast";
 import styles from "./ChatView.module.css";
 import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 
@@ -52,10 +52,18 @@ export function ChatView() {
     socket.emit("join-chat", chatId);
 
     // Listen for new messages
-    socket.on("receive-message", (data: { chatId: string; message: ChatMessage }) => {
+    const handleReceiveMessage = (data: { chatId: string; message: ChatMessage }) => {
       if (data.chatId === chatId) {
         setChat((prevChat) => {
           if (!prevChat) return prevChat;
+          
+          const exists = prevChat.messages.some(m => 
+            (m._id && m._id === data.message._id) || 
+            (m.createdAt === data.message.createdAt && m.text === data.message.text && m.senderId === data.message.senderId)
+          );
+          
+          if (exists) return prevChat;
+
           return {
             ...prevChat,
             messages: [...prevChat.messages, data.message],
@@ -63,12 +71,13 @@ export function ChatView() {
           };
         });
       }
-    });
+    };
+
+    socket.on("receive-message", handleReceiveMessage);
 
     return () => {
       socket.emit("leave-chat", chatId);
-      socket.off("receive-message");
-      disconnectSocket();
+      socket.off("receive-message", handleReceiveMessage);
     };
   }, [chatId]);
 
@@ -87,6 +96,11 @@ export function ChatView() {
       
       setChat((prevChat) => {
         if (!prevChat) return prevChat;
+        
+        // Check if socket already added it to prevent double-display
+        const exists = prevChat.messages.some(m => m._id === newMessage._id);
+        if (exists) return prevChat;
+
         return {
           ...prevChat,
           messages: [...prevChat.messages, newMessage],
@@ -156,7 +170,8 @@ export function ChatView() {
             </div>
           ) : (
             chat.messages.map((msg, index) => {
-              const isOwnMessage = msg.senderId === user?._id;
+              const senderId = typeof msg.senderId === 'string' ? msg.senderId : (msg.senderId as any)?._id;
+              const isOwnMessage = senderId === user?._id;
               return (
                 <div
                   key={msg._id || index}

@@ -6,7 +6,7 @@ export const PublicRoute = ({ children }: { children: JSX.Element }) => {
   const isAuth = useUserStore((state: { isAuthenticated: boolean }) => state.isAuthenticated);
 
   if (isAuth) {
-    return <Navigate to="/profile" replace />;
+    return <Navigate to="/home" replace />;
   }
 
   return children;

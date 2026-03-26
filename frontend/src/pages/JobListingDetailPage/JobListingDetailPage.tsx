@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
 import { useUserStore } from "../../stores/userStore";
 import {
   useJobDetailQuery,

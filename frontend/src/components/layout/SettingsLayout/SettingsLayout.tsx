@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { AtSign, Image, MapPin, PenLine, Phone, User } from "lucide-react";
+import { AtSign, Image, MapPin, Monitor, PenLine, Phone, User } from "lucide-react";
 import { useUserStore } from "../../../stores/userStore";
 
 export function SettingsLayout() {
@@ -19,6 +19,7 @@ export function SettingsLayout() {
     { name: "Phone number", path: "/settings/phone", icon: Phone },
     { name: "My addresses", path: "/settings/addresses", icon: MapPin },
     { name: "Change password", path: "/settings/password", icon: User },
+    { name: "Sessions", path: "/settings/sessions", icon: Monitor },
     { name: "Delete my profile", path: "/settings/delete-account", icon: User },
   ];
 
@@ -78,8 +79,8 @@ export function SettingsLayout() {
                         key={link.path}
                         onClick={() => navigate(link.path)}
                         className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${isActive
-                            ? "bg-[#EF790933] text-rose-600 md:text-gray-900 shadow-sm md:shadow-none border border-rose-100 md:border-0"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent"
+                          ? "bg-[#EF790933] text-rose-600 md:text-gray-900 shadow-sm md:shadow-none border border-rose-100 md:border-0"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent"
                           }`}
                       >
                         <Icon size={18} className={isActive ? "text-rose-500 md:text-gray-900" : "text-gray-500"} />

@@ -3,7 +3,7 @@ import { Button } from "antd";
 import jobbloswipe from "../../../assets/images/jobbloswipe.png";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../../../stores/userStore";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
 import { useState, useEffect, useMemo } from "react";
 import debounce from "lodash.debounce";
 
@@ -66,7 +66,7 @@ export function Search({ onSearchChange, value }: SearchProps) {
     if (!onSearchChange && searchQuery.trim()) {
       navigate(`/search/${encodeURIComponent(searchQuery.trim())}`);
     } else if (!onSearchChange && !searchQuery.trim()) {
-      toast.warning("Vennligst skriv inn et søkeord");
+      toast("Minimum 3 tegn for å søke");
     }
   };
 

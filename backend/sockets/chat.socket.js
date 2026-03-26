@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const cookie = require("cookie");
 
 module.exports = (io) => {
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     try {
       const rawCookie = socket.handshake.headers.cookie;
       if (!rawCookie) {
@@ -11,17 +11,28 @@ module.exports = (io) => {
 
       // 🍪 parse cookies
       const cookies = cookie.parse(rawCookie);
-      const token = cookies.token;
+      const token = cookies.accessToken || cookies.token;
 
       if (!token) {
-        return next(new Error("No token in cookie"));
+        return next(new Error("No token found"));
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      socket.userId = String(decoded.id || decoded._id);
+      
+      // Verify session exists in DB
+      const Session = require("../models/Session");
+      const sessionExists = await Session.findById(decoded.sid);
+
+      if (!sessionExists || sessionExists.userId.toString() !== decoded.id) {
+        return next(new Error("Session expired or revoked"));
+      }
+
+      socket.userId = String(decoded.id);
+      socket.sessionId = decoded.sid;
 
       next();
     } catch (err) {
+      console.error("Socket Auth Error:", err.message);
       next(new Error("Socket auth failed"));
     }
   });

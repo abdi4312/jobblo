@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginIcon from "../../assets/images/Login/login-icon.png";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
 import SocialAuthButtons from "../../components/SocialAuthButtons/AuthButton.tsx";
 import { Input } from "../../components/Ui/Input.tsx";
 import { Button } from "../../components/Ui/Button.tsx";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import Auth from "../../components/Auth/Auth.tsx";
-import { useLogin } from "../../features/auth/hook/useLogin.ts";
+import { useAuth } from "../../features/auth/hook/useAuth.ts";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   // TanStack Hook ka istemal
-  const { mutate: login, isPending, error } = useLogin();
+  const { login, isLoggingIn } = useAuth();
 
   const handleLogin = () => {
     if (!email || !password) {
@@ -75,21 +75,18 @@ export default function LoginPage() {
                     </div>
                   }
                 />
-                <p className="text-red-500">{error?.response?.data?.error}</p>
               </div>
 
               <div className="flex flex-col gap-6.5 2xl:mt-6.5">
                 <Button
-                  // onClick={handleLogin}
-                  // loading={loading}
                   className="bg-transparent text-[#83A790]! text-[14px]! py-0! font-normal! hover:bg-transparent"
                   label="Glemt passord? Klikk her"
                 />
                 <Button
                   onClick={handleLogin}
-                  disabled={isPending}
+                  disabled={isLoggingIn}
                   className="w-full max-w-md bg-[#3F8F6B]! rounded-[14px] text-base! font-normal!"
-                  label={isPending ? "Logger inn..." : "Logg inn"}
+                  label={isLoggingIn ? "Logger inn..." : "Logg inn"}
                 />
               </div>
 

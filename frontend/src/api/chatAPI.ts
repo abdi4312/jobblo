@@ -1,7 +1,7 @@
 import mainLink from "./mainURLs";
 
 export interface ChatMessage {
-  senderId: string;
+  senderId: string | { _id: string; name: string; avatarUrl?: string };
   text: string;
   createdAt: string;
   _id?: string;

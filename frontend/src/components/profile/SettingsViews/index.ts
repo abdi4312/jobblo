@@ -12,4 +12,5 @@ export * from "./UpcomingPreviewView";
 export * from "./VisibilityView";
 export * from "./BlockedUsersView";
 export * from "./CookiesView";
+export * from "./SessionsView";
 export * from "./AboutView";

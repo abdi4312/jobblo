@@ -1,48 +1,17 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { initSocket, disconnectSocket } from "../../socket/socket";
-import { getChatById, sendMessage, type Chat, type ChatMessage } from "../../api/chatAPI";
-import { toast } from "react-toastify";
-
-import styles from "./ConversationView.module.css";
-import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
 import { useUserStore } from "../../stores/userStore";
-
-interface Message {
-  _id?: string;
-  senderId: string | {
-    _id: string;
-    name: string;
-    avatarUrl?: string;
-  };
-  text: string;
-  images?: string[];
-  createdAt: string;
-  status?: "sent" | "delivered" | "read";
-}
-
-interface ReceiveMessagePayload {
-  chatId: string;
-  message: ChatMessage;
-}
+import { getChatById, sendMessage, type Chat, type ChatMessage } from "../../api/chatAPI";
+import { initSocket } from "../../socket/socket";
+import { toast } from "react-hot-toast";
 
 export function ConversationView() {
-  const { conversationId } = useParams();
+  const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [chat, setChat] = useState<Chat | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const [loading, setLoading] = useState(true);
   const { user } = useUserStore();
-  const userId = user?._id;
-
-  const otherUser = chat
-    ? chat.clientId._id === userId
-      ? chat.providerId
-      : chat.clientId
-    : null;
+  const [chat, setChat] = useState<Chat | null>(null);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -50,12 +19,11 @@ export function ConversationView() {
     const fetchChat = async () => {
       try {
         setLoading(true);
-        const chatData = await getChatById(conversationId);
-        setChat(chatData);
-        setMessages(chatData.messages || []);
-      } catch (err) {
-        console.error("Fetch chat error:", err);
-        toast.error("Kunne ikke laste samtale");
+        const data = await getChatById(conversationId);
+        setChat(data);
+      } catch (error) {
+        console.error("Error fetching chat:", error);
+        toast.error("Kunne ikke laste chat");
         navigate("/messages");
       } finally {
         setLoading(false);
@@ -64,244 +32,68 @@ export function ConversationView() {
 
     fetchChat();
 
-    // ========== SOCKET ==========
     const socket = initSocket();
-    if (!socket) return;
-
     socket.emit("join-chat", conversationId);
 
-    const onReceiveMessage = (data: ReceiveMessagePayload) => {
+    const handleReceiveMessage = (data: { chatId: string; message: ChatMessage }) => {
       if (data.chatId === conversationId) {
-        // Don't add message if it's from current user (already added optimistically)
-        const messageSenderId = typeof data.message.senderId === 'string' 
-          ? data.message.senderId 
-          : data.message.senderId._id;
-          
-        if (messageSenderId === userId) {
-          console.log('Skipping own message from socket (already added optimistically)');
-          return;
-        }
-        
-        setMessages((prev) => [...prev, data.message]);
-        setChat((prevChat) => prevChat ? { ...prevChat, lastMessage: data.message.text } : null);
+        setChat((prev) => {
+          if (!prev) return prev;
+          // Check for duplicates
+          if (prev.messages.some((m) => m._id === data.message._id)) return prev;
+          return {
+            ...prev,
+            messages: [...prev.messages, data.message],
+          };
+        });
       }
     };
 
-    socket.on("receive-message", onReceiveMessage);
+    socket.on("receive-message", handleReceiveMessage);
 
     return () => {
-      socket.off("receive-message", onReceiveMessage);
       socket.emit("leave-chat", conversationId);
-      disconnectSocket();
+      socket.off("receive-message", handleReceiveMessage);
     };
   }, [conversationId, navigate]);
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("nb-NO", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) {
-      return "I dag";
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return "I går";
-    } else {
-      return date.toLocaleDateString("nb-NO", {
-        day: "numeric",
-        month: "long",
-      });
-    }
-  };
-
-  const groupMessagesByDate = () => {
-    const groups: { [key: string]: Message[] } = {};
-    messages.forEach((msg) => {
-      const date = new Date(msg.createdAt).toDateString();
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(msg);
-    });
-    return groups;
-  };
-
-  const handleSend = async () => {
-    if (!newMessage.trim() || !conversationId || sending) return;
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim() || !conversationId) return;
 
     try {
-      setSending(true);
-      const msg = await sendMessage(conversationId, newMessage.trim());
-      
-      setMessages((prev) => [...prev, msg]);
-      setChat((prevChat) => prevChat ? { ...prevChat, lastMessage: msg.text } : null);
-      setNewMessage("");
+      const sentMessage = await sendMessage(conversationId, message.trim());
+      setChat((prev) => {
+        if (!prev) return prev;
+        if (prev.messages.some(m => m._id === sentMessage._id)) return prev;
+        return {
+          ...prev,
+          messages: [...prev.messages, sentMessage],
+        };
+      });
+      setMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Kunne ikke sende melding");
-    } finally {
-      setSending(false);
     }
   };
 
-  const messageGroups = groupMessagesByDate();
-
-  if (loading) {
-    return (
-      <div className={styles.pageContainer}>
-        <div className={styles.empty}>
-          <p>Laster samtale...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!chat) {
-    return (
-      <div className={styles.pageContainer}>
-        <div className={styles.empty}>
-          <p>Samtale ikke funnet</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div>Laster chat...</div>;
+  if (!chat) return <div>Chat ikke funnet</div>;
 
   return (
-    <div className={styles.pageContainer}>
-      <ProfileTitleWrapper title={otherUser?.name || "Chat"} buttonText="Tilbake" />
-
-      {/* Job Context */}
-      {chat.serviceId && (
-        <div style={{
-          padding: "12px 20px",
-          backgroundColor: "#f5f5f5",
-          borderBottom: "1px solid #e0e0e0",
-          fontSize: "14px",
-          color: "#666"
-        }}>
-          <strong>Angående:</strong> {chat.serviceId.title || "Jobb"}
-        </div>
-      )}
-
-      <div className={styles.chatContainer}>
-        <div className={styles.messagesArea}>
-          {messages.length === 0 ? (
-            <div className={styles.empty}>
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: "48px", color: "#ccc" }}
-              >
-                chat
-              </span>
-              <p>Ingen meldinger ennå</p>
-              <p className={styles.emptySubtext}>
-                Send en melding for å starte samtalen
-              </p>
-            </div>
-          ) : (
-            Object.entries(messageGroups).map(([date, msgs]) => (
-              <div key={date}>
-                <div className={styles.dateLabel}>
-                  {formatDate(msgs[0].createdAt)}
-                </div>
-                {msgs.map((msg, index) => {
-                  const senderId = typeof msg.senderId === 'string' ? msg.senderId : msg.senderId._id;
-                  const senderName = typeof msg.senderId === 'object' ? msg.senderId.name : 'Unknown';
-                  const senderAvatar = typeof msg.senderId === 'object' ? msg.senderId.avatarUrl : undefined;
-                  
-                  const isSentByMe = senderId === userId;
-                  
-                  console.log('Message render:', {
-                    senderId,
-                    userId,
-                    isSentByMe,
-                    text: msg.text
-                  });
-                  
-                  return (
-                    <div
-                      key={msg._id || index}
-                      className={`${styles.messageWrapper} ${
-                        isSentByMe
-                          ? styles.sent
-                          : styles.received
-                      }`}
-                    >
-                      {!isSentByMe && (
-                        <div className={styles.avatar}>
-                          {senderAvatar ? (
-                            <img
-                              src={senderAvatar}
-                              alt={senderName}
-                            />
-                          ) : (
-                            <div className={styles.avatarPlaceholder}>
-                              {senderName?.charAt(0) || '?'}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      <div className={styles.messageBubble}>
-                        {msg.images && msg.images.length > 0 && (
-                          <div className={styles.messageImages}>
-                            {msg.images.map((img, idx) => (
-                              <img key={idx} src={img} alt="attachment" />
-                            ))}
-                          </div>
-                        )}
-                        <p className={styles.messageText}>{msg.text}</p>
-                        <span className={styles.messageTime}>
-                          {formatTime(msg.createdAt)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ))
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Message Input */}
-        <div className={styles.inputArea}>
-          <div className={styles.inputContainer}>
-            <button
-              type="button"
-              className={styles.attachButton}
-              aria-label="Legg ved fil"
-            >
-              <span className="material-symbols-outlined">attach_file</span>
-            </button>
-
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Skriv en melding..."
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              className={styles.messageInput}
-              disabled={sending}
-            />
-
-            <button
-              type="submit"
-              className={styles.sendButton}
-              disabled={!newMessage.trim() || sending}
-              onClick={handleSend}
-            >
-              <span className="material-symbols-outlined">send</span>
-            </button>
+    <div className="conversation-view">
+      <div className="messages">
+        {chat.messages.map((m, idx) => (
+          <div key={m._id || idx} className={`message ${m.senderId === user?._id ? "own" : "other"}`}>
+            {m.text}
           </div>
-        </div>
+        ))}
       </div>
+      <form onSubmit={handleSend}>
+        <input value={message} onChange={(e) => setMessage(e.target.value)} />
+        <button type="submit">Send</button>
+      </form>
     </div>
   );
 }
