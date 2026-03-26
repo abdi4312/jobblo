@@ -3,7 +3,7 @@ import { ItemsGrid } from "./ProfileHeader/ItemsGrid";
 import { ProfileNav } from "./ProfileHeader/ProfileNav";
 import { useUserStore } from "../../stores/userStore";
 import { useNavigate, useParams } from "react-router-dom";
-import { toast } from 'react-toastify';
+import { toast } from 'react-hot-toast';
 import { App } from 'antd';
 import { useState } from 'react';
 import { useUserProfile } from "../../features/profile/hooks";

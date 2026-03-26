@@ -3,26 +3,20 @@ import "./styles/Jobblo.css";
 import { Outlet } from "react-router-dom";
 import Header from "./components/layout/header/Header.tsx";
 import Footer from "./components/layout/footer/Footer.tsx";
-import { ToastContainer } from 'react-toastify';
-import { Toaster } from 'react-hot-toast';
-import 'react-toastify/dist/ReactToastify.css';
 import { ScrollToTop } from "./components/shared/ScrollToTop.tsx";
 import { App as AntApp } from 'antd';
-import { useUserStore } from "./stores/userStore.ts";
-import { useEffect } from "react";
-
-// Note: QueryClient aur Provider yahan se hata diye gaye hain kyunki wo ab main.tsx mein hain.
+import { useAuth } from "./features/auth/hook/useAuth.ts";
+import { Toaster } from "react-hot-toast";
 
 export default function App() {
-  const { fetchProfile } = useUserStore((state) => state);
+  const { user, isLoadingUser } = useAuth();
 
-  useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+  if (isLoadingUser) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
 
   return (
     <>
-      {/* 1. Toaster ko yahan sabse upar le aayein */}
       <Toaster
         position="bottom-center"
         toastOptions={{
@@ -34,24 +28,11 @@ export default function App() {
           },
         }}
       />
-
       <AntApp>
         <ScrollToTop />
         <Header />
         <Outlet />
         <Footer />
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-        />
       </AntApp>
     </>
   );

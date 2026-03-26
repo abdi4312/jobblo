@@ -3,7 +3,7 @@ import { VippsButton } from "../../component/button/VippsButton.tsx";
 import { VerticalDivider } from "../../component/divider/verticalDivider/VerticalDivider.tsx";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUserStore } from "../../../stores/userStore";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
 import { useState, useEffect } from "react";
 import { getMyChats } from "../../../api/chatAPI";
 import { initSocket } from "../../../socket/socket";
@@ -22,42 +22,28 @@ export default function Header() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (!user) {
+    if (!user?._id) {
       setHasUnreadMessages(false);
+      setUnreadCount(0);
       return;
     }
 
-    const checkUnreadMessages = async () => {
-      if (!user?._id) return;
+    const socket = initSocket();
 
+    const initializeChatState = async () => {
       try {
         const chats = await getMyChats();
-
-        // Debugging ke liye:
-        // console.log("Sab chats:", chats);
-
         if (!Array.isArray(chats)) return;
 
+        // 1. Calculate unread count
         const unreadChats = chats.filter((chat) => {
-          // 1. Check karein ke last message kisne bheja
-          // Agar lastMessage object mojud hai aur uska sender MERI id hai, toh false return karein
           const lastSenderId = chat.clientId?._id || chat.lastMessage?.sender;
-
-          if (lastSenderId === user._id) {
-            return false;
-          }
-
-          // 2. Agar koi update hi nahi hai toh skip
+          if (lastSenderId === user._id) return false;
           if (!chat.updatedAt) return false;
 
-          // 3. LocalStorage check
-          const lastCheckedTime = localStorage.getItem(
-            `lastChatCheck_${user._id}_${chat._id}`
-          );
-
+          const lastCheckedTime = localStorage.getItem(`lastChatCheck_${user._id}_${chat._id}`);
           const chatUpdatedTime = new Date(chat.updatedAt).getTime();
 
-          // 4. Time Comparison
           if (!lastCheckedTime) {
             const weekAgo = new Date();
             weekAgo.setDate(weekAgo.getDate() - 7);
@@ -70,83 +56,60 @@ export default function Header() {
 
         setHasUnreadMessages(unreadChats.length > 0);
         setUnreadCount(unreadChats.length);
+
+        // 2. Join socket rooms
+        if (socket) {
+          chats.forEach((chat) => {
+            if (chat._id) {
+              socket.emit("join-chat", chat._id);
+            }
+          });
+        }
       } catch (error) {
-        console.error("Error fetching chats for unread count:", error);
+        console.error("Error initializing chat state in Header:", error);
       }
     };
 
-    checkUnreadMessages();
+    initializeChatState();
 
-    // Listen for when user opens a chat (to clear red dot immediately)
-    const handleChatRead = () => {
-      checkUnreadMessages();
+    // Listen for real-time messages
+    const handleReceiveMessage = () => {
+      setHasUnreadMessages(true);
+      // We could re-fetch unread count here but it might be heavy
     };
+
+    // Listen for local tab updates
+    const handleChatRead = () => {
+      initializeChatState();
+    };
+
+    if (socket) {
+      if (socket.connected) {
+        initializeChatState();
+      } else {
+        socket.on("connect", initializeChatState);
+      }
+      socket.on("receive-message", handleReceiveMessage);
+    }
 
     window.addEventListener("chat-read", handleChatRead);
 
     return () => {
+      if (socket) {
+        socket.off("receive-message", handleReceiveMessage);
+        socket.off("connect");
+      }
       window.removeEventListener("chat-read", handleChatRead);
     };
-  }, [user]);
-
-  // Separate effect for socket listener to avoid re-subscribing
-  useEffect(() => {
-    if (!user) return;
-
-    // Socket setup for real-time notifications - ensure connection
-    const socket = initSocket();
-
-    if (!socket) return;
-
-    // Join all chat rooms for real-time notifications
-    const joinUserChats = async () => {
-      try {
-        const chats = await getMyChats();
-        chats.forEach((chat) => {
-          if (chat._id) {
-            socket.emit("join-chat", chat._id);
-          }
-        });
-      } catch (error) {
-        console.error("Failed to join chat rooms:", error);
-      }
-    };
-
-    const handleReceiveMessage = (data: any) => {
-      // Always show notification when receiving a message
-      // It will be cleared when user actually opens that specific chat
-      setHasUnreadMessages(true);
-    };
-
-    // Wait for socket to be connected before joining rooms
-    if (socket.connected) {
-      joinUserChats();
-    } else {
-      socket.on("connect", () => {
-        joinUserChats();
-      });
-    }
-
-    socket.on("receive-message", handleReceiveMessage);
-
-    return () => {
-      socket.off("receive-message", handleReceiveMessage);
-      socket.off("connect");
-    };
-  }, [user]);
+  }, [user?._id]);
 
   const handleProtectedNavigation = (path: string) => {
     if (!user) {
-      toast.warning("Du må være logget inn for å få tilgang");
+      toast("Du må være logget inn for å få tilgang");
       navigate("/login");
     } else {
       navigate(path);
     }
-  };
-
-  const handleMessagesClick = () => {
-    // Don't clear unread status here - it should only clear when all chats are checked
-    handleProtectedNavigation("/messages");
   };
 
   interface NavLink {

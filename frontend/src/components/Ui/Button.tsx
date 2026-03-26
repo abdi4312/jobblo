@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 interface ButtonProps {
   label?: string;
-  onClick?: () => void;
+  onClick?: (e?: any) => void;
   to?: string; // internal route
   href?: string; // external link
   icon?: ReactNode; // react icon / svg
@@ -13,6 +13,7 @@ interface ButtonProps {
   size?: "sm" | "md" | "lg";
   disabled?: boolean;
   className?: string;
+  children?: ReactNode;
 }
 
 export const Button = ({
@@ -27,6 +28,7 @@ export const Button = ({
   size = "md",
   disabled = false,
   className = "",
+  children,
 }: ButtonProps) => {
   const baseStyles =
     "inline-flex items-center justify-center gap-2 transition-all font-medium cursor-pointer";
@@ -51,6 +53,7 @@ export const Button = ({
         <img src={iconImage} alt="icon" className="w-4 h-4 object-contain" />
       )}
       {label && <span>{label}</span>}
+      {children}
       {iconPosition === "right" && icon}
     </>
   );

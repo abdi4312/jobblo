@@ -5,12 +5,20 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 
 export default function OAuthSuccess() {
   const navigate = useNavigate();
-  const { fetchProfile } = useUserStore((state) => state);
+  const { fetchProfile, setTokens } = useUserStore((state) => state);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
 
   useEffect(() => {
     const initOAuth = async () => {
       try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get("token");
+
+        if (token) {
+          // Store token first so fetchProfile interceptor can use it if needed
+          setTokens({ accessToken: token });
+        }
+
         await fetchProfile();
         setStatus("success");
         

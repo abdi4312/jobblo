@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getMyPostedServices, deleteService, updateService } from "./api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
 
 export const useMyServices = () => {
   return useQuery({

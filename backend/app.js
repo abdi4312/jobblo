@@ -50,10 +50,15 @@ const corsOptions = {
 
 const passport = require("./config/passport");
 const session = require("express-session");
+const useragent = require("express-useragent");
+
+const { apiLimiter } = require("./middleware/rateLimiter");
 
 const app = express();
 
 app.use(cors(corsOptions));
+app.use(apiLimiter); // Apply general API rate limiting
+app.use(useragent.express());
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

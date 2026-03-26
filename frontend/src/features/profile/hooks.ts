@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { blockUser, followUser, getBlockedUsers, getUserProfile, updateUser } from "./api";
 import { useUserStore } from "../../stores/userStore";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
 
 export const useUpdateUser = () => {
   const { fetchProfile } = useUserStore((state) => state);

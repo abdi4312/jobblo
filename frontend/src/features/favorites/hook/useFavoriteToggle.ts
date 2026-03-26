@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
 import { useFavoriteStatusQuery } from "./useFavorites"; // Path check karlein
 import { useFavoriteActions } from "./useFavorites";
 

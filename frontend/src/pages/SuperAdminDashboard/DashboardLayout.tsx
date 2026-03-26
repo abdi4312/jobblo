@@ -14,7 +14,7 @@ import {
   Rocket,
 } from "lucide-react";
 import { useUserStore } from "../../stores/userStore";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
 const DashboardLayout: React.FC = () => {
   const user = useUserStore((state) => state.user);
   const logout = useUserStore((state) => state.logout);

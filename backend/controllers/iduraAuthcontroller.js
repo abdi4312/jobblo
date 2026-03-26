@@ -1,5 +1,5 @@
+const { generateTokens, createSession } = require("../utils/tokenUtils");
 const axios = require("axios");
-const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
 exports.iduraCallback = async (req, res) => {
@@ -12,14 +12,14 @@ exports.iduraCallback = async (req, res) => {
       `${process.env.IDURA_BASE_URL}/auth/token`,
       {
         code,
-        redirectUri: process.env.IDURA_CALLBACK_URL
+        redirectUri: process.env.IDURA_CALLBACK_URL,
       },
       {
         auth: {
           username: process.env.IDURA_CLIENT_ID,
-          password: process.env.IDURA_CLIENT_SECRET
-        }
-      }
+          password: process.env.IDURA_CLIENT_SECRET,
+        },
+      },
     );
 
     if (tokenRes.data.status !== "success") {
@@ -30,14 +30,12 @@ exports.iduraCallback = async (req, res) => {
 
     // 🔍 STEP 1: Provider check
     let user = await User.findOne({
-      'oauthProviders.provider': 'idura',
-      'oauthProviders.providerId': profile.id
+      "oauthProviders.provider": "idura",
+      "oauthProviders.providerId": profile.id,
     });
 
     if (user) {
-      user.lastLogin = new Date();
-      await user.save();
-      return redirectWithToken(res, user);
+      return redirectWithToken(req, res, user);
     }
 
     // 🔍 STEP 2: Email check (same as Google logic)
@@ -45,13 +43,13 @@ exports.iduraCallback = async (req, res) => {
 
     if (user) {
       const alreadyLinked = user.oauthProviders.some(
-        p => p.provider === "idura"
+        (p) => p.provider === "idura",
       );
 
       if (!alreadyLinked) {
         user.oauthProviders.push({
           provider: "idura",
-          providerId: profile.id
+          providerId: profile.id,
         });
       }
 
@@ -60,7 +58,7 @@ exports.iduraCallback = async (req, res) => {
       user.lastLogin = new Date();
 
       await user.save();
-      return redirectWithToken(res, user);
+      return redirectWithToken(req, res, user);
     }
 
     // 🆕 STEP 3: Create new user (same pattern)
@@ -73,32 +71,41 @@ exports.iduraCallback = async (req, res) => {
       accountStatus: "verified",
       role: "user",
       subscription: "free",
-      oauthProviders: [{
-        provider: "idura",
-        providerId: profile.id
-      }]
+      oauthProviders: [
+        {
+          provider: "idura",
+          providerId: profile.id,
+        },
+      ],
     });
 
-    return redirectWithToken(res, user);
-
+    return redirectWithToken(req, res, user);
   } catch (err) {
     console.error("Idura auth error:", err);
     res.redirect(`${process.env.FRONTEND_URL}/auth-error`);
   }
 };
 
-function redirectWithToken(res, user) {
-  const token = jwt.sign(
-    {
-      userId: user._id,
-      role: user.role,
-      verified: user.verified
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
+async function redirectWithToken(req, res, user) {
+  const { accessToken, refreshToken } = generateTokens(user._id);
+  await createSession(req, user._id, refreshToken);
 
-  res.redirect(
-    `${process.env.FRONTEND_URL}/auth-success?token=${token}`
+  // Set cookies
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    maxAge: 15 * 60 * 1000, // 15 minutes
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+
+  return res.redirect(
+    `${process.env.FRONTEND_URL}/oauth-success?token=${accessToken}`,
   );
 }
