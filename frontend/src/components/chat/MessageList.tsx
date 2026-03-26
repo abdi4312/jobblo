@@ -1,8 +1,8 @@
 import React from 'react';
+import type { ChatMessage } from '../../api/chatAPI';
 
 interface MessageListProps {
-  messages: any[];
-  messageGroups: { [key: string]: any[] };
+  messages: ChatMessage[];
   userId: string | null;
   formatDate: (date: string) => string;
   formatTime: (date: string) => string;
@@ -11,15 +11,28 @@ interface MessageListProps {
 
 function MessageList({
   messages,
-  messageGroups,
   userId,
   formatDate,
   formatTime,
   messagesEndRef
 }: MessageListProps) {
+  const uniqueMessages = Array.from(new Map(
+    messages.map(msg => [
+      msg._id || `${msg.text}-${msg.senderId}-${new Date(msg.createdAt).getTime()}`, 
+      msg
+    ])
+  ).values());
+
+  const grouped = uniqueMessages.reduce((acc: { [key: string]: ChatMessage[] }, msg) => {
+    const date = new Date(msg.createdAt).toDateString();
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(msg);
+    return acc;
+  }, {});
+
   return (
     <div className="flex-1 overflow-y-auto p-5 bg-[#FFFFFFB2]">
-      {messages.length === 0 ? (
+      {uniqueMessages.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-[#999]">
           <span className="material-symbols-outlined text-[48px] text-[#ccc]">
             chat
@@ -30,7 +43,7 @@ function MessageList({
           </p>
         </div>
       ) : (
-        Object.entries(messageGroups).map(([date, msgs]) => (
+        Object.entries(grouped).map(([date, msgs]) => (
           <div key={date}>
             <div className="text-center mx-auto w-fit text-[12px] rounded-4xl px-4 py-1 text-[#2F7E47] bg-[#2F7E471A] my-5 font-medium">
               {formatDate(msgs[0].createdAt)}
@@ -40,14 +53,6 @@ function MessageList({
                 typeof msg.senderId === "string"
                   ? msg.senderId
                   : (msg.senderId as any)?._id;
-              const senderName =
-                typeof msg.senderId === "object"
-                  ? (msg.senderId as any)?.name
-                  : "Unknown";
-              const senderAvatar =
-                typeof msg.senderId === "object"
-                  ? (msg.senderId as any)?.avatarUrl
-                  : undefined;
               const isSentByMe = senderId === userId;
 
               return (

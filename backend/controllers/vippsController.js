@@ -1,8 +1,6 @@
-const setCookie = require("../utils/setCookie.js");
+const { generateTokens, createSession } = require("../utils/tokenUtils");
 const Subscription = require("../models/Subscription");
-
 const axios = require("axios");
-const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const crypto = require("crypto");
 
@@ -77,12 +75,12 @@ exports.vippsCallback = async (req, res) => {
       },
     );
 
-    const accessToken = tokenResponse.data.access_token;
+    const vippsAccessToken = tokenResponse.data.access_token;
 
     // 4️⃣ Fetch Vipps profile
     const userResponse = await axios.get(
       "https://apitest.vipps.no/vipps-userinfo-api/userinfo",
-      { headers: { Authorization: `Bearer ${accessToken}` } },
+      { headers: { Authorization: `Bearer ${vippsAccessToken}` } },
     );
 
     const profile = userResponse.data;
@@ -118,30 +116,41 @@ exports.vippsCallback = async (req, res) => {
 
     await Subscription.create({
       userId: user._id,
-    
+
       currentPlan: {
         plan: "Standard",
         planType: "private",
         startDate: new Date(),
         status: "active",
-      }    
-    })      
+      },
+    });
     // 6️⃣ Clear session state
     if (req.session) delete req.session.vippsState;
 
-    // 7️⃣ Issue JWT
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "24h",
+    // 7️⃣ Issue Tokens & Create Session
+    const { accessToken, refreshToken } = generateTokens(user._id);
+    await createSession(req, user._id, refreshToken);
+
+    // Set cookies
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
-    setCookie.setCookie(res, token);
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
 
     // 8️⃣ Redirect to frontend success page
-    const frontendBase = process.env.FRONTEND_URL.endsWith("/")
-      ? process.env.FRONTEND_URL
-      : `${process.env.FRONTEND_URL}/`;
+    const frontendBase = process.env.FRONTEND_URL || "http://localhost:5173";
+    const redirectUrl = frontendBase.endsWith("/") ? `${frontendBase}oauth-success` : `${frontendBase}/oauth-success`;
 
-    return res.redirect(`${frontendBase}oauth-success?token=${token}`);
+    return res.redirect(`${redirectUrl}?token=${accessToken}`);
   } catch (err) {
     console.error("Vipps API Error:", err.response?.data || err.message);
     // On error, redirect to login page again

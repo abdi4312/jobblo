@@ -1,15 +1,17 @@
-const {iduraCallback} = require('../controllers/iduraAuthcontroller');
-const vippsController = require('../controllers/vippsController');
-const User = require('../models/User');
+const { iduraCallback } = require("../controllers/iduraAuthcontroller");
+const vippsController = require("../controllers/vippsController");
+const User = require("../models/User");
 const { setCookie } = require("../utils/setCookie.js");
 
-const {authenticate} = require('../middleware/auth');
+const { authenticate } = require("../middleware/auth");
+const { authLimiter } = require("../middleware/rateLimiter");
+const { generateTokens, createSession } = require("../utils/tokenUtils");
 
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const authController = require('../controllers/authController');
-const passport = require('passport');
-const jwt = require('jsonwebtoken');
+const authController = require("../controllers/authController");
+const passport = require("passport");
+const jwt = require("jsonwebtoken");
 
 /**
  * @swagger
@@ -75,7 +77,7 @@ const jwt = require('jsonwebtoken');
  *       400:
  *         description: Ugyldig input
  */
-router.post('/register', authController.register);
+router.post("/register", authLimiter, authController.register);
 
 /**
  * @swagger
@@ -99,127 +101,66 @@ router.post('/register', authController.register);
  *       401:
  *         description: Ugyldige påloggingsdetaljer
  */
-router.post('/login', authController.login);
+router.post("/login", authLimiter, authController.login);
 
-// Google OAuth Routes
-
-/**
- * @swagger
- * /api/auth/google:
- *   get:
- *     summary: Initiate Google OAuth login
- *     tags: [OAuth]
- *     description: Redirects user to Google for authentication
- *     responses:
- *       302:
- *         description: Redirect to Google OAuth
- */
-router.get('/google',
-    passport.authenticate('google', { scope: ['profile', 'email'] })
+router.post("/logout", authController.logout);
+router.post("/refresh-token", authController.refreshToken);
+router.get("/profile", authenticate, authController.getProfile);
+router.get("/sessions", authenticate, authController.getSessions);
+router.delete(
+  "/sessions/:sessionId",
+  authenticate,
+  authController.revokeSession,
+);
+router.delete(
+  "/sessions/revoke-others",
+  authenticate,
+  authController.revokeAllOtherSessions,
 );
 
-/**
- * @swagger
- * /api/auth/google/callback:
- *   get:
- *     summary: Google OAuth callback
- *     tags: [OAuth]
- *     description: Handles the callback from Google OAuth
- *     responses:
- *       200:
- *         description: Successfully authenticated
- *       401:
- *         description: Authentication failed
- */
-router.get('/google/callback',
-    // 1. Passport authenticate ko handle karein
-    passport.authenticate('google', { failureRedirect: process.env.FRONTEND_URL + '?error=auth_failed', session: false }),
-    
-    // 2. Sirf ek hi response handler rakhein
-    (req, res) => {
-        try {
-            if (!req.user) {
-                return res.redirect(process.env.FRONTEND_URL + '?error=no_user');
-            }
+// Google OAuth Routes
+router.get(
+  "/google",
+  passport.authenticate("google", { scope: ["profile", "email"] }),
+);
 
-            // Generate JWT
-            const token = jwt.sign(
-                { id: req.user._id, },
-                process.env.JWT_SECRET,
-                { expiresIn: '24h' }
-            );
+router.get(
+  "/google/callback",
+  passport.authenticate("google", {
+    failureRedirect: "/login",
+    session: false,
+  }),
+  async (req, res) => {
+    // This now returns { session, accessToken, refreshToken }
+    const { session, accessToken, refreshToken } = await createSession(
+      req,
+      req.user._id,
+    );
 
-            // Token ko cookie mein set karein
-            setCookie(res, token);
+    // Set cookies
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
 
-            return res.redirect(process.env.FRONTEND_URL + 'oauth-success');
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
 
-        } catch (error) {
-            console.error("Callback Error:", error);
-            // Error hone ki soorat mein agar response nahi bheja gaya to redirect karein
-            if (!res.headersSent) {
-                return res.redirect('http://localhost:3000/login?error=server_error');
-            }
-        }
-    }
+    const frontendBase = process.env.FRONTEND_URL || "http://localhost:5173";
+    const redirectUrl = frontendBase.endsWith("/") ? `${frontendBase}oauth-success` : `${frontendBase}/oauth-success`;
+
+    res.redirect(`${redirectUrl}?token=${accessToken}`);
+  },
 );
 
 router.get("/idura/callback", iduraCallback);
+router.get("/vipps", vippsController.redirectToVipps);
+router.get("/vipps/callback", vippsController.vippsCallback);
 
-/**
- * @swagger
- * /api/auth/profile:
- *   get:
- *     summary: Get current user profile
- *     tags: [OAuth]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: User profile data
- *       401:
- *         description: Not authenticated
- */
-router.get('/profile', authenticate, async(req, res) => {
-    try {
-
-        const  id  = req.userId;
-
-        const user = await User.findById(id).select('-password');
-
-        if (!user) return res.status(404).json({ error: 'User not found' });
-        res.json(user);
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
-
-// Redirect to Vipps login
-router.get('/vipps', vippsController.redirectToVipps);
-
-// Callback URL
-router.get('/vipps/callback', vippsController.vippsCallback);
-
-/**
- * @swagger
- * /api/auth/logout:
- *   post:
- *     summary: Logout user
- *     tags: [OAuth]
- *     responses:
- *       200:
- *         description: Successfully logged out
- */
-router.post('/logout', (req, res) => {
-  res.clearCookie('token', {
-    httpOnly: true,
-    secure: false,       
-    sameSite: 'lax'   
-  });
-
-  res.json({ message: 'Logged out successfully' });
-});
-
-
-module.exports = router; 
+module.exports = router;

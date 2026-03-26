@@ -39,22 +39,23 @@ import TransactionsPage from "../pages/SuperAdminDashboard/TransactionsPage.tsx"
 import ServiceListingPage from "../pages/ServiceListingPage/ServiceListing.tsx";
 import UpcomingFeatures from "../pages/UpcomingFeaturesPage/UpcomingFeatures.tsx";
 import RoadmapAdminPage from "../pages/SuperAdminDashboard/RoadmapAdminPage.tsx";
-import { 
-  UsernameView, 
-  NameView, 
-  BioView, 
-  PictureView, 
-  EmailView, 
-  PhoneView, 
-  AddressesView, 
-  PasswordView, 
-  DeleteAccountView, 
-  LocationView, 
-  UpcomingPreviewView, 
-  VisibilityView, 
-  BlockedUsersView, 
-  CookiesView, 
-  AboutView 
+import {
+  UsernameView,
+  NameView,
+  BioView,
+  PictureView,
+  EmailView,
+  PhoneView,
+  AddressesView,
+  PasswordView,
+  DeleteAccountView,
+  LocationView,
+  UpcomingPreviewView,
+  VisibilityView,
+  BlockedUsersView,
+  CookiesView,
+  SessionsView,
+  AboutView
 } from "../components/profile/SettingsViews";
 
 
@@ -160,6 +161,7 @@ export const routes: RouteObject[] = [
               { path: "visibility", element: <VisibilityView /> },
               { path: "blocked", element: <BlockedUsersView /> },
               { path: "cookies", element: <CookiesView /> },
+              { path: "sessions", element: <SessionsView /> },
               { path: "about", element: <AboutView /> },
             ]
           },

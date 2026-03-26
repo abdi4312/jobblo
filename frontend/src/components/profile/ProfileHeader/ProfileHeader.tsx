@@ -3,7 +3,7 @@ import { ChevronDown, Gem, Star } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBlockUser, useFollowUser } from "../../../features/profile/hooks";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
 import { FollowingModal } from "./FollowingModal";
 import { BlockModal } from "./BlockModal";
 
@@ -234,7 +234,7 @@ export function ProfileHeader({
                           <button
                             onClick={() => {
                               setIsMenuOpen(false);
-                              toast.info("Report user feature coming soon");
+                              toast("Report user feature coming soon");
                             }}
                             className="flex items-center w-full text-[16px] font-medium text-black hover:text-gray-600 transition-colors py-1"
                           >

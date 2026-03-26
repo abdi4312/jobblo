@@ -6,13 +6,15 @@ import { Button } from "../../components/Ui/Button.tsx";
 import SocialAuthButtons from "../../components/SocialAuthButtons/AuthButton.tsx";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import Auth from "../../components/Auth/Auth.tsx";
-import { useRegister } from "../../features/auth/hook/useRegister.ts";
-import { toast } from "react-toastify";
+import { useAuth } from "../../features/auth/hook/useAuth.ts";
+import { toast } from "react-hot-toast";
+
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { mutate: register, isPending } = useRegister(); // Hook use karein
+  const { register, isRegistering } = useAuth(); // Hook use karein
   const [formData, setFormData] = useState({
     name: "",
+    lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -40,14 +42,15 @@ export default function RegisterPage() {
     // TanStack mutation trigger karein
     register({
       name: formData.name,
+      lastName: formData.lastName,
       email: formData.email,
       password: formData.password,
-      phone: "",
     });
   };
 
   const isFormValid =
     formData.name.trim() &&
+    formData.lastName.trim() &&
     formData.email.trim() &&
     formData.password.trim() &&
     formData.confirmPassword.trim() &&
@@ -82,6 +85,16 @@ export default function RegisterPage() {
                   icon={<User size={20} className="text-[#99A1AF]" />}
                   placeholder="Fornavn"
                   onChange={(e) => handleInputChange("name", e.target.value)} // State update logic
+                  className="max-w-md"
+                />
+
+                <Input
+                  label="Etternavn"
+                  type="text"
+                  value={formData.lastName} // Form state se connect kiya
+                  icon={<User size={20} className="text-[#99A1AF]" />}
+                  placeholder="Etternavn"
+                  onChange={(e) => handleInputChange("lastName", e.target.value)} // State update logic
                   className="max-w-md"
                 />
 
@@ -134,11 +147,10 @@ export default function RegisterPage() {
 
               <div className="flex flex-col gap-6.5 mt-6.5">
                 <Button
-                  onClick={handleRegister} // Register function call
-                  disabled={isPending} // TanStack ki pending state
-                  className={`w-full max-w-md rounded-[14px] text-base! font-normal! ${isFormValid ? "bg-[#3F8F6B]!" : "bg-gray-300! cursor-not-allowed"
-                    }`}
-                  label={isPending ? "Registrerer..." : "Registrer deg"} // Dynamic label
+                  onClick={handleRegister}
+                  disabled={!isFormValid || isRegistering}
+                  className="w-full max-w-md bg-[#3F8F6B]! rounded-[14px] text-base! font-normal!"
+                  label={isRegistering ? "Registrerer..." : "Registrer"}
                 />
               </div>
 
