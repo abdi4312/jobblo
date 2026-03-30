@@ -1,13 +1,10 @@
 import HeroImage from "../../assets/images/Hero/hero_img.png";
-import { Input as AppInput } from "../Ui/Input";
-import { Button as AppButton } from "../Ui/Button";
-import { MapPin, Search } from "lucide-react";
-
+import Search from "./search";
 
 export function Hero() {
 
   return (
-    <div className="max-w-300 mx-auto md:flex md:flex-row mb-12 lg:mb-24 relative overflow-hidden min-h-auto">
+    <div className="max-w-300 mx-auto md:flex md:flex-row mb-12 lg:mb-24 relative min-h-auto">
       {/* Background Image for Mobile and Desktop */}
       <div className="flex flex-col gap-2 items-center justify-center text-center mb-4 md:hidden">
         <h2 className="text-[20px] font-medium text-[#0A0A0A] leading-5">
@@ -49,42 +46,9 @@ export function Hero() {
               raskt og enkelt i ditt nærområde
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 bg-white/40 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 w-full max-w-5xl mx-auto">
-            {/* First Input - 4 columns on desktop */}
-            <div className="md:col-span-4">
-              <AppInput
-                placeholder="Hvor?"
-                icon={<MapPin size={15} color="#0A0A0A9E" />}
-                iconPosition="left"
-                containerClassName="max-w-[194px] sm:max-w-[240px] mx-auto"
-              />
-            </div>
 
-            {/* Second Input - 6 columns on desktop */}
-            <div className="md:col-span-8 flex gap-4 w-full">
-              <div className="w-full">
-                <AppInput
-                  placeholder="Hva trenger du hjelp til?"
-                  icon={<Search size={15} color="#0A0A0A9E" />}
-                  iconPosition="left"
-                  containerClassName="w-full lg:max-w-[314px]"
-                />
-              </div>
-
-              {/* Button - 2 columns on desktop */}
-              <div className="">
-                <AppButton
-                  label="Søk"
-                  className="w-full py-3 px-0 rounded-2xl bg-[#E48A3C] text-white font-bold h-full hidden! lg:block!"
-                  size="lg"
-                />
-                <AppButton
-                  icon={<Search size={24} />}
-                  className="w-full p-2.5! rounded-2xl bg-[#E48A3C] text-white font-bold h-full lg:hidden"
-                />
-              </div>
-            </div>
-          </div>
+          {/* Search Section */}
+          <Search />
 
           {/* Stats Section */}
           <div className="flex text-center justify-center md:justify-start gap-3">

@@ -257,7 +257,7 @@ export function ProfileHeader({
               {user?.name || "Bruker Name"}
             </h1>
             <p className="text-[15px] text-gray-800 leading-snug font-medium max-w-2xl">
-              {user?.bio || "tar betaling gjennom tise og vipps 😊 kjøper betaler frakt! 3 for 2 på alt!! (du får billigste gratis)"}
+              {user?.bio}
             </p>
           </div>
         </div>
