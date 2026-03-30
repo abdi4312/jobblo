@@ -27,3 +27,22 @@ export const getBlockedUsers = async (page = 1, limit = 10) => {
   });
   return response.data;
 };
+
+export const searchUsers = async (query?: string) => {
+  const response = await mainLink.get("/api/users/search", {
+    params: { query }
+  });
+  return response.data;
+};
+
+export const getTopUsers = async () => {
+  const response = await mainLink.get("/api/users/top");
+  return response.data;
+};
+
+export const searchAll = async (query: string, type?: string, page?: number, limit?: number) => {
+  const response = await mainLink.get("/api/users/search-all", {
+    params: { query, type, page, limit }
+  });
+  return response.data;
+};

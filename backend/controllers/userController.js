@@ -1,6 +1,8 @@
 const User = require("../models/User");
 const Service = require("../models/Service");
 const mongoose = require("mongoose");
+const Category = require("../models/Category");
+const List = require("../models/List");
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -103,6 +105,120 @@ exports.searchUsers = async (req, res) => {
     res.status(200).json(users);
   } catch (error) {
     console.error("Search error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Get Top 10 Users by Rating and Reviews
+exports.getTopUsers = async (req, res) => {
+  try {
+    const topUsers = await User.find({ _id: { $ne: req.userId } })
+      .select("name lastName email avatarUrl averageRating reviewCount")
+      .sort({ reviewCount: -1, averageRating: -1 })
+      .limit(10);
+    res.status(200).json(topUsers);
+  } catch (error) {
+    console.error("Get top users error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Unified Search for Categories, People, and Public Lists with Pagination
+exports.searchAll = async (req, res) => {
+  try {
+    const { query, type, page = 1, limit = 10 } = req.query;
+
+    if (!query || query.length < 2) {
+      return res.status(200).json({
+        categories: { results: [], total: 0 },
+        people: { results: [], total: 0 },
+        lists: { results: [], total: 0 },
+      });
+    }
+
+    const regex = new RegExp(query, "i");
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const numericLimit = parseInt(limit);
+
+    // If a specific type is requested, return only that type with pagination
+    if (type) {
+      let results = [];
+      let total = 0;
+
+      if (type === "categories") {
+        total = await Category.countDocuments({ name: regex, isActive: true });
+        results = await Category.find({ name: regex, isActive: true })
+          .skip(skip)
+          .limit(numericLimit);
+      } else if (type === "people") {
+        const queryObj = {
+          $or: [{ name: regex }, { lastName: regex }, { email: regex }],
+          _id: { $ne: req.userId },
+        };
+        total = await User.countDocuments(queryObj);
+        results = await User.find(queryObj)
+          .select("name lastName avatarUrl email averageRating reviewCount")
+          .skip(skip)
+          .limit(numericLimit);
+      } else if (type === "lists") {
+        total = await List.countDocuments({ name: regex, public: true });
+        results = await List.find({ name: regex, public: true })
+          .populate("services")
+          .skip(skip)
+          .limit(numericLimit);
+      }
+
+      return res.status(200).json({
+        results,
+        total,
+        page: parseInt(page),
+        limit: numericLimit,
+        totalPages: Math.ceil(total / numericLimit),
+      });
+    }
+
+    // Default: return top 3 for each category (for the initial search dropdown)
+    // 1. Search Categories
+    const categoriesCount = await Category.countDocuments({
+      name: regex,
+      isActive: true,
+    });
+    const categories = await Category.find({
+      name: regex,
+      isActive: true,
+    }).limit(3);
+
+    // 2. Search People (Users)
+    const peopleCount = await User.countDocuments({
+      $or: [{ name: regex }, { lastName: regex }, { email: regex }],
+      _id: { $ne: req.userId },
+    });
+    const people = await User.find({
+      $or: [{ name: regex }, { lastName: regex }, { email: regex }],
+      _id: { $ne: req.userId },
+    })
+      .select("name lastName avatarUrl email averageRating reviewCount")
+      .limit(3);
+
+    // 3. Search Public Lists
+    const listsCount = await List.countDocuments({
+      name: regex,
+      public: true,
+    });
+    const lists = await List.find({
+      name: regex,
+      public: true,
+    })
+      .populate("services")
+      .limit(3);
+
+    res.status(200).json({
+      categories: { results: categories, total: categoriesCount },
+      people: { results: people, total: peopleCount },
+      lists: { results: lists, total: listsCount },
+    });
+  } catch (error) {
+    console.error("Unified search error:", error);
     res.status(500).json({ error: "Server error" });
   }
 };

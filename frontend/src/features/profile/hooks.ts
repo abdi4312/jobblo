@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { blockUser, followUser, getBlockedUsers, getUserProfile, updateUser } from "./api";
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import { blockUser, followUser, getBlockedUsers, getTopUsers, getUserProfile, searchAll, searchUsers, updateUser } from "./api";
 import { useUserStore } from "../../stores/userStore";
 import { toast } from "react-hot-toast";
 
@@ -63,5 +63,43 @@ export const useBlockedUsers = (page = 1, limit = 10) => {
   return useQuery({
     queryKey: ['blockedUsers', page, limit],
     queryFn: () => getBlockedUsers(page, limit),
+  });
+};
+
+export const useSearchUsers = (query?: string) => {
+  return useQuery({
+    queryKey: ['searchUsers', query],
+    queryFn: () => searchUsers(query),
+    enabled: !!query && query.length >= 2,
+  });
+};
+
+export const useTopUsers = () => {
+  return useQuery({
+    queryKey: ['topUsers'],
+    queryFn: () => getTopUsers(),
+  });
+};
+
+export const useUnifiedSearch = (query: string) => {
+  return useQuery({
+    queryKey: ['unifiedSearch', query],
+    queryFn: () => searchAll(query),
+    enabled: query.length >= 2,
+  });
+};
+
+export const useInfiniteSearch = (query: string, type: string, limit: number = 10) => {
+  return useInfiniteQuery({
+    queryKey: ['infiniteSearch', query, type, limit],
+    queryFn: ({ pageParam = 1 }) => searchAll(query, type, pageParam, limit),
+    getNextPageParam: (lastPage) => {
+      if (lastPage.page < lastPage.totalPages) {
+        return lastPage.page + 1;
+      }
+      return undefined;
+    },
+    initialPageParam: 1,
+    enabled: query.length >= 2 && !!type,
   });
 };

@@ -5,6 +5,8 @@ body, h1, h2, h3, h4, h5, h6, p, span, li, a {
 }
 body {
   background-color: #F7F7F7;
+  /* background-color: #F6F1E8; */
+  overflow-x: hidden;
 }
 
 /* Horizontal scrollbar ko hide karne ke liye */

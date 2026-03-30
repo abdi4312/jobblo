@@ -133,6 +133,8 @@ router.post("/", authenticate, requireAdmin, userController.createUser);
  *         description: Brukeren ble ikke funnet
  */
 router.get("/search", authenticate, userController.searchUsers);
+router.get("/search-all", authenticate, userController.searchAll);
+router.get("/top", authenticate, userController.getTopUsers);
 router.get("/blocked", authenticate, userController.getBlockedUsers);
 router.get("/:id", authenticate, userController.getUserById);
 router.put(
