@@ -21,7 +21,7 @@ export function ProfileNav({ activeTab, onTabChange, isOwnProfile = false }: Pro
   return (
     <div className="border-b border-gray-200 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex justify-between md:justify-center md:gap-20">
+        <div className="flex justify-around md:justify-center md:gap-20">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.name;
@@ -35,7 +35,7 @@ export function ProfileNav({ activeTab, onTabChange, isOwnProfile = false }: Pro
                   }`}
               >
                 <Icon size={22} className={isActive ? 'text-black' : 'text-gray-400'} strokeWidth={isActive ? 2.5 : 2} />
-                <span>{tab.name}</span>
+                <span className='hidden md:flex'>{tab.name}</span>
               </button>
             );
           })}
