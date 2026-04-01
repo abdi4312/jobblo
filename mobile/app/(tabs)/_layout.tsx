@@ -1,11 +1,20 @@
 
-import { Tabs } from 'expo-router';
+import { Tabs, useSegments } from 'expo-router';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
 
 export default function TabLayout() {
   const activeColor = '#E68A2E'; // Orange tint from the image
   const inactiveColor = '#687076';
+  const { user, isLoading } = useAuth();
+  const segments = useSegments();
+
+  // Check if current screen is job-search (to make explore tab active)
+  const isJobSearch = segments.includes('job-search');
+
+  // Show nothing while checking auth state
+  if (isLoading) return null;
 
   return (
     <Tabs
@@ -20,6 +29,7 @@ export default function TabLayout() {
           backgroundColor: '#ffffff',
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: '#eee',
+          display: user ? 'flex' : 'none', // Hide tab bar if user is not logged in
         },
         tabBarShowLabel: false,
       }}>
@@ -34,9 +44,16 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "search" : "search-outline"} size={28} color={color} />
-          ),
+          tabBarIcon: ({ color, focused }) => {
+            const isActive = focused || isJobSearch;
+            return (
+              <Ionicons 
+                name={isActive ? "search" : "search-outline"} 
+                size={28} 
+                color={isActive ? activeColor : color} 
+              />
+            );
+          },
         }}
       />
       <Tabs.Screen
@@ -65,6 +82,12 @@ export default function TabLayout() {
               <View style={styles.notificationDot} />
             </View>
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="job-search"
+        options={{
+          href: null, // Hide from tab bar
         }}
       />
     </Tabs>

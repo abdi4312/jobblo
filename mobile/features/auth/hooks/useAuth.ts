@@ -2,17 +2,20 @@ import { useMutation } from '@tanstack/react-query';
 import { authApi } from '../api/auth';
 import { useRouter } from 'expo-router';
 import { Alert } from 'react-native';
+import { useAuth } from '../../../context/AuthContext';
 
 export const useLogin = () => {
     const router = useRouter();
+    const { login } = useAuth();
 
     return useMutation({
         mutationFn: (data: any) => {
             console.log('API Login call started with:', data.email);
             return authApi.login(data);
         },
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
             console.log('Login Success:', data.user.email);
+            await login(data.user, data.accessToken);
             router.replace('/(tabs)');
         },
         onError: (error: any) => {
@@ -30,11 +33,13 @@ export const useLogin = () => {
 
 export const useRegister = () => {
     const router = useRouter();
+    const { login } = useAuth();
 
     return useMutation({
         mutationFn: (data: any) => authApi.register(data),
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
             console.log('Register Success:', data.user.email);
+            await login(data.user, data.accessToken);
             router.replace('/(tabs)');
         },
         onError: (error: any) => {
