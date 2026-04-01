@@ -36,10 +36,25 @@ export default function CreateJobScreen() {
   const [fromDate, setFromDate] = useState(new Date());
   const [toDate, setToDate] = useState(new Date());
 
+  const resetForm = () => {
+    setImages([]);
+    setTitle("");
+    setDescription("");
+    setSelectedCategory("");
+    setLocation({ address: "", city: "" });
+    setPrice("");
+    setPaymentType("Fixed Price");
+    setUrgent(false);
+    setDuration("");
+    setFromDate(new Date());
+    setToDate(new Date());
+  };
+
   const mutation = useMutation({
     mutationFn: (newJob: any) => jobApi.create(newJob),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      resetForm();
       router.back();
     },
   });
@@ -49,7 +64,11 @@ export default function CreateJobScreen() {
       title,
       description,
       price: parseFloat(price),
-      location,
+      location: {
+        ...location,
+        type: "Point",
+        coordinates: [10.7522, 59.9139], // Default Oslo coordinates for now
+      },
       categories: selectedCategory ? [selectedCategory] : [],
       images,
       urgent,
@@ -62,6 +81,11 @@ export default function CreateJobScreen() {
     mutation.mutate(jobData);
   };
 
+  const handleCancel = () => {
+    resetForm();
+    router.back();
+  };
+
   return (
     <RNSafeAreaView
       className="flex-1 bg-white"
@@ -71,7 +95,7 @@ export default function CreateJobScreen() {
 
       {/* Header */}
       <View className="flex-row justify-between items-center px-4 py-3 border-b border-gray-100">
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={handleCancel}>
           <Text className="text-red-500 text-base font-medium">Cancel</Text>
         </TouchableOpacity>
         <Text className="text-lg font-bold">Post a Job</Text>
