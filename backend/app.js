@@ -41,9 +41,14 @@ const swaggerSpec = require("./swagger");
 
 // CORS configuration
 const corsOptions = {
-  origin: "http://localhost:5173",
+  origin: true, // Reflect request origin, or use an array of allowed origins
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "Accept",
+    "X-Requested-With",
+  ],
   credentials: true,
   optionsSuccessStatus: 200,
 };
