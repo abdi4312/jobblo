@@ -44,10 +44,15 @@ function RootLayoutNav() {
   }, [user, segments, isLoading]);
 
   return (
-    <Stack>
+    <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="register" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="list/[id]" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="list/contributors/[id]"
+        options={{ headerShown: false }}
+      />
       <Stack.Screen
         name="modal"
         options={{ presentation: "modal", title: "Modal" }}

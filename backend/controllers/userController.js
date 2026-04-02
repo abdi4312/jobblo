@@ -85,7 +85,7 @@ exports.createUser = async (req, res) => {
 // Search users
 exports.searchUsers = async (req, res) => {
   try {
-    const { query } = req.query;
+    const query = req.query.query || req.query.q;
     console.log("Search query:", query);
     if (!query || query.length < 2) {
       return res.status(200).json([]);
@@ -98,14 +98,11 @@ exports.searchUsers = async (req, res) => {
         { email: { $regex: query, $options: "i" } },
       ],
       _id: { $ne: req.userId }, // Exclude current user
-    })
-      .select("name lastName email avatarUrl")
-      .limit(10);
+    }).limit(10);
 
     res.status(200).json(users);
-  } catch (error) {
-    console.error("Search error:", error);
-    res.status(500).json({ error: "Server error" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -392,7 +389,7 @@ exports.followUser = async (req, res) => {
         $pull: { following: targetUserId },
       });
 
-      await User.findByIdAndUpdate(targetUserId, {
+      await User.findByIdAndUpdate(targetUser, {
         $pull: { followers: currentUserId },
       });
 
@@ -403,7 +400,7 @@ exports.followUser = async (req, res) => {
         $addToSet: { following: targetUserId },
       });
 
-      await User.findByIdAndUpdate(targetUserId, {
+      await User.findByIdAndUpdate(targetUser, {
         $addToSet: { followers: currentUserId },
       });
 
