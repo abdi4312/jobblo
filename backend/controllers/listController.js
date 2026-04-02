@@ -119,7 +119,11 @@ exports.updateList = async (req, res) => {
   try {
     const { listId } = req.params;
     const { name, description, public } = req.body;
-    const list = await List.findOne({ _id: listId, user: req.userId });
+    // Allow finding the list if user is owner OR contributor
+    const list = await List.findOne({
+      _id: listId,
+      $or: [{ user: req.userId }, { contributors: req.userId }],
+    });
 
     if (!list) {
       return res.status(404).json({ message: "List not found" });
@@ -170,7 +174,11 @@ exports.addContributors = async (req, res) => {
 exports.removeContributor = async (req, res) => {
   try {
     const { listId, userId } = req.params;
-    const list = await List.findOne({ _id: listId, user: req.userId });
+    // Allow finding the list if user is owner OR contributor
+    const list = await List.findOne({
+      _id: listId,
+      $or: [{ user: req.userId }, { contributors: req.userId }],
+    });
 
     if (!list) {
       return res.status(404).json({ message: "List not found" });
