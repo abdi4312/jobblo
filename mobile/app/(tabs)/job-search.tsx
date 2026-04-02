@@ -80,7 +80,6 @@ export default function JobSearchScreen() {
             placeholderTextColor="#999"
             value={search}
             onChangeText={setSearch}
-            autoFocus={true}
             returnKeyType="search"
           />
           {search.length > 0 && (
