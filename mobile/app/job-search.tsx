@@ -78,7 +78,6 @@ export default function JobSearchScreen() {
             placeholderTextColor="#999"
             value={search}
             onChangeText={setSearch}
-            autoFocus={true}
             returnKeyType="search"
             onSubmitEditing={() => {
               // Trigger search when user presses search button on keyboard

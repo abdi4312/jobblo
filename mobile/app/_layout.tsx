@@ -21,15 +21,25 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inTabsGroup = segments[0] === "(tabs)";
-    const isJobSearch = segments[1] === "job-search";
+    const rootSegment = segments[0];
+    const isAuthPage = rootSegment === "login" || rootSegment === "register";
+    // Check if it's the root job-search or the tab job-search
+    const isJobSearchPage =
+      rootSegment === "job-search" ||
+      (rootSegment === "(tabs)" && segments[1] === "job-search");
 
-    if (!user && inTabsGroup && !isJobSearch) {
-      // If user is not logged in and trying to access any tab (except job-search), redirect to login
-      router.replace("/login");
-    } else if (user && segments[0] === "login") {
-      // If user is logged in and trying to access login, redirect to tabs
-      router.replace("/(tabs)");
+    if (!user) {
+      // Guest logic: Only allow login, register, and job-search
+      if (!isAuthPage && !isJobSearchPage) {
+        // Redirect any other access to login
+        router.replace("/login");
+      }
+    } else {
+      // Logged in logic: Prevent access to login/register pages
+      if (isAuthPage) {
+        // Redirect to main tabs if already logged in
+        router.replace("/(tabs)");
+      }
     }
   }, [user, segments, isLoading]);
 

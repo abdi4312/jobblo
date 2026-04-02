@@ -5,16 +5,15 @@ import {
   TextInput,
   TouchableOpacity,
   ImageBackground,
-  Image,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useForm, useField } from "@tanstack/react-form";
+import { useForm } from "@tanstack/react-form";
 import { Ionicons } from "@expo/vector-icons";
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useLogin } from "../features/auth/hooks/useAuth";
-import { ActivityIndicator } from "react-native";
 
 interface LoginForm {
   email: string;
@@ -32,7 +31,6 @@ export default function LoginScreen() {
       password: "",
     },
     onSubmit: async ({ value }) => {
-      console.log("Submitting login with:", value);
       loginMutation.mutate(value);
     },
   });
@@ -52,6 +50,7 @@ export default function LoginScreen() {
           <ScrollView
             contentContainerStyle={{ flexGrow: 1 }}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             {/* Top Navigation */}
             <View className="flex-row justify-end pt-4">
@@ -173,7 +172,6 @@ export default function LoginScreen() {
               {/* Login Button */}
               <TouchableOpacity
                 onPress={() => {
-                  console.log("Login button pressed");
                   form.handleSubmit();
                 }}
                 disabled={loginMutation.isPending}
