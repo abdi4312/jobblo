@@ -54,6 +54,7 @@ export default function CreateJobScreen() {
     mutationFn: (newJob: any) => jobApi.create(newJob),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["my-jobs"] });
       resetForm();
       router.back();
     },
