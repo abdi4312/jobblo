@@ -58,9 +58,10 @@ export function MapComponent({
           center={randomCenter}
           radius={circleRadius}
           pathOptions={{
-            color: "#2F7E47",
-            fillColor: "#2F7E47",
+            color: "#ff8a7a",
+            fillColor: "#ff8a7a",
             fillOpacity: 0.2,
+            weight: 2
           }}
         />
       </MapContainer>
