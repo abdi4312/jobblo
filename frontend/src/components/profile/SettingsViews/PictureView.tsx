@@ -1,8 +1,9 @@
 import { useOutletContext } from "react-router-dom";
 import type { SettingsContextType } from "../../../pages/SettingsPage";
+import { Camera } from "lucide-react";
 
 export const PictureView = () => {
-  const { user, fileInputRef, handlePhotoSelect, handleFileChange } = useOutletContext<SettingsContextType>();
+  const { user, fileInputRef, cameraInputRef, handlePhotoSelect, handleCameraSelect, handleFileChange } = useOutletContext<SettingsContextType>();
 
   return (
     <section className="flex flex-col items-center gap-6 py-10">
@@ -22,14 +23,34 @@ export const PictureView = () => {
           accept="image/*" 
           title="Upload profile picture" 
       />
+
+      <input 
+          type="file" 
+          ref={cameraInputRef} 
+          onChange={handleFileChange} 
+          className="hidden" 
+          accept="image/*" 
+          capture="user"
+          title="Take profile picture" 
+      />
       
-      <button
-        type="button"
-        onClick={handlePhotoSelect}
-        className="text-[#f87171] font-semibold text-xl hover:text-rose-600 transition-colors"
-      >
-        Select photo
-      </button>
+      <div className="flex gap-4">
+        <button
+          type="button"
+          onClick={handlePhotoSelect}
+          className="text-[#f87171] font-semibold text-xl hover:text-rose-600 transition-colors"
+        >
+          Select photo
+        </button>
+        <button
+          type="button"
+          onClick={handleCameraSelect}
+          className="text-[#f87171] font-semibold text-xl hover:text-rose-600 transition-colors flex items-center gap-2"
+        >
+          <Camera size={24} />
+          Take photo
+        </button>
+      </div>
     </section>
   );
 };
