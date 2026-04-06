@@ -109,7 +109,7 @@ const JobListingDetailPage = () => {
                 </div>
 
                 {/* Location Card */}
-                <div className="bg-white rounded-[20px] p-6 sm:p-8 shadow-[0px_2px_8px_0px_rgba(0,0,0,0.07)]">
+                <div className="bg-white rounded-[20px] p-3 shadow-[0px_2px_8px_0px_rgba(0,0,0,0.07)]">
                   <JobLocation location={job?.location} />
                 </div>
               </div>
