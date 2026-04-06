@@ -57,7 +57,7 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
         key={currentIndex}
         src={jobImages[currentIndex]}
         alt={`Bilde ${currentIndex + 1}`}
-        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+        className="w-full h-full object-contain"
       />
 
       {/* Gradient overlay */}
