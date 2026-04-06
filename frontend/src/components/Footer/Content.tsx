@@ -10,10 +10,9 @@ const SocialIcon = [
 ]
 
 const Product = [
-    { name: "Funksjoner", link: "#" },
-    { name: "Priser", link: "#" },
-    { name: "Integrasjoner", link: "#" },
-    { name: "API", link: "#" }
+    { name: "LinkedIn", link: "#" },
+    { name: "Facebook", link: "#" },
+    { name: "Instagram", link: "#" },
 ]
 const Resources = [
     { name: "Blogg", link: "#" },
