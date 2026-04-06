@@ -18,9 +18,11 @@ export type SettingsContextType = {
   };
   updateUser: any;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
+  cameraInputRef: React.RefObject<HTMLInputElement | null>;
   handleChange: (key: string, value: string) => void;
   handleUpdate: () => void;
   handlePhotoSelect: () => void;
+  handleCameraSelect: () => void;
   handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 };
 
@@ -39,6 +41,7 @@ export default function SettingsPage() {
     email: "",
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -81,10 +84,23 @@ export default function SettingsPage() {
     fileInputRef.current?.click();
   };
 
+  const handleCameraSelect = () => {
+    cameraInputRef.current?.click();
+  };
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       console.log("File selected:", file.name);
+      if (!user?._id) return;
+
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      updateUser.mutate({
+        userId: user._id,
+        data: formData,
+      });
     }
   };
 
@@ -93,9 +109,11 @@ export default function SettingsPage() {
     form,
     updateUser,
     fileInputRef,
+    cameraInputRef,
     handleChange,
     handleUpdate,
     handlePhotoSelect,
+    handleCameraSelect,
     handleFileChange,
   };
 

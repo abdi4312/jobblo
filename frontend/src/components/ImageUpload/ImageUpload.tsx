@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { Camera } from "lucide-react";
 
 interface ImageUploadProps {
   onImagesChange?: (images: File[]) => void;
@@ -8,10 +9,13 @@ export default function ImageUpload({ onImagesChange }: ImageUploadProps) {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
+      if (files.length === 0) return;
+      
       const newImages = [...selectedImages, ...files];
       setSelectedImages(newImages);
 
@@ -46,6 +50,10 @@ export default function ImageUpload({ onImagesChange }: ImageUploadProps) {
     fileInputRef.current?.click();
   };
 
+  const handleCameraClick = () => {
+    cameraInputRef.current?.click();
+  };
+
   return (
     <div style={{ marginBottom: '24px' }}>
       <input
@@ -56,23 +64,54 @@ export default function ImageUpload({ onImagesChange }: ImageUploadProps) {
         onChange={handleImageChange}
         style={{ display: 'none' }}
       />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleImageChange}
+        style={{ display: 'none' }}
+      />
       
-      <button
-        type="button"
-        onClick={handleButtonClick}
-        style={{
-          marginBottom: '16px',
-          padding: "12px 16px",
-          borderRadius: "8px",
-          border: "1px dashed var(--color-icon)",
-          backgroundColor: "white",
-          cursor: "pointer",
-          fontSize: "14px",
-          color: "var(--color-text)",
-        }}
-      >
-          + Legg til bilder  
-      </button>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+        <button
+          type="button"
+          onClick={handleButtonClick}
+          style={{
+            padding: "12px 16px",
+            borderRadius: "8px",
+            border: "1px dashed var(--color-icon)",
+            backgroundColor: "white",
+            cursor: "pointer",
+            fontSize: "14px",
+            color: "var(--color-text)",
+            flex: 1
+          }}
+        >
+            + Legg til bilder  
+        </button>
+        <button
+          type="button"
+          onClick={handleCameraClick}
+          style={{
+            padding: "12px 16px",
+            borderRadius: "8px",
+            border: "1px dashed var(--color-icon)",
+            backgroundColor: "white",
+            cursor: "pointer",
+            fontSize: "14px",
+            color: "var(--color-text)",
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
+          }}
+          title="Ta bilde"
+        >
+            <Camera size={18} />
+            <span>Ta bilde</span>
+        </button>
+      </div>
 
       {/* Image previews */}
       <div style={{ 
