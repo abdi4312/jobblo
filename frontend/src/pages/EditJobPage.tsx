@@ -63,9 +63,15 @@ export default function EditJobPage() {
     ));
   };
 
-  const handleAddImages = () => {
+  const handleAddImages = (files: File[]) => {
     // Handle adding new images
-    console.log('Add images clicked');
+    console.log('Add images clicked:', files);
+    const newImages = files.map(file => ({
+      id: Math.random().toString(36).substr(2, 9),
+      url: URL.createObjectURL(file),
+      description: ''
+    }));
+    setImages(prev => [...prev, ...newImages]);
   };
 
   const handleChipRemove = (chip: string) => {
