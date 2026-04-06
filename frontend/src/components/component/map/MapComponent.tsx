@@ -38,24 +38,32 @@ export function MapComponent({
     return randomPointInCircle(center, circleRadius);
   }, [lng, lat, circleRadius]);
 
-  console.log("a", randomCenter);
-  console.log("b", randomCenter);
   return (
-    <>
-      <div className={styles.container}>
-        <MapContainer
-          className={styles.map}
+    <div className={styles.container}>
+      <MapContainer
+        className={styles.map}
+        center={randomCenter}
+        zoom={13}
+        scrollWheelZoom={true}
+        dragging={true}
+        zoomControl={true}
+        touchZoom={true}
+        doubleClickZoom={true}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <Circle
           center={randomCenter}
-          zoom={15}
-          scrollWheelZoom={true}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <Circle center={randomCenter} radius={circleRadius} />
-        </MapContainer>
-      </div>
-    </>
+          radius={circleRadius}
+          pathOptions={{
+            color: "#2F7E47",
+            fillColor: "#2F7E47",
+            fillOpacity: 0.2,
+          }}
+        />
+      </MapContainer>
+    </div>
   );
 }
