@@ -8,6 +8,7 @@ interface ConversationListProps {
   conversationId: string | undefined;
   isUnread: (chat: any) => boolean;
   formatTime: (date: string) => string;
+  onlineUsers?: string[];
 }
 
 const ConversationList: React.FC<ConversationListProps> = ({
@@ -17,84 +18,99 @@ const ConversationList: React.FC<ConversationListProps> = ({
   conversationId,
   isUnread,
   formatTime,
+  onlineUsers = [],
 }) => {
   const navigate = useNavigate();
 
   return (
-    <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-1">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden">
       {loading ? (
         <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-[#999] p-10">
-          <p className="animate-pulse">Laster...</p>
+          <p className="animate-pulse">Loading...</p>
         </div>
       ) : filteredChats.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-[#999] p-10 text-center">
           <span className="material-symbols-outlined text-[36px] text-[#ccc]">
             chat_bubble_outline
           </span>
-          <p className="text-sm text-[#666] mt-2">Ingen meldinger</p>
+          <p className="text-sm text-[#666] mt-2">No messages</p>
         </div>
       ) : (
-        filteredChats.map((chat) => {
-          const otherPerson =
-            chat.clientId?._id === user?._id
-              ? chat.providerId
-              : chat.clientId;
+        <div className="flex flex-col">
+          {filteredChats.map((chat) => {
+            const otherPerson =
+              chat.clientId?._id === user?._id
+                ? chat.providerId
+                : chat.clientId;
 
-          const hasUnread = isUnread(chat);
-          const isActive = conversationId === chat._id;
+            const hasUnread = isUnread(chat);
+            const isActive = conversationId === chat._id;
+            const serviceImage = chat.serviceId?.images?.[0] || chat.serviceId?.image;
+            const isOnline = otherPerson?._id && onlineUsers.includes(otherPerson._id);
 
-          return (
-            <div
-              key={chat._id}
-              onClick={() => navigate(`/messages/${chat._id}`)}
-            >
+            return (
               <div
-                className={`bg-white rounded-xl shadow-md overflow-hidden mb-4 hover:bg-gray-50 transition-all cursor-pointer border mr-4 ${isActive ? "border-[#2F7E47]" : "border-transparent"
-                  } hover:border-[#2F7E47] active:border-[#2F7E47]`}
+                key={chat._id}
+                onClick={() => navigate(`/messages/${chat._id}`)}
+                className={`relative flex items-center p-4 gap-4 cursor-pointer transition-all ${isActive
+                    ? "bg-[#EF790933] opacity-80"
+                    : "bg-white hover:bg-[#F8F9FA]"
+                  }`}
               >
-                <div className="flex items-start p-4 gap-4">
-                  {/* 1. Avatar Section */}
-                  <div className="shrink-0">
+                {/* Avatar Section */}
+                <div className="relative shrink-0">
+                  <div className="w-[56px] h-[56px] rounded-full p-[2px] bg-white border border-[#E9ECEF]">
                     {otherPerson?.avatarUrl ? (
                       <img
                         src={otherPerson.avatarUrl}
                         alt={otherPerson.name}
-                        className="w-12 h-12 rounded-full object-cover border border-gray-100 shrink-0"
+                        className="w-full h-full rounded-full object-cover"
                       />
                     ) : (
-                      <span className="w-12 h-12 rounded-full bg-linear-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center text-white font-semibold shrink-0">
-                        {otherPerson?.name?.charAt(0) || "A"}
-                      </span>
+                      <div className="w-full h-full rounded-full bg-[#F1F3F5] flex items-center justify-center text-[#495057] font-bold text-lg">
+                        {otherPerson?.name?.charAt(0) || "U"}
+                      </div>
                     )}
                   </div>
-
-                  {/* 2. Content & Date Section */}
-                  <div className="flex flex-1 justify-between min-w-0">
-                    {/* Name and Message */}
-                    <div className="min-w-0 pr-2">
-                      <h2 className="text-[20px] font-bold text-[#0A0A0A] truncate">
-                        {otherPerson?.name || "Ukjent bruker"}
-                      </h2>
-                      <p className="text-[14px] text-[#6A7282] truncate leading-relaxed">
-                        {chat.lastMessage || "Start samtalen..."}
-                      </p>
-                    </div>
-
-                    {/* Date and Unread Indicator */}
-                    <div className="flex flex-col items-end shrink-0 gap-2">
-                      <h2 className="text-[12px] text-[#999] font-medium whitespace-nowrap">
-                        {formatTime(chat.updatedAt)}
-                      </h2>
-                      {hasUnread && (
-                        <span className="w-2.5 h-2.5 bg-[#EA1717] rounded-full shadow-sm"></span>
-                      )}
-                    </div>
-                  </div>
+                  {isOnline && (
+                    <div className="absolute bottom-[2px] right-[2px] w-[14px] h-[14px] bg-[#22C55E] rounded-full border-2 border-white shadow-sm"></div>
+                  )}
                 </div>
+
+                {/* Content Section */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2 mb-0.5">
+                    <h2 className={`text-[17px] font-bold truncate ${isActive ? "text-[#212529]" : "text-[#495057]"}`}>
+                      {otherPerson?.name || "Unknown"}
+                    </h2>
+                    <span className="text-[13px] text-[#868E96] font-normal whitespace-nowrap">
+                      {formatTime(chat.updatedAt)}
+                    </span>
+                  </div>
+                  <p className={`text-[15px] truncate leading-tight ${hasUnread ? "text-[#212529] font-bold" : "text-[#868E96]"}`}>
+                    {chat.lastMessage || "Start conversation..."}
+                  </p>
+                </div>
+
+                {/* Service Image / Thumbnail */}
+                {serviceImage && (
+                  <div className="shrink-0 ml-2 relative">
+                    <img
+                      src={serviceImage}
+                      alt="Service"
+                      className="w-14 h-14 rounded-2xl object-cover border border-[#F1F3F5] shadow-sm"
+                    />
+                    {chat.serviceId?.isSold && (
+                      <div className="absolute top-0 right-0 bg-[#FF8E8E] text-white text-[9px] font-black px-1.5 py-0.5 rounded-bl-lg rounded-tr-lg uppercase tracking-tighter">
+                        Sold
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          );
-        })
+            );
+          })}
+        </div>
       )}
     </div>
   );

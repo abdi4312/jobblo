@@ -1,7 +1,11 @@
 import type { UserState } from "../types/userTypes.ts";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { fetchProfile as fetchProfileApi, logoutUser } from "../features/auth/Api";
+import {
+  fetchProfile as fetchProfileApi,
+  logoutUser,
+} from "../features/auth/Api";
+import { disconnectSocket } from "../socket/socket";
 
 export const useUserStore = create<UserState>()(
   persist(
@@ -28,6 +32,7 @@ export const useUserStore = create<UserState>()(
       logout: async () => {
         try {
           await logoutUser();
+          disconnectSocket(); // 🔌 Disconnect socket on logout
         } catch (error) {
           console.error("Logout error:", error);
         } finally {
