@@ -1,4 +1,4 @@
-import { Paperclip, SendHorizontal, Smile } from 'lucide-react';
+import {SendHorizontal} from 'lucide-react';
 import React from 'react';
 
 interface MessageInputProps {
@@ -15,32 +15,34 @@ const MessageInput: React.FC<MessageInputProps> = ({
     sending
 }) => {
     return (
-        <div className="p-4 sm:px-5 flex gap-3 items-center">
-            <div className="flex gap-3 items-center bg-[#FFFFFFB2] rounded-[14px] border border-[#0A0A0A1A] w-full py-3 px-4.5">
+        <div className="p-6 bg-white border-t border-[#F8F9FA] flex items-center gap-4">
+            <button className="w-12 h-12 rounded-full bg-[#EF790933] text-[#EF7909] flex items-center justify-center hover:bg-[#FFE5E5] transition-colors shrink-0">
+                <span className="material-symbols-outlined text-[28px]">add</span>
+            </button>
+            
+            <div className="flex-1 relative flex items-center">
                 <input
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Skriv en melding..."
+                    placeholder="Message"
                     onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                    className="flex-1 border-none bg-transparent text-[16px] font-light outline-none disabled:opacity-50"
+                    className="w-full bg-[#F8F9FA] border-none rounded-full py-3.5 px-6 text-[15px] text-[#212529] placeholder-[#ADB5BD] focus:ring-2 focus:ring-[#EF790933] outline-none transition-all"
                     disabled={sending}
                 />
-
-                <div className='flex gap-2'>
-                    <span><Paperclip size={16} /></span>
-                    <span><Smile size={16} /></span>
-                </div>
-
-
             </div>
+
             <button
                 type="submit"
-                className="w-10 h-10 rounded-full border-none bg-[#ea7e15] text-white flex items-center justify-center transition-all shrink-0 hover:bg-[#d36e12] hover:scale-105 active:scale-100 disabled:bg-[#ccc] disabled:cursor-not-allowed"
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shrink-0 shadow-sm ${
+                    !newMessage.trim() || sending 
+                    ? "bg-[#F1F3F5] text-[#ADB5BD] cursor-not-allowed" 
+                    : "bg-[#EF7909] text-white hover:bg-[#EF7908] hover:scale-105 active:scale-95"
+                }`}
                 disabled={!newMessage.trim() || sending}
                 onClick={handleSend}
             >
-                <SendHorizontal size={20} />
+                <SendHorizontal size={22} />
             </button>
         </div>
     );

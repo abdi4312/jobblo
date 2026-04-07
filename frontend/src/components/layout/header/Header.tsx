@@ -157,10 +157,12 @@ export default function Header() {
     };
   }, [lastScrollY]);
 
+  const isMessagesPage = location.pathname.startsWith("/messages");
+
   return (
     <>
       {/* <header className={`${showHeader ? "translate-y-0" : "-translate-y-full"} bg-white transition-transform duration-300 fixed top-0 left-0 right-0 z-50`}> */}
-      <header className="bg-white relative mb-5 md:mb-16">
+      <header className={`bg-white relative ${isMessagesPage ? "mb-0" : "mb-5 md:mb-16"}`}>
         <div className="h-14 md:h-22.75 max-w-300 mx-auto flex justify-between items-center px-4 lg:px-0">
 
           {/* LOGO */}

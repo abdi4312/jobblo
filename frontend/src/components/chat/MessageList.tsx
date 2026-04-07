@@ -24,65 +24,69 @@ function MessageList({
   ).values());
 
   const grouped = uniqueMessages.reduce((acc: { [key: string]: ChatMessage[] }, msg) => {
-    const date = new Date(msg.createdAt).toDateString();
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(msg);
+    const dateString = new Date(msg.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric" });
+    if (!acc[dateString]) acc[dateString] = [];
+    acc[dateString].push(msg);
     return acc;
   }, {});
 
   return (
-    <div className="flex-1 overflow-y-auto p-5 bg-[#FFFFFFB2]">
+    <div className="flex-1 overflow-y-auto p-6 bg-white space-y-8">
       {uniqueMessages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-full text-[#999]">
-          <span className="material-symbols-outlined text-[48px] text-[#ccc]">
-            chat
-          </span>
-          <p className="m-0">Ingen meldinger ennå</p>
-          <p className="text-[14px] text-[#999] mt-2">
-            Send en melding for å starte samtalen
-          </p>
+        <div className="flex flex-col items-center justify-center h-full text-[#ADB5BD]">
+          <div className="w-16 h-16 rounded-full bg-[#F8F9FA] flex items-center justify-center mb-4">
+            <span className="material-symbols-outlined text-[32px] text-[#CED4DA]">chat</span>
+          </div>
+          <p className="m-0 font-medium">No messages yet</p>
+          <p className="text-[14px] mt-1">Send a message to start the conversation</p>
         </div>
       ) : (
         Object.entries(grouped).map(([date, msgs]) => (
-          <div key={date}>
-            <div className="text-center mx-auto w-fit text-[12px] rounded-4xl px-4 py-1 text-[#2F7E47] bg-[#2F7E471A] my-5 font-medium">
-              {formatDate(msgs[0].createdAt)}
+          <div key={date} className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="flex-1 h-[1px] bg-[#F1F3F5]"></div>
+              <span className="text-[12px] font-bold text-[#ADB5BD] uppercase tracking-widest">
+                {date}
+              </span>
+              <div className="flex-1 h-[1px] bg-[#F1F3F5]"></div>
             </div>
+            
             {msgs.map((msg, index) => {
-              const senderId =
-                typeof msg.senderId === "string"
-                  ? msg.senderId
-                  : (msg.senderId as any)?._id;
+              const sender = typeof msg.senderId === "string" ? null : msg.senderId;
+              const senderId = typeof msg.senderId === "string" ? msg.senderId : msg.senderId?._id;
               const isSentByMe = senderId === userId;
 
               return (
                 <div
                   key={msg._id || index}
-                  className={`flex gap-2 mb-3 items-end ${isSentByMe ? "justify-end" : "justify-start"
-                    }`}
+                  className={`flex gap-3 ${isSentByMe ? "justify-end" : "justify-start"}`}
                 >
-                  <div className={`flex flex-col mb-3 max-w-[70%] sm:max-w-[50%] ${isSentByMe ? "items-end" : "items-start"}`}>
-                    {/* Time above the chat bubble */}
-                    <div className='flex gap-2 items-center mb-2'>
-                      <span className="text-[12px] font-normal text-[#8B8F9C] px-1">
-                        {formatTime(msg.createdAt)}
-                      </span>
-                      {isSentByMe && (
-                        <span className="text-[18px] font-medium text-[##0A0A26] px-1">
-                          Me
-                        </span>
+                  {!isSentByMe && (
+                    <div className="shrink-0 mt-1">
+                      {sender?.avatarUrl ? (
+                        <img src={sender.avatarUrl} alt={sender.name} className="w-8 h-8 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-[#F1F3F5] flex items-center justify-center text-[12px] font-bold text-[#495057]">
+                          {sender?.name?.charAt(0) || "U"}
+                        </div>
                       )}
                     </div>
+                  )}
 
+                  <div className={`flex flex-col max-w-[80%] sm:max-w-[60%] ${isSentByMe ? "items-end" : "items-start"}`}>
                     <div
-                      className={`p-3 relative shadow-md ${isSentByMe
-                        ? "bg-[#2F7E4740] text-[#2B2B2B] rounded-tl-xl rounded-tr-[5px] rounded-br-xl rounded-bl-xl"
-                        : "bg-[#FFFFFF1A] text-[#2B2B2B] rounded-tl-[5px] rounded-tr-xl rounded-br-xl rounded-bl-xl"
+                      className={`px-5 py-3 rounded-2xl text-[15px] leading-relaxed shadow-sm ${isSentByMe
+                        ? "bg-[#EF790933] text-[#212529] rounded-tr-none"
+                        : "bg-[#F8F9FA] text-[#212529] rounded-tl-none border border-[#F1F3F5]"
                         }`}
                     >
-                      <p className="m-0 text-[14px] leading-[1.4] wrap-break-word">
-                        {msg.text}
-                      </p>
+                      <p className="m-0 break-words">{msg.text}</p>
+                    </div>
+                    
+                    <div className="mt-1.5 flex items-center gap-2 px-1">
+                      <span className="text-[11px] font-medium text-[#ADB5BD]">
+                        {isSentByMe ? `Read ${formatTime(msg.createdAt)}` : formatTime(msg.createdAt)}
+                      </span>
                     </div>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 import "./styles/App.css";
 import "./styles/Jobblo.css";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import Header from "./components/layout/header/Header.tsx";
 import Footer from "./components/layout/footer/Footer.tsx";
 import { ScrollToTop } from "./components/shared/ScrollToTop.tsx";
@@ -10,10 +10,13 @@ import { Toaster } from "react-hot-toast";
 
 export default function App() {
   const { user, isLoadingUser } = useAuth();
+  const location = useLocation();
 
   if (isLoadingUser) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
+
+  const isMessagesPage = location.pathname.startsWith("/messages");
 
   return (
     <>
@@ -32,7 +35,7 @@ export default function App() {
         <ScrollToTop />
         <Header />
         <Outlet />
-        <Footer />
+        {!isMessagesPage && <Footer />}
       </AntApp>
     </>
   );
