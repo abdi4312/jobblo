@@ -177,7 +177,7 @@ export function MessagesPageSplit() {
         {/* LEFT SIDEBAR */}
         <div
           // className={`${conversationId && isMobile ? "hidden" : "flex"} flex-col w-full xl:w-[420px] xl:min-w-[420px] xl:max-w-[420px] border-r border-[#F1F3F5] bg-white overflow-hidden transition-all`}
-          className={`${conversationId && isMobile ? "hidden" : "flex"} flex-col w-full max-w-[360px] border-r border-[#F1F3F5] bg-white overflow-hidden transition-all`}
+          className={`${conversationId && isMobile ? "hidden" : "flex"} flex-col w-full md:max-w-[360px] border-r border-[#F1F3F5] bg-white overflow-hidden transition-all`}
         >
           {/* SIDEBAR HEADER */}
           <div className="p-6 flex items-center justify-between border-b border-[#F8F9FA]">
