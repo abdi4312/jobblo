@@ -1,6 +1,11 @@
 import type { RouteObject } from "react-router-dom";
 import App from "../App.tsx";
-import { JobListingPage, LandingPage, ProfilePage, SettingsPage } from "../pages";
+import {
+  JobListingPage,
+  LandingPage,
+  ProfilePage,
+  SettingsPage,
+} from "../pages";
 import { SettingsLayout } from "../components/layout/SettingsLayout/SettingsLayout.tsx";
 import LeggUtOppdrag from "../pages/LeggUtOppdragPage/LeggUtOppdrag.tsx";
 import Alert from "../pages/AlertPage/Alert.tsx";
@@ -39,6 +44,7 @@ import TransactionsPage from "../pages/SuperAdminDashboard/TransactionsPage.tsx"
 import ServiceListingPage from "../pages/ServiceListingPage/ServiceListing.tsx";
 import UpcomingFeatures from "../pages/UpcomingFeaturesPage/UpcomingFeatures.tsx";
 import RoadmapAdminPage from "../pages/SuperAdminDashboard/RoadmapAdminPage.tsx";
+import PricingPage from "../pages/PricingPage/PricingPage.tsx";
 import {
   UsernameView,
   NameView,
@@ -55,10 +61,9 @@ import {
   BlockedUsersView,
   CookiesView,
   SessionsView,
-  AboutView
+  AboutView,
+  SubscriptionView,
 } from "../components/profile/SettingsViews";
-
-
 
 export const routes: RouteObject[] = [
   {
@@ -163,9 +168,10 @@ export const routes: RouteObject[] = [
               { path: "cookies", element: <CookiesView /> },
               { path: "sessions", element: <SessionsView /> },
               { path: "about", element: <AboutView /> },
-            ]
+              { path: "subscriptions", element: <SubscriptionView /> },
+            ],
           },
-        ]
+        ],
       },
       {
         path: "Innstillinger",
@@ -253,11 +259,18 @@ export const routes: RouteObject[] = [
         element: <JobbloUserTerm />,
       },
       {
+        path: "membership",
+        element: (
+          <ProtectedRoute>
+            <PricingPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: "upcoming",
         element: <UpcomingFeatures />,
       },
     ],
-
   },
   {
     path: "login",

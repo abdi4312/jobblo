@@ -110,6 +110,7 @@ app.use("/api/hero", heroSelectRouter);
 app.use("/api/chats", chatRouter);
 app.use("/api/stripe", stripeRouter);
 app.use("/api/coupons", couponRouter);
+app.use("/api/transactions", transactionRoutes);
 app.use("/api/admin/transactions", transactionRoutes);
 app.use("/api/jobbloShop", jobbloShopRouter);
 app.use("/api/lists", listsRouter);

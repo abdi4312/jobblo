@@ -15,16 +15,16 @@ exports.getTransactions = async (req, res) => {
     if (search) {
       // Pehle Users collection mein search karein ke kya koi user is email se match karta hai
       const matchedUsers = await User.find({
-        email: { $regex: search, $options: "i" }
+        email: { $regex: search, $options: "i" },
       }).select("_id");
 
-      const userIds = matchedUsers.map(user => user._id);
+      const userIds = matchedUsers.map((user) => user._id);
 
       // Ab Transaction query mein check karein
       query.$or = [
         { stripeSessionId: { $regex: search, $options: "i" } }, // Search by ID
-        { planName: { $regex: search, $options: "i" } },        // Search by Plan
-        { userId: { $in: userIds } }                           // Search by matched User IDs
+        { planName: { $regex: search, $options: "i" } }, // Search by Plan
+        { userId: { $in: userIds } }, // Search by matched User IDs
       ];
     }
 
@@ -39,21 +39,33 @@ exports.getTransactions = async (req, res) => {
     res.status(200).json({
       transactions,
       totalPages: Math.ceil(total / limit),
-      totalTransactions: total
+      totalTransactions: total,
     });
   } catch (error) {
     console.error("Backend Error:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
   }
 };
 
 // GET USER TRANSACTIONS (FOR USER DASHBOARD)
 exports.getUserTransactions = async (req, res) => {
   try {
+    const { page = 1, limit = 10 } = req.query;
     const transactions = await Transaction.find({ userId: req.user.id })
-      .sort({ createdAt: -1 });
-    
-    res.status(200).json({ success: true, transactions });
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * Number(limit))
+      .limit(Number(limit));
+
+    const total = await Transaction.countDocuments({ userId: req.user.id });
+    console.log("total", transactions);
+    res.status(200).json({
+      success: true,
+      transactions,
+      totalPages: Math.ceil(total / Number(limit)),
+      totalTransactions: total,
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -62,11 +74,14 @@ exports.getUserTransactions = async (req, res) => {
 // GET SINGLE TRANSACTION
 exports.getTransactionById = async (req, res) => {
   try {
-    const transaction = await Transaction.findById(req.params.id)
-      .populate("userId serviceId coupon");
-    
+    const transaction = await Transaction.findById(req.params.id).populate(
+      "userId serviceId coupon",
+    );
+
     if (!transaction) {
-      return res.status(404).json({ success: false, error: "Transaction not found" });
+      return res
+        .status(404)
+        .json({ success: false, error: "Transaction not found" });
     }
 
     res.status(200).json({ success: true, transaction });
@@ -89,11 +104,11 @@ exports.updateTransactionStatus = async (req, res) => {
     // Transaction dhoondo aur update karo
     const updatedTransaction = await Transaction.findByIdAndUpdate(
       id,
-      { 
+      {
         status: status,
-        refunded: status === "refunded" ? true : false // Agar status refunded hai to boolean bhi true kar do
+        refunded: status === "refunded" ? true : false, // Agar status refunded hai to boolean bhi true kar do
       },
-      { new: true } // Updated document wapis mangwao
+      { new: true }, // Updated document wapis mangwao
     );
 
     if (!updatedTransaction) {
@@ -102,10 +117,12 @@ exports.updateTransactionStatus = async (req, res) => {
 
     res.status(200).json({
       message: `Transaction status updated to ${status}`,
-      transaction: updatedTransaction
+      transaction: updatedTransaction,
     });
   } catch (error) {
     console.error("Update Status Error:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
   }
 };
