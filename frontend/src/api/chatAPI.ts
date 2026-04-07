@@ -25,6 +25,8 @@ export interface Chat {
     _id: string;
     title?: string;
     description?: string;
+    images?: string[];
+    isSold?: boolean;
   };
   messages: ChatMessage[];
   lastMessage?: string;

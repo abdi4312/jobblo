@@ -23,7 +23,7 @@ exports.createOrGetChat = async (req, res) => {
     if (!provider) {
       return res.status(404).json({ message: "Provider not found." });
     }
-    
+
     let chat = await Chat.findOne({
       clientId: id,
       providerId,
@@ -31,7 +31,7 @@ exports.createOrGetChat = async (req, res) => {
     })
       .populate("clientId", "name")
       .populate("providerId", "name")
-      .populate("serviceId", "title description");
+      .populate("serviceId", "title description images");
 
     if (chat) {
       // If user previously deleted this chat, restore it by removing from deletedFor
@@ -67,7 +67,7 @@ exports.getMyChats = async (req, res) => {
     })
       .populate("clientId", "name role avatarUrl")
       .populate("providerId", "name role avatarUrl")
-      .populate("serviceId", "title description")
+      .populate("serviceId", "title description images")
       .sort({ updatedAt: -1 });
 
     res.json(chats);
@@ -87,7 +87,7 @@ exports.getChatById = async (req, res) => {
     const chat = await Chat.findById(chatId)
       .populate("clientId", "name avatarUrl")
       .populate("providerId", "name avatarUrl")
-      .populate("serviceId", "title description")
+      .populate("serviceId", "title description images")
       .populate("messages.senderId", "name avatarUrl");
 
     if (!chat) {
