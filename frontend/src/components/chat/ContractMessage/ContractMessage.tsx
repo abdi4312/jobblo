@@ -88,7 +88,7 @@ export function ContractMessage({
                 </span>
                 <p className="m-0 text-[13px] text-[#444] font-medium truncate">
                   Contract Agreement:{" "}
-                  <span className="text-[#1a1a1a]">{"Tjenesteavtale"}</span>
+                  <span className="text-[#1a1a1a]">{"Service Agreement"}</span>
                 </p>
               </div>
 
@@ -97,7 +97,7 @@ export function ContractMessage({
                 onClick={() => setShowContract(true)}
                 className="flex items-center gap-0.5 pl-2 py-0.5 bg-[#ea7e151a] text-[#ea7e15] border-none rounded-lg text-[12px] font-bold cursor-pointer hover:bg-[#ea7e15] hover:text-white transition-all shrink-0"
               >
-                Se detaljer
+                View Details
                 <span className="material-symbols-outlined text-[16px]">
                   chevron_right
                 </span>
@@ -143,7 +143,7 @@ export function ContractMessage({
             {contract?.scheduledDate && (
               <div className="text-sm p-[8px_12px] bg-[#E0883526] rounded-md mb-2">
                 <strong className="text-[#E08835] mr-2">Scheduled:</strong>{" "}
-                {new Date(contract.scheduledDate).toLocaleDateString("nb-NO")}
+                {new Date(contract.scheduledDate).toLocaleDateString("en-US")}
               </div>
             )}
           </div>

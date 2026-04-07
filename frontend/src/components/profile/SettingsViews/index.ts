@@ -14,3 +14,4 @@ export * from "./BlockedUsersView";
 export * from "./CookiesView";
 export * from "./SessionsView";
 export * from "./AboutView";
+export * from "./SubscriptionView";
