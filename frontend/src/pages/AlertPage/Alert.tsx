@@ -132,6 +132,12 @@ export default function Alert() {
       color: "text-purple-600",
       bg: "bg-purple-50",
     },
+    favorite: {
+      title: "Lagt til i liste",
+      icon: <Tag size={20} />,
+      color: "text-pink-600",
+      bg: "bg-pink-50",
+    },
   };
 
   const nyheter = alerts.filter((alert) => !alert.read);
@@ -148,6 +154,8 @@ export default function Alert() {
           const handleNotificationClick = () => {
             if (alert.type === "follow" && alert.senderId?._id) {
               navigate(`/profile/${alert.senderId._id}`);
+            } else if (alert.type === "favorite" && alert.senderId?._id) {
+              navigate(`/profile/${alert.senderId._id}`);
             }
           };
 
@@ -156,16 +164,20 @@ export default function Alert() {
               key={alert._id}
               onClick={handleNotificationClick}
               className={`bg-white border border-gray-100 rounded-2xl p-4 shadow-sm mx-auto my-2 transition-all ${
-                alert.type === "follow" ? "cursor-pointer hover:bg-gray-50" : ""
+                alert.type === "follow" || alert.type === "favorite"
+                  ? "cursor-pointer hover:bg-gray-50"
+                  : ""
               }`}
             >
               <div className="flex items-start gap-4">
                 <div className="relative shrink-0">
-                  <div className={`w-14 h-14 ${config.bg || "bg-gray-100"} rounded-full flex items-center justify-center ${config.color || "text-gray-500"} shrink-0 overflow-hidden border border-gray-100`}>
+                  <div
+                    className={`w-14 h-14 ${config.bg || "bg-gray-100"} rounded-full flex items-center justify-center ${config.color || "text-gray-500"} shrink-0 overflow-hidden border border-gray-100`}
+                  >
                     {alert.senderId?.avatarUrl ? (
-                      <img 
-                        src={alert.senderId.avatarUrl} 
-                        alt={alert.senderId.name} 
+                      <img
+                        src={alert.senderId.avatarUrl}
+                        alt={alert.senderId.name}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -176,13 +188,23 @@ export default function Alert() {
                 <div className="flex-1 flex flex-col sm:flex-row justify-between gap-4">
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between sm:justify-start">
-                      <h2 className="text-[18px] font-bold text-[#0A0A0A]">{config.title}</h2>
+                      <h2 className="text-[18px] font-bold text-[#0A0A0A]">
+                        {config.title}
+                      </h2>
                       <div className="flex gap-3 sm:hidden text-gray-400">
-                        <Check size={18} className="text-green-600 cursor-pointer" />
-                        <Trash2 size={18} className="text-red-500 cursor-pointer" />
+                        <Check
+                          size={18}
+                          className="text-green-600 cursor-pointer"
+                        />
+                        <Trash2
+                          size={18}
+                          className="text-red-500 cursor-pointer"
+                        />
                       </div>
                     </div>
-                    <p className="text-[16px] font-medium text-[#0A0A0A] leading-6">{alert.content}</p>
+                    <p className="text-[16px] font-medium text-[#0A0A0A] leading-6">
+                      {alert.content}
+                    </p>
                     <div className="inline-block">
                       <span className="bg-[#2F7E471A] text-[#2F7E47] text-[14px] font-medium px-4 py-1 rounded-full">
                         {alert.type}
@@ -210,12 +232,18 @@ export default function Alert() {
                       className="bg-[#3F8F6B] text-white text-[14px] font-semibold px-6 py-2.5 rounded-2xl hover:bg-[#367a5b] transition-all self-end mt-4 sm:mt-0"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (alert.type === "follow" && alert.senderId?._id) {
+                        if (
+                          (alert.type === "follow" ||
+                            alert.type === "favorite") &&
+                          alert.senderId?._id
+                        ) {
                           navigate(`/profile/${alert.senderId._id}`);
                         }
                       }}
                     >
-                      {alert.type === "follow" ? "Se profil" : "Se søknad"}
+                      {alert.type === "follow" || alert.type === "favorite"
+                        ? "Se profil"
+                        : "Se søknad"}
                     </button>
                   </div>
                 </div>

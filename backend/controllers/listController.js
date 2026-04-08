@@ -1,4 +1,7 @@
 const List = require("../models/List");
+const Service = require("../models/Service");
+const Notification = require("../models/Notification");
+const User = require("../models/User");
 
 // Get all lists for a user (where they are owner or contributor)
 exports.getUserLists = async (req, res) => {
@@ -70,6 +73,20 @@ exports.addServiceToList = async (req, res) => {
     list.services.push(serviceId);
     list.latestservice = serviceId; // Keeping latestservice updated as per original model
     await list.save();
+
+    // Send notification to the service provider
+    const service = await Service.findById(serviceId);
+    const currentUser = await User.findById(req.userId);
+
+    if (service && service.userId && service.userId.toString() !== req.userId) {
+      await Notification.create({
+        userId: service.userId,
+        senderId: req.userId,
+        type: "favorite",
+        content: `${currentUser.name} added your item "${service.title}" to their list`,
+      });
+    }
+
     res.status(200).json(list);
   } catch (error) {
     res
