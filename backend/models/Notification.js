@@ -17,12 +17,18 @@ const notificationSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ['message', 'order', 'system', 'promotion','alert','system_update','general'],
+      enum: ['message', 'order', 'system', 'promotion','alert','system_update','general', 'follow'],
     },
 
     content: {
       type: String,
       required: true,
+    },
+
+    senderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
     },
 
     readBy: [
