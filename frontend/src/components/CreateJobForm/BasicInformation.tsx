@@ -30,7 +30,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
     const labelClasses = "block mb-2 font-semibold text-[15px] text-[#2c3e50]";
 
     return (
-        <div>
+        <div className="">
             <h2 className="text-[20px] font-bold leading-7 text-[#0A0A0A] py-6">Grunnleggende informasjon</h2>
             <div className="space-y-6">
                 {/* 2. Tittel */}
@@ -49,7 +49,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
                 <div className="mb-6">
                     <p className="text-[14px] font-semibold text-[#0A0A0A] leading-5 pb-2">Kategori <span className="text-red-700"> *</span></p>
 
-                    <div className="bg-[#FFFFFF1A] p-6 rounded-[14px] shadow-md border border-[#eee]">
+                    <div className="bg-[#FFFFFFB2] p-6 rounded-[14px] shadow-md border border-[#eee]">
                         <div className="flex flex-wrap max-w-209 justify-center mx-auto gap-3">
                             {/* FIXED: categoryData use kiya hai jo hook se aa raha hai */}
                             {isLoading ? (

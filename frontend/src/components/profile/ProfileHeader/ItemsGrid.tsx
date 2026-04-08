@@ -1,4 +1,3 @@
-import { ChevronDown } from 'lucide-react';
 import { EmptyState } from './EmptyState';
 import { useFavoriteLists } from "../../../features/favoriteLists/hooks";
 import { JobDetailCardSkeleton } from "../../Loading/JobDetailCardSkeleton.tsx";
@@ -30,15 +29,8 @@ export function ItemsGrid({ activeTab, userId }: { activeTab: string, userId?: s
     'Lists': {
       title: "Listene er for øyeblikket tomme",
       description: "Lagrede elementer aur samlinger yahan nazar aayenge"
-    },
-    'Your wardrobe': {
-      title: "Garderoben din er for øyeblikket tom",
-      description: "Når du kjøper noe gjennom et Tise-bud, vises det her"
-    },
-    'Seller Hub': {
-      title: "Selgerhub er for øyeblikket tom",
-      description: "Salgene og innsikten din vil vises her"
     }
+    
   };
 
   const currentEmptyState = emptyStateContent[activeTab] || emptyStateContent['Jobs'];
@@ -57,7 +49,7 @@ export function ItemsGrid({ activeTab, userId }: { activeTab: string, userId?: s
   const showJobs = activeTab === 'Jobs' && jobs.length > 0;
 
   return (
-    <div className="bg-[#f5f5f5] min-h-screen p-4 md:p-6">
+    <div className="min-h-screen p-4 md:p-6">
       <div className="max-w-300 mx-auto">
         {showLists ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
