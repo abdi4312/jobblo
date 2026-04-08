@@ -15,7 +15,7 @@ export default function ProfilePage() {
   const logout = useUserStore((state) => state.logout);
   const navigate = useNavigate();
   const { modal } = App.useApp();
-  const [activeTab, setActiveTab] = useState(userId ? 'Jobs' : 'Likes');
+  const [activeTab, setActiveTab] = useState('Jobs');
   const [isUnblockModalOpen, setIsUnblockModalOpen] = useState(false);
 
   // Fetch profile if userId is provided, otherwise use current user

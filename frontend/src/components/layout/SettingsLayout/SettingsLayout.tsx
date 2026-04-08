@@ -81,7 +81,7 @@ export function SettingsLayout() {
   const isRootSettings = currentPath === "/settings";
 
   return (
-    <div className="min-h-screen bg-gray-50 p-0 flex justify-center">
+    <div className="min-h-screen p-0 flex justify-center">
       <div className="w-full max-w-5xl bg-white md:rounded-2xl shadow-sm md:border border-gray-200 overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex flex-row border-b border-gray-100">

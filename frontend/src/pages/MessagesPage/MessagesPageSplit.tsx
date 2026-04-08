@@ -232,7 +232,7 @@ export function MessagesPageSplit() {
           className={`flex-1 flex flex-col min-w-0 max-w-full bg-white lg:static lg:h-auto ${!conversationId && isMobile ? "hidden" : "flex"}`}
         >
           {!conversationId ? (
-            <div className="flex flex-col items-center justify-center h-full text-[#ADB5BD] bg-[#F8F9FA]">
+            <div className="flex flex-col items-center justify-center h-full text-[#ADB5BD] bg-[#FFFFFF]">
               <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-sm mb-6">
                 <span className="material-symbols-outlined text-[40px] text-[#CED4DA]">
                   chat_bubble
