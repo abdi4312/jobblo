@@ -56,8 +56,11 @@ export const JobCard = ({ job }: JobCardProps) => {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-200">
-            No image
+          <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-100 gap-2">
+            <div className="w-12 h-12 bg-gray-200/50 rounded-full flex items-center justify-center">
+              <Bookmark size={24} className="opacity-30" />
+            </div>
+            <span className="text-[12px] font-bold uppercase tracking-widest opacity-60">No image</span>
           </div>
         )}
 
