@@ -25,14 +25,17 @@ import JobContainer from "../job/JobContainer";
 const StepIndicator = ({ currentStep }: { currentStep: number }) => {
   const steps = ["Grunnleggende", "Tid & Sted", "Kontakt"];
   return (
-    <div className="flex items-start justify-between mb-12 px-12 md:px-0 max-w-lg mx-auto relative">
-      {/* Background Line */}
-      <div className="absolute top-4 md:top-5 left-0 w-full h-[2px] bg-gray-100 z-0" />
-      {/* Active Line Overlay */}
-      <div
-        className="absolute top-4 md:top-5 left-0 h-[2px] bg-[#2D7A4D] transition-all duration-500 ease-out z-0"
-        style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
-      />
+    <div className="flex items-start justify-between mb-12 px-4 md:px-5 max-w-lg mx-auto relative">
+      {/* Progress Line Container */}
+      <div className="absolute top-4 md:top-5 left-8 md:left-10 right-8 md:right-10 h-[2px] bg-white z-0">
+        {/* Active Line Overlay */}
+        <div
+          className="h-full bg-[#2D7A4D] transition-all duration-500 ease-out"
+          style={{
+            width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`,
+          }}
+        />
+      </div>
 
       {steps.map((step, index) => (
         <div
