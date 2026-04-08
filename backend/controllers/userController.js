@@ -3,6 +3,7 @@ const Service = require("../models/Service");
 const mongoose = require("mongoose");
 const Category = require("../models/Category");
 const List = require("../models/List");
+const Notification = require("../models/Notification");
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -389,10 +390,9 @@ exports.followUser = async (req, res) => {
         $pull: { following: targetUserId },
       });
 
-      await User.findByIdAndUpdate(targetUser, {
+      await User.findByIdAndUpdate(targetUserId, {
         $pull: { followers: currentUserId },
       });
-
       return res.json({ message: "Unfollowed", isFollowing: false });
     } else {
       // Follow
@@ -400,8 +400,16 @@ exports.followUser = async (req, res) => {
         $addToSet: { following: targetUserId },
       });
 
-      await User.findByIdAndUpdate(targetUser, {
+      await User.findByIdAndUpdate(targetUserId, {
         $addToSet: { followers: currentUserId },
+      });
+
+      // Create notification for the target user
+      await Notification.create({
+        userId: targetUserId,
+        senderId: currentUserId,
+        type: "follow",
+        content: `${currentUser.name} started following you`,
       });
 
       return res.json({ message: "Followed", isFollowing: true });

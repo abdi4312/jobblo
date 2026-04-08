@@ -1,10 +1,23 @@
 import { useState } from "react";
 import { useUserStore } from "../../stores/userStore";
-import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
-import { nb } from 'date-fns/locale';
-import { AlertTriangle, Bell, Check, CheckCheck, Clock4, Info, MessageSquare, RefreshCcw, ShoppingBag, Tag, Trash2 } from "lucide-react";
+import { formatDistanceToNow, format, isToday, isYesterday } from "date-fns";
+import { nb } from "date-fns/locale";
+import {
+  AlertTriangle,
+  Bell,
+  Check,
+  CheckCheck,
+  Clock4,
+  Info,
+  MessageSquare,
+  RefreshCcw,
+  ShoppingBag,
+  Tag,
+  Trash2,
+} from "lucide-react";
 import { useNotifications } from "../../features/notifications/hooks";
-import { NotificationSkeleton } from "../../components/Loading/NotificationSkeleton"
+import { NotificationSkeleton } from "../../components/Loading/NotificationSkeleton";
+import { useNavigate } from "react-router-dom";
 
 interface Alert {
   _id: string;
@@ -12,6 +25,12 @@ interface Alert {
     _id: string;
     name: string;
     email: string;
+  } | null;
+  senderId?: {
+    _id: string;
+    name: string;
+    lastName?: string;
+    avatarUrl?: string;
   } | null;
   type: string;
   content: string;
@@ -26,9 +45,13 @@ const formatNotificationTime = (dateString: string) => {
     if (isNaN(date.getTime())) return "Ujent dato";
     const timeAgo = formatDistanceToNow(date, { addSuffix: true, locale: nb });
     let datePart = "";
-    if (isToday(date)) { datePart = "i dag"; }
-    else if (isYesterday(date)) { datePart = "i går"; }
-    else { datePart = format(date, "d. MMM", { locale: nb }); }
+    if (isToday(date)) {
+      datePart = "i dag";
+    } else if (isYesterday(date)) {
+      datePart = "i går";
+    } else {
+      datePart = format(date, "d. MMM", { locale: nb });
+    }
     const exactTime = format(date, "HH:mm");
     return `${timeAgo} • ${datePart} kl. ${exactTime}`;
   } catch (error) {
@@ -41,6 +64,7 @@ export default function Alert() {
   const [activeTab, setActiveTab] = useState("Alle");
   const user = useUserStore((state) => state.user);
   const userId = user?._id;
+  const navigate = useNavigate();
 
   // --- TanStack Query Logic ---
   const {
@@ -48,11 +72,11 @@ export default function Alert() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isLoading: queryLoading
+    isLoading: queryLoading,
   } = useNotifications(userId);
 
   // TanStack ke pages ko single array mein convert karna
-  const alerts: Alert[] = data?.pages.flatMap(page => page.data) || [];
+  const alerts: Alert[] = data?.pages.flatMap((page) => page.data) || [];
 
   const tabs = [
     { id: "Alle", label: "Alle" },
@@ -60,13 +84,54 @@ export default function Alert() {
   ];
 
   const notificationConfig = {
-    message: { title: "Ny melding", icon: <MessageSquare size={20} />, color: "text-blue-600", bg: "bg-blue-50" },
-    order: { title: "Bestilling oppdatert", icon: <ShoppingBag size={20} />, color: "text-green-600", bg: "bg-green-50" },
-    system_update: { title: "Systemvarsel", icon: <Info size={20} />, color: "text-blue-600", bg: "bg-blue-100" },
-    promotion: { title: "Spesialtilbud til deg", icon: <Tag size={20} />, color: "text-orange-600", bg: "bg-orange-100" },
-    alert: { title: "Viktig varsel", icon: <AlertTriangle size={20} />, color: "text-red-600", bg: "bg-red-100" },
-    system: { title: "App-oppdatering", icon: <RefreshCcw size={20} />, color: "text-orange-600", bg: "bg-orange-50" },
-    general: { title: "Informasjon", icon: <Bell size={20} />, color: "text-cyan-600", bg: "bg-cyan-50" },
+    message: {
+      title: "Ny melding",
+      icon: <MessageSquare size={20} />,
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+    },
+    order: {
+      title: "Bestilling oppdatert",
+      icon: <ShoppingBag size={20} />,
+      color: "text-green-600",
+      bg: "bg-green-50",
+    },
+    system_update: {
+      title: "Systemvarsel",
+      icon: <Info size={20} />,
+      color: "text-blue-600",
+      bg: "bg-blue-100",
+    },
+    promotion: {
+      title: "Spesialtilbud til deg",
+      icon: <Tag size={20} />,
+      color: "text-orange-600",
+      bg: "bg-orange-100",
+    },
+    alert: {
+      title: "Viktig varsel",
+      icon: <AlertTriangle size={20} />,
+      color: "text-red-600",
+      bg: "bg-red-100",
+    },
+    system: {
+      title: "App-oppdatering",
+      icon: <RefreshCcw size={20} />,
+      color: "text-orange-600",
+      bg: "bg-orange-50",
+    },
+    general: {
+      title: "Informasjon",
+      icon: <Bell size={20} />,
+      color: "text-cyan-600",
+      bg: "bg-cyan-50",
+    },
+    follow: {
+      title: "Ny følger",
+      icon: <Bell size={20} />,
+      color: "text-purple-600",
+      bg: "bg-purple-50",
+    },
   };
 
   const nyheter = alerts.filter((alert) => !alert.read);
@@ -76,13 +141,36 @@ export default function Alert() {
     return (
       <div className="bg-[#FFFFFF1A] shadow p-2 md:p-6 rounded-xl">
         {dataList.map((alert) => {
-          const config = notificationConfig[alert.type as keyof typeof notificationConfig] || notificationConfig.general;
+          const config =
+            notificationConfig[alert.type as keyof typeof notificationConfig] ||
+            notificationConfig.general;
+
+          const handleNotificationClick = () => {
+            if (alert.type === "follow" && alert.senderId?._id) {
+              navigate(`/profile/${alert.senderId._id}`);
+            }
+          };
+
           return (
-            <div key={alert._id} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm mx-auto my-2">
+            <div
+              key={alert._id}
+              onClick={handleNotificationClick}
+              className={`bg-white border border-gray-100 rounded-2xl p-4 shadow-sm mx-auto my-2 transition-all ${
+                alert.type === "follow" ? "cursor-pointer hover:bg-gray-50" : ""
+              }`}
+            >
               <div className="flex items-start gap-4">
                 <div className="relative shrink-0">
                   <div className={`w-14 h-14 ${config.bg || "bg-gray-100"} rounded-full flex items-center justify-center ${config.color || "text-gray-500"} shrink-0 overflow-hidden border border-gray-100`}>
-                    {config.icon}
+                    {alert.senderId?.avatarUrl ? (
+                      <img 
+                        src={alert.senderId.avatarUrl} 
+                        alt={alert.senderId.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      config.icon
+                    )}
                   </div>
                 </div>
                 <div className="flex-1 flex flex-col sm:flex-row justify-between gap-4">
@@ -107,11 +195,27 @@ export default function Alert() {
                   </div>
                   <div className="flex flex-col justify-between items-end min-w-[120px]">
                     <div className="hidden sm:flex gap-4 items-center">
-                      <Check size={20} className="text-green-600 cursor-pointer hover:opacity-70 transition-all" />
-                      <Trash2 size={20} className="text-red-500 cursor-pointer hover:opacity-70 transition-all" />
+                      <Check
+                        size={20}
+                        className="text-green-600 cursor-pointer hover:opacity-70 transition-all"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Trash2
+                        size={20}
+                        className="text-red-500 cursor-pointer hover:opacity-70 transition-all"
+                        onClick={(e) => e.stopPropagation()}
+                      />
                     </div>
-                    <button className="bg-[#3F8F6B] text-white text-[14px] font-semibold px-6 py-2.5 rounded-2xl hover:bg-[#367a5b] transition-all self-end mt-4 sm:mt-0">
-                      Se søknad
+                    <button
+                      className="bg-[#3F8F6B] text-white text-[14px] font-semibold px-6 py-2.5 rounded-2xl hover:bg-[#367a5b] transition-all self-end mt-4 sm:mt-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (alert.type === "follow" && alert.senderId?._id) {
+                          navigate(`/profile/${alert.senderId._id}`);
+                        }
+                      }}
+                    >
+                      {alert.type === "follow" ? "Se profil" : "Se søknad"}
                     </button>
                   </div>
                 </div>
@@ -129,7 +233,10 @@ export default function Alert() {
         <div className="flex justify-between items-center">
           <h1 className="text-[#101828] text-[40px] font-bold">Varsler</h1>
           <p className="flex text-[16px] text-[#2F7E47] font-normal cursor-pointer">
-            <span><CheckCheck size={20} /></span> Mark alle som lest
+            <span>
+              <CheckCheck size={20} />
+            </span>{" "}
+            Mark alle som lest
           </p>
         </div>
 
@@ -151,9 +258,15 @@ export default function Alert() {
         ) : (
           <div>
             {activeTab === "Alle" ? (
-              nyheter.length === 0 ? <p>Ingen nyheter ennå</p> : renderAlerts(nyheter)
+              nyheter.length === 0 ? (
+                <p>Ingen nyheter ennå</p>
+              ) : (
+                renderAlerts(nyheter)
+              )
+            ) : lagrede.length === 0 ? (
+              <p>Ingen lagrede varsler</p>
             ) : (
-              lagrede.length === 0 ? <p>Ingen lagrede varsler</p> : renderAlerts(lagrede)
+              renderAlerts(lagrede)
             )}
 
             {/* LOAD MORE BUTTON logic updated for TanStack */}
