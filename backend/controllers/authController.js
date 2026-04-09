@@ -249,7 +249,16 @@ exports.revokeAllOtherSessions = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select("-password");
+    const user = await User.findById(req.userId)
+      .select("-password")
+      .populate(
+        "followers",
+        "name lastName avatarUrl verified email averageRating reviewCount",
+      )
+      .populate(
+        "following",
+        "name lastName avatarUrl verified email averageRating reviewCount",
+      );
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);
   } catch (error) {
