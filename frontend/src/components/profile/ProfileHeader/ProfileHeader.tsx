@@ -6,6 +6,7 @@ import { useBlockUser, useFollowUser } from "../../../features/profile/hooks";
 import { toast } from "react-hot-toast";
 import { FollowingModal } from "./FollowingModal";
 import { BlockModal } from "./BlockModal";
+import { FollowersFollowingModal } from "./FollowersFollowingModal";
 import type { User } from "../../../types/userTypes";
 
 export function ProfileHeader({
@@ -22,6 +23,11 @@ export function ProfileHeader({
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [isUnblockModalOpen, setIsUnblockModalOpen] = useState(false);
   const [isNotifyEnabled, setIsNotifyEnabled] = useState(false);
+  const [isFollowersFollowingModalOpen, setIsFollowersFollowingModalOpen] =
+    useState(false);
+  const [modalTitle, setModalTitle] = useState<"Followers" | "Following">(
+    "Followers",
+  );
 
   const navigate = useNavigate();
   const followMutation = useFollowUser();
@@ -140,7 +146,13 @@ export function ProfileHeader({
             </p>
 
             <div className="flex gap-4 mb-5">
-              <div className="cursor-pointer hover:underline text-[16px]">
+              <div
+                className="cursor-pointer hover:underline text-[16px]"
+                onClick={() => {
+                  setModalTitle("Followers");
+                  setIsFollowersFollowingModalOpen(true);
+                }}
+              >
                 <span className="font-bold text-black">
                   {user?.followers?.length || 0}
                 </span>{" "}
@@ -148,7 +160,13 @@ export function ProfileHeader({
                   followers
                 </span>
               </div>
-              <div className="cursor-pointer hover:underline text-[16px]">
+              <div
+                className="cursor-pointer hover:underline text-[16px]"
+                onClick={() => {
+                  setModalTitle("Following");
+                  setIsFollowersFollowingModalOpen(true);
+                }}
+              >
                 <span className="font-bold text-black">
                   {user?.following?.length || 0}
                 </span>{" "}
@@ -330,6 +348,26 @@ export function ProfileHeader({
         onConfirm={handleUnblock}
         isPending={blockMutation.isPending}
         type="unblock"
+      />
+
+      <FollowersFollowingModal
+        isOpen={isFollowersFollowingModalOpen}
+        onClose={() => setIsFollowersFollowingModalOpen(false)}
+        title={modalTitle}
+        users={
+          modalTitle === "Followers"
+            ? user?.followers || []
+            : user?.following || []
+        }
+        currentUserFollowing={currentUser?.following || []}
+        onFollowAction={(targetId) => {
+          if (!isAuth) {
+            toast.error("Du må logge inn for å følge brukere");
+            navigate("/login");
+            return;
+          }
+          followMutation.mutate(targetId);
+        }}
       />
     </>
   );
