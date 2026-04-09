@@ -4,24 +4,21 @@ import { useUserStore } from "../../stores/userStore";
 import {
   useJobDetailQuery,
   useSendMessageMutation,
-  useStripeMutation
+  useStripeMutation,
 } from "../../features/jobDetail/hook.ts";
 
 import JobImageCarousel from "../../components/job/JobImageCarousel.tsx";
-import JobDetails from "../../components/job/JobDetails.tsx";
-import JobDescription from "../../components/job/JobDescription.tsx";
-import JobLocation from "../../components/job/JobLocation.tsx";
-import RelatedJobs from "../../components/job/RelatedJobs.tsx";
-import JobContainer from "../../components/job/JobContainer.tsx";
-import JobProvider from "../../components/job/JobProvider.tsx";
 import JobButton from "../../components/job/JobButton.tsx";
 import { JobDetailSkeleton } from "../../components/Loading/JobDetailSkeleton.tsx";
-import { JobDetailCardSkeleton } from "../../components/Loading/JobDetailCardSkeleton.tsx";
 import { useFavoriteToggle } from "../../features/favorites/hook/useFavoriteToggle.ts";
+import { MapComponent } from "../../components/component/map/MapComponent";
+import { Heart, Share2, MapPin, Star } from "lucide-react";
+import { useState } from "react";
 
 const JobListingDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   const sendMessageMutation = useSendMessageMutation();
   const stripeMutation = useStripeMutation();
@@ -29,17 +26,20 @@ const JobListingDetailPage = () => {
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const currentUser = useUserStore((state) => state.user);
 
-  // TanStack Queries (Using id! to ensure id is passed)
-  const { isFavorited, handleFavoriteClick, isLoading } = useFavoriteToggle(id!, isAuth);
-  // Suppress unused warnings if these are managed elsewhere or intended for future use
-  void isFavorited; void handleFavoriteClick; void isLoading;
-
+  const {
+    isFavorited,
+    handleFavoriteClick,
+    isLoading: favLoading,
+  } = useFavoriteToggle(id!, isAuth);
   const { data: job, isLoading: isJobLoading } = useJobDetailQuery(id!);
   const isOwnJob = job?.userId?._id === currentUser?._id;
 
+  const [lng, lat] = job?.location?.coordinates || [0, 0];
+  const hasCoordinates = job?.location?.coordinates && (lng !== 0 || lat !== 0);
+
   const handleSendMessage = async (providerId: string) => {
     if (!isAuth) {
-      toast.error("Du må logge inn for å sende melding");
+      toast.error("Please login to send message");
       navigate("/login");
       return;
     }
@@ -52,7 +52,16 @@ const JobListingDetailPage = () => {
           navigate(`/messages/${data._id}`);
         },
         onError: async (err: unknown) => {
-          const error = err as { response?: { status?: number; data?: { paymentRequired?: boolean; amount?: number; message?: string } } };
+          const error = err as {
+            response?: {
+              status?: number;
+              data?: {
+                paymentRequired?: boolean;
+                amount?: number;
+                message?: string;
+              };
+            };
+          };
           const status = error.response?.status;
           const data = error.response?.data;
 
@@ -65,110 +74,253 @@ const JobListingDetailPage = () => {
               });
               window.location.href = paymentSession.url;
             } catch {
-              toast.error("Kunne ikke starte betaling");
+              toast.error("Could not start payment");
             }
             return;
           }
-          toast.error(data?.message || "Kunne ikke opprette samtale");
+          toast.error(data?.message || "Could not create conversation");
         },
-      }
+      },
     );
   };
 
-  const isMessageLoading = sendMessageMutation.isPending || stripeMutation.isPending;
+  const isMessageLoading =
+    sendMessageMutation.isPending || stripeMutation.isPending;
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  // Loading State
+  if (isJobLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-16">
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <JobDetailSkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  // Not Found State
+  if (!job) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-16 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Job Not Found
+          </h2>
+          <p className="text-gray-600">
+            The job you're looking for doesn't exist.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#F5F6F8]">
-      <div className="max-w-[1200px] mx-auto px-2 lg:px-0">
+    <div className="min-h-screen">
+      {/* Main Content */}
+      <div className="max-w-300 mx-auto px-4 py-6">
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Left - Image */}
+          <div className="relative lg:sticky lg:top-20 lg:h-fit">
+            <div className="rounded-xl overflow-hidden shadow-sm max-h-125">
+              {job.images && job.images.length > 0 ? (
+                <img
+                  src={job.images[selectedImageIndex]}
+                  alt={job.title}
+                  className="w-full max-h-125 h-full object-contain"
+                />
+              ) : (
+                <div className="w-full h-96 bg-gray-200 flex items-center justify-center">
+                  <span className="text-gray-400">No image</span>
+                </div>
+              )}
 
-        {/* Loading State */}
-        {isJobLoading ? (
-          <div className="flex flex-col lg:flex-row gap-6 mt-16 items-start">
-            <div className="flex-1"><JobDetailSkeleton /></div>
-            <div className="lg:w-[360px] w-full"><JobDetailCardSkeleton /></div>
-          </div>
-        ) : (
-          <div className="mt-16 sm:mt-0">
-            <div className="flex flex-col lg:flex-row gap-6 items-start">
+              {/* Like Button */}
+              {/* <button 
+                onClick={handleFavoriteClick}
+                disabled={favLoading}
+                className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center hover:shadow-lg transition-shadow z-10"
+              >
+                <Heart size={20} fill={isFavorited ? "#ef4444" : "none"} color={isFavorited ? "#ef4444" : "#6b7280"}/>
+              </button> */}
+            </div>
 
-              {/* ── Left Column: Main Content ── */}
-              <div className="flex-1 w-full min-w-0 space-y-5">
-
-                {/* Main Job Card */}
-                <div className="bg-white rounded-[20px] overflow-hidden shadow-[0px_2px_8px_0px_rgba(0,0,0,0.07)]">
-                  <JobImageCarousel images={job?.images} />
-                  <div className="px-6 pt-6 pb-8 sm:px-8 space-y-6">
-                    <JobDetails job={job} />
-                    <div className="border-t border-[#F0F0F0]" />
-                    <JobDescription description={job?.description} />
+            {/* Thumbnails */}
+            {job.images && job.images.length > 1 && (
+              <div className="flex gap-2 mt-3">
+                {job.images.slice(0, 4).map((img: string, idx: number) => (
+                  <div
+                    key={idx}
+                    onClick={() => setSelectedImageIndex(idx)}
+                    className={`w-16 h-16 rounded-lg overflow-hidden cursor-pointer transition-all ${idx === selectedImageIndex ? "ring-2 ring-blue-500 opacity-100" : "opacity-70 hover:opacity-100"}`}
+                  >
+                    <img
+                      src={img}
+                      className="w-full h-full object-cover"
+                      alt=""
+                    />
                   </div>
-                </div>
+                ))}
+              </div>
+            )}
+          </div>
 
-                {/* Provider Card (Includes Salary internal to it as per previous turn) */}
-                <div className="bg-white rounded-[20px] p-6 sm:p-8 shadow-[0px_2px_8px_0px_rgba(0,0,0,0.07)]">
-                  <JobProvider job={job} />
-                </div>
+          {/* Right - Details */}
+          <div className="space-y-6">
+            {/* Title & Price */}
+            <div>
+              <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                  {job.title || "Untitled Job"}
+                </h1>
+                <p className="text-3xl font-bold text-green-600">
+                  {job.price ? job.price.toLocaleString() : "0"} kr
+                </p>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Duration: {job.duration?.value || "-"}{" "}
+                {job.duration?.unit || ""}
+              </p>
+            </div>
 
-                {/* Location Card */}
-                <div className="bg-white rounded-[20px] p-3 shadow-[0px_2px_8px_0px_rgba(0,0,0,0.07)]">
-                  <JobLocation location={job?.location} />
+            {/* Contact Button */}
+            {job._id && (
+              <JobButton
+                handleSendMessage={() =>
+                  job.userId?._id && handleSendMessage(job.userId._id)
+                }
+                id={job._id}
+                job={job}
+                isOwnJob={isOwnJob}
+                isMsgLoading={isMessageLoading}
+              />
+            )}
+
+            {/* Description */}
+            <div className="bg-white rounded-xl p-5 shadow-sm">
+              <h2 className="font-semibold text-gray-900 mb-3">Description</h2>
+              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                {job.description || "No description available"}
+              </p>
+            </div>
+
+            {/* Details */}
+            <div className="bg-white rounded-xl p-5 shadow-sm">
+              <h2 className="font-semibold text-gray-900 mb-3">Details</h2>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Category</span>
+                  <span className="font-medium">
+                    {job.categories?.[0] || "General"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Location</span>
+                  <span className="font-medium flex items-center gap-1">
+                    <MapPin size={14} /> {job.location?.city || "Not specified"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Posted</span>
+                  <span className="font-medium">
+                    {job.createdAt ? formatDate(job.createdAt) : "-"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Experience</span>
+                  <span className="font-medium">
+                    {job.experience || "Not specified"}
+                  </span>
                 </div>
               </div>
+            </div>
 
-              {/* ── Right Column: Sticky Sidebar ── */}
-              <aside className="lg:w-[360px] w-full lg:sticky lg:top-5 space-y-4 shrink-0">
+            {/* Map */}
+            {hasCoordinates && (
+              <div className="bg-white rounded-xl p-5 shadow-sm">
+                <h2 className="font-semibold text-gray-900 mb-3">
+                  Location Map
+                </h2>
+                <div className="h-48 rounded-lg overflow-hidden bg-gray-100">
+                  <MapComponent
+                    coordinates={job.location.coordinates}
+                    circleRadius={800}
+                  />
+                </div>
+              </div>
+            )}
 
-                {/* Price CTA Card */}
-                <div className="bg-white rounded-[20px] overflow-hidden shadow-[0px_2px_8px_0px_rgba(0,0,0,0.07)]">
-                  <div className="h-1.5 bg-[#2F7E47]" />
-                  <div className="p-6 space-y-5">
-                    <div>
-                      <p className="text-[11px] font-semibold text-[#2F7E47] uppercase tracking-widest mb-1">
-                        Totalpris
-                      </p>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-[42px] font-black text-[#0A0A0A] leading-none tabular-nums">
-                          {job?.price ? job.price.toLocaleString("nb-NO") : "–"}
-                        </span>
-                        <span className="text-[20px] font-semibold text-[#9CA3AF]">kr</span>
-                      </div>
-                    </div>
-
-                    <JobButton
-                      handleSendMessage={() => handleSendMessage(job?.userId?._id)}
-                      id={job._id}
-                      job={job}
-                      isOwnJob={isOwnJob}
-                      isMsgLoading={isMessageLoading}
-                    />
-
-                    <p className="text-[11px] text-center text-[#9CA3AF] leading-relaxed">
-                      Trygt og sikkert oppgjør gjennom Jobblo.
+            {/* Seller Info */}
+            <div
+              className="bg-white rounded-xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() =>
+                job.userId?._id && navigate(`/profile/${job.userId._id}`)
+              }
+            >
+              <div className="flex items-center gap-3">
+                {job.userId?.avatarUrl ? (
+                  <img
+                    src={job.userId.avatarUrl}
+                    alt={job.userId.name}
+                    className="w-14 h-14 rounded-full object-cover border border-gray-200"
+                  />
+                ) : (
+                  <div className="w-14 h-14 bg-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                    {job.userId?.name?.charAt(0) || "?"}
+                  </div>
+                )}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-gray-900">
+                      {job.userId?.name || "Unknown Seller"}
                     </p>
+                    <span className="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full">
+                      Not Verified
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <div className="flex items-center gap-1 text-sm text-yellow-500">
+                      <Star size={14} fill="currentColor" />
+                      <span>{job.userId?.averageRating || "0"}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-sm text-green-600">
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <span>12 fullforte</span>
+                    </div>
                   </div>
                 </div>
-
-                {/* Quick Info Card */}
-                <div className="bg-white rounded-[20px] p-6 shadow-[0px_2px_8px_0px_rgba(0,0,0,0.07)]">
-                  <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-widest mb-4">
-                    Oppdragsinfo
-                  </p>
-                  <JobContainer job={job} />
-                </div>
-
-              </aside>
+              </div>
             </div>
 
-            {/* ── Related Jobs: Full-width at the bottom ── */}
-            <div className="mt-12 pb-12">
-              <h3 className="text-[20px] font-bold text-[#0A0A0A] mb-6 px-1">Lignende oppdrag</h3>
-              <RelatedJobs
-                coordinates={job?.location?.coordinates}
-                currentJobId={job?._id}
-              />
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2">
+                <Share2 size={16} /> Share
+              </button>
+              <button className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
+                Report
+              </button>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
