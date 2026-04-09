@@ -8,6 +8,7 @@ import { getMyChats } from "../../../api/chatAPI";
 import { initSocket } from "../../../socket/socket";
 import { NavLink } from "react-router-dom";
 import { Bell, Heart, Home, MessageCircle, Plus, User } from "lucide-react";
+import { useUnreadCount } from "../../../features/notifications/hooks";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -15,11 +16,15 @@ export default function Header() {
   const user = useUserStore((state) => state.user);
   const Auth = useUserStore((state) => state.isAuthenticated);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+
+  // Get unread notifications count using our new hook
+  const { data: unreadNotificationsData } = useUnreadCount(user?._id);
+  const unreadNotificationsCount = unreadNotificationsData?.count || 0;
 
   useEffect(() => {
     if (!user?._id) {
-      setUnreadCount(0);
+      setUnreadMessagesCount(0);
       return;
     }
 
@@ -49,7 +54,7 @@ export default function Header() {
           return chatUpdatedTime > lastCheckedTimestamp;
         });
 
-        setUnreadCount(unreadChats.length);
+        setUnreadMessagesCount(unreadChats.length);
 
         // 2. Join socket rooms
         if (socket) {
@@ -68,7 +73,7 @@ export default function Header() {
 
     // Listen for real-time messages
     const handleReceiveMessage = () => {
-      setUnreadCount(prev => prev + 1);
+      setUnreadMessagesCount(prev => prev + 1);
     };
 
     // Listen for local tab updates
@@ -122,8 +127,8 @@ export default function Header() {
   const navLinkUse: NavLinkItem[] = [
     { name: "Legg ut oppdrag", icon: <Plus size={20} />, path: "/publish-job" },
     { name: "Home", icon: <Home size={25} />, path: "/home" },
-    { name: "Meldinger", icon: <MessageCircle size={18} />, path: "/messages", badgeCount: unreadCount },
-    { name: "Varsler", icon: <Bell size={18} />, path: "/alerts" },
+    { name: "Meldinger", icon: <MessageCircle size={18} />, path: "/messages", badgeCount: unreadMessagesCount },
+    { name: "Varsler", icon: <Bell size={18} />, path: "/alerts", badgeCount: unreadNotificationsCount },
     { name: "Favoritter", icon: <Heart size={18} />, path: "/favorites" },
     { name: "Profil", icon: <User size={18} />, path: "/profile" },
   ];
@@ -132,7 +137,7 @@ export default function Header() {
 
   return (
     <>
-      <header className={`bg-white relative ${isMessagesPage ? "mb-0" : "mb-5 md:mb-16"}`}>
+      <header className={`bg-[#F6F1E8] relative ${isMessagesPage ? "mb-0" : "mb-6"}`}>
         <div className="h-14 md:h-22.75 max-w-300 mx-auto flex justify-between items-center px-4 lg:px-0">
 
           {/* LOGO */}

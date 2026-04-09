@@ -1,6 +1,6 @@
-const Notification = require('../models/Notification');
-const User = require('../models/User');
-const mongoose = require('mongoose');
+const Notification = require("../models/Notification");
+const User = require("../models/User");
+const mongoose = require("mongoose");
 
 // GET /api/notifications - Get all notifications for a user
 exports.getAllNotifications = async (req, res) => {
@@ -80,10 +80,93 @@ exports.markAsRead = async (req, res) => {
   }
 };
 
+// PUT /api/notifications/read-all - Mark all notifications as read for a user
+exports.markAllAsRead = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    await Notification.updateMany(
+      { userId, read: false },
+      { $set: { read: true } },
+    );
+
+    res.json({ success: true, message: "All notifications marked as read" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// DELETE /api/notifications/:id - Delete a notification
+exports.deleteNotification = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid notification ID" });
+    }
+
+    const deleted = await Notification.findByIdAndDelete(id);
+
+    if (!deleted) {
+      return res.status(404).json({ error: "Notification not found" });
+    }
+
+    res.json({ success: true, message: "Notification deleted" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// GET /api/notifications/unread-count - Get unread count for a user
+exports.getUnreadCount = async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    const count = await Notification.countDocuments({
+      userId,
+      read: false,
+    });
+
+    res.json({ count });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Helper function to create and emit notification (can be used elsewhere)
+exports.createAndEmitNotification = async (io, data) => {
+  try {
+    const notification = await Notification.create(data);
+    const populated = await Notification.findById(notification._id)
+      .populate("userId", "name email")
+      .populate("senderId", "name lastName avatarUrl");
+
+    // Emit to the specific user room
+    if (data.userId) {
+      io.to(data.userId.toString()).emit("new_notification", populated);
+    } else if (data.isSystem) {
+      io.emit("new_notification", populated); // System notification to everyone
+    }
+
+    return populated;
+  } catch (error) {
+    console.error("Error creating/emitting notification:", error);
+  }
+};
+
 // POST /api/notifications/test - Create test notification
 exports.createTestNotification = async (req, res) => {
   try {
     const { userId, type, content } = req.body;
+    const io = req.app.get("io");
 
     // Validate required fields
     if (!userId) {
@@ -101,21 +184,15 @@ exports.createTestNotification = async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Create test notification with default values if not provided
-    const testNotification = await Notification.create({
+    // Create test notification
+    const testNotification = await exports.createAndEmitNotification(io, {
       userId,
       type: type || "test",
       content: content || "Dette er en test-notifikasjon fra Jobblo API",
     });
 
-    // Populate user info
-    await testNotification.populate("userId", "name email");
-
     res.status(201).json(testNotification);
   } catch (error) {
-    if (error.name === "ValidationError") {
-      return res.status(400).json({ error: error.message });
-    }
     res.status(500).json({ error: error.message });
   }
 };
@@ -124,12 +201,13 @@ exports.createTestNotification = async (req, res) => {
 exports.createSystemNotification = async (req, res) => {
   try {
     const { type, content } = req.body;
+    const io = req.app.get("io");
 
     if (!type || !content) {
       return res.status(400).json({ error: "Type & content required" });
     }
 
-    const notification = await Notification.create({
+    const notification = await exports.createAndEmitNotification(io, {
       type,
       content,
       isSystem: true,

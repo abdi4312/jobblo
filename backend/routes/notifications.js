@@ -1,7 +1,7 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const notificationController = require('../controllers/notificationController');
-const { authenticate, requireAdmin } = require('../middleware/auth');
+const notificationController = require("../controllers/notificationController");
+const { authenticate, requireAdmin } = require("../middleware/auth");
 
 /**
  * @swagger
@@ -67,7 +67,29 @@ const { authenticate, requireAdmin } = require('../middleware/auth');
  *       500:
  *         description: Server-feil
  */
-router.get('/', authenticate, notificationController.getAllNotifications);
+router.get("/", authenticate, notificationController.getAllNotifications);
+
+/**
+ * @swagger
+ * /api/notifications/unread-count:
+ *   get:
+ *     summary: Hent antall uleste notifikasjoner
+ *     tags: [Notifikasjoner]
+ *     parameters:
+ *       - in: query
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Antall uleste notifikasjoner
+ */
+router.get(
+  "/unread-count",
+  authenticate,
+  notificationController.getUnreadCount,
+);
 
 /**
  * @swagger
@@ -96,7 +118,48 @@ router.get('/', authenticate, notificationController.getAllNotifications);
  *       500:
  *         description: Server-feil
  */
-router.put('/:id/read', authenticate, notificationController.markAsRead);
+router.put("/:id/read", authenticate, notificationController.markAsRead);
+
+/**
+ * @swagger
+ * /api/notifications/read-all:
+ *   put:
+ *     summary: Marker alle notifikasjoner som lest
+ *     tags: [Notifikasjoner]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Alle notifikasjoner markert som lest
+ */
+router.put("/read-all", authenticate, notificationController.markAllAsRead);
+
+/**
+ * @swagger
+ * /api/notifications/{id}:
+ *   delete:
+ *     summary: Slett en notifikasjon
+ *     tags: [Notifikasjoner]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Notifikasjon slettet
+ */
+router.delete("/:id", authenticate, notificationController.deleteNotification);
 
 /**
  * @swagger
@@ -136,7 +199,7 @@ router.put('/:id/read', authenticate, notificationController.markAsRead);
  *       500:
  *         description: Server-feil
  */
-router.post('/test', notificationController.createTestNotification);
+router.post("/test", notificationController.createTestNotification);
 
 /**
  * @swagger
@@ -191,6 +254,11 @@ router.post('/test', notificationController.createTestNotification);
  *       500:
  *         description: Server-feil
  */
-router.post('/system', authenticate, requireAdmin, notificationController.createSystemNotification);
+router.post(
+  "/system",
+  authenticate,
+  requireAdmin,
+  notificationController.createSystemNotification,
+);
 
 module.exports = router;
