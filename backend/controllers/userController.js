@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const Category = require("../models/Category");
 const List = require("../models/List");
 const Notification = require("../models/Notification");
+const notificationController = require("./notificationController");
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -405,12 +406,15 @@ exports.followUser = async (req, res) => {
       });
 
       // Create notification for the target user
-      await Notification.create({
-        userId: targetUserId,
-        senderId: currentUserId,
-        type: "follow",
-        content: `${currentUser.name} started following you`,
-      });
+      await notificationController.createAndEmitNotification(
+        req.app.get("io"),
+        {
+          userId: targetUserId,
+          senderId: currentUserId,
+          type: "follow",
+          content: `${currentUser.name} started following you`,
+        },
+      );
 
       return res.json({ message: "Followed", isFollowing: true });
     }

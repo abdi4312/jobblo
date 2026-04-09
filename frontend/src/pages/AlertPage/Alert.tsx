@@ -15,9 +15,16 @@ import {
   Tag,
   Trash2,
 } from "lucide-react";
-import { useNotifications } from "../../features/notifications/hooks";
+import {
+  useNotifications,
+  useMarkAsRead,
+  useMarkAllAsRead,
+  useDeleteNotification,
+  useUnreadCount,
+} from "../../features/notifications/hooks";
 import { NotificationSkeleton } from "../../components/Loading/NotificationSkeleton";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 
 interface Alert {
   _id: string;
@@ -75,12 +82,20 @@ export default function Alert() {
     isLoading: queryLoading,
   } = useNotifications(userId);
 
+  const { data: unreadCountData } = useUnreadCount(userId);
+  const markAsReadMutation = useMarkAsRead();
+  const markAllAsReadMutation = useMarkAllAsRead();
+  const deleteNotificationMutation = useDeleteNotification();
+
   // TanStack ke pages ko single array mein convert karna
   const alerts: Alert[] = data?.pages.flatMap((page) => page.data) || [];
 
   const tabs = [
     { id: "Alle", label: "Alle" },
-    { id: "Uleste", label: "Uleste" },
+    {
+      id: "Uleste",
+      label: `Uleste${unreadCountData?.count ? ` (${unreadCountData.count})` : ""}`,
+    },
   ];
 
   const notificationConfig = {
@@ -140,8 +155,33 @@ export default function Alert() {
     },
   };
 
-  const nyheter = alerts.filter((alert) => !alert.read);
-  const lagrede = alerts.filter((alert) => alert.read);
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await markAsReadMutation.mutateAsync(id);
+      toast.success("Markert som lest");
+    } catch (error) {
+      toast.error("Kunne ikke markere som lest");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteNotificationMutation.mutateAsync(id);
+      toast.success("Varsel slettet");
+    } catch (error) {
+      toast.error("Kunne ikke slette varsel");
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (!userId) return;
+    try {
+      await markAllAsReadMutation.mutateAsync(userId);
+      toast.success("Alle markert som lest");
+    } catch (error) {
+      toast.error("Kunne ikke markere alle som lest");
+    }
+  };
 
   const renderAlerts = (dataList: Alert[]) => {
     return (
@@ -192,13 +232,28 @@ export default function Alert() {
                         {config.title}
                       </h2>
                       <div className="flex gap-3 sm:hidden text-gray-400">
-                        <Check
-                          size={18}
-                          className="text-green-600 cursor-pointer"
-                        />
+                        {alert.read ? (
+                          <CheckCheck
+                            size={18}
+                            className="text-green-600 cursor-default"
+                          />
+                        ) : (
+                          <Check
+                            size={18}
+                            className="text-gray-400 cursor-pointer hover:text-green-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMarkAsRead(alert._id);
+                            }}
+                          />
+                        )}
                         <Trash2
                           size={18}
                           className="text-red-500 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(alert._id);
+                          }}
                         />
                       </div>
                     </div>
@@ -217,15 +272,28 @@ export default function Alert() {
                   </div>
                   <div className="flex flex-col justify-between items-end min-w-[120px]">
                     <div className="hidden sm:flex gap-4 items-center">
-                      <Check
-                        size={20}
-                        className="text-green-600 cursor-pointer hover:opacity-70 transition-all"
-                        onClick={(e) => e.stopPropagation()}
-                      />
+                      {alert.read ? (
+                        <CheckCheck
+                          size={20}
+                          className="text-green-600 cursor-default"
+                        />
+                      ) : (
+                        <Check
+                          size={20}
+                          className="text-gray-400 cursor-pointer hover:text-green-600 hover:opacity-70 transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkAsRead(alert._id);
+                          }}
+                        />
+                      )}
                       <Trash2
                         size={20}
                         className="text-red-500 cursor-pointer hover:opacity-70 transition-all"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(alert._id);
+                        }}
                       />
                     </div>
                     <button
@@ -255,17 +323,25 @@ export default function Alert() {
     );
   };
 
+  const filteredAlerts =
+    activeTab === "Alle" ? alerts : alerts.filter((a) => !a.read);
+
   return (
     <div className="max-w-300 mx-auto">
       <div>
         <div className="flex justify-between items-center">
           <h1 className="text-[#101828] text-[40px] font-bold">Varsler</h1>
-          <p className="flex text-[16px] text-[#2F7E47] font-normal cursor-pointer">
-            <span>
-              <CheckCheck size={20} />
-            </span>{" "}
-            Mark alle som lest
-          </p>
+          {unreadCountData?.count >= 5 && (
+            <p
+              className="flex text-[16px] text-[#2F7E47] font-normal cursor-pointer hover:opacity-70"
+              onClick={handleMarkAllAsRead}
+            >
+              <span>
+                <CheckCheck size={20} />
+              </span>{" "}
+              Mark alle som lest
+            </p>
+          )}
         </div>
 
         <div className={`flex w-fit gap-6 my-8`}>
@@ -285,16 +361,14 @@ export default function Alert() {
           <NotificationSkeleton />
         ) : (
           <div>
-            {activeTab === "Alle" ? (
-              nyheter.length === 0 ? (
-                <p>Ingen nyheter ennå</p>
-              ) : (
-                renderAlerts(nyheter)
-              )
-            ) : lagrede.length === 0 ? (
-              <p>Ingen lagrede varsler</p>
+            {filteredAlerts.length === 0 ? (
+              <p className="text-center py-10 text-gray-500">
+                {activeTab === "Alle"
+                  ? "Ingen nyheter ennå"
+                  : "Ingen uleste varsler"}
+              </p>
             ) : (
-              renderAlerts(lagrede)
+              renderAlerts(filteredAlerts)
             )}
 
             {/* LOAD MORE BUTTON logic updated for TanStack */}

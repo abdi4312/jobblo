@@ -2,6 +2,7 @@ const List = require("../models/List");
 const Service = require("../models/Service");
 const Notification = require("../models/Notification");
 const User = require("../models/User");
+const notificationController = require("./notificationController");
 
 // Get all lists for a user (where they are owner or contributor)
 exports.getUserLists = async (req, res) => {
@@ -79,12 +80,15 @@ exports.addServiceToList = async (req, res) => {
     const currentUser = await User.findById(req.userId);
 
     if (service && service.userId && service.userId.toString() !== req.userId) {
-      await Notification.create({
-        userId: service.userId,
-        senderId: req.userId,
-        type: "favorite",
-        content: `${currentUser.name} added your item "${service.title}" to their list`,
-      });
+      await notificationController.createAndEmitNotification(
+        req.app.get("io"),
+        {
+          userId: service.userId,
+          senderId: req.userId,
+          type: "favorite",
+          content: `${currentUser.name} added your item "${service.title}" to their list`,
+        },
+      );
     }
 
     res.status(200).json(list);
