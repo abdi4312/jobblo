@@ -1,8 +1,19 @@
 import React from "react";
 import { MapPin, Clock, Trash2 } from "lucide-react";
 
+interface ServiceData {
+  _id: string;
+  title: string;
+  description?: string;
+  location: { address?: string; city?: string } | string;
+  price: { value?: number; unit?: string } | number;
+  duration: { value?: string | number; unit?: string } | string;
+  images?: string[];
+  image?: string;
+}
+
 interface ServiceCardProps {
-  data: any;
+  data: ServiceData;
   onDelete: () => void;
 }
 

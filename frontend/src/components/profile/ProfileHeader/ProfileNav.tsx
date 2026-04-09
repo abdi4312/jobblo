@@ -1,4 +1,4 @@
-import { LayoutGrid, Heart, Bookmark, Shirt, Gauge } from 'lucide-react';
+import { LayoutGrid, Heart, Bookmark } from 'lucide-react';
 
 interface ProfileNavProps {
   activeTab: string;

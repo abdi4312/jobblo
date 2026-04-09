@@ -1,4 +1,4 @@
-const { generateTokens, createSession } = require("../utils/tokenUtils");
+const { createSession } = require("../utils/tokenUtils");
 const Subscription = require("../models/Subscription");
 const axios = require("axios");
 const User = require("../models/User");
@@ -127,16 +127,15 @@ exports.vippsCallback = async (req, res) => {
     // 6️⃣ Clear session state
     if (req.session) delete req.session.vippsState;
 
-    // 7️⃣ Issue Tokens & Create Session
-    const { accessToken, refreshToken } = generateTokens(user._id);
-    await createSession(req, user._id, refreshToken);
+    // 7️⃣ Issue Tokens & Create Session (createSession handles token generation)
+    const { accessToken, refreshToken } = await createSession(req, user._id);
 
     // Set cookies
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: 60 * 60 * 1000, // 1 hour (matches token expiry)
     });
 
     res.cookie("refreshToken", refreshToken, {

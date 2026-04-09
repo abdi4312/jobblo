@@ -7,10 +7,29 @@ import {
   RotateCcw,
 } from "lucide-react";
 
+interface TransactionItem {
+  _id: string;
+  user?: { name?: string; email?: string };
+  plan?: { name?: string };
+  type?: string;
+  amount?: number;
+  discount?: number;
+  status?: string;
+  refunded?: boolean;
+  createdAt?: string;
+  reference?: string;
+}
+
+interface StatusConfig {
+  color: string;
+  bgColor: string;
+  label: string;
+}
+
 interface Props {
-  transactions: any[];
+  transactions: TransactionItem[];
   loading: boolean;
-  getStatusConfig: (status: string) => any;
+  getStatusConfig: (status: string) => StatusConfig;
   onUpdateStatus: (id: string, newStatus: string) => void;
 }
 

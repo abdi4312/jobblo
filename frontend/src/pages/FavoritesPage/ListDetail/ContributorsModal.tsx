@@ -1,8 +1,23 @@
-import { X, UserMinus, Plus, User } from "lucide-react";
+import { X, Plus, User } from "lucide-react";
 import { useRemoveContributor } from "../../../features/favoriteLists/hooks";
 
+interface Contributor {
+  _id: string;
+  name?: string;
+  lastName?: string;
+  email?: string;
+  avatarUrl?: string;
+  username?: string;
+}
+
+interface List {
+  _id: string;
+  user?: Contributor[];
+  contributors?: Contributor[];
+}
+
 interface ContributorsModalProps {
-  list: any;
+  list: List;
   isOpen: boolean;
   onClose: () => void;
   onAddContributor: () => void;
@@ -61,7 +76,7 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({ list, isOpen, onC
 
           <div className="space-y-4">
             {/* List Owner */}
-            {list.user?.map((owner: any) => (
+            {list.user?.map((owner: Contributor) => (
               <div
                 key={owner._id}
                 className="w-full flex items-center justify-between p-2 hover:bg-gray-50 rounded-2xl transition-all"
@@ -91,7 +106,7 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({ list, isOpen, onC
 
             {/* Other Contributors */}
             {list.contributors?.length > 0 ? (
-              list.contributors.map((user: any) => (
+              list.contributors.map((user: Contributor) => (
                 <div
                   key={user._id}
                   className="w-full flex items-center justify-between p-2 hover:bg-gray-50 rounded-2xl transition-all"

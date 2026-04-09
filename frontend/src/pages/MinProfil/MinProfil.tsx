@@ -170,20 +170,19 @@ export default function MinProfil() {
               <span>{section.icon}</span>
               <span className="text-[24px] font-semibold">{section.title}</span>
             </div>
-            {section.fields.map((f: any) => (
+            {section.fields.map((f: { field: string; label: string; type?: string }) => (
               <div key={f.field}>
                 {f.label === "Fornavn" && <div className="h-[1px] bg-black/5 my-2" />}
                 <ProfileField
                   label={f.label}
                   field={f.field}
-                  value={(formData as any)[f.field]}
-                  initialValue={(user as any)[f.field === 'phoneNumber' ? 'phone' : f.field] || ""}
+                  value={(formData as unknown as Record<string, string>)[f.field]}
+                  initialValue={(user as unknown as Record<string, string>)[f.field === 'phoneNumber' ? 'phone' : f.field] || ""}
                   type={f.type}
                   isEditing={editingField === f.field}
                   onEdit={handleEdit}
                   onSave={handleSave}
                   onChange={handleInputChange}
-                  isLoading={updateUserMutation.isPending && editingField === f.field}
                 />
               </div>
             ))}

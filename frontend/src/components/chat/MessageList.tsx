@@ -4,7 +4,6 @@ import type { ChatMessage } from '../../api/chatAPI';
 interface MessageListProps {
   messages: ChatMessage[];
   userId: string | null;
-  formatDate: (date: string) => string;
   formatTime: (date: string) => string;
   messagesEndRef: React.RefObject<HTMLDivElement>;
 }
@@ -12,7 +11,6 @@ interface MessageListProps {
 function MessageList({
   messages,
   userId,
-  formatDate,
   formatTime,
   messagesEndRef
 }: MessageListProps) {

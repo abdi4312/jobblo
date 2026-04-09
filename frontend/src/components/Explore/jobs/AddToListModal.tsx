@@ -10,6 +10,12 @@ interface AddToListModalProps {
   onClose: () => void;
 }
 
+interface FavoriteList {
+  _id: string;
+  name: string;
+  services?: Array<{ _id?: string; images?: string[] } | string>;
+}
+
 const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose }) => {
   const { data: lists = [], isLoading } = useFavoriteLists();
   const createListMutation = useCreateFavoriteList();
@@ -32,13 +38,13 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose })
     }
   };
 
-  const isJobInList = (list: any) => {
-    return list.services?.some((s: any) =>
+  const isJobInList = (list: FavoriteList) => {
+    return list.services?.some((s: { _id?: string } | string) =>
       typeof s === "string" ? s === job._id : s._id === job._id,
     );
   };
 
-  const handleToggleList = async (list: any) => {
+  const handleToggleList = async (list: FavoriteList) => {
     if (isJobInList(list)) {
       await removeFromListMutation.mutateAsync({
         listId: list._id,
@@ -150,7 +156,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose })
             </div>
           ) : (
             <div className="space-y-2">
-              {lists.map((list: any) => (
+              {lists.map((list: FavoriteList) => (
                 <button
                   key={list._id}
                   onClick={() => handleToggleList(list)}
@@ -158,15 +164,19 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose })
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 group-hover:bg-gray-200 transition-colors">
-                      {list.services?.[0]?.images?.[0] ? (
-                        <img
-                          src={list.services[0].images[0]}
-                          className="w-full h-full object-cover rounded-xl"
-                          alt=""
-                        />
-                      ) : (
-                        <Plus size={20} />
-                      )}
+                      {(() => {
+                        const firstService = list.services?.[0];
+                        const imageUrl = firstService && typeof firstService !== 'string' ? firstService.images?.[0] : undefined;
+                        return imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            className="w-full h-full object-cover rounded-xl"
+                            alt=""
+                          />
+                        ) : (
+                          <Plus size={20} />
+                        );
+                      })()}
                     </div>
                     <div className="text-left">
                       <p className="font-bold text-[#0A0A0A]">{list.name}</p>

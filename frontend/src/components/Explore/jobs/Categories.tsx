@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useCategories } from "../../../features/categories/hooks.ts";
 import { useNavigate } from "react-router-dom";
 import { CategoriesSkeleton } from "../../Loading/CategoriesSkeleton.tsx";
@@ -12,11 +12,10 @@ interface CategoriesProps {
 }
 
 export function Categories({
-  showTitle = true,
   onCategoriesChange,
   allowMultiSelect = false,
 }: CategoriesProps) {
-  const { data: category = [], isLoading, error } = useCategories();
+  const { data: category = [], isLoading } = useCategories();
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const navigate = useNavigate();
@@ -82,7 +81,7 @@ export function Categories({
 
                   // Check if currently selected (for active state)
                   const isSelected = selectedCategories.includes(item.name);
-                  const LucideIcon = (Icons as any)[item.icon] || Icons.HelpCircle;
+                  const LucideIcon = (Icons as Record<string, React.ComponentType<{ size?: number; strokeWidth?: number }> >)[item.icon] || Icons.HelpCircle;
 
                   return (
                     <div

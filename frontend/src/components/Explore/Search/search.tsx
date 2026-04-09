@@ -22,7 +22,7 @@ export function Search({ onSearchChange, value }: SearchProps) {
     if (value !== undefined && value !== searchQuery) {
       setSearchQuery(value);
     }
-  }, [value]);
+  }, [value, searchQuery]);
 
   // Create debounced search function that waits 1 second after user stops typing
   const debouncedSearch = useMemo(

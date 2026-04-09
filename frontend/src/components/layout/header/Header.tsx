@@ -1,6 +1,5 @@
 import * as Icons from "../../../assets/icons";
 import { VippsButton } from "../../component/button/VippsButton.tsx";
-import { VerticalDivider } from "../../component/divider/verticalDivider/VerticalDivider.tsx";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUserStore } from "../../../stores/userStore";
 import { toast } from "react-hot-toast";
@@ -15,15 +14,11 @@ export default function Header() {
   const location = useLocation();
   const user = useUserStore((state) => state.user);
   const Auth = useUserStore((state) => state.isAuthenticated);
-  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
-  const [showHeader, setShowHeader] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     if (!user?._id) {
-      setHasUnreadMessages(false);
       setUnreadCount(0);
       return;
     }
@@ -54,7 +49,6 @@ export default function Header() {
           return chatUpdatedTime > lastCheckedTimestamp;
         });
 
-        setHasUnreadMessages(unreadChats.length > 0);
         setUnreadCount(unreadChats.length);
 
         // 2. Join socket rooms
@@ -74,8 +68,7 @@ export default function Header() {
 
     // Listen for real-time messages
     const handleReceiveMessage = () => {
-      setHasUnreadMessages(true);
-      // We could re-fetch unread count here but it might be heavy
+      setUnreadCount(prev => prev + 1);
     };
 
     // Listen for local tab updates
@@ -112,18 +105,14 @@ export default function Header() {
     }
   };
 
-  interface NavLink {
-    name: string;
-    path: string;
-  }
   interface NavLinkItem {
     name: string;
-    icon: React.ReactNode;
+    icon?: React.ReactNode;
     path: string;
     badgeCount?: number;
   }
 
-  const navLinks: NavLink[] = [
+  const navLinks: NavLinkItem[] = [
     { name: "Om oss", path: "/om-oss" },
     { name: "Slik fungerer det", path: "/slik-fungerer-det" },
     { name: "Tjenester", path: "/job-listing" },
@@ -132,36 +121,17 @@ export default function Header() {
 
   const navLinkUse: NavLinkItem[] = [
     { name: "Legg ut oppdrag", icon: <Plus size={20} />, path: "/publish-job" },
-    { name: "Home", icon: <Home size={25} />, path: "home" },
+    { name: "Home", icon: <Home size={25} />, path: "/home" },
     { name: "Meldinger", icon: <MessageCircle size={18} />, path: "/messages", badgeCount: unreadCount },
     { name: "Varsler", icon: <Bell size={18} />, path: "/alerts" },
     { name: "Favoritter", icon: <Heart size={18} />, path: "/favorites" },
     { name: "Profil", icon: <User size={18} />, path: "/profile" },
   ];
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY < lastScrollY) {
-        // Bruker scroller opp
-        setShowHeader(true);
-      } else {
-        // Bruker scroller ned
-        setShowHeader(false);
-      }
-      setLastScrollY(window.scrollY);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, [lastScrollY]);
 
   const isMessagesPage = location.pathname.startsWith("/messages");
 
   return (
     <>
-      {/* <header className={`${showHeader ? "translate-y-0" : "-translate-y-full"} bg-white transition-transform duration-300 fixed top-0 left-0 right-0 z-50`}> */}
       <header className={`bg-white relative ${isMessagesPage ? "mb-0" : "mb-5 md:mb-16"}`}>
         <div className="h-14 md:h-22.75 max-w-300 mx-auto flex justify-between items-center px-4 lg:px-0">
 
@@ -269,7 +239,7 @@ export default function Header() {
 
           <ul className="flex flex-col gap-2 p-4">
             {/* Logic: If Auth show navLinkUse else navLinks */}
-            {(Auth ? navLinkUse : navLinks).map((link: any, index: number) => (
+            {(Auth ? navLinkUse : navLinks).map((link, index) => (
               <li key={index}>
                 <NavLink
                   to={link.path}

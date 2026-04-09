@@ -1,11 +1,18 @@
 import React from "react";
 import { X } from "lucide-react";
 
+interface NewUserData {
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+}
+
 interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  newUser: any;
-  setNewUser: (data: any) => void;
+  newUser: NewUserData;
+  setNewUser: React.Dispatch<React.SetStateAction<NewUserData>>;
   handleCreateUser: (e: React.FormEvent) => void;
   isSubmitting: boolean;
 }

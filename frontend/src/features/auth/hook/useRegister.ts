@@ -13,7 +13,7 @@ export const useRegister = () => {
       toast.success(`Velkommen ${response.user.name}!`);
       navigate("/home");
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error("Error registering:", error);
       if (axios.isAxiosError(error)) {
         const errorMsg = error.response?.data?.error || "Kunne ikke registrere bruker";

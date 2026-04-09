@@ -9,7 +9,7 @@ import { useAuth } from "./features/auth/hook/useAuth.ts";
 import { Toaster } from "react-hot-toast";
 
 export default function App() {
-  const { user, isLoadingUser } = useAuth();
+  const { isLoadingUser } = useAuth();
   const location = useLocation();
 
   if (isLoadingUser) {

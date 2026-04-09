@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, Navigation, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { MapComponent } from "../component/map/MapComponent";
 
 interface JobLocationProps {

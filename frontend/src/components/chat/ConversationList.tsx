@@ -1,12 +1,27 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
+interface ConversationUser {
+  _id: string;
+  name?: string;
+  avatarUrl?: string;
+}
+
+interface ChatItem {
+  _id: string;
+  clientId?: ConversationUser;
+  providerId?: ConversationUser;
+  serviceId?: { images?: string[]; image?: string; title?: string; isSold?: boolean };
+  lastMessage?: { text?: string; createdAt?: string };
+  updatedAt?: string;
+}
+
 interface ConversationListProps {
   loading: boolean;
-  filteredChats: any[];
-  user: any;
+  filteredChats: ChatItem[];
+  user: { _id?: string } | null;
   conversationId: string | undefined;
-  isUnread: (chat: any) => boolean;
+  isUnread: (chat: ChatItem) => boolean;
   formatTime: (date: string) => string;
   onlineUsers?: string[];
 }
@@ -84,7 +99,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                       {otherPerson?.name || "Unknown"}
                     </h2>
                     <span className="text-[13px] text-[#868E96] font-normal whitespace-nowrap">
-                      {formatTime(chat.updatedAt)}
+                      {formatTime(chat.updatedAt || "")}
                     </span>
                   </div>
                   <p className={`text-[15px] truncate leading-tight ${hasUnread ? "text-[#212529] font-bold" : "text-[#868E96]"}`}>

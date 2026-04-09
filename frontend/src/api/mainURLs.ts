@@ -106,7 +106,7 @@ mainLink.interceptors.response.use(
         // Retry original request
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return mainLink(originalRequest);
-      } catch (refreshError: any) {
+      } catch (refreshError: unknown) {
         console.error("Token refresh failed. Resetting auth state...");
         isRefreshing = false;
         onTokenRefreshed(null); // Notify subscribers that it failed

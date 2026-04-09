@@ -33,7 +33,7 @@ export default function JobListingPage() {
     if (location.state) {
       window.history.replaceState({}, document.title);
     }
-  }, []);
+  }, [location.state]);
 
   return <>
     <div className="max-w-300 mx-auto px-4 pb-10">

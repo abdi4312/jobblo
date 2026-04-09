@@ -1,10 +1,22 @@
 import React from "react";
 import { X as CloseIcon } from "lucide-react";
 
+interface HeroFormData {
+  title: string;
+  subtitle: string;
+  buttonText: string;
+  buttonUrl: string;
+  footerText: string;
+  bgColor: string;
+  image: File | string | null;
+  activeFrom: string;
+  expireAt: string;
+}
+
 interface HeroModalProps {
   editingId: string | null;
-  formData: any;
-  setFormData: (data: any) => void;
+  formData: HeroFormData;
+  setFormData: React.Dispatch<React.SetStateAction<HeroFormData>>;
   handleSubmit: (e: React.FormEvent) => void;
   closeModal: () => void;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;

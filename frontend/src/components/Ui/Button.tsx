@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 interface ButtonProps {
   label?: string;
-  onClick?: (e?: any) => void;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => void;
   to?: string; // internal route
   href?: string; // external link
   icon?: ReactNode; // react icon / svg

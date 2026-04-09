@@ -1,8 +1,18 @@
+interface ServiceId {
+  _id: string;
+  title?: string;
+}
+
+interface UserId {
+  _id: string;
+  name?: string;
+}
+
 export interface ContractOrder {
   _id: string;
-  serviceId?: any;
-  customerId?: any;
-  providerId?: any;
+  serviceId?: ServiceId;
+  customerId?: UserId;
+  providerId?: UserId;
   agreedPrice?: number;
   scheduledDate?: string;
 }

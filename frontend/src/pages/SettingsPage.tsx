@@ -3,8 +3,22 @@ import { Outlet } from "react-router-dom";
 import { useUserStore } from "../stores/userStore";
 import { useUpdateUser } from "../features/profile/hooks";
 
+interface UserData {
+  _id?: string;
+  name?: string;
+  email?: string;
+  avatarUrl?: string;
+  phone?: string;
+  bio?: string;
+}
+
+interface UpdateUserResult {
+  mutateAsync: (data: FormData) => Promise<unknown>;
+  isPending: boolean;
+}
+
 export type SettingsContextType = {
-  user: any;
+  user: UserData | null;
   form: {
     name: string;
     lastName: string;
@@ -16,7 +30,7 @@ export type SettingsContextType = {
     country: string;
     email: string;
   };
-  updateUser: any;
+  updateUser: UpdateUserResult;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   cameraInputRef: React.RefObject<HTMLInputElement | null>;
   handleChange: (key: string, value: string) => void;

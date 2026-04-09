@@ -22,7 +22,20 @@ interface HistoryItem {
     iconName?: string;
 }
 
-function search() {
+interface CategoryResult {
+    _id: string;
+    name: string;
+    icon: string;
+}
+
+interface UserResult {
+    _id: string;
+    name: string;
+    lastName?: string;
+    avatarUrl?: string;
+}
+
+function SearchComponent() {
     const navigate = useNavigate();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [activeTab, setActiveTab] = useState("Top");
@@ -53,7 +66,8 @@ function search() {
         localStorage.removeItem("search_history_v2");
     };
 
-    const handleSearchSubmit = (e?: React.FormEvent) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _handleSearchSubmit = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (searchQuery.trim()) {
             const query = searchQuery.trim();
@@ -102,7 +116,7 @@ function search() {
         infiniteData?.pages.flatMap((page) => page.results) || [];
 
     // Fetch search results (old hook, keeping for now to avoid breaking other logic)
-    const { data: searchPeople, isLoading: isSearchLoading } = useSearchUsers(
+    useSearchUsers(
         activeTab === "People" && searchQuery.length >= 2 ? searchQuery : undefined,
     );
 
@@ -237,8 +251,9 @@ function search() {
                                                             )}
                                                         </div>
                                                         {searchResults.categories.results.map(
-                                                            (cat: any) => {
+                                                            (cat: CategoryResult) => {
                                                                 const LucideIcon =
+                                                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                                                     (Icons as any)[cat.icon] || Icons.HelpCircle;
                                                                 return (
                                                                     <div
@@ -294,7 +309,7 @@ function search() {
                                                                 </button>
                                                             )}
                                                         </div>
-                                                        {searchResults.people.results.map((p: any) => (
+                                                        {searchResults.people.results.map((p: UserResult) => (
                                                             <div
                                                                 key={p._id}
                                                                 onClick={() => {
@@ -357,7 +372,7 @@ function search() {
                                                                 </button>
                                                             )}
                                                         </div>
-                                                        {searchResults.lists.results.map((list: any) => (
+                                                        {searchResults.lists.results.map((list) => (
                                                             <div
                                                                 key={list._id}
                                                                 onClick={() => {
@@ -461,10 +476,13 @@ function search() {
                                             </div>
                                         ) : infiniteResults.length > 0 ? (
                                             <div className="space-y-4">
+                                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                                 {infiniteResults.map((item: any) => {
                                                     if (activeTab === "Categories") {
+                                                        const catItem = item;
                                                         const LucideIcon =
-                                                            (Icons as any)[item.icon] || Icons.HelpCircle;
+                                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                                            (Icons as any)[catItem.icon] || Icons.HelpCircle;
                                                         return (
                                                             <div
                                                                 key={item._id}
@@ -613,7 +631,7 @@ function search() {
                                         Loading lists...
                                     </div>
                                 ) : favoriteLists && favoriteLists.length > 0 ? (
-                                    favoriteLists.map((list: any) => (
+                                    favoriteLists.map((list) => (
                                         <div
                                             key={list._id}
                                             onClick={() => {
@@ -662,8 +680,9 @@ function search() {
                                         Loading categories...
                                     </div>
                                 ) : categories && categories.length > 0 ? (
-                                    categories.map((cat: any) => {
+                                    categories.map((cat) => {
                                         const LucideIcon =
+                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                             (Icons as any)[cat.icon] || Icons.HelpCircle;
                                         return (
                                             <div
@@ -712,7 +731,7 @@ function search() {
                                         Loading people...
                                     </div>
                                 ) : people && people.length > 0 ? (
-                                    people.map((p: any) => (
+                                    people.map((p) => (
                                         <div
                                             key={p._id}
                                             onClick={() => {
@@ -808,7 +827,8 @@ function search() {
                                         <div className="space-y-4">
                                             {searchHistory.map((item) => {
                                                 const LucideIcon = item.iconName
-                                                    ? (Icons as any)[item.iconName]
+                                                    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                                      (Icons as any)[item.iconName]
                                                     : Tag;
                                                 return (
                                                     <div
@@ -888,4 +908,4 @@ function search() {
     );
 }
 
-export default search;
+export default SearchComponent;

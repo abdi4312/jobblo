@@ -17,7 +17,6 @@ import { JobCard } from "../../components/Explore/jobs/JobCard";
 import { MapComponent } from "../../components/component/map/MapComponent";
 import { useJobs } from "../../features/jobsList/hooks";
 import { useFilterOptions } from "../../features/jobsList/filterHooks";
-import toast from "react-hot-toast";
 
 const ServiceListing = () => {
   const { categoryName } = useParams();
@@ -67,7 +66,7 @@ const ServiceListing = () => {
     if (!locationSearch.trim()) return filterOptions.locations;
 
     return filterOptions.locations.filter((loc) =>
-      (loc as any).name.toLowerCase().includes(locationSearch.toLowerCase()),
+      loc.name.toLowerCase().includes(locationSearch.toLowerCase()),
     );
   }, [filterOptions?.locations, locationSearch]);
 
@@ -172,7 +171,7 @@ const ServiceListing = () => {
                           ? "bg-[#ff8a7a]/20 text-[#ff8a7a]"
                           : "bg-gray-100 text-gray-400"
                       }`}>
-                        {(cat as any).count || 0}
+                        {(cat).count || 0}
                       </span>
                     </span>
                   </button>
@@ -212,7 +211,7 @@ const ServiceListing = () => {
                               ? "bg-[#ff8a7a]/20 text-[#ff8a7a]"
                               : "bg-gray-100 text-gray-300"
                           }`}>
-                            {(sub as any).count || 0}
+                            {(sub).count || 0}
                           </span>
                         </span>
                       </button>
@@ -289,24 +288,24 @@ const ServiceListing = () => {
           ) : (
             filteredLocations.map((loc) => (
               <label
-                key={(loc as any).name}
+                key={(loc).name}
                 className="flex items-center justify-between cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
                   <input
                     type="checkbox"
-                    checked={selectedLocations.includes((loc as any).name)}
-                    onChange={() => toggleLocation((loc as any).name)}
+                    checked={selectedLocations.includes((loc).name)}
+                    onChange={() => toggleLocation((loc).name)}
                     className="w-5 h-5 rounded-md border-gray-300 text-[#ff8a7a] focus:ring-[#ff8a7a]"
                   />
                   <span
-                    className={`text-sm transition-colors ${selectedLocations.includes((loc as any).name) ? "text-gray-900 font-bold" : "text-gray-600 group-hover:text-gray-900"}`}
+                    className={`text-sm transition-colors ${selectedLocations.includes((loc).name) ? "text-gray-900 font-bold" : "text-gray-600 group-hover:text-gray-900"}`}
                   >
-                    {(loc as any).name}
+                    {(loc).name}
                   </span>
                 </div>
                 <span className="text-[10px] text-gray-300">
-                  ({(loc as any).count})
+                  ({(loc).count})
                 </span>
               </label>
             ))

@@ -1,5 +1,4 @@
 import { io, Socket } from "socket.io-client";
-import mainLink from "../api/mainURLs";
 
 let socket: Socket | null = null;
 

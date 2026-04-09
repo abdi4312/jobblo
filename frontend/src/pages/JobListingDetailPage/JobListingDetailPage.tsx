@@ -51,19 +51,20 @@ const JobListingDetailPage = () => {
         onSuccess: (data) => {
           navigate(`/messages/${data._id}`);
         },
-        onError: async (err: any) => {
-          const status = err.response?.status;
-          const data = err.response?.data;
+        onError: async (err: unknown) => {
+          const error = err as { response?: { status?: number; data?: { paymentRequired?: boolean; amount?: number; message?: string } } };
+          const status = error.response?.status;
+          const data = error.response?.data;
 
           if (status === 402 && data?.paymentRequired) {
             try {
               const paymentSession = await stripeMutation.mutateAsync({
-                amount: data.amount,
+                amount: data.amount || 0,
                 providerId,
                 serviceId: job._id,
               });
               window.location.href = paymentSession.url;
-            } catch (stripeErr) {
+            } catch {
               toast.error("Kunne ikke starte betaling");
             }
             return;

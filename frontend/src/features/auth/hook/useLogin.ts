@@ -19,10 +19,11 @@ export const useLogin = () => {
       navigate("/home");
     },
     
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string } } };
       console.error("Error logging in:", error);
-      console.log("error",error.response?.data.error);
-      toast.error(error.response?.data?.error || "Feil e-post eller passord");
+      console.log("error", err.response?.data?.error);
+      toast.error(err.response?.data?.error || "Feil e-post eller passord");
     },
   
   });

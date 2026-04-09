@@ -13,6 +13,11 @@ export interface CreateListDTO {
   name: string;
 }
 
+export interface UpdateListDTO {
+  name?: string;
+  isPublic?: boolean;
+}
+
 export interface AddServiceToListDTO {
   listId: string;
   serviceId: string;

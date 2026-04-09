@@ -3,6 +3,7 @@ import { MapPin } from "lucide-react";
 import { useNearbyJobsQuery } from "../../features/jobDetail/hook.ts";
 import { JobCard } from "../Explore/jobs/JobCard.tsx";
 import { JobCardSkeleton } from "../Loading/JobCardSkeleton.tsx";
+import type { Jobs } from "../../types/Jobs";
 
 interface RelatedJobsProps {
   coordinates?: [number, number];
@@ -53,7 +54,7 @@ const RelatedJobs: React.FC<RelatedJobsProps> = ({ coordinates, currentJobId }) 
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-      {nearbyJobs.map((job: any) => (
+      {nearbyJobs.map((job: Jobs) => (
         <JobCard key={job._id} job={job} />
       ))}
     </div>

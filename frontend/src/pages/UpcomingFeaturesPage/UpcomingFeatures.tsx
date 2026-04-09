@@ -61,7 +61,7 @@ const UpcomingFeatures: React.FC = () => {
                     {['all', 'planned', 'in-progress', 'completed'].map((f) => (
                         <button
                             key={f}
-                            onClick={() => setFilter(f as any)}
+                            onClick={() => setFilter(f as 'all' | 'planned' | 'in-progress' | 'completed')}
                             className={`px-8 py-3.5 rounded-[20px] text-[13px] font-black tracking-wide transition-all duration-500 capitalize shadow-sm
                                 ${filter === f
                                     ? 'bg-[#2F7E47] text-white shadow-[#2F7E4740] shadow-2xl translate-y-[-2px]'

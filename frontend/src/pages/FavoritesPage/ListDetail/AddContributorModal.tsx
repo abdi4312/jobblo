@@ -1,8 +1,15 @@
 import React, { useState } from "react";
-import { X, Search, UserPlus, ArrowLeft } from "lucide-react";
+import { X, Search, UserPlus } from "lucide-react";
 import mainLink from "../../../api/mainURLs";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
+
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+}
 
 interface AddContributorModalProps {
   listId: string;
@@ -12,9 +19,9 @@ interface AddContributorModalProps {
 
 const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpen, onClose }) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
 
   const queryClient = useQueryClient();
 
@@ -35,7 +42,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpe
     }
   };
 
-  const toggleUserSelection = (user: any) => {
+  const toggleUserSelection = (user: User) => {
     setSelectedUsers(prev => {
       const isAlreadySelected = prev.some(u => u._id === user._id);
       if (isAlreadySelected) {
@@ -65,7 +72,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpe
       setSearchQuery("");
       setSearchResults([]);
       setSelectedUsers([]);
-    } catch (err) {
+    } catch {
       toast.error("Failed to add contributors");
     }
   };

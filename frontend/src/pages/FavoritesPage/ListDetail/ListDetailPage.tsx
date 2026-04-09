@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  MoreHorizontal,
   ChevronDown,
   Globe,
   Lock,
@@ -9,7 +8,6 @@ import {
   Users,
   Trash2,
   Edit3,
-  ArrowLeft
 } from "lucide-react";
 import { useFavoriteList, useUpdateFavoriteList, useDeleteFavoriteList, useToggleFollowList } from "../../../features/favoriteLists/hooks";
 import { useUserStore } from "../../../stores/userStore";
@@ -30,10 +28,10 @@ export const ListDetailPage: React.FC = () => {
   const currentUser = useUserStore((state) => state.user);
 
   // Check if current user is owner (it's an array in the model)
-  const isOwner = list?.user?.some((u: any) => (u._id || u) === currentUser?._id);
+  const isOwner = list?.user?.some((u) => ((u as { _id?: string })._id || u) === currentUser?._id);
 
   // Check if following
-  const isFollowing = list?.followers?.some((u: any) => (u._id || u) === currentUser?._id);
+  const isFollowing = list?.followers?.some((u) => ((u as { _id?: string })._id || u) === currentUser?._id);
 
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -47,7 +45,7 @@ export const ListDetailPage: React.FC = () => {
   const sortedServices = React.useMemo(() => {
     if (!list?.services) return [];
 
-    let services = [...list.services];
+    const services = [...list.services];
 
     if (sortOrder === "Last added first") {
       // The array in Mongoose is usually in the order added, so reverse it for "last added first"
@@ -280,7 +278,7 @@ export const ListDetailPage: React.FC = () => {
 
         {/* List Items Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {sortedServices?.map((job: any) => (
+          {sortedServices?.map((job) => (
             <JobCard key={job._id} job={job} />
           ))}
         </div>
