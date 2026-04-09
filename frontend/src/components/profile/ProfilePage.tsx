@@ -16,7 +16,6 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const { modal } = App.useApp();
   const [activeTab, setActiveTab] = useState('Jobs');
-  const [isUnblockModalOpen, setIsUnblockModalOpen] = useState(false);
 
   // Fetch profile if userId is provided, otherwise use current user
   const { data: profileUser, isLoading } = useUserProfile(userId);
@@ -36,11 +35,6 @@ export default function ProfilePage() {
         navigate("/");
       },
     });
-  };
-
-  const handleUnblockSuccess = () => {
-    setIsUnblockModalOpen(false);
-    toast.success("User unblocked");
   };
 
   if (userId && isLoading) {
@@ -65,7 +59,7 @@ export default function ProfilePage() {
     );
   }
 
-  const isBlockedByMe = userId && currentUser?.blockedUsers?.some((id: any) =>
+  const isBlockedByMe = userId && currentUser?.blockedUsers?.some((id) =>
     (typeof id === 'string' ? id : id._id)?.toString() === userId
   );
 
@@ -76,8 +70,6 @@ export default function ProfilePage() {
           <ProfileHeader
             user={userToDisplay}
             handlelogout={handleLogout}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
             isOwnProfile={!userId || userId === currentUser?._id}
           />
         </div>
@@ -96,11 +88,12 @@ export default function ProfilePage() {
               <p className="text-[16px] text-gray-500 font-medium leading-relaxed">
                 To see this users ads, you need to{" "}
                 <button
-                  onClick={() => setIsUnblockModalOpen(true)}
+                  onClick={() => {/* This logic is handled in ProfileHeader now */}}
                   className="text-black font-bold underline hover:text-gray-700 transition-colors"
                 >
-                  unblock them
-                </button>
+                  unblock
+                </button>{" "}
+                them first.
               </p>
             </div>
           </div>
@@ -115,8 +108,6 @@ export default function ProfilePage() {
           </>
         )}
       </div>
-
-      {/* Reusable Unblock Modal if needed here or just use the one in ProfileHeader */}
     </>
   );
 }

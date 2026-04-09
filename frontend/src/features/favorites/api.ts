@@ -1,5 +1,5 @@
 import mainLink from "../../api/mainURLs";
-import type { FavoritesResponse } from "./types/favorites.types";
+import type { FavoritesResponse, FavoriteItem } from "./types/favorites.types";
 
 export const getFavorites = async (): Promise<FavoritesResponse> => {
   const response = await mainLink.get("/api/favorites");
@@ -8,10 +8,10 @@ export const getFavorites = async (): Promise<FavoritesResponse> => {
 
 export const checkIsFavorited = async (id: string) => {
   const res = await getFavorites();
-  return res.data.some((fav: any) => fav.service._id === id);
+  return res.favorites.some((fav: FavoriteItem) => fav.service._id === id);
 };
 
-export const setFavorite = async (serviceId: string): Promise<any> => {
+export const setFavorite = async (serviceId: string): Promise<{ success: boolean }> => {
   const response = await mainLink.post(`/api/favorites/${serviceId}`);
   return response.data;
 };

@@ -3,18 +3,27 @@ import { blockUser, followUser, getBlockedUsers, getTopUsers, getUserProfile, se
 import { useUserStore } from "../../stores/userStore";
 import { toast } from "react-hot-toast";
 
+interface UpdateUserData {
+  name?: string;
+  email?: string;
+  phone?: string;
+  avatarUrl?: string;
+  bio?: string;
+}
+
 export const useUpdateUser = () => {
   const { fetchProfile } = useUserStore((state) => state);
 
   return useMutation({
-    mutationFn: ({ userId, data }: { userId: string; data: any }) => 
+    mutationFn: ({ userId, data }: { userId: string; data: UpdateUserData }) => 
       updateUser(userId, data),
     onSuccess: () => {
       fetchProfile();
       toast.success('Oppdatert!');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Kunne ikke oppdatere');
+    onError: (error: unknown) => {
+      const err = error as { message?: string };
+      toast.error(err.message || 'Kunne ikke oppdatere');
     }
   });
 };
@@ -37,8 +46,9 @@ export const useFollowUser = () => {
       queryClient.invalidateQueries({ queryKey: ['userProfile', userId] });
       fetchProfile();
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Kunne ikke følge bruker');
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || 'Kunne ikke følge bruker');
     }
   });
 };
@@ -53,8 +63,9 @@ export const useBlockUser = () => {
       queryClient.invalidateQueries({ queryKey: ['userProfile', userId] });
       fetchProfile();
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Kunne ikke blokkere bruker');
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || 'Kunne ikke blokkere bruker');
     }
   });
 };

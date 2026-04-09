@@ -1,12 +1,12 @@
 import React from "react";
-import { Send, X, Info, AlertTriangle, Tag, Bell } from "lucide-react";
+import { Send } from "lucide-react";
 
 interface NotificationFormProps {
   formData: { type: string; content: string };
-  setFormData: (data: any) => void;
+  setFormData: (data: { type: string; content: string }) => void;
   handleSubmit: (e: React.FormEvent) => void;
   loading: boolean;
-  notificationTypes: any[];
+  notificationTypes: { id: string; label: string; icon: React.ReactNode; color: string }[];
 }
 
 const NotificationForm: React.FC<NotificationFormProps> = ({

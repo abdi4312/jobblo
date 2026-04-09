@@ -1,5 +1,7 @@
+import type { User } from "../../../types/userTypes";
+
 interface BlockModalProps {
-  user: any;
+  user: User | null;
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -15,7 +17,7 @@ export function BlockModal({
   isPending,
   type
 }: BlockModalProps) {
-  if (!isOpen) return null;
+  if (!isOpen || !user) return null;
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">

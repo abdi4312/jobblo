@@ -46,7 +46,7 @@ export function Info() {
             {category.map((item) => {
               const style = categoryStyles[item.name] || { color: "#000", active: "#F3F4F6" };
               const isSelected = selectedCategories.includes(item.name);
-              const LucideIcon = (Icons as any)[item.icon] || Icons.HelpCircle;
+              const LucideIcon = (Icons as Record<string, React.ComponentType<{ size?: number; className?: string }>>)[item.icon] || Icons.HelpCircle;
 
               return (
                 <div

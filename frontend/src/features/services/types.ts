@@ -16,6 +16,25 @@ export interface UserId {
   email: string;
 }
 
+export interface ImageMetadata {
+  url: string;
+  publicId?: string;
+}
+
+export interface TimeEntry {
+  start?: string;
+  end?: string;
+}
+
+export interface ServiceUpdateData {
+  title?: string;
+  description?: string;
+  price?: number;
+  location?: Location;
+  categories?: string[];
+  urgent?: boolean;
+}
+
 export interface Service {
   _id: string;
   userId: UserId;
@@ -29,8 +48,8 @@ export interface Service {
   status: string;
   tags: string[];
   equipment: string;
-  imageMetadata: any[];
-  timeEntries: any[];
+  imageMetadata: ImageMetadata[];
+  timeEntries: TimeEntry[];
   duration: Duration;
   fromDate?: string;
   toDate?: string;

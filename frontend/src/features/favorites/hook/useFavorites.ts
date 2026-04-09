@@ -32,9 +32,10 @@ export function useFavoriteActions(onSuccessCallback?: () => void) {
       queryClient.invalidateQueries({ queryKey: ["favoriteStatus", id] });
       onSuccessCallback?.();
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { error?: string } } };
       console.error("Failed to add favorite", err);
-      toast.error(err?.response?.data?.error || "Kunne ikke legge til favoritt");
+      toast.error(error?.response?.data?.error || "Kunne ikke legge til favoritt");
     },
   });
 
@@ -48,10 +49,11 @@ export function useFavoriteActions(onSuccessCallback?: () => void) {
       queryClient.invalidateQueries({ queryKey: ["favoriteStatus", id] });
       onSuccessCallback?.();
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { error?: string } } };
       console.error("Failed to remove favorite", err);
       // 404 error yahan catch hoga agar ID galat hai
-      toast.error(err?.response?.data?.error || "Kunne ikke fjerne favoritt");
+      toast.error(error?.response?.data?.error || "Kunne ikke fjerne favoritt");
     },
   });
 

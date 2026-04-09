@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useUpdateFavoriteList } from "../../../features/favoriteLists/hooks";
+import type { FavoriteList } from "../../../features/favoriteLists/types";
 
 interface EditListModalProps {
-  list: any;
+  list: FavoriteList;
   isOpen: boolean;
   onClose: () => void;
 }

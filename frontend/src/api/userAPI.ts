@@ -10,8 +10,9 @@ export async function userLogin(email: string, password: string) {
     await fetchProfile();
 
     return res.data;
-  } catch (err: any) {
-    console.error("Login failed:", err.response?.data || err.message);
+  } catch (err: unknown) {
+    const error = err as { response?: { data?: { message?: string } }; message?: string };
+    console.error("Login failed:", error.response?.data || error.message);
     throw err;
   }
 }
@@ -27,8 +28,9 @@ export async function registerUser(userData: {
     const { fetchProfile } = useUserStore.getState();
     await fetchProfile();
     return res.data;
-  } catch (err: any) {
-    console.error("Registration failed:", err.response?.data || err.message);
+  } catch (err: unknown) {
+    const error = err as { response?: { data?: { message?: string } }; message?: string };
+    console.error("Registration failed:", error.response?.data || error.message);
     throw err;
   }
 }

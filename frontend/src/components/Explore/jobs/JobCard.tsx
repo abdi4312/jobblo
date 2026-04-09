@@ -29,8 +29,8 @@ export const JobCard = ({ job }: JobCardProps) => {
   };
 
   // Check if job is in ANY of the user's lists
-  const isInAnyList = lists.some((list: any) =>
-    list.services?.some((s: any) => (typeof s === 'string' ? s === job._id : s._id === job._id))
+  const isInAnyList = lists.some((list: { services?: Array<{ _id?: string } | string> }) =>
+    list.services?.some((s: { _id?: string } | string) => (typeof s === 'string' ? s === job._id : s._id === job._id))
   );
 
   const handleFavClick = (e: React.MouseEvent) => {

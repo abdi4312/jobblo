@@ -1,4 +1,4 @@
-import { Modal, Radio, Button, Input } from "antd";
+import { Modal, Button, Input } from "antd";
 import { useState } from "react";
 // import { getSubscriptionPlans } from "../../../api/subscriptionPlanApi";
 import mainLink from "../../../api/mainURLs";
@@ -350,7 +350,8 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
 
         window.location.href = checkout.data.url;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       setCouponLoading(false);
       setShowCouponModal(false);
 
@@ -358,7 +359,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
         icon: "error",
         title: "Ugyldig kupong",
         text:
-          error?.response?.data?.message ||
+          err?.response?.data?.message ||
           "Kupongkoden er ikke gyldig eller er utløpt",
         confirmButtonColor: "#2d4a3e",
       });

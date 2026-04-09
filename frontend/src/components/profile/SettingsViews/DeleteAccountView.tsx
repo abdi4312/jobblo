@@ -1,4 +1,3 @@
-import { UserX } from "lucide-react";
 import { useOutletContext } from "react-router-dom";
 import type { SettingsContextType } from "../../../pages/SettingsPage";
 import toast from "react-hot-toast";

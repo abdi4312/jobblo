@@ -6,30 +6,16 @@ import { useBlockUser, useFollowUser } from "../../../features/profile/hooks";
 import { toast } from "react-hot-toast";
 import { FollowingModal } from "./FollowingModal";
 import { BlockModal } from "./BlockModal";
-
-interface User {
-  _id: string;
-  name: string;
-  lastName?: string;
-  avatarUrl?: string;
-  email: string;
-  createdAt?: string;
-  bio?: string;
-  height?: string;
-}
+import type { User } from "../../../types/userTypes";
 
 export function ProfileHeader({
   user,
   handlelogout,
-  activeTab,
-  onTabChange,
-  isOwnProfile = true
+  isOwnProfile = true,
 }: {
-  user: User | null,
-  handlelogout: () => void,
-  activeTab: string,
-  onTabChange: (tabName: string) => void,
-  isOwnProfile?: boolean
+  user: User | null;
+  handlelogout: () => void;
+  isOwnProfile?: boolean;
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFollowingModalOpen, setIsFollowingModalOpen] = useState(false);
@@ -43,10 +29,17 @@ export function ProfileHeader({
   const currentUser = useUserStore((state) => state.user);
   const isAuth = useUserStore((state) => state.isAuthenticated);
 
-  const isBlockedByMe = currentUser?.blockedUsers?.some((id: any) =>
-    (typeof id === 'string' ? id : id._id)?.toString() === user?._id
+  const isBlockedByMe = currentUser?.blockedUsers?.some(
+    (id) => (typeof id === "string" ? id : id._id)?.toString() === user?._id,
   );
-  const isFollowing = user?._id && (user as any).followers?.includes(currentUser?._id);
+
+  const followersArray = (user?.followers || []) as (string | User)[];
+  const isFollowing =
+    user?._id &&
+    currentUser?._id &&
+    followersArray.some(
+      (f) => (typeof f === "string" ? f : f._id) === currentUser._id,
+    );
 
   const handleFollowClick = () => {
     if (!isAuth) {
@@ -69,7 +62,7 @@ export function ProfileHeader({
         onSuccess: () => {
           setIsFollowingModalOpen(false);
           toast.success(`Unfollowed ${user.name}`);
-        }
+        },
       });
     }
   };
@@ -80,7 +73,7 @@ export function ProfileHeader({
         onSuccess: () => {
           setIsUnblockModalOpen(false);
           toast.success(`User unblocked`);
-        }
+        },
       });
     }
   };
@@ -97,7 +90,7 @@ export function ProfileHeader({
             disabled={blockMutation.isPending}
             className="text-[14px] font-bold text-[#FF6B6B] hover:underline mt-0.5 disabled:opacity-50"
           >
-            {blockMutation.isPending ? 'Unblocking...' : 'Unblock'}
+            {blockMutation.isPending ? "Unblocking..." : "Unblock"}
           </button>
         </div>
       )}
@@ -109,7 +102,10 @@ export function ProfileHeader({
             <div className="relative group cursor-pointer">
               <div className="w-32 h-32 sm:w-42 sm:h-42 rounded-full overflow-hidden bg-gray-100 border border-gray-100 shadow-inner">
                 <img
-                  src={user?.avatarUrl || "https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332"}
+                  src={
+                    user?.avatarUrl ||
+                    "https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332"
+                  }
                   alt="Profile"
                   className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
                 />
@@ -130,29 +126,46 @@ export function ProfileHeader({
           {/* User Info & Actions Column */}
           <div className="flex flex-col items-center sm:items-start flex-1 sm:pt-1">
             <h2 className="text-xl sm:text-3xl font-bold text-gray-900 tracking-tight leading-none mb-3">
-              @{user?.name.toLowerCase().replace(/\s+/g, '') || "guest"}
+              @{user?.name.toLowerCase().replace(/\s+/g, "") || "guest"}
             </h2>
 
             <p className="text-[13px] font-bold text-gray-400 uppercase tracking-wide mb-5">
-              Became a Jobblo in {user?.createdAt ? new Date(user.createdAt).toLocaleString('en-US', { month: 'long', year: 'numeric' }) : 'December 2019'}
+              Became a Jobblo in{" "}
+              {user?.createdAt
+                ? new Date(user.createdAt).toLocaleString("en-US", {
+                    month: "long",
+                    year: "numeric",
+                  })
+                : "December 2019"}
             </p>
 
             <div className="flex gap-4 mb-5">
               <div className="cursor-pointer hover:underline text-[16px]">
-                <span className="font-bold text-black">{(user as any)?.followers?.length || 0}</span> <span className="text-gray-900 font-medium text-[16px]">followers</span>
+                <span className="font-bold text-black">
+                  {user?.followers?.length || 0}
+                </span>{" "}
+                <span className="text-gray-900 font-medium text-[16px]">
+                  followers
+                </span>
               </div>
               <div className="cursor-pointer hover:underline text-[16px]">
-                <span className="font-bold text-black">{(user as any)?.following?.length || 0}</span> <span className="text-gray-900 font-medium text-[16px]">following</span>
+                <span className="font-bold text-black">
+                  {user?.following?.length || 0}
+                </span>{" "}
+                <span className="text-gray-900 font-medium text-[16px]">
+                  following
+                </span>
               </div>
             </div>
 
             <div className="relative flex gap-3">
               {isOwnProfile ? (
                 <>
-                  <button className="flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl
+                  <button
+                    className="flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl
                    text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm"
-                   onClick={() => navigate("/coins")}
-                   >
+                    onClick={() => navigate("/coins")}
+                  >
                     <Store size={18} className="text-gray-800" />
                     <span>Jobblo Shop</span>
                   </button>
@@ -160,10 +173,13 @@ export function ProfileHeader({
                   <div className="relative">
                     <button
                       onClick={() => setIsMenuOpen(!isMenuOpen)}
-                      className={`flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm ${isMenuOpen ? 'bg-gray-50' : ''}`}
+                      className={`flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm ${isMenuOpen ? "bg-gray-50" : ""}`}
                     >
                       <span>More</span>
-                      <ChevronDown size={18} className={`transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown
+                        size={18}
+                        className={`transition-transform duration-200 ${isMenuOpen ? "rotate-180" : ""}`}
+                      />
                     </button>
 
                     {isMenuOpen && (
@@ -177,7 +193,10 @@ export function ProfileHeader({
                           </button>
                           <div className="h-[1px] bg-gray-100 my-1" />
                           <button
-                            onClick={() => { setIsMenuOpen(false); handlelogout(); }}
+                            onClick={() => {
+                              setIsMenuOpen(false);
+                              handlelogout();
+                            }}
                             className="flex items-center w-full text-lg font-medium text-[#EA1717] hover:text-red-700 transition-colors"
                           >
                             Log out
@@ -192,29 +211,39 @@ export function ProfileHeader({
                   <button
                     onClick={handleFollowClick}
                     disabled={followMutation.isPending || isBlockedByMe}
-                    className={`flex items-center gap-2 ${isFollowing ? 'bg-white border-2 border-gray-200 text-black' : 'bg-[#FF6B6B] text-white'} px-8 py-2.5 rounded-xl text-[15px] font-bold hover:opacity-90 transition-all shadow-sm ${isBlockedByMe ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    className={`flex items-center gap-2 ${isFollowing ? "bg-white border-2 border-gray-200 text-black" : "bg-[#FF6B6B] text-white"} px-8 py-2.5 rounded-xl text-[15px] font-bold hover:opacity-90 transition-all shadow-sm ${isBlockedByMe ? "opacity-40 cursor-not-allowed" : ""}`}
                   >
-                    {followMutation.isPending ? '...' : (isFollowing ? (
+                    {followMutation.isPending ? (
+                      "..."
+                    ) : isFollowing ? (
                       <>
                         <span>Following</span>
                         <ChevronDown size={18} />
                       </>
-                    ) : 'Follow')}
+                    ) : (
+                      "Follow"
+                    )}
                   </button>
                   <button
                     disabled={isBlockedByMe}
-                    className={`flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm ${isBlockedByMe ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    className={`flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm ${isBlockedByMe ? "opacity-40 cursor-not-allowed" : ""}`}
                   >
                     <Star size={18} className="text-gray-800" />
-                    <span>{(user as any)?.averageRating || '5.0'} ({(user as any)?.reviewCount || '0'})</span>
+                    <span>
+                      {user?.averageRating || "5.0"} ({user?.reviewCount || "0"}
+                      )
+                    </span>
                   </button>
                   <div className="relative">
                     <button
                       onClick={() => setIsMenuOpen(!isMenuOpen)}
-                      className={`flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm ${isMenuOpen ? 'bg-gray-50' : ''}`}
+                      className={`flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm ${isMenuOpen ? "bg-gray-50" : ""}`}
                     >
                       <span>More</span>
-                      <ChevronDown size={18} className={`transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown
+                        size={18}
+                        className={`transition-transform duration-200 ${isMenuOpen ? "rotate-180" : ""}`}
+                      />
                     </button>
 
                     {isMenuOpen && (
@@ -224,14 +253,14 @@ export function ProfileHeader({
                             onClick={() => {
                               setIsMenuOpen(false);
                               if (isBlockedByMe) {
-                                setIsUnblockModalOpen(true);
+                                handleUnblock();
                               } else {
                                 setIsBlockModalOpen(true);
                               }
                             }}
                             className="flex items-center w-full text-[16px] font-medium text-black hover:text-gray-600 transition-colors py-1"
                           >
-                            {isBlockedByMe ? 'Unblock user' : 'Block user'}
+                            {isBlockedByMe ? "Unblock user" : "Block user"}
                           </button>
                           <div className="h-[1px] bg-gray-100 my-0.5" />
                           <button
@@ -286,7 +315,7 @@ export function ProfileHeader({
               onSuccess: (data) => {
                 setIsBlockModalOpen(false);
                 toast.success(data.message || `${user?.name} blocked`);
-              }
+              },
             });
           }
         }}

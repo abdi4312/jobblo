@@ -1,5 +1,3 @@
-import styles from "./AuthButton.module.css";
-
 export default function SocialAuthButtons() {
   const handleGoogle = () => {
     window.location.href = `${import.meta.env.VITE_MAIN_URL}/api/auth/google`;

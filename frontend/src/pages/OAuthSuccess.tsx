@@ -34,7 +34,7 @@ export default function OAuthSuccess() {
     };
 
     initOAuth();
-  }, [fetchProfile, navigate]);
+  }, [fetchProfile, navigate, setTokens]);
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-[#F7F7F7] overflow-hidden font-['Inter',sans-serif]">

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getMyPostedServices, deleteService, updateService } from "./api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
+import type { ServiceUpdateData } from "./types";
 
 export const useMyServices = () => {
   return useQuery({
@@ -20,19 +21,21 @@ export const useServiceActions = () => {
       queryClient.invalidateQueries({ queryKey: ["my-services"] });
       toast.success("Annonse slettet!");
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Kunne ikke slette annonse");
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || "Kunne ikke slette annonse");
     }
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => updateService(id, data),
+    mutationFn: ({ id, data }: { id: string; data: ServiceUpdateData }) => updateService(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-services"] });
       toast.success("Oppdrag oppdatert!");
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Kunne ikke oppdatere");
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || "Kunne ikke oppdatere");
     }
   });
 

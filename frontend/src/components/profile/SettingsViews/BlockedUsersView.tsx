@@ -3,17 +3,18 @@ import { useState } from "react";
 import { useBlockedUsers, useBlockUser } from "../../../features/profile/hooks";
 import { Spinner } from "../../Ui/Spinner";
 import { useNavigate } from "react-router-dom";
+import type { User } from "../../../types/userTypes";
 
 export const BlockedUsersView = () => {
   const [page, setPage] = useState(1);
   const [isUnblockModalOpen, setIsUnblockModalOpen] = useState(false);
-  const [userToUnblock, setUserToUnblock] = useState<any>(null);
+  const [userToUnblock, setUserToUnblock] = useState<User | null>(null);
   const limit = 10;
   const { data, isLoading } = useBlockedUsers(page, limit);
   const blockMutation = useBlockUser();
   const navigate = useNavigate();
 
-  const handleUnblockClick = (user: any) => {
+  const handleUnblockClick = (user: User) => {
     setUserToUnblock(user);
     setIsUnblockModalOpen(true);
   };
@@ -24,7 +25,7 @@ export const BlockedUsersView = () => {
         onSuccess: () => {
           setIsUnblockModalOpen(false);
           setUserToUnblock(null);
-        }
+        },
       });
     }
   };
@@ -44,7 +45,12 @@ export const BlockedUsersView = () => {
     <section className="flex flex-col gap-10 max-w-2xl w-full">
       <div className="flex flex-col gap-2">
         <p className="text-[17px] text-[#555] leading-[1.4] font-normal">
-          When you block someone, they won't be able to send you messages, follow you or like any of your ads, and you won't see any notifications from them. <span className="underline cursor-pointer text-black font-medium">Read more here.</span>
+          When you block someone, they won't be able to send you messages,
+          follow you or like any of your ads, and you won't see any
+          notifications from them.{" "}
+          <span className="underline cursor-pointer text-black font-medium">
+            Read more here.
+          </span>
         </p>
       </div>
 
@@ -52,8 +58,11 @@ export const BlockedUsersView = () => {
         {blockedUsers.length > 0 ? (
           <>
             <div className="flex flex-col gap-6">
-              {blockedUsers.map((user: any) => (
-                <div key={user._id} className="flex items-center justify-between group">
+              {blockedUsers.map((user: User) => (
+                <div
+                  key={user._id}
+                  className="flex items-center justify-between group"
+                >
                   <div
                     className="flex items-center gap-4 cursor-pointer"
                     onClick={() => navigate(`/profile/${user._id}`)}
@@ -61,19 +70,26 @@ export const BlockedUsersView = () => {
                     <div className="relative">
                       <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-100 border border-gray-50 shadow-sm">
                         <img
-                          src={user.avatarUrl || "https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332"}
+                          src={
+                            user.avatarUrl ||
+                            "https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332"
+                          }
                           alt={user.name}
                           className="w-full h-full object-cover"
                         />
                       </div>
                       {/* Checkmark icon as seen in image */}
                       <div className="absolute bottom-0 right-0 bg-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-white">
-                        <Check size={10} className="text-white" strokeWidth={4} />
+                        <Check
+                          size={10}
+                          className="text-white"
+                          strokeWidth={4}
+                        />
                       </div>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-[18px] font-bold text-black leading-tight">
-                        {user.name.toLowerCase().replace(/\s+/g, '')}
+                        {user.name.toLowerCase().replace(/\s+/g, "")}
                       </span>
                       <span className="text-[16px] text-[#888] font-normal">
                         {user.name} {user.lastName}
@@ -85,7 +101,9 @@ export const BlockedUsersView = () => {
                     disabled={blockMutation.isPending}
                     className="text-[14px] font-bold text-[#FF6B6B] hover:underline px-2 py-1 disabled:opacity-50"
                   >
-                    {blockMutation.isPending && userToUnblock?._id === user._id ? '...' : 'Unblock'}
+                    {blockMutation.isPending && userToUnblock?._id === user._id
+                      ? "..."
+                      : "Unblock"}
                   </button>
                 </div>
               ))}
@@ -95,7 +113,7 @@ export const BlockedUsersView = () => {
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-4 mt-10 border-t border-gray-50 pt-8">
                 <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="p-2 rounded-full hover:bg-gray-50 disabled:opacity-30 transition-colors"
                 >
@@ -105,7 +123,7 @@ export const BlockedUsersView = () => {
                   Page {page} of {totalPages}
                 </span>
                 <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                   className="p-2 rounded-full hover:bg-gray-50 disabled:opacity-30 transition-colors"
                 >
@@ -119,7 +137,9 @@ export const BlockedUsersView = () => {
             <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-6">
               <Shield size={32} className="text-gray-200" strokeWidth={1.5} />
             </div>
-            <p className="text-gray-400 font-bold text-lg">You haven't blocked any users yet</p>
+            <p className="text-gray-400 font-bold text-lg">
+              You haven't blocked any users yet
+            </p>
           </div>
         )}
       </div>
@@ -127,13 +147,19 @@ export const BlockedUsersView = () => {
       {/* Unblock User Confirmation Modal */}
       {isUnblockModalOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 backdrop-blur-[1px]">
-          <div className="absolute inset-0" onClick={() => setIsUnblockModalOpen(false)} />
+          <div
+            className="absolute inset-0"
+            onClick={() => setIsUnblockModalOpen(false)}
+          />
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[420px] relative z-10 overflow-hidden animate-in zoom-in-95 fade-in duration-200">
             <div className="p-10 flex flex-col items-center text-center">
               <div className="relative mb-8">
                 <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-gray-50 shadow-sm bg-gray-100">
                   <img
-                    src={userToUnblock?.avatarUrl || "https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332"}
+                    src={
+                      userToUnblock?.avatarUrl ||
+                      "https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332"
+                    }
                     alt="Profile"
                     className="w-full h-full object-cover"
                   />
@@ -145,7 +171,8 @@ export const BlockedUsersView = () => {
               </h3>
 
               <p className="text-[14px] text-gray-500 font-medium leading-relaxed mb-10 px-2">
-                This user will be able to see and contact you on Jobblo. (The user will not be notified)
+                This user will be able to see and contact you on Jobblo. (The
+                user will not be notified)
               </p>
 
               <div className="grid grid-cols-2 w-full border-t border-gray-100 mt-2">
@@ -160,7 +187,7 @@ export const BlockedUsersView = () => {
                   onClick={confirmUnblock}
                   className="py-5 text-[17px] font-bold text-[#FF6B6B] hover:bg-gray-50 transition-all disabled:opacity-50"
                 >
-                  {blockMutation.isPending ? '...' : 'Unblock'}
+                  {blockMutation.isPending ? "..." : "Unblock"}
                 </button>
               </div>
             </div>

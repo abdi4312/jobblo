@@ -2,14 +2,21 @@ import { useState, useEffect, useRef } from "react";
 import { ReceiptText, MoreHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+interface ChatHeaderProps {
+  isMobile: boolean;
+  otherUser?: { avatarUrl?: string; name?: string; _id?: string };
+  contract?: { status?: string; _id?: string };
+  setShowCreateContract: (show: boolean) => void;
+  isOnline: boolean;
+}
+
 function ChatHeader({
   isMobile,
   otherUser,
-  activeChat,
   contract,
   setShowCreateContract,
   isOnline,
-}: any) {
+}: ChatHeaderProps) {
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);

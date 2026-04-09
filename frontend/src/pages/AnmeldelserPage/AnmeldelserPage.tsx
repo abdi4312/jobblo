@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import StjerneIcon from "../../assets/icons/stjerne.svg?react";
 import { Star } from "lucide-react";
 interface DisplayReview {
   id: string;

@@ -6,6 +6,7 @@ import { useUserStore } from '../../stores/userStore';
 import AddToListModal from '../Explore/jobs/AddToListModal';
 import { useNavigate } from 'react-router-dom';
 import { useFavoriteLists } from '../../features/favoriteLists/hooks';
+import type { Jobs } from '../../types/Jobs';
 
 interface JobButtonProps {
     handleSendMessage: () => void;
@@ -14,7 +15,7 @@ interface JobButtonProps {
     isOwnJob: boolean;
     isMsgLoading: boolean; // Button action loading (spinner)
     id: string;
-    job?: any; // Added job prop to pass to modal
+    job?: Jobs; // Added job prop to pass to modal
 }
 
 const JobButton: React.FC<JobButtonProps> = ({
@@ -31,8 +32,8 @@ const JobButton: React.FC<JobButtonProps> = ({
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Check if job is in ANY of the user's lists
-    const isInAnyList = lists.some((list: any) => 
-        list.services?.some((s: any) => (typeof s === 'string' ? s === id : s._id === id))
+    const isInAnyList = lists.some((list) =>
+        list.services?.some((s) => (typeof s === 'string' ? s === id : s._id === id))
     );
 
     const handleHeartClick = (e: React.MouseEvent) => {

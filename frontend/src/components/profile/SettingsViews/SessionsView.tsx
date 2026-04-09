@@ -2,6 +2,17 @@ import { useAuth } from "../../../features/auth/hook/useAuth";
 import { Monitor, Smartphone, Tablet, XCircle, Clock, MapPin } from "lucide-react";
 import { Button } from "../../Ui/Button";
 
+interface Session {
+  _id: string;
+  isCurrent: boolean;
+  device: string;
+  browser: string;
+  os: string;
+  location?: string;
+  ip: string;
+  lastUsed: string;
+}
+
 export const SessionsView = () => {
   const { sessions, isLoadingSessions, revokeSession, revokeOthers, isRevokingOthers } = useAuth();
 
@@ -9,7 +20,7 @@ export const SessionsView = () => {
     return <div className="flex justify-center p-10 font-medium text-gray-400">Loading sessions...</div>;
   }
 
-  const otherSessionsCount = sessions?.filter((s: any) => !s.isCurrent).length || 0;
+  const otherSessionsCount = sessions?.filter((s: Session) => !s.isCurrent).length || 0;
 
   const getDeviceIcon = (device: string) => {
     if (device?.toLowerCase().includes("mobile") || device?.toLowerCase().includes("android") || device?.toLowerCase().includes("iphone")) {
@@ -50,7 +61,7 @@ export const SessionsView = () => {
             <p className="text-gray-500">No active sessions found.</p>
           </div>
         ) : (
-          sessions?.map((session: any) => (
+          sessions?.map((session: Session) => (
             <div
               key={session._id}
               className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 gap-4"

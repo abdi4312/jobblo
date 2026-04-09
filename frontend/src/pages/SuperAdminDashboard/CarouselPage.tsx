@@ -25,7 +25,6 @@ const CarouselPage: React.FC = () => {
 
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -41,7 +40,7 @@ const CarouselPage: React.FC = () => {
     expireAt: "",
   });
 
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: { _id: string; title?: string; subtitle?: string; buttonText?: string; buttonUrl?: string; footerText?: string; bgColor?: string; image?: string; activeFrom?: string; expireAt?: string }) => {
     setEditingId(item._id);
     setFormData({
       title: item.title || "",
@@ -154,7 +153,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       Swal.fire("Suksess!", "Hero banner er opprettet", "success");
     }
     closeModal();
-  } catch (error: any) {
+  } catch {
     Swal.fire(
       "Feil",
       editingId ? "Kunne ikke oppdatere hero" : "Kunne ikke opprette hero",
@@ -178,7 +177,7 @@ const handleDelete = async (id: string) => {
     try {
       await deleteHeroMutation.mutateAsync(id);
       Swal.fire("Slettet!", "Banneret har blitt slettet.", "success");
-    } catch (error) {
+    } catch {
       Swal.fire("Feil", "Kunne ikke slette banneret", "error");
     }
   }

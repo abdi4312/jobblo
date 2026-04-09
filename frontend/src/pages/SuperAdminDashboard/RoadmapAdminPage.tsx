@@ -55,8 +55,9 @@ const RoadmapAdminPage = () => {
                 Swal.fire("Success!", "New feature added.", "success");
             }
             setIsModalOpen(false);
-        } catch (err: any) {
-            Swal.fire("Error", err.response?.data?.error || "Action failed", "error");
+        } catch (err: unknown) {
+            const error = err as { response?: { data?: { error?: string } } };
+            Swal.fire("Error", error.response?.data?.error || "Action failed", "error");
         }
     };
 
@@ -74,7 +75,7 @@ const RoadmapAdminPage = () => {
             try {
                 await deleteMutation.mutateAsync(id);
                 Swal.fire("Deleted!", "Feature has been removed.", "success");
-            } catch (err) {
+            } catch {
                 Swal.fire("Error", "Deletion failed", "error");
             }
         }
@@ -220,7 +221,7 @@ const RoadmapAdminPage = () => {
                                         <label className="block text-[11px] font-black uppercase tracking-widest text-gray-400 mb-2">Status</label>
                                         <select
                                             value={formData.status}
-                                            onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                                            onChange={(e) => setFormData({ ...formData, status: e.target.value as RoadmapFeatureInput['status'] })}
                                             className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm font-bold outline-none"
                                             title="Select status"
                                         >
@@ -233,7 +234,7 @@ const RoadmapAdminPage = () => {
                                         <label className="block text-[11px] font-black uppercase tracking-widest text-gray-400 mb-2">Tag</label>
                                         <select
                                             value={formData.tag}
-                                            onChange={(e) => setFormData({ ...formData, tag: e.target.value as any })}
+                                            onChange={(e) => setFormData({ ...formData, tag: e.target.value as RoadmapFeatureInput['tag'] })}
                                             className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm font-bold outline-none"
                                             title="Select tag"
                                         >

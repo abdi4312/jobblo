@@ -1,13 +1,27 @@
 import React from "react";
 import { Clock, Bell } from "lucide-react";
 
+interface NotificationHistoryItem {
+  _id: string;
+  type: string;
+  title: string;
+  message: string;
+  createdAt: string;
+  sentTo?: number;
+}
+
+interface NotificationType {
+  value: string;
+  label: string;
+}
+
 interface NotificationHistoryProps {
-  history: any[];
+  history: NotificationHistoryItem[];
   loading: boolean;
   page: number;
   totalPages: number;
   onPageChange: (newPage: number) => void;
-  notificationTypes: any[];
+  notificationTypes: NotificationType[];
 }
 
 const NotificationHistory: React.FC<NotificationHistoryProps> = ({

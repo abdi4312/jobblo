@@ -72,12 +72,38 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
   );
 };
 
+interface InitialData {
+  title?: string;
+  description?: string;
+  price?: string | number;
+  address?: string;
+  city?: string;
+  categories?: string | string[];
+  urgent?: boolean;
+  equipment?: string;
+  fromDate?: string;
+  toDate?: string;
+  durationValue?: string | number;
+  durationUnit?: string;
+  paymentType?: string;
+  phone?: string;
+  email?: string;
+  images?: string[];
+}
+
+interface CreateJobFormProps {
+  onSubmit: (formData: FormData) => void;
+  userId: string;
+  initialData?: InitialData;
+  isEditMode?: boolean;
+}
+
 export default function CreateJobForm({
   onSubmit,
   userId,
   initialData,
   isEditMode = false,
-}: any) {
+}: CreateJobFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [title, setTitle] = useState(initialData?.title || "");
   const [description, setDescription] = useState(
@@ -133,7 +159,7 @@ export default function CreateJobForm({
       setEmail(data.email || "");
       setCurrentStep(data.currentStep || 1);
     }
-  }, []);
+  }, [initialData]);
 
   useEffect(() => {
     const dataToSave = {
@@ -293,11 +319,12 @@ export default function CreateJobForm({
         coordinates: [10.7461, 59.9127] as [number, number],
       },
       duration: {
-        value: durationValue,
+        value: durationValue ? parseInt(durationValue.toString()) : 0,
         unit: durationUnit,
       },
       fromDate,
       toDate,
+      createdAt: new Date().toISOString(),
       userId: {
         _id: currentUser?._id || "preview",
         name: currentUser?.name || "Ditt navn",
@@ -361,7 +388,7 @@ export default function CreateJobForm({
                 setTitle={setTitle}
                 description={description}
                 setDescription={setDescription}
-                categories={categories}
+                categories={categories as any}
                 setCategories={setCategories}
                 price={price}
                 setPrice={setPrice}
@@ -548,7 +575,7 @@ export default function CreateJobForm({
                 </div>
 
                 <div className="bg-white rounded-[20px] p-6 sm:p-8 shadow-[0px_2px_8px_0px_rgba(0,0,0,0.07)]">
-                  <JobProvider job={previewJobData as any} />
+                  <JobProvider job={previewJobData} />
                 </div>
 
                 <div className="bg-white rounded-[20px] p-3 shadow-[0px_2px_8px_0px_rgba(0,0,0,0.07)]">
@@ -589,7 +616,7 @@ export default function CreateJobForm({
                   <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-widest mb-4">
                     Oppdragsinfo
                   </p>
-                  <JobContainer job={previewJobData as any} />
+                  <JobContainer job={previewJobData} />
                 </div>
               </aside>
             </div>

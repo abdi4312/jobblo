@@ -7,12 +7,9 @@ import { toast } from "react-hot-toast";
 export const useAuth = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { login: setStoreLogin, logout: setStoreLogout, tokens, isAuthenticated } = useUserStore();
+  const { login: setStoreLogin, logout: setStoreLogout, isAuthenticated } = useUserStore();
 
-  // If store says authenticated but no token, fix it
-  if (isAuthenticated && !tokens?.accessToken) {
-    setStoreLogout();
-  }
+  // Note: Don't auto-logout here during rehydration - let the interceptor handle token issues
 
   const loginMutation = useMutation({
     mutationFn: userLogin,
@@ -23,9 +20,10 @@ export const useAuth = () => {
       toast.success(`Velkommen tilbake, ${data.user.name}!`);
       navigate("/home");
     },
-    onError: (error: any) => {
-      console.error("Login Error Details:", error.response?.data || error.message);
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || "Innlogging mislyktes. Vennligst sjekk legitimasjonen din.";
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string; message?: string } }; message?: string };
+      console.error("Login Error Details:", err.response?.data || err.message);
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || "Innlogging mislyktes. Vennligst sjekk legitimasjonen din.";
       console.log("errorMessage",errorMessage);
       
       toast.error(errorMessage);
@@ -41,9 +39,10 @@ export const useAuth = () => {
       toast.success("Registration Successful!");
       navigate("/home");
     },
-    onError: (error: any) => {
-      console.error("Registration Error Details:", error.response?.data || error.message);
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || "Registrering mislyktes.";
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string; message?: string } }; message?: string };
+      console.error("Registration Error Details:", err.response?.data || err.message);
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || "Registrering mislyktes.";
       toast.error(errorMessage);
     },
   });
@@ -88,8 +87,9 @@ export const useAuth = () => {
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
       toast.success("Session revoked");
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to revoke session");
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || "Failed to revoke session");
     },
   });
 
@@ -99,8 +99,9 @@ export const useAuth = () => {
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
       toast.success("All other sessions revoked");
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Failed to revoke other sessions");
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || "Failed to revoke other sessions");
     },
   });
 
@@ -108,13 +109,19 @@ export const useAuth = () => {
   useQuery({
     queryKey: ["auth-refresh"],
     queryFn: async () => {
-      const data = await refreshToken();
-      useUserStore.getState().setTokens({ accessToken: data.accessToken });
-      return data;
+      try {
+        const data = await refreshToken();
+        useUserStore.getState().setTokens({ accessToken: data.accessToken });
+        return data;
+      } catch (error) {
+        console.error("Proactive token refresh failed:", error);
+        // Don't logout here - let the interceptor handle it on next API call
+        throw error;
+      }
     },
     refetchInterval: 1000 * 60 * 45, // Proactively refresh every 45 minutes
     enabled: isAuthenticated,
-    retry: 3,
+    retry: 2,
   });
 
   return {

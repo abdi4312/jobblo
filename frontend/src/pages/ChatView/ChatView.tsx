@@ -170,7 +170,7 @@ export function ChatView() {
             </div>
           ) : (
             chat.messages.map((msg, index) => {
-              const senderId = typeof msg.senderId === 'string' ? msg.senderId : (msg.senderId as any)?._id;
+              const senderId = typeof msg.senderId === 'string' ? msg.senderId : (msg.senderId as { _id?: string })?._id;
               const isOwnMessage = senderId === user?._id;
               return (
                 <div
