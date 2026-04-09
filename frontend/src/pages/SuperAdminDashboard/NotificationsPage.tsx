@@ -92,10 +92,11 @@ const NotificationsPage = () => {
         setFormData({ ...formData, content: "" });
         setShowForm(false);
         fetchHistory(1);
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as { response?: { data?: { error?: string } } };
         Swal.fire(
           "Error",
-          error.response?.data?.error || "Failed to send",
+          err.response?.data?.error || "Failed to send",
           "error",
         );
       } finally {

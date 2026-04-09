@@ -34,10 +34,10 @@ export default function MineAnnonser() {
     }
   };
 
-  const handleFormSubmit = (jobData: any) => {
+  const handleFormSubmit = (jobData: FormData) => {
     if (editingService) {
       updateMutation.mutate(
-        { id: editingService._id, data: jobData },
+        { id: editingService._id, data: jobData as unknown as Service },
         { onSuccess: () => setEditingService(null) },
       );
     }
@@ -53,6 +53,7 @@ export default function MineAnnonser() {
         <div className="p-2 max-w-300 mx-auto">
           <CreateJobForm
             onSubmit={handleFormSubmit}
+            userId=""
             isEditMode={true}
             initialData={{
               title: editingService.title,
@@ -100,7 +101,7 @@ export default function MineAnnonser() {
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 m-2 gap-2.5">
-          {services.map((job: any) => {
+          {services.map((job: Service) => {
             const catName = Array.isArray(job.categories)
               ? job.categories[0]
               : job.categories;

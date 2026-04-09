@@ -1,4 +1,3 @@
-import { Modal, Button, Input } from "antd";
 import { useState } from "react";
 import mainLink from "../../api/mainURLs";
 import { Check, X, ArrowLeft, Tag, ShoppingCart, Loader2 } from "lucide-react";
@@ -63,8 +62,9 @@ export default function PricingPage() {
         code: promoCode.trim(),
       });
       toast.success("Promo code activated! 🎉");
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Invalid coupon code");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error(err?.response?.data?.message || "Invalid coupon code");
       setDiscountInfo(null);
     } finally {
       setIsApplyingPromo(false);
@@ -76,7 +76,7 @@ export default function PricingPage() {
 
     setIsRedirecting(true);
     try {
-      const payload: any = {
+      const payload: { planId: string; couponCode?: string } = {
         planId: selectedPlan._id,
       };
 
@@ -89,7 +89,7 @@ export default function PricingPage() {
         payload,
       );
       window.location.href = res.data.url;
-    } catch (error: any) {
+    } catch {
       toast.error("Could not start payment. Please try again later.");
       setIsRedirecting(false);
     }

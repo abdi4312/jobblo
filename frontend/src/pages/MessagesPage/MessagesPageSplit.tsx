@@ -46,7 +46,7 @@ export function MessagesPageSplit() {
     : null;
 
   const isOtherUserOnline =
-    otherUser?._id && onlineUsers.includes(otherUser._id);
+    !!(otherUser?._id && onlineUsers.includes(otherUser._id));
 
   // Window Resize
   useEffect(() => {
@@ -74,7 +74,7 @@ export function MessagesPageSplit() {
       window.dispatchEvent(new CustomEvent("chat-read"));
     }
 
-    const handleReceiveMessage = (data: any) => {
+    const handleReceiveMessage = (data: { chatId: string }) => {
       queryClient.invalidateQueries({ queryKey: ["chat", data.chatId] });
       queryClient.invalidateQueries({ queryKey: ["chats"] });
 
@@ -155,7 +155,8 @@ export function MessagesPageSplit() {
     return date.toLocaleDateString("en-US", { day: "2-digit", month: "short" });
   };
 
-  const formatDate = (dateString: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const today = new Date();
     const yesterday = new Date(today);
@@ -165,7 +166,7 @@ export function MessagesPageSplit() {
     return date.toLocaleDateString("en-US", { day: "numeric", month: "long" });
   };
 
-  const filteredChats = chats.filter((chat: any) => {
+  const filteredChats = chats.filter((chat) => {
     if (activeFilter === "All") return true;
     if (activeFilter === "Sales") return chat.providerId._id === userId;
     return chat.clientId._id === userId;
@@ -211,7 +212,7 @@ export function MessagesPageSplit() {
             filteredChats={filteredChats}
             user={user}
             conversationId={conversationId}
-            isUnread={(chat: any) => {
+            isUnread={(chat) => {
               if (chat.clientId?._id === userId) {
                 return false;
               }
@@ -253,11 +254,10 @@ export function MessagesPageSplit() {
             <>
               <ChatHeader
                 isMobile={isMobile}
-                otherUser={otherUser}
-                activeChat={activeChat}
-                contract={contract}
+                otherUser={otherUser ?? undefined}
+                contract={contract ?? undefined}
                 setShowCreateContract={setShowCreateContract}
-                isOnline={isOtherUserOnline}
+                isOnline={!!isOtherUserOnline}
               />
 
               <div className="flex-1 flex flex-col min-h-0 bg-white">
@@ -273,7 +273,6 @@ export function MessagesPageSplit() {
                 <MessageList
                   messages={messages}
                   userId={String(userId)}
-                  formatDate={formatDate}
                   formatTime={formatTime}
                   messagesEndRef={
                     messagesEndRef as React.RefObject<HTMLDivElement>

@@ -90,7 +90,7 @@ export default function CoinsPage() {
     }
 
     void getRewards();
-  }, []);
+  }, [fetchProfile]);
 
   const handleRedeem = async (rewardId: number, coinCost: number) => {
     if (userCoins >= coinCost) {

@@ -1,4 +1,4 @@
-const { generateTokens, createSession } = require("../utils/tokenUtils");
+const { createSession } = require("../utils/tokenUtils");
 const axios = require("axios");
 const User = require("../models/User");
 
@@ -87,15 +87,15 @@ exports.iduraCallback = async (req, res) => {
 };
 
 async function redirectWithToken(req, res, user) {
-  const { accessToken, refreshToken } = generateTokens(user._id);
-  await createSession(req, user._id, refreshToken);
+  // createSession now handles token generation internally
+  const { accessToken, refreshToken } = await createSession(req, user._id);
 
   // Set cookies
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    maxAge: 15 * 60 * 1000, // 15 minutes
+    maxAge: 60 * 60 * 1000, // 1 hour (matches token expiry)
   });
 
   res.cookie("refreshToken", refreshToken, {

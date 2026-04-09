@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import mainLink from "../../api/mainURLs";
 import Swal from "sweetalert2";
 import ServiceCard from "../../components/SuperAdminDashboard/Service/ServiceCard";
+import type { Service } from "../../features/services/types";
 
 const ServicesPage: React.FC = () => {
-  const [services, setServices] = useState([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [limit, setLimit] = useState(6);
   const [loading, setLoading] = useState(true);
 
-  const fetchServices = async () => {
+  const fetchServices = useCallback(async () => {
     try {
       setLoading(true);
       const response = await mainLink.get(
@@ -24,7 +25,7 @@ const ServicesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, limit]);
 
   const handleDelete = async (id: string) => {
     const result = await Swal.fire({
@@ -42,7 +43,7 @@ const ServicesPage: React.FC = () => {
         await mainLink.delete(`/api/admin/services/${id}`);
         Swal.fire("Deleted!", "Service has been removed.", "success");
         fetchServices();
-      } catch (err) {
+      } catch {
         Swal.fire("Error", "Failed to delete service", "error");
       }
     }
@@ -50,7 +51,7 @@ const ServicesPage: React.FC = () => {
 
   useEffect(() => {
     fetchServices();
-  }, [currentPage, limit]);
+  }, [fetchServices]);
 
   return (
     <div className="animate-in fade-in duration-500 p-4">
@@ -84,7 +85,7 @@ const ServicesPage: React.FC = () => {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((service: any) => (
+            {services.map((service) => (
               <ServiceCard
                 key={service._id}
                 data={service}

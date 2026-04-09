@@ -4,6 +4,20 @@ import { JobDetailCardSkeleton } from "../../Loading/JobDetailCardSkeleton.tsx";
 import { useNavigate } from "react-router-dom";
 import { useJobs } from "../../../features/jobsList/hooks";
 
+interface List {
+  _id: string;
+  name: string;
+  services?: {
+    images?: string[];
+  }[];
+}
+
+interface Job {
+  _id: string;
+  title: string;
+  images?: string[];
+}
+
 export function ItemsGrid({ activeTab, userId }: { activeTab: string, userId?: string }) {
   const navigate = useNavigate();
   const { data: lists = [], isLoading: isListsLoading, isError: isListsError } = useFavoriteLists(userId);
@@ -53,7 +67,7 @@ export function ItemsGrid({ activeTab, userId }: { activeTab: string, userId?: s
       <div className="max-w-300 mx-auto">
         {showLists ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {lists.map((list: any) => {
+            {lists.map((list: List) => {
               const latestService = list.services?.[list.services.length - 1];
               const backgroundImage = latestService?.images?.[0] || "";
 
@@ -88,7 +102,7 @@ export function ItemsGrid({ activeTab, userId }: { activeTab: string, userId?: s
           </div>
         ) : showJobs ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {jobs.map((job: any) => (
+            {jobs.map((job: Job) => (
               <div
                 key={job._id}
                 onClick={() => navigate(`/job-listing/${job._id}`)}

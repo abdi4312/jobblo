@@ -1,5 +1,4 @@
 import mainLink from "../../api/mainURLs";
-import { getFavorites } from "../../api/favoriteAPI";
 
 export const getJobDetail = async (id: string) => {
   const response = await mainLink.get(`/api/services/${id}`);

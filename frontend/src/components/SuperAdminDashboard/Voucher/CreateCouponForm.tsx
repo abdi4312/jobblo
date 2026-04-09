@@ -1,10 +1,25 @@
 import React, { useState, useEffect } from "react";
 import { X, Tag, Calendar, DollarSign, Hash } from "lucide-react";
 
+interface CouponFormData {
+  name: string;
+  code: string;
+  amount: number;
+  expiresDate?: string;
+}
+
+interface InitialCouponData {
+  name?: string;
+  code?: string;
+  amount?: number;
+  expiresDate?: string;
+  active?: boolean;
+}
+
 interface CreateCouponFormProps {
   onClose: () => void;
-  onSubmit: (data: any) => void;
-  initialData?: any; // Edit ke liye naya prop
+  onSubmit: (data: CouponFormData) => void;
+  initialData?: InitialCouponData;
 }
 
 const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
@@ -27,7 +42,7 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
       setFormData({
         name: initialData.name || "",
         code: initialData.code || "",
-        price: initialData.amount || "", // backend 'amount' bhejta hai
+        price: String(initialData.amount ?? ""), // backend 'amount' bhejta hai
         activeAt: "", // Agar backend activeAt bhej raha hai to yahan map karein
         expiresAt: initialData.expiresDate
           ? new Date(initialData.expiresDate).toISOString().split("T")[0]

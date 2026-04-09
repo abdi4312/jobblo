@@ -16,8 +16,9 @@ export const useContractActions = (serviceId: string) => {
       queryClient.invalidateQueries({ queryKey: ["chats"] });
       toast.success("Kontrakten er signert!");
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.error || "Kunne ikke signere kontrakten");
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { error?: string } } };
+      toast.error(error?.response?.data?.error || "Kunne ikke signere kontrakten");
     },
   });
 
@@ -41,8 +42,9 @@ export const useContractActions = (serviceId: string) => {
 
       toast.success("Contract sent successfully!");
     },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.error || "Failed to create contract");
+    onError: (err: unknown) => {
+      const error = err as { response?: { data?: { error?: string } } };
+      toast.error(error?.response?.data?.error || "Failed to create contract");
     },
   });
 

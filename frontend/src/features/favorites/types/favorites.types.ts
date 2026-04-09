@@ -4,9 +4,16 @@ export interface FavoriteService {
   category: string;
   price?: number;
   images?: string[];
-  // Baki fields jo aapke service object mein hain wo yahan add karein
+}
+
+export interface FavoriteItem {
+  _id: string;
+  service: FavoriteService;
+  user: string;
+  createdAt: string;
 }
 
 export interface FavoritesResponse {
-  favorites: FavoriteService[];
+  favorites: FavoriteItem[];
+  data: FavoriteItem[];
 }

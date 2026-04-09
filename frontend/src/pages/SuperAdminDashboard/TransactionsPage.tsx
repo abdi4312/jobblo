@@ -1,28 +1,39 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Search,
   CheckCircle2,
-  XCircle,
   Clock,
   ChevronLeft,
   ChevronRight,
   Filter,
   ChevronDown,
   RotateCcw,
+  XCircle,
 } from "lucide-react";
 import mainLink from "../../api/mainURLs";
 import TransactionTable from "../../components/SuperAdminDashboard/Transcaction/TransactionTable";
 import Swal from "sweetalert2";
 
+interface Transaction {
+  _id: string;
+  user?: { name?: string; email?: string };
+  plan?: { name?: string };
+  type?: string;
+  amount?: number;
+  status?: string;
+  refunded?: boolean;
+  createdAt?: string;
+}
+
 const TransactionPage: React.FC = () => {
-  const [transactions, setTransactions] = useState([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("");
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     try {
       setLoading(true);
       const response = await mainLink.get(
@@ -36,7 +47,7 @@ const TransactionPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchQuery, selectedType]);
 
   // Status update karne wala function
   const handleUpdateStatus = async (id: string, newStatus: string) => {
@@ -72,11 +83,12 @@ const TransactionPage: React.FC = () => {
           timer: 1500,
           showConfirmButton: false,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as { response?: { data?: { message?: string } } };
         console.error("Update failed:", error);
         Swal.fire({
           title: "Error!",
-          text: error.response?.data?.message || "Failed to update status.",
+          text: err.response?.data?.message || "Failed to update status.",
           icon: "error",
         });
       }
@@ -89,32 +101,36 @@ const TransactionPage: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(handler);
-  }, [searchQuery, selectedType, currentPage]);
+  }, [fetchTransactions]);
 
-  const getStatusConfig = (status: string) => {
+  const getStatusConfig = (status: string): { label: string; color: string; bgColor: string; icon: React.ReactNode } => {
     switch (status) {
       case "succeeded":
         return {
           label: "Succeeded",
-          color: "bg-emerald-100 text-emerald-600",
+          color: "text-emerald-600",
+          bgColor: "bg-emerald-100",
           icon: <CheckCircle2 size={14} />,
         };
       case "failed":
         return {
           label: "Failed",
-          color: "bg-rose-100 text-rose-600",
+          color: "text-rose-600",
+          bgColor: "bg-rose-100",
           icon: <XCircle size={14} />,
         };
       case "refunded":
         return {
           label: "Refunded",
-          color: "bg-gray-100 text-gray-600",
+          color: "text-gray-600",
+          bgColor: "bg-gray-100",
           icon: <RotateCcw size={14} />,
         };
       default:
         return {
           label: "Pending",
-          color: "bg-amber-100 text-amber-600",
+          color: "text-amber-600",
+          bgColor: "bg-amber-100",
           icon: <Clock size={14} />,
         };
     }

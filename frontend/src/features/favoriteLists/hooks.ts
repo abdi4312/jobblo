@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { favoriteListsApi } from "./api";
-import type { CreateListDTO, AddServiceToListDTO } from "./types";
+import type { CreateListDTO, AddServiceToListDTO, UpdateListDTO } from "./types";
 import { toast } from "react-hot-toast";
 
 export const favoriteListsKeys = {
@@ -32,8 +32,9 @@ export const useCreateFavoriteList = () => {
       queryClient.invalidateQueries({ queryKey: favoriteListsKeys.all });
       toast.success("List created successfully");
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to create list");
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || "Failed to create list");
     },
   });
 };
@@ -41,7 +42,7 @@ export const useCreateFavoriteList = () => {
 export const useUpdateFavoriteList = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ listId, data }: { listId: string, data: any }) => favoriteListsApi.updateList(listId, data),
+    mutationFn: ({ listId, data }: { listId: string, data: UpdateListDTO }) => favoriteListsApi.updateList(listId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: favoriteListsKeys.all });
       queryClient.invalidateQueries({ queryKey: favoriteListsKeys.list(variables.listId) });
@@ -59,8 +60,9 @@ export const useAddContributor = () => {
       queryClient.invalidateQueries({ queryKey: favoriteListsKeys.list(variables.listId) });
       toast.success("Contributor added successfully");
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to add contributor");
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || "Failed to add contributor");
     },
   });
 };
@@ -85,8 +87,9 @@ export const useAddServiceToFavoriteList = () => {
       queryClient.invalidateQueries({ queryKey: favoriteListsKeys.all });
       toast.success("Added to list");
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to add to list");
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || "Failed to add to list");
     },
   });
 };
@@ -109,7 +112,7 @@ export const useDeleteFavoriteList = () => {
   return useMutation({
     mutationFn: (listId: string) => favoriteListsApi.deleteList(listId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: favoriteListsKeys.userLists });
+      queryClient.invalidateQueries({ queryKey: favoriteListsKeys.all });
       toast.success("List deleted successfully");
     },
   });
@@ -123,8 +126,9 @@ export const useToggleFollowList = () => {
       queryClient.invalidateQueries({ queryKey: favoriteListsKeys.list(listId) });
       queryClient.invalidateQueries({ queryKey: favoriteListsKeys.all });
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Failed to follow list");
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || "Failed to follow list");
     },
   });
 };

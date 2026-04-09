@@ -1,8 +1,17 @@
 import React from "react";
 import { Trash2 } from "lucide-react";
 
+interface UserData {
+  _id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: string;
+  createdAt?: string;
+}
+
 interface UserTableProps {
-  users: any[];
+  users: UserData[];
   loading: boolean;
   handleRoleChange: (id: string, newRole: string) => void;
   handleDelete: (id: string) => void;
@@ -29,7 +38,7 @@ const UserTable: React.FC<UserTableProps> = ({ users, loading, handleRoleChange,
               </td>
             </tr>
           ) : (
-            users.map((user: any) => (
+            users.map((user: UserData) => (
               <tr key={user._id} className="group hover:bg-gray-50/80 transition-colors">
                 <td className="py-5 px-4">
                   <div className="font-bold text-gray-800">{user.name}</div>
@@ -51,7 +60,7 @@ const UserTable: React.FC<UserTableProps> = ({ users, loading, handleRoleChange,
                   </select>
                 </td>
                 <td className="py-5 px-4 text-center text-gray-400 text-xs">
-                  {new Date(user.createdAt).toLocaleDateString()}
+                  {user.createdAt ? new Date(user.createdAt as string).toLocaleDateString() : "N/A"}
                 </td>
                 <td className="py-5 px-4 text-right">
                   <button

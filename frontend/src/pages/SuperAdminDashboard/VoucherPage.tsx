@@ -1,18 +1,28 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Plus, ChevronLeft, ChevronRight, Trash2, Edit3 } from "lucide-react";
 import CreateCouponForm from "../../components/SuperAdminDashboard/Voucher/CreateCouponForm";
 import mainLink from "../../api/mainURLs";
 import Swal from "sweetalert2";
 
+interface Voucher {
+  _id: string;
+  name: string;
+  code: string;
+  amount: number;
+  active: boolean;
+  expiresDate: string;
+  usedBy: string[];
+}
+
 const VoucherPage: React.FC = () => {
-  const [vouchers, setVouchers] = useState([]);
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCoupon, setEditingCoupon] = useState<any>(null);
+  const [editingCoupon, setEditingCoupon] = useState<Voucher | null>(null);
 
-  const fetchCoupons = async () => {
+  const fetchCoupons = useCallback(async () => {
     setIsLoading(true);
     try {
       const resp = await mainLink.get(`/api/coupons?page=${currentPage}&limit=8`);
@@ -20,16 +30,16 @@ const VoucherPage: React.FC = () => {
         setVouchers(resp.data.coupons);
         setTotalPages(resp.data.totalPages);
       }
-    } catch (error: any) {
+    } catch {
       Swal.fire("Error", "Failed to fetch coupons", "error");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage]);
 
   useEffect(() => {
     fetchCoupons();
-  }, [currentPage]);
+  }, [fetchCoupons]);
 
   const handleDelete = async (id: string) => {
     const result = await Swal.fire({
@@ -54,13 +64,13 @@ const VoucherPage: React.FC = () => {
           showConfirmButton: false
         });
         fetchCoupons();
-      } catch (error: any) {
+      } catch {
         Swal.fire("Error", "Delete failed", "error");
       }
     }
   };
 
-  const handleSubmitCoupon = async (data: any) => {
+  const handleSubmitCoupon = async (data: { name: string; code: string; amount: string; expiresDate: string }) => {
     try {
       const payload = {
         name: data.name,
@@ -80,8 +90,9 @@ const VoucherPage: React.FC = () => {
       setIsModalOpen(false);
       setEditingCoupon(null);
       fetchCoupons();
-    } catch (error: any) {
-      Swal.fire("Error", error.response?.data?.error || "Operation failed", "error");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      Swal.fire("Error", err.response?.data?.error || "Operation failed", "error");
     }
   };
 
@@ -117,7 +128,7 @@ const VoucherPage: React.FC = () => {
               ) : vouchers.length === 0 ? (
                 <tr><td colSpan={6} className="py-20 text-center text-gray-400 font-medium">No coupons found.</td></tr>
               ) : (
-                vouchers.map((voucher: any) => {
+                vouchers.map((voucher: Voucher) => {
                   // status check logic: agar active false ho ya date guzar chuki ho toh Expired
                   const isExpired = new Date(voucher.expiresDate) < new Date();
                   const currentStatus = !voucher.active || isExpired ? "Expired" : "Active";

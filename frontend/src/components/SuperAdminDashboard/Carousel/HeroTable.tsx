@@ -4,10 +4,27 @@ import {
   Pencil as EditIcon,
 } from "lucide-react";
 
+interface HeroItem {
+  _id: string;
+  title: string;
+  subtitle?: string;
+  image: string;
+  activeFrom: string;
+  expireAt: string;
+}
+
+interface StatusInfo {
+  label: string;
+  color: string;
+  icon: React.ReactNode;
+  dateInfo: string;
+  dateTextColor: string;
+}
+
 interface HeroTableProps {
-  heroes: any[];
-  getStatus: (start: string, end: string) => any;
-  handleEdit: (item: any) => void;
+  heroes: HeroItem[];
+  getStatus: (start: string, end: string) => StatusInfo;
+  handleEdit: (item: HeroItem) => void;
   handleDelete: (id: string) => void;
   loading: boolean;
 }
@@ -25,7 +42,7 @@ const HeroTable: React.FC<HeroTableProps> = ({ heroes, getStatus, handleEdit, ha
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50/50">
-          {heroes.map((item: any) => {
+          {heroes.map((item: HeroItem) => {
             const status = getStatus(item.activeFrom, item.expireAt);
             return (
               <tr

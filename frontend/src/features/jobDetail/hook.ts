@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getJobDetail ,createChat, createStripeSession, getNearbyJobs} from "./jobApi";
+import type { Jobs } from "../../types/Jobs";
 
 export const useJobDetailQuery = (id: string) => {
   return useQuery({
@@ -21,7 +22,7 @@ export const useNearbyJobsQuery = (coordinates: [number, number] | undefined, cu
 
       // Filter current job and take only first 4
       return data
-        .filter((job: any) => job._id !== currentJobId)
+        .filter((job: Jobs) => job._id !== currentJobId)
         .slice(0, 4);
     },
     enabled: !!coordinates && coordinates.length === 2,

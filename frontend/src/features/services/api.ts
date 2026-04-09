@@ -1,4 +1,5 @@
 import mainLink from "../../api/mainURLs";
+import type { ServiceUpdateData } from "./types";
 
 export async function getMyPostedServices() {
   const res = await mainLink.get("/api/services/my-posted");
@@ -10,7 +11,7 @@ export async function deleteService(serviceId: string) {
   return res.data;
 }
 
-export async function updateService(serviceId: string, jobData: any) {
+export async function updateService(serviceId: string, jobData: ServiceUpdateData) {
   const res = await mainLink.put(`/api/services/${serviceId}`, jobData);
   return res.data;
 }

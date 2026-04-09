@@ -1,16 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import mainLink from "../../api/mainURLs";
 
-export interface FilterOptions {
-    categories: Array<{
+export interface FilterOptionLocation {
+    name: string;
+    count?: number;
+}
+
+export interface FilterOptionCategory {
+    _id: string;
+    name: string;
+    count?: number;
+    subcategories: Array<{
         _id: string;
         name: string;
-        subcategories: Array<{
-            _id: string;
-            name: string;
-        }>;
+        count?: number;
     }>;
-    locations: string[];
+}
+
+export interface FilterOptions {
+    categories: FilterOptionCategory[];
+    locations: FilterOptionLocation[];
     priceRange: {
         min: number;
         max: number;
