@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import styles from './NotificationSettings.module.css';
 import { NotificationOption } from '../NotificationOption/NotificationOption';
+import { NotificationToggle } from '../NotificationToggle/NotificationToggle';
+import { useUserStore } from '../../../stores/userStore';
 import BellIcon from '../../../assets/icons/bell.svg?react';
 
 interface NotificationState {
@@ -17,6 +19,9 @@ interface NotificationData {
 
 export function NotificationSettings() {
   const [isExpanded, setIsExpanded] = useState(false);
+  const notificationsEnabled = useUserStore((state) => state.notificationsEnabled);
+  const setNotificationsEnabled = useUserStore((state) => state.setNotificationsEnabled);
+
   const [notifications, setNotifications] = useState<NotificationData>({
     newMessage: { push: true, sms: false, email: true },
     marketing: { push: false, sms: false, email: false },
@@ -66,6 +71,13 @@ export function NotificationSettings() {
       
       {isExpanded && (
         <div className={styles.expandedContent}>
+          <div className={styles.soundSetting}>
+            <NotificationToggle
+              label="Varsellyd"
+              enabled={notificationsEnabled}
+              onChange={(enabled) => setNotificationsEnabled(enabled)}
+            />
+          </div>
           <NotificationOption
             title="Ny melding"
             notifications={notifications.newMessage}

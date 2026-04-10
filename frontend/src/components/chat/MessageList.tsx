@@ -83,7 +83,11 @@ function MessageList({
                     
                     <div className="mt-1.5 flex items-center gap-2 px-1">
                       <span className="text-[11px] font-medium text-[#ADB5BD]">
-                        {isSentByMe ? `Read ${formatTime(msg.createdAt)}` : formatTime(msg.createdAt)}
+                        {isSentByMe 
+                          ? (msg.seenBy && msg.seenBy.length > 1 
+                              ? `Read ${formatTime(msg.createdAt)}` 
+                              : `Unread ${formatTime(msg.createdAt)}`)
+                          : formatTime(msg.createdAt)}
                       </span>
                     </div>
                   </div>

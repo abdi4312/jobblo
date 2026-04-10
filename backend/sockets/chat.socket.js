@@ -90,19 +90,24 @@ module.exports = (io) => {
 
         let modified = false;
         chat.messages.forEach((m) => {
-          if (!m.seenBy.includes(userId)) {
+          if (!m.seenBy) m.seenBy = [];
+          // More robust ID comparison
+          const currentUserIdStr = String(userId);
+          const alreadySeen = m.seenBy.some(
+            (id) => String(id) === currentUserIdStr,
+          );
+          if (!alreadySeen) {
             m.seenBy.push(userId);
             modified = true;
           }
         });
 
         if (modified) {
-          // Use markModified for nested arrays to ensure Mongoose detects changes
           chat.markModified("messages");
           await chat.save();
         }
 
-        // Notify other user in the chat
+        // Notify ALL users in the chat room (including sender)
         io.to(`chat-${chatId}`).emit("messages-read", { chatId, userId });
       } catch (err) {
         console.error("Mark as read error:", err.message);
@@ -123,13 +128,14 @@ module.exports = (io) => {
           senderId: socket.userId,
           text,
           createdAt: new Date(),
-          seenBy: [socket.userId],
+          seenBy: [socket.userId], // Sender already saw their own message
         };
 
         chat.messages.push(newMessage);
         chat.lastMessage = text;
         await chat.save();
 
+        // Emit socket event to notify users in the chat room
         io.to(`chat-${chatId}`).emit("receive-message", {
           chatId,
           message: newMessage,

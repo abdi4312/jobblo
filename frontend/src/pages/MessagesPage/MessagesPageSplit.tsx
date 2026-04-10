@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { initSocket } from "../../socket/socket";
 import { useUserStore } from "../../stores/userStore";
 import { useChatQueries } from "../../features/chat/hook";
+import { useNotificationSound } from "../../hooks/useNotificationSound";
 
 // Components
 import ChatHeader from "../../components/chat/ChatHeader";
@@ -29,6 +30,7 @@ export function MessagesPageSplit() {
 
   const { user } = useUserStore();
   const userId = user?._id;
+  const { playMessageSound, playSendSound } = useNotificationSound();
 
   // TANSTACK QUERIES (Fetching Logic)
   const { chatsQuery, activeChatQuery, contractQuery, sendMutation } =
@@ -45,8 +47,9 @@ export function MessagesPageSplit() {
       : activeChat.clientId
     : null;
 
-  const isOtherUserOnline =
-    !!(otherUser?._id && onlineUsers.includes(otherUser._id));
+  const isOtherUserOnline = !!(
+    otherUser?._id && onlineUsers.includes(otherUser._id)
+  );
 
   // Window Resize
   useEffect(() => {
@@ -67,19 +70,20 @@ export function MessagesPageSplit() {
     if (conversationId && userId) {
       socket.emit("join-chat", conversationId);
       socket.emit("mark-as-read", { chatId: conversationId, userId });
-      localStorage.setItem(
-        `lastChatCheck_${userId}_${conversationId}`,
-        new Date().toISOString(),
-      );
+      // Invalidate chats list so the dot in sidebar goes away immediately
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
       window.dispatchEvent(new CustomEvent("chat-read"));
     }
 
     const handleReceiveMessage = (data: { chatId: string }) => {
+      // Immediate invalidation to trigger UI update
       queryClient.invalidateQueries({ queryKey: ["chat", data.chatId] });
       queryClient.invalidateQueries({ queryKey: ["chats"] });
 
       if (conversationId === data.chatId) {
         socket.emit("mark-as-read", { chatId: conversationId, userId });
+        // Also dispatch custom event for Header to update immediately
+        window.dispatchEvent(new CustomEvent("chat-read"));
       }
     };
 
@@ -87,6 +91,8 @@ export function MessagesPageSplit() {
       if (data.chatId === conversationId) {
         queryClient.invalidateQueries({ queryKey: ["chat", data.chatId] });
       }
+      // ALWAYS invalidate chats list so the unread dot in the sidebar updates
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
     };
 
     const handleUserOnline = (onlineUserIds: string[]) => {
@@ -134,7 +140,12 @@ export function MessagesPageSplit() {
     if (!newMessage.trim() || !conversationId || sendMutation.isPending) return;
     sendMutation.mutate(
       { id: conversationId, text: newMessage.trim() },
-      { onSuccess: () => setNewMessage("") },
+      {
+        onSuccess: () => {
+          setNewMessage("");
+          playSendSound();
+        },
+      },
     );
   };
 
@@ -213,15 +224,37 @@ export function MessagesPageSplit() {
             user={user}
             conversationId={conversationId}
             isUnread={(chat) => {
-              if (chat.clientId?._id === userId) {
-                return false;
-              }
-              const lastCheck = localStorage.getItem(
-                `lastChatCheck_${userId}_${chat._id}`,
-              );
-              return lastCheck
-                ? new Date(chat.updatedAt) > new Date(lastCheck)
-                : true;
+              if (!chat.messages || chat.messages.length === 0) return false;
+              const lastMessage = chat.messages[chat.messages.length - 1];
+
+              const currentUserId = String(userId || "");
+              if (!currentUserId) return false;
+
+              const getMsgSenderId = (msg: any) => {
+                if (!msg.senderId) return "";
+                if (typeof msg.senderId === "string") return msg.senderId;
+                if (typeof msg.senderId === "object") {
+                  return String(msg.senderId._id || msg.senderId.id || "");
+                }
+                return String(msg.senderId);
+              };
+
+              const senderId = getMsgSenderId(lastMessage);
+              if (!senderId) return false;
+
+              // If you are the sender, it is NOT unread for you
+              if (senderId === currentUserId) return false;
+
+              // Check if you are in the seenBy array
+              const seenBy = Array.isArray(lastMessage.seenBy)
+                ? lastMessage.seenBy
+                : [];
+              const isSeenByMe = seenBy.some((id: any) => {
+                const idStr = String(id?._id || id?.id || id || "");
+                return idStr === currentUserId;
+              });
+
+              return !isSeenByMe;
             }}
             formatTime={formatTime}
             onlineUsers={onlineUsers}
