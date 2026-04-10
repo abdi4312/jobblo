@@ -9,6 +9,7 @@ import { initSocket } from "../../../socket/socket";
 import { NavLink } from "react-router-dom";
 import { Bell, Heart, Home, MessageCircle, Plus, User } from "lucide-react";
 import { useUnreadCount } from "../../../features/notifications/hooks";
+import { useNotificationSound } from "../../../hooks/useNotificationSound";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export default function Header() {
   const Auth = useUserStore((state) => state.isAuthenticated);
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const { playMessageSound, playAlertSound } = useNotificationSound();
 
   // Get unread notifications count using our new hook
   const { data: unreadNotificationsData } = useUnreadCount(user?._id);
@@ -37,21 +39,38 @@ export default function Header() {
 
         // 1. Calculate unread count
         const unreadChats = chats.filter((chat) => {
-          const lastSenderId = chat.clientId?._id || chat.lastMessage?.sender;
-          if (lastSenderId === user._id) return false;
-          if (!chat.updatedAt) return false;
+          if (!chat.messages || chat.messages.length === 0) return false;
+          const lastMessage = chat.messages[chat.messages.length - 1];
 
-          const lastCheckedTime = localStorage.getItem(`lastChatCheck_${user._id}_${chat._id}`);
-          const chatUpdatedTime = new Date(chat.updatedAt).getTime();
+          const currentUserId = String(user?._id || user?.id || "");
+          if (!currentUserId) return false;
 
-          if (!lastCheckedTime) {
-            const weekAgo = new Date();
-            weekAgo.setDate(weekAgo.getDate() - 7);
-            return chatUpdatedTime > weekAgo.getTime();
-          }
+          const getMsgSenderId = (msg: any) => {
+            if (!msg.senderId) return "";
+            // If senderId is an object (populated), get _id. If it's a string, use it.
+            if (typeof msg.senderId === "string") return msg.senderId;
+            if (typeof msg.senderId === "object") {
+              return String(msg.senderId._id || msg.senderId.id || "");
+            }
+            return String(msg.senderId);
+          };
 
-          const lastCheckedTimestamp = new Date(lastCheckedTime).getTime();
-          return chatUpdatedTime > lastCheckedTimestamp;
+          const senderId = getMsgSenderId(lastMessage);
+          if (!senderId) return false;
+
+          // If you are the sender, it is NOT unread for you
+          if (senderId === currentUserId) return false;
+
+          // Check if you are in the seenBy array
+          const seenBy = Array.isArray(lastMessage.seenBy)
+            ? lastMessage.seenBy
+            : [];
+          const isSeenByMe = seenBy.some((id: any) => {
+            const idStr = String(id?._id || id?.id || id || "");
+            return idStr === currentUserId;
+          });
+
+          return !isSeenByMe;
         });
 
         setUnreadMessagesCount(unreadChats.length);
@@ -72,8 +91,37 @@ export default function Header() {
     initializeChatState();
 
     // Listen for real-time messages
-    const handleReceiveMessage = () => {
-      setUnreadMessagesCount(prev => prev + 1);
+    const handleReceiveMessage = (data: any) => {
+      // Re-fetch or re-calculate. Simplest is to re-initialize
+      initializeChatState();
+
+      // Play sound if message is from someone else
+      const currentUserId = String(user?._id || user?.id || "");
+      
+      const getMsgSenderId = (msg: any) => {
+        if (!msg) return "";
+        const sId = msg.senderId || msg.sender;
+        if (!sId) return "";
+        if (typeof sId === "string") return sId;
+        if (typeof sId === "object") return String(sId._id || sId.id || "");
+        return String(sId);
+      };
+
+      const senderId = getMsgSenderId(data?.message);
+      
+      if (senderId && currentUserId && senderId !== currentUserId) {
+        playMessageSound();
+      }
+    };
+
+    // Listen for new notifications (alerts)
+    const handleNewNotification = () => {
+      playAlertSound();
+    };
+
+    // Listen for real-time read status
+    const handleMessagesRead = (data: any) => {
+      initializeChatState();
     };
 
     // Listen for local tab updates
@@ -88,6 +136,8 @@ export default function Header() {
         socket.on("connect", initializeChatState);
       }
       socket.on("receive-message", handleReceiveMessage);
+      socket.on("messages-read", handleMessagesRead);
+      socket.on("new_notification", handleNewNotification);
     }
 
     window.addEventListener("chat-read", handleChatRead);
@@ -95,11 +145,13 @@ export default function Header() {
     return () => {
       if (socket) {
         socket.off("receive-message", handleReceiveMessage);
+        socket.off("messages-read", handleMessagesRead);
+        socket.off("new_notification", handleNewNotification);
         socket.off("connect");
       }
       window.removeEventListener("chat-read", handleChatRead);
     };
-  }, [user?._id]);
+  }, [user?._id, playMessageSound, playAlertSound]);
 
   const handleProtectedNavigation = (path: string) => {
     if (!user) {
@@ -127,8 +179,18 @@ export default function Header() {
   const navLinkUse: NavLinkItem[] = [
     { name: "Legg ut oppdrag", icon: <Plus size={20} />, path: "/publish-job" },
     { name: "Home", icon: <Home size={25} />, path: "/home" },
-    { name: "Meldinger", icon: <MessageCircle size={18} />, path: "/messages", badgeCount: unreadMessagesCount },
-    { name: "Varsler", icon: <Bell size={18} />, path: "/alerts", badgeCount: unreadNotificationsCount },
+    {
+      name: "Meldinger",
+      icon: <MessageCircle size={18} />,
+      path: "/messages",
+      badgeCount: unreadMessagesCount,
+    },
+    {
+      name: "Varsler",
+      icon: <Bell size={18} />,
+      path: "/alerts",
+      badgeCount: unreadNotificationsCount,
+    },
     { name: "Favoritter", icon: <Heart size={18} />, path: "/favorites" },
     { name: "Profil", icon: <User size={18} />, path: "/profile" },
   ];
@@ -137,11 +199,15 @@ export default function Header() {
 
   return (
     <>
-      <header className={`bg-[#F6F1E8] relative ${isMessagesPage ? "mb-0" : "mb-6"}`}>
+      <header
+        className={`bg-[#F6F1E8] relative ${isMessagesPage ? "mb-0" : "mb-6"}`}
+      >
         <div className="h-14 md:h-22.75 max-w-300 mx-auto flex justify-between items-center px-4 lg:px-0">
-
           {/* LOGO */}
-          <div className="h-10.75 w-40 sm:w-40.5 cursor-pointer" onClick={() => navigate("/")}>
+          <div
+            className="h-10.75 w-40 sm:w-40.5 cursor-pointer"
+            onClick={() => navigate("/")}
+          >
             <Icons.JobbloIcon />
           </div>
 
@@ -153,7 +219,10 @@ export default function Header() {
                   <NavLink
                     to={link.path}
                     className={({ isActive }) =>
-                      `transition-all font-light text-[16px] cursor-pointer ${isActive ? "text-black font-semibold" : "text-[#0A0A0A9E]! hover:text-black!"
+                      `transition-all font-light text-[16px] cursor-pointer ${
+                        isActive
+                          ? "text-black font-semibold"
+                          : "text-[#0A0A0A9E]! hover:text-black!"
                       }`
                     }
                   >
@@ -168,7 +237,8 @@ export default function Header() {
             <div className="hidden md:flex items-center gap-6 px-4 py-3">
               {navLinkUse.map((link, index) => {
                 const homeButton = link.path === "/home";
-                const isHomeButtonActive = homeButton && location.pathname === link.path;
+                const isHomeButtonActive =
+                  homeButton && location.pathname === link.path;
 
                 if (homeButton) {
                   return (
@@ -182,7 +252,8 @@ export default function Header() {
                   );
                 }
                 const jobButton = link.path === "/publish-job";
-                const isJobButtonActive = jobButton && location.pathname === link.path;
+                const isJobButtonActive =
+                  jobButton && location.pathname === link.path;
                 if (jobButton) {
                   return (
                     <button
@@ -200,19 +271,22 @@ export default function Header() {
                     key={index}
                     to={link.path}
                     className={({ isActive }) =>
-                      `relative flex items-center gap-2 cursor-pointer group py-2 ${isActive ? "border-b-2 border-[#44916F]" : ""
+                      `relative flex items-center gap-2 cursor-pointer group py-2 ${
+                        isActive ? "border-b-2 border-[#44916F]" : ""
                       }`
                     }
                   >
                     <div className="relative text-[#364153]! group-hover:text-black">
                       {link.icon}
-                      {(link.badgeCount !== undefined && link.badgeCount > 0) && (
+                      {link.badgeCount !== undefined && link.badgeCount > 0 && (
                         <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                           {link.badgeCount}
                         </span>
                       )}
                     </div>
-                    <span className="text-sm font-medium text-[#0A0A0A9E]! group-hover:text-black">{link.name}</span>
+                    <span className="text-sm font-medium text-[#0A0A0A9E]! group-hover:text-black">
+                      {link.name}
+                    </span>
                   </NavLink>
                 );
               })}
@@ -221,21 +295,30 @@ export default function Header() {
 
           {/* RIGHT SIDE (MOBILE TOGGLE) */}
           <div className="md:hidden">
-            <button className="text-2xl" onClick={() => setMenuOpen(true)}>☰</button>
+            <button className="text-2xl" onClick={() => setMenuOpen(true)}>
+              ☰
+            </button>
           </div>
-          {!Auth &&
+          {!Auth && (
             <div className="md:flex items-center gap-4 hidden">
-              <div className="hidden md:block"><VippsButton /></div>
-            </div>}
+              <div className="hidden md:block">
+                <VippsButton />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* SIDEBAR MOBILE */}
         {menuOpen && (
-          <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setMenuOpen(false)} />
+          <div
+            className="fixed inset-0 bg-black/40 z-40 md:hidden"
+            onClick={() => setMenuOpen(false)}
+          />
         )}
         <div
-          className={`fixed top-0 left-0 h-full w-64 bg-white z-50 transform transition-transform duration-300 md:hidden ${menuOpen ? "translate-x-0" : "-translate-x-full"
-            }`}
+          className={`fixed top-0 left-0 h-full w-64 bg-white z-50 transform transition-transform duration-300 md:hidden ${
+            menuOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
         >
           <div className="flex justify-between items-center p-4 border-b">
             <span className="font-semibold">Meny</span>
@@ -250,19 +333,37 @@ export default function Header() {
                   to={link.path}
                   onClick={() => setMenuOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 p-3 rounded-lg ${isActive ? "bg-green-50 text-[#44916F] font-bold" : "text-gray-700"
+                    `flex items-center gap-3 p-3 rounded-lg ${
+                      isActive
+                        ? "bg-green-50 text-[#44916F] font-bold"
+                        : "text-gray-700"
                     }`
                   }
                 >
-                  {link.icon && <span className="text-[#0A0A0A9E]! group-hover:text-black">{link.icon}</span>}
-                  <span className="text-sm font-medium text-[#0A0A0A9E]! group-hover:text-black">{link.name}</span>
+                  {link.icon && (
+                    <div className="relative text-[#0A0A0A9E]! group-hover:text-black">
+                      {link.icon}
+                      {link.badgeCount !== undefined && link.badgeCount > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
+                          {link.badgeCount}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <span className="text-sm font-medium text-[#0A0A0A9E]! group-hover:text-black">
+                    {link.name}
+                  </span>
                 </NavLink>
               </li>
             ))}
           </ul>
 
           {/* Vipps Button in Sidebar for mobile logout users */}
-          {!Auth && <div className="p-4"><VippsButton /></div>}
+          {!Auth && (
+            <div className="p-4">
+              <VippsButton />
+            </div>
+          )}
         </div>
       </header>
     </>
