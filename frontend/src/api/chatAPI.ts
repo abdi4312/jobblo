@@ -5,6 +5,7 @@ export interface ChatMessage {
   text: string;
   createdAt: string;
   _id?: string;
+  seenBy?: string[];
 }
 
 export interface Chat {
@@ -63,8 +64,13 @@ export const getChatById = async (chatId: string): Promise<Chat> => {
 /**
  * Send a message in a chat
  */
-export const sendMessage = async (chatId: string, text: string): Promise<ChatMessage> => {
-  const response = await mainLink.post(`/api/chats/${chatId}/message`, { text });
+export const sendMessage = async (
+  chatId: string,
+  text: string,
+): Promise<ChatMessage> => {
+  const response = await mainLink.post(`/api/chats/${chatId}/message`, {
+    text,
+  });
   return response.data;
 };
 

@@ -139,6 +139,7 @@ exports.sendMessage = async (req, res) => {
       senderId: id,
       text,
       createdAt: new Date(),
+      seenBy: [id],
     };
 
     chat.messages.push(message);

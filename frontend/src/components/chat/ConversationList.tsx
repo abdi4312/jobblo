@@ -1,5 +1,5 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from "react";
+import { useNavigate } from "react-router-dom";
 
 interface ConversationUser {
   _id: string;
@@ -11,9 +11,15 @@ interface ChatItem {
   _id: string;
   clientId?: ConversationUser;
   providerId?: ConversationUser;
-  serviceId?: { images?: string[]; image?: string; title?: string; isSold?: boolean };
-  lastMessage?: { text?: string; createdAt?: string };
-  updatedAt?: string;
+  serviceId?: {
+    images?: string[];
+    image?: string;
+    title?: string;
+    isSold?: boolean;
+  };
+  lastMessage?: string;
+  messages?: any[];
+  updatedAt: string;
 }
 
 interface ConversationListProps {
@@ -60,17 +66,20 @@ const ConversationList: React.FC<ConversationListProps> = ({
 
             const hasUnread = isUnread(chat);
             const isActive = conversationId === chat._id;
-            const serviceImage = chat.serviceId?.images?.[0] || chat.serviceId?.image;
-            const isOnline = otherPerson?._id && onlineUsers.includes(otherPerson._id);
+            const serviceImage =
+              chat.serviceId?.images?.[0] || chat.serviceId?.image;
+            const isOnline =
+              otherPerson?._id && onlineUsers.includes(otherPerson._id);
 
             return (
               <div
                 key={chat._id}
                 onClick={() => navigate(`/messages/${chat._id}`)}
-                className={`relative flex items-center p-4 gap-4 cursor-pointer transition-all ${isActive
+                className={`relative flex items-center p-4 gap-4 cursor-pointer transition-all ${
+                  isActive
                     ? "bg-[#EF790933] opacity-80"
                     : "bg-white hover:bg-[#F8F9FA]"
-                  }`}
+                }`}
               >
                 {/* Avatar Section */}
                 <div className="relative shrink-0">
@@ -95,14 +104,21 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 {/* Content Section */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 mb-0.5">
-                    <h2 className={`text-[17px] font-bold truncate ${isActive ? "text-[#212529]" : "text-[#495057]"}`}>
+                    <h2
+                      className={`text-[17px] font-bold truncate flex-1 ${isActive ? "text-[#212529]" : "text-[#495057]"}`}
+                    >
                       {otherPerson?.name || "Unknown"}
                     </h2>
+                    {hasUnread && !isActive && (
+                      <div className="w-2.5 h-2.5 bg-[#EF7909] rounded-full shrink-0"></div>
+                    )}
                     <span className="text-[13px] text-[#868E96] font-normal whitespace-nowrap">
                       {formatTime(chat.updatedAt || "")}
                     </span>
                   </div>
-                  <p className={`text-[15px] truncate leading-tight ${hasUnread ? "text-[#212529] font-bold" : "text-[#868E96]"}`}>
+                  <p
+                    className={`text-[15px] truncate leading-tight ${hasUnread ? "text-[#212529] font-bold" : "text-[#868E96]"}`}
+                  >
                     {chat.lastMessage || "Start conversation..."}
                   </p>
                 </div>
