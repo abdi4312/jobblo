@@ -13,6 +13,9 @@ export const useUserStore = create<UserState>()(
       user: null,
       tokens: null,
       isAuthenticated: false,
+      notificationsEnabled: true,
+
+      setNotificationsEnabled: (enabled) => set({ notificationsEnabled: enabled }),
 
       setUser: (user) =>
         set({
