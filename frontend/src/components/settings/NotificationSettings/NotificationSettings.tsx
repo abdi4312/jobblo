@@ -1,49 +1,13 @@
-import { useState } from 'react';
-import styles from './NotificationSettings.module.css';
-import { NotificationOption } from '../NotificationOption/NotificationOption';
-import { NotificationToggle } from '../NotificationToggle/NotificationToggle';
-import { useUserStore } from '../../../stores/userStore';
-import BellIcon from '../../../assets/icons/bell.svg?react';
-
-interface NotificationState {
-  push: boolean;
-  sms: boolean;
-  email: boolean;
-}
-
-interface NotificationData {
-  newMessage: NotificationState;
-  marketing: NotificationState;
-  reminders: NotificationState;
-}
+import { useState } from "react";
+import styles from "./NotificationSettings.module.css";
+import { NotificationManager } from "../NotificationManager/NotificationManager";
+import BellIcon from "../../../assets/icons/bell.svg?react";
 
 export function NotificationSettings() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const notificationsEnabled = useUserStore((state) => state.notificationsEnabled);
-  const setNotificationsEnabled = useUserStore((state) => state.setNotificationsEnabled);
-
-  const [notifications, setNotifications] = useState<NotificationData>({
-    newMessage: { push: true, sms: false, email: true },
-    marketing: { push: false, sms: false, email: false },
-    reminders: { push: true, sms: false, email: false }
-  });
 
   const handleToggleExpanded = () => {
     setIsExpanded(!isExpanded);
-  };
-
-  const handleNotificationChange = (
-    category: keyof NotificationData,
-    type: keyof NotificationState,
-    enabled: boolean
-  ) => {
-    setNotifications(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-        [type]: enabled
-      }
-    }));
   };
 
   return (
@@ -53,46 +17,30 @@ export function NotificationSettings() {
           <div className={styles.iconContainer}>
             <BellIcon />
           </div>
-          <div className={styles.text}>Varsler</div>
+          <div className={styles.text}>Varslingsinnstillinger</div>
         </div>
         <div className={styles.arrowContainer}>
-          <svg 
-            width="25" 
-            height="24" 
-            viewBox="0 0 25 24" 
-            fill="none" 
+          <svg
+            width="25"
+            height="24"
+            viewBox="0 0 25 24"
+            fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className={isExpanded ? styles.arrowExpanded : styles.arrowCollapsed}
+            className={
+              isExpanded ? styles.arrowExpanded : styles.arrowCollapsed
+            }
           >
-            <path d="M12.9512 12.6L17.5512 8L18.9512 9.4L12.9512 15.4L6.95117 9.4L8.35117 8L12.9512 12.6Z" fill="#303030"/>
+            <path
+              d="M12.9512 12.6L17.5512 8L18.9512 9.4L12.9512 15.4L6.95117 9.4L8.35117 8L12.9512 12.6Z"
+              fill="#303030"
+            />
           </svg>
         </div>
       </div>
-      
+
       {isExpanded && (
         <div className={styles.expandedContent}>
-          <div className={styles.soundSetting}>
-            <NotificationToggle
-              label="Varsellyd"
-              enabled={notificationsEnabled}
-              onChange={(enabled) => setNotificationsEnabled(enabled)}
-            />
-          </div>
-          <NotificationOption
-            title="Ny melding"
-            notifications={notifications.newMessage}
-            onChange={(type, enabled) => handleNotificationChange('newMessage', type, enabled)}
-          />
-          <NotificationOption
-            title="Markedsføring"
-            notifications={notifications.marketing}
-            onChange={(type, enabled) => handleNotificationChange('marketing', type, enabled)}
-          />
-          <NotificationOption
-            title="Påminnelser"
-            notifications={notifications.reminders}
-            onChange={(type, enabled) => handleNotificationChange('reminders', type, enabled)}
-          />
+          <NotificationManager />
         </div>
       )}
     </div>
