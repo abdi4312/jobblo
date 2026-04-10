@@ -49,8 +49,14 @@ export type UserState = {
   tokens: AuthTokens | null;
   isAuthenticated: boolean;
   notificationsEnabled: boolean;
+  browserNotificationsEnabled: boolean;
+  emailNotificationsEnabled: boolean;
+  smsNotificationsEnabled: boolean;
 
   setNotificationsEnabled: (enabled: boolean) => void;
+  setBrowserNotificationsEnabled: (enabled: boolean) => void;
+  setEmailNotificationsEnabled: (enabled: boolean) => void;
+  setSmsNotificationsEnabled: (enabled: boolean) => void;
   setUser: (user: User) => void;
   setTokens: (tokens: AuthTokens) => void;
 

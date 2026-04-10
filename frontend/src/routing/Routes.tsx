@@ -63,6 +63,7 @@ import {
   SessionsView,
   AboutView,
   SubscriptionView,
+  NotificationsView,
 } from "../components/profile/SettingsViews";
 
 export const routes: RouteObject[] = [
@@ -168,6 +169,7 @@ export const routes: RouteObject[] = [
               { path: "cookies", element: <CookiesView /> },
               { path: "sessions", element: <SessionsView /> },
               { path: "about", element: <AboutView /> },
+              { path: "notifications", element: <NotificationsView /> },
               { path: "subscriptions", element: <SubscriptionView /> },
             ],
           },

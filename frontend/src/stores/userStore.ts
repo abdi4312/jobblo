@@ -14,8 +14,21 @@ export const useUserStore = create<UserState>()(
       tokens: null,
       isAuthenticated: false,
       notificationsEnabled: true,
+      browserNotificationsEnabled: true,
+      emailNotificationsEnabled: true,
+      smsNotificationsEnabled: false,
 
-      setNotificationsEnabled: (enabled) => set({ notificationsEnabled: enabled }),
+      setNotificationsEnabled: (enabled) =>
+        set({ notificationsEnabled: enabled }),
+
+      setBrowserNotificationsEnabled: (enabled) =>
+        set({ browserNotificationsEnabled: enabled }),
+
+      setEmailNotificationsEnabled: (enabled) =>
+        set({ emailNotificationsEnabled: enabled }),
+
+      setSmsNotificationsEnabled: (enabled) =>
+        set({ smsNotificationsEnabled: enabled }),
 
       setUser: (user) =>
         set({

@@ -97,7 +97,7 @@ export default function Header() {
 
       // Play sound if message is from someone else
       const currentUserId = String(user?._id || user?.id || "");
-      
+
       const getMsgSenderId = (msg: any) => {
         if (!msg) return "";
         const sId = msg.senderId || msg.sender;
@@ -108,15 +108,57 @@ export default function Header() {
       };
 
       const senderId = getMsgSenderId(data?.message);
-      
+
       if (senderId && currentUserId && senderId !== currentUserId) {
-        playMessageSound();
+        // 1. Play sound
+        if (useUserStore.getState().notificationsEnabled) {
+          playMessageSound();
+        }
+
+        // 2. Show browser notification if minimized/background
+        if (
+          useUserStore.getState().browserNotificationsEnabled &&
+          document.hidden &&
+          "Notification" in window &&
+          Notification.permission === "granted"
+        ) {
+          const notification = new Notification(`Ny melding fra Jobblo`, {
+            body: data?.message?.text || "Du har fått en ny melding",
+            icon: "/logo192.png",
+          });
+
+          notification.onclick = () => {
+            window.focus();
+            if (data?.chatId) navigate(`/messages/${data.chatId}`);
+            notification.close();
+          };
+
+          // Auto-close after 5 seconds
+          setTimeout(() => notification.close(), 5000);
+        }
       }
     };
 
     // Listen for new notifications (alerts)
-    const handleNewNotification = () => {
-      playAlertSound();
+    const handleNewNotification = (data: any) => {
+      if (useUserStore.getState().notificationsEnabled) {
+        playAlertSound();
+      }
+
+      if (
+        useUserStore.getState().browserNotificationsEnabled &&
+        document.hidden &&
+        "Notification" in window &&
+        Notification.permission === "granted"
+      ) {
+        const notification = new Notification("Ny varsel fra Jobblo", {
+          body: data?.content || "Du har fått et nytt varsel",
+          icon: "/logo192.png",
+        });
+
+        // Auto-close after 5 seconds
+        setTimeout(() => notification.close(), 5000);
+      }
     };
 
     // Listen for real-time read status
