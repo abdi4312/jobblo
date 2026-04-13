@@ -71,6 +71,6 @@ export const createOrder = async (payload: CreateOrderPayload): Promise<Order> =
  * Update order status
  */
 export const updateOrderStatus = async (orderId: string, status: string): Promise<Order> => {
-  const response = await mainLink.patch(`/api/orders/${orderId}/status`, { status });
+  const response = await mainLink.patch(`/api/orders/${orderId}`, { status });
   return response.data;
 };

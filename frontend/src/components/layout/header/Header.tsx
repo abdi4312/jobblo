@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { getMyChats } from "../../../api/chatAPI";
 import { initSocket } from "../../../socket/socket";
 import { NavLink } from "react-router-dom";
-import { Bell, Heart, Home, MessageCircle, Plus, User } from "lucide-react";
+import { Bell, FileText, Home, MessageCircle, Plus, User } from "lucide-react";
 import { useUnreadCount } from "../../../features/notifications/hooks";
 import { useNotificationSound } from "../../../hooks/useNotificationSound";
 
@@ -77,6 +77,7 @@ export default function Header() {
 
         // 2. Join socket rooms
         if (socket) {
+          socket.emit("join", user?._id);
           chats.forEach((chat) => {
             if (chat._id) {
               socket.emit("join-chat", chat._id);
@@ -233,7 +234,7 @@ export default function Header() {
       path: "/alerts",
       badgeCount: unreadNotificationsCount,
     },
-    { name: "Favoritter", icon: <Heart size={18} />, path: "/favorites" },
+    { name: "Kontrakt", icon: <FileText size={18} />, path: "/contracts" },
     { name: "Profil", icon: <User size={18} />, path: "/profile" },
   ];
 

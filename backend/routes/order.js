@@ -32,7 +32,7 @@ const { authenticate } = require('../middleware/auth');
  *           description: ID til tjenestetilbyderen
  *         status:
  *           type: string
- *           enum: [pending, confirmed, completed, cancelled]
+ *           enum: [pending, accepted, declined, in_progress, completed, cancelled, awaiting_payment, paid]
  *         price:
  *           type: number
  *         contractId:
@@ -156,7 +156,7 @@ router.post('/', authenticate, orderController.createOrder);
  *             properties:
  *               status:
  *                 type: string
- *                 enum: [pending, confirmed, completed, cancelled]
+ *                 enum: [pending, accepted, declined, in_progress, completed, cancelled, awaiting_payment, paid]
  *                 description: Oppdatert ordrestatus
  *               price:
  *                 type: number

@@ -15,7 +15,8 @@ import RegisterPage from "../pages/RegisterPage/RegisterPage.tsx";
 import { ProtectedRoute } from "../components/shared/ProtectedRoute.tsx";
 import InstillingerPage from "../pages/InstillingerPage/InstillingerPage.tsx";
 import AnmeldelserPage from "../pages/AnmeldelserPage/AnmeldelserPage.tsx";
-import { FavoritesPage } from "../pages/FavoritesPage/FavoritesPage.tsx";
+import { ContractsPage } from "../pages/ContractsPage/ContractsPage.tsx";
+import { ContractDetailPage } from "../pages/ContractsPage/ContractDetailPage.tsx";
 import { ListDetailPage } from "../pages/FavoritesPage/ListDetail/ListDetailPage.tsx";
 import OmOssPage from "../pages/OmOssPage/OmOssPage.tsx";
 import TjenesterPage from "../pages/TjenesterPage/TjenesterPage.tsx";
@@ -184,10 +185,18 @@ export const routes: RouteObject[] = [
         element: <AnmeldelserPage />,
       },
       {
-        path: "favorites",
+        path: "contracts",
         element: (
           <ProtectedRoute>
-            <FavoritesPage />
+            <ContractsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "contracts/:id",
+        element: (
+          <ProtectedRoute>
+            <ContractDetailPage />
           </ProtectedRoute>
         ),
       },
