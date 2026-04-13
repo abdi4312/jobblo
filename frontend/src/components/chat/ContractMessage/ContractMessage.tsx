@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { initSocket } from "../../../socket/socket";
 import { useContractActions } from "../../../features/contracts/hooks/useContractActions";
 import type { Contract } from "../../../features/contracts/types/contract.types";
+import { useNavigate } from "react-router-dom";
 
 interface ContractMessageProps {
   contract: Contract;
@@ -16,6 +17,7 @@ export function ContractMessage({
 }: ContractMessageProps) {
   const queryClient = useQueryClient();
   const [showContract, setShowContract] = useState(false);
+  const navigate = useNavigate();
 
   // Extract Service ID for TanStack Query
   const serviceId =
@@ -94,7 +96,8 @@ export function ContractMessage({
 
               {/* Right Side: Detail Button */}
               <button
-                onClick={() => setShowContract(true)}
+                onClick={() => navigate(`/contracts/${contract._id}`)}
+                // onClick={() => setShowContract(true)}
                 className="flex items-center gap-0.5 pl-2 py-0.5 bg-[#ea7e151a] text-[#ea7e15] border-none rounded-lg text-[12px] font-bold cursor-pointer hover:bg-[#ea7e15] hover:text-white transition-all shrink-0"
               >
                 View Details

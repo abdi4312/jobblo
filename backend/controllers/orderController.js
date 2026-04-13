@@ -171,16 +171,29 @@ exports.updateOrder = async (req, res) => {
     }
 
     // ✅ Valid status values
-    const validStatus = ['pending', 'confirmed', 'completed', 'cancelled'];
+    const validStatus = [
+      'pending',
+      'accepted',
+      'declined',
+      'in_progress',
+      'completed',
+      'cancelled',
+      'awaiting_payment',
+      'paid'
+    ];
     if (updates.status && !validStatus.includes(updates.status)) {
       return res.status(400).json({ error: 'Invalid status value' });
     }
 
     // 🔁 STRICT STATUS FLOW
     const statusFlow = {
-      pending: ['confirmed', 'completed', 'cancelled'],
-      confirmed: ['completed', 'cancelled'],
-      cancelled: []
+      pending: ['accepted', 'declined', 'completed', 'cancelled'],
+      accepted: ['in_progress', 'completed', 'cancelled'],
+      in_progress: ['completed', 'cancelled'],
+      cancelled: [],
+      declined: [],
+      awaiting_payment: ['paid', 'cancelled'],
+      paid: ['completed']
     };
 
     if (updates.status) {

@@ -2,7 +2,8 @@ import { useState } from "react";
 import mainLink from "../../api/mainURLs";
 import { Check, X, ArrowLeft, Tag, ShoppingCart, Loader2 } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { Button as AppButton } from "../../components/Ui/Button";
+import { Button } from "../../components/Ui/Button";
+import { Input } from "../../components/Ui/Input";
 import { usePlans } from "../../features/plans/hooks";
 import { toast } from "react-hot-toast";
 
@@ -251,7 +252,7 @@ export default function PricingPage() {
                     You will be redirected to Stripe for a safe and secure
                     payment.
                   </p>
-                  <AppButton
+                  <Button
                     label={isRedirecting ? "Redirecting..." : "Go to payment"}
                     onClick={handleCheckout}
                     disabled={isRedirecting}
@@ -290,7 +291,7 @@ export default function PricingPage() {
 
         <div className="flex justify-center mb-12">
           <div className="inline-flex bg-white border border-[#E08835] rounded-[14px] p-1 shadow-sm">
-            <AppButton
+            <Button
               label="Business"
               onClick={() => setUserType("business")}
               className={`h-12! px-10! font-semibold! rounded-[10px]! transition-all! duration-300! ${
@@ -299,7 +300,7 @@ export default function PricingPage() {
                   : "!bg-transparent !text-[#1A1A1A] !border-none hover:!bg-orange-50"
               }`}
             />
-            <AppButton
+            <Button
               label="Individual"
               onClick={() => setUserType("private")}
               className={`!h-[48px] !px-10 !text-[18px] !font-semibold !rounded-[10px] !transition-all !duration-300 ${
@@ -356,7 +357,7 @@ export default function PricingPage() {
                     <p className="text-sm text-[#ADB5BD] mt-1">per month</p>
                   </div>
 
-                  <AppButton
+                  <Button
                     label="Upgrade now"
                     onClick={() => handleUpgradeClick(plan)}
                     className={`w-full py-4 rounded-2xl font-bold transition-all mb-8 ${

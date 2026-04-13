@@ -57,6 +57,33 @@ const { authenticate } = require("../middleware/auth");
 
 /**
  * @swagger
+ * /api/contracts:
+ *   get:
+ *     summary: Get all contracts for the authenticated user
+ *     tags: [Contracts]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of contracts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 contracts:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Contract'
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/", authenticate, contractController.getAllMyContracts);
+
+/**
+ * @swagger
  * /api/contracts/{serviceId}:
  *   get:
  *     summary: Get contracts for a service (Client or Provider)
