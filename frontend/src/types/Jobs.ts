@@ -18,6 +18,7 @@ export type Jobs = {
   images: string[];
   urgent: boolean;
   promoted?: boolean;
+  favCount?: number;
   status: "open" | "closed";
   tags: string[];
   equipment: "utstyrfri" | "delvis utstyr" | "trengs utstyr";
