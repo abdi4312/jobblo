@@ -17,9 +17,11 @@ export type Jobs = {
   categories: string[];
   images: string[];
   urgent: boolean;
+  promoted?: boolean;
   status: "open" | "closed";
   tags: string[];
   equipment: "utstyrfri" | "delvis utstyr" | "trengs utstyr";
+  likes?: string[];
   createdAt: string;
   updatedAt: string;
   timeEntries?: {

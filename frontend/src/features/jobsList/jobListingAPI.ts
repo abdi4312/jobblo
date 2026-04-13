@@ -1,5 +1,6 @@
 import mainLink from "../../api/mainURLs";
 import type { Jobs } from "./types";
+import type { Tab } from "../../types/tabs";
 
 interface FetchJobsParams {
   page?: number;
@@ -12,6 +13,7 @@ interface FetchJobsParams {
   urgent?: boolean;
   minPrice?: number;
   maxPrice?: number;
+  tab?: Tab;
 }
 
 export interface JobsResponse {
@@ -35,8 +37,18 @@ export const fetchJobs = async ({
   urgent = false,
   minPrice,
   maxPrice,
+  tab = "Discover",
 }: FetchJobsParams): Promise<JobsResponse> => {
-  const res = await mainLink.get("/api/services", {
+  // Map tabs to endpoints
+  const endpointMap = {
+    Discover: "/api/feed/discover",
+    "People’s": "/api/feed/peoples",
+    Favorites: "/api/feed/favorites",
+  };
+
+  const url = endpointMap[tab] || "/api/services";
+
+  const res = await mainLink.get(url, {
     params: {
       page,
       limit,
@@ -51,5 +63,23 @@ export const fetchJobs = async ({
     },
   });
 
+  // Handle feed response format (might not have pagination)
+  if (res.data.success && Array.isArray(res.data.data)) {
+    return {
+      data: res.data.data,
+      pagination: {
+        total: res.data.count || res.data.data.length,
+        totalPages: 1, // Feeds are currently not paginated
+        page: 1,
+        limit: res.data.data.length,
+      },
+    };
+  }
+
+  return res.data;
+};
+
+export const toggleLikeService = async (serviceId: string) => {
+  const res = await mainLink.post(`/api/services/${serviceId}/like`);
   return res.data;
 };

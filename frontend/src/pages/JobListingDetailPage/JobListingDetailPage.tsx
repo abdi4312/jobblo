@@ -7,12 +7,12 @@ import {
   useStripeMutation,
 } from "../../features/jobDetail/hook.ts";
 
-import JobImageCarousel from "../../components/job/JobImageCarousel.tsx";
 import JobButton from "../../components/job/JobButton.tsx";
 import { JobDetailSkeleton } from "../../components/Loading/JobDetailSkeleton.tsx";
 import { useFavoriteToggle } from "../../features/favorites/hook/useFavoriteToggle.ts";
+import { useToggleLike } from "../../features/jobsList/hooks";
 import { MapComponent } from "../../components/component/map/MapComponent";
-import { Heart, Share2, MapPin, Star } from "lucide-react";
+import { Heart, Share2, MapPin, Star, Bookmark, Zap } from "lucide-react";
 import { useState } from "react";
 
 const JobListingDetailPage = () => {
@@ -33,6 +33,19 @@ const JobListingDetailPage = () => {
   } = useFavoriteToggle(id!, isAuth);
   const { data: job, isLoading: isJobLoading } = useJobDetailQuery(id!);
   const isOwnJob = job?.userId?._id === currentUser?._id;
+  const toggleLike = useToggleLike();
+
+  const isLiked = job?.likes?.includes(currentUser?._id || "");
+  const likesCount = job?.likes?.length || 0;
+
+  const handleLikeClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuth) {
+      navigate("/login");
+      return;
+    }
+    toggleLike.mutate(id!);
+  };
 
   const [lng, lat] = job?.location?.coordinates || [0, 0];
   const hasCoordinates = job?.location?.coordinates && (lng !== 0 || lat !== 0);
@@ -143,14 +156,36 @@ const JobListingDetailPage = () => {
                 </div>
               )}
 
-              {/* Like Button */}
-              {/* <button 
-                onClick={handleFavoriteClick}
-                disabled={favLoading}
-                className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center hover:shadow-lg transition-shadow z-10"
-              >
-                <Heart size={20} fill={isFavorited ? "#ef4444" : "none"} color={isFavorited ? "#ef4444" : "#6b7280"}/>
-              </button> */}
+              {/* Action Buttons */}
+              <div className="absolute top-4 right-4 flex flex-col gap-3 z-10">
+                {/* Like Button */}
+                <button
+                  onClick={handleLikeClick}
+                  disabled={toggleLike.isPending}
+                  className="w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+                  title={isLiked ? "Unlike" : "Like"}
+                >
+                  <Heart
+                    size={20}
+                    fill={isLiked ? "#FF4B4B" : "none"}
+                    color={isLiked ? "#FF4B4B" : "#6b7280"}
+                  />
+                </button>
+              </div>
+
+              {/* Badges */}
+              <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
+                {job.promoted && (
+                  <div className="bg-[#FF8A71] text-white px-4 py-2 rounded-full font-bold text-[12px] shadow-lg flex items-center gap-1.5 uppercase tracking-widest">
+                    <Zap size={14} fill="white" /> Promoted
+                  </div>
+                )}
+                {job.urgent && (
+                  <div className="bg-[#FF4B4B] text-white px-4 py-2 rounded-full font-bold text-[12px] shadow-lg flex items-center gap-1.5 uppercase tracking-widest">
+                    <Zap size={14} fill="white" /> Haster
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Thumbnails */}
@@ -177,15 +212,25 @@ const JobListingDetailPage = () => {
           <div className="space-y-6">
             {/* Title & Price */}
             <div>
-              <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                  {job.title || "Untitled Job"}
-                </h1>
-                <p className="text-3xl font-bold text-green-600">
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1">
+                  <h1 className="text-2xl font-bold text-gray-900 mb-1">
+                    {job.title || "Untitled Job"}
+                  </h1>
+                  <div className="flex items-center gap-3 mb-2">
+                    {likesCount > 0 && (
+                      <div className="flex items-center gap-1.5 text-sm font-bold text-gray-600 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+                        <Heart size={14} fill="#FF4B4B" color="#FF4B4B" />
+                        <span>{likesCount} likes</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p className="text-3xl font-bold text-green-600 shrink-0">
                   {job.price ? job.price.toLocaleString() : "0"} kr
                 </p>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-gray-500">
                 Duration: {job.duration?.value || "-"}{" "}
                 {job.duration?.unit || ""}
               </p>

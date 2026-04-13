@@ -345,4 +345,13 @@ router.post('/:id/time-entries', authenticate, serviceController.addTimeEntry);
 router.get('/:id/time-entries', authenticate, serviceController.getTimeEntries);
 
 
+/**
+ * @swagger
+ * /api/services/{id}/like:
+ *   post:
+ *     summary: Toggle like on a service
+ *     tags: [Tjenester]
+ */
+router.post('/:id/like', authenticate, serviceController.toggleLike);
+
 module.exports = router;
