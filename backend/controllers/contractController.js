@@ -16,6 +16,33 @@ const getUserRole = (order, userId) => {
 };
 
 /**
+ * GET /api/contracts
+ * Retrieve all contracts where user is either client or provider
+ */
+exports.getAllMyContracts = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    const contracts = await Contract.find({
+      $or: [{ clientId: userId }, { providerId: userId }],
+    })
+      .populate("serviceId")
+      .populate("clientId", "name email")
+      .populate("providerId", "name email")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: contracts.length,
+      contracts,
+    });
+  } catch (error) {
+    console.error("GET ALL MY CONTRACTS ERROR:", error);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+};
+
+/**
  * GET /api/contracts/:serviceId
  * Retrieve contract by ID
  */
@@ -174,6 +201,37 @@ exports.signContract = async (req, res) => {
       contract.status = "pending_signatures";
     }
 
+    // --- REALTIME NOTIFICATIONS & ALERTS ---
+    const io = req.app.get("io");
+
+    if (contract.status === "pending_signatures") {
+      if (isClient) {
+        // Client signed, notify provider
+        await Notification.create({
+          userId: contract.providerId,
+          type: "alert",
+          referenceId: contract._id,
+          content: `Klienten har signert kontrakten. Det venter nå på din signatur.`,
+        });
+        io.to(`user_${contract.providerId}`).emit("new_notification", {
+          content: `Klienten har signert kontrakten. Det venter nå på din signatur.`,
+          type: "alert",
+        });
+      } else if (isProvider) {
+        // Provider signed, notify client
+        await Notification.create({
+          userId: contract.clientId,
+          type: "alert",
+          referenceId: contract._id,
+          content: `Tilbyderen har signert kontrakten. Det venter nå på din signatur.`,
+        });
+        io.to(`user_${contract.clientId}`).emit("new_notification", {
+          content: `Tilbyderen har signert kontrakten. Det venter nå på din signatur.`,
+          type: "alert",
+        });
+      }
+    }
+
     if (contract.status === "signed") {
       const order = await Order.findOne({ contractId: contract._id });
       if (order) {
@@ -185,43 +243,51 @@ exports.signContract = async (req, res) => {
         return res.status(404).json({ error: "Service not found" });
       }
 
-    const orderCreate = await Order.create({
-      serviceId: contract.serviceId,
-      customerId: contract.clientId,
-      providerId: contract.providerId,
-      contractId: contract._id,
-      scheduledDate: contract.scheduledDate,
-      price: contract.price,
-      status: "pending",
-      location: { address: contract.address || service?.location?.address },
-    });
-
+      const orderCreate = await Order.create({
+        serviceId: contract.serviceId,
+        customerId: contract.clientId,
+        providerId: contract.providerId,
+        contractId: contract._id,
+        scheduledDate: contract.scheduledDate,
+        price: contract.price,
+        status: "pending",
+        location: { address: contract.address || service?.location?.address },
+      });
 
       await Notification.insertMany([
-      {
-        userId: contract.clientId,
-        type: "order",
-        referenceId: orderCreate._id,
-        content: `Your order for ${service.title} has been created.`,
-      },
-      {
-        userId: contract.providerId,
-        type: "order",
-        referenceId: orderCreate._id,
-        content: `You received a new order for ${service.title}.`,
-      },
-    ]);
+        {
+          userId: contract.clientId,
+          type: "order",
+          referenceId: orderCreate._id,
+          content: `Your order for ${service.title} has been created.`,
+        },
+        {
+          userId: contract.providerId,
+          type: "order",
+          referenceId: orderCreate._id,
+          content: `You received a new order for ${service.title}.`,
+        },
+      ]);
 
-
+      // Emit realtime notifications for full signature
+      io.to(`user_${contract.clientId}`).emit("new_notification", {
+        content: `Kontrakten for ${service.title} er nå fullstendig signert og ordren er opprettet!`,
+        type: "order",
+      });
+      io.to(`user_${contract.providerId}`).emit("new_notification", {
+        content: `Kontrakten for ${service.title} er nå fullstendig signert og ordren er opprettet!`,
+        type: "order",
+      });
     }
 
     await contract.save();
 
     // --- SOCKET EMIT ---
-    const io = req.app.get("io");
     io.to(`service_${contract.serviceId}`).emit("contract_signed", {
       contract,
     });
+    // Also emit globally for the contracts page
+    io.emit("contract_updated", { contractId: contract._id });
 
     res.json({
       success: true,

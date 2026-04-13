@@ -116,3 +116,11 @@ export const signContract = async (contractId: string): Promise<Contract> => {
 export const deleteContract = async (contractId: string): Promise<void> => {
   await mainLink.delete(`/api/contracts/${contractId}`);
 };
+
+/**
+ * Get all contracts for the authenticated user
+ */
+export const getAllContracts = async (): Promise<Contract[]> => {
+  const response = await mainLink.get("/api/contracts");
+  return response.data.contracts || [];
+};
