@@ -3,8 +3,9 @@ import "./styles/Jobblo.css";
 import { Outlet, useLocation } from "react-router-dom";
 import Header from "./components/layout/header/Header.tsx";
 import Footer from "./components/layout/footer/Footer.tsx";
+import { HomeSubNavbar } from "./components/layout/HomeSubNavbar/HomeSubNavbar.tsx";
 import { ScrollToTop } from "./components/shared/ScrollToTop.tsx";
-import { App as AntApp } from 'antd';
+import { App as AntApp } from "antd";
 import { useAuth } from "./features/auth/hook/useAuth.ts";
 import { Toaster } from "react-hot-toast";
 
@@ -13,7 +14,11 @@ export default function App() {
   const location = useLocation();
 
   if (isLoadingUser) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Loading...
+      </div>
+    );
   }
 
   const isMessagesPage = location.pathname.startsWith("/messages");
@@ -24,10 +29,10 @@ export default function App() {
         position="bottom-center"
         toastOptions={{
           style: {
-            background: '#333', // Thora dark gray/black
-            color: '#fff',
+            background: "#333", // Thora dark gray/black
+            color: "#fff",
             zIndex: 99999, // Max z-index
-            borderRadius: '12px',
+            borderRadius: "12px",
           },
         }}
       />

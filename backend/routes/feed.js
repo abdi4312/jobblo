@@ -1,7 +1,7 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const feedController = require('../controllers/feedController');
-const { authenticate } = require('../middleware/auth');
+const feedController = require("../controllers/feedController");
+const { authenticate } = require("../middleware/auth");
 
 /**
  * @swagger
@@ -32,6 +32,9 @@ const { authenticate } = require('../middleware/auth');
  *       404:
  *         description: Bruker ikke funnet
  */
-router.get('/following', authenticate, feedController.getFollowingFeed);
+router.get("/following", authenticate, feedController.getFollowingFeed);
+router.get("/discover", feedController.getDiscoverFeed);
+router.get("/peoples", feedController.getPeoplesFeed);
+router.get("/favorites", feedController.getFavoritesFeed);
 
 module.exports = router;

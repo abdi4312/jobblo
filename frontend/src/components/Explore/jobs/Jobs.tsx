@@ -1,40 +1,68 @@
 import { useJobs } from "../../../features/jobsList/hooks";
 import { JobCard } from "./JobCard";
 import { JobCardSkeleton } from "../../Loading/JobCardSkeleton";
+import type { Tab } from "../../../types/tabs";
 
-interface JobsContainerProps { selectedCategories?: string[]; searchQuery?: string; }
+interface JobsContainerProps {
+  selectedCategories?: string[];
+  searchQuery?: string;
+  activeTab?: Tab;
+}
 
-export default function JobsContainer({ selectedCategories = [], searchQuery = "", }: JobsContainerProps) {
-
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, } = useJobs({
-    categories: selectedCategories,
-    search: searchQuery,
-  });
+export default function JobsContainer({
+  selectedCategories = [],
+  searchQuery = "",
+  activeTab = "Discover",
+}: JobsContainerProps) {
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useJobs({
+      categories: selectedCategories,
+      search: searchQuery,
+      tab: activeTab,
+    });
 
   // const totalJobs = data?.pages[0].pagination.total || 0;
   const jobs = data?.pages.flatMap((page) => page.data) || [];
 
-
   return (
     <div>
-      {/* Header Section */}
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-[#0A0A0A] tracking-tight">Explore Jobs</h2>
-          <p className="text-gray-500 mt-2 text-[15px]">Find your next opportunity from our latest listings</p>
-        </div>
-      </div>
-
       <div className="grid gap-x-4 gap-y-8 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 justify-start items-start mx-auto w-full">
-        {isLoading ? (
-          Array.from({ length: 2 }).map((_, index) => (
-            <JobCardSkeleton key={index} />
-          ))
-        ) : (
-          jobs.map((job) => <JobCard key={job._id} job={job} />)
-        )}
-
+        {isLoading
+          ? Array.from({ length: 8 }).map((_, index) => (
+              <JobCardSkeleton key={index} />
+            ))
+          : jobs.map((job) => <JobCard key={job._id} job={job} />)}
       </div>
+
+      {!isLoading && jobs.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="bg-gray-50 p-6 rounded-full mb-4">
+            <svg
+              className="w-12 h-12 text-gray-300"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">
+            Ingen tjenester funnet
+          </h3>
+          <p className="text-gray-500 max-w-xs">
+            {activeTab === "Favorites"
+              ? "Du har ikke lagt til noen tjenester i dine favoritter ennå."
+              : activeTab === "People’s"
+                ? "Ingen populære tjenester akkurat nå. Prøv igjen senere!"
+                : "Vi fant ingen tjenester som samsvarer med ditt søk eller kategori."}
+          </p>
+        </div>
+      )}
 
       {hasNextPage && (
         <div className="flex justify-center mt-8">
