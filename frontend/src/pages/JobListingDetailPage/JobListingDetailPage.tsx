@@ -217,11 +217,17 @@ const JobListingDetailPage = () => {
                   <h1 className="text-2xl font-bold text-gray-900 mb-1">
                     {job.title || "Untitled Job"}
                   </h1>
-                  <div className="flex items-center gap-3 mb-2">
+                  <div className="flex flex-wrap items-center gap-3 mb-2">
                     {likesCount > 0 && (
                       <div className="flex items-center gap-1.5 text-sm font-bold text-gray-600 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
                         <Heart size={14} fill="#FF4B4B" color="#FF4B4B" />
                         <span>{likesCount} likes</span>
+                      </div>
+                    )}
+                    {job.favCount !== undefined && job.favCount > 0 && (
+                      <div className="flex items-center gap-1.5 text-sm font-bold text-[#2F7E47] bg-[#2F7E47]/5 px-3 py-1 rounded-full border border-[#2F7E47]/10">
+                        <Bookmark size={14} fill="#2F7E47" color="#2F7E47" />
+                        <span>{job.favCount} saves</span>
                       </div>
                     )}
                   </div>

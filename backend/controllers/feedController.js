@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const Service = require("../models/Service");
 const Favorite = require("../models/Favorite");
+const List = require("../models/List");
 const mongoose = require("mongoose");
 
 // GET /api/feed/following
@@ -129,31 +130,64 @@ exports.getFavoritesFeed = async (req, res) => {
   try {
     const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    // Aggregate favorites to find most favorited in last 24 hours
-    const topFavorites = await Favorite.aggregate([
+    // 1. Aggregate from specific Favorite collection (last 24h)
+    const favoriteTrending = await Favorite.aggregate([
       { $match: { createdAt: { $gte: last24h } } },
       { $group: { _id: "$service", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
-      { $limit: 30 },
+      { $limit: 20 },
     ]);
 
-    const serviceIds = topFavorites.map((f) => f._id);
+    // 2. Aggregate from List model (services added to lists in last 24h)
+    // Since List stores services in an array, we unwind them
+    const listTrending = await List.aggregate([
+      { $match: { updatedAt: { $gte: last24h } } }, // updatedAt gives a hint about recent activity
+      { $unwind: "$services" },
+      { $group: { _id: "$services", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 20 },
+    ]);
+
+    // Combine both results
+    const combinedResults = [...favoriteTrending, ...listTrending];
+
+    // Sum up counts for same service IDs
+    const scoreMap = {};
+    combinedResults.forEach((item) => {
+      const id = item._id.toString();
+      scoreMap[id] = (scoreMap[id] || 0) + item.count;
+    });
+
+    // Sort service IDs by their total "favorite" count
+    const sortedServiceIds = Object.keys(scoreMap)
+      .sort((a, b) => scoreMap[b] - scoreMap[a])
+      .slice(0, 30);
 
     // Fetch the services
     const services = await Service.find({
-      _id: { $in: serviceIds },
+      _id: { $in: sortedServiceIds },
       status: "open",
     }).populate("userId", "name avatarUrl verified");
 
-    // Maintain sorting order based on favorite count
-    const sortedServices = serviceIds
-      .map((id) => services.find((s) => s._id.toString() === id.toString()))
+    // Maintain sorting order and add favCount
+    const finalData = sortedServiceIds
+      .map((id) => {
+        const service = services.find((s) => s._id.toString() === id);
+        if (!service) return null;
+
+        // Convert to object and add the count from our scoreMap
+        const serviceObj = service.toObject();
+        return {
+          ...serviceObj,
+          favCount: scoreMap[id] || 0,
+        };
+      })
       .filter(Boolean);
 
     return res.json({
       success: true,
-      count: sortedServices.length,
-      data: sortedServices,
+      count: finalData.length,
+      data: finalData,
     });
   } catch (error) {
     console.error("FAVORITES FEED ERROR:", error);

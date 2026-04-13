@@ -170,11 +170,18 @@ export const JobCard = ({ job }: JobCardProps) => {
           <h2 className="text-[#0A0A0A] font-bold text-[15px] leading-tight truncate flex-1">
             {job.title}
           </h2>
-          {likesCount > 0 && (
-            <div className="flex items-center gap-1 text-[#6A6A6A] text-[12px] font-bold">
-              <Heart size={12} fill="#6A6A6A" /> {likesCount}
-            </div>
-          )}
+          <div className="flex flex-col items-end gap-0.5 shrink-0">
+            {likesCount > 0 && (
+              <div className="flex items-center gap-1 text-[#6A6A6A] text-[11px] font-bold">
+                <Heart size={10} fill="#6A6A6A" /> {likesCount}
+              </div>
+            )}
+            {job.favCount !== undefined && job.favCount > 0 && (
+              <div className="flex items-center gap-1 text-[#2F7E47] text-[11px] font-bold">
+                <Bookmark size={10} fill="#2F7E47" /> {job.favCount}
+              </div>
+            )}
+          </div>
         </div>
         <div className="text-[#6A6A6A] text-[14px] font-medium flex items-center justify-start max-w-full">
           {job.location?.city && (
