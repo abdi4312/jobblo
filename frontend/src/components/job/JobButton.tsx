@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../Ui/Button';
-import { Heart, MessageCircle } from 'lucide-react';
+import { Bookmark, MessageCircle } from 'lucide-react';
 import { TailSpin } from "react-loader-spinner";
 import { useUserStore } from '../../stores/userStore';
 import AddToListModal from '../Explore/jobs/AddToListModal';
@@ -66,7 +66,7 @@ const JobButton: React.FC<JobButtonProps> = ({
                     onClick={handleHeartClick}
                     disabled={isLoading}
                     label={isInAnyList ? 'Lagret' : 'Lagre'}
-                    icon={<Heart size={18} fill={isInAnyList ? 'currentColor' : 'none'} />}
+                    icon={<Bookmark size={18} fill={isInAnyList ? 'currentColor' : 'none'} />}
                     className={`h-12 px-5 border rounded-xl text-[14px]! font-semibold! transition-all! whitespace-nowrap
                         ${isInAnyList
                             ? 'bg-[#F0B100]! border-[#F0B100]! text-white!'

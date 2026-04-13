@@ -500,3 +500,38 @@ exports.getMyPostedServices = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
+// ------------------- Toggle Like -------------------
+
+exports.toggleLike = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.userId;
+
+    const service = await Service.findById(id);
+    if (!service) return res.status(404).json({ error: "Service not found" });
+
+    const isLiked = service.likes.includes(userId);
+
+    if (isLiked) {
+      // Remove like
+      service.likes = service.likes.filter(
+        (uid) => uid.toString() !== userId.toString(),
+      );
+    } else {
+      // Add like
+      service.likes.push(userId);
+    }
+
+    await service.save();
+
+    res.json({
+      success: true,
+      isLiked: !isLiked,
+      likesCount: service.likes.length,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
