@@ -13,6 +13,7 @@ import { BasicInformation } from "./BasicInformation";
 import { TimeAndPlace } from "./TimeAndPlace";
 import { PaymentInformation } from "./PaymentInformation";
 import { useUserStore } from "../../stores/userStore";
+import toast from "react-hot-toast";
 
 // Job Detail Components for Preview
 import JobImageCarousel from "../job/JobImageCarousel";
@@ -205,7 +206,8 @@ export default function CreateJobForm({
       return (
         title.trim() !== "" &&
         description.trim().length >= 20 &&
-        categories !== ""
+        categories !== "" &&
+        (selectedImages.length > 0 || currentImages.length > 0)
       );
     }
     if (step === 2) {
@@ -224,9 +226,14 @@ export default function CreateJobForm({
       setCurrentStep((prev) => Math.min(prev + 1, 3));
     } else {
       let msg = "Vennligst fyll ut alle påkrevde felt riktig.";
-      if (currentStep === 1 && description.length < 20)
-        msg = "Beskrivelsen må være minst 20 tegn.";
-      alert(msg);
+      if (currentStep === 1) {
+        if (description.length < 20) {
+          msg = "Beskrivelsen må være minst 20 tegn.";
+        } else if (selectedImages.length === 0 && currentImages.length === 0) {
+          msg = "Vennligst last opp minst ett bilde.";
+        }
+      }
+      toast.error(msg);
     }
   };
 
