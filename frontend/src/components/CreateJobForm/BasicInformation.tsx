@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from "react";
 import { useCategories } from "../../features/categories/hooks";
-import { Search, Info, Check } from "lucide-react";
+import { Search, Info, Check, Sparkles, Loader2 } from "lucide-react";
 import type { CategoryType } from "../../features/categories/types";
+import mainLink from "../../api/mainURLs";
+import toast from "react-hot-toast";
 
 interface BasicInformationProps {
   title: string;
@@ -19,12 +21,85 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
   setTitle,
   description,
   setDescription,
+  price,
+  setPrice,
   categories,
   setCategories,
 }) => {
   const { data: categoryData = [], isLoading, error } = useCategories();
   const [searchTerm, setSearchTerm] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
+  const [showTitleAiInput, setShowTitleAiInput] = useState(false);
+  const [titleAiPrompt, setTitleAiPrompt] = useState("");
   const maxDescriptionLength = 2000;
+
+  const handleAiGenerate = async () => {
+    if (!title || title.length < 5) {
+      toast.error("Vennligst skriv en tittel først (min. 5 tegn)");
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const res = await mainLink.post("/api/ai/generate-job-info", {
+        title,
+        category: categories,
+      });
+
+      if (res.data?.success) {
+        const { description: aiDesc, estimatedPrice } = res.data.data;
+        setDescription(aiDesc);
+        if (estimatedPrice && !price) {
+          setPrice(estimatedPrice.toString());
+        }
+        toast.success("Beskrivelse generert med AI!");
+      }
+    } catch (err: any) {
+      console.error(err);
+      const errorMessage =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        "Kunne ikke generere AI-innhold. Sjekk API-nøkkel.";
+      toast.error(errorMessage);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleGenerateTitle = async () => {
+    if (!titleAiPrompt || titleAiPrompt.length < 5) {
+      toast.error("Vennligst beskriv hva jobben går ut på (min. 5 tegn)");
+      return;
+    }
+
+    setIsGeneratingTitle(true);
+    try {
+      const res = await mainLink.post("/api/ai/generate-title", {
+        description: titleAiPrompt,
+      });
+
+      if (res.data?.success) {
+        const { title: aiTitle, estimatedPrice } = res.data.data;
+        setTitle(aiTitle);
+        if (estimatedPrice) {
+          setPrice(estimatedPrice.toString());
+        }
+        setShowTitleAiInput(false);
+        setTitleAiPrompt("");
+        toast.success("Tittel og pris generert!");
+      }
+    } catch (err: any) {
+      console.error("TITLE GEN ERROR:", err);
+      const errorMessage =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Kunne ikke generere tittel.";
+      toast.error(errorMessage);
+    } finally {
+      setIsGeneratingTitle(false);
+    }
+  };
 
   const filteredCategories = useMemo(() => {
     return categoryData.filter((cat: CategoryType | string) => {
@@ -41,19 +116,65 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
           <label className="text-[11px] md:text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
             Tittel <span className="text-red-500">*</span>
           </label>
-          <span
-            className={`text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded-full ${title.length > 50 ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"}`}
-          >
-            {title.length}/70
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowTitleAiInput(!showTitleAiInput)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-600 rounded-lg
+              text-[10px] md:text-xs font-bold hover:bg-purple-100 transition-all border border-purple-200"
+            >
+              <Sparkles size={12} />
+              Generer med AI
+            </button>
+            <span
+              className={`text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded-full 
+              ${title.length > 50 ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"}`}
+            >
+              {title.length}/70
+            </span>
+          </div>
         </div>
+
+        {showTitleAiInput && (
+          <div className="mb-4 p-3 bg-purple-50/50 rounded-xl border border-purple-100 animate-in slide-in-from-top-2 duration-300">
+            <p className="text-[10px] font-bold text-purple-600 mb-2 uppercase tracking-tight">
+              Hva skal gjøres?
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={titleAiPrompt}
+                onChange={(e) => setTitleAiPrompt(e.target.value)}
+                placeholder="Beskriv jobben kort (f.eks. male en liten bod utvendig)"
+                className="flex-1 px-3 py-2 text-xs md:text-sm rounded-lg border border-purple-200 focus:border-purple-400 outline-none"
+                onKeyDown={(e) => e.key === "Enter" && handleGenerateTitle()}
+              />
+              <button
+                type="button"
+                onClick={handleGenerateTitle}
+                disabled={isGeneratingTitle}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold
+              hover:bg-purple-700 disabled:opacity-50 transition-all flex items-center gap-2"
+              >
+                {isGeneratingTitle ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  "Generer"
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value.slice(0, 70))}
           required
           placeholder="F.eks. Malearbeid i stue"
-          className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-base md:text-lg font-medium outline-none focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5 transition-all"
+          className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200
+        bg-white text-base md:text-lg font-medium outline-none focus:border-[#2D7A4D]
+         focus:ring-4 focus:ring-[#2D7A4D]/5 transition-all"
         />
       </div>
 
@@ -125,13 +246,31 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
       {/* 3. Description Section */}
       <div className="bg-white/60 p-4 md:p-6 rounded-2xl border border-white/40 shadow-sm">
         <div className="flex items-center justify-between mb-4">
-          <label className="text-[11px] md:text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-            Beskrivelse <span className="text-red-500">*</span>
-          </label>
-          <div className="flex items-center gap-1.5 text-[9px] md:text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-            <Info size={10} />
-            Min. 20 tegn
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] md:text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+              Beskrivelse <span className="text-red-500">*</span>
+            </label>
+            <div className="flex items-center gap-1.5 text-[9px] md:text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full w-fit">
+              <Info size={10} />
+              Min. 20 tegn
+            </div>
           </div>
+
+          {/* AI Generate Button */}
+          <button
+            type="button"
+            onClick={handleAiGenerate}
+            disabled={isGenerating}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-600
+            rounded-lg text-[10px] md:text-xs font-bold hover:bg-purple-100 transition-all border border-purple-200"
+          >
+            {isGenerating ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Sparkles size={14} />
+            )}
+            {isGenerating ? "Genererer..." : "Generer med AI"}
+          </button>
         </div>
         <div className="relative">
           <textarea
@@ -141,7 +280,9 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
             }
             required
             placeholder="Gi en detaljert beskrivelse..."
-            className="min-h-[150px] md:min-h-[200px] w-full bg-white p-4 md:p-6 resize-none border border-gray-200 rounded-2xl outline-none focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5 transition-all text-sm md:text-base text-gray-700 leading-relaxed"
+            className="min-h-[150px] md:min-h-[200px] w-full bg-white p-4 md:p-6 resize-none border
+            border-gray-200 rounded-2xl outline-none focus:border-[#2D7A4D] focus:ring-4
+          focus:ring-[#2D7A4D]/5 transition-all text-sm md:text-base text-gray-700 leading-relaxed"
           />
           <div className="absolute bottom-3 md:bottom-4 right-3 md:right-4 flex items-center gap-2">
             <span
