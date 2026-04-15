@@ -31,11 +31,11 @@ export const Button = ({
   children,
 }: ButtonProps) => {
   const baseStyles =
-    "inline-flex items-center justify-center gap-2 transition-all font-medium cursor-pointer";
+    "inline-flex items-center justify-center cursor-pointer gap-2 transition-all font-medium cursor-pointer";
 
   const variants = {
     primary:
-      "bg-[#E08835] text-white hover:bg-[#E08835] text-[16px] font-semibold ",
+    "bg-[#2F7E47] text-white hover:bg-[#2F7E47] text-[16px] font-semibold",
     secondary: "bg-gray-200 text-black hover:bg-gray-300",
     outline: "border border-black text-black hover:bg-black hover:text-white",
   };

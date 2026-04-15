@@ -25,7 +25,7 @@ export default function CtaBanner() {
               </p>
             </div>
 
-            <Button label="Bli med nå" className="text-[16px]! min-w-[110px] rounded-[10px] font-semibold!"/>
+            <Button label="Bli med nå" className="text-[16px]! z-10 min-w-27.5 rounded-[10px] font-semibold!"/>
 
           </div>
         </div>

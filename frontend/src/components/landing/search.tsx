@@ -155,7 +155,7 @@ function SearchComponent() {
     return (
         <div className="relative w-full max-w-5xl mx-auto" ref={dropdownRef}>
             <div
-                className={`gap-3 p-3 bg-white/40 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 w-full md:min-w-137.5 lg:min-w-[650px] transition-all duration-300`}
+                className={`gap-3 p-3 bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 w-full md:min-w-137.5 lg:min-w-162.5 transition-all duration-300`}
             >
                 <div className="flex">
                     <AppInput
@@ -171,9 +171,9 @@ function SearchComponent() {
 
             {/* Pop-up List (Dropdown) */}
             {isDropdownOpen && (
-                <div className="absolute top-22 left-0 right-0 bg-white border border-gray-100 rounded-[32px] shadow-2xl z-50 p-2 sm:p-6 pt-2 max-h-120 overflow-auto transition-all duration-300 ease-in-out">
+                <div className="absolute top-22 left-0 right-0 bg-white border border-gray-100 rounded-4xl shadow-2xl z-50 p-2 sm:p-6 pt-2 max-h-120 overflow-auto transition-all duration-300 ease-in-out">
                     {/* Tabs */}
-                    <div className="flex bg-[#F5F5F7] p-1.5 rounded-[24px] mb-8 w-full max-w-[560px] mx-auto">
+                    <div className="flex bg-[#F5F5F7] p-1.5 rounded-3xl mb-8 w-full max-w-140 mx-auto">
                         {tabs.map((tab) => (
                             <button
                                 key={tab}
@@ -189,7 +189,7 @@ function SearchComponent() {
                     </div>
 
                     {/* Results Section */}
-                    <div className="px-6 space-y-10 pb-6 max-h-[600px] overflow-y-auto custom-scrollbar">
+                    <div className="px-6 space-y-10 pb-6 max-h-150 overflow-y-auto custom-scrollbar">
                         {searchQuery.length >= 2 ? (
                             <div className="space-y-10">
                                 {activeTab === "Top" ? (
@@ -208,7 +208,7 @@ function SearchComponent() {
                                             }}
                                             className="flex items-center gap-5 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-all group"
                                         >
-                                            <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center flex-shrink-0">
+                                            <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center shrink-0">
                                                 <Search
                                                     size={24}
                                                     className="text-gray-900 group-hover:text-[#2F7E47] transition-colors"

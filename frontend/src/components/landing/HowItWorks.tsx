@@ -49,7 +49,7 @@ export function HowItWorks() {
             return (
               <div
                 key={step.id}
-                className="relative bg-white p-6 rounded-xl shadow-sm flex flex-col items-start min-h-61 border border-gray-100"
+                className="relative bg-white/60 p-6 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.04)] flex flex-col items-start min-h-61 border border-white"
               >
                 {/* Top Right Green Badge */}
                 <div
@@ -62,7 +62,8 @@ export function HowItWorks() {
                 </div>
 
                 {/* Icon Container with Neumorphic effect */}
-                <div className="size-14 bg-white rounded-lg flex items-center justify-center shadow-[inset_0_2px_10px_rgba(0,0,0,0.05)] border border-gray-50 mb-12">
+                <div className="size-14 bg-white rounded-lg flex items-center justify-center
+                shadow-[inset_0_2px_10px_rgba(0,0,0,0.05),0_5px_15px_rgba(0,0,0,0.05)] border border-gray-100 mb-12">
                   <Icon className="size-6 text-[#2F7E47]" strokeWidth={1.5} />
                 </div>
 

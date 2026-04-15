@@ -86,7 +86,7 @@ export function Guide() {
     <section className="py-20 px-6 lg:px-20">
       <div className="max-w-300 mx-auto">
         {/* Header - Center aligned with Jobblo Logo touch */}
-        <h2 className="text-[28px] md:text-[40px] font-bold text-center leading-10 mb-[28px] md:mb-16 text-[#0A0A0A]">
+        <h2 className="text-[28px] md:text-[40px] font-bold text-center leading-10 mb-7 md:mb-16 text-[#0A0A0A]">
           Hvorfor velge
           <span className="inline-flex items-center">
             <Icons.JobbloIcon className="w-full h-full" />
@@ -124,10 +124,12 @@ export function Guide() {
             {features.map((feature, idx) => (
               <div
                 key={idx}
-                className="group flex items-start gap-6 bg-white/60 p-6 rounded-xl border border-white shadow-[0_10px_30px_rgba(0,0,0,0.04)] hover:bg-white transition-all duration-300 cursor-default"
+                className="group flex items-start gap-6 bg-white/60 p-6 rounded-xl border border-white
+                shadow-[0_10px_30px_rgba(0,0,0,0.04)] hover:bg-white transition-all duration-300 cursor-default"
               >
                 {/* Neumorphic Icon Container */}
-                <div className="shrink-0 size-14 bg-white rounded-2xl flex items-center justify-center shadow-[inset_0_2px_10px_rgba(0,0,0,0.05),0_5px_15px_rgba(0,0,0,0.05)] border border-gray-100">
+                <div className="shrink-0 size-14 bg-white rounded-2xl flex items-center justify-center
+                shadow-[inset_0_2px_10px_rgba(0,0,0,0.05),0_5px_15px_rgba(0,0,0,0.05)] border border-gray-100">
                   {feature.icon}
                 </div>
 
