@@ -152,6 +152,26 @@ router.get('/', serviceController.getAllServices);
  */
 router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
 
+/**
+ * -------------------------------------------------------
+ *  GET LIKED SERVICES
+ * -------------------------------------------------------
+ */
+
+/**
+ * @swagger
+ * /api/services/liked:
+ *   get:
+ *     summary: Get all services liked by logged-in user
+ *     tags: [Tjenester]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of user's liked services
+ */
+router.get('/liked', authenticate, serviceController.getLikedServices);
+
 
 /**
  * -------------------------------------------------------

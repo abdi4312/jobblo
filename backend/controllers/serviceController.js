@@ -501,6 +501,23 @@ exports.getMyPostedServices = async (req, res) => {
   }
 };
 
+// ------------------- Get Liked Services -------------------
+
+exports.getLikedServices = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const services = await Service.find({ likes: userId })
+      .populate("categories")
+      .populate("userId", "name email avatarUrl verified")
+      .sort({ createdAt: -1 });
+
+    res.json(services);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
 // ------------------- Toggle Like -------------------
 
 exports.toggleLike = async (req, res) => {
