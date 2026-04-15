@@ -1,8 +1,10 @@
-import { EmptyState } from './EmptyState';
+import { EmptyState } from "./EmptyState";
 import { useFavoriteLists } from "../../../features/favoriteLists/hooks";
 import { JobDetailCardSkeleton } from "../../Loading/JobDetailCardSkeleton.tsx";
 import { useNavigate } from "react-router-dom";
-import { useJobs } from "../../../features/jobsList/hooks";
+import { useJobs, useLikedJobs } from "../../../features/jobsList/hooks";
+import { JobCard } from "../../Explore/jobs/JobCard.tsx";
+import type { Jobs } from "../../../../types/Jobs.ts";
 
 interface List {
   _id: string;
@@ -12,55 +14,91 @@ interface List {
   }[];
 }
 
-interface Job {
-  _id: string;
-  title: string;
-  images?: string[];
-}
-
-export function ItemsGrid({ activeTab, userId }: { activeTab: string, userId?: string }) {
+export function ItemsGrid({
+  activeTab,
+  userId,
+}: {
+  activeTab: string;
+  userId?: string;
+}) {
   const navigate = useNavigate();
-  const { data: lists = [], isLoading: isListsLoading, isError: isListsError } = useFavoriteLists(userId);
+  const {
+    data: lists = [],
+    isLoading: isListsLoading,
+    isError: isListsError,
+  } = useFavoriteLists(userId);
 
   const {
     data: jobsData,
     isLoading: isJobsLoading,
-    isError: isJobsError
+    isError: isJobsError,
   } = useJobs({ userId });
 
-  const jobs = jobsData?.pages.flatMap(page => page.data) || [];
+  const {
+    data: likedJobsData,
+    isLoading: isLikedJobsLoading,
+    isError: isLikedJobsError,
+  } = useLikedJobs();
+
+  const jobs = (jobsData?.pages.flatMap((page) => page.data) ||
+    []) as unknown as Jobs[];
+  const likedJobs = (likedJobsData?.data || []) as unknown as Jobs[];
 
   // Empty states content mapping
-  const emptyStateContent: Record<string, { title: string; description: string }> = {
-    'Jobs': {
+  const emptyStateContent: Record<
+    string,
+    { title: string; description: string }
+  > = {
+    Jobs: {
       title: "Brukeren har ikke lagt ut noen oppdrag ennå",
-      description: "Når brukeren legger ut oppdrag, vil de vises her"
+      description: "Når brukeren legger ut oppdrag, vil de vises her",
     },
-    'Likes': {
+    Likes: {
       title: "Ingen likte elementer ennå",
-      description: "Elementer som er likt vil vises her"
+      description: "Elementer som er likt vil vises her",
     },
-    'Lists': {
+    Lists: {
       title: "Listene er for øyeblikket tomme",
-      description: "Lagrede elementer aur samlinger yahan nazar aayenge"
-    }
-    
+      description: "Lagrede elementer aur samlinger yahan nazar aayenge",
+    },
   };
 
-  const currentEmptyState = emptyStateContent[activeTab] || emptyStateContent['Jobs'];
+  const currentEmptyState =
+    emptyStateContent[activeTab] || emptyStateContent["Jobs"];
 
-  if (activeTab === 'Lists') {
+  if (activeTab === "Lists") {
     if (isListsLoading) return <JobDetailCardSkeleton />;
-    if (isListsError) return <p className="text-center py-20 text-red-500">Kunne ikke laste lister.</p>;
+    if (isListsError)
+      return (
+        <p className="text-center py-20 text-red-500">
+          Kunne ikke laste lister.
+        </p>
+      );
   }
 
-  if (activeTab === 'Jobs') {
+  if (activeTab === "Jobs") {
     if (isJobsLoading) return <JobDetailCardSkeleton />;
-    if (isJobsError) return <p className="text-center py-20 text-red-500">Kunne ikke laste oppdrag.</p>;
+    if (isJobsError)
+      return (
+        <p className="text-center py-20 text-red-500">
+          Kunne ikke laste oppdrag.
+        </p>
+      );
   }
 
-  const showLists = activeTab === 'Lists' && lists.length > 0;
-  const showJobs = activeTab === 'Jobs' && jobs.length > 0;
+  if (activeTab === "Likes") {
+    if (isLikedJobsLoading) return <JobDetailCardSkeleton />;
+    if (isLikedJobsError)
+      return (
+        <p className="text-center py-20 text-red-500">
+          Kunne ikke laste likte oppdrag.
+        </p>
+      );
+  }
+
+  const showLists = activeTab === "Lists" && lists.length > 0;
+  const showJobs = activeTab === "Jobs" && jobs.length > 0;
+  const showLikes = activeTab === "Likes" && likedJobs.length > 0;
 
   return (
     <div className="min-h-screen p-4 md:p-6">
@@ -102,30 +140,14 @@ export function ItemsGrid({ activeTab, userId }: { activeTab: string, userId?: s
           </div>
         ) : showJobs ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {jobs.map((job: Job) => (
-              <div
-                key={job._id}
-                onClick={() => navigate(`/job-listing/${job._id}`)}
-                className="relative aspect-4/5 w-full rounded-3xl overflow-hidden cursor-pointer group shadow-sm"
-              >
-                {job.images?.[0] ? (
-                  <img
-                    src={job.images[0]}
-                    alt={job.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-300">
-                    <span className="text-sm">Ingen bilder</span>
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
-                <div className="absolute bottom-6 left-6 right-6">
-                  <h2 className="text-white font-bold text-lg md:text-xl drop-shadow-md truncate">
-                    {job.title}
-                  </h2>
-                </div>
-              </div>
+            {jobs.map((job: Jobs) => (
+              <JobCard key={job._id} job={job} />
+            ))}
+          </div>
+        ) : showLikes ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {likedJobs.map((job: Jobs) => (
+              <JobCard key={job._id} job={job} />
             ))}
           </div>
         ) : (

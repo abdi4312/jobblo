@@ -1,9 +1,10 @@
 import {
   useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { fetchJobs, toggleLikeService } from "./jobListingAPI";
+import { fetchJobs, toggleLikeService, fetchLikedJobs } from "./jobListingAPI";
 import type { Tab } from "../../types/tabs";
 
 interface UseJobsParams {
@@ -82,6 +83,14 @@ export const useToggleLike = () => {
       // Invalidate normal jobs list, feeds AND the specific job detail
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       queryClient.invalidateQueries({ queryKey: ["jobDetail", serviceId] });
+      queryClient.invalidateQueries({ queryKey: ["likedJobs"] });
     },
+  });
+};
+
+export const useLikedJobs = () => {
+  return useQuery({
+    queryKey: ["likedJobs"],
+    queryFn: fetchLikedJobs,
   });
 };
