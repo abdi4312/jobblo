@@ -83,3 +83,21 @@ export const toggleLikeService = async (serviceId: string) => {
   const res = await mainLink.post(`/api/services/${serviceId}/like`);
   return res.data;
 };
+
+export const fetchLikedJobs = async (): Promise<JobsResponse> => {
+  const res = await mainLink.get("/api/services/liked");
+  // The API returns an array of services directly or wrapped?
+  // Based on the controller: res.json(services);
+  // So it returns an array.
+  const services = res.data;
+
+  return {
+    data: services,
+    pagination: {
+      total: services.length,
+      totalPages: 1,
+      page: 1,
+      limit: services.length,
+    },
+  };
+};
