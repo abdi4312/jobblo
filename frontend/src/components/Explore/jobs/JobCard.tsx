@@ -12,10 +12,10 @@ interface JobCardProps {
 }
 
 const categoryColorMap: Record<string, string> = {
-  Rørlegger: "bg-[#EF7909]",
+  Rørlegger: "bg-[#2F7E47]",
   Renhold: "bg-[#2F7E47]",
   Maling: "bg-[#238CEB]",
-  Hagearbeid: "bg-[#EF7909]",
+  Hagearbeid: "bg-[#2F7E47]",
   Flytting: "bg-[#2F7E47]",
 };
 
@@ -34,7 +34,7 @@ export const JobCard = ({ job }: JobCardProps) => {
   const isLiked = job.likes?.includes(user?._id || "");
   const likesCount = job.likes?.length || 0;
 
-  // Check if job is in ANY of the user's lists
+  // Sjekk om jobben er i NOEN av brukerens lister
   const isInAnyList = lists.some(
     (list: { services?: Array<{ _id?: string } | string> }) =>
       list.services?.some((s: { _id?: string } | string) =>
@@ -63,14 +63,14 @@ export const JobCard = ({ job }: JobCardProps) => {
   const catName = Array.isArray(job.categories)
     ? job.categories[0]
     : job.categories;
-  const badgeColor = categoryColorMap[catName] || "bg-[#EF7909]";
+  const badgeColor = categoryColorMap[catName] || "bg-[#2F7E47]";
 
   return (
     <div
       className="flex flex-col gap-2 w-full cursor-pointer group"
       onClick={handleCardClick}
     >
-      {/* Image Section */}
+      {/* Bildeseksjon */}
       <div className="relative aspect-4/5 w-full bg-[#f6f6f6] rounded-[20px] overflow-hidden">
         {job.images && job.images[0] ? (
           <img
@@ -84,14 +84,14 @@ export const JobCard = ({ job }: JobCardProps) => {
               <Bookmark size={24} className="opacity-30" />
             </div>
             <span className="text-[12px] font-bold uppercase tracking-widest opacity-60">
-              No image
+              Ingen bilder
             </span>
           </div>
         )}
 
-        {/* Action Buttons Container (Bottom Right on Hover) */}
+        {/* Handling-knapper (nederst til høyre ved hover) */}
         <div className="absolute bottom-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300 z-10">
-          {/* Like Button */}
+          {/* Liker-knapp */}
           <button
             className="w-10 h-10 flex items-center justify-center bg-white rounded-[14px] shadow-md hover:scale-105 active:scale-95 transition-all"
             onClick={handleLikeClick}
@@ -104,7 +104,7 @@ export const JobCard = ({ job }: JobCardProps) => {
             />
           </button>
 
-          {/* Favorite Button */}
+          {/* Favoritt-knapp */}
           <button
             className="w-10 h-10 flex items-center justify-center bg-white rounded-[14px] shadow-md hover:scale-105 active:scale-95 transition-all"
             onClick={handleFavClick}
@@ -124,11 +124,11 @@ export const JobCard = ({ job }: JobCardProps) => {
           </button>
         </div>
 
-        {/* Promoted / Urgent Badge (Top Left) */}
+        {/* Fremmet / Haster-merke (øverst til venstre) */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
           {job.promoted && (
             <div className="bg-[#FF8A71] text-white px-3 py-1.5 rounded-full font-bold text-[11px] shadow-lg flex items-center gap-1 uppercase tracking-widest">
-              <Zap size={12} fill="white" /> Promoted
+              <Zap size={12} fill="white" /> Fremmet
             </div>
           )}
           {job.urgent && (
@@ -138,7 +138,7 @@ export const JobCard = ({ job }: JobCardProps) => {
           )}
         </div>
 
-        {/* Category Badge (Bottom Left) */}
+        {/* Kategorimerke (nederst til venstre) */}
         {catName && (
           <div
             className={`absolute bottom-3 left-3 ${badgeColor} text-white px-3 py-1.5 rounded-full font-bold text-[12px] shadow-xs tracking-wide`}
@@ -147,11 +147,11 @@ export const JobCard = ({ job }: JobCardProps) => {
           </div>
         )}
 
-        {/* Sold Ribbon (Top Right) */}
+        {/* Solgt-bånd (øverst til høyre) */}
         {job.status === "closed" && (
           <div className="absolute top-0 right-0 overflow-hidden w-24 h-24 pointer-events-none">
             <div className="bg-[#FF8A71] text-white font-black text-[12px] py-1.5 w-[140%] text-center rotate-45 translate-x-[20%] translate-y-[25%] shadow-md uppercase tracking-widest">
-              Sold
+              Solgt
             </div>
           </div>
         )}

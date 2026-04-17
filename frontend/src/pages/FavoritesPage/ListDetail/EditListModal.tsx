@@ -50,7 +50,7 @@ const EditListModal: React.FC<EditListModalProps> = ({ list, isOpen, onClose }) 
         {/* Header */}
         <div className="relative flex items-center justify-center p-6 border-b border-gray-100">
           <h2 className="text-[#0A0A0A] font-bold text-lg">
-            Edit name and description
+            Rediger navn og beskrivelse
           </h2>
           <button
             onClick={onClose}
@@ -65,37 +65,37 @@ const EditListModal: React.FC<EditListModalProps> = ({ list, isOpen, onClose }) 
           <div className="space-y-2">
             <div className="relative">
               <label className="absolute left-4 top-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-                Name
+                Navn
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 maxLength={30}
-                className="w-full px-4 pt-7 pb-3 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-[#FF8A71] outline-none transition-all font-medium"
+                className="w-full px-4 pt-7 pb-3 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-[#2F7E47] outline-none transition-all font-medium"
               />
             </div>
             <p className="text-[11px] text-gray-400 ml-1">
-              {name.length}/30 characters
+              {name.length}/30 tegn
             </p>
           </div>
 
           <div className="relative">
             <textarea
-              placeholder="List description"
+              placeholder="Beskrivelse av listen"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="w-full px-4 py-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-[#FF8A71] outline-none transition-all resize-none min-h-[120px]"
+              className="w-full px-4 py-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-[#2F7E47] outline-none transition-all resize-none min-h-[120px]"
             />
           </div>
 
           <button
             type="submit"
             disabled={!name.trim() || updateListMutation.isPending}
-            className="w-full py-4 bg-[#FF8A71] text-white font-bold rounded-2xl hover:bg-[#ff7659] disabled:opacity-50 transition-all shadow-md active:scale-[0.98] text-lg"
+            className={`w-full py-4 bg-[#2F7E47] text-white font-bold rounded-2xl hover:bg-[#2F7E47] transition-all shadow-md active:scale-[0.98] text-lg ${updateListMutation.isPending || !name.trim() ? "opacity-80" : ""}`}
           >
-            {updateListMutation.isPending ? "Saving..." : "Save"}
+            {updateListMutation.isPending ? "Lagrer..." : "Lagre"}
           </button>
         </form>
       </div>

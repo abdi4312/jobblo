@@ -52,7 +52,7 @@ const JobListingDetailPage = () => {
 
   const handleSendMessage = async (providerId: string) => {
     if (!isAuth) {
-      toast.error("Please login to send message");
+      toast.error("Vennligst logg inn for å sende melding");
       navigate("/login");
       return;
     }
@@ -87,11 +87,11 @@ const JobListingDetailPage = () => {
               });
               window.location.href = paymentSession.url;
             } catch {
-              toast.error("Could not start payment");
+              toast.error("Kunne ikke starte betaling");
             }
             return;
           }
-          toast.error(data?.message || "Could not create conversation");
+          toast.error(data?.message || "Kunne ikke opprette samtale");
         },
       },
     );
@@ -102,7 +102,7 @@ const JobListingDetailPage = () => {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString("en-US", {
+    return new Date(dateString).toLocaleDateString("no-NO", {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -126,10 +126,10 @@ const JobListingDetailPage = () => {
       <div className="min-h-screen bg-gray-50 pt-16 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Job Not Found
+            Oppdrag ikke funnet
           </h2>
           <p className="text-gray-600">
-            The job you're looking for doesn't exist.
+            Oppdraget du leter etter eksisterer ikke.
           </p>
         </div>
       </div>
@@ -152,7 +152,7 @@ const JobListingDetailPage = () => {
                 />
               ) : (
                 <div className="w-full h-96 bg-gray-200 flex items-center justify-center">
-                  <span className="text-gray-400">No image</span>
+                  <span className="text-gray-400">Ingen bilde</span>
                 </div>
               )}
 
@@ -163,7 +163,7 @@ const JobListingDetailPage = () => {
                   onClick={handleLikeClick}
                   disabled={toggleLike.isPending}
                   className="w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
-                  title={isLiked ? "Unlike" : "Like"}
+                  title={isLiked ? "Fjern likerklikk" : "Lik"}
                 >
                   <Heart
                     size={20}
@@ -177,7 +177,7 @@ const JobListingDetailPage = () => {
               <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
                 {job.promoted && (
                   <div className="bg-[#FF8A71] text-white px-4 py-2 rounded-full font-bold text-[12px] shadow-lg flex items-center gap-1.5 uppercase tracking-widest">
-                    <Zap size={14} fill="white" /> Promoted
+                    <Zap size={14} fill="white" /> Fremmet
                   </div>
                 )}
                 {job.urgent && (
@@ -195,7 +195,7 @@ const JobListingDetailPage = () => {
                   <div
                     key={idx}
                     onClick={() => setSelectedImageIndex(idx)}
-                    className={`w-16 h-16 rounded-lg overflow-hidden cursor-pointer transition-all ${idx === selectedImageIndex ? "ring-2 ring-blue-500 opacity-100" : "opacity-70 hover:opacity-100"}`}
+                    className={`w-16 h-16 rounded-lg overflow-hidden cursor-pointer transition-all ${idx === selectedImageIndex ? "ring-2 ring-[#2F7E47] opacity-100" : "opacity-70 hover:opacity-100"}`}
                   >
                     <img
                       src={img}
@@ -215,29 +215,29 @@ const JobListingDetailPage = () => {
               <div className="flex justify-between items-start gap-4">
                 <div className="flex-1">
                   <h1 className="text-2xl font-bold text-gray-900 mb-1">
-                    {job.title || "Untitled Job"}
+                    {job.title || "Uten tittel"}
                   </h1>
                   <div className="flex flex-wrap items-center gap-3 mb-2">
                     {likesCount > 0 && (
                       <div className="flex items-center gap-1.5 text-sm font-bold text-gray-600 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
                         <Heart size={14} fill="#FF4B4B" color="#FF4B4B" />
-                        <span>{likesCount} likes</span>
+                        <span>{likesCount} likerklikk</span>
                       </div>
                     )}
                     {job.favCount !== undefined && job.favCount > 0 && (
                       <div className="flex items-center gap-1.5 text-sm font-bold text-[#2F7E47] bg-[#2F7E47]/5 px-3 py-1 rounded-full border border-[#2F7E47]/10">
                         <Bookmark size={14} fill="#2F7E47" color="#2F7E47" />
-                        <span>{job.favCount} saves</span>
+                        <span>{job.favCount} lagret</span>
                       </div>
                     )}
                   </div>
                 </div>
-                <p className="text-3xl font-bold text-green-600 shrink-0">
+                <p className="text-3xl font-bold text-[#2F7E47] shrink-0">
                   {job.price ? job.price.toLocaleString() : "0"} kr
                 </p>
               </div>
               <p className="text-sm text-gray-500">
-                Duration: {job.duration?.value || "-"}{" "}
+                Varighet: {job.duration?.value || "-"}{" "}
                 {job.duration?.unit || ""}
               </p>
             </div>
@@ -257,38 +257,38 @@ const JobListingDetailPage = () => {
 
             {/* Description */}
             <div className="bg-white rounded-xl p-5 shadow-sm">
-              <h2 className="font-semibold text-gray-900 mb-3">Description</h2>
+              <h2 className="font-semibold text-gray-900 mb-3">Beskrivelse</h2>
               <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {job.description || "No description available"}
+                {job.description || "Ingen beskrivelse tilgjengelig"}
               </p>
             </div>
 
             {/* Details */}
             <div className="bg-white rounded-xl p-5 shadow-sm">
-              <h2 className="font-semibold text-gray-900 mb-3">Details</h2>
+              <h2 className="font-semibold text-gray-900 mb-3">Detaljer</h2>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Category</span>
+                  <span className="text-gray-500">Kategori</span>
                   <span className="font-medium">
-                    {job.categories?.[0] || "General"}
+                    {job.categories?.[0] || "Generelt"}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Location</span>
+                  <span className="text-gray-500">Sted</span>
                   <span className="font-medium flex items-center gap-1">
-                    <MapPin size={14} /> {job.location?.city || "Not specified"}
+                    <MapPin size={14} /> {job.location?.city || "Ikke angitt"}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Posted</span>
+                  <span className="text-gray-500">Lagt ut</span>
                   <span className="font-medium">
                     {job.createdAt ? formatDate(job.createdAt) : "-"}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Experience</span>
+                  <span className="text-gray-500">Erfaring</span>
                   <span className="font-medium">
-                    {job.experience || "Not specified"}
+                    {job.experience || "Ikke angitt"}
                   </span>
                 </div>
               </div>
@@ -298,7 +298,7 @@ const JobListingDetailPage = () => {
             {hasCoordinates && (
               <div className="bg-white rounded-xl p-5 shadow-sm">
                 <h2 className="font-semibold text-gray-900 mb-3">
-                  Location Map
+                  Kart over lokasjon
                 </h2>
                 <div className="h-48 rounded-lg overflow-hidden bg-gray-100">
                   <MapComponent
@@ -324,17 +324,17 @@ const JobListingDetailPage = () => {
                     className="w-14 h-14 rounded-full object-cover border border-gray-200"
                   />
                 ) : (
-                  <div className="w-14 h-14 bg-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                  <div className="w-14 h-14 bg-[#2F7E47] rounded-full flex items-center justify-center text-white text-xl font-bold">
                     {job.userId?.name?.charAt(0) || "?"}
                   </div>
                 )}
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-semibold text-gray-900">
-                      {job.userId?.name || "Unknown Seller"}
+                      {job.userId?.name || "Ukjent selger"}
                     </p>
                     <span className="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full">
-                      Not Verified
+                      Ikke verifisert
                     </span>
                   </div>
                   <div className="flex items-center gap-3 mt-1">
@@ -342,7 +342,7 @@ const JobListingDetailPage = () => {
                       <Star size={14} fill="currentColor" />
                       <span>{job.userId?.averageRating || "0"}</span>
                     </div>
-                    <div className="flex items-center gap-1 text-sm text-green-600">
+                    <div className="flex items-center gap-1 text-sm text-[#2F7E47]">
                       <svg
                         className="w-4 h-4"
                         fill="currentColor"
@@ -354,7 +354,7 @@ const JobListingDetailPage = () => {
                           clipRule="evenodd"
                         />
                       </svg>
-                      <span>12 fullforte</span>
+                      <span>12 fullførte</span>
                     </div>
                   </div>
                 </div>
@@ -364,10 +364,10 @@ const JobListingDetailPage = () => {
             {/* Actions */}
             <div className="flex gap-3">
               <button className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2">
-                <Share2 size={16} /> Share
+                <Share2 size={16} /> Del
               </button>
               <button className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
-                Report
+                Rapporter
               </button>
             </div>
           </div>

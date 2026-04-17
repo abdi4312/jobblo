@@ -3,7 +3,9 @@ import type { ReactNode } from "react";
 
 interface ButtonProps {
   label?: string;
-  onClick?: (e: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => void;
+  onClick?: (
+    e: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>,
+  ) => void;
   to?: string; // internal route
   href?: string; // external link
   icon?: ReactNode; // react icon / svg
@@ -34,8 +36,7 @@ export const Button = ({
     "inline-flex items-center justify-center cursor-pointer gap-2 transition-all font-medium cursor-pointer";
 
   const variants = {
-    primary:
-    "bg-[#2F7E47] text-white hover:bg-[#2F7E47] text-[16px] font-semibold",
+    primary: "bg-[#2F7E47] text-white text-[16px] font-semibold",
     secondary: "bg-gray-200 text-black hover:bg-gray-300",
     outline: "border border-black text-black hover:bg-black hover:text-white",
   };
@@ -62,7 +63,7 @@ export const Button = ({
     ${baseStyles}
     ${variants[variant]}
     ${sizes[size]}
-    ${disabled ? "opacity-50 pointer-events-none" : ""}
+    ${disabled ? "opacity-80 pointer-events-none" : "hover:bg-[#2F7E47]"}
     ${className}
   `;
 

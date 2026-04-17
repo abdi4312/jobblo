@@ -24,14 +24,14 @@ export function ContractsPage() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<"All" | "Sent" | "Received">(
-    "All",
+  const [activeFilter, setActiveFilter] = useState<"Alle" | "Sendte" | "Mottatte">(
+    "Alle",
   );
 
   const filteredContracts = contracts.filter((contract) => {
-    if (activeFilter === "All") return true;
-    if (activeFilter === "Sent") return contract.providerId?._id === user?._id;
-    if (activeFilter === "Received") return contract.clientId._id === user?._id;
+    if (activeFilter === "Alle") return true;
+    if (activeFilter === "Sendte") return contract.providerId?._id === user?._id;
+    if (activeFilter === "Mottatte") return contract.clientId._id === user?._id;
     return true;
   });
 
@@ -75,7 +75,7 @@ export function ContractsPage() {
       setOrders(fetchedOrders);
     } catch (error) {
       console.error("Error fetching contracts/orders:", error);
-      if (showLoading) toast.error("Could not load contracts.");
+      if (showLoading) toast.error("Kunne ikke laste kontrakter.");
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -102,27 +102,27 @@ export function ContractsPage() {
     if (order && contract.status === "signed") {
       const statusMap: Record<string, { label: string; color: string }> = {
         pending: {
-          label: "Order Pending",
+          label: "Bestilling venter",
           color: "bg-amber-100 text-amber-800 border-amber-200",
         },
         accepted: {
-          label: "Order Accepted",
+          label: "Bestilling akseptert",
           color: "bg-blue-100 text-blue-800 border-blue-200",
         },
         declined: {
-          label: "Order Declined",
+          label: "Bestilling avvist",
           color: "bg-rose-100 text-rose-800 border-rose-200",
         },
         in_progress: {
-          label: "In Progress",
+          label: "I arbeid",
           color: "bg-indigo-100 text-indigo-800 border-indigo-200",
         },
         completed: {
-          label: "Completed",
+          label: "Fullført",
           color: "bg-emerald-100 text-emerald-800 border-emerald-200",
         },
         cancelled: {
-          label: "Order Cancelled",
+          label: "Bestilling kansellert",
           color: "bg-slate-100 text-slate-800 border-slate-200",
         },
       };
@@ -137,22 +137,22 @@ export function ContractsPage() {
     switch (contract.status) {
       case "draft":
         return {
-          label: "Draft",
+          label: "Utkast",
           color: "bg-slate-50 text-slate-600 border-slate-200",
         };
       case "pending_signatures":
         return {
-          label: "Pending Signatures",
+          label: "Venter på signering",
           color: "bg-blue-50 text-blue-700 border-blue-200",
         };
       case "signed":
         return {
-          label: "Fully Signed",
+          label: "Signert",
           color: "bg-emerald-50 text-emerald-700 border-emerald-200",
         };
       case "cancelled":
         return {
-          label: "Cancelled",
+          label: "Kansellert",
           color: "bg-rose-50 text-rose-700 border-rose-200",
         };
       default:
@@ -171,14 +171,14 @@ export function ContractsPage() {
     if (isPast(date)) {
       return (
         <span className="text-slate-400 text-sm font-medium italic">
-          Started / Passed
+          Startet / Passert
         </span>
       );
     }
 
     return (
       <span className="text-emerald-600 font-bold text-sm bg-emerald-50 px-2 py-0.5 rounded-md">
-        Starts in {formatDistanceToNow(date)}
+        Starter om {formatDistanceToNow(date)}
       </span>
     );
   };
@@ -186,7 +186,7 @@ export function ContractsPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#44916F]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2F7E47]"></div>
       </div>
     );
   }
@@ -198,26 +198,26 @@ export function ContractsPage() {
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center">
-              <FileText size={24} className="text-[#3F8F6B]" />
+              <FileText size={24} className="text-[#2F7E47]" />
             </div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              Active Contracts
+              Aktive kontrakter
             </h1>
           </div>
           <p className="text-slate-500 text-lg ml-1">
-            Manage your service agreements and track progress efficiently.
+            Administrer dine tjenesteavtaler og følg fremgangen effektivt.
           </p>
         </div>
 
         {/* Filters Section */}
         <div className="flex gap-2 mb-8 bg-slate-50/50 p-2 rounded-2xl w-fit border border-slate-100">
-          {(["All", "Sent", "Received"] as const).map((filter) => (
+          {(["Alle", "Sendte", "Mottatte"] as const).map((filter) => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
               className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${
                 activeFilter === filter
-                  ? "bg-[#3F8F6B] text-white shadow-md shadow-[#3F8F6B]/20"
+                  ? "bg-[#2F7E47] text-white shadow-md shadow-[#2F7E47]/20"
                   : "bg-transparent text-slate-500 hover:text-slate-800 hover:bg-white"
               }`}
             >
@@ -232,20 +232,20 @@ export function ContractsPage() {
               <SearchX className="text-slate-300" size={40} />
             </div>
             <h2 className="text-xl font-bold text-slate-800 mb-2">
-              {activeFilter === "All"
-                ? "Your desk is clear"
-                : activeFilter === "Sent"
-                  ? "No sent contracts"
-                  : "No received contracts"}
+              {activeFilter === "Alle"
+                ? "Skrivebordet ditt er tomt"
+                : activeFilter === "Sendte"
+                  ? "Ingen sendte kontrakter"
+                  : "Ingen mottatte kontrakter"}
             </h2>
             <p className="text-slate-500 mb-8 max-w-sm mx-auto">
-              {activeFilter === "All"
-                ? "You don't have any pending or active contracts right now."
-                : activeFilter === "Sent"
-                  ? "You haven't sent any service agreements yet."
-                  : "You haven't received any service agreements yet."}
+              {activeFilter === "Alle"
+                ? "Du har ingen ventende eller aktive kontrakter akkurat nå."
+                : activeFilter === "Sendte"
+                  ? "Du har ikke sendt noen tjenesteavtaler ennå."
+                  : "Du har ikke mottatt noen tjenesteavtaler ennå."}
             </p>
-            {activeFilter === "All" && (
+            {activeFilter === "Alle" && (
               <Link
                 to="/home"
                 className="inline-flex items-center px-6 py-3 bg-[#3F8F6B] text-white rounded-full font-semibold hover:bg-[#327a58] transition-colors shadow-md hover:shadow-lg"
