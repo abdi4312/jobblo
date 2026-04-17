@@ -15,7 +15,7 @@ export default function ProfilePage() {
   const logout = useUserStore((state) => state.logout);
   const navigate = useNavigate();
   const { modal } = App.useApp();
-  const [activeTab, setActiveTab] = useState('Jobs');
+  const [activeTab, setActiveTab] = useState("Oppdrag");
 
   // Fetch profile if userId is provided, otherwise use current user
   const { data: profileUser, isLoading } = useUserProfile(userId);

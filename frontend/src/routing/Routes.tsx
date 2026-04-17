@@ -123,6 +123,14 @@ export const routes: RouteObject[] = [
         ),
       },
       {
+        path: "Publish-job/:id",
+        element: (
+          <ProtectedRoute>
+            <LeggUtOppdrag />,
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: "alerts",
         element: (
           <ProtectedRoute>

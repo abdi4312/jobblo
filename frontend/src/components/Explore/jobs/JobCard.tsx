@@ -1,14 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import type { Jobs } from "../../../types/Jobs.ts";
 import { useUserStore } from "../../../stores/userStore.ts";
-import { Bookmark, Heart, Zap } from "lucide-react";
+import { Bookmark, Heart, Zap, Pencil, Trash2 } from "lucide-react";
 import React, { useState } from "react";
 import AddToListModal from "./AddToListModal.tsx";
 import { useFavoriteLists } from "../../../features/favoriteLists/hooks";
 import { useToggleLike } from "../../../features/jobsList/hooks";
+import { useServiceActions } from "../../../features/services/hooks";
 
 interface JobCardProps {
   job: Jobs;
+  isOwner?: boolean;
 }
 
 const categoryColorMap: Record<string, string> = {
@@ -19,13 +21,14 @@ const categoryColorMap: Record<string, string> = {
   Flytting: "bg-[#2F7E47]",
 };
 
-export const JobCard = ({ job }: JobCardProps) => {
+export const JobCard = ({ job, isOwner }: JobCardProps) => {
   const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const { data: lists = [], isLoading: listsLoading } = useFavoriteLists();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const toggleLike = useToggleLike();
+  const { deleteMutation } = useServiceActions();
 
   const handleCardClick = () => {
     navigate(`/job-listing/${job._id}`);
@@ -33,6 +36,11 @@ export const JobCard = ({ job }: JobCardProps) => {
 
   const isLiked = job.likes?.includes(user?._id || "");
   const likesCount = job.likes?.length || 0;
+
+  const isOwnJob =
+    isOwner ||
+    (user?._id &&
+      (job.userId === user._id || (job.userId as any)?._id === user._id));
 
   // Sjekk om jobben er i NOEN av brukerens lister
   const isInAnyList = lists.some(
@@ -58,6 +66,18 @@ export const JobCard = ({ job }: JobCardProps) => {
       return;
     }
     toggleLike.mutate(job._id);
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/Publish-job/${job._id}`);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm("Er du sikker på at du vil slette denne annonsen?")) {
+      deleteMutation.mutate(job._id);
+    }
   };
 
   const catName = Array.isArray(job.categories)
@@ -91,37 +111,64 @@ export const JobCard = ({ job }: JobCardProps) => {
 
         {/* Handling-knapper (nederst til høyre ved hover) */}
         <div className="absolute bottom-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300 z-10">
-          {/* Liker-knapp */}
-          <button
-            className="w-10 h-10 flex items-center justify-center bg-white rounded-[14px] shadow-md hover:scale-105 active:scale-95 transition-all"
-            onClick={handleLikeClick}
-          >
-            <Heart
-              size={20}
-              className={
-                isLiked ? "fill-[#FF4B4B] text-[#FF4B4B]" : "text-[#0A0A0A]"
-              }
-            />
-          </button>
+          {isOwnJob ? (
+            <>
+              {/* Edit-knapp */}
+              <button
+                className="w-10 h-10 flex items-center justify-center bg-white rounded-[14px] shadow-md hover:scale-105 active:scale-95 transition-all text-[#2F7E47]"
+                onClick={handleEditClick}
+              >
+                <Pencil size={20} />
+              </button>
 
-          {/* Favoritt-knapp */}
-          <button
-            className="w-10 h-10 flex items-center justify-center bg-white rounded-[14px] shadow-md hover:scale-105 active:scale-95 transition-all"
-            onClick={handleFavClick}
-          >
-            {listsLoading ? (
-              <div className="animate-spin w-4 h-4 border-[1.5px] border-gray-300 border-t-[#2F7E47] rounded-full" />
-            ) : (
-              <Bookmark
-                size={20}
-                className={
-                  isInAnyList
-                    ? "fill-[#0A0A0A] text-[#0A0A0A]"
-                    : "text-[#0A0A0A]"
-                }
-              />
-            )}
-          </button>
+              {/* Slett-knapp */}
+              <button
+                className="w-10 h-10 flex items-center justify-center bg-white rounded-[14px] shadow-md hover:scale-105 active:scale-95 transition-all text-[#FF4B4B]"
+                onClick={handleDeleteClick}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? (
+                  <div className="animate-spin w-4 h-4 border-[1.5px] border-gray-300 border-t-[#FF4B4B] rounded-full" />
+                ) : (
+                  <Trash2 size={20} />
+                )}
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Liker-knapp */}
+              <button
+                className="w-10 h-10 flex items-center justify-center bg-white rounded-[14px] shadow-md hover:scale-105 active:scale-95 transition-all"
+                onClick={handleLikeClick}
+              >
+                <Heart
+                  size={20}
+                  className={
+                    isLiked ? "fill-[#FF4B4B] text-[#FF4B4B]" : "text-[#0A0A0A]"
+                  }
+                />
+              </button>
+
+              {/* Favoritt-knapp */}
+              <button
+                className="w-10 h-10 flex items-center justify-center bg-white rounded-[14px] shadow-md hover:scale-105 active:scale-95 transition-all"
+                onClick={handleFavClick}
+              >
+                {listsLoading ? (
+                  <div className="animate-spin w-4 h-4 border-[1.5px] border-gray-300 border-t-[#2F7E47] rounded-full" />
+                ) : (
+                  <Bookmark
+                    size={20}
+                    className={
+                      isInAnyList
+                        ? "fill-[#0A0A0A] text-[#0A0A0A]"
+                        : "text-[#0A0A0A]"
+                    }
+                  />
+                )}
+              </button>
+            </>
+          )}
         </div>
 
         {/* Fremmet / Haster-merke (øverst til venstre) */}
