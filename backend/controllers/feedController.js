@@ -41,16 +41,29 @@ exports.getFollowingFeed = async (req, res) => {
 // GET /api/feed/discover
 exports.getDiscoverFeed = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
     // Simple: Get latest open services, maybe random in future
     const services = await Service.find({ status: "open" })
       .populate("userId", "name avatarUrl verified")
       .sort({ createdAt: -1 })
-      .limit(50);
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Service.countDocuments({ status: "open" });
 
     return res.json({
       success: true,
       count: services.length,
       data: services,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     console.error("DISCOVER FEED ERROR:", error);
@@ -61,6 +74,10 @@ exports.getDiscoverFeed = async (req, res) => {
 // GET /api/feed/peoples
 exports.getPeoplesFeed = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
     const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     // 1. Trending: Most favorited in last 24 hours
@@ -73,16 +90,20 @@ exports.getPeoplesFeed = async (req, res) => {
 
     const trendingServiceIds = trendingFavorites.map((f) => f._id);
 
-    // 2. Most Liked: Sort by length of likes array
-    // 3. Paid Promotion: Services with promoted: true
-    const services = await Service.find({
+    // 2. Paid Promotion: Services with promoted: true
+    // 3. Open Services
+    const query = {
       $or: [
         { _id: { $in: trendingServiceIds } },
         { promoted: true },
         { status: "open" },
       ],
       status: "open",
-    })
+    };
+
+    const total = await Service.countDocuments(query);
+
+    const services = await Service.find(query)
       .populate("userId", "name avatarUrl verified")
       .lean();
 
@@ -111,13 +132,19 @@ exports.getPeoplesFeed = async (req, res) => {
     // Sort by score
     scoredServices.sort((a, b) => b.score - a.score);
 
-    // Return top 50
-    const result = scoredServices.slice(0, 50);
+    // Return paginated result
+    const result = scoredServices.slice(skip, skip + limit);
 
     return res.json({
       success: true,
       count: result.length,
       data: result,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     console.error("PEOPLES FEED ERROR:", error);
@@ -128,6 +155,10 @@ exports.getPeoplesFeed = async (req, res) => {
 // GET /api/feed/favorites
 exports.getFavoritesFeed = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
     const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     // 1. Aggregate from specific Favorite collection (last 24h)
@@ -163,6 +194,8 @@ exports.getFavoritesFeed = async (req, res) => {
       .sort((a, b) => scoreMap[b] - scoreMap[a])
       .slice(0, 30);
 
+    const total = sortedServiceIds.length;
+
     // Fetch the services
     const services = await Service.find({
       _id: { $in: sortedServiceIds },
@@ -184,10 +217,19 @@ exports.getFavoritesFeed = async (req, res) => {
       })
       .filter(Boolean);
 
+    // Return paginated result
+    const result = finalData.slice(skip, skip + limit);
+
     return res.json({
       success: true,
-      count: finalData.length,
-      data: finalData,
+      count: result.length,
+      data: result,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     console.error("FAVORITES FEED ERROR:", error);

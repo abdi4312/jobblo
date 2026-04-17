@@ -7,13 +7,11 @@ interface ProfileNavProps {
 }
 
 export function ProfileNav({ activeTab, onTabChange, isOwnProfile = false }: ProfileNavProps) {
-  // If it's another user's profile, show 'Jobs' and 'Lists'
+  // If it's another user's profile, show 'Oppdrag' and 'Lister'
   const allTabs = [
-    { name: 'Jobs', icon: LayoutGrid },
-    { name: 'Likes', icon: Heart },
-    { name: 'Lists', icon: Bookmark },
-    // { name: 'Your wardrobe', icon: Shirt },
-    // { name: 'Seller Hub', icon: Gauge },
+    { name: 'Oppdrag', icon: LayoutGrid },
+    { name: 'Liker', icon: Heart },
+    { name: 'Lister', icon: Bookmark },
   ];
 
   const tabs = isOwnProfile ? allTabs : [allTabs[0], allTabs[2]];

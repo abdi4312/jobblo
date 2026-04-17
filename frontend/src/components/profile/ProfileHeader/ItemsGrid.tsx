@@ -5,6 +5,9 @@ import { useNavigate } from "react-router-dom";
 import { useJobs, useLikedJobs } from "../../../features/jobsList/hooks";
 import { JobCard } from "../../Explore/jobs/JobCard.tsx";
 import type { Jobs } from "../../../../types/Jobs.ts";
+import { useUserStore } from "../../../stores/userStore.ts";
+import { Button } from "../../Ui/Button.tsx";
+import { useEffect, useRef } from "react";
 
 interface List {
   _id: string;
@@ -22,6 +25,10 @@ export function ItemsGrid({
   userId?: string;
 }) {
   const navigate = useNavigate();
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const currentUser = useUserStore((state) => state.user);
+  const isOwner = userId === currentUser?._id;
+
   const {
     data: lists = [],
     isLoading: isListsLoading,
@@ -32,6 +39,9 @@ export function ItemsGrid({
     data: jobsData,
     isLoading: isJobsLoading,
     isError: isJobsError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   } = useJobs({ userId });
 
   const {
@@ -39,6 +49,25 @@ export function ItemsGrid({
     isLoading: isLikedJobsLoading,
     isError: isLikedJobsError,
   } = useLikedJobs();
+
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage || activeTab !== "Oppdrag") return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, activeTab]);
 
   const jobs = (jobsData?.pages.flatMap((page) => page.data) ||
     []) as unknown as Jobs[];
@@ -49,24 +78,24 @@ export function ItemsGrid({
     string,
     { title: string; description: string }
   > = {
-    Jobs: {
+    Oppdrag: {
       title: "Brukeren har ikke lagt ut noen oppdrag ennå",
       description: "Når brukeren legger ut oppdrag, vil de vises her",
     },
-    Likes: {
+    Liker: {
       title: "Ingen likte elementer ennå",
       description: "Elementer som er likt vil vises her",
     },
-    Lists: {
+    Lister: {
       title: "Listene er for øyeblikket tomme",
-      description: "Lagrede elementer aur samlinger yahan nazar aayenge",
+      description: "Lagrede elementer og samlinger vil vises her",
     },
   };
 
   const currentEmptyState =
-    emptyStateContent[activeTab] || emptyStateContent["Jobs"];
+    emptyStateContent[activeTab] || emptyStateContent["Oppdrag"];
 
-  if (activeTab === "Lists") {
+  if (activeTab === "Lister") {
     if (isListsLoading) return <JobDetailCardSkeleton />;
     if (isListsError)
       return (
@@ -76,7 +105,7 @@ export function ItemsGrid({
       );
   }
 
-  if (activeTab === "Jobs") {
+  if (activeTab === "Oppdrag") {
     if (isJobsLoading) return <JobDetailCardSkeleton />;
     if (isJobsError)
       return (
@@ -86,7 +115,7 @@ export function ItemsGrid({
       );
   }
 
-  if (activeTab === "Likes") {
+  if (activeTab === "Liker") {
     if (isLikedJobsLoading) return <JobDetailCardSkeleton />;
     if (isLikedJobsError)
       return (
@@ -96,9 +125,9 @@ export function ItemsGrid({
       );
   }
 
-  const showLists = activeTab === "Lists" && lists.length > 0;
-  const showJobs = activeTab === "Jobs" && jobs.length > 0;
-  const showLikes = activeTab === "Likes" && likedJobs.length > 0;
+  const showLists = activeTab === "Lister" && lists.length > 0;
+  const showJobs = activeTab === "Oppdrag" && jobs.length > 0;
+  const showLikes = activeTab === "Liker" && likedJobs.length > 0;
 
   return (
     <div className="min-h-screen p-4 md:p-6">
@@ -139,11 +168,28 @@ export function ItemsGrid({
             })}
           </div>
         ) : showJobs ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {jobs.map((job: Jobs) => (
-              <JobCard key={job._id} job={job} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {jobs.map((job: Jobs) => (
+                <JobCard key={job._id} job={job} isOwner={isOwner} />
+              ))}
+            </div>
+            {hasNextPage && (
+              <div
+                ref={loadMoreRef}
+                className="flex justify-center mt-10 min-h-[100px]"
+              >
+                {isFetchingNextPage ? (
+                  <div className="flex items-center gap-2 bg-[#2F7E47] text-white px-8 py-2 rounded-full font-bold">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Laster mer...
+                  </div>
+                ) : (
+                  <div className="h-4 w-full" />
+                )}
+              </div>
+            )}
+          </>
         ) : showLikes ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {likedJobs.map((job: Jobs) => (
