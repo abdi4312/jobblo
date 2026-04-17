@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useCategories } from "../../features/categories/hooks";
-import { Search, Info, Check, Sparkles, Loader2 } from "lucide-react";
+import { Search, Info, Check, Sparkles, Loader2, X, Plus } from "lucide-react";
 import type { CategoryType } from "../../features/categories/types";
 import mainLink from "../../api/mainURLs";
 import toast from "react-hot-toast";
@@ -14,6 +14,10 @@ interface BasicInformationProps {
   setPrice: (val: string) => void;
   categories: string;
   setCategories: (val: string) => void;
+  tags: string[];
+  setTags: (val: string[]) => void;
+  setDurationValue: (val: string) => void;
+  setDurationUnit: (val: string) => void;
 }
 
 export const BasicInformation: React.FC<BasicInformationProps> = ({
@@ -25,6 +29,10 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
   setPrice,
   categories,
   setCategories,
+  tags,
+  setTags,
+  setDurationValue,
+  setDurationUnit,
 }) => {
   const { data: categoryData = [], isLoading, error } = useCategories();
   const [searchTerm, setSearchTerm] = useState("");
@@ -32,7 +40,19 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
   const [showTitleAiInput, setShowTitleAiInput] = useState(false);
   const [titleAiPrompt, setTitleAiPrompt] = useState("");
+  const [newTag, setNewTag] = useState("");
   const maxDescriptionLength = 2000;
+
+  const handleAddTag = () => {
+    if (newTag.trim() && !tags.includes(newTag.trim())) {
+      setTags([...tags, newTag.trim()]);
+      setNewTag("");
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter((t) => t !== tagToRemove));
+  };
 
   const handleAiGenerate = async () => {
     if (!title || title.length < 5) {
@@ -48,10 +68,22 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
       });
 
       if (res.data?.success) {
-        const { description: aiDesc, estimatedPrice } = res.data.data;
+        const {
+          description: aiDesc,
+          estimatedPrice,
+          category: aiCategory,
+          duration: aiDuration,
+        } = res.data.data;
         setDescription(aiDesc);
         if (estimatedPrice && !price) {
           setPrice(estimatedPrice.toString());
+        }
+        if (aiCategory) {
+          setCategories(aiCategory);
+        }
+        if (aiDuration && aiDuration.value) {
+          setDurationValue(aiDuration.value.toString());
+          setDurationUnit(aiDuration.unit || "hours");
         }
         toast.success("Beskrivelse generert med AI!");
       }
@@ -290,6 +322,60 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
             >
               {description.length}/{maxDescriptionLength}
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Skills/Tags Section */}
+      <div className="bg-white/60 p-4 md:p-6 rounded-2xl border border-white/40 shadow-sm">
+        <label className="text-[11px] md:text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 mb-4">
+          Ferdigheter / Tags
+        </label>
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#2D7A4D]/10 text-[#2D7A4D] rounded-full text-xs font-bold border border-[#2D7A4D]/20"
+              >
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTag(tag)}
+                  className="hover:text-red-500 transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </span>
+            ))}
+            {tags.length === 0 && (
+              <p className="text-gray-400 text-xs italic py-2">
+                Ingen ferdigheter lagt til ennå. Bruk AI for å generere eller
+                legg til manuelt.
+              </p>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && (e.preventDefault(), handleAddTag())
+                }
+                placeholder="Legg til en ferdighet (f.eks. Maling, Vasking...)"
+                className="w-full px-4 py-2 text-xs md:text-sm rounded-xl border border-gray-200 outline-none focus:border-[#2D7A4D] bg-white/50"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleAddTag}
+              className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-all"
+            >
+              <Plus size={18} />
+            </button>
           </div>
         </div>
       </div>

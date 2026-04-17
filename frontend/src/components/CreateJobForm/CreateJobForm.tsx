@@ -14,6 +14,8 @@ import { TimeAndPlace } from "./TimeAndPlace";
 import { PaymentInformation } from "./PaymentInformation";
 import { useUserStore } from "../../stores/userStore";
 import toast from "react-hot-toast";
+import { generateFullJobListing } from "../../api/aiAPI";
+import { Sparkles, Loader2 } from "lucide-react";
 
 // Job Detail Components for Preview
 import JobImageCarousel from "../job/JobImageCarousel";
@@ -129,14 +131,79 @@ export default function CreateJobForm({
   );
   const [phone, setPhone] = useState(initialData?.phone || "");
   const [email, setEmail] = useState(initialData?.email || "");
+  const [tags, setTags] = useState<string[]>([]);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [currentImages, setCurrentImages] = useState<string[]>(
     initialData?.images || [],
   );
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [isGeneratingFullListing, setIsGeneratingFullListing] = useState(false);
+  const [smartFillPrompt, setSmartFillPrompt] = useState("");
+  const [showSmartFillInput, setShowSmartFillInput] = useState(false);
 
   const currentUser = useUserStore((state) => state.user);
+
+  const handleAiSmartFill = async () => {
+    if (!smartFillPrompt || smartFillPrompt.length < 5) {
+      toast.error("Vennligst beskriv hva du trenger hjelp med (min. 5 tegn)");
+      return;
+    }
+
+    setIsGeneratingFullListing(true);
+    try {
+      const response = await generateFullJobListing(smartFillPrompt);
+
+      if (response.success) {
+        const {
+          title: aiTitle,
+          description: aiDesc,
+          category: aiCategory,
+          duration: aiDuration,
+          priceRange,
+          locationRelevance,
+          skills: aiSkills,
+        } = response.data;
+
+        setTitle(aiTitle);
+        setDescription(aiDesc);
+
+        // Robust category matching
+        if (aiCategory) {
+          setCategories(aiCategory.trim());
+        }
+
+        setTags(aiSkills);
+
+        // Price - take mid point or min
+        setPrice(priceRange.min.toString());
+
+        // Duration
+        if (aiDuration && aiDuration.value) {
+          setDurationValue(aiDuration.value.toString());
+          setDurationUnit(aiDuration.unit || "hours");
+        }
+
+        // Location
+        if (locationRelevance === "remote") {
+          setCity("Fjernarbeid / Remote");
+        }
+
+        setShowSmartFillInput(false);
+        setSmartFillPrompt("");
+        toast.success("AI har fylt ut skjemaet for deg! Se gjennom detaljene.");
+      }
+    } catch (err: any) {
+      console.error("SMART FILL ERROR:", err);
+      const errorMessage =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Kunne ikke generere jobbinformasjon.";
+      toast.error(errorMessage);
+    } finally {
+      setIsGeneratingFullListing(false);
+    }
+  };
 
   // Persistence
   useEffect(() => {
@@ -158,6 +225,7 @@ export default function CreateJobForm({
       setPaymentType(data.paymentType || "Fastpris");
       setPhone(data.phone || "");
       setEmail(data.email || "");
+      setTags(data.tags || []);
       setCurrentStep(data.currentStep || 1);
     }
   }, [initialData]);
@@ -179,6 +247,7 @@ export default function CreateJobForm({
       paymentType,
       phone,
       email,
+      tags,
       currentStep,
     };
     localStorage.setItem("jobFormData", JSON.stringify(dataToSave));
@@ -269,6 +338,9 @@ export default function CreateJobForm({
       catArray.forEach((cat) => formData.append("categories", cat));
     }
 
+    // Tags
+    tags.forEach((tag) => formData.append("tags", tag));
+
     // Duration
     if (durationValue) {
       formData.append("duration[value]", durationValue.toString());
@@ -315,11 +387,14 @@ export default function CreateJobForm({
       description,
       price: price ? parseInt(price.toString()) : 0,
       images: previewImages,
-      tags: categories
-        ? Array.isArray(categories)
-          ? categories
-          : [categories]
-        : [],
+      tags:
+        tags.length > 0
+          ? tags
+          : categories
+            ? Array.isArray(categories)
+              ? categories
+              : [categories]
+            : [],
       location: {
         address,
         city,
@@ -369,6 +444,87 @@ export default function CreateJobForm({
         <div className="p-1 md:p-4">
           {currentStep === 1 && (
             <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {/* AI Assistant Integrated Section */}
+              <div className="px-4 pt-4">
+                <div
+                  className={`relative overflow-hidden transition-all duration-500 rounded-3xl shadow-lg ${
+                    showSmartFillInput
+                      ? "bg-gradient-to-br from-[#1b4b2f] to-[#143924]"
+                      : "bg-[#1b4b2f]"
+                  }`}
+                >
+                  <div className="relative p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex-1 space-y-4 text-center md:text-left">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/10">
+                        <Sparkles className="text-yellow-400 w-3 h-3" />
+                        <span className="text-white text-[9px] font-bold uppercase tracking-wider opacity-90">
+                          Jobblo AI Assistant
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+                          {showSmartFillInput
+                            ? "Beskriv oppdraget"
+                            : "Fyll ut automatisk med AI"}
+                        </h2>
+                        <p className="text-white/60 text-xs md:text-sm font-medium max-w-md">
+                          Spar tid! Fortell oss hva du trenger hjelp med, så
+                          ordner vi resten.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="w-full md:w-auto">
+                      {!showSmartFillInput ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowSmartFillInput(true)}
+                          className="group w-full md:w-[280px] py-4 px-6 bg-white text-[#4F46E5] rounded-2xl font-black text-base 
+                          shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2"
+                        >
+                          <Sparkles className="w-5 h-5 text-[#4F46E5]" />
+                          PRØV SMART-UTFYLLING
+                        </button>
+                      ) : (
+                        <div className="w-full md:w-[400px] space-y-3 animate-in slide-in-from-right-4 duration-500">
+                          <textarea
+                            value={smartFillPrompt}
+                            onChange={(e) => setSmartFillPrompt(e.target.value)}
+                            placeholder="Beskriv jobben her..."
+                            className="w-full min-h-[120px] px-5 py-4 bg-white/5 backdrop-blur-xl border border-white/10 
+                            rounded-2xl text-white placeholder-white/20 outline-none focus:border-white/30 
+                            transition-all text-sm font-medium resize-none"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowSmartFillInput(false)}
+                              className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold 
+                              transition-all border border-white/10"
+                            >
+                              Avbryt
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleAiSmartFill}
+                              disabled={isGeneratingFullListing}
+                              className="flex-[2] py-3 bg-white text-[#4F46E5] rounded-xl font-black text-xs
+                              hover:bg-gray-50 transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
+                            >
+                              {isGeneratingFullListing ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                "FYLL UT NÅ"
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="bg-white/60 p-4 md:p-6 rounded-2xl border border-white/40 shadow-sm">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 bg-[#2D7A4D]/10 rounded-full flex items-center justify-center text-[#2D7A4D]">
@@ -399,6 +555,10 @@ export default function CreateJobForm({
                 setCategories={setCategories}
                 price={price}
                 setPrice={setPrice}
+                tags={tags}
+                setTags={setTags}
+                setDurationValue={setDurationValue}
+                setDurationUnit={setDurationUnit}
               />
             </div>
           )}
