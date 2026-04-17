@@ -6,21 +6,19 @@ export const PasswordView = () => {
   // const { form, handleChange, handleUpdate, updateUser } = useOutletContext<SettingsContextType>();
   const { form, handleChange, updateUser } = useOutletContext<SettingsContextType>();
 
-  // Logic: Button tabhi enable hoga jab dono fields fill hon aur request pending na ho
-  // Password view mein 'isUnchanged' ki jagah hum 'isEmpty' check karte hain
+  // Logikk: Knappen aktiveres bare når begge feltene er fylt ut og forespørselen ikke er ventende
+  // I passordvisning sjekker vi 'isEmpty' i stedet for 'isUnchanged'
   const isDisabled = !form.currentPassword || !form.newPassword || updateUser?.isPending;
   const handleUpdate = () => {
-    toast.success("Coming Soon");
+    toast.success("Kommer snart");
   }
-
-
 
   return (
     <section className="flex flex-col gap-6 max-w-2xl">
-      {/* Current Password */}
+      {/* Nåværende passord */}
       <div className="relative group">
         <label htmlFor="currentPassword" className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight">
-          Current Password
+          Nåværende passord
         </label>
         <input
           id="currentPassword"
@@ -32,10 +30,10 @@ export const PasswordView = () => {
         />
       </div>
 
-      {/* New Password */}
+      {/* Nytt passord */}
       <div className="relative group">
         <label htmlFor="newPassword" className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight">
-          New Password
+          Nytt passord
         </label>
         <input
           id="newPassword"
@@ -47,18 +45,18 @@ export const PasswordView = () => {
         />
       </div>
 
-      {/* Action Button */}
+      {/* Handling-knapp */}
       <button
         type="button"
         onClick={handleUpdate}
         disabled={isDisabled}
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
           ${isDisabled
-            ? "bg-[#EF790993] cursor-not-allowed opacity-80"
-            : "bg-[#EF7909] hover:bg-[#D66A08] active:scale-[0.98]"
+            ? "bg-[#2F7E47] cursor-not-allowed opacity-80"
+            : "bg-[#2F7E47] hover:bg-[#2F7E47] active:scale-[0.98]"
           }`}
       >
-        {updateUser?.isPending ? "Updating..." : "Change password"}
+        {updateUser?.isPending ? "Oppdaterer..." : "Endre passord"}
       </button>
     </section>
   );

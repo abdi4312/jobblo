@@ -4,7 +4,7 @@ import type { SettingsContextType } from "../../../pages/SettingsPage";
 export const AddressesView = () => {
   const { form, handleChange, handleUpdate, updateUser, user } = useOutletContext<SettingsContextType>();
 
-  // Logic: Check agar teeno fields mein se kisi ek mein bhi change hua hai ya nahi
+  // Logikk: Sjekk om det er gjort endringer i noen av de tre feltene
   const isUnchanged =
     form.address === user?.address &&
     form.postNumber === user?.postNumber &&
@@ -14,10 +14,10 @@ export const AddressesView = () => {
 
   return (
     <section className="flex flex-col gap-6 max-w-2xl">
-      {/* Street Address */}
+      {/* Gateadresse */}
       <div className="relative group">
         <label htmlFor="address" className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight">
-          Street Address
+          Gateadresse
         </label>
         <input
           id="address"
@@ -28,10 +28,10 @@ export const AddressesView = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Post Number */}
+        {/* Postnummer */}
         <div className="relative group">
           <label htmlFor="postNumber" className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight">
-            Post Number
+            Postnummer
           </label>
           <input
             id="postNumber"
@@ -41,10 +41,10 @@ export const AddressesView = () => {
           />
         </div>
 
-        {/* City (Post Sted) */}
+        {/* Sted (Poststed) */}
         <div className="relative group">
           <label htmlFor="postSted" className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight">
-            City
+            Sted
           </label>
           <input
             id="postSted"
@@ -55,18 +55,18 @@ export const AddressesView = () => {
         </div>
       </div>
 
-      {/* Action Button */}
+      {/* Handling-knapp */}
       <button
         type="button"
         onClick={handleUpdate}
         disabled={isDisabled}
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
           ${isDisabled
-            ? "bg-[#EF790993] cursor-not-allowed opacity-80"
-            : "bg-[#EF7909] hover:bg-[#D66A08] active:scale-[0.98]"
+            ? "bg-[#2F7E47] cursor-not-allowed opacity-80"
+            : "bg-[#2F7E47] hover:bg-[#2F7E47] active:scale-[0.98]"
           }`}
       >
-        {updateUser?.isPending ? "Saving..." : "Save addresses"}
+        {updateUser?.isPending ? "Lagrer..." : "Lagre adresser"}
       </button>
     </section>
   );

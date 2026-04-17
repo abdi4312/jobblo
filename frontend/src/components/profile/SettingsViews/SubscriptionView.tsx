@@ -39,7 +39,7 @@ export function SubscriptionView() {
   const totalPages = data?.totalPages || 1;
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    return new Date(dateString).toLocaleDateString("no-NO", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -52,21 +52,21 @@ export function SubscriptionView() {
       <section>
         <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
           <Package className="text-[#E08835]" size={20} />
-          Current Subscription
+          Gjeldende abonnement
         </h3>
         <div className="bg-gradient-to-br from-[#2d4a3e] to-[#1a2e26] rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
           <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <p className="text-white/70 text-sm font-medium uppercase tracking-wider mb-1">
-                Active Plan
+                Aktiv plan
               </p>
               <h4 className="text-3xl font-black">
                 {user?.subscription || "Standard"}
               </h4>
               <p className="text-white/60 text-xs mt-2">
-                Your account type is set to{" "}
+                Din kontotype er satt til{" "}
                 <span className="text-white font-bold">
-                  {user?.planType || "private"}
+                  {user?.planType === "private" ? "privat" : user?.planType || "privat"}
                 </span>
               </p>
             </div>
@@ -74,7 +74,7 @@ export function SubscriptionView() {
               onClick={() => (window.location.href = "/membership")}
               className="bg-white text-[#2d4a3e] px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-orange-50 transition-colors shadow-md"
             >
-              Manage Plan
+              Administrer plan
             </button>
           </div>
           {/* Decorative Pattern */}
@@ -86,13 +86,13 @@ export function SubscriptionView() {
       <section>
         <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
           <History className="text-[#E08835]" size={20} />
-          Purchase History
+          Kjøpshistorikk
         </h3>
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
             <Loader2 className="animate-spin text-[#E08835] mb-2" size={32} />
-            <p className="text-gray-500 font-medium">Loading transactions...</p>
+            <p className="text-gray-500 font-medium">Laster transaksjoner...</p>
           </div>
         ) : transactions.length > 0 ? (
           <div className="space-y-3">
@@ -101,13 +101,13 @@ export function SubscriptionView() {
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
                     <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                      Plan / Item
+                      Plan / Vare
                     </th>
                     <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                      Date
+                      Dato
                     </th>
                     <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                      Amount
+                      Beløp
                     </th>
                     <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">
                       Status
@@ -147,7 +147,7 @@ export function SubscriptionView() {
                               : "bg-orange-50 text-orange-600 border border-orange-100"
                           }`}
                         >
-                          {tx.status}
+                          {tx.status === "succeeded" ? "Fullført" : tx.status}
                         </span>
                       </td>
                     </tr>
@@ -156,11 +156,11 @@ export function SubscriptionView() {
               </table>
             </div>
 
-            {/* Pagination */}
+            {/* Paginering */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between pt-4">
                 <p className="text-sm text-gray-500 font-medium">
-                  Page <span className="text-gray-900">{page}</span> of{" "}
+                  Side <span className="text-gray-900">{page}</span> av{" "}
                   <span className="text-gray-900">{totalPages}</span>
                 </p>
                 <div className="flex gap-2">
@@ -190,13 +190,13 @@ export function SubscriptionView() {
               strokeWidth={1.5}
             />
             <p className="text-gray-500 font-medium">
-              No purchase history found.
+              Ingen kjøpshistorikk funnet.
             </p>
             <button
               onClick={() => (window.location.href = "/membership")}
               className="mt-4 text-[#E08835] font-bold text-sm hover:underline"
             >
-              Browse plans
+              Se planer
             </button>
           </div>
         )}

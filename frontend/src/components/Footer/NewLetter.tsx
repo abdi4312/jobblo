@@ -33,7 +33,7 @@ export default function NewLetter() {
                             <form className="flex gap-3 p-0!">
 
                                 <div className="flex gap-3 flex-col md:flex-row justify-center items-center w-full">
-                                    <Input placeholder="email" icon={<Mail size={20} className="text-[#9E9E9E]" />} containerClassName="max-w-[300px] sm:max-w-[500px] md:min-w-75 text-[#000000]" />
+                                    <Input placeholder="E-post" icon={<Mail size={20} className="text-[#9E9E9E]" />} containerClassName="max-w-[300px] sm:max-w-[500px] md:min-w-75 text-[#000000]" />
                                     <Button label="Abonner" size="lg" className="max-w-23.75" />
                                 </div>
 

@@ -25,9 +25,7 @@ export function ProfileHeader({
   const [isNotifyEnabled, setIsNotifyEnabled] = useState(false);
   const [isFollowersFollowingModalOpen, setIsFollowersFollowingModalOpen] =
     useState(false);
-  const [modalTitle, setModalTitle] = useState<"Followers" | "Following">(
-    "Followers",
-  );
+  const [modalTitle, setModalTitle] = useState<"Følgere" | "Følger">("Følgere");
 
   const navigate = useNavigate();
   const followMutation = useFollowUser();
@@ -67,7 +65,7 @@ export function ProfileHeader({
       followMutation.mutate(user._id, {
         onSuccess: () => {
           setIsFollowingModalOpen(false);
-          toast.success(`Unfollowed ${user.name}`);
+          toast.success(`Sluttet å følge ${user.name}`);
         },
       });
     }
@@ -78,7 +76,7 @@ export function ProfileHeader({
       blockMutation.mutate(user._id, {
         onSuccess: () => {
           setIsUnblockModalOpen(false);
-          toast.success(`User unblocked`);
+          toast.success(`Bruker opphevet blokkering`);
         },
       });
     }
@@ -89,19 +87,19 @@ export function ProfileHeader({
       {isBlockedByMe && (
         <div className="bg-[#FEF2F2] py-3 text-center border-b border-red-100 animate-in slide-in-from-top duration-300">
           <p className="text-[14px] font-medium text-gray-900">
-            You have blocked this user.
+            Du har blokkert denne brukeren.
           </p>
           <button
             onClick={() => setIsUnblockModalOpen(true)}
             disabled={blockMutation.isPending}
             className="text-[14px] font-bold text-[#FF6B6B] hover:underline mt-0.5 disabled:opacity-50"
           >
-            {blockMutation.isPending ? "Unblocking..." : "Unblock"}
+            {blockMutation.isPending ? "Opphever..." : "Opphev blokkering"}
           </button>
         </div>
       )}
 
-      <div className="bg-white px-4 sm:px-18 pt-8 pb-10">
+      <div className="bg-white/60 px-4 sm:px-18 pt-8 pb-10">
         <div className="max-w-300 mx-auto flex flex-col items-center sm:items-start sm:flex-row gap-8 sm:gap-10 relative">
           {/* Profile Picture Column */}
           <div className="flex flex-col items-center gap-3">
@@ -122,7 +120,7 @@ export function ProfileHeader({
                     onClick={() => navigate("/settings/picture")}
                     className="bg-white/90 backdrop-blur-sm border border-gray-200 px-4 py-1.5 rounded-full text-sm font-bold text-gray-800 shadow-sm opacity-0 group-hover:opacity-100 transition-all hover:bg-white"
                   >
-                    Edit photo
+                    Rediger bilde
                   </button>
                 </div>
               )}
@@ -136,20 +134,20 @@ export function ProfileHeader({
             </h2>
 
             <p className="text-[13px] font-bold text-gray-400 uppercase tracking-wide mb-5">
-              Became a Jobblo in{" "}
+              Ble en Jobblo i{" "}
               {user?.createdAt
-                ? new Date(user.createdAt).toLocaleString("en-US", {
+                ? new Date(user.createdAt).toLocaleString("no-NO", {
                     month: "long",
                     year: "numeric",
                   })
-                : "December 2019"}
+                : "desember 2019"}
             </p>
 
             <div className="flex gap-4 mb-5">
               <div
                 className="cursor-pointer hover:underline text-[16px]"
                 onClick={() => {
-                  setModalTitle("Followers");
+                  setModalTitle("Følgere");
                   setIsFollowersFollowingModalOpen(true);
                 }}
               >
@@ -157,13 +155,13 @@ export function ProfileHeader({
                   {user?.followers?.length || 0}
                 </span>{" "}
                 <span className="text-gray-900 font-medium text-[16px]">
-                  followers
+                  følgere
                 </span>
               </div>
               <div
                 className="cursor-pointer hover:underline text-[16px]"
                 onClick={() => {
-                  setModalTitle("Following");
+                  setModalTitle("Følger");
                   setIsFollowersFollowingModalOpen(true);
                 }}
               >
@@ -171,7 +169,7 @@ export function ProfileHeader({
                   {user?.following?.length || 0}
                 </span>{" "}
                 <span className="text-gray-900 font-medium text-[16px]">
-                  following
+                  følger
                 </span>
               </div>
             </div>
@@ -185,7 +183,7 @@ export function ProfileHeader({
                     onClick={() => navigate("/coins")}
                   >
                     <Store size={18} className="text-gray-800" />
-                    <span>Jobblo Shop</span>
+                    <span>Jobblo Shoppen</span>
                   </button>
 
                   <div className="relative">
@@ -193,7 +191,7 @@ export function ProfileHeader({
                       onClick={() => setIsMenuOpen(!isMenuOpen)}
                       className={`flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm ${isMenuOpen ? "bg-gray-50" : ""}`}
                     >
-                      <span>More</span>
+                      <span>Mer</span>
                       <ChevronDown
                         size={18}
                         className={`transition-transform duration-200 ${isMenuOpen ? "rotate-180" : ""}`}
@@ -207,9 +205,9 @@ export function ProfileHeader({
                             onClick={() => navigate("/settings")}
                             className="flex items-center w-full text-lg font-medium text-black hover:text-gray-600 transition-colors"
                           >
-                            Settings
+                            Innstillinger
                           </button>
-                          <div className="h-[1px] bg-gray-100 my-1" />
+                          <div className="h-px bg-gray-100 my-1" />
                           <button
                             onClick={() => {
                               setIsMenuOpen(false);
@@ -217,7 +215,7 @@ export function ProfileHeader({
                             }}
                             className="flex items-center w-full text-lg font-medium text-[#EA1717] hover:text-red-700 transition-colors"
                           >
-                            Log out
+                            Log ut av Jobblo
                           </button>
                         </div>
                       </div>
@@ -229,17 +227,17 @@ export function ProfileHeader({
                   <button
                     onClick={handleFollowClick}
                     disabled={followMutation.isPending || isBlockedByMe}
-                    className={`flex items-center gap-2 ${isFollowing ? "bg-white border-2 border-gray-200 text-black" : "bg-[#FF6B6B] text-white"} px-8 py-2.5 rounded-xl text-[15px] font-bold hover:opacity-90 transition-all shadow-sm ${isBlockedByMe ? "opacity-40 cursor-not-allowed" : ""}`}
+                    className={`flex items-center gap-2 ${isFollowing ? "bg-white border-2 border-gray-200 text-black" : "bg-[#2F7E47] text-white"} px-8 py-2.5 rounded-xl text-[15px] font-bold hover:opacity-90 transition-all shadow-sm ${isBlockedByMe ? "opacity-40 cursor-not-allowed" : ""}`}
                   >
                     {followMutation.isPending ? (
                       "..."
                     ) : isFollowing ? (
                       <>
-                        <span>Following</span>
+                        <span>Følger</span>
                         <ChevronDown size={18} />
                       </>
                     ) : (
-                      "Follow"
+                      "Følg"
                     )}
                   </button>
                   <button
@@ -257,7 +255,7 @@ export function ProfileHeader({
                       onClick={() => setIsMenuOpen(!isMenuOpen)}
                       className={`flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm ${isMenuOpen ? "bg-gray-50" : ""}`}
                     >
-                      <span>More</span>
+                      <span>Mer</span>
                       <ChevronDown
                         size={18}
                         className={`transition-transform duration-200 ${isMenuOpen ? "rotate-180" : ""}`}
@@ -278,9 +276,11 @@ export function ProfileHeader({
                             }}
                             className="flex items-center w-full text-[16px] font-medium text-black hover:text-gray-600 transition-colors py-1"
                           >
-                            {isBlockedByMe ? "Unblock user" : "Block user"}
+                            {isBlockedByMe
+                              ? "Fjern blokkering"
+                              : "Blokker bruker"}
                           </button>
-                          <div className="h-[1px] bg-gray-100 my-0.5" />
+                          <div className="h-px bg-gray-100 my-0.5" />
                           <button
                             onClick={() => {
                               setIsMenuOpen(false);
@@ -288,7 +288,7 @@ export function ProfileHeader({
                             }}
                             className="flex items-center w-full text-[16px] font-medium text-black hover:text-gray-600 transition-colors py-1"
                           >
-                            Report user
+                            Rapport bruker
                           </button>
                         </div>
                       </div>

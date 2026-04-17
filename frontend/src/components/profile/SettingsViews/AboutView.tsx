@@ -7,14 +7,14 @@ export const AboutView = () => (
         <HelpCircle size={24} />
       </div>
       <div>
-        <h3 className="text-lg font-bold text-gray-900 mb-1">About us</h3>
+        <h3 className="text-lg font-bold text-gray-900 mb-1">Om oss</h3>
         <p className="text-sm text-gray-600 leading-relaxed mb-4">
-          Jobblo is a platform built for the community. We're dedicated to helping you find your next job or hire the best talent.
+          Jobblo er en plattform bygget for fellesskapet. Vi er dedikert til å hjelpe deg med å finne din neste jobb eller ansette de beste talentene.
         </p>
         <div className="flex flex-col gap-2">
-          <button className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors text-left">Terms of Service</button>
-          <button className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors text-left">Privacy Policy</button>
-          <button className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors text-left">Contact Support</button>
+          <button className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors text-left">Vilkår for bruk</button>
+          <button className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors text-left">Personvernerklæring</button>
+          <button className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors text-left">Kontakt support</button>
         </div>
       </div>
     </div>

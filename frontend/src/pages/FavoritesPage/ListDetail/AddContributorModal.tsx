@@ -17,7 +17,11 @@ interface AddContributorModalProps {
   onClose: () => void;
 }
 
-const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpen, onClose }) => {
+const AddContributorModal: React.FC<AddContributorModalProps> = ({
+  listId,
+  isOpen,
+  onClose,
+}) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -33,7 +37,9 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpe
 
     setIsSearching(true);
     try {
-      const response = await mainLink.get(`/api/users/search?query=${encodeURIComponent(searchQuery.trim())}`);
+      const response = await mainLink.get(
+        `/api/users/search?query=${encodeURIComponent(searchQuery.trim())}`,
+      );
       setSearchResults(response.data);
     } catch (err) {
       console.error("Search error:", err);
@@ -43,13 +49,13 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpe
   };
 
   const toggleUserSelection = (user: User) => {
-    setSelectedUsers(prev => {
-      const isAlreadySelected = prev.some(u => u._id === user._id);
+    setSelectedUsers((prev) => {
+      const isAlreadySelected = prev.some((u) => u._id === user._id);
       if (isAlreadySelected) {
-        return prev.filter(u => u._id !== user._id);
+        return prev.filter((u) => u._id !== user._id);
       } else {
         if (prev.length >= 10) {
-          toast.error("You can select up to 10 users at a time");
+          toast.error("Du kan velge opptil 10 brukere om gangen");
           return prev;
         }
         return [...prev, user];
@@ -61,11 +67,13 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpe
     if (selectedUsers.length === 0) return;
 
     try {
-      const userIds = selectedUsers.map(u => u._id);
+      const userIds = selectedUsers.map((u) => u._id);
       await mainLink.post(`/api/lists/${listId}/contributors`, { userIds });
 
-      queryClient.invalidateQueries({ queryKey: ["favoriteLists", "user", listId] });
-      toast.success(`${selectedUsers.length} contributors added successfully`);
+      queryClient.invalidateQueries({
+        queryKey: ["favoriteLists", "user", listId],
+      });
+      toast.success(`${selectedUsers.length} bidragsytere lagt til`);
 
       onClose();
       // Reset state
@@ -73,7 +81,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpe
       setSearchResults([]);
       setSelectedUsers([]);
     } catch {
-      toast.error("Failed to add contributors");
+      toast.error("Kunne ikke legge til bidragsytere");
     }
   };
 
@@ -89,7 +97,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpe
         {/* Header */}
         <div className="relative flex items-center justify-center p-6 border-b border-gray-100">
           <h2 className="text-[#0A0A0A] font-bold text-lg">
-            Add contributor
+            Legg til bidragsyter
           </h2>
           <button
             onClick={onClose}
@@ -104,21 +112,24 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpe
           {/* Search Bar Row */}
           <form onSubmit={handleSearch} className="flex gap-3 items-center">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+              <Search
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
+                size={20}
+              />
               <input
                 autoFocus
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="test"
+                placeholder="Søk..."
                 className="w-full pl-12 pr-4 py-3.5 bg-gray-100/80 rounded-[20px] border-none outline-none text-gray-700 placeholder-gray-400 font-medium"
               />
             </div>
             <button
               type="submit"
-              className="px-8 py-3.5 bg-[#FF8A71] text-black font-bold rounded-[20px] hover:bg-[#ff7659] transition-all"
+              className="px-8 py-3.5 bg-[#2F7E47] text-white font-bold rounded-[20px] hover:bg-[#2F7E47] transition-all"
             >
-              Search
+              Søk
             </button>
           </form>
 
@@ -126,11 +137,13 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpe
           <div className="flex-1 overflow-y-auto -mx-2 px-2 space-y-1">
             {isSearching ? (
               <div className="flex justify-center py-10">
-                <div className="animate-spin w-8 h-8 border-4 border-gray-100 border-t-[#FF8A71] rounded-full" />
+                <div className="animate-spin w-8 h-8 border-4 border-gray-100 border-t-[#2F7E47] rounded-full" />
               </div>
             ) : searchResults.length > 0 ? (
               searchResults.map((user) => {
-                const isSelected = selectedUsers.some(u => u._id === user._id);
+                const isSelected = selectedUsers.some(
+                  (u) => u._id === user._id,
+                );
                 return (
                   <button
                     key={user._id}
@@ -140,9 +153,13 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpe
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-full bg-gray-100 overflow-hidden shrink-0 border border-gray-100">
                         {user.avatarUrl ? (
-                          <img src={user.avatarUrl} className="w-full h-full object-cover" alt="" />
+                          <img
+                            src={user.avatarUrl}
+                            className="w-full h-full object-cover"
+                            alt=""
+                          />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[#FF8A71] bg-[#FFF0ED]">
+                          <div className="w-full h-full flex items-center justify-center text-[#2F7E47] bg-[#2F7E4711]">
                             <UserPlus size={24} />
                           </div>
                         )}
@@ -152,25 +169,34 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpe
                           {user.name} {user.lastName}
                         </p>
                         <p className="text-sm text-gray-400 font-medium">
-                          {user.name[0]}{user.lastName ? user.lastName[0] : ""}
+                          {user.name[0]}
+                          {user.lastName ? user.lastName[0] : ""}
                         </p>
                       </div>
                     </div>
 
                     {/* Selection Circle */}
-                    <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${isSelected
-                      ? "border-[#7D1D54] bg-white"
-                      : "border-gray-300 bg-white"
-                      }`}>
+                    <div
+                      className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
+                        isSelected
+                          ? "border-[#2F7E47] bg-white"
+                          : "border-gray-300 bg-white"
+                      }`}
+                    >
                       {isSelected && (
-                        <div className="w-4 h-4 rounded-full bg-[#7D1D54]" />
+                        <div className="w-4 h-4 rounded-full bg-[#2F7E47]" />
                       )}
                     </div>
                   </button>
                 );
               })
-            ) : searchQuery.length >= 2 && !isSearching && (
-              <p className="text-center py-10 text-gray-400">No users found</p>
+            ) : (
+              searchQuery.length >= 2 &&
+              !isSearching && (
+                <p className="text-center py-10 text-gray-400">
+                  Ingen brukere funnet
+                </p>
+              )
             )}
           </div>
 
@@ -178,9 +204,10 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpe
           <button
             onClick={handleAddContributors}
             disabled={selectedUsers.length === 0}
-            className="w-full py-4.5 bg-[#FF8A71] text-black font-bold rounded-[22px] hover:bg-[#ff7659] disabled:bg-[#FF8A71]/40 disabled:text-gray-500 transition-all shadow-md active:scale-[0.98] text-lg mt-4"
+            className="w-full py-4.5 bg-[#2F7E47] text-white font-bold rounded-[22px] hover:bg-[#2F7E47] disabled:bg-[#2F7E47]/40 disabled:text-gray-500 transition-all shadow-md active:scale-[0.98] text-lg mt-4"
           >
-            Add contributor {selectedUsers.length > 0 && `(${selectedUsers.length})`}
+            Legg til bidragsyter{" "}
+            {selectedUsers.length > 0 && `(${selectedUsers.length})`}
           </button>
         </div>
       </div>

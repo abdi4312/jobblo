@@ -72,7 +72,7 @@ export default function RegisterPage() {
 
               <div>
                 <h1 className="text-3xl font-bold text-[#0E2A22]">Velkommen</h1>
-                <p className="text-base font-normal text-[#4A5565]">Logg inn til din Jobblo-konto</p>
+                <p className="text-base font-normal text-[#4A5565]">Opprett din Jobblo-konto</p>
               </div>
             </div>
 
@@ -81,30 +81,30 @@ export default function RegisterPage() {
                 <Input
                   label="Fornavn"
                   type="text"
-                  value={formData.name} // Form state se connect kiya
+                  value={formData.name} // Koblet til skjema-state
                   icon={<User size={20} className="text-[#99A1AF]" />}
                   placeholder="Fornavn"
-                  onChange={(e) => handleInputChange("name", e.target.value)} // State update logic
+                  onChange={(e) => handleInputChange("name", e.target.value)} // State-oppdateringslogikk
                   className="max-w-md"
                 />
 
                 <Input
                   label="Etternavn"
                   type="text"
-                  value={formData.lastName} // Form state se connect kiya
+                  value={formData.lastName} // Koblet til skjema-state
                   icon={<User size={20} className="text-[#99A1AF]" />}
                   placeholder="Etternavn"
-                  onChange={(e) => handleInputChange("lastName", e.target.value)} // State update logic
+                  onChange={(e) => handleInputChange("lastName", e.target.value)} // State-oppdateringslogikk
                   className="max-w-md"
                 />
 
                 <Input
                   label="E-post"
                   type="email"
-                  value={formData.email} // Form state se connect kiya
+                  value={formData.email} // Koblet til skjema-state
                   icon={<Mail size={20} className="text-[#99A1AF]" />}
-                  placeholder="user1@jobblo.no"
-                  onChange={(e) => handleInputChange("email", e.target.value)} // State update logic
+                  placeholder="bruker@jobblo.no"
+                  onChange={(e) => handleInputChange("email", e.target.value)} // State-oppdateringslogikk
                   className="max-w-md"
                 />
 
@@ -112,7 +112,7 @@ export default function RegisterPage() {
                   label="Passord"
                   type={showPassword ? "text" : "password"}
                   icon={<Lock size={20} className="text-[#99A1AF]" />}
-                  value={formData.password} // Form state se connect kiya
+                  value={formData.password} // Koblet til skjema-state
                   placeholder="••••••••"
                   onChange={(e) => handleInputChange("password", e.target.value)}
                   className="max-w-md"
@@ -130,7 +130,7 @@ export default function RegisterPage() {
                   label="Bekreft passord"
                   type={showConfirmPassword ? "text" : "password"}
                   icon={<Lock size={20} className="text-[#99A1AF]" />}
-                  value={formData.confirmPassword} // Form state se connect kiya
+                  value={formData.confirmPassword} // Koblet til skjema-state
                   placeholder="••••••••"
                   onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                   className="max-w-md"
@@ -149,7 +149,7 @@ export default function RegisterPage() {
                 <Button
                   onClick={handleRegister}
                   disabled={!isFormValid || isRegistering}
-                  className="w-full max-w-md bg-[#3F8F6B]! rounded-[14px] text-base! font-normal!"
+                  className={`w-full max-w-md bg-[#2F7E47]! rounded-[14px] text-base! font-normal! ${(!isFormValid || isRegistering) ? "opacity-80" : ""}`}
                   label={isRegistering ? "Registrerer..." : "Registrer"}
                 />
               </div>
@@ -168,7 +168,7 @@ export default function RegisterPage() {
                 <p>Har du allerede en konto?</p>
                 <Button
                   onClick={() => navigate("/login")}
-                  className="bg-transparent! text-[#3F8F6B]! p-0! text-base! font-normal!"
+                  className="bg-transparent! text-[#2F7E47]! p-0! text-base! font-normal!"
                   label="Logg inn"
                 />
               </div>

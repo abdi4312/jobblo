@@ -4,7 +4,7 @@ import type { SettingsContextType } from "../../../pages/SettingsPage";
 export const LocationView = () => {
   const { form, handleChange, handleUpdate, updateUser, user } = useOutletContext<SettingsContextType>();
 
-  // Logic: Check agar input country original data ke barabar hai
+  // Logikk: Sjekk om landet i input er det samme som det opprinnelige landet
   const isUnchanged = form.country === user?.country;
   const isDisabled = isUnchanged || updateUser?.isPending;
 
@@ -12,7 +12,7 @@ export const LocationView = () => {
     <section className="flex flex-col gap-6 max-w-2xl">
       <div className="relative group">
         <label htmlFor="country" className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight">
-          Country
+          Land
         </label>
         <input
           id="country"
@@ -22,18 +22,18 @@ export const LocationView = () => {
         />
       </div>
 
-      {/* Aapka Wala Button Style */}
+      {/* Din knappestil */}
       <button
         type="button"
         onClick={handleUpdate}
         disabled={isDisabled}
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
           ${isDisabled
-            ? "bg-[#EF790993] cursor-not-allowed opacity-80"
-            : "bg-[#EF7909] hover:bg-[#D66A08] active:scale-[0.98]"
+            ? "bg-[#2F7E47] cursor-not-allowed opacity-80"
+            : "bg-[#2F7E47] hover:bg-[#2F7E47] active:scale-[0.98]"
           }`}
       >
-        {updateUser?.isPending ? "Updating..." : "Update location"}
+        {updateUser?.isPending ? "Oppdaterer..." : "Oppdater lokasjon"}
       </button>
     </section>
   );

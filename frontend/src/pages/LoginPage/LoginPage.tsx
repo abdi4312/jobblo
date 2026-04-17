@@ -30,19 +30,25 @@ export default function LoginPage() {
     <>
       <div className="bg-white min-h-screen">
         <div className="flex mx-auto">
-          <div className='w-[50%] relative 2xl:mix-h-236 min-h-screen overflow-hidden hidden lg:block'>
+          <div className="w-[50%] relative 2xl:mix-h-236 min-h-screen overflow-hidden hidden lg:block">
             <Auth />
           </div>
 
           <div className=" w-full lg:w-[50%] 2xl:mt-29.25 mt-7 mx-3 lg:mx-0">
             <div className="flex flex-col text-center justify-center mb-2 2xl:mb-8.5">
               <div className="flex items-center justify-center">
-                <img src={LoginIcon} alt="Login_icon" className="max-w-22.5 max-h-9.75 object-cover" />
+                <img
+                  src={LoginIcon}
+                  alt="Login_icon"
+                  className="max-w-22.5 max-h-9.75 object-cover"
+                />
               </div>
 
               <div>
                 <h1 className="text-3xl font-bold text-[#0E2A22]">Velkommen</h1>
-                <p className="text-base font-normal text-[#4A5565]">Logg inn til din Jobblo-konto</p>
+                <p className="text-base font-normal text-[#4A5565]">
+                  Logg inn til din Jobblo-konto
+                </p>
               </div>
             </div>
             <div className="max-w-md mx-auto">
@@ -85,7 +91,7 @@ export default function LoginPage() {
                 <Button
                   onClick={handleLogin}
                   disabled={isLoggingIn}
-                  className="w-full max-w-md bg-[#3F8F6B]! rounded-[14px] text-base! font-normal!"
+                  className={`w-full max-w-md bg-[#2F7E47]! rounded-[14px] text-base! font-normal! ${isLoggingIn ? "opacity-80" : ""}`}
                   label={isLoggingIn ? "Logger inn..." : "Logg inn"}
                 />
               </div>
@@ -108,7 +114,7 @@ export default function LoginPage() {
                 <p>Har du ikke konto?</p>
                 <Button
                   onClick={() => navigate("/register")}
-                  className="bg-transparent! text-[#3F8F6B]! p-0! text-base! font-normal!"
+                  className="bg-transparent! text-[#2F7E47]! p-0! text-base! font-normal!"
                   label="Registrer deg"
                 />
               </div>
@@ -117,6 +123,5 @@ export default function LoginPage() {
         </div>
       </div>
     </>
-
   );
 }

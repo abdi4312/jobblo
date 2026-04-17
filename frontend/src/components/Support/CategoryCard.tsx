@@ -5,7 +5,7 @@ function CategoryCard() {
         { icon: User, title: "Konto & Profil", color: "bg-[#2F7E471A] text-[#2F7E47]" },
         { icon: CreditCard, title: "Betaling", color: "bg-[#E088351A] text-[#E08835]" },
         { icon: FileText, title: "Oppdrag & Søknader", color: "bg-[#238CEB1A] text-[#238CEB]" },
-        { icon: Shield, title: "Sikkerhet", color: "bg-[#EF79091A] text-[#EF7909]" },
+        { icon: Shield, title: "Sikkerhet", color: "bg-[#2F7E471A] text-[#2F7E47]" },
         { icon: Settings, title: "Innstillinger", color: "bg-[#673AB71A] text-[#673AB7]" },
         { icon: HelpCircle, title: "Annet", color: "bg-[#9E9E9E1A] text-[#9E9E9E]" },
     ];

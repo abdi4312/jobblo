@@ -76,7 +76,7 @@ export function NotificationManager() {
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
       <div className="flex items-center gap-3 mb-8 pb-4 border-b border-gray-50">
         <div className="p-3 bg-green-50 rounded-xl">
-          <Bell className="text-[#3F8F6B]" size={24} />
+          <Bell className="text-[#2F7E47]" size={24} />
         </div>
         <div>
           <h2 className="text-xl font-bold text-gray-900">
@@ -173,7 +173,7 @@ export function NotificationManager() {
         </p>
         <button
           onClick={sendTestNotification}
-          className="w-full py-2.5 px-4 bg-[#3F8F6B] text-white text-sm font-bold rounded-lg hover:bg-[#357a5b] transition-colors"
+          className="w-full py-2.5 px-4 bg-[#2F7E47] text-white text-sm font-bold rounded-lg hover:bg-[#2F7E47] transition-colors"
         >
           Send test-varsel (Bytt fane etterpå)
         </button>

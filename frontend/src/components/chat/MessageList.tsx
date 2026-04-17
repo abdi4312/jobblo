@@ -22,7 +22,7 @@ function MessageList({
   ).values());
 
   const grouped = uniqueMessages.reduce((acc: { [key: string]: ChatMessage[] }, msg) => {
-    const dateString = new Date(msg.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric" });
+    const dateString = new Date(msg.createdAt).toLocaleDateString("no-NO", { month: "long", day: "numeric" });
     if (!acc[dateString]) acc[dateString] = [];
     acc[dateString].push(msg);
     return acc;
@@ -35,8 +35,8 @@ function MessageList({
           <div className="w-16 h-16 rounded-full bg-[#F8F9FA] flex items-center justify-center mb-4">
             <span className="material-symbols-outlined text-[32px] text-[#CED4DA]">chat</span>
           </div>
-          <p className="m-0 font-medium">No messages yet</p>
-          <p className="text-[14px] mt-1">Send a message to start the conversation</p>
+          <p className="m-0 font-medium">Ingen meldinger ennå</p>
+          <p className="text-[14px] mt-1">Send en melding for å starte samtalen</p>
         </div>
       ) : (
         Object.entries(grouped).map(([date, msgs]) => (
@@ -74,7 +74,7 @@ function MessageList({
                   <div className={`flex flex-col max-w-[80%] sm:max-w-[60%] ${isSentByMe ? "items-end" : "items-start"}`}>
                     <div
                       className={`px-5 py-3 rounded-2xl text-[15px] leading-relaxed shadow-sm ${isSentByMe
-                        ? "bg-[#EF790933] text-[#212529] rounded-tr-none"
+                        ? "bg-[#2F7E4733] text-[#212529] rounded-tr-none"
                         : "bg-[#F8F9FA] text-[#212529] rounded-tl-none border border-[#F1F3F5]"
                         }`}
                     >
@@ -85,8 +85,8 @@ function MessageList({
                       <span className="text-[11px] font-medium text-[#ADB5BD]">
                         {isSentByMe 
                           ? (msg.seenBy && msg.seenBy.length > 1 
-                              ? `Read ${formatTime(msg.createdAt)}` 
-                              : `Unread ${formatTime(msg.createdAt)}`)
+                              ? `Lest ${formatTime(msg.createdAt)}` 
+                              : `Ulest ${formatTime(msg.createdAt)}`)
                           : formatTime(msg.createdAt)}
                       </span>
                     </div>

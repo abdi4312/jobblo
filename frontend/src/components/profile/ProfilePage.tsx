@@ -3,9 +3,9 @@ import { ItemsGrid } from "./ProfileHeader/ItemsGrid";
 import { ProfileNav } from "./ProfileHeader/ProfileNav";
 import { useUserStore } from "../../stores/userStore";
 import { useNavigate, useParams } from "react-router-dom";
-import { toast } from 'react-hot-toast';
-import { App } from 'antd';
-import { useState } from 'react';
+import { toast } from "react-hot-toast";
+import { App } from "antd";
+import { useState } from "react";
 import { useUserProfile } from "../../features/profile/hooks";
 import { Spinner } from "../Ui/Spinner";
 
@@ -25,10 +25,10 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     modal.confirm({
-      title: 'Er du sikker?',
-      content: 'Vil du virkelig logge ut?',
-      okText: 'Ja, logg ut',
-      cancelText: 'Avbryt',
+      title: "Er du sikker?",
+      content: "Vil du virkelig logge ut?",
+      okText: "Ja, logg ut",
+      cancelText: "Avbryt",
       onOk() {
         logout();
         toast.success("Du har blitt logget ut");
@@ -50,7 +50,7 @@ export default function ProfilePage() {
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <h2 className="text-2xl font-bold">Bruker ikke funnet</h2>
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate("/")}
           className="bg-primary text-white px-6 py-2 rounded-xl"
         >
           Gå hjem
@@ -59,9 +59,11 @@ export default function ProfilePage() {
     );
   }
 
-  const isBlockedByMe = userId && currentUser?.blockedUsers?.some((id) =>
-    (typeof id === 'string' ? id : id._id)?.toString() === userId
-  );
+  const isBlockedByMe =
+    userId &&
+    currentUser?.blockedUsers?.some(
+      (id) => (typeof id === "string" ? id : id._id)?.toString() === userId,
+    );
 
   return (
     <>
@@ -84,16 +86,20 @@ export default function ProfilePage() {
                   className="w-full h-full object-contain opacity-80"
                 />
               </div>
-              <h3 className="text-[22px] font-bold text-gray-900 mb-3">You have blocked this user</h3>
+              <h3 className="text-[22px] font-bold text-gray-900 mb-3">
+                Du har blokkert denne brukeren
+              </h3>
               <p className="text-[16px] text-gray-500 font-medium leading-relaxed">
-                To see this users ads, you need to{" "}
+                For å se denne brukerens annonser må du{" "}
                 <button
-                  onClick={() => {/* This logic is handled in ProfileHeader now */}}
+                  onClick={() => {
+                    /* This logic is handled in ProfileHeader now */
+                  }}
                   className="text-black font-bold underline hover:text-gray-700 transition-colors"
                 >
-                  unblock
+                  oppheve blokkeringen
                 </button>{" "}
-                them first.
+                først.
               </p>
             </div>
           </div>
@@ -104,7 +110,10 @@ export default function ProfilePage() {
               onTabChange={setActiveTab}
               isOwnProfile={!userId || userId === currentUser?._id}
             />
-            <ItemsGrid activeTab={activeTab} userId={userId || currentUser?._id} />
+            <ItemsGrid
+              activeTab={activeTab}
+              userId={userId || currentUser?._id}
+            />
           </>
         )}
       </div>
