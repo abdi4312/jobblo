@@ -46,7 +46,11 @@ export const fetchJobs = async ({
     Favorites: "/api/feed/favorites",
   };
 
-  const url = endpointMap[tab] || "/api/services";
+  // If userId is provided, we always want the base services endpoint to filter by user
+  const url =
+    userId && userId !== ""
+      ? "/api/services"
+      : endpointMap[tab] || "/api/services";
 
   const res = await mainLink.get(url, {
     params: {
@@ -67,9 +71,9 @@ export const fetchJobs = async ({
   if (res.data.success && Array.isArray(res.data.data)) {
     return {
       data: res.data.data,
-      pagination: {
+      pagination: res.data.pagination || {
         total: res.data.count || res.data.data.length,
-        totalPages: 1, // Feeds are currently not paginated
+        totalPages: 1,
         page: 1,
         limit: res.data.data.length,
       },

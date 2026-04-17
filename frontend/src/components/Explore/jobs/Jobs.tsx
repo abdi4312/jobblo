@@ -2,6 +2,7 @@ import { useJobs } from "../../../features/jobsList/hooks";
 import { JobCard } from "./JobCard";
 import { JobCardSkeleton } from "../../Loading/JobCardSkeleton";
 import type { Tab } from "../../../types/tabs";
+import { useEffect, useRef } from "react";
 
 interface JobsContainerProps {
   selectedCategories?: string[];
@@ -14,12 +15,32 @@ export default function JobsContainer({
   searchQuery = "",
   activeTab = "Discover",
 }: JobsContainerProps) {
+  const loadMoreRef = useRef<HTMLDivElement>(null);
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useJobs({
       categories: selectedCategories,
       search: searchQuery,
       tab: activeTab,
     });
+
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // const totalJobs = data?.pages[0].pagination.total || 0;
   const jobs = data?.pages.flatMap((page) => page.data) || [];
@@ -65,14 +86,18 @@ export default function JobsContainer({
       )}
 
       {hasNextPage && (
-        <div className="flex justify-center mt-8">
-          <button
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className="px-8 py-3 bg-[#2F7E47] text-white rounded-lg font-semibold"
-          >
-            {isFetchingNextPage ? "Laster..." : "Load More"}
-          </button>
+        <div
+          ref={loadMoreRef}
+          className="flex justify-center mt-12 pb-10 min-h-[100px]"
+        >
+          {isFetchingNextPage ? (
+            <div className="flex items-center gap-2 px-10 py-3.5 bg-[#2F7E47] text-white rounded-full font-bold shadow-md">
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Laster...
+            </div>
+          ) : (
+            <div className="h-4 w-full" />
+          )}
         </div>
       )}
     </div>
