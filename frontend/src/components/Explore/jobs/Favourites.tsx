@@ -13,12 +13,12 @@ export function Favourites() {
 
     return (
         <div className="w-full py-16 overflow-hidden">
-            <div className="w-full max-w-[1200px] mx-auto px-4">
+            <div className="w-full max-w-300 mx-auto px-4">
                 {/* Header Section */}
                 <div className="flex justify-between items-end mb-8">
                     <div>
-                        <h2 className="text-2xl md:text-3xl font-bold text-[#0A0A0A] tracking-tight">Our Favourites</h2>
-                        <p className="text-gray-500 mt-2 text-[15px]">Find inspiration in our curated lists</p>
+                        <h2 className="text-2xl md:text-3xl font-bold text-[#0A0A0A] tracking-tight">Våre favoritter</h2>
+                        <p className="text-gray-500 mt-2 text-[15px]">Finn inspiration i våre favoritter</p>
                     </div>
 
                     {/* Custom Navigation Arrows */}

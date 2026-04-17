@@ -44,42 +44,50 @@ export function SettingsLayout() {
   }, [location.pathname]);
 
   const publicProfileLinks = [
-    { name: "Username", path: "/settings", icon: AtSign },
-    { name: "First and last name", path: "/settings/name", icon: User },
+    { name: "Brukernavn", path: "/settings", icon: AtSign },
+    { name: "Fornavn og etternavn", path: "/settings/name", icon: User },
     { name: "Bio", path: "/settings/bio", icon: PenLine },
-    { name: "Upload profile picture", path: "/settings/picture", icon: Image },
+    { name: "Last opp profilbilde", path: "/settings/picture", icon: Image },
   ];
 
   const personalInfoLinks = [
-    { name: "Email address", path: "/settings/email", icon: AtSign },
-    { name: "Phone number", path: "/settings/phone", icon: Phone },
-    { name: "My addresses", path: "/settings/addresses", icon: MapPin },
-    { name: "Change password", path: "/settings/password", icon: User },
-    { name: "Sessions", path: "/settings/sessions", icon: Monitor },
-    { name: "Delete my profile", path: "/settings/delete-account", icon: User },
+    { name: "E-postadresse", path: "/settings/email", icon: AtSign },
+    { name: "Telefonnummer", path: "/settings/phone", icon: Phone },
+    { name: "Mine adresser", path: "/settings/addresses", icon: MapPin },
+    { name: "Endre passord", path: "/settings/password", icon: User },
+    { name: "Økter", path: "/settings/sessions", icon: Monitor },
+    {
+      name: "Slett profilen min",
+      path: "/settings/delete-account",
+      icon: User,
+    },
   ];
 
   const otherLinks = [
-    { name: "Location", path: "/settings/location", icon: MapPin },
-    { name: "Upcoming", path: "/settings/upcoming", icon: AtSign },
-    { name: "Jobblo membership", path: "/membership", icon: AtSign },
+    { name: "Lokasjon", path: "/settings/location", icon: MapPin },
+    { name: "Kommende", path: "/settings/upcoming", icon: AtSign },
+    { name: "Jobblo medlemskap", path: "/membership", icon: AtSign },
     {
-      name: "Subscriptions",
+      name: "Abonnementer",
       path: "/settings/subscriptions",
       icon: CreditCard,
     },
   ];
 
   const privacyLinks = [
-    { name: "Notifications", path: "/settings/notifications", icon: Bell },
+    { name: "Varsler", path: "/settings/notifications", icon: Bell },
     {
-      name: "Search engine visibility",
+      name: "Søkemotorsynlighet",
       path: "/settings/visibility",
       icon: AtSign,
     },
-    { name: "Blocked users", path: "/settings/blocked", icon: User },
-    { name: "Cookie settings", path: "/settings/cookies", icon: AtSign },
-    { name: "About us", path: "/settings/about", icon: PenLine },
+    { name: "Blokkerte brukere", path: "/settings/blocked", icon: User },
+    {
+      name: "Innstillinger for kapsler",
+      path: "/settings/cookies",
+      icon: AtSign,
+    },
+    { name: "Om oss", path: "/settings/about", icon: PenLine },
   ];
 
   const currentPath = location.pathname;
@@ -92,11 +100,11 @@ export function SettingsLayout() {
     ...privacyLinks,
   ];
   let activeTab =
-    allLinks.find((link) => link.path === currentPath)?.name || "Settings";
+    allLinks.find((link) => link.path === currentPath)?.name || "Innstillinger";
 
   // Special case for Blocked users to show count in header
   if (currentPath === "/settings/blocked" && user?.blockedUsers?.length > 0) {
-    activeTab = `Blocked users (${user.blockedUsers.length})`;
+    activeTab = `Blokkerte brukere (${user.blockedUsers.length})`;
   }
 
   const handleBackToSidebar = () => {
@@ -113,7 +121,7 @@ export function SettingsLayout() {
           <div
             className={`${showSidebar ? "flex" : "hidden md:flex"} w-full md:w-64 p-4 sm:p-6 font-bold text-xl sm:text-lg text-gray-900 md:border-r border-gray-100 items-center justify-center md:justify-start`}
           >
-            Settings
+            Innstillinger
           </div>
           {/* Active tab title with back button */}
           <div className="flex-1 p-4 sm:p-6 font-semibold text-lg text-gray-800 flex items-center md:justify-start bg-white border-gray-100 min-w-0">
@@ -137,10 +145,10 @@ export function SettingsLayout() {
           >
             <div className="flex flex-col gap-4 md:gap-6 px-2 md:px-0">
               {[
-                { title: "Public Profile", links: publicProfileLinks },
-                { title: "Personal Information", links: personalInfoLinks },
-                { title: "OTHER", links: otherLinks },
-                { title: "PRIVACY AND TERMS", links: privacyLinks },
+                { title: "Offentlig profil", links: publicProfileLinks },
+                { title: "Personlig informasjon", links: personalInfoLinks },
+                { title: "ANNET", links: otherLinks },
+                { title: "PERSONVERN OG VILKÅR", links: privacyLinks },
               ].map((group) => (
                 <div key={group.title} className="flex flex-col gap-2 md:gap-1">
                   <div className="hidden md:block text-xs font-bold text-gray-400 uppercase mb-2 px-4 whitespace-nowrap">
@@ -155,7 +163,7 @@ export function SettingsLayout() {
                         onClick={() => navigate(link.path)}
                         className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
                           isActive
-                            ? "bg-[#EF790933] text-rose-600 md:text-gray-900 shadow-sm md:shadow-none border border-rose-100 md:border-0"
+                            ? "bg-[#2F7E4733] text-rose-600 md:text-gray-900 shadow-sm md:shadow-none border border-rose-100 md:border-0"
                             : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent"
                         }`}
                       >

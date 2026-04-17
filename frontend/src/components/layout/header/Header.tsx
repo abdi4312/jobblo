@@ -221,7 +221,7 @@ export default function Header() {
 
   const navLinkUse: NavLinkItem[] = [
     { name: "Legg ut oppdrag", icon: <Plus size={20} />, path: "/publish-job" },
-    { name: "Home", icon: <Home size={25} />, path: "/home" },
+    { name: "Hjem", icon: <Home size={25} />, path: "/home" },
     {
       name: "Meldinger",
       icon: <MessageCircle size={18} />,
@@ -288,7 +288,7 @@ export default function Header() {
                     <button
                       key={index}
                       onClick={() => handleProtectedNavigation(link.path)}
-                      className={`flex items-center mx-auto ${isHomeButtonActive ? "text-[#3F8F6B]" : "hover:text-[#3F8F6B]"}`}
+                      className={`flex items-center mx-auto ${isHomeButtonActive ? "text-[#2F7E47]" : "hover:text-[#2F7E47]"}`}
                     >
                       {link.icon}
                     </button>
@@ -302,7 +302,7 @@ export default function Header() {
                     <button
                       key={index}
                       onClick={() => handleProtectedNavigation(link.path)}
-                      className={`flex items-center mx-auto ${isJobButtonActive ? "bg-[#3F8F6B]" : "bg-[#3F8F6B]"} text-white px-4 py-2 rounded-full font-medium transition-hover hover:bg-[#387a5d]`}
+                      className={`flex items-center mx-auto ${isJobButtonActive ? "bg-[#2F7E47]" : "bg-[#2F7E47]"} text-white px-4 py-2 rounded-full font-medium transition-hover hover:bg-[#2F7E47]`}
                     >
                       {link.icon}
                     </button>
@@ -315,7 +315,7 @@ export default function Header() {
                     to={link.path}
                     className={({ isActive }) =>
                       `relative flex items-center gap-2 cursor-pointer group py-2 ${
-                        isActive ? "border-b-2 border-[#44916F]" : ""
+                        isActive ? "border-b-2 border-[#2F7E47]" : ""
                       }`
                     }
                   >
@@ -378,7 +378,7 @@ export default function Header() {
                   className={({ isActive }) =>
                     `flex items-center gap-3 p-3 rounded-lg ${
                       isActive
-                        ? "bg-green-50 text-[#44916F] font-bold"
+                        ? "bg-green-50 text-[#2F7E47] font-bold"
                         : "text-gray-700"
                     }`
                   }

@@ -72,7 +72,7 @@ const JobLocation: React.FC<JobLocationProps> = ({ location }) => {
         </div>
 
         <div className="rounded-[14px] flex items-center justify-center gap-2 px-3 py-1.5 shadow-[0px_2px_4px_-2px_rgba(0,0,0,0.1)] bg-white">
-          <span className="text-[#3F8F6B]">
+          <span className="text-[#2F7E47]">
             <MapPin size={15} />
           </span>
           <p className="text-[#0A0A0A9E] text-[14px] font-light">

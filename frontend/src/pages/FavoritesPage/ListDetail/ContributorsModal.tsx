@@ -23,7 +23,12 @@ interface ContributorsModalProps {
   onAddContributor: () => void;
 }
 
-const ContributorsModal: React.FC<ContributorsModalProps> = ({ list, isOpen, onClose, onAddContributor }) => {
+const ContributorsModal: React.FC<ContributorsModalProps> = ({
+  list,
+  isOpen,
+  onClose,
+  onAddContributor,
+}) => {
   const removeContributorMutation = useRemoveContributor();
 
   if (!isOpen || !list) return null;
@@ -50,9 +55,7 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({ list, isOpen, onC
       >
         {/* Header */}
         <div className="relative flex items-center justify-center p-6 border-b border-gray-100">
-          <h2 className="text-[#0A0A0A] font-bold text-lg">
-            Contributors
-          </h2>
+          <h2 className="text-[#0A0A0A] font-bold text-lg">Bidragsytere</h2>
           <button
             onClick={onClose}
             className="absolute right-6 p-1 hover:bg-gray-100 rounded-full transition-colors"
@@ -68,10 +71,10 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({ list, isOpen, onC
             onClick={onAddContributor}
             className="flex items-center gap-3 px-3 py-4 text-[#0A0A0A] font-bold hover:bg-gray-50 rounded-2xl transition-all mb-2"
           >
-            <div className="w-12 h-12 rounded-full bg-[#FF8A71]/10 flex items-center justify-center text-[#FF8A71]">
+            <div className="w-12 h-12 rounded-full bg-[#2F7E4711] flex items-center justify-center text-[#2F7E47]">
               <Plus size={24} />
             </div>
-            <span>Add contributor</span>
+            <span>Legg til bidragsyter</span>
           </button>
 
           <div className="space-y-4">
@@ -84,9 +87,13 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({ list, isOpen, onC
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden shrink-0 border border-gray-100 shadow-sm">
                     {owner.avatarUrl ? (
-                      <img src={owner.avatarUrl} className="w-full h-full object-cover" alt="" />
+                      <img
+                        src={owner.avatarUrl}
+                        className="w-full h-full object-cover"
+                        alt=""
+                      />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[#FF8A71] bg-[#FFF0ED]">
+                      <div className="w-full h-full flex items-center justify-center text-[#2F7E47] bg-[#2F7E4711]">
                         <User size={20} />
                       </div>
                     )}
@@ -95,11 +102,13 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({ list, isOpen, onC
                     <p className="font-bold text-[#0A0A0A] text-base leading-tight">
                       {owner.name} {owner.lastName}
                     </p>
-                    <p className="text-sm text-gray-400 font-medium">{owner.email || "Owner"}</p>
+                    <p className="text-sm text-gray-400 font-medium">
+                      {owner.email || "Eier"}
+                    </p>
                   </div>
                 </div>
                 <span className="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold rounded-full uppercase tracking-wider">
-                  Owner
+                  Eier
                 </span>
               </div>
             ))}
@@ -114,30 +123,40 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({ list, isOpen, onC
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden shrink-0 border border-gray-100 shadow-sm">
                       {user.avatarUrl ? (
-                        <img src={user.avatarUrl} className="w-full h-full object-cover" alt="" />
+                        <img
+                          src={user.avatarUrl}
+                          className="w-full h-full object-cover"
+                          alt=""
+                        />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#FF8A71] bg-[#FFF0ED]">
+                        <div className="w-full h-full flex items-center justify-center text-[#2F7E47] bg-[#2F7E4711]">
                           <User size={20} />
                         </div>
                       )}
                     </div>
                     <div className="text-left">
-                      <p className="font-bold text-[#0A0A0A] text-base leading-tight">{user.name} {user.lastName}</p>
-                      <p className="text-sm text-gray-400 font-medium">{user.email || user.username}</p>
+                      <p className="font-bold text-[#0A0A0A] text-base leading-tight">
+                        {user.name} {user.lastName}
+                      </p>
+                      <p className="text-sm text-gray-400 font-medium">
+                        {user.email || user.username}
+                      </p>
                     </div>
                   </div>
 
                   <button
                     onClick={() => handleRemove(user._id)}
                     disabled={removeContributorMutation.isPending}
-                    className="px-6 py-2 border border-gray-300 rounded-2xl font-bold text-[#0A0A0A] hover:bg-gray-50 transition-all active:scale-95"
+                    className="px-6 py-2 border border-gray-300 rounded-2xl font-bold text-[#0A0A0A] hover:bg-gray-50 transition-all active:scale-[0.98]"
                   >
-                    Remove
+                    Fjern
                   </button>
                 </div>
               ))
             ) : (
-              <p className="text-center py-10 text-gray-400">No contributors yet</p>
+              <p className="text-center py-10 text-gray-400">
+                Ingen bidragsytere ennå
+              </p>
             )}
           </div>
         </div>

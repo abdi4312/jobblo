@@ -25,7 +25,7 @@ const ServiceListing = () => {
 
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [selectedSort, setSelectedSort] = useState({
-    label: "Newest first",
+    label: "Nyeste først",
     value: "newest",
   });
   const [localSearch, setLocalSearch] = useState(initialSearch);
@@ -71,10 +71,10 @@ const ServiceListing = () => {
   }, [filterOptions?.locations, locationSearch]);
 
   const sortOptions = filterOptions?.sortOptions || [
-    { label: "Newest first", value: "newest" },
-    { label: "Price: low to high", value: "price_low" },
-    { label: "Price: high to low", value: "price_high" },
-    { label: "Most relevant", value: "relevant" },
+    { label: "Nyeste først", value: "newest" },
+    { label: "Pris: lav til høy", value: "price_low" },
+    { label: "Pris: høy til lav", value: "price_high" },
+    { label: "Mest relevant", value: "relevant" },
   ];
 
   useEffect(() => {
@@ -143,7 +143,7 @@ const ServiceListing = () => {
     <div className="space-y-8">
       {/* 1. Categories & Subcategories */}
       <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-xl font-bold mb-5 text-gray-900">Categories</h3>
+        <h3 className="text-xl font-bold mb-5 text-gray-900">Kategorier</h3>
         <div className="space-y-2">
           {isFiltersLoading ? (
             <div className="flex items-center gap-2 text-gray-400 py-4">
@@ -160,18 +160,20 @@ const ServiceListing = () => {
                     onClick={() => toggleCategory(cat.name)}
                     className={`flex-1 text-left font-medium py-2 px-3 rounded-xl transition-all duration-200 ${
                       selectedCategories.includes(cat.name)
-                        ? "bg-[#ff8a7a]/10 text-[#ff8a7a]"
-                        : "text-gray-700 hover:bg-gray-50 hover:text-[#ff8a7a]"
+                        ? "bg-[#2F7E4711] text-[#2F7E47]"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-[#2F7E47]"
                     }`}
                   >
                     <span className="flex items-center gap-2">
                       {cat.name}
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                        selectedCategories.includes(cat.name)
-                          ? "bg-[#ff8a7a]/20 text-[#ff8a7a]"
-                          : "bg-gray-100 text-gray-400"
-                      }`}>
-                        {(cat).count || 0}
+                      <span
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          selectedCategories.includes(cat.name)
+                            ? "bg-[#2F7E4722] text-[#2F7E47]"
+                            : "bg-gray-100 text-gray-400"
+                        }`}
+                      >
+                        {cat.count || 0}
                       </span>
                     </span>
                   </button>
@@ -180,7 +182,7 @@ const ServiceListing = () => {
                       onClick={() => toggleExpand(cat._id)}
                       className={`p-2 rounded-lg transition-all duration-200 ${
                         expandedCategories.includes(cat._id)
-                          ? "bg-[#ff8a7a]/10 text-[#ff8a7a]"
+                          ? "bg-[#2F7E4711] text-[#2F7E47]"
                           : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                       }`}
                     >
@@ -193,25 +195,27 @@ const ServiceListing = () => {
                   )}
                 </div>
                 {expandedCategories.includes(cat._id) && (
-                  <div className="pl-3 space-y-1 ml-3 border-l-2 border-[#ff8a7a]/20">
+                  <div className="pl-3 space-y-1 ml-3 border-l-2 border-[#2F7E4722]">
                     {cat.subcategories.map((sub) => (
                       <button
                         key={sub._id}
                         onClick={() => toggleCategory(sub.name)}
                         className={`w-full text-left py-2 px-3 rounded-xl text-sm transition-all duration-200 ${
                           selectedCategories.includes(sub.name)
-                            ? "bg-[#ff8a7a]/10 text-[#ff8a7a] font-semibold"
+                            ? "bg-[#2F7E4711] text-[#2F7E47] font-semibold"
                             : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
                         }`}
                       >
                         <span className="flex items-center gap-2">
                           {sub.name}
-                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                            selectedCategories.includes(sub.name)
-                              ? "bg-[#ff8a7a]/20 text-[#ff8a7a]"
-                              : "bg-gray-100 text-gray-300"
-                          }`}>
-                            {(sub).count || 0}
+                          <span
+                            className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                              selectedCategories.includes(sub.name)
+                                ? "bg-[#2F7E4722] text-[#2F7E47]"
+                                : "bg-gray-100 text-gray-300"
+                            }`}
+                          >
+                            {sub.count || 0}
                           </span>
                         </span>
                       </button>
@@ -225,16 +229,16 @@ const ServiceListing = () => {
       </section>
 
       {/* 2. Map View Link/Button */}
-      <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:border-[#ff8a7a]/30 transition-all cursor-pointer group overflow-hidden">
+      <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:border-[#2F7E4733] transition-all cursor-pointer group overflow-hidden">
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.05)] group-hover:scale-105 transition-transform z-10">
-              <MapIcon className="text-[#ff8a7a]" size={28} strokeWidth={1.5} />
+              <MapIcon className="text-[#2F7E47]" size={28} strokeWidth={1.5} />
             </div>
             <div>
-              <h4 className="text-xl font-bold text-gray-900">Map view</h4>
+              <h4 className="text-xl font-bold text-gray-900">Kartvisning</h4>
               <p className="text-sm text-gray-500 font-medium">
-                Explore jobs near you
+                Utforsk oppdrag nær deg
               </p>
             </div>
           </div>
@@ -288,25 +292,23 @@ const ServiceListing = () => {
           ) : (
             filteredLocations.map((loc) => (
               <label
-                key={(loc).name}
+                key={loc.name}
                 className="flex items-center justify-between cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
                   <input
                     type="checkbox"
-                    checked={selectedLocations.includes((loc).name)}
-                    onChange={() => toggleLocation((loc).name)}
+                    checked={selectedLocations.includes(loc.name)}
+                    onChange={() => toggleLocation(loc.name)}
                     className="w-5 h-5 rounded-md border-gray-300 text-[#ff8a7a] focus:ring-[#ff8a7a]"
                   />
                   <span
-                    className={`text-sm transition-colors ${selectedLocations.includes((loc).name) ? "text-gray-900 font-bold" : "text-gray-600 group-hover:text-gray-900"}`}
+                    className={`text-sm transition-colors ${selectedLocations.includes(loc.name) ? "text-gray-900 font-bold" : "text-gray-600 group-hover:text-gray-900"}`}
                   >
-                    {(loc).name}
+                    {loc.name}
                   </span>
                 </div>
-                <span className="text-[10px] text-gray-300">
-                  ({(loc).count})
-                </span>
+                <span className="text-[10px] text-gray-300">({loc.count})</span>
               </label>
             ))
           )}
@@ -420,7 +422,7 @@ const ServiceListing = () => {
               onSubmit={handleSearchSubmit}
               className="relative flex-1 group"
             >
-              <div className="absolute left-8 top-1/2 -translate-y-1/2 text-[#ff8a7a] transition-all duration-200 z-10 flex items-center justify-center w-8 h-8">
+              <div className="absolute left-8 top-1/2 -translate-y-1/2 text-[#2F7E47] transition-all duration-200 z-10 flex items-center justify-center w-8 h-8">
                 <Search size={20} strokeWidth={2} />
               </div>
               <input
@@ -429,7 +431,7 @@ const ServiceListing = () => {
                 onChange={(e) => setLocalSearch(e.target.value)}
                 placeholder={categoryName || "Search..."}
                 className="w-full pl-12 pr-12 h-12 sm:h-14 bg-white rounded-full text-sm sm:text-base shadow-[0_4px_25px_rgba(0,0,0,0.06)] border-2 border-transparent focus:border-[#ff8a7a]/10 focus:ring-4 focus:ring-[#ff8a7a]/5 outline-none transition-all placeholder:text-gray-300 text-gray-900 font-normal no-underline decoration-transparent"
-                style={{ textDecoration: 'none' }}
+                style={{ textDecoration: "none" }}
               />
               {localSearch && (
                 <button
@@ -441,7 +443,7 @@ const ServiceListing = () => {
                       search: "",
                     });
                   }}
-                  className="absolute right-8 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"
+                  className="absolute right-8 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-full text-[#2F7E47] transition-colors"
                 >
                   <X size={18} strokeWidth={2.5} />
                 </button>
@@ -454,11 +456,12 @@ const ServiceListing = () => {
                 onClick={() => setIsSortOpen(!isSortOpen)}
                 className="flex items-center justify-center bg-white w-12 h-12 sm:w-14 sm:h-14 rounded-2xl shadow-[0_4px_25px_rgba(0,0,0,0.06)] cursor-pointer transition-all hover:bg-gray-50 active:scale-95"
               >
-                <ArrowUpDown size={22} className="text-[#ff8a7a]" />
+                <ArrowUpDown size={22} className="text-[#2F7E47]" />
               </button>
 
               {isSortOpen && (
-                <div className="absolute right-0 mt-3 w-64 md:w-72 bg-white rounded-[24px] md:rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.15)] overflow-hidden z-[100] p-2 animate-in fade-in zoom-in duration-200 origin-top-right">
+                <div className="absolute right-0 mt-3 w-64 md:w-72 bg-white rounded-[24px] md:rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.15)]
+                 overflow-hidden z-[100] p-2 animate-in fade-in zoom-in duration-200 origin-top-right">
                   {sortOptions.map((option) => (
                     <button
                       key={option.value}
@@ -468,13 +471,13 @@ const ServiceListing = () => {
                       }}
                       className={`w-full flex items-center justify-between px-4 py-3 md:px-6 md:py-4 rounded-[18px] md:rounded-[24px] text-left font-bold text-sm md:text-[17px] transition-colors ${
                         selectedSort.value === option.value
-                          ? "bg-[#f8f8f8] text-[#ff8a7a]"
+                          ? "bg-[#2F7E4711] text-[#2F7E47]"
                           : "text-[#0A0A0A] hover:bg-gray-50"
                       }`}
                     >
                       <span>{option.label}</span>
                       {selectedSort.value === option.value && (
-                        <Check size={18} className="text-[#ff8a7a]" />
+                        <Check size={18} className="text-[#2F7E47]" />
                       )}
                     </button>
                   ))}

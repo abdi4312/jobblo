@@ -47,14 +47,14 @@ const ConversationList: React.FC<ConversationListProps> = ({
     <div className="flex-1 overflow-y-auto overflow-x-hidden">
       {loading ? (
         <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-[#999] p-10">
-          <p className="animate-pulse">Loading...</p>
+          <p className="animate-pulse">Laster...</p>
         </div>
       ) : filteredChats.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-[#999] p-10 text-center">
           <span className="material-symbols-outlined text-[36px] text-[#ccc]">
             chat_bubble_outline
           </span>
-          <p className="text-sm text-[#666] mt-2">No messages</p>
+          <p className="text-sm text-[#666] mt-2">Ingen meldinger</p>
         </div>
       ) : (
         <div className="flex flex-col">
@@ -77,11 +77,11 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 onClick={() => navigate(`/messages/${chat._id}`)}
                 className={`relative flex items-center p-4 gap-4 cursor-pointer transition-all ${
                   isActive
-                    ? "bg-[#EF790933] opacity-80"
+                    ? "bg-[#2F7E4733] opacity-80"
                     : "bg-white hover:bg-[#F8F9FA]"
                 }`}
               >
-                {/* Avatar Section */}
+                {/* Avatar-seksjon */}
                 <div className="relative shrink-0">
                   <div className="w-[56px] h-[56px] rounded-full p-[2px] bg-white border border-[#E9ECEF]">
                     {otherPerson?.avatarUrl ? (
@@ -101,16 +101,16 @@ const ConversationList: React.FC<ConversationListProps> = ({
                   )}
                 </div>
 
-                {/* Content Section */}
+                {/* Innholdsseksjon */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 mb-0.5">
                     <h2
                       className={`text-[17px] font-bold truncate flex-1 ${isActive ? "text-[#212529]" : "text-[#495057]"}`}
                     >
-                      {otherPerson?.name || "Unknown"}
+                      {otherPerson?.name || "Ukjent"}
                     </h2>
                     {hasUnread && !isActive && (
-                      <div className="w-2.5 h-2.5 bg-[#EF7909] rounded-full shrink-0"></div>
+                      <div className="w-2.5 h-2.5 bg-[#2F7E47] rounded-full shrink-0"></div>
                     )}
                     <span className="text-[13px] text-[#868E96] font-normal whitespace-nowrap">
                       {formatTime(chat.updatedAt || "")}
@@ -119,21 +119,21 @@ const ConversationList: React.FC<ConversationListProps> = ({
                   <p
                     className={`text-[15px] truncate leading-tight ${hasUnread ? "text-[#212529] font-bold" : "text-[#868E96]"}`}
                   >
-                    {chat.lastMessage || "Start conversation..."}
+                    {chat.lastMessage || "Start samtale..."}
                   </p>
                 </div>
 
-                {/* Service Image / Thumbnail */}
+                {/* Tjenestebilde / Miniatyrbilde */}
                 {serviceImage && (
                   <div className="shrink-0 ml-2 relative">
                     <img
                       src={serviceImage}
-                      alt="Service"
+                      alt="Tjeneste"
                       className="w-14 h-14 rounded-2xl object-cover border border-[#F1F3F5] shadow-sm"
                     />
                     {chat.serviceId?.isSold && (
                       <div className="absolute top-0 right-0 bg-[#FF8E8E] text-white text-[9px] font-black px-1.5 py-0.5 rounded-bl-lg rounded-tr-lg uppercase tracking-tighter">
-                        Sold
+                        Solgt
                       </div>
                     )}
                   </div>

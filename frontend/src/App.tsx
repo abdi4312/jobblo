@@ -15,8 +15,8 @@ export default function App() {
 
   if (isLoadingUser) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        Loading...
+      <div className="flex items-center justify-center min-h-screen font-bold text-gray-400">
+        Laster...
       </div>
     );
   }

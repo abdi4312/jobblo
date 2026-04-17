@@ -71,10 +71,10 @@ export default function JobListingPage() {
             <div className="w-full">
               <h2 className="text-2xl md:text-3xl font-bold text-[#0A0A0A] tracking-tight mb-6">
                 {activeTab === "Discover"
-                  ? "Explore Jobs"
+                  ? "Finn oppdrag"
                   : activeTab === "People’s"
-                    ? "Trending Now"
-                    : "Most Favorites"}
+                    ? "Finn favoritter"
+                    : "Finn de mest favoritter"}
               </h2>
               <Jobs
                 selectedCategories={selectedCategories}

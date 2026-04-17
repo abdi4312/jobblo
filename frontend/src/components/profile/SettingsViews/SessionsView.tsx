@@ -17,7 +17,7 @@ export const SessionsView = () => {
   const { sessions, isLoadingSessions, revokeSession, revokeOthers, isRevokingOthers } = useAuth();
 
   if (isLoadingSessions) {
-    return <div className="flex justify-center p-10 font-medium text-gray-400">Loading sessions...</div>;
+    return <div className="flex justify-center p-10 font-medium text-gray-400">Laster økter...</div>;
   }
 
   const otherSessionsCount = sessions?.filter((s: Session) => !s.isCurrent).length || 0;
@@ -36,13 +36,13 @@ export const SessionsView = () => {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Active Sessions</h2>
-          <p className="text-sm text-gray-500">Manage your active logins across different devices and browsers.</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">Aktive økter</h2>
+          <p className="text-sm text-gray-500">Administrer dine aktive innlogginger på forskjellige enheter og nettlesere.</p>
         </div>
         {otherSessionsCount > 0 && (
           <Button
             onClick={() => {
-              if (window.confirm("Are you sure you want to revoke all other sessions?")) {
+              if (window.confirm("Er du sikker på at du vil avslutte alle andre økter?")) {
                 revokeOthers();
               }
             }}
@@ -50,7 +50,7 @@ export const SessionsView = () => {
             className="text-xs py-1.5 h-auto border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold"
             disabled={isRevokingOthers}
           >
-            Revoke All Others
+            Logg ut alle andre
           </Button>
         )}
       </div>
@@ -58,7 +58,7 @@ export const SessionsView = () => {
       <div className="space-y-4">
         {sessions?.length === 0 ? (
           <div className="text-center p-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-            <p className="text-gray-500">No active sessions found.</p>
+            <p className="text-gray-500">Ingen aktive økter funnet.</p>
           </div>
         ) : (
           sessions?.map((session: Session) => (
@@ -72,20 +72,20 @@ export const SessionsView = () => {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-900">{session.browser} on {session.os}</span>
+                    <span className="font-semibold text-gray-900">{session.browser} på {session.os}</span>
                     {session.isCurrent && (
-                      <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-black uppercase rounded-full">Current</span>
+                      <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-black uppercase rounded-full">Nåværende</span>
                     )}
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-400">
                     <div className="flex items-center gap-1.5" title={session.ip}>
                       <MapPin size={13} className="text-orange-400" />
-                      <span className="font-medium text-gray-600">{session.location || "Unknown Location"}</span>
+                      <span className="font-medium text-gray-600">{session.location || "Ukjent sted"}</span>
                       <span className="text-[10px] text-gray-400 opacity-70">({session.ip === "::1" ? "Localhost" : session.ip})</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Clock size={13} className="text-gray-300" />
-                      <span>Last active: {new Date(session.lastUsed).toLocaleString()}</span>
+                      <span>Sist aktiv: {new Date(session.lastUsed).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
@@ -98,7 +98,7 @@ export const SessionsView = () => {
                   variant="secondary"
                 >
                   <XCircle size={14} />
-                  <span>Revoke Access</span>
+                  <span>Logg ut enhet</span>
                 </Button>
               )}
             </div>
@@ -108,7 +108,7 @@ export const SessionsView = () => {
 
       <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
         <p className="text-xs text-blue-700 leading-relaxed">
-          <strong>Security Note:</strong> If you see a device or location you don't recognize, revoke the session immediately and change your password.
+          <strong>Sikkerhetsmerknad:</strong> Hvis du ser en enhet eller et sted du ikke kjenner igjen, bør du logge ut økten umiddelbart og endre passordet ditt.
         </p>
       </div>
     </div>

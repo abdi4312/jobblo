@@ -4,16 +4,16 @@ import type { SettingsContextType } from "../../../pages/SettingsPage";
 export const PhoneView = () => {
   const { form, handleChange, handleUpdate, updateUser, user } = useOutletContext<SettingsContextType>();
 
-  // Logic: Check agar input value original phone number ke barabar hai
+  // Logikk: Sjekk om inndataverdien er den samme som det opprinnelige telefonnummeret
   const isUnchanged = form.phone === user?.phone;
   const isDisabled = isUnchanged || updateUser?.isPending;
 
-  // Sirf numbers allow karne ka function
+  // Funksjon for å bare tillate tall
   const handlePhoneChange = (value: string) => {
-    // 1. Sirf numbers aur shuru ka '+' allow karne ke liye logic
-    const cleaned = value.replace(/[^\d+]/g, ""); // Digits aur '+' ke ilawa sab khatam
+    // 1. Logikk for å bare tillate tall og '+' i begynnelsen
+    const cleaned = value.replace(/[^\d+]/g, ""); // Fjerner alt unntatt siffer og '+'
 
-    // 2. Taake '+' sirf shuru mein hi aa sakay (beech mein nahi)
+    // 2. Sørger for at '+' bare kan være i begynnelsen
     const finalValue = cleaned.startsWith('+')
       ? '+' + cleaned.replace(/\+/g, '')
       : cleaned.replace(/\+/g, '');
@@ -28,8 +28,8 @@ export const PhoneView = () => {
           htmlFor="phone"
           className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight"
         >
-          Phone Number
-        </label> {/* Label yahan band ho raha hai */}
+          Telefonnummer
+        </label> {/* Labelen slutter her */}
 
         <input
           id="phone"
@@ -38,7 +38,7 @@ export const PhoneView = () => {
           className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-gray-100 outline-none rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors"
           value={form.phone}
           onChange={(event) => handlePhoneChange(event.target.value)}
-          placeholder="+47900000"
+          placeholder="+47 000 00 000"
         />
       </div>
 
@@ -48,11 +48,11 @@ export const PhoneView = () => {
         disabled={isDisabled}
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
           ${isDisabled
-            ? "bg-[#EF790993] cursor-not-allowed opacity-80"
-            : "bg-[#EF7909] hover:bg-[#D66A08] active:scale-[0.98]"
+            ? "bg-[#2F7E47] cursor-not-allowed opacity-80"
+            : "bg-[#2F7E47] hover:bg-[#2F7E47] active:scale-[0.98]"
           }`}
       >
-        {updateUser?.isPending ? "Updating..." : "Update phone"}
+        {updateUser?.isPending ? "Oppdaterer..." : "Oppdater telefon"}
       </button>
     </section>
   );

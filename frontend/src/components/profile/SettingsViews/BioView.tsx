@@ -4,7 +4,7 @@ import type { SettingsContextType } from "../../../pages/SettingsPage";
 export const BioView = () => {
   const { form, handleChange, handleUpdate, updateUser, user } = useOutletContext<SettingsContextType>();
 
-  // Logic: Check agar bio wahi hai jo pehle se profile mein thi
+  // Logikk: Sjekk om bio er den samme som allerede var i profilen
   const isUnchanged = form.bio === user?.bio;
   const isDisabled = isUnchanged || updateUser?.isPending;
 
@@ -29,11 +29,11 @@ export const BioView = () => {
         disabled={isDisabled}
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
           ${isDisabled
-            ? "bg-[#EF790993] cursor-not-allowed opacity-80"
-            : "bg-[#EF7909] hover:bg-[#D66A08] active:scale-[0.98]"
+            ? "bg-[#2F7E47] cursor-not-allowed opacity-80"
+            : "bg-[#2F7E47] hover:bg-[#2F7E47] active:scale-[0.98]"
           }`}
       >
-        {updateUser?.isPending ? "Saving..." : "Update bio"}
+        {updateUser?.isPending ? "Lagrer..." : "Oppdater bio"}
       </button>
     </section>
   );

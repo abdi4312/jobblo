@@ -82,10 +82,10 @@ export function ContractMessage({
       {!showContract && (
         <div>
           <div className="flex justify-center -mt-3">
-            <div className="w-full bg-[#E0883526] border border-[#E0883526] rounded-[6px] py-1 px-4 flex items-center justify-between">
+            <div className="w-full bg-[#2F7E4733] border border-[#E0883526] rounded-[6px] py-1 px-4 flex items-center justify-between">
               {/* Left Side: Icon & Text */}
               <div className="flex items-center gap-3 truncate">
-                <span className="text-[#ea7e15] text-[20px] shrink-0">
+                <span className="text-[20px] shrink-0">
                   <ReceiptText size={14} />
                 </span>
                 <p className="m-0 text-[13px] text-[#444] font-medium truncate">
@@ -98,7 +98,7 @@ export function ContractMessage({
               <button
                 onClick={() => navigate(`/contracts/${contract._id}`)}
                 // onClick={() => setShowContract(true)}
-                className="flex items-center gap-0.5 pl-2 py-0.5 bg-[#ea7e151a] text-[#ea7e15] border-none rounded-lg text-[12px] font-bold cursor-pointer hover:bg-[#ea7e15] hover:text-white transition-all shrink-0"
+                className="flex items-center gap-0.5 pl-2 py-0.5 bg-[#2F7E4733] border-none rounded-lg text-[12px] font-bold cursor-pointer hover:bg-[#2F7E4733] hover:text-white transition-all duration-300 shrink-0"
               >
                 View Details
                 <span className="material-symbols-outlined text-[16px]">

@@ -11,16 +11,16 @@ export const UpcomingPreviewView = () => {
           <Rocket size={24} />
         </div>
         <div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Upcoming Features</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Kommende funksjoner</h3>
           <p className="text-[15px] text-gray-600 leading-relaxed mb-6">
-            We're constantly working on new features to make Jobblo even better for you. Check out what's coming soon!
+            Vi jobber kontinuerlig med nye funksjoner for å gjøre Jobblo enda bedre for deg. Se hva som kommer snart!
           </p>
           <button 
             onClick={() => navigate("/upcoming")}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl shadow-md transition-all"
+            className="flex items-center gap-2 bg-[#2F7E47] hover:bg-[#2F7E47] text-white font-bold px-6 py-3 rounded-xl shadow-md transition-all"
           >
             <Info size={18} />
-            View Roadmap
+            Se veikart
           </button>
         </div>
       </div>

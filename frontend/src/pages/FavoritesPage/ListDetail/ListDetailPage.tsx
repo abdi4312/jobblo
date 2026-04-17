@@ -9,7 +9,12 @@ import {
   Trash2,
   Edit3,
 } from "lucide-react";
-import { useFavoriteList, useUpdateFavoriteList, useDeleteFavoriteList, useToggleFollowList } from "../../../features/favoriteLists/hooks";
+import {
+  useFavoriteList,
+  useUpdateFavoriteList,
+  useDeleteFavoriteList,
+  useToggleFollowList,
+} from "../../../features/favoriteLists/hooks";
 import { useUserStore } from "../../../stores/userStore";
 import { JobCard } from "../../../components/Explore/jobs/JobCard";
 import Swal from "sweetalert2";
@@ -28,38 +33,42 @@ export const ListDetailPage: React.FC = () => {
   const currentUser = useUserStore((state) => state.user);
 
   // Check if current user is owner (it's an array in the model)
-  const isOwner = list?.user?.some((u) => ((u as { _id?: string })._id || u) === currentUser?._id);
+  const isOwner = list?.user?.some(
+    (u) => ((u as { _id?: string })._id || u) === currentUser?._id,
+  );
 
   // Check if following
-  const isFollowing = list?.followers?.some((u) => ((u as { _id?: string })._id || u) === currentUser?._id);
+  const isFollowing = list?.followers?.some(
+    (u) => ((u as { _id?: string })._id || u) === currentUser?._id,
+  );
 
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddContributorModal, setShowAddContributorModal] = useState(false);
   const [showContributorsModal, setShowContributorsModal] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
-  const [sortOrder, setSortOrder] = useState("Last added first");
+  const [sortOrder, setSortOrder] = useState("Sist lagt til");
 
-  const sortOptions = ["Last added first", "Available first", "Sold first"];
+  const sortOptions = ["Sist lagt til", "Tilgjengelige først", "Solgte først"];
 
   const sortedServices = React.useMemo(() => {
     if (!list?.services) return [];
 
     const services = [...list.services];
 
-    if (sortOrder === "Last added first") {
+    if (sortOrder === "Sist lagt til") {
       // The array in Mongoose is usually in the order added, so reverse it for "last added first"
       return services.reverse();
-    } else if (sortOrder === "Available first") {
+    } else if (sortOrder === "Tilgjengelige først") {
       return services.sort((a, b) => {
-        if (a.status === 'open' && b.status !== 'open') return -1;
-        if (a.status !== 'open' && b.status === 'open') return 1;
+        if (a.status === "open" && b.status !== "open") return -1;
+        if (a.status !== "open" && b.status === "open") return 1;
         return 0;
       });
-    } else if (sortOrder === "Sold first") {
+    } else if (sortOrder === "Solgte først") {
       return services.sort((a, b) => {
-        if (a.status === 'closed' && b.status !== 'closed') return -1;
-        if (a.status !== 'closed' && b.status === 'closed') return 1;
+        if (a.status === "closed" && b.status !== "closed") return -1;
+        if (a.status !== "closed" && b.status === "closed") return 1;
         return 0;
       });
     }
@@ -67,19 +76,19 @@ export const ListDetailPage: React.FC = () => {
     return services;
   }, [list?.services, sortOrder]);
 
-  if (isLoading) return <div className="p-20 text-center">Loading list...</div>;
-  if (!list) return <div className="p-20 text-center">List not found.</div>;
+  if (isLoading) return <div className="p-20 text-center">Laster liste...</div>;
+  if (!list) return <div className="p-20 text-center">Liste ikke funnet.</div>;
 
   const handleMakePublic = async () => {
     await updateListMutation.mutateAsync({
       listId: list._id,
-      data: { public: !list.public }
+      data: { public: !list.public },
     });
   };
 
   const handleFollowToggle = async () => {
     if (!currentUser) {
-      toast.error("Please login to follow lists");
+      toast.error("Vennligst logg inn for å følge lister");
       return;
     }
     await toggleFollowMutation.mutateAsync(list._id);
@@ -87,12 +96,13 @@ export const ListDetailPage: React.FC = () => {
 
   const handleDelete = async () => {
     const result = await Swal.fire({
-      title: "Delete list?",
-      text: "This action cannot be undone.",
+      title: "Slette liste?",
+      text: "Denne handlingen kan ikke angres.",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#EF4444",
-      confirmButtonText: "Delete",
+      confirmButtonText: "Slett",
+      cancelButtonText: "Avbryt",
     });
 
     if (result.isConfirmed) {
@@ -135,10 +145,14 @@ export const ListDetailPage: React.FC = () => {
         {/* List Thumbnail */}
         <div className="w-48 h-48 rounded-4xl bg-gray-100 overflow-hidden shadow-md shrink-0">
           {latestImage ? (
-            <img src={latestImage} className="w-full h-full object-cover" alt="" />
+            <img
+              src={latestImage}
+              className="w-full h-full object-cover"
+              alt=""
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-gray-300">
-              No items
+              Ingen elementer
             </div>
           )}
         </div>
@@ -148,9 +162,12 @@ export const ListDetailPage: React.FC = () => {
           <h1 className="text-4xl font-bold text-[#0A0A0A]">{list.name}</h1>
 
           <div className="flex items-center gap-6 text-sm text-gray-500 font-medium">
-            <span>{list.services?.length || 0} items</span>
-            <span>{list.followers?.length || 0} followers</span>
-            <span>{(list.user?.length || 0) + (list.contributors?.length || 0)} contributors</span>
+            <span>{list.services?.length || 0} elementer</span>
+            <span>{list.followers?.length || 0} følgere</span>
+            <span>
+              {(list.user?.length || 0) + (list.contributors?.length || 0)}{" "}
+              bidragsytere
+            </span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -158,12 +175,13 @@ export const ListDetailPage: React.FC = () => {
               <>
                 <button
                   onClick={handleMakePublic}
-                  className={`px-6 py-2.5 rounded-xl font-bold transition-all active:scale-95 ${list.public
-                    ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    : "bg-[#FF8A71] text-white hover:bg-[#ff7659]"
-                    }`}
+                  className={`px-6 py-2.5 rounded-xl font-bold transition-all active:scale-95 ${
+                    list.public
+                      ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      : "bg-[#2F7E47] text-white hover:bg-[#2F7E47]"
+                  }`}
                 >
-                  {list.public ? "Make private" : "Make public"}
+                  {list.public ? "Gjør privat" : "Gjør offentlig"}
                 </button>
 
                 <div className="relative">
@@ -171,13 +189,20 @@ export const ListDetailPage: React.FC = () => {
                     onClick={() => setShowMoreMenu(!showMoreMenu)}
                     className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200 rounded-xl font-bold hover:bg-gray-50 transition-all active:scale-95"
                   >
-                    More <ChevronDown size={18} className={`transition-transform ${showMoreMenu ? 'rotate-180' : ''}`} />
+                    Mer{" "}
+                    <ChevronDown
+                      size={18}
+                      className={`transition-transform ${showMoreMenu ? "rotate-180" : ""}`}
+                    />
                   </button>
 
                   {showMoreMenu && (
                     <div className="absolute top-full mt-2 left-0 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
-                      <button onClick={handleDelete} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-red-500 font-semibold transition-colors">
-                        <Trash2 size={18} /> Delete list
+                      <button
+                        onClick={handleDelete}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-red-500 font-semibold transition-colors"
+                      >
+                        <Trash2 size={18} /> Slett liste
                       </button>
                       <button
                         onClick={() => {
@@ -186,11 +211,14 @@ export const ListDetailPage: React.FC = () => {
                         }}
                         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 font-semibold transition-colors"
                       >
-                        <Edit3 size={18} /> Edit name and description
+                        <Edit3 size={18} /> Rediger navn og beskrivelse
                       </button>
-                      <button onClick={handleMakePublic} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 font-semibold transition-colors">
+                      <button
+                        onClick={handleMakePublic}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 font-semibold transition-colors"
+                      >
                         {list.public ? <Lock size={18} /> : <Globe size={18} />}
-                        {list.public ? "Make private" : "Make public"}
+                        {list.public ? "Gjør privat" : "Gjør offentlig"}
                       </button>
                       <button
                         onClick={() => {
@@ -199,7 +227,7 @@ export const ListDetailPage: React.FC = () => {
                         }}
                         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 font-semibold transition-colors"
                       >
-                        <UserPlus size={18} /> Add contributor
+                        <UserPlus size={18} /> Legg til bidragsyter
                       </button>
                       <button
                         onClick={() => {
@@ -208,7 +236,7 @@ export const ListDetailPage: React.FC = () => {
                         }}
                         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-700 font-semibold transition-colors"
                       >
-                        <Users size={18} /> Contributors
+                        <Users size={18} /> Bidragsytere
                       </button>
                     </div>
                   )}
@@ -218,12 +246,17 @@ export const ListDetailPage: React.FC = () => {
               <button
                 onClick={handleFollowToggle}
                 disabled={toggleFollowMutation.isPending}
-                className={`px-8 py-2.5 rounded-xl font-bold transition-all active:scale-95 shadow-sm ${isFollowing
-                  ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  : "bg-[#FF8A71] text-white hover:bg-[#ff7659]"
-                  }`}
+                className={`px-8 py-2.5 rounded-xl font-bold transition-all active:scale-95 shadow-sm ${
+                  isFollowing
+                    ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    : "bg-[#2F7E47] text-white hover:bg-[#2F7E47]"
+                }`}
               >
-                {toggleFollowMutation.isPending ? "..." : (isFollowing ? "Following" : "Follow")}
+                {toggleFollowMutation.isPending
+                  ? "..."
+                  : isFollowing
+                    ? "Følger"
+                    : "Følg"}
               </button>
             )}
           </div>
@@ -232,45 +265,55 @@ export const ListDetailPage: React.FC = () => {
 
       <div className="border-t border-gray-100 pt-8">
         <div className="flex justify-end items-center mb-8 gap-4">
-          <span className="text-[#0A0A0A] font-medium text-lg">Sort</span>
+          <span className="text-[#0A0A0A] font-medium text-lg">Sorter</span>
           <div className="relative">
             <button
               onClick={() => setShowSortMenu(!showSortMenu)}
               className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-300 rounded-2xl font-bold text-base hover:bg-gray-50 transition-all active:scale-95"
             >
-              {sortOrder} <ChevronDown size={20} className={`transition-transform duration-200 ${showSortMenu ? 'rotate-180' : ''}`} />
+              {sortOrder}{" "}
+              <ChevronDown
+                size={20}
+                className={`transition-transform duration-200 ${showSortMenu ? "rotate-180" : ""}`}
+              />
             </button>
 
             {showSortMenu && (
               <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-[24px] shadow-2xl border border-gray-100 py-3 z-[60] animate-in slide-in-from-top-2 duration-200">
                 <div className="px-4 py-2 flex items-center gap-2 text-gray-400 font-bold text-sm uppercase tracking-wider">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m3 16 4 4 4-4" /><path d="M7 20V4" /><path d="m21 8-4-4-4 4" /><path d="M17 4v16" />
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="m3 16 4 4 4-4" />
+                    <path d="M7 20V4" />
+                    <path d="m21 8-4-4-4 4" />
+                    <path d="M17 4v16" />
                   </svg>
-                  Sort by
+                  Sorter etter
                 </div>
-                <div className="mt-1">
-                  {sortOptions.map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => {
-                        setSortOrder(option);
-                        setShowSortMenu(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-4 py-3.5 transition-colors ${sortOrder === option
-                        ? "bg-[#FFF0ED] text-[#FF8A71] font-bold"
-                        : "hover:bg-gray-50 text-[#0A0A0A] font-semibold"
-                        }`}
-                    >
-                      <span>{option}</span>
-                      {sortOrder === option && (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      )}
-                    </button>
-                  ))}
-                </div>
+                {sortOptions.map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => {
+                      setSortOrder(option);
+                      setShowSortMenu(false);
+                    }}
+                    className={`w-full text-left px-4 py-3.5 text-base font-bold transition-colors ${
+                      sortOrder === option
+                        ? "text-[#2F7E47] bg-[#2F7E4711]"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
               </div>
             )}
           </div>
