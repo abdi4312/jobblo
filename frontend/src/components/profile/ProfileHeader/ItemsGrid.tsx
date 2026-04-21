@@ -3,7 +3,7 @@ import { useFavoriteLists } from "../../../features/favoriteLists/hooks";
 import { JobDetailCardSkeleton } from "../../Loading/JobDetailCardSkeleton.tsx";
 import { useNavigate } from "react-router-dom";
 import { useJobs, useLikedJobs } from "../../../features/jobsList/hooks";
-import { JobCard } from "../../Explore/jobs/JobCard.tsx";
+import { JobCard } from "../../component/jobCard/JobCard.tsx";
 import type { Jobs } from "../../../../types/Jobs.ts";
 import { useUserStore } from "../../../stores/userStore.ts";
 import { Button } from "../../Ui/Button.tsx";

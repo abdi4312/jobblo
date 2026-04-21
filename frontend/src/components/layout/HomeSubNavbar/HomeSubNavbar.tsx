@@ -9,7 +9,7 @@ export function HomeSubNavbar({ activeTab, setActiveTab }: HomeSubNavbarProps) {
   const tabs: Tab[] = ["Discover", "People’s", "Favorites"];
 
   return (
-    <div className="w-full bg-white border-b border-gray-100 mb-6 -mt-6">
+    <div className="w-full bg-white/60 shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white cursor-pointer mb-6 -mt-6">
       <div className="max-w-300 mx-auto px-4">
         <div className="flex justify-around items-center">
           {tabs.map((tab) => (

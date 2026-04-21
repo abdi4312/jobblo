@@ -1,5 +1,5 @@
 import { useJobs } from "../../../features/jobsList/hooks";
-import { JobCard } from "./JobCard";
+import { JobCard } from "../../component/jobCard/JobCard";
 import { JobCardSkeleton } from "../../Loading/JobCardSkeleton";
 import type { Tab } from "../../../types/tabs";
 import { useEffect, useRef } from "react";
@@ -47,7 +47,7 @@ export default function JobsContainer({
 
   return (
     <div>
-      <div className="grid gap-x-4 gap-y-8 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 justify-start items-start mx-auto w-full">
+      <div className="grid gap-x-6 gap-y-8 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 justify-start items-start mx-auto w-full">
         {isLoading
           ? Array.from({ length: 8 }).map((_, index) => (
               <JobCardSkeleton key={index} />

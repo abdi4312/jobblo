@@ -69,7 +69,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose })
       }}
     >
       <div
-        className="w-full max-w-[420px] bg-white rounded-[32px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200"
+        className="w-full max-w-105 bg-white rounded-4xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -91,13 +91,14 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose })
               </button>
             )}
           </div>
-          <div className="flex-[2] text-center">
+          <div className="flex-2 text-center">
             <h2 className="text-[#0A0A0A] font-bold text-lg">
               {showCreateNew ? "New list" : "Add to list"}
             </h2>
           </div>
           <div className="flex-1 flex justify-end">
             <button
+              title="Lukk"
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             >
@@ -107,7 +108,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose })
         </div>
 
         {/* Content */}
-        <div className="p-6 min-h-[220px] max-h-[60vh] overflow-y-auto custom-scrollbar">
+        <div className="p-6 min-h-55 max-h-[60vh] overflow-y-auto custom-scrollbar">
           {isLoading ? (
             <div className="flex justify-center items-center py-10">
               <div className="animate-spin w-8 h-8 border-4 border-gray-200 border-t-[#2F7E47] rounded-full" />

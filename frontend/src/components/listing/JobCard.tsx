@@ -1,4 +1,3 @@
-import styles from '../../styles/JobListingPage.module.css';
 import { useNavigate } from 'react-router-dom';
 
 type Tag = { name: string; type: string };
