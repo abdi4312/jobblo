@@ -1,15 +1,11 @@
 import { useState, useEffect } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
-// import { Search } from "../../components/Explore/Search/search.tsx";
 import { Categories } from "../../components/Explore/jobs/Categories.tsx";
 import Jobs from "../../components/Explore/jobs/Jobs.tsx";
 import { Banner } from "../../components/Explore/jobs/banners.tsx";
 import { Favourites } from "../../components/Explore/jobs/Favourites.tsx";
-import { HomeSubNavbar } from "../../components/layout/HomeSubNavbar/HomeSubNavbar.tsx";
-import type { Tab } from "../../types/tabs";
 
 export default function JobListingPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("Discover");
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const categoryFromUrl = searchParams.get("category");
@@ -43,7 +39,6 @@ export default function JobListingPage() {
 
   return (
     <>
-      <HomeSubNavbar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="max-w-300 mx-auto px-4 pb-10">
         {/* Grid container: Mobile pe 1 column, Desktop pe 12 columns */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -53,33 +48,27 @@ export default function JobListingPage() {
             <h1 className="leading-tight">Finn ditt neste oppdrag</h1>
           </div> */}
 
-            {/* Categories Horizontal Scroll - Only show on Discover tab */}
-            {activeTab === "Discover" && (
-              <Categories
-                showTitle={false}
-                allowMultiSelect={true}
-                onCategoriesChange={setSelectedCategories}
-                searchQuery={searchQuery}
-                onSearchClear={() => setSearchQuery("")}
-              />
-            )}
+            {/* Categories Horizontal Scroll */}
+            <Categories
+              showTitle={false}
+              allowMultiSelect={true}
+              onCategoriesChange={setSelectedCategories}
+              searchQuery={searchQuery}
+              onSearchClear={() => setSearchQuery("")}
+            />
 
-            {activeTab === "Discover" && <Banner />}
-            {activeTab === "Discover" && <Favourites />}
+            <Banner />
+            <Favourites />
 
             {/* Jobs Listing */}
             <div className="w-full">
               <h2 className="text-2xl md:text-3xl font-bold text-[#0A0A0A] tracking-tight mb-6">
-                {activeTab === "Discover"
-                  ? "Finn oppdrag"
-                  : activeTab === "People’s"
-                    ? "Finn favoritter"
-                    : "Finn de mest favoritter"}
+                Finn oppdrag
               </h2>
               <Jobs
                 selectedCategories={selectedCategories}
                 searchQuery={searchQuery}
-                activeTab={activeTab}
+                activeTab="Discover"
               />
             </div>
           </div>

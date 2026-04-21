@@ -3,7 +3,6 @@ import "./styles/Jobblo.css";
 import { Outlet, useLocation } from "react-router-dom";
 import Header from "./components/layout/header/Header.tsx";
 import Footer from "./components/layout/footer/Footer.tsx";
-import { HomeSubNavbar } from "./components/layout/HomeSubNavbar/HomeSubNavbar.tsx";
 import { ScrollToTop } from "./components/shared/ScrollToTop.tsx";
 import { App as AntApp } from "antd";
 import { useAuth } from "./features/auth/hook/useAuth.ts";
