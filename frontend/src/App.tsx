@@ -7,6 +7,7 @@ import { ScrollToTop } from "./components/shared/ScrollToTop.tsx";
 import { App as AntApp } from "antd";
 import { useAuth } from "./features/auth/hook/useAuth.ts";
 import { Toaster } from "react-hot-toast";
+import MainLoading from "./assets/loading/main-loading.gif";
 
 export default function App() {
   const { isLoadingUser } = useAuth();
@@ -14,8 +15,8 @@ export default function App() {
 
   if (isLoadingUser) {
     return (
-      <div className="flex items-center justify-center min-h-screen font-bold text-gray-400">
-        Laster...
+      <div className="flex items-center justify-center min-h-screen">
+        <img src={MainLoading} alt="Loading..." className="w-36 h-36" />
       </div>
     );
   }
