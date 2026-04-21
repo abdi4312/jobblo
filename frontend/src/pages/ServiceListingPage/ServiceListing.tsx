@@ -13,7 +13,7 @@ import {
   Tag,
 } from "lucide-react";
 import { Slider } from "antd";
-import { JobCard } from "../../components/Explore/jobs/JobCard";
+import { JobCard } from "../../components/component/jobCard/JobCard";
 import { MapComponent } from "../../components/component/map/MapComponent";
 import { useJobs } from "../../features/jobsList/hooks";
 import { useFilterOptions } from "../../features/jobsList/filterHooks";
@@ -518,7 +518,7 @@ const ServiceListing = () => {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-x-6 gap-y-10">
                 {jobs.map((job, index) => {
                   if (jobs.length === index + 1) {
                     return (
