@@ -67,8 +67,6 @@ passport.use(new GoogleStrategy({
                 verified: false,
                 role: 'user',
                 subscription: 'Standard',
-                followers: [],
-                following: [],
                 earnings: 0,
                 spending: 0,
                 availability: [],

@@ -79,8 +79,6 @@ const serviceSchema = new mongoose.Schema(
       default: "utstyrfri",
     },
 
-    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-
     timeEntries: [timeEntrySchema],
   },
   { timestamps: true },

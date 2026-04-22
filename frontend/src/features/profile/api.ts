@@ -11,11 +11,6 @@ export const getUserProfile = async (userId: string) => {
   return response.data;
 };
 
-export const followUser = async (userId: string) => {
-  const response = await mainLink.post(`/api/users/${userId}/follow`);
-  return response.data;
-};
-
 export const blockUser = async (userId: string) => {
   const response = await mainLink.post(`/api/users/${userId}/block`);
   return response.data;
@@ -23,14 +18,14 @@ export const blockUser = async (userId: string) => {
 
 export const getBlockedUsers = async (page = 1, limit = 10) => {
   const response = await mainLink.get("/api/users/blocked", {
-    params: { page, limit }
+    params: { page, limit },
   });
   return response.data;
 };
 
 export const searchUsers = async (query?: string) => {
   const response = await mainLink.get("/api/users/search", {
-    params: { query }
+    params: { query },
   });
   return response.data;
 };
@@ -40,9 +35,14 @@ export const getTopUsers = async () => {
   return response.data;
 };
 
-export const searchAll = async (query: string, type?: string, page?: number, limit?: number) => {
+export const searchAll = async (
+  query: string,
+  type?: string,
+  page?: number,
+  limit?: number,
+) => {
   const response = await mainLink.get("/api/users/search-all", {
-    params: { query, type, page, limit }
+    params: { query, type, page, limit },
   });
   return response.data;
 };
