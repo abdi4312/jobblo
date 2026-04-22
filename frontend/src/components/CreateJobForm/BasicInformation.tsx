@@ -18,6 +18,7 @@ interface BasicInformationProps {
   setTags: (val: string[]) => void;
   setDurationValue: (val: string) => void;
   setDurationUnit: (val: string) => void;
+  setHourlyRate: (val: string) => void;
 }
 
 export const BasicInformation: React.FC<BasicInformationProps> = ({
@@ -33,6 +34,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
   setTags,
   setDurationValue,
   setDurationUnit,
+  setHourlyRate,
 }) => {
   const { data: categoryData = [], isLoading, error } = useCategories();
   const [searchTerm, setSearchTerm] = useState("");
@@ -71,10 +73,21 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
         const {
           description: aiDesc,
           estimatedPrice,
+          hourlyRate: aiHourlyRate,
           category: aiCategory,
           duration: aiDuration,
+          skills: aiSkills,
         } = res.data.data;
         setDescription(aiDesc);
+
+        if (aiSkills && Array.isArray(aiSkills)) {
+          setTags(aiSkills);
+        }
+
+        if (aiHourlyRate) {
+          setHourlyRate(aiHourlyRate.toString());
+        }
+
         if (estimatedPrice && !price) {
           setPrice(estimatedPrice.toString());
         }
@@ -112,8 +125,28 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
       });
 
       if (res.data?.success) {
-        const { title: aiTitle, estimatedPrice } = res.data.data;
+        const {
+          title: aiTitle,
+          estimatedPrice,
+          hourlyRate: aiHourlyRate,
+          duration: aiDuration,
+          skills: aiSkills,
+        } = res.data.data;
         setTitle(aiTitle);
+
+        if (aiSkills && Array.isArray(aiSkills)) {
+          setTags(aiSkills);
+        }
+
+        if (aiHourlyRate) {
+          setHourlyRate(aiHourlyRate.toString());
+        }
+
+        if (aiDuration && aiDuration.value) {
+          setDurationValue(aiDuration.value.toString());
+          setDurationUnit(aiDuration.unit || "hours");
+        }
+
         if (estimatedPrice) {
           setPrice(estimatedPrice.toString());
         }

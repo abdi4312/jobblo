@@ -232,9 +232,16 @@ const JobListingDetailPage = () => {
                     )}
                   </div>
                 </div>
-                <p className="text-3xl font-bold text-[#2F7E47] shrink-0">
-                  {job.price ? job.price.toLocaleString() : "0"} kr
-                </p>
+                <div className="text-right">
+                  <p className="text-3xl font-bold text-[#2F7E47] shrink-0">
+                    {job.price ? job.price.toLocaleString() : "0"} kr
+                  </p>
+                  {job.hourlyRate && (
+                    <p className="text-sm font-medium text-gray-500">
+                      {job.hourlyRate.toLocaleString()} kr / time
+                    </p>
+                  )}
+                </div>
               </div>
               <p className="text-sm text-gray-500">
                 Varighet: {job.duration?.value || "-"}{" "}
