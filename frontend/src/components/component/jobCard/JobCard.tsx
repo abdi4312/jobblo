@@ -1,11 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import type { Jobs } from "../../../types/Jobs.ts";
 import { useUserStore } from "../../../stores/userStore.ts";
-import { Bookmark, Heart, Zap, Pencil, Trash2, Truck } from "lucide-react";
+import { Bookmark, Zap, Pencil, Trash2, Truck } from "lucide-react";
 import React, { useState } from "react";
 import AddToListModal from "../../Explore/jobs/AddToListModal";
 import { useFavoriteLists } from "../../../features/favoriteLists/hooks";
-import { useToggleLike } from "../../../features/jobsList/hooks";
 import { useServiceActions } from "../../../features/services/hooks";
 
 interface JobCardProps {
@@ -27,15 +26,11 @@ export const JobCard = ({ job, isOwner }: JobCardProps) => {
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const { data: lists = [], isLoading: listsLoading } = useFavoriteLists();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const toggleLike = useToggleLike();
   const { deleteMutation } = useServiceActions();
 
   const handleCardClick = () => {
     navigate(`/job-listing/${job._id}`);
   };
-
-  const isLiked = job.likes?.includes(user?._id || "");
-  const likesCount = job.likes?.length || 0;
 
   const isOwnJob =
     isOwner ||
@@ -57,15 +52,6 @@ export const JobCard = ({ job, isOwner }: JobCardProps) => {
       return;
     }
     setIsModalOpen(true);
-  };
-
-  const handleLikeClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isAuth) {
-      navigate("/login");
-      return;
-    }
-    toggleLike.mutate(job._id);
   };
 
   const handleEditClick = (e: React.MouseEvent) => {
@@ -107,20 +93,6 @@ export const JobCard = ({ job, isOwner }: JobCardProps) => {
               Ingen bilder
             </span>
           </div>
-        )}
-
-        {/* Liker-knapp (Øverst til høyre) */}
-        {!isOwnJob && (
-          <button
-            title="Liker"
-            className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center bg-black/10 hover:bg-black/20 backdrop-blur-md rounded-full transition-all z-20"
-            onClick={handleLikeClick}
-          >
-            <Heart
-              size={18}
-              className={isLiked ? "fill-white text-white" : "text-white"}
-            />
-          </button>
         )}
 
         {/* Eier-handlinger (Nederst til høyre ved hover) */}

@@ -13,7 +13,6 @@ import {
   useFavoriteList,
   useUpdateFavoriteList,
   useDeleteFavoriteList,
-  useToggleFollowList,
 } from "../../../features/favoriteLists/hooks";
 import { useUserStore } from "../../../stores/userStore";
 import { JobCard } from "../../../components/component/jobCard/JobCard";
@@ -29,16 +28,10 @@ export const ListDetailPage: React.FC = () => {
   const { data: list, isLoading } = useFavoriteList(listId!);
   const updateListMutation = useUpdateFavoriteList();
   const deleteListMutation = useDeleteFavoriteList();
-  const toggleFollowMutation = useToggleFollowList();
   const currentUser = useUserStore((state) => state.user);
 
   // Check if current user is owner (it's an array in the model)
   const isOwner = list?.user?.some(
-    (u) => ((u as { _id?: string })._id || u) === currentUser?._id,
-  );
-
-  // Check if following
-  const isFollowing = list?.followers?.some(
     (u) => ((u as { _id?: string })._id || u) === currentUser?._id,
   );
 
@@ -84,14 +77,6 @@ export const ListDetailPage: React.FC = () => {
       listId: list._id,
       data: { public: !list.public },
     });
-  };
-
-  const handleFollowToggle = async () => {
-    if (!currentUser) {
-      toast.error("Vennligst logg inn for å følge lister");
-      return;
-    }
-    await toggleFollowMutation.mutateAsync(list._id);
   };
 
   const handleDelete = async () => {
@@ -163,7 +148,6 @@ export const ListDetailPage: React.FC = () => {
 
           <div className="flex items-center gap-6 text-sm text-gray-500 font-medium">
             <span>{list.services?.length || 0} elementer</span>
-            <span>{list.followers?.length || 0} følgere</span>
             <span>
               {(list.user?.length || 0) + (list.contributors?.length || 0)}{" "}
               bidragsytere
@@ -242,23 +226,7 @@ export const ListDetailPage: React.FC = () => {
                   )}
                 </div>
               </>
-            ) : (
-              <button
-                onClick={handleFollowToggle}
-                disabled={toggleFollowMutation.isPending}
-                className={`px-8 py-2.5 rounded-xl font-bold transition-all active:scale-95 shadow-sm ${
-                  isFollowing
-                    ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    : "bg-[#2F7E47] text-white hover:bg-[#2F7E47]"
-                }`}
-              >
-                {toggleFollowMutation.isPending
-                  ? "..."
-                  : isFollowing
-                    ? "Følger"
-                    : "Følg"}
-              </button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

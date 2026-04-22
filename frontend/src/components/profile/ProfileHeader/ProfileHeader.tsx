@@ -2,11 +2,9 @@ import { useUserStore } from "../../../stores/userStore";
 import { ChevronDown, Store, Star } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useBlockUser, useFollowUser } from "../../../features/profile/hooks";
+import { useBlockUser } from "../../../features/profile/hooks";
 import { toast } from "react-hot-toast";
-import { FollowingModal } from "./FollowingModal";
 import { BlockModal } from "./BlockModal";
-import { FollowersFollowingModal } from "./FollowersFollowingModal";
 import type { User } from "../../../types/userTypes";
 
 export function ProfileHeader({
@@ -19,57 +17,16 @@ export function ProfileHeader({
   isOwnProfile?: boolean;
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isFollowingModalOpen, setIsFollowingModalOpen] = useState(false);
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [isUnblockModalOpen, setIsUnblockModalOpen] = useState(false);
-  const [isNotifyEnabled, setIsNotifyEnabled] = useState(false);
-  const [isFollowersFollowingModalOpen, setIsFollowersFollowingModalOpen] =
-    useState(false);
-  const [modalTitle, setModalTitle] = useState<"Følgere" | "Følger">("Følgere");
 
   const navigate = useNavigate();
-  const followMutation = useFollowUser();
   const blockMutation = useBlockUser();
   const currentUser = useUserStore((state) => state.user);
-  const isAuth = useUserStore((state) => state.isAuthenticated);
 
   const isBlockedByMe = currentUser?.blockedUsers?.some(
     (id) => (typeof id === "string" ? id : id._id)?.toString() === user?._id,
   );
-
-  const followersArray = (user?.followers || []) as (string | User)[];
-  const isFollowing =
-    user?._id &&
-    currentUser?._id &&
-    followersArray.some(
-      (f) => (typeof f === "string" ? f : f._id) === currentUser._id,
-    );
-
-  const handleFollowClick = () => {
-    if (!isAuth) {
-      toast.error("Du må logge inn for å følge brukere");
-      navigate("/login");
-      return;
-    }
-    if (isFollowing) {
-      setIsFollowingModalOpen(true);
-      return;
-    }
-    if (user?._id) {
-      followMutation.mutate(user._id);
-    }
-  };
-
-  const handleUnfollow = () => {
-    if (user?._id) {
-      followMutation.mutate(user._id, {
-        onSuccess: () => {
-          setIsFollowingModalOpen(false);
-          toast.success(`Sluttet å følge ${user.name}`);
-        },
-      });
-    }
-  };
 
   const handleUnblock = () => {
     if (user?._id) {
@@ -143,37 +100,6 @@ export function ProfileHeader({
                 : "desember 2019"}
             </p>
 
-            <div className="flex gap-4 mb-5">
-              <div
-                className="cursor-pointer hover:underline text-[16px]"
-                onClick={() => {
-                  setModalTitle("Følgere");
-                  setIsFollowersFollowingModalOpen(true);
-                }}
-              >
-                <span className="font-bold text-black">
-                  {user?.followers?.length || 0}
-                </span>{" "}
-                <span className="text-gray-900 font-medium text-[16px]">
-                  følgere
-                </span>
-              </div>
-              <div
-                className="cursor-pointer hover:underline text-[16px]"
-                onClick={() => {
-                  setModalTitle("Følger");
-                  setIsFollowersFollowingModalOpen(true);
-                }}
-              >
-                <span className="font-bold text-black">
-                  {user?.following?.length || 0}
-                </span>{" "}
-                <span className="text-gray-900 font-medium text-[16px]">
-                  følger
-                </span>
-              </div>
-            </div>
-
             <div className="relative flex gap-3">
               {isOwnProfile ? (
                 <>
@@ -224,22 +150,6 @@ export function ProfileHeader({
                 </>
               ) : (
                 <>
-                  <button
-                    onClick={handleFollowClick}
-                    disabled={followMutation.isPending || isBlockedByMe}
-                    className={`flex items-center gap-2 ${isFollowing ? "bg-white border-2 border-gray-200 text-black" : "bg-[#2F7E47] text-white"} px-8 py-2.5 rounded-xl text-[15px] font-bold hover:opacity-90 transition-all shadow-sm ${isBlockedByMe ? "opacity-40 cursor-not-allowed" : ""}`}
-                  >
-                    {followMutation.isPending ? (
-                      "..."
-                    ) : isFollowing ? (
-                      <>
-                        <span>Følger</span>
-                        <ChevronDown size={18} />
-                      </>
-                    ) : (
-                      "Følg"
-                    )}
-                  </button>
                   <button
                     disabled={isBlockedByMe}
                     className={`flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm ${isBlockedByMe ? "opacity-40 cursor-not-allowed" : ""}`}
@@ -313,16 +223,6 @@ export function ProfileHeader({
         </div>
       </div>
 
-      <FollowingModal
-        user={user}
-        isOpen={isFollowingModalOpen}
-        onClose={() => setIsFollowingModalOpen(false)}
-        isNotifyEnabled={isNotifyEnabled}
-        onToggleNotify={() => setIsNotifyEnabled(!isNotifyEnabled)}
-        onUnfollow={handleUnfollow}
-        isPending={followMutation.isPending}
-      />
-
       <BlockModal
         user={user}
         isOpen={isBlockModalOpen}
@@ -348,26 +248,6 @@ export function ProfileHeader({
         onConfirm={handleUnblock}
         isPending={blockMutation.isPending}
         type="unblock"
-      />
-
-      <FollowersFollowingModal
-        isOpen={isFollowersFollowingModalOpen}
-        onClose={() => setIsFollowersFollowingModalOpen(false)}
-        title={modalTitle}
-        users={
-          modalTitle === "Followers"
-            ? user?.followers || []
-            : user?.following || []
-        }
-        currentUserFollowing={currentUser?.following || []}
-        onFollowAction={(targetId) => {
-          if (!isAuth) {
-            toast.error("Du må logge inn for å følge brukere");
-            navigate("/login");
-            return;
-          }
-          followMutation.mutate(targetId);
-        }}
       />
     </>
   );

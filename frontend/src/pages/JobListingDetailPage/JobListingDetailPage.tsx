@@ -10,9 +10,8 @@ import {
 import JobButton from "../../components/job/JobButton.tsx";
 import { JobDetailSkeleton } from "../../components/Loading/JobDetailSkeleton.tsx";
 import { useFavoriteToggle } from "../../features/favorites/hook/useFavoriteToggle.ts";
-import { useToggleLike } from "../../features/jobsList/hooks";
 import { MapComponent } from "../../components/component/map/MapComponent";
-import { Heart, Share2, MapPin, Star, Bookmark, Zap } from "lucide-react";
+import { Share2, MapPin, Star, Bookmark, Zap } from "lucide-react";
 import { useState } from "react";
 
 const JobListingDetailPage = () => {
@@ -33,19 +32,6 @@ const JobListingDetailPage = () => {
   } = useFavoriteToggle(id!, isAuth);
   const { data: job, isLoading: isJobLoading } = useJobDetailQuery(id!);
   const isOwnJob = job?.userId?._id === currentUser?._id;
-  const toggleLike = useToggleLike();
-
-  const isLiked = job?.likes?.includes(currentUser?._id || "");
-  const likesCount = job?.likes?.length || 0;
-
-  const handleLikeClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isAuth) {
-      navigate("/login");
-      return;
-    }
-    toggleLike.mutate(id!);
-  };
 
   const [lng, lat] = job?.location?.coordinates || [0, 0];
   const hasCoordinates = job?.location?.coordinates && (lng !== 0 || lat !== 0);
@@ -157,21 +143,7 @@ const JobListingDetailPage = () => {
               )}
 
               {/* Action Buttons */}
-              <div className="absolute top-4 right-4 flex flex-col gap-3 z-10">
-                {/* Like Button */}
-                <button
-                  onClick={handleLikeClick}
-                  disabled={toggleLike.isPending}
-                  className="w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
-                  title={isLiked ? "Fjern likerklikk" : "Lik"}
-                >
-                  <Heart
-                    size={20}
-                    fill={isLiked ? "#FF4B4B" : "none"}
-                    color={isLiked ? "#FF4B4B" : "#6b7280"}
-                  />
-                </button>
-              </div>
+              <div className="absolute top-4 right-4 flex flex-col gap-3 z-10"></div>
 
               {/* Badges */}
               <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
@@ -218,12 +190,6 @@ const JobListingDetailPage = () => {
                     {job.title || "Uten tittel"}
                   </h1>
                   <div className="flex flex-wrap items-center gap-3 mb-2">
-                    {likesCount > 0 && (
-                      <div className="flex items-center gap-1.5 text-sm font-bold text-gray-600 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
-                        <Heart size={14} fill="#FF4B4B" color="#FF4B4B" />
-                        <span>{likesCount} likerklikk</span>
-                      </div>
-                    )}
                     {job.favCount !== undefined && job.favCount > 0 && (
                       <div className="flex items-center gap-1.5 text-sm font-bold text-[#2F7E47] bg-[#2F7E47]/5 px-3 py-1 rounded-full border border-[#2F7E47]/10">
                         <Bookmark size={14} fill="#2F7E47" color="#2F7E47" />

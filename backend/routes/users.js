@@ -45,16 +45,6 @@ const upload = require("../middleware/upload");
  *           type: string
  *           format: date-time
  *           description: Siste innlogging
- *         followers:
- *           type: array
- *           items:
- *             type: string
- *           description: Liste over følgere (bruker-IDer)
- *         following:
- *           type: array
- *           items:
- *             type: string
- *           description: Liste over brukere denne følger
  *         availability:
  *           type: array
  *           items:
@@ -146,7 +136,6 @@ router.put(
 router.delete("/:id", authenticate, userController.deleteUser);
 router.get("/:id/services", authenticate, userController.getUserServices);
 router.get("/", authenticate, requireAdmin, userController.getAllUsers);
-router.post("/:id/follow", authenticate, userController.followUser);
 router.post("/:id/block", authenticate, userController.blockUser);
 
 module.exports = router;

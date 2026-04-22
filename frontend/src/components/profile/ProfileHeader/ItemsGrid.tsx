@@ -2,7 +2,7 @@ import { EmptyState } from "./EmptyState";
 import { useFavoriteLists } from "../../../features/favoriteLists/hooks";
 import { JobDetailCardSkeleton } from "../../Loading/JobDetailCardSkeleton.tsx";
 import { useNavigate } from "react-router-dom";
-import { useJobs, useLikedJobs } from "../../../features/jobsList/hooks";
+import { useJobs } from "../../../features/jobsList/hooks";
 import { JobCard } from "../../component/jobCard/JobCard.tsx";
 import type { Jobs } from "../../../../types/Jobs.ts";
 import { useUserStore } from "../../../stores/userStore.ts";
@@ -44,12 +44,6 @@ export function ItemsGrid({
     isFetchingNextPage,
   } = useJobs({ userId });
 
-  const {
-    data: likedJobsData,
-    isLoading: isLikedJobsLoading,
-    isError: isLikedJobsError,
-  } = useLikedJobs();
-
   useEffect(() => {
     if (!hasNextPage || isFetchingNextPage || activeTab !== "Oppdrag") return;
 
@@ -71,7 +65,6 @@ export function ItemsGrid({
 
   const jobs = (jobsData?.pages.flatMap((page) => page.data) ||
     []) as unknown as Jobs[];
-  const likedJobs = (likedJobsData?.data || []) as unknown as Jobs[];
 
   // Empty states content mapping
   const emptyStateContent: Record<
@@ -81,10 +74,6 @@ export function ItemsGrid({
     Oppdrag: {
       title: "Brukeren har ikke lagt ut noen oppdrag ennå",
       description: "Når brukeren legger ut oppdrag, vil de vises her",
-    },
-    Liker: {
-      title: "Ingen likte elementer ennå",
-      description: "Elementer som er likt vil vises her",
     },
     Lister: {
       title: "Listene er for øyeblikket tomme",
@@ -115,19 +104,8 @@ export function ItemsGrid({
       );
   }
 
-  if (activeTab === "Liker") {
-    if (isLikedJobsLoading) return <JobDetailCardSkeleton />;
-    if (isLikedJobsError)
-      return (
-        <p className="text-center py-20 text-red-500">
-          Kunne ikke laste likte oppdrag.
-        </p>
-      );
-  }
-
   const showLists = activeTab === "Lister" && lists.length > 0;
   const showJobs = activeTab === "Oppdrag" && jobs.length > 0;
-  const showLikes = activeTab === "Liker" && likedJobs.length > 0;
 
   return (
     <div className="min-h-screen p-4 md:p-6">
@@ -190,12 +168,6 @@ export function ItemsGrid({
               </div>
             )}
           </>
-        ) : showLikes ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {likedJobs.map((job: Jobs) => (
-              <JobCard key={job._id} job={job} />
-            ))}
-          </div>
         ) : (
           <div className="flex items-center justify-center">
             <EmptyState

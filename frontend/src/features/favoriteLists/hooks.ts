@@ -117,18 +117,3 @@ export const useDeleteFavoriteList = () => {
     },
   });
 };
-
-export const useToggleFollowList = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (listId: string) => favoriteListsApi.toggleFollowList(listId),
-    onSuccess: (_, listId) => {
-      queryClient.invalidateQueries({ queryKey: favoriteListsKeys.list(listId) });
-      queryClient.invalidateQueries({ queryKey: favoriteListsKeys.all });
-    },
-    onError: (error: unknown) => {
-      const err = error as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || "Failed to follow list");
-    },
-  });
-};
