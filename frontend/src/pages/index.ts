@@ -1,4 +1,3 @@
-export { default as NotFoundPage } from "./NotFoundPage/NotFoundPage.tsx";
 export { default as EditJobPage } from "./EditJobPage";
 export { default as JobListingDetailPage } from "./JobListingDetailPage/JobListingDetailPage.tsx";
 export { default as JobListingPage } from "./ExplorePage/JobListingPage.tsx";
