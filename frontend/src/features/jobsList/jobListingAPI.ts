@@ -39,18 +39,8 @@ export const fetchJobs = async ({
   maxPrice,
   tab = "Discover",
 }: FetchJobsParams): Promise<JobsResponse> => {
-  // Map tabs to endpoints
-  const endpointMap = {
-    Discover: "/api/feed/discover",
-    "People’s": "/api/feed/peoples",
-    Favorites: "/api/feed/favorites",
-  };
-
-  // If userId is provided, we always want the base services endpoint to filter by user
-  const url =
-    userId && userId !== ""
-      ? "/api/services"
-      : endpointMap[tab] || "/api/services";
+  // Use the main services endpoint
+  const url = "/api/services";
 
   const res = await mainLink.get(url, {
     params: {
@@ -67,7 +57,6 @@ export const fetchJobs = async ({
     },
   });
 
-  // Handle feed response format (might not have pagination)
   if (res.data.success && Array.isArray(res.data.data)) {
     return {
       data: res.data.data,
@@ -81,27 +70,4 @@ export const fetchJobs = async ({
   }
 
   return res.data;
-};
-
-export const toggleLikeService = async (serviceId: string) => {
-  const res = await mainLink.post(`/api/services/${serviceId}/like`);
-  return res.data;
-};
-
-export const fetchLikedJobs = async (): Promise<JobsResponse> => {
-  const res = await mainLink.get("/api/services/liked");
-  // The API returns an array of services directly or wrapped?
-  // Based on the controller: res.json(services);
-  // So it returns an array.
-  const services = res.data;
-
-  return {
-    data: services,
-    pagination: {
-      total: services.length,
-      totalPages: 1,
-      page: 1,
-      limit: services.length,
-    },
-  };
 };

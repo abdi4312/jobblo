@@ -129,17 +129,26 @@ exports.refreshToken = async (req, res) => {
       return res.status(401).json({ error: "Refresh token missing" });
 
     let session = await Session.findOne({ refreshToken });
-    
+
     // GRACE PERIOD LOGIC: If not found, check if it was recently rotated
     if (!session) {
       session = await Session.findOne({ oldRefreshToken: refreshToken });
-      
+
       // If found as old token, check if rotation was recent (within 60 seconds)
-      if (session && session.updatedAt && (new Date().getTime() - new Date(session.updatedAt).getTime() < 60000)) {
+      if (
+        session &&
+        session.updatedAt &&
+        new Date().getTime() - new Date(session.updatedAt).getTime() < 60000
+      ) {
         console.log("Accepted old refresh token within grace period.");
         // Use this session
       } else {
-        return res.status(401).json({ error: "Invalid session or expired grace period", code: "SESSION_REVOKED" });
+        return res
+          .status(401)
+          .json({
+            error: "Invalid session or expired grace period",
+            code: "SESSION_REVOKED",
+          });
       }
     }
 
@@ -218,9 +227,14 @@ exports.getSessions = async (req, res) => {
 exports.revokeSession = async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const result = await Session.deleteOne({ _id: sessionId, userId: req.user._id });
+    const result = await Session.deleteOne({
+      _id: sessionId,
+      userId: req.user._id,
+    });
     if (result.deletedCount === 0) {
-      return res.status(404).json({ error: "Session not found or unauthorized" });
+      return res
+        .status(404)
+        .json({ error: "Session not found or unauthorized" });
     }
     res.json({ message: "Session revoked" });
   } catch (error) {
@@ -249,16 +263,7 @@ exports.revokeAllOtherSessions = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.userId)
-      .select("-password")
-      .populate(
-        "followers",
-        "name lastName avatarUrl verified email averageRating reviewCount",
-      )
-      .populate(
-        "following",
-        "name lastName avatarUrl verified email averageRating reviewCount",
-      );
+    const user = await User.findById(req.userId).select("-password");
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);
   } catch (error) {

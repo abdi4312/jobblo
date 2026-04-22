@@ -1,5 +1,18 @@
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
-import { blockUser, followUser, getBlockedUsers, getTopUsers, getUserProfile, searchAll, searchUsers, updateUser } from "./api";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
+import {
+  blockUser,
+  getBlockedUsers,
+  getTopUsers,
+  getUserProfile,
+  searchAll,
+  searchUsers,
+  updateUser,
+} from "./api";
 import { useUserStore } from "../../stores/userStore";
 import { toast } from "react-hot-toast";
 
@@ -15,41 +28,24 @@ export const useUpdateUser = () => {
   const { fetchProfile } = useUserStore((state) => state);
 
   return useMutation({
-    mutationFn: ({ userId, data }: { userId: string; data: UpdateUserData }) => 
+    mutationFn: ({ userId, data }: { userId: string; data: UpdateUserData }) =>
       updateUser(userId, data),
     onSuccess: () => {
       fetchProfile();
-      toast.success('Oppdatert!');
+      toast.success("Oppdatert!");
     },
     onError: (error: unknown) => {
       const err = error as { message?: string };
-      toast.error(err.message || 'Kunne ikke oppdatere');
-    }
+      toast.error(err.message || "Kunne ikke oppdatere");
+    },
   });
 };
 
 export const useUserProfile = (userId: string | undefined) => {
   return useQuery({
-    queryKey: ['userProfile', userId],
+    queryKey: ["userProfile", userId],
     queryFn: () => getUserProfile(userId!),
     enabled: !!userId,
-  });
-};
-
-export const useFollowUser = () => {
-  const queryClient = useQueryClient();
-  const { fetchProfile } = useUserStore((state) => state);
-
-  return useMutation({
-    mutationFn: (userId: string) => followUser(userId),
-    onSuccess: (_, userId) => {
-      queryClient.invalidateQueries({ queryKey: ['userProfile', userId] });
-      fetchProfile();
-    },
-    onError: (error: unknown) => {
-      const err = error as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || 'Kunne ikke følge bruker');
-    }
   });
 };
 
@@ -60,26 +56,26 @@ export const useBlockUser = () => {
   return useMutation({
     mutationFn: (userId: string) => blockUser(userId),
     onSuccess: (_, userId) => {
-      queryClient.invalidateQueries({ queryKey: ['userProfile', userId] });
+      queryClient.invalidateQueries({ queryKey: ["userProfile", userId] });
       fetchProfile();
     },
     onError: (error: unknown) => {
       const err = error as { response?: { data?: { error?: string } } };
-      toast.error(err.response?.data?.error || 'Kunne ikke blokkere bruker');
-    }
+      toast.error(err.response?.data?.error || "Kunne ikke blokkere bruker");
+    },
   });
 };
 
 export const useBlockedUsers = (page = 1, limit = 10) => {
   return useQuery({
-    queryKey: ['blockedUsers', page, limit],
+    queryKey: ["blockedUsers", page, limit],
     queryFn: () => getBlockedUsers(page, limit),
   });
 };
 
 export const useSearchUsers = (query?: string) => {
   return useQuery({
-    queryKey: ['searchUsers', query],
+    queryKey: ["searchUsers", query],
     queryFn: () => searchUsers(query),
     enabled: !!query && query.length >= 2,
   });
@@ -87,22 +83,26 @@ export const useSearchUsers = (query?: string) => {
 
 export const useTopUsers = () => {
   return useQuery({
-    queryKey: ['topUsers'],
+    queryKey: ["topUsers"],
     queryFn: () => getTopUsers(),
   });
 };
 
 export const useUnifiedSearch = (query: string) => {
   return useQuery({
-    queryKey: ['unifiedSearch', query],
+    queryKey: ["unifiedSearch", query],
     queryFn: () => searchAll(query),
     enabled: query.length >= 2,
   });
 };
 
-export const useInfiniteSearch = (query: string, type: string, limit: number = 10) => {
+export const useInfiniteSearch = (
+  query: string,
+  type: string,
+  limit: number = 10,
+) => {
   return useInfiniteQuery({
-    queryKey: ['infiniteSearch', query, type, limit],
+    queryKey: ["infiniteSearch", query, type, limit],
     queryFn: ({ pageParam = 1 }) => searchAll(query, type, pageParam, limit),
     getNextPageParam: (lastPage) => {
       if (lastPage.page < lastPage.totalPages) {

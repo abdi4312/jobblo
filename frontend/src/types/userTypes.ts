@@ -16,8 +16,6 @@ export type User = {
   postNumber?: string;
   postSted?: string;
   country?: string;
-  followers?: (string | User)[];
-  following?: (string | User)[];
   blockedUsers?: (string | User)[];
   availability?: []; // Hva er dette?
   earnings?: number;

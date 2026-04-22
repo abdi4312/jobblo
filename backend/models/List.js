@@ -9,7 +9,6 @@ const listSchema = new mongoose.Schema(
     latestservice: { type: mongoose.Schema.Types.ObjectId, ref: "Service" },
     services: [{ type: mongoose.Schema.Types.ObjectId, ref: "Service" }],
     contributors: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true },
 );

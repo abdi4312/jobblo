@@ -41,8 +41,6 @@ exports.createUser = async (req, res) => {
       subscription,
       verified,
       lastLogin,
-      followers,
-      following,
       availability,
       earnings,
       spending,
@@ -66,8 +64,6 @@ exports.createUser = async (req, res) => {
       subscription,
       verified,
       lastLogin,
-      followers,
-      following,
       availability,
       earnings,
       spending,
@@ -230,16 +226,7 @@ exports.getUserById = async (req, res) => {
       return res.status(400).json({ error: "Invalid user ID format" });
     }
 
-    const user = await User.findById(id)
-      .select("-password")
-      .populate(
-        "followers",
-        "name lastName avatarUrl verified email averageRating reviewCount",
-      )
-      .populate(
-        "following",
-        "name lastName avatarUrl verified email averageRating reviewCount",
-      );
+    const user = await User.findById(id).select("-password");
 
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);
@@ -367,72 +354,6 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// Follow/Unfollow a user
-exports.followUser = async (req, res) => {
-  try {
-    const currentUserId = req.userId;
-    const targetUserId = req.params.id;
-
-    // Validate IDs
-    if (!isValidId(currentUserId) || !isValidId(targetUserId)) {
-      return res.status(400).json({ error: "Invalid user ID format" });
-    }
-
-    // Can't follow yourself
-    if (currentUserId === targetUserId) {
-      return res.status(400).json({ error: "You cannot follow yourself" });
-    }
-
-    // Fetch users
-    const [currentUser, targetUser] = await Promise.all([
-      User.findById(currentUserId),
-      User.findById(targetUserId),
-    ]);
-
-    if (!currentUser || !targetUser) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const isFollowing = currentUser.following.includes(targetUserId);
-
-    if (isFollowing) {
-      // Unfollow
-      await User.findByIdAndUpdate(currentUserId, {
-        $pull: { following: targetUserId },
-      });
-
-      await User.findByIdAndUpdate(targetUserId, {
-        $pull: { followers: currentUserId },
-      });
-      return res.json({ message: "Unfollowed", isFollowing: false });
-    } else {
-      // Follow
-      await User.findByIdAndUpdate(currentUserId, {
-        $addToSet: { following: targetUserId },
-      });
-
-      await User.findByIdAndUpdate(targetUserId, {
-        $addToSet: { followers: currentUserId },
-      });
-
-      // Create notification for the target user
-      await notificationController.createAndEmitNotification(
-        req.app.get("io"),
-        {
-          userId: targetUserId,
-          senderId: currentUserId,
-          type: "follow",
-          content: `${currentUser.name} started following you`,
-        },
-      );
-
-      return res.json({ message: "Followed", isFollowing: true });
-    }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
 // Get blocked users list (More Reliable Version)
 exports.getBlockedUsers = async (req, res) => {
   try {
@@ -499,14 +420,6 @@ exports.blockUser = async (req, res) => {
       // Block
       await User.findByIdAndUpdate(currentUserId, {
         $addToSet: { blockedUsers: targetUserId },
-      });
-
-      // Also unfollow automatically if blocking
-      await User.findByIdAndUpdate(currentUserId, {
-        $pull: { following: targetUserId, followers: targetUserId },
-      });
-      await User.findByIdAndUpdate(targetUserId, {
-        $pull: { followers: currentUserId, following: currentUserId },
       });
 
       return res.json({ message: "User blocked", isBlocked: true });

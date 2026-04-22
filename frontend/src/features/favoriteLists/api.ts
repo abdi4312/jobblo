@@ -47,9 +47,4 @@ export const favoriteListsApi = {
   deleteList: async (listId: string): Promise<void> => {
     await mainLink.delete(`/api/lists/${listId}`);
   },
-
-  toggleFollowList: async (listId: string): Promise<{ isFollowing: boolean, followersCount: number }> => {
-    const response = await mainLink.post(`/api/lists/${listId}/follow`);
-    return response.data;
-  },
 };

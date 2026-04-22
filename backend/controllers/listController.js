@@ -25,9 +25,7 @@ exports.getUserLists = async (req, res) => {
       };
     }
 
-    const lists = await List.find(query)
-      .populate("services")
-      .populate("followers", "name lastName avatarUrl email");
+    const lists = await List.find(query).populate("services");
     res.status(200).json(lists);
   } catch (error) {
     res
@@ -232,8 +230,7 @@ exports.getListById = async (req, res) => {
     })
       .populate("services")
       .populate("user", "name lastName avatarUrl email")
-      .populate("contributors", "name lastName avatarUrl email")
-      .populate("followers", "name lastName avatarUrl email");
+      .populate("contributors", "name lastName avatarUrl email");
 
     if (!list) {
       return res.status(404).json({ message: "List not found" });
@@ -262,54 +259,5 @@ exports.deleteList = async (req, res) => {
     res
       .status(500)
       .json({ message: "Error deleting list", error: error.message });
-  }
-};
-
-// Toggle Follow a list
-exports.toggleFollowList = async (req, res) => {
-  try {
-    const { listId } = req.params;
-    const userId = req.userId;
-
-    const list = await List.findById(listId);
-    if (!list) {
-      return res.status(404).json({ message: "List not found" });
-    }
-
-    if (!list.public) {
-      // Only public lists can be followed, unless you are a contributor
-      const isContributor = list.contributors.some(
-        (id) => id.toString() === userId,
-      );
-      const isOwner = list.user.some((id) => id.toString() === userId);
-      if (!isContributor && !isOwner) {
-        return res
-          .status(403)
-          .json({ message: "Cannot follow a private list" });
-      }
-    }
-
-    const isFollowing = list.followers.some((id) => id.toString() === userId);
-
-    if (isFollowing) {
-      // Unfollow
-      list.followers = list.followers.filter((id) => id.toString() !== userId);
-    } else {
-      // Follow
-      list.followers.push(userId);
-    }
-
-    await list.save();
-    res.status(200).json({
-      message: isFollowing
-        ? "Unfollowed successfully"
-        : "Followed successfully",
-      isFollowing: !isFollowing,
-      followersCount: list.followers.length,
-    });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error toggling follow", error: error.message });
   }
 };
