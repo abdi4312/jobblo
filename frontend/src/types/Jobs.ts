@@ -4,6 +4,7 @@ export type Jobs = {
   title: string;
   description: string;
   price: number;
+  hourlyRate?: number;
   location: {
     type: string;
     coordinates: number[];

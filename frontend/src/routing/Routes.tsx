@@ -3,7 +3,6 @@ import App from "../App.tsx";
 import {
   JobListingPage,
   LandingPage,
-  NotFoundPage,
   ProfilePage,
   SettingsPage,
 } from "../pages";
@@ -289,10 +288,6 @@ export const routes: RouteObject[] = [
       {
         path: "upcoming",
         element: <UpcomingFeatures />,
-      },
-      {
-        path: "*",
-        element: <NotFoundPage />,
       },
     ],
   },

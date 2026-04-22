@@ -16,6 +16,7 @@ import { useUserStore } from "../../stores/userStore";
 import toast from "react-hot-toast";
 import { generateFullJobListing } from "../../api/aiAPI";
 import { Sparkles, Loader2 } from "lucide-react";
+import { usePaymentCalculation } from "../../hooks/usePaymentCalculation";
 
 // Job Detail Components for Preview
 import JobImageCarousel from "../job/JobImageCarousel";
@@ -112,11 +113,9 @@ export default function CreateJobForm({
   const [description, setDescription] = useState(
     initialData?.description || "",
   );
-  const [price, setPrice] = useState(initialData?.price || "");
   const [address, setAddress] = useState(initialData?.address || "");
   const [city, setCity] = useState(initialData?.city || "");
   const [categories, setCategories] = useState(initialData?.categories || "");
-  const [urgent, setUrgent] = useState(initialData?.urgent || false);
   const [equipment, setEquipment] = useState(initialData?.equipment || "");
   const [fromDate, setFromDate] = useState(initialData?.fromDate || "");
   const [toDate, setToDate] = useState(initialData?.toDate || "");
@@ -126,9 +125,22 @@ export default function CreateJobForm({
   const [durationUnit, setDurationUnit] = useState(
     initialData?.durationUnit || "hours",
   );
-  const [paymentType, setPaymentType] = useState(
-    initialData?.paymentType || "Fastpris",
+
+  const {
+    price,
+    setPrice,
+    hourlyRate,
+    setHourlyRate,
+    paymentType,
+    setPaymentType,
+    urgent,
+    setUrgent,
+  } = usePaymentCalculation(
+    (durationValue ?? "").toString(),
+    durationUnit,
+    initialData,
   );
+
   const [phone, setPhone] = useState(initialData?.phone || "");
   const [email, setEmail] = useState(initialData?.email || "");
   const [tags, setTags] = useState<string[]>([]);
@@ -163,6 +175,8 @@ export default function CreateJobForm({
           priceRange,
           locationRelevance,
           skills: aiSkills,
+          hourlyRate: aiHourlyRate,
+          estimatedPrice: aiEstimatedPrice,
         } = response.data;
 
         setTitle(aiTitle);
@@ -175,8 +189,16 @@ export default function CreateJobForm({
 
         setTags(aiSkills);
 
+        if (aiHourlyRate) {
+          setHourlyRate(aiHourlyRate.toString());
+        }
+
         // Price - take mid point or min
-        setPrice(priceRange.min.toString());
+        if (priceRange) {
+          setPrice(priceRange.min.toString());
+        } else if (aiEstimatedPrice) {
+          setPrice(aiEstimatedPrice.toString());
+        }
 
         // Duration
         if (aiDuration && aiDuration.value) {
@@ -191,7 +213,7 @@ export default function CreateJobForm({
 
         setShowSmartFillInput(false);
         setSmartFillPrompt("");
-        toast.success("AI har fylt ut skjemaet for deg! Se gjennom detaljene.");
+        toast.success("Skjemaet er fylt ut med AI!");
       }
     } catch (err: any) {
       console.error("SMART FILL ERROR:", err);
@@ -222,6 +244,7 @@ export default function CreateJobForm({
       setToDate(data.toDate || "");
       setDurationValue(data.durationValue || "");
       setDurationUnit(data.durationUnit || "hours");
+      setHourlyRate(data.hourlyRate || "");
       setPaymentType(data.paymentType || "Fastpris");
       setPhone(data.phone || "");
       setEmail(data.email || "");
@@ -244,6 +267,7 @@ export default function CreateJobForm({
       toDate,
       durationValue,
       durationUnit,
+      hourlyRate,
       paymentType,
       phone,
       email,
@@ -316,6 +340,7 @@ export default function CreateJobForm({
     formData.append("title", title);
     formData.append("description", description);
     formData.append("price", price.toString());
+    if (hourlyRate) formData.append("hourlyRate", hourlyRate.toString());
     formData.append("urgent", urgent.toString());
     formData.append("equipment", equipment);
     formData.append("paymentType", paymentType);
@@ -386,6 +411,7 @@ export default function CreateJobForm({
       title,
       description,
       price: price ? parseInt(price.toString()) : 0,
+      hourlyRate: hourlyRate ? parseInt(hourlyRate.toString()) : 0,
       images: previewImages,
       tags:
         tags.length > 0
@@ -559,6 +585,7 @@ export default function CreateJobForm({
                 setTags={setTags}
                 setDurationValue={setDurationValue}
                 setDurationUnit={setDurationUnit}
+                setHourlyRate={setHourlyRate}
               />
             </div>
           )}
@@ -584,6 +611,8 @@ export default function CreateJobForm({
                 setPaymentType={setPaymentType}
                 price={price}
                 setPrice={setPrice}
+                hourlyRate={hourlyRate}
+                setHourlyRate={setHourlyRate}
                 urgent={urgent}
                 setUrgent={setUrgent}
               />

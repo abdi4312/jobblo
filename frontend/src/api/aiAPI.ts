@@ -16,6 +16,8 @@ export interface AIJobListingResponse {
       min: number;
       max: number;
     };
+    hourlyRate?: number;
+    estimatedPrice?: number;
     pricingReasoning: string;
   };
 }

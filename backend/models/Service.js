@@ -26,6 +26,7 @@ const serviceSchema = new mongoose.Schema(
     title: { type: String, required: true },
     description: { type: String },
     price: { type: Number, min: 0, required: true },
+    hourlyRate: { type: Number, min: 0 },
 
     // Lokasjon
     location: {
