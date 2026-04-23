@@ -9,25 +9,19 @@ import {
 import { SettingsLayout } from "../components/layout/SettingsLayout/SettingsLayout.tsx";
 import LeggUtOppdrag from "../pages/LeggUtOppdragPage/LeggUtOppdrag.tsx";
 import Alert from "../pages/AlertPage/Alert.tsx";
-import MinProfil from "../pages/MinProfil/MinProfil.tsx";
 import LoginPage from "../pages/LoginPage/LoginPage.tsx";
 import RegisterPage from "../pages/RegisterPage/RegisterPage.tsx";
 import { ProtectedRoute } from "../components/shared/ProtectedRoute.tsx";
-import InstillingerPage from "../pages/InstillingerPage/InstillingerPage.tsx";
 import AnmeldelserPage from "../pages/AnmeldelserPage/AnmeldelserPage.tsx";
 import { ContractsPage } from "../pages/ContractsPage/ContractsPage.tsx";
 import { ContractDetailPage } from "../pages/ContractsPage/ContractDetailPage.tsx";
 import { ListDetailPage } from "../pages/FavoritesPage/ListDetail/ListDetailPage.tsx";
-import OmOssPage from "../pages/OmOssPage/OmOssPage.tsx";
-import TjenesterPage from "../pages/TjenesterPage/TjenesterPage.tsx";
 import TeamPage from "../pages/TeamPage/TeamPage.tsx";
 import SupportPage from "../pages/SupportPage/SupportPage.tsx";
-import AnnonsereglerPage from "../pages/AnnonsereglerPage/AnnonsereglerPage.tsx";
 import MineAnnonser from "../pages/MyJobsPage/MineAnnonser.tsx";
 import JobListingDetailPage from "../pages/JobListingDetailPage/JobListingDetailPage.tsx";
 import CoinsPage from "../pages/CoinsPage/CoinsPage.tsx";
 import { MessagesPageSplit } from "../pages/MessagesPage/MessagesPageSplit.tsx";
-import MinInntekt from "../pages/MinInntekt/MinInntekt.tsx";
 import OAuthSuccess from "../pages/OAuthSuccess.tsx";
 import { PublicRoute } from "../components/shared/PublicRoute.tsx";
 import SaleSubscriptionTermsPage from "../pages/SaleSubscriptionTermsPage/SaleSubscriptionTermsPage.tsx";
@@ -134,19 +128,7 @@ export const routes: RouteObject[] = [
         path: "alerts",
         element: (
           <ProtectedRoute>
-            <Alert />,
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "Min-profil",
-        element: <MinProfil />,
-      },
-      {
-        path: "min-inntekt",
-        element: (
-          <ProtectedRoute>
-            <MinInntekt />
+            <Alert />
           </ProtectedRoute>
         ),
       },
@@ -183,10 +165,6 @@ export const routes: RouteObject[] = [
             ],
           },
         ],
-      },
-      {
-        path: "Innstillinger",
-        element: <InstillingerPage />,
       },
       {
         path: "Anmeldelser",
@@ -229,14 +207,6 @@ export const routes: RouteObject[] = [
         ),
       },
       {
-        path: "om-oss",
-        element: <OmOssPage />,
-      },
-      {
-        path: "tjenester",
-        element: <TjenesterPage />,
-      },
-      {
         path: "team",
         element: <TeamPage />,
       },
@@ -247,10 +217,6 @@ export const routes: RouteObject[] = [
       {
         path: "support",
         element: <SupportPage />,
-      },
-      {
-        path: "annonseregler",
-        element: <AnnonsereglerPage />,
       },
       {
         path: "messages",
