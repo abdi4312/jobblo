@@ -254,26 +254,7 @@ export default function Header() {
           </div>
 
           {/* DESKTOP NAV */}
-          {!Auth && (
-            <ul className="hidden md:flex gap-8 list-none">
-              {navLinks.map((link, index) => (
-                <li key={index}>
-                  <NavLink
-                    to={link.path}
-                    className={({ isActive }) =>
-                      `transition-all font-light text-[16px] cursor-pointer ${
-                        isActive
-                          ? "text-black font-semibold"
-                          : "text-[#0A0A0A9E]! hover:text-black!"
-                      }`
-                    }
-                  >
-                    {link.name}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          )}
+          {!Auth && <div className="hidden md:flex flex-1"></div>}
 
           {Auth && (
             <div className="hidden md:flex items-center gap-6 px-4 py-3">
@@ -342,10 +323,26 @@ export default function Header() {
             </button>
           </div>
           {!Auth && (
-            <div className="md:flex items-center gap-4 hidden">
-              <div className="hidden md:block">
-                <VippsButton />
-              </div>
+            <div className="md:flex items-center gap-6 hidden">
+              <NavLink
+                to="/home"
+                className={({ isActive }) =>
+                  `transition-all cursor-pointer ${
+                    isActive
+                      ? "text-[#2F7E47]!"
+                      : "text-[#2F7E47]!"
+                  }`
+                }
+              >
+                <Home size={30} strokeWidth={1.5} />
+              </NavLink>
+
+              <button
+                onClick={() => navigate("/login")}
+                className="bg-[#2F7E47] text-white px-8 py-3 rounded-[20px] font-semibold transition-all hover:bg-[#25633a] active:scale-95 shadow-sm"
+              >
+                Register/Log in
+              </button>
             </div>
           )}
         </div>
@@ -368,36 +365,67 @@ export default function Header() {
           </div>
 
           <ul className="flex flex-col gap-2 p-4">
-            {/* Logic: If Auth show navLinkUse else navLinks */}
-            {(Auth ? navLinkUse : navLinks).map((link, index) => (
-              <li key={index}>
-                <NavLink
-                  to={link.path}
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 p-3 rounded-lg ${
-                      isActive
-                        ? "bg-green-50 text-[#2F7E47] font-bold"
-                        : "text-gray-700"
-                    }`
-                  }
-                >
-                  {link.icon && (
-                    <div className="relative text-[#0A0A0A9E]! group-hover:text-black">
-                      {link.icon}
-                      {link.badgeCount !== undefined && link.badgeCount > 0 && (
-                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
-                          {link.badgeCount}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  <span className="text-sm font-medium text-[#0A0A0A9E]! group-hover:text-black">
-                    {link.name}
-                  </span>
-                </NavLink>
-              </li>
-            ))}
+            {!Auth ? (
+              <>
+                <li>
+                  <NavLink
+                    to="/home"
+                    onClick={() => setMenuOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 p-3 rounded-lg ${
+                        isActive
+                          ? "bg-green-50 text-[#2F7E47]! font-bold"
+                          : "text-gray-700!"
+                      }`
+                    }
+                  >
+                    <Home size={20} />
+                    <span className="text-sm font-medium">Hjem</span>
+                  </NavLink>
+                </li>
+                {/* <li>
+                  <NavLink
+                    to="/login"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-green-50 hover:text-[#2F7E47]"
+                  >
+                    <User size={20} />
+                    <span className="text-sm font-medium">Register/Log in</span>
+                  </NavLink>
+                </li> */}
+              </>
+            ) : (
+              navLinkUse.map((link, index) => (
+                <li key={index}>
+                  <NavLink
+                    to={link.path}
+                    onClick={() => setMenuOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 p-3 rounded-lg ${
+                        isActive
+                          ? "bg-green-50 text-[#2F7E47]! font-bold"
+                          : "text-gray-700!"
+                      }`
+                    }
+                  >
+                    {link.icon && (
+                      <div className="relative text-[#0A0A0A9E]! group-hover:text-black">
+                        {link.icon}
+                        {link.badgeCount !== undefined &&
+                          link.badgeCount > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
+                              {link.badgeCount}
+                            </span>
+                          )}
+                      </div>
+                    )}
+                    <span className="text-sm font-medium text-[#0A0A0A9E]! group-hover:text-black">
+                      {link.name}
+                    </span>
+                  </NavLink>
+                </li>
+              ))
+            )}
           </ul>
 
           {/* Vipps Button in Sidebar for mobile logout users */}
