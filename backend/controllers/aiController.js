@@ -29,38 +29,35 @@ exports.generateJobInfo = async (req, res) => {
     const categoryNames = dbCategories.map((c) => c.name).join(", ");
 
     const prompt = `
-      You are a professional job assistant specialized in the Norwegian labor market. Based on the job title "${title}" ${category ? `in the category "${category}"` : ""}, 
-      please provide:
+      Based on the job title "${title}" ${category ? `in the category "${category}"` : ""}, please provide the following information.
+      
+      STRICT LANGUAGE RULE:
+      - Detect the language of the input: "${title}".
+      - You MUST provide all text fields ("description", "skills", "category") in the EXACT SAME LANGUAGE as the input.
+      - DO NOT switch to any other language.
+
+      Requirements:
       1. A professional and engaging job description (around 100-150 words).
-      2. A list of 3-5 required skills (Ferdigheter/Tags) for this job.
+      2. A list of 3-5 required skills for this job.
       3. A fair hourly rate in NOK (Norwegian Krone) for this type of work.
       4. An estimated total price based on the duration.
       5. Category: If the current category is not appropriate, suggest the best one from this list: [${categoryNames}].
       
-      CRITICAL: 
-      - PERSPECTIVE: The user is the HIRER (the person who will pay). Write the description from the perspective of "I need help with..." or "I am looking for someone to...". 
-      - DO NOT write as if you are offering a service (e.g., DON'T say "Are you looking for...?" or "We provide..."). 
-      - The user is NOT a company or service provider; the user is a person who needs a task done.
-      - Detect the language used in the title and respond in that same language.
-      - If you suggest or confirm a category, it MUST be an exact match from the provided list: [${categoryNames}].
-      - PRICING: Base the hourlyRate on the local Norwegian market (Norway). Consider typical hourly rates and service fees in Norway (e.g., minimum hourly rates are often 300-500 NOK, while skilled labor starts much higher).
-      - CALCULATION: The "estimatedPrice" MUST be exactly "hourlyRate" multiplied by the "duration.value" (if unit is hours).
+      OTHER RULES: 
+      - PERSPECTIVE: The user is the HIRER. Write the description from the perspective of "I need help with..." or "I am looking for someone to...". 
+      - DO NOT write as if you are offering a service.
+      - PRICING: Base the hourlyRate on the local Norwegian market context.
+      - CALCULATION: The "estimatedPrice" MUST be "hourlyRate" * "duration.value".
       
-      Respond strictly in JSON format with the following keys:
+      Respond strictly in JSON format:
       {
         "description": "...",
         "skills": ["...", "..."],
         "hourlyRate": 400,
         "estimatedPrice": 800,
         "category": "...",
-        "duration": {
-          "value": 1,
-          "unit": "hours"
-        }
+        "duration": { "value": 1, "unit": "hours" }
       }
-      
-      Note: duration.unit MUST be one of: "minutes", "hours", "days".
-      Note: hourlyRate and estimatedPrice should be numbers.
     `;
 
     const response = await openai.chat.completions.create({
@@ -69,7 +66,7 @@ exports.generateJobInfo = async (req, res) => {
         {
           role: "system",
           content:
-            "You are a helpful assistant that generates job information in JSON format.",
+            "You are a helpful assistant. You MUST detect the language of the user's input and respond in that EXACT SAME language for all text fields. This is mandatory.",
         },
         { role: "user", content: prompt },
       ],
@@ -117,35 +114,34 @@ exports.generateTitle = async (req, res) => {
     }
 
     const prompt = `
-      You are a professional job assistant specialized in the Norwegian labor market. Based on the user's brief description: "${description}", 
-      please provide:
+      Based on the description: "${description}", please provide the following information.
+      
+      STRICT LANGUAGE RULE:
+      - Detect the language of the input: "${description}".
+      - You MUST provide all text fields ("title", "skills") in the EXACT SAME LANGUAGE as the input.
+      - DO NOT switch to any other language.
+
+      Requirements:
       1. A professional and catchy job title (max 60 characters).
-      2. A list of 3-5 required skills (Ferdigheter/Tags).
-      3. A fair hourly rate in NOK (Norwegian Krone).
+      2. A list of 3-5 required skills.
+      3. A fair hourly rate in NOK (Norwegian Krone) for this work in Norway.
       4. An estimated duration for the task.
       5. An estimated total price (hourlyRate * duration).
       
-      CRITICAL: 
-      - PERSPECTIVE: The user is the HIRER (the person who will pay). Write from the perspective of "I need help with..." or "I am looking for someone to...". 
-      - DO NOT write as if you are offering a service (e.g., DON'T say "Are you looking for...?" or "We provide..."). 
-      - The user is NOT a company or service provider; the user is a person who needs a task done.
-      - Detect the language used in the description and respond in that same language.
-      - PRICING: Base the hourlyRate on the local Norwegian market (Norway).
-      - CALCULATION: "estimatedPrice" MUST be "hourlyRate" multiplied by "duration.value".
+      OTHER RULES: 
+      - PERSPECTIVE: The user is the HIRER. Write from the perspective of "I need help with..." or "I am looking for someone to...". 
+      - DO NOT write as if you are offering a service.
+      - PRICING: Base the hourlyRate on the local Norwegian market context.
+      - CALCULATION: "estimatedPrice" MUST be "hourlyRate" * "duration.value".
       
-      Respond strictly in JSON format with the following keys:
+      Respond strictly in JSON format:
       {
         "title": "...",
         "skills": ["...", "..."],
         "hourlyRate": 400,
         "estimatedPrice": 800,
-        "duration": {
-          "value": 2,
-          "unit": "hours"
-        }
+        "duration": { "value": 2, "unit": "hours" }
       }
-      
-      Note: duration.unit MUST be one of: "minutes", "hours", "days".
     `;
 
     // Hum explicitly gpt-4o use karte hain kyunke ye JSON mode ke liye behtar hai
@@ -155,7 +151,7 @@ exports.generateTitle = async (req, res) => {
         {
           role: "system",
           content:
-            "You are a helpful assistant that generates job titles in JSON format.",
+            "You are a helpful assistant. You MUST detect the language of the user's input and respond in that EXACT SAME language for all text fields. This is mandatory.",
         },
         { role: "user", content: prompt },
       ],
@@ -207,49 +203,41 @@ exports.generateFullJobListing = async (req, res) => {
     const categoryNames = dbCategories.map((c) => c.name).join(", ");
 
     const aiPrompt = `
-      You are a professional job listing expert specialized in the Norwegian labor market. Based on the following brief description: "${prompt}", 
-      please generate a complete, structured job listing and suggest a fair price range.
+      Based on the prompt: "${prompt}", please generate a complete job listing.
       
+      STRICT LANGUAGE RULE:
+      - Detect the language of the input: "${prompt}".
+      - You MUST provide all text fields ("title", "description", "skills", "pricingReasoning") in the EXACT SAME LANGUAGE as the input.
+      - DO NOT switch to any other language.
+
       Requirements:
       1. Title: A professional and catchy job title.
       2. Description: A detailed and engaging job description (100-200 words).
-      3. Category: Choose the most appropriate category ONLY from this list: [${categoryNames}].
-      4. Skills: A list of 3-5 required skills for this job.
+      3. Category: Choose the most appropriate category ONLY from: [${categoryNames}].
+      4. Skills: A list of 3-5 required skills.
       5. Hourly Rate: A fair hourly rate in NOK for this service in Norway.
       6. Duration: Estimated time required to complete the task.
       7. Location Relevance: Whether the job needs to be on-site or can be done remotely.
       8. Price Range: A suggested total price range (min-max) based on hourlyRate * duration.
-      9. Pricing Reasoning: Explain the hourly rate and how it relates to the duration.
+      9. Pricing Reasoning: Explain the hourly rate and duration in the same language as the prompt.
       
-      CRITICAL: 
-      - PERSPECTIVE: The user is the HIRER (the person who will pay). Write the description from the perspective of "I need help with..." or "I am looking for someone to...". 
-      - DO NOT write as if you are offering a service (e.g., DON'T say "Are you looking for...?" or "We provide..."). 
-      - The user is NOT a company or service provider; the user is a person who needs a task done.
-      - Detect the language used in the prompt and respond in that same language.
-      - The "category" field MUST be an exact match from the provided list: [${categoryNames}].
-      - PRICING: Base the hourlyRate on the local Norwegian market (Norway).
-      - CALCULATION: "priceRange" MUST be based on "hourlyRate" multiplied by "duration.value".
+      OTHER RULES: 
+      - PERSPECTIVE: The user is the HIRER. Write from the perspective of "I need help with..." or "I am looking for someone to...". 
+      - DO NOT write as if you are offering a service.
+      - PRICING: Base the hourlyRate on the local Norwegian market context.
       
-      Respond strictly in JSON format with the following keys:
+      Respond strictly in JSON format:
       {
         "title": "...",
         "description": "...",
         "category": "...",
         "skills": ["...", "..."],
         "hourlyRate": 400,
-        "duration": {
-          "value": 2,
-          "unit": "hours"
-        },
+        "duration": { "value": 2, "unit": "hours" },
         "locationRelevance": "on-site/remote",
-        "priceRange": {
-          "min": 700,
-          "max": 900
-        },
+        "priceRange": { "min": 700, "max": 900 },
         "pricingReasoning": "..."
       }
-
-      Note: duration.unit MUST be one of: "minutes", "hours", "days".
     `;
 
     const response = await openai.chat.completions.create({
@@ -258,7 +246,7 @@ exports.generateFullJobListing = async (req, res) => {
         {
           role: "system",
           content:
-            "You are a professional job listing assistant that provides structured information in JSON format.",
+            "You are a helpful assistant. You MUST detect the language of the user's input and respond in that EXACT SAME language for all text fields. This is mandatory.",
         },
         { role: "user", content: aiPrompt },
       ],
