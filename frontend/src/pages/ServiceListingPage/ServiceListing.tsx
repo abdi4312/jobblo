@@ -139,7 +139,7 @@ const ServiceListing = () => {
     setPriceRange({ min: 0, max: 100000 });
   };
 
-  const FilterSidebarContent = () => (
+  const renderFilterSidebarContent = () => (
     <div className="space-y-8">
       {/* 1. Categories & Subcategories */}
       <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
@@ -324,7 +324,7 @@ const ServiceListing = () => {
           {(priceRange.min !== 0 || priceRange.max !== 100000) && (
             <button
               onClick={handlePriceReset}
-              className="text-sm font-bold text-[#ff8a7a] hover:text-[#e57a6a] transition-colors"
+              className="text-sm font-bold text-[#2F7E47] hover:text-[#2F7E47] transition-colors"
             >
               Reset
             </button>
@@ -358,11 +358,49 @@ const ServiceListing = () => {
               },
             }}
           />
-          <div className="flex justify-between items-center mt-2 text-sm text-gray-500 font-medium">
-            <span>Min: {priceRange.min} kr</span>
-            <span>
-              Max: {priceRange.max >= 50000 ? "∞" : `${priceRange.max} kr`}
-            </span>
+          <div className="flex gap-3 mt-6">
+            <div className="flex-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block ml-1">
+                Min pris
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={priceRange.min}
+                  onChange={(e) => {
+                    const val = Math.max(0, parseInt(e.target.value) || 0);
+                    setPriceRange((prev) => ({ ...prev, min: val }));
+                  }}
+                  className="w-full pl-3 pr-8 py-2.5 bg-gray-50 rounded-xl text-sm font-semibold text-gray-900 border-2 border-transparent focus:border-[#ff8a7a]/20 focus:bg-white transition-all outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400">
+                  kr
+                </span>
+              </div>
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block ml-1">
+                Maks pris
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={priceRange.max === 100000 ? "" : priceRange.max}
+                  onChange={(e) => {
+                    const val =
+                      e.target.value === ""
+                        ? 100000
+                        : Math.max(0, parseInt(e.target.value) || 0);
+                    setPriceRange((prev) => ({ ...prev, max: val }));
+                  }}
+                  placeholder="∞"
+                  className="w-full pl-3 pr-8 py-2.5 bg-gray-50 rounded-xl text-sm font-semibold text-gray-900 border-2 border-transparent focus:border-[#ff8a7a]/20 focus:bg-white transition-all outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400">
+                  kr
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -370,11 +408,11 @@ const ServiceListing = () => {
   );
 
   return (
-    <div className="max-w-[1400px] mx-auto px-4 md:px-5 pb-10 min-h-screen">
+    <div className="max-w-300 mx-auto px-4 md:px-5 pb-10 min-h-screen">
       <div className="flex flex-col lg:flex-row gap-6 md:gap-8 mt-6 md:mt-8">
         {/* MOBILE OVERLAY DRAWER */}
         {isFilterDrawerOpen && (
-          <div className="fixed inset-0 z-[1000] lg:hidden">
+          <div className="fixed inset-0 z-1000 lg:hidden">
             <div
               className="absolute inset-0 bg-black/50 backdrop-blur-sm"
               onClick={() => setIsFilterDrawerOpen(false)}
@@ -389,7 +427,7 @@ const ServiceListing = () => {
                   <X size={24} />
                 </button>
               </div>
-              <FilterSidebarContent />
+              {renderFilterSidebarContent()}
               <button
                 onClick={() => setIsFilterDrawerOpen(false)}
                 className="w-full bg-[#ff8a7a] text-white font-bold py-4 rounded-2xl mt-8 shadow-lg shadow-[#ff8a7a]/20"
@@ -401,8 +439,8 @@ const ServiceListing = () => {
         )}
 
         {/* LEFT SIDEBAR - Desktop only */}
-        <aside className="hidden lg:block w-72 flex-shrink-0">
-          <FilterSidebarContent />
+        <aside className="hidden lg:block w-72 shrink-0">
+          {renderFilterSidebarContent()}
         </aside>
 
         {/* MAIN CONTENT AREA */}
@@ -451,7 +489,7 @@ const ServiceListing = () => {
             </form>
 
             {/* 3. Sort Button */}
-            <div className="relative flex-shrink-0" ref={dropdownRef}>
+            <div className="relative shrink-0" ref={dropdownRef}>
               <button
                 onClick={() => setIsSortOpen(!isSortOpen)}
                 className="flex items-center justify-center bg-white w-12 h-12 sm:w-14 sm:h-14 rounded-2xl shadow-[0_4px_25px_rgba(0,0,0,0.06)] cursor-pointer transition-all hover:bg-gray-50 active:scale-95"
@@ -460,8 +498,10 @@ const ServiceListing = () => {
               </button>
 
               {isSortOpen && (
-                <div className="absolute right-0 mt-3 w-64 md:w-72 bg-white rounded-[24px] md:rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.15)]
-                 overflow-hidden z-[100] p-2 animate-in fade-in zoom-in duration-200 origin-top-right">
+                <div
+                  className="absolute right-0 mt-3 w-64 md:w-72 bg-white rounded-[24px] md:rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.15)]
+                 overflow-hidden z-[100] p-2 animate-in fade-in zoom-in duration-200 origin-top-right"
+                >
                   {sortOptions.map((option) => (
                     <button
                       key={option.value}
