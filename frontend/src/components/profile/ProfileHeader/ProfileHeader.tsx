@@ -103,14 +103,14 @@ export function ProfileHeader({
             <div className="relative flex gap-3">
               {isOwnProfile ? (
                 <>
-                  <button
+                  {/* <button
                     className="flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl
                    text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm"
                     onClick={() => navigate("/coins")}
                   >
                     <Store size={18} className="text-gray-800" />
                     <span>Jobblo Shoppen</span>
-                  </button>
+                  </button> */}
 
                   <div className="relative">
                     <button
