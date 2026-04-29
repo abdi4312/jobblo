@@ -13,6 +13,7 @@ import { useFavoriteToggle } from "../../features/favorites/hook/useFavoriteTogg
 import { MapComponent } from "../../components/component/map/MapComponent";
 import { Share2, MapPin, Star, Bookmark, Zap } from "lucide-react";
 import { useState } from "react";
+import { dateFormatter } from "../../utils/dateFormatter";
 
 const JobListingDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -88,11 +89,7 @@ const JobListingDetailPage = () => {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString("no-NO", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return dateFormatter.toShortDate(dateString);
   };
 
   // Loading State
