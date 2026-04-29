@@ -8,22 +8,33 @@ import { Button } from "../../components/Ui/Button.tsx";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import Auth from "../../components/Auth/Auth.tsx";
 import { useAuth } from "../../features/auth/hook/useAuth.ts";
+import { useForm } from "../../hooks/useForm.ts";
+import {
+  loginValidationSchema,
+  type LoginFormValues,
+} from "../../validations/authValidations";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-
-  // TanStack Hook ka istemal
   const { login, isLoggingIn } = useAuth();
 
+  const { values, errors, handleChange, validate } = useForm<LoginFormValues>(
+    {
+      email: "",
+      password: "",
+    },
+    loginValidationSchema,
+  );
+
+  const [showPassword, setShowPassword] = useState(false);
+
   const handleLogin = () => {
-    if (!email || !password) {
-      toast.error("Vennligst fyll ut alle feltene");
+    if (!validate()) {
+      toast.error("Vennligst fyll ut alle feltene riktig");
       return;
     }
-    login({ email, password });
+
+    login({ email: values.email, password: values.password });
   };
 
   return (
@@ -56,10 +67,11 @@ export default function LoginPage() {
                 <Input
                   label="E-post"
                   type="email"
-                  value={email}
+                  value={values.email}
                   icon={<Mail size={20} className="text-[#99A1AF]" />}
                   placeholder="user1@jobblo.no"
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => handleChange("email", e.target.value)}
+                  error={errors.email}
                   className="max-w-md"
                 />
                 <Input
@@ -67,18 +79,20 @@ export default function LoginPage() {
                   // Dynamic type toggle
                   type={showPassword ? "text" : "password"}
                   icon={<Lock size={20} className="text-[#99A1AF]" />}
-                  value={password}
+                  value={values.password}
                   placeholder="••••••••"
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => handleChange("password", e.target.value)}
+                  error={errors.password}
                   className="max-w-md"
                   // Right side icon logic
                   rightIcon={
-                    <div
+                    <button
+                      type="button"
                       className="cursor-pointer text-[#99A1AF] hover:text-gray-700 transition-colors"
-                      onClick={() => setShowPassword(!showPassword)}
+                      onClick={() => setShowPassword((prev) => !prev)}
                     >
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </div>
+                    </button>
                   }
                 />
               </div>
