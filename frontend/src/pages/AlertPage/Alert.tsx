@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useUserStore } from "../../stores/userStore";
-import { formatDistanceToNow, format, isToday, isYesterday } from "date-fns";
-import { nb } from "date-fns/locale";
+import { dateFormatter } from "../../utils/dateFormatter";
+import { timeFormatter } from "../../utils/timeFormatter";
 import {
   AlertTriangle,
   Bell,
@@ -48,18 +48,9 @@ interface Alert {
 
 const formatNotificationTime = (dateString: string) => {
   try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "Ujent dato";
-    const timeAgo = formatDistanceToNow(date, { addSuffix: true, locale: nb });
-    let datePart = "";
-    if (isToday(date)) {
-      datePart = "i dag";
-    } else if (isYesterday(date)) {
-      datePart = "i går";
-    } else {
-      datePart = format(date, "d. MMM", { locale: nb });
-    }
-    const exactTime = format(date, "HH:mm");
+    const timeAgo = dateFormatter.toRelative(dateString);
+    const datePart = dateFormatter.format(dateString, "d. MMM");
+    const exactTime = timeFormatter.toShortTime(dateString);
     return `${timeAgo} • ${datePart} kl. ${exactTime}`;
   } catch (error) {
     console.log(error);
