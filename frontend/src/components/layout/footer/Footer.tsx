@@ -1,28 +1,45 @@
-import CtaBanner from "../../Footer/CtaBanner";
-import Content from "../../Footer/Content";
-import NewLetter from "../../Footer/NewLetter";
-
+import { NavLink } from "react-router-dom";
 
 const Footer = () => {
+  const currentYear = new Date().getFullYear();
+
+  const footerLinks = [
+    { name: "Kundesenter", link: "/support" },
+    { name: "Jobb i Jobblo", link: "/sale-subscription-terms" },
+    { name: "Personvern", link: "/privacy" },
+    { name: "Vilkår for bruk", link: "/user-term" },
+    { name: "Om oss", link: "/about" },
+    { name: "Cookie-innstillinger", link: "/cookies" },
+  ];
+
   return (
-    <>
-      <div className="lg:relative lg:mt-20">
-        <div className="mb-2.5 lg:absolute -top-22.5 left-0 right-0">
-          <CtaBanner />
-        </div>
-        <div className="w-full bg-[#2F7E47] pt-5">
+    <footer className="w-full py-8 mt-auto">
+      <div className="max-w-300 mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-base text-[#0A0A0A]">
+        {/* Left Side: Links */}
+        <div className="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2">
+          {footerLinks.map((item, index) => (
+            <NavLink
+              key={index}
+              to={item.link}
+              className="hover:underline transition-all duration-200 text-[#0A0A0A]!"
+            >
+              {item.name}
+            </NavLink>
+          ))}
 
-          {/* Main Footer Content */}
-          <div className="relative max-w-300 mx-auto px-6 lg:px-8 md:pt-25">
-            <Content />
+          {/* Country Selector Placeholder */}
+          <div className="flex items-center gap-1 cursor-pointer hover:underline">
+            <span className="font-bold text-[10px] uppercase">no</span>
+            <span>Norway</span>
           </div>
+        </div>
 
-          <NewLetter />
-
+        {/* Right Side: Copyright */}
+        <div className="text-[#0A0A0A] whitespace-nowrap">
+          © Jobblo AS {currentYear}
         </div>
       </div>
-    </>
-
+    </footer>
   );
 };
 
