@@ -113,7 +113,7 @@ export function ProfileHeader({
             <div className="flex gap-6 mb-6">
               {profileType === "seeker" ? (
                 <>
-                  <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-gray-900">
                       {user?.reviewCount || 0}
                     </span>
@@ -121,7 +121,7 @@ export function ProfileHeader({
                       Fullførte
                     </span>
                   </div>
-                  <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-gray-900">
                       {user?.averageRating?.toFixed(1) || "5.0"}
                     </span>
@@ -132,7 +132,7 @@ export function ProfileHeader({
                 </>
               ) : (
                 <>
-                  <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-gray-900">
                       {user?.reviewCount || 0}
                     </span>
@@ -140,7 +140,7 @@ export function ProfileHeader({
                       Ansettelser
                     </span>
                   </div>
-                  <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-gray-900">
                       {user?.averageRating?.toFixed(1) || "5.0"}
                     </span>
@@ -212,6 +212,7 @@ export function ProfileHeader({
                       )
                     </span>
                   </button>
+
                   <div className="relative">
                     <button
                       onClick={() => setIsMenuOpen(!isMenuOpen)}

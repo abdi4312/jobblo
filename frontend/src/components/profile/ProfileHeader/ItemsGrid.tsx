@@ -3,6 +3,7 @@ import { Star } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useUserProfile } from "../../../features/profile/hooks";
 import { useFavoriteLists } from "../../../features/favoriteLists/hooks";
+import { MOCK_PORTFOLIO, MOCK_REVIEWS } from "../../../data/profileMockData";
 import { JobDetailCardSkeleton } from "../../Loading/JobDetailCardSkeleton.tsx";
 import { useNavigate } from "react-router-dom";
 import { useJobs } from "../../../features/jobsList/hooks";
@@ -96,15 +97,15 @@ export function ItemsGrid({
         "Mandag - Fredag: 08:00 - 16:00\nLørdag: 10:00 - 14:00\nSøndag: Stengt";
 
       return (
-        <div className="max-w-300 mx-auto p-6 flex flex-col gap-6">
+        <div className="max-w-300 mx-auto pt-5 flex flex-col gap-6">
           {/* Skills Section */}
-          <div className="bg-white p-8 shadow-sm border border-gray-100">
+          <div className="bg-white/60 p-8 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white">
             <h3 className="text-xl font-bold mb-6">Mine ferdigheter</h3>
             <div className="flex flex-wrap gap-3">
               {userSkills.map((skill: string) => (
                 <span
                   key={skill}
-                  className="px-6 py-3 bg-[#2F7E4715] rounded-2xl text-sm font-bold text-[#2F7E47] border border-[#2F7E4720]"
+                  className="px-4 py-1 bg-[#2F7E4715] rounded-md text-sm font-bold text-[#2F7E47] border border-[#2F7E4720]"
                 >
                   {skill}
                 </span>
@@ -118,13 +119,13 @@ export function ItemsGrid({
           </div>
 
           {/* Availability Section */}
-          <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100">
+          <div className="bg-white/60 p-8 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white">
             <h3 className="text-xl font-bold mb-6">Min tilgjengelighet</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {availabilityText.split("\n").map((time: string) => (
                 <div
                   key={time}
-                  className="p-4 bg-gray-50 rounded-2xl border border-gray-100 font-medium"
+                  className="p-4 rounded-xl bg-[#2F7E4715] text-[#2F7E47] border border-[#2F7E4720] shadow-sm font-medium"
                 >
                   {time}
                 </div>
@@ -139,16 +140,23 @@ export function ItemsGrid({
       return (
         <div className="max-w-300 mx-auto p-6">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
+            {MOCK_PORTFOLIO.map((project) => (
               <div
-                key={i}
-                className="aspect-square bg-gray-100 rounded-[2rem] overflow-hidden border border-gray-200 group cursor-pointer relative"
+                key={project.id}
+                className="group relative aspect-square bg-gray-100 rounded-[2rem] overflow-hidden border border-gray-100 cursor-pointer shadow-sm hover:shadow-md transition-all duration-300"
               >
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-white font-bold">Se prosjekt</span>
-                </div>
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                  Prosjekt {i}
+                <img
+                  src={project.image}
+                  alt={project.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+                  <span className="text-[#2F7E47] bg-white/90 backdrop-blur-sm text-[10px] font-bold px-3 py-1 rounded-full w-fit mb-2">
+                    {project.category}
+                  </span>
+                  <h4 className="text-white font-bold text-sm md:text-base">
+                    {project.title}
+                  </h4>
                 </div>
               </div>
             ))}
@@ -199,12 +207,40 @@ export function ItemsGrid({
   if (activeTab === "Vurderinger") {
     return (
       <div className="max-w-300 mx-auto p-6">
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2rem] border border-gray-100">
-          <Star className="w-16 h-16 text-gray-200 mb-4" />
-          <h3 className="text-xl font-bold text-gray-900">
-            {currentEmptyState.title}
-          </h3>
-          <p className="text-gray-500">{currentEmptyState.description}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {MOCK_REVIEWS.map((review) => (
+            <div
+              key={review.id}
+              className="bg-white/60 p-6 rounded-xl border border-white shadow-sm flex flex-col gap-4"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
+                    <img
+                      src={review.avatar}
+                      alt={review.author}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900">{review.author}</h4>
+                    <p className="text-xs text-gray-400 font-medium">
+                      {review.date}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 bg-[#2F7E4710] px-3 py-1.5 rounded-xl">
+                  <Star size={14} fill="#2F7E47" className="text-[#2F7E47]" />
+                  <span className="text-sm font-bold text-[#2F7E47]">
+                    {review.rating}.0
+                  </span>
+                </div>
+              </div>
+              <p className="text-gray-600 leading-relaxed italic text-sm">
+                "{review.comment}"
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     );
