@@ -42,6 +42,16 @@ const userSchema = new mongoose.Schema(
     verified: { type: Boolean, default: false },
     lastLogin: { type: Date },
     availability: [{ start: Date, end: Date }],
+    availabilityText: { type: String },
+    skills: [{ type: String }],
+    portfolio: [
+      {
+        title: { type: String },
+        description: { type: String },
+        imageUrl: { type: String },
+        link: { type: String },
+      },
+    ],
     earnings: { type: Number, default: 0 },
     spending: { type: Number, default: 0 },
     oauthProviders: [

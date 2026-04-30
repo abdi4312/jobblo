@@ -15,7 +15,13 @@ export default function ProfilePage() {
   const logout = useUserStore((state) => state.logout);
   const navigate = useNavigate();
   const { modal } = App.useApp();
-  const [activeTab, setActiveTab] = useState("Oppdrag");
+  const [activeTab, setActiveTab] = useState("Om meg");
+  const [profileType, setProfileType] = useState<"seeker" | "poster">("seeker");
+
+  const handleProfileTypeChange = (type: "seeker" | "poster") => {
+    setProfileType(type);
+    setActiveTab(type === "seeker" ? "Om meg" : "Aktive");
+  };
 
   // Fetch profile if userId is provided, otherwise use current user
   const { data: profileUser, isLoading } = useUserProfile(userId);
@@ -73,6 +79,7 @@ export default function ProfilePage() {
             user={userToDisplay}
             handlelogout={handleLogout}
             isOwnProfile={!userId || userId === currentUser?._id}
+            profileType={profileType}
           />
         </div>
 
@@ -105,14 +112,40 @@ export default function ProfilePage() {
           </div>
         ) : (
           <>
+            <div className="flex justify-center bg-white border-b border-gray-100 py-4">
+              <div className="flex bg-gray-100 p-1 rounded-2xl w-full max-w-[400px] mx-4">
+                <button
+                  onClick={() => handleProfileTypeChange("seeker")}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                    profileType === "seeker"
+                      ? "bg-white text-black shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  Jobbsøker
+                </button>
+                <button
+                  onClick={() => handleProfileTypeChange("poster")}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                    profileType === "poster"
+                      ? "bg-white text-black shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  Oppdragsgiver
+                </button>
+              </div>
+            </div>
             <ProfileNav
               activeTab={activeTab}
               onTabChange={setActiveTab}
               isOwnProfile={!userId || userId === currentUser?._id}
+              profileType={profileType}
             />
             <ItemsGrid
               activeTab={activeTab}
               userId={userId || currentUser?._id}
+              profileType={profileType}
             />
           </>
         )}

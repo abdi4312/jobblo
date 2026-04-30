@@ -16,3 +16,4 @@ export * from "./SessionsView";
 export * from "./AboutView";
 export * from "./SubscriptionView";
 export * from "./NotificationsView";
+export * from "./SeekerSettingsView";

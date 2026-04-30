@@ -11,6 +11,8 @@ import {
   CreditCard,
   ArrowLeft,
   Bell,
+  Clock,
+  Briefcase,
 } from "lucide-react";
 import { useUserStore } from "../../../stores/userStore";
 
@@ -48,6 +50,7 @@ export function SettingsLayout() {
     { name: "Fornavn og etternavn", path: "/settings/name", icon: User },
     { name: "Bio", path: "/settings/bio", icon: PenLine },
     { name: "Last opp profilbilde", path: "/settings/picture", icon: Image },
+    { name: "Jobbsøker-profil", path: "/settings/seeker", icon: Briefcase },
   ];
 
   const personalInfoLinks = [
@@ -128,6 +131,8 @@ export function SettingsLayout() {
             {/* Mobile back button - only show when sidebar is hidden on small screens */}
             {!showSidebar && (
               <button
+                title="Tilbake til sidste side"
+                type="button"
                 onClick={handleBackToSidebar}
                 className="md:hidden mr-3 p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors flex items-center justify-center shrink-0"
               >
