@@ -7,12 +7,14 @@ import { useEffect, useRef } from "react";
 interface JobsContainerProps {
   selectedCategories?: string[];
   searchQuery?: string;
+  isUrgent?: boolean;
   activeTab?: Tab;
 }
 
 export default function JobsContainer({
   selectedCategories = [],
   searchQuery = "",
+  isUrgent = false,
   activeTab = "Discover",
 }: JobsContainerProps) {
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -20,6 +22,7 @@ export default function JobsContainer({
     useJobs({
       categories: selectedCategories,
       search: searchQuery,
+      urgent: isUrgent,
       tab: activeTab,
     });
 

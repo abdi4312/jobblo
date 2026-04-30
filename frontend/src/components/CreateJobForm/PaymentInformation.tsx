@@ -6,7 +6,9 @@ import {
   Wallet,
   Clock,
   Info,
+  Lock,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface PaymentInformationProps {
   paymentType: string;
@@ -17,6 +19,7 @@ interface PaymentInformationProps {
   setHourlyRate: (val: string) => void;
   urgent: boolean;
   setUrgent: (val: boolean) => void;
+  subscription?: string;
 }
 
 export const PaymentInformation: React.FC<PaymentInformationProps> = ({
@@ -28,7 +31,10 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
   setHourlyRate,
   urgent,
   setUrgent,
+  subscription = "Standard",
 }) => {
+  const isPaidSubscriber = subscription !== "Standard";
+
   const paymentMethods = [
     {
       id: "Fastpris",
@@ -151,20 +157,43 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
 
       {/* 3. Urgent Section */}
       <div
-        className={`p-4 md:p-6 rounded-2xl border-2 transition-all duration-300 flex items-center justify-between cursor-pointer ${
-          urgent ? "border-red-200 bg-red-50" : "border-gray-100 bg-white/60"
+        className={`p-4 md:p-6 rounded-2xl border-2 transition-all duration-300 flex items-center justify-between cursor-pointer relative ${
+          !isPaidSubscriber
+            ? "border-gray-100 bg-gray-50/50 grayscale opacity-80"
+            : urgent
+              ? "border-red-200 bg-red-50"
+              : "border-gray-100 bg-white/60"
         }`}
-        onClick={() => setUrgent(!urgent)}
+        onClick={() => {
+          if (!isPaidSubscriber) {
+            toast.error(
+              "Haster-valget er kun tilgjengelig for betalte abonnementer",
+              {
+                icon: "🔒",
+              },
+            );
+            return;
+          }
+          setUrgent(!urgent);
+        }}
       >
+        {!isPaidSubscriber && (
+          <div className="absolute top-2 right-4 flex items-center gap-1.5 bg-gray-900/10 px-2 py-0.5 rounded-full">
+            <Lock size={10} className="text-gray-600" />
+            <span className="text-[9px] font-bold text-gray-600 uppercase">
+              PRO
+            </span>
+          </div>
+        )}
         <div className="flex items-center gap-3 md:gap-4">
           <div
-            className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 ${urgent ? "bg-red-500 text-white" : "bg-gray-100 text-gray-400"}`}
+            className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 ${urgent && isPaidSubscriber ? "bg-red-500 text-white" : "bg-gray-100 text-gray-400"}`}
           >
             <AlertCircle size={20} className="md:w-6 md:h-6" />
           </div>
           <div>
             <p
-              className={`text-sm md:text-base font-bold ${urgent ? "text-red-700" : "text-gray-700"}`}
+              className={`text-sm md:text-base font-bold ${urgent && isPaidSubscriber ? "text-red-700" : "text-gray-700"}`}
             >
               Haster oppdraget?
             </p>
@@ -174,10 +203,10 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
           </div>
         </div>
         <div
-          className={`w-10 h-6 md:w-14 md:h-8 rounded-full p-1 transition-colors duration-300 shrink-0 ${urgent ? "bg-red-500" : "bg-gray-200"}`}
+          className={`w-10 h-6 md:w-14 md:h-8 rounded-full p-1 transition-colors duration-300 shrink-0 ${urgent && isPaidSubscriber ? "bg-red-500" : "bg-gray-200"}`}
         >
           <div
-            className={`w-4 h-4 md:w-6 md:h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${urgent ? "translate-x-4 md:translate-x-6" : "translate-x-0"}`}
+            className={`w-4 h-4 md:w-6 md:h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${urgent && isPaidSubscriber ? "translate-x-4 md:translate-x-6" : "translate-x-0"}`}
           />
         </div>
       </div>
