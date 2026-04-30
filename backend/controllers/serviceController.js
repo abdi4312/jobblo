@@ -14,12 +14,17 @@ exports.getAllServices = async (req, res) => {
       userId,
       page = 1,
       limit = 25,
+      urgent,
     } = req.query;
 
     const query = {};
 
     if (userId) {
       query.userId = userId;
+    }
+
+    if (urgent === "true") {
+      query.urgent = true;
     }
 
     if (category) {
@@ -216,6 +221,11 @@ exports.createService = async (req, res) => {
     // defaults
     serviceData.status = serviceData.status || "open";
     serviceData.equipment = serviceData.equipment || "utstyrfri";
+
+    // Restriction for urgent (haste) - only for paid subscribers
+    if (serviceData.urgent && user.subscription === "Standard") {
+      serviceData.urgent = false;
+    }
 
     // Add images from Multer (Cloudinary)
     if (req.files && req.files.length > 0) {

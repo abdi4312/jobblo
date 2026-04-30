@@ -11,6 +11,7 @@ import {
   Search,
   X,
   Tag,
+  AlertCircle,
 } from "lucide-react";
 import { Slider } from "antd";
 import { JobCard } from "../../components/component/jobCard/JobCard";
@@ -37,6 +38,7 @@ const ServiceListing = () => {
   const [locationSearch, setLocationSearch] = useState("");
   const [priceRange, setPriceRange] = useState({ min: 0, max: 100000 });
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [isUrgent, setIsUrgent] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { data: filterOptions, isLoading: isFiltersLoading } =
@@ -56,6 +58,7 @@ const ServiceListing = () => {
     sort: selectedSort.value,
     minPrice: priceRange.min,
     maxPrice: priceRange.max,
+    urgent: isUrgent,
     limit: 16,
   });
 
@@ -141,6 +144,52 @@ const ServiceListing = () => {
 
   const renderFilterSidebarContent = () => (
     <div className="space-y-8">
+      {/* 0. Urgent Filter Toggle */}
+      <section
+        className={`p-6 rounded-3xl border-2 transition-all duration-300 flex items-center justify-between cursor-pointer shadow-sm ${
+          isUrgent ? "border-red-200 bg-red-50" : "border-gray-100 bg-white"
+        }`}
+        onClick={() => setIsUrgent(!isUrgent)}
+      >
+        <div className="flex items-center gap-4">
+          <div
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
+              isUrgent
+                ? "bg-red-500 text-white shadow-lg shadow-red-200"
+                : "bg-gray-100 text-gray-400"
+            }`}
+          >
+            <AlertCircle
+              size={24}
+              className={isUrgent ? "animate-pulse" : ""}
+            />
+          </div>
+          <div>
+            <p
+              className={`text-base font-bold transition-colors ${
+                isUrgent ? "text-red-700" : "text-gray-700"
+              }`}
+            >
+              Haster
+            </p>
+            <p className="text-xs text-gray-500 font-medium">
+              Vis kun hasteoppdrag
+            </p>
+          </div>
+        </div>
+        <div
+          className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 shrink-0 ${
+            isUrgent ? "bg-red-500" : "bg-gray-200"
+          }`}
+        >
+          <div
+            className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
+              isUrgent ? "translate-x-5" : "translate-x-0"
+            }`}
+          />
+        </div>
+      </section>
+
       {/* 1. Categories & Subcategories */}
       <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
         <h3 className="text-xl font-bold mb-5 text-gray-900">Kategorier</h3>
