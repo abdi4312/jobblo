@@ -29,6 +29,8 @@ export type SettingsContextType = {
     postSted: string;
     country: string;
     email: string;
+    availabilityText: string;
+    skills: string[];
   };
   updateUser: UpdateUserResult;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -53,6 +55,8 @@ export default function SettingsPage() {
     postSted: "",
     country: "",
     email: "",
+    availabilityText: "",
+    skills: [],
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -69,10 +73,12 @@ export default function SettingsPage() {
       postSted: user.postSted || "",
       country: user.country || "",
       email: user.email || "",
+      availabilityText: (user as any).availabilityText || "",
+      skills: (user as any).skills || [],
     });
   }, [user]);
 
-  const handleChange = (key: string, value: string) => {
+  const handleChange = (key: string, value: any) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -90,6 +96,8 @@ export default function SettingsPage() {
         postSted: form.postSted,
         country: form.country,
         email: form.email,
+        availabilityText: form.availabilityText,
+        skills: form.skills,
       },
     });
   };
