@@ -59,6 +59,7 @@ import {
   AboutView,
   SubscriptionView,
   NotificationsView,
+  SeekerSettingsView,
 } from "../components/profile/SettingsViews";
 
 export const routes: RouteObject[] = [
@@ -162,6 +163,7 @@ export const routes: RouteObject[] = [
               { path: "about", element: <AboutView /> },
               { path: "notifications", element: <NotificationsView /> },
               { path: "subscriptions", element: <SubscriptionView /> },
+              { path: "seeker", element: <SeekerSettingsView /> },
             ],
           },
         ],

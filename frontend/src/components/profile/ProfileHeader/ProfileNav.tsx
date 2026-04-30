@@ -1,20 +1,40 @@
-import { LayoutGrid, Bookmark } from "lucide-react";
+import {
+  LayoutGrid,
+  Bookmark,
+  Briefcase,
+  Star,
+  Clock,
+  User,
+  Award,
+} from "lucide-react";
 
 interface ProfileNavProps {
   activeTab: string;
   onTabChange: (tabName: string) => void;
   isOwnProfile?: boolean;
+  profileType?: "seeker" | "poster";
 }
 
 export function ProfileNav({
   activeTab,
   onTabChange,
   isOwnProfile = false,
+  profileType = "seeker",
 }: ProfileNavProps) {
-  const tabs = [
-    { name: "Oppdrag", icon: LayoutGrid },
-    { name: "Lister", icon: Bookmark },
+  const seekerTabs = [
+    { name: "Om meg", icon: User },
+    { name: "Fullførte", icon: Briefcase },
+    { name: "Vurderinger", icon: Star },
+    { name: "Portfolio", icon: LayoutGrid },
   ];
+
+  const posterTabs = [
+    { name: "Aktive", icon: LayoutGrid },
+    { name: "Tidligere", icon: Briefcase },
+    { name: "Vurderinger", icon: Star },
+  ];
+
+  const tabs = profileType === "seeker" ? seekerTabs : posterTabs;
 
   return (
     <div className="border-b border-gray-200 bg-white">

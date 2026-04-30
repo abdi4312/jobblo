@@ -11,10 +11,12 @@ export function ProfileHeader({
   user,
   handlelogout,
   isOwnProfile = true,
+  profileType = "seeker",
 }: {
   user: User | null;
   handlelogout: () => void;
   isOwnProfile?: boolean;
+  profileType?: "seeker" | "poster";
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
@@ -56,7 +58,7 @@ export function ProfileHeader({
         </div>
       )}
 
-      <div className="bg-white/60 px-4 sm:px-18 pt-8 pb-10">
+      <div className="bg-[#F6F1E8] px-4 sm:px-18 pt-8 pb-10">
         <div className="max-w-300 mx-auto flex flex-col items-center sm:items-start sm:flex-row gap-8 sm:gap-10 relative">
           {/* Profile Picture Column */}
           <div className="flex flex-col items-center gap-3">
@@ -86,9 +88,16 @@ export function ProfileHeader({
 
           {/* User Info & Actions Column */}
           <div className="flex flex-col items-center sm:items-start flex-1 sm:pt-1">
-            <h2 className="text-xl sm:text-3xl font-bold text-gray-900 tracking-tight leading-none mb-3">
-              @{user?.name.toLowerCase().replace(/\s+/g, "") || "guest"}
-            </h2>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-3">
+              <h2 className="text-xl sm:text-3xl font-bold text-gray-900 tracking-tight leading-none">
+                @{user?.name.toLowerCase().replace(/\s+/g, "") || "guest"}
+              </h2>
+              {user?.verified && (
+                <span className="flex items-center gap-1 bg-[#2F7E47] text-white text-[10px] font-bold px-2 py-1 rounded-full w-fit">
+                  Verifisert
+                </span>
+              )}
+            </div>
 
             <p className="text-[13px] font-bold text-gray-400 uppercase tracking-wide mb-5">
               Ble en Jobblo i{" "}
@@ -99,6 +108,49 @@ export function ProfileHeader({
                   })
                 : "desember 2019"}
             </p>
+
+            {/* Stats Row */}
+            <div className="flex gap-6 mb-6">
+              {profileType === "seeker" ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-gray-900">
+                      {user?.reviewCount || 0}
+                    </span>
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                      Fullførte
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-gray-900">
+                      {user?.averageRating?.toFixed(1) || "5.0"}
+                    </span>
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                      Rating
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-gray-900">
+                      {user?.reviewCount || 0}
+                    </span>
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                      Ansettelser
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-gray-900">
+                      {user?.averageRating?.toFixed(1) || "5.0"}
+                    </span>
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                      Som poster
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
 
             <div className="relative flex gap-3">
               {isOwnProfile ? (
@@ -115,7 +167,7 @@ export function ProfileHeader({
                   <div className="relative">
                     <button
                       onClick={() => setIsMenuOpen(!isMenuOpen)}
-                      className={`flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm ${isMenuOpen ? "bg-gray-50" : ""}`}
+                      className={`flex items-center gap-2 bg-white px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all ${isMenuOpen ? "bg-gray-50" : ""}`}
                     >
                       <span>Mer</span>
                       <ChevronDown
@@ -160,6 +212,7 @@ export function ProfileHeader({
                       )
                     </span>
                   </button>
+
                   <div className="relative">
                     <button
                       onClick={() => setIsMenuOpen(!isMenuOpen)}

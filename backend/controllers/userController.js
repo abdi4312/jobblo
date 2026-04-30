@@ -261,6 +261,9 @@ exports.updateUser = async (req, res) => {
       "postNumber",
       "postSted",
       "country",
+      "availabilityText",
+      "skills",
+      "portfolio",
     ];
 
     if (req.user.role === "superAdmin") {
