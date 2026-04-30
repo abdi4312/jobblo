@@ -4,6 +4,7 @@ import { Categories } from "../../components/Explore/jobs/Categories.tsx";
 import Jobs from "../../components/Explore/jobs/Jobs.tsx";
 import { Banner } from "../../components/Explore/jobs/banners.tsx";
 import { Favourites } from "../../components/Explore/jobs/Favourites.tsx";
+import { AlertCircle } from "lucide-react";
 
 export default function JobListingPage() {
   const location = useLocation();
@@ -20,6 +21,7 @@ export default function JobListingPage() {
   const [searchQuery, setSearchQuery] = useState<string>(
     initialState?.searchQuery || "",
   );
+  const [isUrgentOnly, setIsUrgentOnly] = useState<boolean>(false);
 
   // Clear navigation state on mount
   useEffect(() => {
@@ -62,12 +64,31 @@ export default function JobListingPage() {
 
             {/* Jobs Listing */}
             <div className="w-full">
-              <h2 className="text-2xl md:text-3xl font-bold text-[#0A0A0A] tracking-tight mb-6">
-                Finn oppdrag
-              </h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-[#0A0A0A] tracking-tight">
+                  Finn oppdrag
+                </h2>
+
+                <button
+                  onClick={() => setIsUrgentOnly(!isUrgentOnly)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold transition-all duration-300 border-2 ${
+                    isUrgentOnly
+                      ? "bg-red-500 border-red-500 text-white shadow-md shadow-red-200"
+                      : "bg-white border-gray-100 text-gray-600 hover:border-red-200 hover:text-red-500"
+                  }`}
+                >
+                  <AlertCircle
+                    size={18}
+                    className={isUrgentOnly ? "animate-pulse" : ""}
+                  />
+                  <span className="text-sm">Haster</span>
+                </button>
+              </div>
+
               <Jobs
                 selectedCategories={selectedCategories}
                 searchQuery={searchQuery}
+                isUrgent={isUrgentOnly}
                 activeTab="Discover"
               />
             </div>

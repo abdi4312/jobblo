@@ -615,6 +615,7 @@ export default function CreateJobForm({
                 setHourlyRate={setHourlyRate}
                 urgent={urgent}
                 setUrgent={setUrgent}
+                subscription={currentUser?.subscription || "Standard"}
               />
             </div>
           )}
