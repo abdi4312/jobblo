@@ -362,6 +362,8 @@ export function ContractsPage() {
                                 Oppdater Status:
                               </span>
                               <select
+                                title="Velg oppdater status"
+                                id="status-select"
                                 className="bg-white border border-slate-200 text-slate-800 text-xs font-bold rounded-lg focus:ring-2 focus:ring-[#3F8F6B]/20 focus:border-[#3F8F6B] block p-2 shadow-sm transition-all outline-none"
                                 value={relatedOrder.status}
                                 onChange={(e) => {
