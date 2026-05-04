@@ -1,6 +1,9 @@
 import mainLink from "../../api/mainURLs";
 
-export async function userLogin(credentials: { email: string; password: string }) {
+export async function userLogin(credentials: {
+  email: string;
+  password: string;
+}) {
   const res = await mainLink.post("/api/auth/login", credentials);
   return res.data;
 }

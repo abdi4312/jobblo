@@ -355,6 +355,7 @@ export function ContractsPage() {
 
                         {contract.status === "signed" &&
                           relatedOrder &&
+                          relatedOrder.status !== "completed" &&
                           isProvider && (
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">

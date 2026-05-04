@@ -347,6 +347,48 @@ exports.getUserServices = async (req, res) => {
   }
 };
 
+// ------------------- Portfolio Management -------------------
+
+exports.addPortfolioItem = async (req, res) => {
+  try {
+    const { title, description, link } = req.body;
+    const userId = req.userId;
+
+    const updates = { title, description, link };
+
+    if (req.file) {
+      updates.imageUrl = req.file.path;
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $push: { portfolio: updates } },
+      { new: true }
+    );
+
+    res.status(201).json(user.portfolio[user.portfolio.length - 1]);
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+exports.deletePortfolioItem = async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const userId = req.userId;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { portfolio: { _id: itemId } } },
+      { new: true }
+    );
+
+    res.json({ message: "Portfolio item deleted" });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
 // List all users
 exports.getAllUsers = async (req, res) => {
   try {

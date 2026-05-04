@@ -1,9 +1,11 @@
 import { EmptyState } from "./EmptyState";
 import { Star } from "lucide-react";
 import { useParams } from "react-router-dom";
-import { useUserProfile } from "../../../features/profile/hooks";
+import {
+  useUserProfile,
+  useUserReviews,
+} from "../../../features/profile/hooks";
 import { useFavoriteLists } from "../../../features/favoriteLists/hooks";
-import { MOCK_PORTFOLIO, MOCK_REVIEWS } from "../../../data/profileMockData";
 import { JobDetailCardSkeleton } from "../../Loading/JobDetailCardSkeleton.tsx";
 import { useNavigate } from "react-router-dom";
 import { useJobs } from "../../../features/jobsList/hooks";
@@ -23,28 +25,25 @@ interface List {
 
 export function ItemsGrid({
   activeTab,
-  userId,
+  user,
   profileType,
 }: {
   activeTab: string;
-  userId?: string;
+  user: any;
   profileType?: "seeker" | "poster";
 }) {
   const navigate = useNavigate();
-  const { userId: userIdParam } = useParams<{ userId: string }>();
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const currentUser = useUserStore((state) => state.user);
-  const isOwner = userId === currentUser?._id;
+  const isOwner = user?._id === currentUser?._id;
 
-  // Fetch profile if userId is provided, otherwise use current user
-  const { data: profileUser } = useUserProfile(userIdParam);
-  const userToDisplay = userIdParam ? profileUser : currentUser;
+  const { data: realReviews } = useUserReviews(user?._id, profileType);
 
   const {
     data: lists = [],
     isLoading: isListsLoading,
     isError: isListsError,
-  } = useFavoriteLists(userId);
+  } = useFavoriteLists(user?._id);
 
   const {
     data: jobsData,
@@ -53,7 +52,7 @@ export function ItemsGrid({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useJobs({ userId });
+  } = useJobs({ userId: user?._id });
 
   useEffect(() => {
     if (
@@ -85,7 +84,7 @@ export function ItemsGrid({
   // Seeker Specific Content
   if (profileType === "seeker") {
     if (activeTab === "Om meg") {
-      const userSkills = (userToDisplay as any)?.skills || [
+      const userSkills = (user as any)?.skills || [
         "Maling",
         "Snekkering",
         "Hagearbeid",
@@ -93,7 +92,7 @@ export function ItemsGrid({
         "Flytting",
       ];
       const availabilityText =
-        (userToDisplay as any)?.availabilityText ||
+        (user as any)?.availabilityText ||
         "Mandag - Fredag: 08:00 - 16:00\nLørdag: 10:00 - 14:00\nSøndag: Stengt";
 
       return (
@@ -137,23 +136,36 @@ export function ItemsGrid({
     }
 
     if (activeTab === "Portfolio") {
+      const portfolioItems = (user as any)?.portfolio || [];
+
+      if (portfolioItems.length === 0) {
+        return (
+          <EmptyState
+            title="Ingen portfolio-elementer ennå"
+            description="Denne brukeren har ikke lagt til noe i sin portfolio"
+          />
+        );
+      }
+
       return (
         <div className="max-w-300 mx-auto p-6">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-            {MOCK_PORTFOLIO.map((project) => (
+            {portfolioItems.map((project: any) => (
               <div
-                key={project.id}
+                key={project._id || project.id}
                 className="group relative aspect-square bg-gray-100 rounded-[2rem] overflow-hidden border border-gray-100 cursor-pointer shadow-sm hover:shadow-md transition-all duration-300"
               >
                 <img
-                  src={project.image}
+                  src={project.imageUrl || project.image}
                   alt={project.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
-                  <span className="text-[#2F7E47] bg-white/90 backdrop-blur-sm text-[10px] font-bold px-3 py-1 rounded-full w-fit mb-2">
-                    {project.category}
-                  </span>
+                  {project.category && (
+                    <span className="text-[#2F7E47] bg-white/90 backdrop-blur-sm text-[10px] font-bold px-3 py-1 rounded-full w-fit mb-2">
+                      {project.category}
+                    </span>
+                  )}
                   <h4 className="text-white font-bold text-sm md:text-base">
                     {project.title}
                   </h4>
@@ -205,27 +217,42 @@ export function ItemsGrid({
     emptyStateContent[activeTab] || emptyStateContent["Oppdrag"];
 
   if (activeTab === "Vurderinger") {
+    const displayReviews = realReviews || [];
+
+    if (displayReviews.length === 0) {
+      return (
+        <EmptyState
+          title={emptyStateContent.Vurderinger.title}
+          description={emptyStateContent.Vurderinger.description}
+        />
+      );
+    }
+
     return (
       <div className="max-w-300 mx-auto p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {MOCK_REVIEWS.map((review) => (
+          {displayReviews.map((review: any) => (
             <div
-              key={review.id}
+              key={review._id || review.id}
               className="bg-white/60 p-6 rounded-xl border border-white shadow-sm flex flex-col gap-4"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
                     <img
-                      src={review.avatar}
-                      alt={review.author}
+                      src={review.reviewerId?.avatarUrl || review.avatar}
+                      alt={review.reviewerId?.name || review.author}
                       className="w-full h-full object-cover"
                     />
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900">{review.author}</h4>
+                    <h4 className="font-bold text-gray-900">
+                      {review.reviewerId?.name || review.author}
+                    </h4>
                     <p className="text-xs text-gray-400 font-medium">
-                      {review.date}
+                      {review.createdAt
+                        ? new Date(review.createdAt).toLocaleDateString("no-NO")
+                        : review.date}
                     </p>
                   </div>
                 </div>

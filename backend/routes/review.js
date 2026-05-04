@@ -1,7 +1,7 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const reviewController = require('../controllers/reviewController');
-const {authenticate} = require('../middleware/auth');
+const reviewController = require("../controllers/reviewController");
+const { authenticate } = require("../middleware/auth");
 
 /**
  * @swagger
@@ -103,34 +103,11 @@ const {authenticate} = require('../middleware/auth');
  *       404:
  *         description: Service or reviewer not found
  */
-router.post('/services/:id/reviews', authenticate, reviewController.createReview);
-
-/**
- * @swagger
- * /api/services/{id}/reviews:
- *   get:
- *     summary: Get all reviews for a service
- *     tags: [Reviews]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Service ID
- *     responses:
- *       200:
- *         description: Reviews retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ReviewWithStats'
- *       400:
- *         description: Invalid service ID
- *       404:
- *         description: Service not found
- */
-router.get('/services/:id/reviews', authenticate, reviewController.getServiceReviews);
+router.post(
+  "/services/:id/reviews",
+  authenticate,
+  reviewController.createReview,
+);
 
 /**
  * @swagger
@@ -148,7 +125,18 @@ router.get('/services/:id/reviews', authenticate, reviewController.getServiceRev
  *               items:
  *                 $ref: '#/components/schemas/Review'
  */
-router.get('/reviews', reviewController.getAllReviews);
+router.post("/reviews", authenticate, reviewController.createReview);
+router.get(
+  "/users/:userId/reviews",
+  authenticate,
+  reviewController.getUserReviews,
+);
+router.get(
+  "/orders/:orderId/review",
+  authenticate,
+  reviewController.getReviewByOrder,
+);
+router.get("/reviews", reviewController.getAllReviews);
 
 /**
  * @swagger
@@ -171,7 +159,7 @@ router.get('/reviews', reviewController.getAllReviews);
  *       404:
  *         description: Review not found
  */
-router.delete('/reviews/:id', authenticate, reviewController.deleteReview);
+router.delete("/reviews/:id", authenticate, reviewController.deleteReview);
 
 /**
  * @swagger
@@ -202,33 +190,6 @@ router.delete('/reviews/:id', authenticate, reviewController.deleteReview);
  *                   type: integer
  *                   description: Number of reviews returned
  */
-router.get('/reviews/latest', reviewController.getLatestReviews);
-
-/**
- * @swagger
- * /api/reviews/user/{id}:
- *   get:
- *     summary: Get all reviews for services owned by a specific user
- *     tags: [Reviews]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID
- *     responses:
- *       200:
- *         description: Reviews retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ReviewWithStats'
- *       400:
- *         description: Invalid user ID
- *       404:
- *         description: User not found
- */
-router.get('/reviews/user/:id', authenticate, reviewController.getUserReviews);
+router.get("/reviews/latest", reviewController.getLatestReviews);
 
 module.exports = router;

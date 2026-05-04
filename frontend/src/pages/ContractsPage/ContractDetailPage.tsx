@@ -4,6 +4,8 @@ import { getAllContracts, signContract } from "../../api/contractAPI";
 import type { Contract } from "../../api/contractAPI";
 import { getAllOrders, updateOrderStatus } from "../../api/orderAPI";
 import type { Order } from "../../api/orderAPI";
+import { createReview, getReviewByOrder } from "../../api/reviewsAPI";
+import type { Review } from "../../api/reviewsAPI";
 import { useUserStore } from "../../stores/userStore";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns/format";
@@ -16,6 +18,8 @@ import {
   ArrowLeft,
   PenTool,
   CheckCircle,
+  Star,
+  Send,
 } from "lucide-react";
 
 export function ContractDetailPage() {
@@ -26,9 +30,16 @@ export function ContractDetailPage() {
   const [order, setOrder] = useState<Order | undefined>(undefined);
   const [loading, setLoading] = useState(true);
 
+  // Review state
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [existingReview, setExistingReview] = useState<any>(null);
+
   useEffect(() => {
     fetchData();
-  }, [id]);
+  }, [id, user?._id]);
 
   const fetchData = async () => {
     try {
@@ -46,6 +57,17 @@ export function ContractDetailPage() {
             : (o.contractId as any)?._id === currentContract._id,
         );
         setOrder(relatedOrder);
+
+        // Check for existing review if order is completed
+        if (relatedOrder?.status === "completed" && user?._id) {
+          const isClient = currentContract.clientId._id === user?._id;
+          const role = isClient ? "seeker" : "poster";
+          const review = await getReviewByOrder(relatedOrder._id, role);
+          if (review) {
+            setExistingReview(review);
+            setHasReviewed(true);
+          }
+        }
       } else {
         toast.error("Kontrakt ikke funnet.");
         navigate("/contracts");
@@ -80,6 +102,37 @@ export function ContractDetailPage() {
     } catch (error: any) {
       console.error(error);
       toast.error(error.response?.data?.error || "Kunne ikke oppdatere status");
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!order || !contract) return;
+    try {
+      setIsSubmittingReview(true);
+      const revieweeId = isClient
+        ? contract.providerId._id
+        : contract.clientId._id;
+      const revieweeRole = isClient ? "seeker" : "poster";
+
+      await createReview({
+        orderId: order._id,
+        serviceId:
+          typeof order.serviceId === "string"
+            ? order.serviceId
+            : order.serviceId?._id,
+        revieweeId,
+        revieweeRole,
+        rating,
+        comment,
+      });
+
+      toast.success("Vurdering sendt!");
+      setHasReviewed(true);
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.response?.data?.error || "Kunne ikke sende vurdering");
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -328,7 +381,110 @@ export function ContractDetailPage() {
                 {/* Signed / Order Controls */}
                 {contract.status === "signed" && order && (
                   <div className="bg-white border border-emerald-100 rounded-2xl p-6 md:p-8 shadow-sm">
-                    {isProvider ? (
+                    {order.status === "completed" ? (
+                      <div className="space-y-6">
+                        <div className="text-center py-2">
+                          <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle size={28} strokeWidth={2.5} />
+                          </div>
+                          <p className="font-extrabold text-xl text-slate-900 mb-2">
+                            Oppdrag Fullført!
+                          </p>
+                          <p className="text-sm font-medium text-slate-500 leading-relaxed mb-6">
+                            Oppdraget er markert som ferdig. Gi en vurdering for
+                            å hjelpe andre i fellesskapet.
+                          </p>
+                        </div>
+
+                        {!hasReviewed ? (
+                          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
+                            <div className="flex flex-col items-center gap-3">
+                              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                Din vurdering
+                              </span>
+                              <div className="flex gap-2">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <button
+                                    key={star}
+                                    onClick={() => setRating(star)}
+                                    className="transition-transform active:scale-90"
+                                  >
+                                    <Star
+                                      size={32}
+                                      fill={star <= rating ? "#F0B100" : "none"}
+                                      className={
+                                        star <= rating
+                                          ? "text-[#F0B100]"
+                                          : "text-slate-300"
+                                      }
+                                    />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider ml-1">
+                                Kommentar (valgfritt)
+                              </label>
+                              <textarea
+                                value={comment}
+                                onChange={(e) => setComment(e.target.value)}
+                                placeholder="Hvordan var din opplevelse?"
+                                className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-medium outline-none focus:ring-2 focus:ring-[#2F7E47]/10 focus:border-[#2F7E47] transition-all resize-none"
+                                rows={3}
+                              />
+                            </div>
+
+                            <button
+                              onClick={handleSubmitReview}
+                              disabled={isSubmittingReview}
+                              className="w-full py-3.5 bg-black text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-50"
+                            >
+                              {isSubmittingReview ? (
+                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              ) : (
+                                <>
+                                  <Send size={18} />
+                                  Send vurdering
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 text-center space-y-4">
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="flex gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    size={20}
+                                    fill={
+                                      star <= (existingReview?.rating || rating)
+                                        ? "#F0B100"
+                                        : "none"
+                                    }
+                                    className={
+                                      star <= (existingReview?.rating || rating)
+                                        ? "text-[#F0B100]"
+                                        : "text-slate-300"
+                                    }
+                                  />
+                                ))}
+                              </div>
+                              <p className="text-[#2F7E47] font-bold">
+                                Takk for din vurdering!
+                              </p>
+                            </div>
+                            {(existingReview?.comment || comment) && (
+                              <p className="text-sm text-slate-600 italic px-4">
+                                "{existingReview?.comment || comment}"
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : isProvider ? (
                       <div className="space-y-5">
                         <div>
                           <p className="font-extrabold text-slate-900 text-lg mb-1">

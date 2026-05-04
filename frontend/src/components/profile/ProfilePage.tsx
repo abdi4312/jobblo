@@ -144,7 +144,7 @@ export default function ProfilePage() {
             />
             <ItemsGrid
               activeTab={activeTab}
-              userId={userId || currentUser?._id}
+              user={userToDisplay}
               profileType={profileType}
             />
           </>
