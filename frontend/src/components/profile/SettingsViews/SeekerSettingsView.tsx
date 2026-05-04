@@ -183,6 +183,7 @@ export const SeekerSettingsView = () => {
               className="border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-white transition-colors"
             >
               <input 
+                title="Laste opp bilde"
                 type="file" 
                 ref={fileInputRef} 
                 className="hidden" 
@@ -231,6 +232,7 @@ export const SeekerSettingsView = () => {
                 <p className="text-xs text-gray-500 truncate">{project.description}</p>
               </div>
               <button 
+                title="Slett prosjekt"
                 onClick={() => handleDeleteProject(project._id)}
                 className="p-2 text-gray-400 hover:text-red-500 transition-colors"
               >

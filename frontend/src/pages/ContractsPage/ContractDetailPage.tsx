@@ -405,6 +405,7 @@ export function ContractDetailPage() {
                               <div className="flex gap-2">
                                 {[1, 2, 3, 4, 5].map((star) => (
                                   <button
+                                    title={`Gi ${star} stjern`}
                                     key={star}
                                     onClick={() => setRating(star)}
                                     className="transition-transform active:scale-90"
@@ -500,6 +501,7 @@ export function ContractDetailPage() {
                             Current Status
                           </label>
                           <select
+                            title="Velg status"
                             className="w-full border-slate-200 bg-slate-50 text-slate-800 font-bold rounded-xl shadow-sm focus:ring-[#3F8F6B] focus:border-[#3F8F6B] text-sm py-3.5 px-4 border outline-none cursor-pointer hover:bg-slate-100 transition-colors"
                             value={order.status}
                             onChange={(e) =>

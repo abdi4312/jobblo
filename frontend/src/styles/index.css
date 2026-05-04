@@ -10,11 +10,11 @@ body {
 }
 
 /* Horizontal scrollbar ko hide karne ke liye */
-.custom-scrollbar {
+.custom-scrollbar, .no-scrollbar {
   -ms-overflow-style: none;  /* Internet Explorer aur Edge */
   scrollbar-width: none;     /* Firefox */
 }
 
-.custom-scrollbar::-webkit-scrollbar {
+.custom-scrollbar::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar {
   display: none;             /* Chrome, Safari aur Opera */
 }
