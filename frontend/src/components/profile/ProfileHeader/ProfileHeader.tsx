@@ -1,5 +1,5 @@
 import { useUserStore } from "../../../stores/userStore";
-import { ChevronDown, Store, Star } from "lucide-react";
+import { ChevronDown, Store, Star, Settings } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBlockUser } from "../../../features/profile/hooks";
@@ -155,14 +155,14 @@ export function ProfileHeader({
             <div className="relative flex gap-3">
               {isOwnProfile ? (
                 <>
-                  {/* <button
+                  <button
                     className="flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl
                    text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm"
-                    onClick={() => navigate("/coins")}
+                    onClick={() => navigate("/settings/seeker")}
                   >
-                    <Store size={18} className="text-gray-800" />
-                    <span>Jobblo Shoppen</span>
-                  </button> */}
+                    <Settings size={18} className="text-gray-800" />
+                    <span>Jobbsøkerinnstillinger</span>
+                  </button>
 
                   <div className="relative">
                     <button

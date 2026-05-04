@@ -68,18 +68,22 @@ export default function ProfileScreen() {
     }
 
     return (
-      <View className="flex-row flex-wrap justify-between px-4">
+      <View className="flex-row flex-wrap px-4">
         {jobs.map((job) => (
-          <JobCard
-            key={job._id}
-            item={job}
-            onPress={() =>
-              router.push({
-                pathname: "/job-search",
-                params: { id: job._id },
-              })
-            }
-          />
+          <View 
+            key={job._id} 
+            style={{ width: '48%', marginBottom: 16 }}
+          >
+            <JobCard
+              item={job}
+              onPress={() =>
+                router.push({
+                  pathname: "/job-search",
+                  params: { id: job._id },
+                })
+              }
+            />
+          </View>
         ))}
       </View>
     );
