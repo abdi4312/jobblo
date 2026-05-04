@@ -7,7 +7,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, description }: EmptyStateProps) {
   return (
-    <div className="bg-[#ffff] flex flex-col rounded-2xl items-center justify-center py-10 px-4 text-center max-w-[400px] mx-auto">
+    <div className="bg-[#ffff] mt-10 flex flex-col rounded-2xl items-center justify-center py-10 px-4 text-center max-w-[400px] mx-auto">
       {/* Cactus/Desert Illustration Placeholder */}
       <div className="w-35 h-35 bg-[#fff0ed] rounded-full flex items-center justify-center mb-8 relative overflow-hidden">
         <div className="absolute bottom-0 w-full h-1/2 bg-[#ffd8d1] opacity-50"></div>

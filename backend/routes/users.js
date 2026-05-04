@@ -135,6 +135,8 @@ router.put(
 );
 router.delete("/:id", authenticate, userController.deleteUser);
 router.get("/:id/services", authenticate, userController.getUserServices);
+router.post("/portfolio", authenticate, upload.single("image"), userController.addPortfolioItem);
+router.delete("/portfolio/:itemId", authenticate, userController.deletePortfolioItem);
 router.get("/", authenticate, requireAdmin, userController.getAllUsers);
 router.post("/:id/block", authenticate, userController.blockUser);
 

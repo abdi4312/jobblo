@@ -46,3 +46,22 @@ export const searchAll = async (
   });
   return response.data;
 };
+
+export const getUserReviews = async (userId: string, role?: string) => {
+  const response = await mainLink.get(`/api/users/${userId}/reviews`, {
+    params: { role },
+  });
+  return response.data;
+};
+
+export const addPortfolioItem = async (data: FormData) => {
+  const response = await mainLink.post("/api/users/portfolio", data, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+};
+
+export const deletePortfolioItem = async (itemId: string) => {
+  const response = await mainLink.delete(`/api/users/portfolio/${itemId}`);
+  return response.data;
+};

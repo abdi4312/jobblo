@@ -9,6 +9,9 @@ import {
   getBlockedUsers,
   getTopUsers,
   getUserProfile,
+  getUserReviews,
+  addPortfolioItem,
+  deletePortfolioItem,
   searchAll,
   searchUsers,
   updateUser,
@@ -112,5 +115,49 @@ export const useInfiniteSearch = (
     },
     initialPageParam: 1,
     enabled: query.length >= 2 && !!type,
+  });
+};
+
+export const useUserReviews = (userId: string | undefined, role?: string) => {
+  return useQuery({
+    queryKey: ["userReviews", userId, role],
+    queryFn: () => getUserReviews(userId!, role),
+    enabled: !!userId,
+  });
+};
+
+export const useAddPortfolioItem = () => {
+  const queryClient = useQueryClient();
+  const { fetchProfile } = useUserStore((state) => state);
+
+  return useMutation({
+    mutationFn: (data: FormData) => addPortfolioItem(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+      fetchProfile();
+      toast.success("Portfolio-element lagt til!");
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.error || "Kunne ikke legge til portfolio",
+      );
+    },
+  });
+};
+
+export const useDeletePortfolioItem = () => {
+  const queryClient = useQueryClient();
+  const { fetchProfile } = useUserStore((state) => state);
+
+  return useMutation({
+    mutationFn: (itemId: string) => deletePortfolioItem(itemId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+      fetchProfile();
+      toast.success("Portfolio-element slettet");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Kunne ikke slette element");
+    },
   });
 };
