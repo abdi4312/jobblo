@@ -14,11 +14,13 @@ import { MapComponent } from "../../components/component/map/MapComponent";
 import { Share2, MapPin, Star, Bookmark, Zap } from "lucide-react";
 import { useState } from "react";
 import { dateFormatter } from "../../utils/dateFormatter";
+import { ShareModal } from "../../components/shared/ShareModal/ShareModal";
 
 const JobListingDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const sendMessageMutation = useSendMessageMutation();
   const stripeMutation = useStripeMutation();
@@ -86,6 +88,10 @@ const JobListingDetailPage = () => {
 
   const isMessageLoading =
     sendMessageMutation.isPending || stripeMutation.isPending;
+
+  const handleShare = () => {
+    setIsShareModalOpen(true);
+  };
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";
@@ -333,7 +339,10 @@ const JobListingDetailPage = () => {
 
             {/* Actions */}
             <div className="flex gap-3">
-              <button className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2">
+              <button
+                onClick={handleShare}
+                className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2"
+              >
                 <Share2 size={16} /> Del
               </button>
               <button className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
@@ -343,6 +352,13 @@ const JobListingDetailPage = () => {
           </div>
         </div>
       </div>
+
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        url={window.location.href}
+        title={job.title || "Jobblo Oppdrag"}
+      />
     </div>
   );
 };
