@@ -40,6 +40,7 @@ import ServiceListingPage from "../pages/ServiceListingPage/ServiceListing.tsx";
 import UpcomingFeatures from "../pages/UpcomingFeaturesPage/UpcomingFeatures.tsx";
 import RoadmapAdminPage from "../pages/SuperAdminDashboard/RoadmapAdminPage.tsx";
 import PricingPage from "../pages/PricingPage/PricingPage.tsx";
+import NotFoundPage from "../pages/NotFoundPage/NotFoundPage.tsx";
 import {
   UsernameView,
   NameView,
@@ -257,6 +258,10 @@ export const routes: RouteObject[] = [
         path: "upcoming",
         element: <UpcomingFeatures />,
       },
+      {
+        path: "*",
+        element: <NotFoundPage />,
+      },
     ],
   },
   {
@@ -346,6 +351,10 @@ export const routes: RouteObject[] = [
             <RoadmapAdminPage />
           </AdminProtectedRoute>
         ),
+      },
+      {
+        path: "*",
+        element: <NotFoundPage />,
       },
     ],
   },
