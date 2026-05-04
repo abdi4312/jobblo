@@ -1,8 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Input as AppInput } from "../Ui/Input";
-import { Search, SlidersHorizontal, Tag, User } from "lucide-react";
-import * as Icons from "lucide-react";
 import { useFavoriteLists } from "../../features/favoriteLists/hooks";
 import { useCategories } from "../../features/categories/hooks";
 import {
@@ -12,89 +9,42 @@ import {
   useInfiniteSearch,
 } from "../../features/profile/hooks";
 import { useUserStore } from "../../stores/userStore";
+import { useSearchHistory } from "../../hooks/useSearchHistory";
 
-interface HistoryItem {
-  id: string;
-  type: "query" | "user" | "category";
-  title: string;
-  subtitle?: string;
-  avatarUrl?: string;
-  iconName?: string;
-}
-
-interface CategoryResult {
-  _id: string;
-  name: string;
-  icon: string;
-}
-
-interface UserResult {
-  _id: string;
-  name: string;
-  lastName?: string;
-  avatarUrl?: string;
-}
+// Refactored Components
+import { SearchInput } from "./Search/SearchInput";
+import { SearchTabs } from "./Search/SearchTabs";
+import { HistorySection } from "./Search/HistorySection";
+import { TopResults } from "./Search/TopResults";
+import { InfiniteResults } from "./Search/InfiniteResults";
+import { DefaultResults } from "./Search/DefaultResults";
 
 function SearchComponent() {
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("Top");
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchHistory, setSearchHistory] = useState<HistoryItem[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Custom Hook for search history management
+  const { searchHistory, saveToHistory, clearHistory } = useSearchHistory();
   const user = useUserStore((state) => state.user);
 
-  // Load search history from localStorage
-  useEffect(() => {
-    const history = localStorage.getItem("search_history_v2");
-    if (history) {
-      setSearchHistory(JSON.parse(history));
-    }
-  }, []);
+  // --- Data Fetching ---
 
-  const saveToHistory = (item: HistoryItem) => {
-    const newHistory = [
-      item,
-      ...searchHistory.filter((h) => h.id !== item.id),
-    ].slice(0, 5);
-    setSearchHistory(newHistory);
-    localStorage.setItem("search_history_v2", JSON.stringify(newHistory));
-  };
-
-  const clearHistory = () => {
-    setSearchHistory([]);
-    localStorage.removeItem("search_history_v2");
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _handleSearchSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (searchQuery.trim()) {
-      const query = searchQuery.trim();
-      saveToHistory({
-        id: `query-${query}`,
-        type: "query",
-        title: query,
-        subtitle: "Brand search",
-      });
-      navigate(`/search/job/all?search=${query}`);
-      setIsDropdownOpen(false);
-    }
-  };
-
-  // Fetch favorite lists
+  // Fetch favorite lists for the logged-in user
   const { data: favoriteLists, isLoading: isListsLoading } = useFavoriteLists(
     user?._id,
   );
 
-  // Fetch categories
+  // Fetch all categories
   const { data: categories, isLoading: isCategoriesLoading } = useCategories();
 
-  // Unified Search for Categories, People, and Lists (Top 3 for each)
+  // Unified Search for Top results (Categories, People, Lists)
   const { data: searchResults, isLoading: isSearching } =
     useUnifiedSearch(searchQuery);
 
-  // Infinite Search for specific tabs
+  // Infinite Search for specific tab views
   const infiniteType =
     activeTab === "Categories"
       ? "categories"
@@ -111,11 +61,10 @@ function SearchComponent() {
     isLoading: isInfiniteLoading,
   } = useInfiniteSearch(searchQuery, infiniteType, 10);
 
-  // Flatten infinite search results
   const infiniteResults =
     infiniteData?.pages.flatMap((page) => page.results) || [];
 
-  // Fetch search results (old hook, keeping for now to avoid breaking other logic)
+  // Old search hook (kept for compatibility)
   useSearchUsers(
     activeTab === "People" && searchQuery.length >= 2 ? searchQuery : undefined,
   );
@@ -129,6 +78,7 @@ function SearchComponent() {
         ? searchResults?.people?.results
         : infiniteResults
       : topPeople;
+
   const isPeopleLoading =
     searchQuery.length >= 2
       ? activeTab === "Top"
@@ -136,9 +86,23 @@ function SearchComponent() {
         : isInfiniteLoading
       : isTopLoading;
 
-  const tabs = ["Top", "Categories", "People", "Lists"];
+  // --- Handlers ---
 
-  // Close dropdown when clicking outside
+  const handleItemClick = (item: any) => {
+    if (item.type === "query" || item.type === "category") {
+      setSearchQuery(item.title);
+      if (item.type === "query") {
+        navigate(`/search/job/all?search=${item.title}`);
+      } else {
+        navigate(`/search/job/${item.title}`);
+      }
+    } else {
+      navigate(`/profile/${item.id}`);
+    }
+    setIsDropdownOpen(false);
+  };
+
+  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -152,759 +116,87 @@ function SearchComponent() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const tabs = [
+    { label: "Topp", value: "Top" },
+    { label: "Kategorier", value: "Categories" },
+    { label: "Personer", value: "People" },
+    { label: "Lister", value: "Lists" },
+  ];
+
   return (
     <div className="relative w-full max-w-5xl mx-auto" ref={dropdownRef}>
-      <div
-        className={`gap-3 p-3 bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 w-full md:min-w-137.5 lg:min-w-162.5 transition-all duration-300`}
-      >
-        <div className="flex">
-          <AppInput
-            className="bg-transparent! outline-none! border-0 text-[20px] pl-12.5 w-full placeholder:text-gray-900"
-            placeholder="Hva leter du etter?"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => setIsDropdownOpen(true)}
-            icon={<Search size={25} color="#0A0A0A" />}
-          />
-        </div>
-      </div>
+      {/* Search Bar Input */}
+      <SearchInput
+        value={searchQuery}
+        onChange={setSearchQuery}
+        onFocus={() => setIsDropdownOpen(true)}
+      />
 
-      {/* Pop-up List (Dropdown) */}
+      {/* Search Dropdown Overlay */}
       {isDropdownOpen && (
         <div className="absolute top-22 left-0 right-0 bg-white border border-gray-100 rounded-4xl shadow-2xl z-50 p-2 sm:p-6 pt-2 max-h-120 overflow-auto transition-all duration-300 ease-in-out">
-          {/* Tabs */}
-          <div className="flex bg-[#F5F5F7] p-1.5 rounded-3xl mb-8 w-full max-w-140 mx-auto">
-            {["Topp", "Kategorier", "Personer", "Lister"].map((tab, idx) => {
-              const tabKeys = ["Top", "Categories", "People", "Lists"];
-              return (
-                <button
-                  key={tabKeys[idx]}
-                  onClick={() => setActiveTab(tabKeys[idx])}
-                  className={`flex-1 py-3 px-4 rounded-[18px] text-[12px] sm:text-[16px] font-semibold transition-all duration-200 ${
-                    activeTab === tabKeys[idx]
-                      ? "bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] text-black"
-                      : "text-gray-500 hover:text-black"
-                  }`}
-                >
-                  {tab}
-                </button>
-              );
-            })}
-          </div>
+          {/* Tab Navigation */}
+          <SearchTabs
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            tabs={tabs}
+          />
 
-          {/* Results Section */}
+          {/* Results Container */}
           <div className="px-6 space-y-10 pb-6 max-h-150 overflow-y-auto custom-scrollbar">
             {searchQuery.length >= 2 ? (
               <div className="space-y-10">
                 {activeTab === "Top" ? (
-                  <>
-                    {/* Search for "[query]" amongst all Jobs */}
-                    <div
-                      onClick={() => {
-                        saveToHistory({
-                          id: `query-${searchQuery}`,
-                          type: "query",
-                          title: searchQuery,
-                          subtitle: "Brand search",
-                        });
-                        navigate(`/search/job/all?search=${searchQuery}`);
-                        setIsDropdownOpen(false);
-                      }}
-                      className="flex items-center gap-5 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-all group"
-                    >
-                      <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center shrink-0">
-                        <Search
-                          size={24}
-                          className="text-gray-900 group-hover:text-[#2F7E47] transition-colors"
-                          strokeWidth={1.5}
-                        />
-                      </div>
-                      <div>
-                        <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight">
-                          Søk etter{" "}
-                          <span className="text-[#2F7E47]">
-                            "{searchQuery}"
-                          </span>
-                        </h3>
-                        <p className="text-[15px] text-gray-500 font-medium mt-1">
-                          Blant alle oppdrag
-                        </p>
-                      </div>
-                    </div>
-
-                    {isSearching ? (
-                      <div className="text-center py-10 text-gray-500">
-                        Søker...
-                      </div>
-                    ) : (
-                      <>
-                        {/* Categories Results (Top 3) */}
-                        {searchResults?.categories?.results?.length > 0 && (
-                          <div className="space-y-5">
-                            <div className="flex items-center justify-between px-2">
-                              <h4 className="text-[18px] font-bold text-[#1A1A1A]">
-                                Populære kategorier
-                              </h4>
-                              {searchResults.categories.total > 3 && (
-                                <button
-                                  onClick={() => setActiveTab("Categories")}
-                                  className="text-[14px] font-bold text-[#2F7E47] hover:underline transition-all"
-                                >
-                                  Se alle
-                                </button>
-                              )}
-                            </div>
-                            {searchResults.categories.results.map(
-                              (cat: CategoryResult) => {
-                                const LucideIcon =
-                                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                  (Icons as any)[cat.icon] || Icons.HelpCircle;
-                                return (
-                                  <div
-                                    key={cat._id}
-                                    onClick={() => {
-                                      saveToHistory({
-                                        id: cat._id,
-                                        type: "category",
-                                        title: cat.name,
-                                        subtitle: "Kategorisøk",
-                                        iconName: cat.icon,
-                                      });
-                                      navigate(`/search/job/${cat.name}`);
-                                      setIsDropdownOpen(false);
-                                    }}
-                                    className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-all group"
-                                  >
-                                    <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center flex-shrink-0">
-                                      <LucideIcon
-                                        size={24}
-                                        className="text-[#2F7E47]"
-                                        strokeWidth={1.5}
-                                      />
-                                    </div>
-                                    <div>
-                                      <h3 className="text-[15px] sm:text-[17px] font-bold text-[#1A1A1A] leading-tight group-hover:text-[#2F7E47] transition-colors">
-                                        {cat.name}
-                                      </h3>
-                                      <p className="text-[15px] text-gray-500 font-medium mt-1">
-                                        Interiør & møbler
-                                      </p>
-                                    </div>
-                                  </div>
-                                );
-                              },
-                            )}
-                          </div>
-                        )}
-
-                        {/* People Results (Top 3) */}
-                        {searchResults?.people?.results?.length > 0 && (
-                          <div className="space-y-5">
-                            <div className="flex items-center justify-between px-2">
-                              <h4 className="text-[18px] font-bold text-[#1A1A1A]">
-                                Topp tjenesteytere
-                              </h4>
-                              {searchResults.people.total > 3 && (
-                                <button
-                                  onClick={() => setActiveTab("People")}
-                                  className="text-[14px] font-bold text-[#2F7E47] hover:underline transition-all"
-                                >
-                                  Se alle
-                                </button>
-                              )}
-                            </div>
-                            {searchResults.people.results.map(
-                              (p: UserResult) => (
-                                <div
-                                  key={p._id}
-                                  onClick={() => {
-                                    saveToHistory({
-                                      id: p._id,
-                                      type: "user",
-                                      title:
-                                        `${p.name} ${p.lastName || ""}`.trim(),
-                                      subtitle: p.name?.toLowerCase(),
-                                      avatarUrl: p.avatarUrl,
-                                    });
-                                    navigate(`/profile/${p._id}`);
-                                    setIsDropdownOpen(false);
-                                  }}
-                                  className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors group"
-                                >
-                                  <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                                    {p.avatarUrl ? (
-                                      <img
-                                        src={p.avatarUrl}
-                                        alt=""
-                                        className="w-full h-full object-cover"
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                                        <User
-                                          className="text-gray-400"
-                                          size={24}
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight group-hover:text-[#2F7E47] transition-colors">
-                                      {p.name} {p.lastName}
-                                    </h3>
-                                    <p className="text-[14px] text-gray-500 font-medium mt-1">
-                                      @{p.name?.toLowerCase()}
-                                      {p.lastName?.toLowerCase()}
-                                    </p>
-                                  </div>
-                                </div>
-                              ),
-                            )}
-                          </div>
-                        )}
-
-                        {/* Lists Results (Top 3) */}
-                        {searchResults?.lists?.results?.length > 0 && (
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between px-2">
-                              <h4 className="text-[18px] font-bold text-[#1A1A1A]">
-                                Offentlige lister
-                              </h4>
-                              {searchResults.lists.total > 3 && (
-                                <button
-                                  onClick={() => setActiveTab("Lists")}
-                                  className="text-[14px] font-bold px-4 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
-                                >
-                                  Se alle
-                                </button>
-                              )}
-                            </div>
-                            {searchResults.lists.results.map((list) => (
-                              <div
-                                key={list._id}
-                                onClick={() => {
-                                  navigate(`/favorites/list/${list._id}`);
-                                  setIsDropdownOpen(false);
-                                }}
-                                className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors group"
-                              >
-                                <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-200 flex-shrink-0">
-                                  {list.services && list.services[0]?.images ? (
-                                    <img
-                                      src={list.services[0].images[0]}
-                                      alt=""
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                                      <Tag
-                                        className="text-gray-400"
-                                        size={20}
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                                <div>
-                                  <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight group-hover:text-[#2F7E47] transition-colors">
-                                    {list.name}
-                                  </h3>
-                                  <p className="text-[14px] text-gray-500 font-medium mt-1">
-                                    {list.services?.length || 0} oppdrag ·
-                                    Offentlig
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {!searchResults?.categories?.results?.length &&
-                          !searchResults?.people?.results?.length &&
-                          !searchResults?.lists?.results?.length && (
-                            <div className="text-center py-10 text-gray-500">
-                              No results found for "{searchQuery}"
-                            </div>
-                          )}
-                      </>
-                    )}
-                  </>
+                  <TopResults
+                    searchQuery={searchQuery}
+                    isSearching={isSearching}
+                    searchResults={searchResults}
+                    onSaveToHistory={saveToHistory}
+                    onNavigate={navigate}
+                    onCloseDropdown={() => setIsDropdownOpen(false)}
+                    onSeeAll={setActiveTab}
+                  />
                 ) : (
-                  /* Paginated/Infinite Search Results for Categories, People, or Lists */
-                  <div className="space-y-6">
-                    {/* Search for "[query]" amongst all Jobs (Added here too) */}
-                    <div
-                      onClick={() => {
-                        saveToHistory({
-                          id: `query-${searchQuery}`,
-                          type: "query",
-                          title: searchQuery,
-                          subtitle: "Brand search",
-                        });
-                        navigate(`/search/job/all?search=${searchQuery}`);
-                        setIsDropdownOpen(false);
-                      }}
-                      className="flex items-center gap-5 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-all group"
-                    >
-                      <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center flex-shrink-0">
-                        <Search
-                          size={24}
-                          className="text-gray-900 group-hover:text-[#2F7E47] transition-colors"
-                          strokeWidth={1.5}
-                        />
-                      </div>
-                      <div>
-                        <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight">
-                          Søk etter{" "}
-                          <span className="text-[#2F7E47]">
-                            "{searchQuery}"
-                          </span>
-                        </h3>
-                        <p className="text-[15px] text-gray-500 font-medium mt-1">
-                          Blant alle oppdrag
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between px-2">
-                      <h4 className="text-[18px] font-bold text-[#1A1A1A]">
-                        {activeTab} Search Results
-                      </h4>
-                      <button
-                        onClick={() => setActiveTab("Top")}
-                        className="text-[14px] font-bold px-4 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
-                      >
-                        Back to Top
-                      </button>
-                    </div>
-
-                    {isInfiniteLoading ? (
-                      <div className="text-center py-10 text-gray-500">
-                        Searching {activeTab}...
-                      </div>
-                    ) : infiniteResults.length > 0 ? (
-                      <div className="space-y-4">
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        {infiniteResults.map((item: any) => {
-                          if (activeTab === "Categories") {
-                            const catItem = item;
-                            const LucideIcon =
-                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                              (Icons as any)[catItem.icon] || Icons.HelpCircle;
-                            return (
-                              <div
-                                key={item._id}
-                                onClick={() => {
-                                  saveToHistory({
-                                    id: item._id,
-                                    type: "category",
-                                    title: item.name,
-                                    subtitle: "Category search",
-                                    iconName: item.icon,
-                                  });
-                                  navigate(`/search/job/${item.name}`);
-                                  setIsDropdownOpen(false);
-                                }}
-                                className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-all group"
-                              >
-                                <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center flex-shrink-0">
-                                  <LucideIcon
-                                    size={24}
-                                    className="text-[#2F7E47]"
-                                    strokeWidth={1.5}
-                                  />
-                                </div>
-                                <div>
-                                  <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight group-hover:text-[#2F7E47] transition-colors">
-                                    {item.name}
-                                  </h3>
-                                  <p className="text-[15px] text-gray-500 font-medium mt-1">
-                                    Explore {item.name}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          } else if (activeTab === "People") {
-                            return (
-                              <div
-                                key={item._id}
-                                onClick={() => {
-                                  saveToHistory({
-                                    id: item._id,
-                                    type: "user",
-                                    title:
-                                      `${item.name} ${item.lastName || ""}`.trim(),
-                                    subtitle: item.name?.toLowerCase(),
-                                    avatarUrl: item.avatarUrl,
-                                  });
-                                  navigate(`/profile/${item._id}`);
-                                  setIsDropdownOpen(false);
-                                }}
-                                className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors group"
-                              >
-                                <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                                  {item.avatarUrl ? (
-                                    <img
-                                      src={item.avatarUrl}
-                                      alt=""
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                                      <User
-                                        className="text-gray-400"
-                                        size={24}
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                                <div>
-                                  <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight group-hover:text-[#2F7E47] transition-colors">
-                                    {item.name} {item.lastName}
-                                  </h3>
-                                  <p className="text-[14px] text-gray-500 font-medium mt-1">
-                                    @{item.name?.toLowerCase()}
-                                    {item.lastName?.toLowerCase()}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          } else if (activeTab === "Lists") {
-                            return (
-                              <div
-                                key={item._id}
-                                onClick={() => {
-                                  navigate(`/favorites/list/${item._id}`);
-                                  setIsDropdownOpen(false);
-                                }}
-                                className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors group"
-                              >
-                                <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-200 flex-shrink-0">
-                                  {item.services && item.services[0]?.images ? (
-                                    <img
-                                      src={item.services[0].images[0]}
-                                      alt=""
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                                      <Tag
-                                        className="text-gray-400"
-                                        size={20}
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                                <div>
-                                  <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight group-hover:text-[#2F7E47] transition-colors">
-                                    {item.name}
-                                  </h3>
-                                  <p className="text-[14px] text-gray-500 font-medium mt-1">
-                                    {item.services?.length || 0} adverts ·
-                                    Public
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          }
-                          return null;
-                        })}
-
-                        {hasNextPage && (
-                          <div className="flex justify-center pt-4">
-                            <button
-                              onClick={() => fetchNextPage()}
-                              disabled={isFetchingNextPage}
-                              className="px-8 py-3 bg-white border border-gray-200 text-gray-700 font-bold rounded-2xl hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50"
-                            >
-                              {isFetchingNextPage
-                                ? "Laster mer..."
-                                : "Se flere"}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-center py-10 text-gray-500">
-                        No {activeTab.toLowerCase()} found for "{searchQuery}"
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : activeTab === "Lists" ? (
-              <div className="space-y-4">
-                {isListsLoading ? (
-                  <div className="text-center py-10 text-gray-500">
-                    Loading lists...
-                  </div>
-                ) : favoriteLists && favoriteLists.length > 0 ? (
-                  favoriteLists.map((list) => (
-                    <div
-                      key={list._id}
-                      onClick={() => {
-                        navigate(`/favorites/list/${list._id}`);
-                        setIsDropdownOpen(false);
-                      }}
-                      className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors group"
-                    >
-                      <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-200 flex-shrink-0">
-                        {list.services && list.services[0]?.images ? (
-                          <img
-                            src={list.services[0].images[0]}
-                            alt={list.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                            <Tag className="text-gray-400" size={20} />
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight group-hover:text-[#2F7E47] transition-colors">
-                          {list.name}
-                        </h3>
-                        <p className="text-[14px] text-gray-500 font-medium mt-1">
-                          {list.services?.length || 0} adverts ·{" "}
-                          {list.public ? "Public" : "Not public"}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-10 text-gray-500">
-                    No lists found.{" "}
-                    {user
-                      ? "Create one to see it here!"
-                      : "Login to see your lists."}
-                  </div>
-                )}
-              </div>
-            ) : activeTab === "Categories" ? (
-              <div className="space-y-4">
-                {isCategoriesLoading ? (
-                  <div className="text-center py-10 text-gray-500">
-                    Loading categories...
-                  </div>
-                ) : categories && categories.length > 0 ? (
-                  categories.map((cat) => {
-                    const LucideIcon =
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      (Icons as any)[cat.icon] || Icons.HelpCircle;
-                    return (
-                      <div
-                        key={cat._id}
-                        onClick={() => {
-                          saveToHistory({
-                            id: cat._id,
-                            type: "category",
-                            title: cat.name,
-                            subtitle: "Category search",
-                            iconName: cat.icon,
-                          });
-                          navigate(`/search/job/${cat.name}`);
-                          setIsDropdownOpen(false);
-                        }}
-                        className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors group"
-                      >
-                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 flex items-center justify-center">
-                          <LucideIcon
-                            className="text-[#2F7E47]"
-                            size={24}
-                            strokeWidth={1.5}
-                          />
-                        </div>
-                        <div>
-                          <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight group-hover:text-[#2F7E47] transition-colors">
-                            {cat.name}
-                          </h3>
-                          <p className="text-[14px] text-gray-500 font-medium mt-1">
-                            Explore {cat.name} tasks
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-10 text-gray-500">
-                    No categories found.
-                  </div>
-                )}
-              </div>
-            ) : activeTab === "People" ? (
-              <div className="space-y-4">
-                {isPeopleLoading ? (
-                  <div className="text-center py-10 text-gray-500">
-                    Loading people...
-                  </div>
-                ) : people && people.length > 0 ? (
-                  people.map((p) => (
-                    <div
-                      key={p._id}
-                      onClick={() => {
-                        saveToHistory({
-                          id: p._id,
-                          type: "user",
-                          title: `${p.name} ${p.lastName || ""}`.trim(),
-                          subtitle: p.name?.toLowerCase(),
-                          avatarUrl: p.avatarUrl,
-                        });
-                        navigate(`/profile/${p._id}`);
-                        setIsDropdownOpen(false);
-                      }}
-                      className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors group"
-                    >
-                      <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                        {p.avatarUrl ? (
-                          <img
-                            src={p.avatarUrl}
-                            alt={p.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                            <User className="text-gray-400" size={24} />
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight group-hover:text-[#2F7E47] transition-colors">
-                          {p.name} {p.lastName}
-                        </h3>
-                        <p className="text-[14px] text-gray-500 font-medium mt-1">
-                          @{p.name?.toLowerCase()}
-                          {p.lastName?.toLowerCase()}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-10 text-gray-500">
-                    No people found.
-                  </div>
+                  <InfiniteResults
+                    activeTab={activeTab}
+                    searchQuery={searchQuery}
+                    isInfiniteLoading={isInfiniteLoading}
+                    infiniteResults={infiniteResults}
+                    hasNextPage={hasNextPage}
+                    isFetchingNextPage={isFetchingNextPage}
+                    fetchNextPage={fetchNextPage}
+                    onSaveToHistory={saveToHistory}
+                    onNavigate={navigate}
+                    onCloseDropdown={() => setIsDropdownOpen(false)}
+                    onBackToTop={() => setActiveTab("Top")}
+                  />
                 )}
               </div>
             ) : (
               <>
-                {/* All Jobs */}
-                <div
-                  onClick={() => {
-                    navigate("/search/job/all");
-                    setIsDropdownOpen(false);
-                  }}
-                  className="flex items-center gap-6 cursor-pointer group"
-                >
-                  <div className="flex items-center justify-center">
-                    <SlidersHorizontal
-                      size={24}
-                      className="text-gray-900 group-hover:text-[#2F7E47] transition-colors"
-                      strokeWidth={1.5}
-                    />
-                  </div>
-                  <div>
-                    <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight group-hover:text-[#2F7E47] transition-colors">
-                      All Jobs
-                    </h3>
-                    <p className="text-[15px] text-gray-500 font-medium mt-1">
-                      See all Jobs
-                    </p>
-                  </div>
-                </div>
+                {/* Default display when no query is typed */}
+                <DefaultResults
+                  activeTab={activeTab}
+                  user={user}
+                  isListsLoading={isListsLoading}
+                  favoriteLists={favoriteLists}
+                  isCategoriesLoading={isCategoriesLoading}
+                  categories={categories}
+                  isPeopleLoading={isPeopleLoading}
+                  people={people}
+                  onNavigate={navigate}
+                  onCloseDropdown={() => setIsDropdownOpen(false)}
+                  onSaveToHistory={saveToHistory}
+                />
 
-                {/* Recently Searched Section */}
-                <div className="pt-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-[18px] font-bold text-[#1A1A1A]">
-                      Siste søk
-                    </h4>
-                    {searchHistory.length > 0 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          clearHistory();
-                        }}
-                        className="text-[14px] font-bold text-[#2F7E47] hover:underline transition-all"
-                      >
-                        Tøm logg
-                      </button>
-                    )}
-                  </div>
-
-                  {searchHistory.length > 0 ? (
-                    <div className="space-y-4">
-                      {searchHistory.map((item) => {
-                        const LucideIcon = item.iconName
-                          ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            (Icons as any)[item.iconName]
-                          : Tag;
-                        return (
-                          <div
-                            key={item.id}
-                            onClick={() => {
-                              if (
-                                item.type === "query" ||
-                                item.type === "category"
-                              ) {
-                                setSearchQuery(item.title);
-                                if (item.type === "query") {
-                                  navigate(
-                                    `/search/job/all?search=${item.title}`,
-                                  );
-                                } else {
-                                  navigate(`/search/job/${item.title}`);
-                                }
-                              } else {
-                                navigate(`/profile/${item.id}`);
-                              }
-                              setIsDropdownOpen(false);
-                            }}
-                            className="flex items-center gap-5 hover:bg-gray-50 p-2 rounded-2xl transition-all cursor-pointer group"
-                          >
-                            <div className="flex-shrink-0">
-                              {item.type === "user" ? (
-                                <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-200">
-                                  {item.avatarUrl ? (
-                                    <img
-                                      src={item.avatarUrl}
-                                      alt=""
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <User className="text-gray-400" size={20} />
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center">
-                                  <LucideIcon
-                                    size={24}
-                                    className="text-[#2F7E47]"
-                                    strokeWidth={1.5}
-                                  />
-                                </div>
-                              )}
-                            </div>
-                            <div>
-                              <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight">
-                                {item.title}
-                              </h3>
-                              <p className="text-[15px] text-gray-500 font-medium mt-0.5">
-                                {item.subtitle}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="py-2">
-                      <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight">
-                        No search history
-                      </h3>
-                      <p className="text-[15px] text-gray-500 font-medium mt-1">
-                        Try searching for something
-                      </p>
-                    </div>
-                  )}
-                </div>
+                {/* Search History (only shown on Top tab or default) */}
+                {activeTab === "Top" && (
+                  <HistorySection
+                    history={searchHistory}
+                    onClear={clearHistory}
+                    onItemClick={handleItemClick}
+                  />
+                )}
               </>
             )}
           </div>
