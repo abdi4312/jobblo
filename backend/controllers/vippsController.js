@@ -6,26 +6,53 @@ const crypto = require("crypto");
 
 exports.redirectToVipps = (req, res) => {
   try {
+    console.log("Vipps Redirect triggered");
+
     // 1️⃣ Generate strong random state (CSRF protection)
     const state = crypto.randomBytes(16).toString("hex");
-    req.session.vippsState = state; // save in session
+    if (req.session) {
+      req.session.vippsState = state;
+      console.log("State saved in session:", state);
+    } else {
+      console.error(
+        "CRITICAL: Session not found in request. Check session middleware.",
+      );
+    }
 
     // 2️⃣ Build Vipps OAuth query params
+    const clientId = (process.env.VIPPS_CLIENT_ID || "").trim();
+    const redirectUri = (process.env.VIPPS_REDIRECT_URI || "").trim();
+
+    if (!clientId || !redirectUri) {
+      console.error(
+        "CRITICAL: VIPPS_CLIENT_ID or VIPPS_REDIRECT_URI is missing in .env",
+      );
+    }
+
     const params = new URLSearchParams({
-      client_id: process.env.VIPPS_CLIENT_ID?.trim(),
+      client_id: clientId,
       response_type: "code",
       scope: "openid name phoneNumber email",
-      state,
-      redirect_uri: process.env.VIPPS_REDIRECT_URI?.trim(),
+      state: state,
+      redirect_uri: redirectUri,
     });
 
-    const vippsAuthUrl = `https://apitest.vipps.no/access-management-1.0/access/oauth2/auth?${params.toString()}`;
+    const vippsBaseUrl = (
+      process.env.VIPPS_BASE_URL || "https://apitest.vipps.no"
+    ).replace(/\/$/, "");
+    const vippsAuthUrl = `${vippsBaseUrl}/access-management-1.0/access/oauth2/auth?${params.toString()}`;
+
+    console.log("Full Redirecting URL:", vippsAuthUrl);
 
     // 3️⃣ Redirect user to Vipps login
     return res.redirect(vippsAuthUrl);
   } catch (err) {
-    console.error("Error building Vipps login URL:", err);
-    return res.status(500).send("Failed to redirect to Vipps login.");
+    console.error("Error in redirectToVipps:", err);
+    return res.status(500).json({
+      error: "Internal Server Error",
+      message: err.message,
+      stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+    });
   }
 };
 
@@ -55,8 +82,10 @@ exports.vippsCallback = async (req, res) => {
 
   try {
     // 3️⃣ Exchange code for token
+    const vippsBaseUrl =
+      process.env.VIPPS_BASE_URL || "https://apitest.vipps.no";
     const tokenResponse = await axios.post(
-      "https://apitest.vipps.no/access-management-1.0/access/oauth2/token",
+      `${vippsBaseUrl}/access-management-1.0/access/oauth2/token`,
       new URLSearchParams({
         grant_type: "authorization_code",
         code,
@@ -79,7 +108,7 @@ exports.vippsCallback = async (req, res) => {
 
     // 4️⃣ Fetch Vipps profile
     const userResponse = await axios.get(
-      "https://apitest.vipps.no/vipps-userinfo-api/userinfo",
+      `${vippsBaseUrl}/vipps-userinfo-api/userinfo`,
       { headers: { Authorization: `Bearer ${vippsAccessToken}` } },
     );
 
@@ -147,7 +176,9 @@ exports.vippsCallback = async (req, res) => {
 
     // 8️⃣ Redirect to frontend success page
     const frontendBase = process.env.FRONTEND_URL || "http://localhost:5173";
-    const redirectUrl = frontendBase.endsWith("/") ? `${frontendBase}oauth-success` : `${frontendBase}/oauth-success`;
+    const redirectUrl = frontendBase.endsWith("/")
+      ? `${frontendBase}oauth-success`
+      : `${frontendBase}/oauth-success`;
 
     return res.redirect(`${redirectUrl}?token=${accessToken}`);
   } catch (err) {
