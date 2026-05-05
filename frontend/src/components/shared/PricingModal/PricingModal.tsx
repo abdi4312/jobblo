@@ -5,7 +5,7 @@ import mainLink from "../../../api/mainURLs";
 import Swal from "sweetalert2";
 import { Check, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { Button as AppButton } from "../../Ui/Button";
+import { Button} from "../../Ui/button/Button";
 import { usePlans } from "../../../features/plans/hooks";
 
 interface PricingModalProps {
@@ -427,26 +427,30 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
               </Radio.Group> */}
               <div className="flex justify-center mb-[30px]">
                 {/* Main wrapper jo buttons ko ek saath jorta hai */}
-                <div className="inline-flex bg-white border border-orange-custom rounded-[14px] p-1 shadow-sm">
+                <div className="inline-flex bg-[#F2F4F7] rounded-[14px] p-1">
                   {/* Bedrift Button */}
-                  <AppButton
+                  <Button
                     label="Bedrift"
+                    variant={userType === "business" ? "outline" : "secondary"}
+                    size="default"
                     onClick={() => setUserType("business")}
-                    className={`h-12! px-10! font-semibold! rounded-[10px]! transition-all! duration-300! ${
+                    className={`${
                       userType === "business"
-                        ? "!bg-[#E48A3C] !text-white !border-none shadow-md"
-                        : "!bg-transparent !text-[#1A1A1A] !border-none hover:!bg-orange-50"
+                        ? variant="true"
+                        : variant="false"
                     }`}
                   />
 
                   {/* Privatperson Button */}
-                  <AppButton
+                  <Button
                     label="Privatperson"
+                    variant={userType === "private" ? "outline" : "secondary"}
+                    size="default"
                     onClick={() => setUserType("private")}
-                    className={`!h-[48px] !px-10 !text-[18px] !font-semibold !rounded-[10px] !transition-all !duration-300 ${
+                    className={`${
                       userType === "private"
-                        ? "!bg-[#E48A3C] !text-white !border-none shadow-md"
-                        : "!bg-transparent !text-[#1A1A1A] !border-none hover:!bg-orange-50"
+                        ? variant="true"
+                        : variant="false"
                     }`}
                   />
                 </div>

@@ -4,7 +4,7 @@ import LoginIcon from "../../assets/images/Login/login-icon.png";
 import { toast } from "react-hot-toast";
 import SocialAuthButtons from "../../components/SocialAuthButtons/AuthButton.tsx";
 import { Input } from "../../components/Ui/Input.tsx";
-import { Button } from "../../components/Ui/Button.tsx";
+import { Button } from "../../components/Ui/button/Button";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import Auth from "../../components/Auth/Auth.tsx";
 import { useAuth } from "../../features/auth/hook/useAuth.ts";
@@ -104,9 +104,10 @@ export default function LoginPage() {
                 />
                 <Button
                   onClick={handleLogin}
-                  disabled={isLoggingIn}
-                  className={`w-full max-w-md bg-custom-green! rounded-[14px] text-base! font-normal! ${isLoggingIn ? "opacity-80" : ""}`}
-                  label={isLoggingIn ? "Logger inn..." : "Logg inn"}
+                  loading={isLoggingIn}
+                  variant="default"
+                  className="w-full max-w-md"
+                  label="Logg inn"
                 />
               </div>
 

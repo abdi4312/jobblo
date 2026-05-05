@@ -2,7 +2,7 @@ import { useState } from "react";
 import mainLink from "../../api/mainURLs";
 import { Check, X, ArrowLeft, Tag, ShoppingCart, Loader2 } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { Button } from "../../components/Ui/Button";
+import { Button } from "../../components/Ui/button/Button";
 import { Input } from "../../components/Ui/Input";
 import { usePlans } from "../../features/plans/hooks";
 import { toast } from "react-hot-toast";
@@ -291,23 +291,25 @@ export default function PricingPage() {
         </div>
 
         <div className="flex justify-center mb-12">
-          <div className="inline-flex bg-white border border-orange-custom rounded-[14px] p-1 shadow-sm">
+          <div className="inline-flex bg-[#F2F4F7] rounded-[14px] p-1">
             <Button
               label="Business"
+              variant={userType === "business" ? "outline" : "secondary"}
               onClick={() => setUserType("business")}
-              className={`h-12! px-10! font-semibold! rounded-[10px]! transition-all! duration-300! ${
+              className={`h-12! px-10! font-bold! rounded-[10px]! transition-all! duration-300! ${
                 userType === "business"
-                  ? "!bg-[#E48A3C] !text-white !border-none shadow-md"
-                  : "!bg-transparent !text-[#1A1A1A] !border-none hover:!bg-orange-50"
+                  ? "!bg-white !text-[#101828] !border-none shadow-sm"
+                  : "!bg-transparent !text-[#475467] !border-none"
               }`}
             />
             <Button
               label="Individual"
+              variant={userType === "private" ? "outline" : "secondary"}
               onClick={() => setUserType("private")}
-              className={`!h-[48px] !px-10 !text-[18px] !font-semibold !rounded-[10px] !transition-all !duration-300 ${
+              className={`h-12! px-10! font-bold! rounded-[10px]! transition-all! duration-300! ${
                 userType === "private"
-                  ? "!bg-[#E48A3C] !text-white !border-none shadow-md"
-                  : "!bg-transparent !text-[#1A1A1A] !border-none hover:!bg-orange-50"
+                  ? "!bg-white !text-[#101828] !border-none shadow-sm"
+                  : "!bg-transparent !text-[#475467] !border-none"
               }`}
             />
           </div>

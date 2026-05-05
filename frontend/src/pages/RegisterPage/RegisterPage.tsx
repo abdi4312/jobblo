@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginIcon from "../../assets/images/Login/login-icon.png";
 import { Input } from "../../components/Ui/Input.tsx";
-import { Button } from "../../components/Ui/Button.tsx";
+import { Button } from "../../components/Ui/button/Button";
 import SocialAuthButtons from "../../components/SocialAuthButtons/AuthButton.tsx";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import Auth from "../../components/Auth/Auth.tsx";
@@ -160,9 +160,9 @@ export default function RegisterPage() {
               <div className="flex flex-col gap-6.5 mt-6.5">
                 <Button
                   onClick={handleRegister}
-                  disabled={isRegistering}
-                  className={`w-full max-w-md bg-custom-green! rounded-[14px] text-base! font-normal! ${isRegistering ? "opacity-80" : ""}`}
-                  label={isRegistering ? "Registrerer..." : "Registrer"}
+                  loading={isRegistering}
+                  className="w-full max-w-md bg-custom-green! rounded-[14px] text-base! font-normal!"
+                  label="Registrer"
                 />
               </div>
 
