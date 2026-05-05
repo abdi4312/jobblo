@@ -30,7 +30,7 @@ export default function Auth() {
                 <div className="flex flex-col gap-8">
                     <div>
                         <h1 className="text-[48px] font-bold leading-15">Små jobber.</h1>
-                        <h1 className="text-[48px] font-bold text-[#E08835] leading-15">Store muligheter.</h1>
+                        <h1 className="text-[48px] font-bold text-orange-custom leading-15">Store muligheter.</h1>
                     </div>
 
                     <div className="max-w-97.25">

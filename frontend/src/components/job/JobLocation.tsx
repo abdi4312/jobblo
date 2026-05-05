@@ -21,16 +21,18 @@ const JobLocation: React.FC<JobLocationProps> = ({ location }) => {
   // Logic to calculate radius based on coordinate precision if not provided by backend
   const calculateRadiusFromPrecision = (coordinate: number): number => {
     const str = coordinate.toString();
-    const decimalPart = str.split('.')[1] || "";
+    const decimalPart = str.split(".")[1] || "";
     const precision = decimalPart.length;
 
     if (precision <= 2) return 5000; // ~5km for very low precision (e.g. 59.91)
     if (precision === 3) return 2000; // ~2km for medium-low precision (e.g. 59.913)
-    if (precision === 4) return 800;  // ~800m for medium precision (e.g. 59.9139)
+    if (precision === 4) return 800; // ~800m for medium precision (e.g. 59.9139)
     return 400; // ~400m for high precision
   };
 
-  const radius = location?.radius || (hasCoordinates ? calculateRadiusFromPrecision(lat) : 800);
+  const radius =
+    location?.radius ||
+    (hasCoordinates ? calculateRadiusFromPrecision(lat) : 800);
 
   const googleMapsUrl = hasCoordinates
     ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
@@ -58,7 +60,7 @@ const JobLocation: React.FC<JobLocationProps> = ({ location }) => {
       )}
 
       {/* <div className="flex flex-col justify-center items-center gap-3 py-6">
-        <span className="pl-2.5 pt-3.25 pr-3.5 pb-2.75 text-[#2F7E47]! bg-[#CBDBD0]! rounded-full">
+        <span className="pl-2.5 pt-3.25 pr-3.5 pb-2.75 text-custom-green! bg-[#CBDBD0]! rounded-full">
           <Navigation size={24} />
         </span>
 
@@ -72,7 +74,7 @@ const JobLocation: React.FC<JobLocationProps> = ({ location }) => {
         </div>
 
         <div className="rounded-[14px] flex items-center justify-center gap-2 px-3 py-1.5 shadow-[0px_2px_4px_-2px_rgba(0,0,0,0.1)] bg-white">
-          <span className="text-[#2F7E47]">
+          <span className="text-custom-green">
             <MapPin size={15} />
           </span>
           <p className="text-[#0A0A0A9E] text-[14px] font-light">

@@ -9,7 +9,11 @@ interface EditListModalProps {
   onClose: () => void;
 }
 
-const EditListModal: React.FC<EditListModalProps> = ({ list, isOpen, onClose }) => {
+const EditListModal: React.FC<EditListModalProps> = ({
+  list,
+  isOpen,
+  onClose,
+}) => {
   const updateListMutation = useUpdateFavoriteList();
   const [name, setName] = useState(list?.name || "");
   const [description, setDescription] = useState(list?.description || "");
@@ -49,7 +53,7 @@ const EditListModal: React.FC<EditListModalProps> = ({ list, isOpen, onClose }) 
       >
         {/* Header */}
         <div className="relative flex items-center justify-center p-6 border-b border-gray-100">
-          <h2 className="text-[#0A0A0A] font-bold text-lg">
+          <h2 className="text-custom-black font-bold text-lg">
             Rediger navn og beskrivelse
           </h2>
           <button
@@ -93,7 +97,7 @@ const EditListModal: React.FC<EditListModalProps> = ({ list, isOpen, onClose }) 
           <button
             type="submit"
             disabled={!name.trim() || updateListMutation.isPending}
-            className={`w-full py-4 bg-[#2F7E47] text-white font-bold rounded-2xl hover:bg-[#2F7E47] transition-all shadow-md active:scale-[0.98] text-lg ${updateListMutation.isPending || !name.trim() ? "opacity-80" : ""}`}
+            className={`w-full py-4 bg-custom-green text-white font-bold rounded-2xl hover:bg-custom-green transition-all shadow-md active:scale-[0.98] text-lg ${updateListMutation.isPending || !name.trim() ? "opacity-80" : ""}`}
           >
             {updateListMutation.isPending ? "Lagrer..." : "Lagre"}
           </button>

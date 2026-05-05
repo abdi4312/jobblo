@@ -2,7 +2,8 @@ import { useOutletContext } from "react-router-dom";
 import type { SettingsContextType } from "../../../pages/SettingsPage";
 
 export const EmailView = () => {
-  const { form, handleChange, handleUpdate, updateUser, user } = useOutletContext<SettingsContextType>();
+  const { form, handleChange, handleUpdate, updateUser, user } =
+    useOutletContext<SettingsContextType>();
 
   // Logikk: Sjekk om e-posten i input er den samme som brukerens opprinnelige e-post
   const isUnchanged = form.email === user?.email;
@@ -11,7 +12,10 @@ export const EmailView = () => {
   return (
     <section className="flex flex-col gap-6 max-w-2xl">
       <div className="relative group">
-        <label htmlFor="email" className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight">
+        <label
+          htmlFor="email"
+          className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight"
+        >
           E-postadresse
         </label>
         <input
@@ -28,9 +32,10 @@ export const EmailView = () => {
         onClick={handleUpdate}
         disabled={isDisabled}
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
-          ${isDisabled
-            ? "bg-[#2F7E47] cursor-not-allowed opacity-80"
-            : "bg-[#2F7E47] hover:bg-[#2F7E47] active:scale-[0.98]"
+          ${
+            isDisabled
+              ? "bg-custom-green cursor-not-allowed opacity-80"
+              : "bg-custom-green hover:bg-custom-green active:scale-[0.98]"
           }`}
       >
         {updateUser?.isPending ? "Oppdaterer..." : "Oppdater e-post"}

@@ -557,7 +557,7 @@ export default function CreateJobForm({
                     <Image size={22} />
                   </div>
                   <div>
-                    <h2 className="font-bold text-lg md:text-xl text-[#0A0A0A]">
+                    <h2 className="font-bold text-lg md:text-xl text-custom-black">
                       Last opp bilder
                     </h2>
                     <p className="text-gray-500 text-xs md:text-sm">
@@ -730,9 +730,9 @@ export default function CreateJobForm({
 
       {/* Full Page Job Detail Preview */}
       {showPreview && (
-        <div className="fixed inset-0 z-[10000] bg-[#F5F6F8] overflow-y-auto animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-10000 bg-[#F5F6F8] overflow-y-auto animate-in fade-in duration-300">
           {/* Header Actions */}
-          <div className="sticky top-0 z-[10001] bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+          <div className="sticky top-0 z-10001 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex items-center justify-between">
             <button
               onClick={() => setShowPreview(false)}
               className="flex items-center gap-2 text-gray-600 font-bold hover:bg-gray-100 px-4 py-2 rounded-xl transition-all"
@@ -745,15 +745,17 @@ export default function CreateJobForm({
                 Forhåndsvisning
               </span>
               <button
+                title="Lukk forhåndsvisning"
+                type="button"
                 onClick={() => setShowPreview(false)}
-                className="bg-[#2D7A4D] text-white p-2 rounded-full hover:bg-[#25633e] transition-all shadow-lg"
+                className="bg-custom-green text-white p-2 rounded-full hover:bg-[#25633e] transition-all shadow-lg"
               >
                 <X size={20} />
               </button>
             </div>
           </div>
 
-          <div className="max-w-[1200px] mx-auto px-4 lg:px-0 pt-8 pb-20">
+          <div className="max-w-300 mx-auto px-4 lg:px-0 pt-8 pb-20">
             <div className="flex flex-col lg:flex-row gap-6 items-start">
               {/* Left Column */}
               <div className="flex-1 w-full min-w-0 space-y-5">
@@ -781,16 +783,16 @@ export default function CreateJobForm({
               </div>
 
               {/* Right Column Sidebar */}
-              <aside className="lg:w-[360px] w-full lg:sticky lg:top-20 space-y-4 shrink-0">
+              <aside className="lg:w-90 w-full lg:sticky lg:top-20 space-y-4 shrink-0">
                 <div className="bg-white rounded-[20px] overflow-hidden shadow-[0px_2px_8px_0px_rgba(0,0,0,0.07)]">
-                  <div className="h-1.5 bg-[#2F7E47]" />
+                  <div className="h-1.5 bg-custom-green" />
                   <div className="p-6 space-y-5">
                     <div>
-                      <p className="text-[11px] font-semibold text-[#2F7E47] uppercase tracking-widest mb-1">
+                      <p className="text-[11px] font-semibold text-custom-green uppercase tracking-widest mb-1">
                         Totalpris
                       </p>
                       <div className="flex items-baseline gap-1.5">
-                        <span className="text-[42px] font-black text-[#0A0A0A] leading-none tabular-nums">
+                        <span className="text-[42px] font-black text-custom-black leading-none tabular-nums">
                           {previewJobData.price.toLocaleString("nb-NO")}
                         </span>
                         <span className="text-[20px] font-semibold text-[#9CA3AF]">
@@ -799,7 +801,7 @@ export default function CreateJobForm({
                       </div>
                     </div>
 
-                    <button className="w-full py-4 bg-[#2D7A4D] text-white rounded-2xl font-bold shadow-lg opacity-50 cursor-not-allowed">
+                    <button className="w-full py-4 bg-custom-green text-white rounded-2xl font-bold shadow-lg opacity-50 cursor-not-allowed">
                       Send melding (Preview)
                     </button>
 

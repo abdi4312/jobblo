@@ -77,7 +77,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 onClick={() => navigate(`/messages/${chat._id}`)}
                 className={`relative flex items-center p-4 gap-4 cursor-pointer transition-all ${
                   isActive
-                    ? "bg-[#2F7E4733] opacity-80"
+                    ? "bg-custom-green-light opacity-80"
                     : "bg-white hover:bg-[#F8F9FA]"
                 }`}
               >
@@ -110,7 +110,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                       {otherPerson?.name || "Ukjent"}
                     </h2>
                     {hasUnread && !isActive && (
-                      <div className="w-2.5 h-2.5 bg-[#2F7E47] rounded-full shrink-0"></div>
+                      <div className="w-2.5 h-2.5 bg-custom-green rounded-full shrink-0"></div>
                     )}
                     <span className="text-[13px] text-[#868E96] font-normal whitespace-nowrap">
                       {formatTime(chat.updatedAt || "")}

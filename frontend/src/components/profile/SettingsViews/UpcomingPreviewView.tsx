@@ -17,7 +17,7 @@ export const UpcomingPreviewView = () => {
           </p>
           <button 
             onClick={() => navigate("/upcoming")}
-            className="flex items-center gap-2 bg-[#2F7E47] hover:bg-[#2F7E47] text-white font-bold px-6 py-3 rounded-xl shadow-md transition-all"
+            className="flex items-center gap-2 bg-custom-green hover:bg-custom-green/60 text-white font-bold px-6 py-3 rounded-xl shadow-md transition-all"
           >
             <Info size={18} />
             Se veikart

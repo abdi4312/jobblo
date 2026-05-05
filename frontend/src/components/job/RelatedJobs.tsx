@@ -43,7 +43,7 @@ const RelatedJobs: React.FC<RelatedJobsProps> = ({ coordinates, currentJobId }) 
           </p>
           <button
             onClick={() => navigate("/job-listing")}
-            className="mt-5 text-sm font-semibold text-[#2F7E47] hover:underline"
+            className="mt-5 text-sm font-semibold text-custom-green hover:underline"
           >
             Se alle tilgjengelige jobber →
           </button>

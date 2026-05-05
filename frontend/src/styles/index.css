@@ -24,6 +24,13 @@ body {
   display: none;             /* Chrome, Safari aur Opera */
 }
 
+@theme {
+  --color-orange-custom: #e08835;
+  --color-custom-black: #0a0a0a;
+  --color-custom-green: #2f7e47;
+  --color-custom-green-light:#2F7E4733 ;
+}
+
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: 'Geist Variable', sans-serif;

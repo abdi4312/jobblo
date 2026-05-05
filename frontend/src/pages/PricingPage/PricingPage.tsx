@@ -121,7 +121,7 @@ export default function PricingPage() {
             {/* Order Summary */}
             <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#E9ECEF]">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-[#E0883515] flex items-center justify-center text-[#E08835]">
+                <div className="w-10 h-10 rounded-xl bg-[#E0883515] flex items-center justify-center text-orange-custom">
                   <ShoppingCart size={20} />
                 </div>
                 <h2 className="text-2xl font-bold text-[#212529]">
@@ -168,7 +168,7 @@ export default function PricingPage() {
                     <span className="text-lg font-bold text-[#212529]">
                       Total to pay
                     </span>
-                    <span className="text-3xl font-black text-[#2F7E47]">
+                    <span className="text-3xl font-black text-custom-green">
                       {discountInfo
                         ? discountInfo.finalPrice
                         : selectedPlan.price}{" "}
@@ -191,7 +191,7 @@ export default function PricingPage() {
                         >
                           <Check
                             size={14}
-                            className="text-[#2F7E47] mt-0.5 shrink-0"
+                            className="text-custom-green mt-0.5 shrink-0"
                           />
                           {feature}
                         </li>
@@ -206,7 +206,7 @@ export default function PricingPage() {
               {/* Promo Code Card */}
               <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#E9ECEF]">
                 <h3 className="text-lg font-bold text-[#212529] mb-4 flex items-center gap-2">
-                  <Tag size={18} className="text-[#E08835]" />
+                  <Tag size={18} className="text-orange-custom" />
                   Do you have a promo code?
                 </h3>
                 <div className="flex gap-2">
@@ -214,7 +214,7 @@ export default function PricingPage() {
                     placeholder="Enter code"
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                    className="h-12 rounded-xl border-[#E9ECEF] focus:border-[#E08835] focus:ring-0"
+                    className="h-12 rounded-xl border-[#E9ECEF] focus:border-orange-custom focus:ring-0"
                     disabled={isApplyingPromo || !!discountInfo}
                   />
                   <Button
@@ -232,6 +232,7 @@ export default function PricingPage() {
                       Code <strong>{discountInfo.code}</strong> activated!
                     </span>
                     <button
+                      title="Remove discount code"
                       onClick={() => {
                         setDiscountInfo(null);
                         setPromoCode("");
@@ -281,7 +282,7 @@ export default function PricingPage() {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-[40px] font-bold tracking-normal mb-4">
-            Choose your <span className="text-[#2F7E47]">plan</span>
+            Choose your <span className="text-custom-green">plan</span>
           </h2>
           <p className="text-lg font-light text-[#0A0A0A9E] max-w-2xl mx-auto">
             Transparent pricing with no hidden costs. Start for free and upgrade
@@ -290,7 +291,7 @@ export default function PricingPage() {
         </div>
 
         <div className="flex justify-center mb-12">
-          <div className="inline-flex bg-white border border-[#E08835] rounded-[14px] p-1 shadow-sm">
+          <div className="inline-flex bg-white border border-orange-custom rounded-[14px] p-1 shadow-sm">
             <Button
               label="Business"
               onClick={() => setUserType("business")}
@@ -314,7 +315,7 @@ export default function PricingPage() {
 
         {isLoading ? (
           <div className="flex justify-center items-center py-24">
-            <Loader2 className="animate-spin text-[#E08835] mr-2" />
+            <Loader2 className="animate-spin text-orange-custom mr-2" />
             <p className="text-xl">Loading plans...</p>
           </div>
         ) : (
@@ -326,7 +327,7 @@ export default function PricingPage() {
                   key={plan._id}
                   className={`flex flex-col bg-white rounded-3xl p-8 transition-all duration-300 relative ${
                     isPopular
-                      ? "ring-2 ring-[#E08835] shadow-2xl scale-105 z-10"
+                      ? "ring-2 ring-orange-custom shadow-2xl scale-105 z-10"
                       : "border border-[#E9ECEF] shadow-sm hover:shadow-md"
                   }`}
                 >
@@ -362,8 +363,8 @@ export default function PricingPage() {
                     onClick={() => handleUpgradeClick(plan)}
                     className={`w-full py-4 rounded-2xl font-bold transition-all mb-8 ${
                       isPopular
-                        ? "!bg-[#E08835] !text-white hover:!bg-black shadow-lg"
-                        : "!bg-transparent !text-[#E08835] !border-2 !border-[#E08835] hover:!bg-[#E08835] hover:!text-white"
+                        ? "!bg-orange-custom !text-white hover:!bg-black shadow-lg"
+                        : "!bg-transparent !text-orange-custom !border-2 !border-orange-custom hover:!bg-orange-custom hover:!text-white"
                     }`}
                   />
 
@@ -377,7 +378,7 @@ export default function PricingPage() {
                           key={i}
                           className="flex items-start gap-3 text-[15px] text-[#495057]"
                         >
-                          <div className="mt-1 shrink-0 w-5 h-5 rounded-full bg-[#E0883515] flex items-center justify-center text-[#E08835]">
+                          <div className="mt-1 shrink-0 w-5 h-5 rounded-full bg-[#E0883515] flex items-center justify-center text-orange-custom">
                             <Check size={12} strokeWidth={3} />
                           </div>
                           {feature}
@@ -397,7 +398,7 @@ export default function PricingPage() {
           </h4>
           <NavLink
             to="/support"
-            className="inline-flex items-center text-[#2F7E47] font-black text-lg hover:underline gap-2"
+            className="inline-flex items-center text-custom-green font-black text-lg hover:underline gap-2"
           >
             Contact us
             <span className="material-symbols-outlined">arrow_forward</span>

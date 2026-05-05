@@ -2,7 +2,8 @@ import { useOutletContext } from "react-router-dom";
 import type { SettingsContextType } from "../../../pages/SettingsPage";
 
 export const BioView = () => {
-  const { form, handleChange, handleUpdate, updateUser, user } = useOutletContext<SettingsContextType>();
+  const { form, handleChange, handleUpdate, updateUser, user } =
+    useOutletContext<SettingsContextType>();
 
   // Logikk: Sjekk om bio er den samme som allerede var i profilen
   const isUnchanged = form.bio === user?.bio;
@@ -11,7 +12,10 @@ export const BioView = () => {
   return (
     <section className="flex flex-col gap-6 max-w-2xl">
       <div className="relative group">
-        <label htmlFor="bio" className="absolute left-4 top-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-tight">
+        <label
+          htmlFor="bio"
+          className="absolute left-4 top-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-tight"
+        >
           Bio
         </label>
         <textarea
@@ -28,9 +32,10 @@ export const BioView = () => {
         onClick={handleUpdate}
         disabled={isDisabled}
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
-          ${isDisabled
-            ? "bg-[#2F7E47] cursor-not-allowed opacity-80"
-            : "bg-[#2F7E47] hover:bg-[#2F7E47] active:scale-[0.98]"
+          ${
+            isDisabled
+              ? "bg-custom-green cursor-not-allowed opacity-80"
+              : "bg-custom-green hover:bg-custom-green active:scale-[0.98]"
           }`}
       >
         {updateUser?.isPending ? "Lagrer..." : "Oppdater bio"}

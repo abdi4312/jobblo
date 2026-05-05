@@ -65,7 +65,7 @@ export default function JobListingPage() {
             {/* Jobs Listing */}
             <div className="w-full">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <h2 className="text-2xl md:text-3xl font-bold text-[#0A0A0A] tracking-tight">
+                <h2 className="text-2xl md:text-3xl font-bold text-custom-black tracking-tight">
                   Finn oppdrag
                 </h2>
 

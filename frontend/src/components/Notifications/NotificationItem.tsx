@@ -148,7 +148,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         <div className="flex-1 flex flex-col sm:flex-row justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex items-center justify-between sm:justify-start">
-              <h2 className="text-[18px] font-bold text-[#0A0A0A]">
+              <h2 className="text-[18px] font-bold text-custom-black">
                 {config.title}
               </h2>
 
@@ -177,12 +177,12 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
               </div>
             </div>
 
-            <p className="text-[16px] font-medium text-[#0A0A0A] leading-6">
+            <p className="text-[16px] font-medium text-custom-black leading-6">
               {alert.content}
             </p>
 
             <div className="inline-block">
-              <span className="bg-[#2F7E471A] text-[#2F7E47] text-[14px] font-medium px-4 py-1 rounded-full">
+              <span className="bg-[#2F7E471A] text-custom-green text-[14px] font-medium px-4 py-1 rounded-full">
                 {alert.type}
               </span>
             </div>

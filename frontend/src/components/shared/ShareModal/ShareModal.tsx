@@ -111,7 +111,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
           </div>
 
           {/* URL Copy Section */}
-          <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-2 flex items-center gap-3">
+          <div className="bg-custom-black border border-white/10 rounded-2xl p-2 flex items-center gap-3">
             <div className="flex-1 px-3 overflow-hidden">
               <p className="text-sm text-gray-400 truncate font-mono">
                 {url}
@@ -120,7 +120,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             <button
               title="Copy URL"
               onClick={handleCopy}
-              className="bg-white text-black px-5 py-2 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors"
+              className="bg-white text-custom-black px-5 py-2 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors"
             >
               Copy
             </button>

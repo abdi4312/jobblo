@@ -144,7 +144,7 @@ export const ListDetailPage: React.FC = () => {
 
         {/* List Info */}
         <div className="flex-1 space-y-4">
-          <h1 className="text-4xl font-bold text-[#0A0A0A]">{list.name}</h1>
+          <h1 className="text-4xl font-bold text-custom-black">{list.name}</h1>
 
           <div className="flex items-center gap-6 text-sm text-gray-500 font-medium">
             <span>{list.services?.length || 0} elementer</span>
@@ -162,7 +162,7 @@ export const ListDetailPage: React.FC = () => {
                   className={`px-6 py-2.5 rounded-xl font-bold transition-all active:scale-95 ${
                     list.public
                       ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      : "bg-[#2F7E47] text-white hover:bg-[#2F7E47]"
+                      : "bg-custom-green text-white hover:bg-custom-green"
                   }`}
                 >
                   {list.public ? "Gjør privat" : "Gjør offentlig"}
@@ -233,7 +233,7 @@ export const ListDetailPage: React.FC = () => {
 
       <div className="border-t border-gray-100 pt-8">
         <div className="flex justify-end items-center mb-8 gap-4">
-          <span className="text-[#0A0A0A] font-medium text-lg">Sorter</span>
+          <span className="text-custom-black font-medium text-lg">Sorter</span>
           <div className="relative">
             <button
               onClick={() => setShowSortMenu(!showSortMenu)}
@@ -275,7 +275,7 @@ export const ListDetailPage: React.FC = () => {
                     }}
                     className={`w-full text-left px-4 py-3.5 text-base font-bold transition-colors ${
                       sortOrder === option
-                        ? "text-[#2F7E47] bg-[#2F7E4711]"
+                        ? "text-custom-green bg-[#2F7E4711]"
                         : "text-gray-700 hover:bg-gray-50"
                     }`}
                   >

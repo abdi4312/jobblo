@@ -5,7 +5,7 @@ import mainLink from "../../../api/mainURLs";
 import Swal from "sweetalert2";
 import { Check, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { Button as AppButton } from "../../Ui/Button"
+import { Button as AppButton } from "../../Ui/Button";
 import { usePlans } from "../../../features/plans/hooks";
 
 interface PricingModalProps {
@@ -277,7 +277,6 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
 
   const { data: plans, isLoading } = usePlans();
 
-
   const handlePlanSelection = async (planId: string) => {
     setSelectedPlanId(planId);
     setShowCouponModal(true);
@@ -386,27 +385,29 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
             className="bg-[#F2F2F2] rounded-xl w-[98%] max-w-280 max-h-[99vh] overflow-y-auto p-10"
             onClick={(e) => e.stopPropagation()}
           >
-
             <div className="flex justify-between">
               <div>
-
                 <h2 className="text-[40px] font-bold tracking-normal mb-4">
-                  Velg din <span className="text-[#2F7E47]">plan</span>
+                  Velg din <span className="text-custom-green">plan</span>
                 </h2>
 
                 <p className="text-base font-light text-[#0A0A0A9E]">
-                  Transparente priser uten skjulte kostnader. Start gratis og oppgrader når du er klar.
+                  Transparente priser uten skjulte kostnader. Start gratis og
+                  oppgrader når du er klar.
                 </p>
-
               </div>
 
               {/* Close Button */}
-              <div >
-                <button onClick={onClose} className="p-3.5 bg-white rounded-[14px] hover:text-[#E08835] hover:border-[#E08835]">
+              <div>
+                <button
+                  title="Lukk"
+                  onClick={onClose}
+                  className="p-3.5 bg-white rounded-[14px]
+                hover:text-orange-custom hover:border-orange-custom"
+                >
                   <X size={16} />
                 </button>
               </div>
-
             </div>
 
             <div className="py-5">
@@ -426,26 +427,27 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
               </Radio.Group> */}
               <div className="flex justify-center mb-[30px]">
                 {/* Main wrapper jo buttons ko ek saath jorta hai */}
-                <div className="inline-flex bg-white border border-[#E08835] rounded-[14px] p-1 shadow-sm">
-
+                <div className="inline-flex bg-white border border-orange-custom rounded-[14px] p-1 shadow-sm">
                   {/* Bedrift Button */}
                   <AppButton
                     label="Bedrift"
                     onClick={() => setUserType("business")}
-                    className={`h-12! px-10! font-semibold! rounded-[10px]! transition-all! duration-300! ${userType === "business"
-                      ? "!bg-[#E48A3C] !text-white !border-none shadow-md"
-                      : "!bg-transparent !text-[#1A1A1A] !border-none hover:!bg-orange-50"
-                      }`}
+                    className={`h-12! px-10! font-semibold! rounded-[10px]! transition-all! duration-300! ${
+                      userType === "business"
+                        ? "!bg-[#E48A3C] !text-white !border-none shadow-md"
+                        : "!bg-transparent !text-[#1A1A1A] !border-none hover:!bg-orange-50"
+                    }`}
                   />
 
                   {/* Privatperson Button */}
                   <AppButton
                     label="Privatperson"
                     onClick={() => setUserType("private")}
-                    className={`!h-[48px] !px-10 !text-[18px] !font-semibold !rounded-[10px] !transition-all !duration-300 ${userType === "private"
-                      ? "!bg-[#E48A3C] !text-white !border-none shadow-md"
-                      : "!bg-transparent !text-[#1A1A1A] !border-none hover:!bg-orange-50"
-                      }`}
+                    className={`!h-[48px] !px-10 !text-[18px] !font-semibold !rounded-[10px] !transition-all !duration-300 ${
+                      userType === "private"
+                        ? "!bg-[#E48A3C] !text-white !border-none shadow-md"
+                        : "!bg-transparent !text-[#1A1A1A] !border-none hover:!bg-orange-50"
+                    }`}
                   />
                 </div>
               </div>
@@ -455,17 +457,21 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                   <p>Laster planer...</p>
                 </div>
               ) : (
-                <div className={`flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap gap-4`}>
+                <div
+                  className={`flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap gap-4`}
+                >
                   {currentPlans.map((plan) => {
                     const isPopular = getIsPopular(plan);
                     return (
                       <div
                         key={plan._id}
                         className={`relative rounded-lg min-w-80.25 min-h-140 bg-[#F2F2F2] p-8 items-center justify-center my-auto
-                          ${isPopular ? "border border-[#E08835] lg:min-w-91.5 lg:min-h-152"
-                            : "border border-[#d9d9d9]"
-                          }`}>
-
+                          ${
+                            isPopular
+                              ? "border border-orange-custom lg:min-w-91.5 lg:min-h-152"
+                              : "border border-[#d9d9d9]"
+                          }`}
+                      >
                         <div className="flex flex-col gap-2 mb-2">
                           <div className="flex justify-between">
                             <div>
@@ -481,7 +487,6 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                               </div>
                             )}
                           </div>
-
                         </div>
 
                         <div className="mb-8">
@@ -494,20 +499,27 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                           <p className="text-[32px] font-bold">
                             {plan.price} kr
                           </p>
-                          <p className="text-[16px] font-light">
-                            måned
-                          </p>
+                          <p className="text-[16px] font-light">måned</p>
                         </div>
 
-                        <AppButton label="Se alle oppdrag" onClick={() => handlePlanSelection(plan._id)}
+                        <AppButton
+                          label="Se alle oppdrag"
+                          onClick={() => handlePlanSelection(plan._id)}
                           className={`w-50 my-8 border rounded-xl
-                          ${isPopular ? "hover:bg-transparent hover:text-[#E08835]!"
-                              : "text-[#E08835]! border-[#E08835] bg-transparent hover:bg-[#E08835] hover:text-white!"}`} />
+                          ${
+                            isPopular
+                              ? "hover:bg-transparent hover:text-orange-custom!"
+                              : "text-orange-custom! border-orange-custom bg-transparent hover:bg-orange-custom hover:text-white!"
+                          }`}
+                        />
 
                         <ul className="list-none p-0 mb-5">
                           {plan.featuresText?.map((feature, i) => (
-                            <li key={i} className="mb-2 pl-7.5 relative text-base font-normal">
-                              <span className="absolute left-0 size-5 text-[#2F7E47] p-0.75 bg-amber-600 rounded-full">
+                            <li
+                              key={i}
+                              className="mb-2 pl-7.5 relative text-base font-normal"
+                            >
+                              <span className="absolute left-0 size-5 text-custom-green p-0.75 bg-amber-600 rounded-full">
                                 <Check className="size-3.5" />
                               </span>
                               {feature}
@@ -517,20 +529,22 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                       </div>
                     );
                   })}
-
                 </div>
               )}
 
               <div className="flex items-center justify-center text-base md:text-[24px] pt-10 gap-2">
                 <p className="font-normal">Har du spørsmål om våre planer?</p>
-                <NavLink to="/" className="text-[#2F7E47]!  font-semibold decoration-solid hover:underline">Kontakt oss</NavLink>
+                <NavLink
+                  to="/"
+                  className="text-custom-green!  font-semibold decoration-solid hover:underline"
+                >
+                  Kontakt oss
+                </NavLink>
               </div>
-
             </div>
           </div>
-        </div >
-      )
-      }
+        </div>
+      )}
 
       {/* Coupon Modal same rahega */}
       <CouponModal
@@ -540,6 +554,5 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
         loading={couponLoading}
       />
     </>
-
   );
 }

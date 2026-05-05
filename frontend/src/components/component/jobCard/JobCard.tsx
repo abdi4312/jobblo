@@ -13,11 +13,11 @@ interface JobCardProps {
 }
 
 const categoryColorMap: Record<string, string> = {
-  Rørlegger: "bg-[#2F7E47]",
-  Renhold: "bg-[#2F7E47]",
+  Rørlegger: "bg-custom-green",
+  Renhold: "bg-custom-blue",
   Maling: "bg-[#238CEB]",
-  Hagearbeid: "bg-[#2F7E47]",
-  Flytting: "bg-[#2F7E47]",
+  Hagearbeid: "bg-custom-green",
+  Flytting: "bg-custom-blue",
 };
 
 export const JobCard = ({ job, isOwner }: JobCardProps) => {
@@ -69,7 +69,7 @@ export const JobCard = ({ job, isOwner }: JobCardProps) => {
   const catName = Array.isArray(job.categories)
     ? job.categories[0]
     : job.categories;
-  const badgeColor = categoryColorMap[catName] || "bg-[#2F7E47]";
+  const badgeColor = categoryColorMap[catName] || "bg-custom-green";
 
   return (
     <div
@@ -100,7 +100,7 @@ export const JobCard = ({ job, isOwner }: JobCardProps) => {
           <div className="absolute bottom-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300 z-10">
             <button
               title="Rediger"
-              className="w-10 h-10 flex items-center justify-center bg-white rounded-[14px] shadow-md hover:scale-105 active:scale-95 transition-all text-[#2F7E47]"
+              className="w-10 h-10 flex items-center justify-center bg-white rounded-[14px] shadow-md hover:scale-105 active:scale-95 transition-all text-custom-green"
               onClick={handleEditClick}
             >
               <Pencil size={20} />
@@ -140,14 +140,14 @@ export const JobCard = ({ job, isOwner }: JobCardProps) => {
             onClick={handleFavClick}
           >
             {listsLoading ? (
-              <div className="animate-spin w-3 h-3 border-[1.5px] border-gray-300 border-t-[#2F7E47] rounded-full" />
+              <div className="animate-spin w-3 h-3 border-[1.5px] border-gray-300 border-t-custom-green rounded-full" />
             ) : (
               <Bookmark
                 size={16}
                 className={
                   isInAnyList
-                    ? "fill-[#0A0A0A] text-[#0A0A0A]"
-                    : "text-[#0A0A0A]"
+                    ? "fill-custom-black"
+                    : "text-custom-black"
                 }
               />
             )}
@@ -170,12 +170,12 @@ export const JobCard = ({ job, isOwner }: JobCardProps) => {
         </div> */}
 
         {/* Tittel */}
-        <h2 className="text-[#0A0A0A] font-bold text-[15px] leading-tight line-clamp-2">
+        <h2 className="text-custom-black font-bold text-[15px] leading-tight line-clamp-2">
           {job.title}
         </h2>
 
         {/* Pris */}
-        <div className="text-[#0A0A0A] font-bold text-[16px]">
+        <div className="text-custom-black font-bold text-[16px]">
           {job.price.toLocaleString()} kr
         </div>
 

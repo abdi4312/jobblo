@@ -96,7 +96,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({
       >
         {/* Header */}
         <div className="relative flex items-center justify-center p-6 border-b border-gray-100">
-          <h2 className="text-[#0A0A0A] font-bold text-lg">
+          <h2 className="text-custom-black font-bold text-lg">
             Legg til bidragsyter
           </h2>
           <button
@@ -127,7 +127,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({
             </div>
             <button
               type="submit"
-              className="px-8 py-3.5 bg-[#2F7E47] text-white font-bold rounded-[20px] hover:bg-[#2F7E47] transition-all"
+              className="px-8 py-3.5 bg-custom-green text-white font-bold rounded-[20px] hover:bg-custom-green transition-all"
             >
               Søk
             </button>
@@ -159,13 +159,13 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({
                             alt=""
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[#2F7E47] bg-[#2F7E4711]">
+                          <div className="w-full h-full flex items-center justify-center text-custom-green bg-[#2F7E4711]">
                             <UserPlus size={24} />
                           </div>
                         )}
                       </div>
                       <div className="text-left">
-                        <p className="font-bold text-[#0A0A0A] text-lg leading-tight">
+                        <p className="font-bold text-custom-black text-lg leading-tight">
                           {user.name} {user.lastName}
                         </p>
                         <p className="text-sm text-gray-400 font-medium">
@@ -184,7 +184,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({
                       }`}
                     >
                       {isSelected && (
-                        <div className="w-4 h-4 rounded-full bg-[#2F7E47]" />
+                        <div className="w-4 h-4 rounded-full bg-custom-green" />
                       )}
                     </div>
                   </button>
@@ -204,7 +204,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({
           <button
             onClick={handleAddContributors}
             disabled={selectedUsers.length === 0}
-            className="w-full py-4.5 bg-[#2F7E47] text-white font-bold rounded-[22px] hover:bg-[#2F7E47] disabled:bg-[#2F7E47]/40 disabled:text-gray-500 transition-all shadow-md active:scale-[0.98] text-lg mt-4"
+            className="w-full py-4.5 bg-custom-green text-white font-bold rounded-[22px] hover:bg-custom-green disabled:bg-custom-green/40 disabled:text-gray-500 transition-all shadow-md active:scale-[0.98] text-lg mt-4"
           >
             Legg til bidragsyter{" "}
             {selectedUsers.length > 0 && `(${selectedUsers.length})`}

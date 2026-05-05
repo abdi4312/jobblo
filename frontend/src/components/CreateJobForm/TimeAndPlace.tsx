@@ -39,7 +39,7 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
             <MapPin size={22} />
           </div>
           <div>
-            <h2 className="font-bold text-lg md:text-xl text-[#0A0A0A]">
+            <h2 className="font-bold text-lg md:text-xl text-custom-black">
               Hvor skal det gjøres?
             </h2>
             <p className="text-gray-500 text-xs md:text-sm">
@@ -85,7 +85,7 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
             <Calendar size={22} />
           </div>
           <div>
-            <h2 className="font-bold text-lg md:text-xl text-[#0A0A0A]">
+            <h2 className="font-bold text-lg md:text-xl text-custom-black">
               Når skal det gjøres?
             </h2>
             <p className="text-gray-500 text-xs md:text-sm">
@@ -132,7 +132,7 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
             <Clock size={22} />
           </div>
           <div>
-            <h2 className="font-bold text-lg md:text-xl text-[#0A0A0A]">
+            <h2 className="font-bold text-lg md:text-xl text-custom-black">
               Forventet varighet
             </h2>
             <p className="text-gray-500 text-xs md:text-sm">

@@ -268,7 +268,7 @@ export default function Header() {
                     <button
                       key={index}
                       onClick={() => handleProtectedNavigation(link.path)}
-                      className={`flex items-center mx-auto ${isHomeButtonActive ? "text-[#2F7E47]" : "hover:text-[#2F7E47]"}`}
+                      className={`flex items-center mx-auto ${isHomeButtonActive ? "text-custom-green" : "hover:text-custom-green"}`}
                     >
                       {link.icon}
                     </button>
@@ -282,7 +282,7 @@ export default function Header() {
                     <button
                       key={index}
                       onClick={() => handleProtectedNavigation(link.path)}
-                      className={`flex items-center mx-auto ${isJobButtonActive ? "bg-[#2F7E47]" : "bg-[#2F7E47]"} text-white px-4 py-2 rounded-full font-medium transition-hover hover:bg-[#2F7E47]`}
+                      className={`flex items-center mx-auto ${isJobButtonActive ? "bg-custom-green" : "bg-custom-green"} text-white px-4 py-2 rounded-full font-medium transition-hover hover:bg-custom-green`}
                     >
                       {link.icon}
                     </button>
@@ -328,9 +328,7 @@ export default function Header() {
                 to="/home"
                 className={({ isActive }) =>
                   `transition-all cursor-pointer ${
-                    isActive
-                      ? "text-[#2F7E47]!"
-                      : "text-[#2F7E47]!"
+                    isActive ? "text-custom-green!" : "text-custom-green!"
                   }`
                 }
               >
@@ -339,7 +337,7 @@ export default function Header() {
 
               <button
                 onClick={() => navigate("/login")}
-                className="bg-[#2F7E47] text-white px-8 py-3 rounded-[20px] font-semibold transition-all hover:bg-[#25633a] active:scale-95 shadow-sm"
+                className="bg-custom-green text-white px-8 py-3 rounded-[20px] font-semibold transition-all hover:bg-[#25633a] active:scale-95 shadow-sm"
               >
                 Register/Log in
               </button>
@@ -374,7 +372,7 @@ export default function Header() {
                     className={({ isActive }) =>
                       `flex items-center gap-3 p-3 rounded-lg ${
                         isActive
-                          ? "bg-green-50 text-[#2F7E47]! font-bold"
+                          ? "bg-green-50 text-custom-green! font-bold"
                           : "text-gray-700!"
                       }`
                     }
@@ -387,7 +385,7 @@ export default function Header() {
                   <NavLink
                     to="/login"
                     onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-green-50 hover:text-[#2F7E47]"
+                    className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-green-50 hover:text-custom-green"
                   >
                     <User size={20} />
                     <span className="text-sm font-medium">Register/Log in</span>
@@ -403,7 +401,7 @@ export default function Header() {
                     className={({ isActive }) =>
                       `flex items-center gap-3 p-3 rounded-lg ${
                         isActive
-                          ? "bg-green-50 text-[#2F7E47]! font-bold"
+                          ? "bg-green-50 text-custom-green! font-bold"
                           : "text-gray-700!"
                       }`
                     }

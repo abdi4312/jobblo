@@ -258,7 +258,7 @@ export function ContractDetailPage() {
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
                   Avtalt pris
                 </span>
-                <div className="text-3xl font-black text-[#2F7E47] flex items-end gap-1">
+                <div className="text-3xl font-black text-custom-green flex items-end gap-1">
                   {contract.price}{" "}
                   <span className="text-sm font-bold text-slate-400 mb-1">
                     NOK
@@ -321,7 +321,7 @@ export function ContractDetailPage() {
               {contract.address && (
                 <div className="mt-6 flex items-start gap-4 bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
                   <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center shrink-0">
-                    <MapPin className="text-[#2F7E47]" size={18} />
+                    <MapPin className="text-custom-green" size={18} />
                   </div>
                   <div>
                     <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
@@ -357,7 +357,7 @@ export function ContractDetailPage() {
                     </p>
                     <button
                       onClick={handleSignContract}
-                      className="w-full py-3.5 bg-[#2F7E47] text-white font-bold rounded-xl hover:bg-[#2F7E47] hover:shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all"
+                      className="w-full py-3.5 bg-custom-green text-white font-bold rounded-xl hover:bg-custom-green hover:shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all"
                     >
                       Signer kontrakt
                     </button>
@@ -473,7 +473,7 @@ export function ContractDetailPage() {
                                   />
                                 ))}
                               </div>
-                              <p className="text-[#2F7E47] font-bold">
+                              <p className="text-custom-green font-bold">
                                 Takk for din vurdering!
                               </p>
                             </div>

@@ -3,10 +3,12 @@ import type { SettingsContextType } from "../../../pages/SettingsPage";
 
 export const NameView = () => {
   // 'user' objekt-kontekst for sammenligning
-  const { form, handleChange, handleUpdate, updateUser, user } = useOutletContext<SettingsContextType>();
+  const { form, handleChange, handleUpdate, updateUser, user } =
+    useOutletContext<SettingsContextType>();
 
   // Logikk: Hvis fornavn og etternavn er de samme som før
-  const isUnchanged = form.name === user?.name && form.lastName === user?.lastName;
+  const isUnchanged =
+    form.name === user?.name && form.lastName === user?.lastName;
   const isDisabled = isUnchanged || updateUser?.isPending;
 
   return (
@@ -14,7 +16,10 @@ export const NameView = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Fornavn */}
         <div className="relative group">
-          <label htmlFor="firstName" className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight">
+          <label
+            htmlFor="firstName"
+            className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight"
+          >
             Fornavn
           </label>
           <input
@@ -27,7 +32,10 @@ export const NameView = () => {
 
         {/* Etternavn */}
         <div className="relative group">
-          <label htmlFor="lastName" className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight">
+          <label
+            htmlFor="lastName"
+            className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight"
+          >
             Etternavn
           </label>
           <input
@@ -45,9 +53,10 @@ export const NameView = () => {
         onClick={handleUpdate}
         disabled={isDisabled || updateUser?.isPending}
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
-          ${isDisabled
-            ? "bg-[#2F7E47] cursor-not-allowed opacity-80"
-            : "bg-[#2F7E47] hover:bg-[#2F7E47] active:scale-[0.98]"
+          ${
+            isDisabled
+              ? "bg-custom-green cursor-not-allowed opacity-80"
+              : "bg-custom-green hover:bg-custom-green active:scale-[0.98]"
           }`}
       >
         {updateUser?.isPending ? "Lagrer..." : "Lagre endringer"}

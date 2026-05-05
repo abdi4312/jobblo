@@ -105,7 +105,7 @@ export default function LoginPage() {
                 <Button
                   onClick={handleLogin}
                   disabled={isLoggingIn}
-                  className={`w-full max-w-md bg-[#2F7E47]! rounded-[14px] text-base! font-normal! ${isLoggingIn ? "opacity-80" : ""}`}
+                  className={`w-full max-w-md bg-custom-green! rounded-[14px] text-base! font-normal! ${isLoggingIn ? "opacity-80" : ""}`}
                   label={isLoggingIn ? "Logger inn..." : "Logg inn"}
                 />
               </div>
@@ -128,7 +128,7 @@ export default function LoginPage() {
                 <p>Har du ikke konto?</p>
                 <Button
                   onClick={() => navigate("/register")}
-                  className="bg-transparent! text-[#2F7E47]! p-0! text-base! font-normal!"
+                  className="bg-transparent! text-custom-green! p-0! text-base! font-normal!"
                   label="Registrer deg"
                 />
               </div>

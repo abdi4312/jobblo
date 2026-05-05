@@ -24,13 +24,14 @@ export function ContractsPage() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<"Alle" | "Sendte" | "Mottatte">(
-    "Alle",
-  );
+  const [activeFilter, setActiveFilter] = useState<
+    "Alle" | "Sendte" | "Mottatte"
+  >("Alle");
 
   const filteredContracts = contracts.filter((contract) => {
     if (activeFilter === "Alle") return true;
-    if (activeFilter === "Sendte") return contract.providerId?._id === user?._id;
+    if (activeFilter === "Sendte")
+      return contract.providerId?._id === user?._id;
     if (activeFilter === "Mottatte") return contract.clientId._id === user?._id;
     return true;
   });
@@ -198,7 +199,7 @@ export function ContractsPage() {
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center">
-              <FileText size={24} className="text-[#2F7E47]" />
+              <FileText size={24} className="text-custom-green" />
             </div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
               Aktive kontrakter
@@ -217,7 +218,7 @@ export function ContractsPage() {
               onClick={() => setActiveFilter(filter)}
               className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${
                 activeFilter === filter
-                  ? "bg-[#2F7E47] text-white shadow-md shadow-[#2F7E47]/20"
+                  ? "bg-custom-green text-white shadow-md shadow-[#2F7E47]/20"
                   : "bg-transparent text-slate-500 hover:text-slate-800 hover:bg-white"
               }`}
             >

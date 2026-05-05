@@ -161,7 +161,7 @@ export default function RegisterPage() {
                 <Button
                   onClick={handleRegister}
                   disabled={isRegistering}
-                  className={`w-full max-w-md bg-[#2F7E47]! rounded-[14px] text-base! font-normal! ${isRegistering ? "opacity-80" : ""}`}
+                  className={`w-full max-w-md bg-custom-green! rounded-[14px] text-base! font-normal! ${isRegistering ? "opacity-80" : ""}`}
                   label={isRegistering ? "Registrerer..." : "Registrer"}
                 />
               </div>
@@ -182,7 +182,7 @@ export default function RegisterPage() {
                 <p>Har du allerede en konto?</p>
                 <Button
                   onClick={() => navigate("/login")}
-                  className="bg-transparent! text-[#2F7E47]! p-0! text-base! font-normal!"
+                  className="bg-transparent! text-custom-green! p-0! text-base! font-normal!"
                   label="Logg inn"
                 />
               </div>

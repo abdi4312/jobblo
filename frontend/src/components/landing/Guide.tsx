@@ -86,7 +86,7 @@ export function Guide() {
     <section className="py-20 px-6 lg:px-20">
       <div className="max-w-300 mx-auto">
         {/* Header - Center aligned with Jobblo Logo touch */}
-        <h2 className="text-[28px] md:text-[40px] font-bold text-center leading-10 mb-7 md:mb-16 text-[#0A0A0A]">
+        <h2 className="text-[28px] md:text-[40px] font-bold text-center leading-10 mb-7 md:mb-16 text-custom-black">
           Hvorfor velge
           <span className="inline-flex items-center">
             <Icons.JobbloIcon className="w-full h-full" />
@@ -107,11 +107,11 @@ export function Guide() {
 
               {/* Glassmorphism Badge */}
               <div className="absolute max-w-45 max-h-20 bottom-7 left-7 backdrop-blur-[17.6px] p-3 rounded-t-xl rounded-r-xl flex gap-3">
-                <span className="text-[32px] md:text-[40px] font-semibold items-center text-[#2F7E47]">
+                <span className="text-[32px] md:text-[40px] font-semibold items-center text-custom-green">
                   250
                 </span>
                 <div className="flex flex-col justify-end">
-                  <span className="text-[14px] md:text-base font-light text-[#0A0A0A]">
+                  <span className="text-[14px] md:text-base font-light text-custom-black">
                     Jobs/Day
                   </span>
                 </div>
@@ -128,16 +128,18 @@ export function Guide() {
                 shadow-[0_10px_30px_rgba(0,0,0,0.04)] hover:bg-white transition-all duration-300 cursor-default"
               >
                 {/* Neumorphic Icon Container */}
-                <div className="shrink-0 size-14 bg-white rounded-2xl flex items-center justify-center
-                shadow-[inset_0_2px_10px_rgba(0,0,0,0.05),0_5px_15px_rgba(0,0,0,0.05)] border border-gray-100">
+                <div
+                  className="shrink-0 size-14 bg-white rounded-2xl flex items-center justify-center
+                shadow-[inset_0_2px_10px_rgba(0,0,0,0.05),0_5px_15px_rgba(0,0,0,0.05)] border border-gray-100"
+                >
                   {feature.icon}
                 </div>
 
                 <div className="flex-col">
-                  <h3 className="text-xl font-bold text-[#0A0A0A]">
+                  <h3 className="text-xl font-bold text-custom-black">
                     {feature.title}
                   </h3>
-                  <p className="text-[#0A0A0A] text-sm md:text-base font-light max-w-109.75">
+                  <p className="text-custom-black text-sm md:text-base font-light max-w-109.75">
                     {feature.description}
                   </p>
                 </div>

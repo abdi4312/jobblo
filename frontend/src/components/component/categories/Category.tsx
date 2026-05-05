@@ -33,7 +33,7 @@ export function Category() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-[12px] sm:text-[14px] font-medium text-center text-[#0A0A0A] block">
+                  <span className="text-[12px] sm:text-[14px] font-medium text-center text-custom-black block">
                     Alle
                   </span>
                 </div>
@@ -61,7 +61,7 @@ export function Category() {
                       </span>
                     </div>
                     <div>
-                      <span className="text-[12px] sm:text-[14px] font-medium text-center text-[#0A0A0A] block">
+                      <span className="text-[12px] sm:text-[14px] font-medium text-center text-custom-black block">
                         {item.name}
                       </span>
                     </div>

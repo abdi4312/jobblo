@@ -194,7 +194,7 @@ const JobListingDetailPage = () => {
                   </h1>
                   <div className="flex flex-wrap items-center gap-3 mb-2">
                     {job.favCount !== undefined && job.favCount > 0 && (
-                      <div className="flex items-center gap-1.5 text-sm font-bold text-[#2F7E47] bg-[#2F7E47]/5 px-3 py-1 rounded-full border border-[#2F7E47]/10">
+                      <div className="flex items-center gap-1.5 text-sm font-bold text-custom-green bg-custom-green/5 px-3 py-1 rounded-full border border-[#2F7E47]/10">
                         <Bookmark size={14} fill="#2F7E47" color="#2F7E47" />
                         <span>{job.favCount} lagret</span>
                       </div>
@@ -202,7 +202,7 @@ const JobListingDetailPage = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-3xl font-bold text-[#2F7E47] shrink-0">
+                  <p className="text-3xl font-bold text-custom-green shrink-0">
                     {job.price ? job.price.toLocaleString() : "0"} kr
                   </p>
                   {job.hourlyRate && (
@@ -300,7 +300,7 @@ const JobListingDetailPage = () => {
                     className="w-14 h-14 rounded-full object-cover border border-gray-200"
                   />
                 ) : (
-                  <div className="w-14 h-14 bg-[#2F7E47] rounded-full flex items-center justify-center text-white text-xl font-bold">
+                  <div className="w-14 h-14 bg-custom-green rounded-full flex items-center justify-center text-white text-xl font-bold">
                     {job.userId?.name?.charAt(0) || "?"}
                   </div>
                 )}
@@ -318,7 +318,7 @@ const JobListingDetailPage = () => {
                       <Star size={14} fill="currentColor" />
                       <span>{job.userId?.averageRating || "0"}</span>
                     </div>
-                    <div className="flex items-center gap-1 text-sm text-[#2F7E47]">
+                    <div className="flex items-center gap-1 text-sm text-custom-green">
                       <svg
                         className="w-4 h-4"
                         fill="currentColor"

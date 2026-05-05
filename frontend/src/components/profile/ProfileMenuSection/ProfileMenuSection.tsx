@@ -74,11 +74,11 @@ export function ProfileMenuSection() {
               }}
             >
               <div className="flex items-center gap-8">
-                <div className="bg-white text-[#2F7E47] rounded-[14px] shadow-md flex items-center justify-center p-4.5">
+                <div className="bg-white text-custom-green rounded-[14px] shadow-md flex items-center justify-center p-4.5">
                   <item.icon size={20} />
                 </div>
                 <div>
-                  <h2 className="text-[20px] font-bold text-[#0A0A0A]">
+                  <h2 className="text-[20px] font-bold text-custom-black">
                     {item.text}
                   </h2>
                   <span className="text-[14px] font-medium">{item.des}</span>

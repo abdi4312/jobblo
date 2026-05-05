@@ -90,7 +90,7 @@ export default function LeggUtOppdrag() {
       <div className="max-w-300 mx-auto">
         <div className="flex flex-col gap-4 px-4 md:px-6">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <span className="p-4.5 shadow-md text-[#2F7E47] bg-[#FFFFFF1A] rounded-[14px] inline-flex items-center justify-center">
+            <span className="p-4.5 shadow-md text-custom-green bg-[#FFFFFF1A] rounded-[14px] inline-flex items-center justify-center">
               <BriefcaseBusiness size={20} />
             </span>
 

@@ -2,16 +2,23 @@ import { useOutletContext } from "react-router-dom";
 import type { SettingsContextType } from "../../../pages/SettingsPage";
 import { useState, useRef } from "react";
 import { X, Plus, Trash2, Image as ImageIcon } from "lucide-react";
-import { useAddPortfolioItem, useDeletePortfolioItem } from "../../../features/profile/hooks";
+import {
+  useAddPortfolioItem,
+  useDeletePortfolioItem,
+} from "../../../features/profile/hooks";
 
 export const SeekerSettingsView = () => {
   const { form, handleChange, handleUpdate, updateUser, user } =
     useOutletContext<SettingsContextType>();
   const [newSkill, setNewSkill] = useState("");
-  
+
   // Portfolio states
   const [isAddingProject, setIsAddingProject] = useState(false);
-  const [projectForm, setProjectForm] = useState({ title: "", description: "", link: "" });
+  const [projectForm, setProjectForm] = useState({
+    title: "",
+    description: "",
+    link: "",
+  });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,7 +59,7 @@ export const SeekerSettingsView = () => {
         setIsAddingProject(false);
         setProjectForm({ title: "", description: "", link: "" });
         setSelectedImage(null);
-      }
+      },
     });
   };
 
@@ -111,12 +118,14 @@ export const SeekerSettingsView = () => {
               key={skill}
               className="flex items-center gap-2 bg-[#2F7E4715] px-4 py-2 rounded-full border border-[#2F7E4720]"
             >
-              <span className="text-sm font-bold text-[#2F7E47]">{skill}</span>
+              <span className="text-sm font-bold text-custom-green">
+                {skill}
+              </span>
               <button
                 title="Fjern"
                 type="button"
                 onClick={() => removeSkill(skill)}
-                className="text-[#2F7E47] hover:text-[#1a4a2a] opacity-60 hover:opacity-100"
+                className="text-custom-green hover:text-[#1a4a2a] opacity-60 hover:opacity-100"
               >
                 <X size={14} />
               </button>
@@ -132,8 +141,8 @@ export const SeekerSettingsView = () => {
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200 mb-4
           ${
             isDisabled
-              ? "bg-[#2F7E47] cursor-not-allowed opacity-80"
-              : "bg-[#2F7E47] hover:bg-[#2F7E47] active:scale-[0.98]"
+              ? "bg-custom-green cursor-not-allowed opacity-80"
+              : "bg-custom-green hover:bg-custom-green active:scale-[0.98]"
           }`}
       >
         {updateUser?.isPending ? "Lagrer..." : "Lagre endringer"}
@@ -145,7 +154,7 @@ export const SeekerSettingsView = () => {
           <h3 className="text-lg font-bold text-gray-900">Portfolio</h3>
           <button
             onClick={() => setIsAddingProject(!isAddingProject)}
-            className="flex items-center gap-2 text-sm font-bold text-[#2F7E47] hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 text-sm font-bold text-custom-green hover:opacity-80 transition-opacity"
           >
             <Plus size={18} />
             Legg til prosjekt
@@ -160,14 +169,18 @@ export const SeekerSettingsView = () => {
                 placeholder="Prosjekt tittel"
                 className="bg-white rounded-xl px-4 py-3 outline-none border border-gray-200 font-medium"
                 value={projectForm.title}
-                onChange={(e) => setProjectForm({ ...projectForm, title: e.target.value })}
+                onChange={(e) =>
+                  setProjectForm({ ...projectForm, title: e.target.value })
+                }
               />
               <input
                 type="text"
                 placeholder="Link (valgfritt)"
                 className="bg-white rounded-xl px-4 py-3 outline-none border border-gray-200 font-medium"
                 value={projectForm.link}
-                onChange={(e) => setProjectForm({ ...projectForm, link: e.target.value })}
+                onChange={(e) =>
+                  setProjectForm({ ...projectForm, link: e.target.value })
+                }
               />
             </div>
             <textarea
@@ -175,30 +188,34 @@ export const SeekerSettingsView = () => {
               rows={2}
               className="bg-white rounded-xl px-4 py-3 outline-none border border-gray-200 font-medium resize-none"
               value={projectForm.description}
-              onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
+              onChange={(e) =>
+                setProjectForm({ ...projectForm, description: e.target.value })
+              }
             />
-            
-            <div 
+
+            <div
               onClick={() => fileInputRef.current?.click()}
               className="border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-white transition-colors"
             >
-              <input 
+              <input
                 title="Laste opp bilde"
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
                 accept="image/*"
                 onChange={(e) => setSelectedImage(e.target.files?.[0] || null)}
               />
               {selectedImage ? (
-                <div className="flex items-center gap-2 text-[#2F7E47] font-bold">
+                <div className="flex items-center gap-2 text-custom-green font-bold">
                   <ImageIcon size={20} />
                   <span>{selectedImage.name}</span>
                 </div>
               ) : (
                 <>
                   <ImageIcon size={24} className="text-gray-400" />
-                  <span className="text-sm font-medium text-gray-500">Klikk for å laste opp bilde</span>
+                  <span className="text-sm font-medium text-gray-500">
+                    Klikk for å laste opp bilde
+                  </span>
                 </>
               )}
             </div>
@@ -209,7 +226,9 @@ export const SeekerSettingsView = () => {
                 disabled={addPortfolioMutation.isPending || !projectForm.title}
                 className="flex-1 bg-black text-white font-bold py-3 rounded-xl disabled:opacity-50"
               >
-                {addPortfolioMutation.isPending ? "Lagrer..." : "Lagre prosjekt"}
+                {addPortfolioMutation.isPending
+                  ? "Lagrer..."
+                  : "Lagre prosjekt"}
               </button>
               <button
                 onClick={() => setIsAddingProject(false)}
@@ -223,15 +242,26 @@ export const SeekerSettingsView = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(user as any)?.portfolio?.map((project: any) => (
-            <div key={project._id} className="bg-white border border-gray-100 rounded-2xl p-4 flex gap-4 items-center group">
+            <div
+              key={project._id}
+              className="bg-white border border-gray-100 rounded-2xl p-4 flex gap-4 items-center group"
+            >
               <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 shrink-0">
-                <img src={project.imageUrl} className="w-full h-full object-cover" alt="" />
+                <img
+                  src={project.imageUrl}
+                  className="w-full h-full object-cover"
+                  alt=""
+                />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-bold text-gray-900 truncate">{project.title}</h4>
-                <p className="text-xs text-gray-500 truncate">{project.description}</p>
+                <h4 className="font-bold text-gray-900 truncate">
+                  {project.title}
+                </h4>
+                <p className="text-xs text-gray-500 truncate">
+                  {project.description}
+                </p>
               </div>
-              <button 
+              <button
                 title="Slett prosjekt"
                 onClick={() => handleDeleteProject(project._id)}
                 className="p-2 text-gray-400 hover:text-red-500 transition-colors"
@@ -242,7 +272,9 @@ export const SeekerSettingsView = () => {
           ))}
           {(user as any)?.portfolio?.length === 0 && !isAddingProject && (
             <div className="col-span-full py-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-              <p className="text-sm text-gray-400 italic">Ingen prosjekter i portfolioen ennå.</p>
+              <p className="text-sm text-gray-400 italic">
+                Ingen prosjekter i portfolioen ennå.
+              </p>
             </div>
           )}
         </div>

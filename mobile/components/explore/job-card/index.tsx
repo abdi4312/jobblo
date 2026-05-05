@@ -51,7 +51,7 @@ const JobCard: React.FC<JobCardProps> = ({ item, onPress }) => {
 
       {/* Title */}
       <Text
-        className="text-[#0A0A0A] text-base font-medium mb-1 px-1"
+        className="text-custom-black text-base font-medium mb-1 px-1"
         numberOfLines={1}
       >
         {item.title}
@@ -65,7 +65,7 @@ const JobCard: React.FC<JobCardProps> = ({ item, onPress }) => {
       </View>
 
       <View className="flex-row flex-wrap items-end justify-end px-1">
-        <Text className="text-[#0A0A0A] text-base font-semibold">
+        <Text className="text-custom-black text-base font-semibold">
           NOK {item.price}
         </Text>
       </View>

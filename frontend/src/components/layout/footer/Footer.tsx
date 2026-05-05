@@ -14,14 +14,14 @@ const Footer = () => {
 
   return (
     <footer className="w-full py-8 mt-auto">
-      <div className="max-w-300 mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-base text-[#0A0A0A]">
+      <div className="max-w-300 mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-base text-custom-black">
         {/* Left Side: Links */}
         <div className="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2">
           {footerLinks.map((item, index) => (
             <NavLink
               key={index}
               to={item.link}
-              className="hover:underline transition-all duration-200 text-[#0A0A0A]!"
+              className="hover:underline transition-all duration-200 text-custom-black!"
             >
               {item.name}
             </NavLink>
@@ -35,7 +35,7 @@ const Footer = () => {
         </div>
 
         {/* Right Side: Copyright */}
-        <div className="text-[#0A0A0A] whitespace-nowrap">
+        <div className="text-custom-black whitespace-nowrap">
           © Jobblo AS {currentYear}
         </div>
       </div>

@@ -74,7 +74,7 @@ function MessageList({
                   <div className={`flex flex-col max-w-[80%] sm:max-w-[60%] ${isSentByMe ? "items-end" : "items-start"}`}>
                     <div
                       className={`px-5 py-3 rounded-2xl text-[15px] leading-relaxed shadow-sm ${isSentByMe
-                        ? "bg-[#2F7E4733] text-[#212529] rounded-tr-none"
+                        ? "bg-custom-green-light text-[#212529] rounded-tr-none"
                         : "bg-[#F8F9FA] text-[#212529] rounded-tl-none border border-[#F1F3F5]"
                         }`}
                     >

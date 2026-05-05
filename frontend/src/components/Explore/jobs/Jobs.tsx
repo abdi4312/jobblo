@@ -91,10 +91,10 @@ export default function JobsContainer({
       {hasNextPage && (
         <div
           ref={loadMoreRef}
-          className="flex justify-center mt-12 pb-10 min-h-[100px]"
+          className="flex justify-center mt-12 pb-10 min-h-25"
         >
           {isFetchingNextPage ? (
-            <div className="flex items-center gap-2 px-10 py-3.5 bg-[#2F7E47] text-white rounded-full font-bold shadow-md">
+            <div className="flex items-center gap-2 px-10 py-3.5 bg-custom-green text-white rounded-full font-bold shadow-md">
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               Laster...
             </div>

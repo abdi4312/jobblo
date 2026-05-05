@@ -12,7 +12,6 @@ const steps = [
     title: "Finn oppdrag",
     description: "Søk blant tusenvis av spennende jobber",
     IconComponent: UserPlus,
-
   },
   {
     id: "03",
@@ -34,10 +33,10 @@ export function HowItWorks() {
       <div className="max-w-300 mx-auto">
         {/* Main Title */}
         <div className="text-center mb-8 md:mb-16">
-          <h2 className="text-[28px] md:text-4xl md:text-[40px] font-bold text-[#0A0A0A] mb-4">
-            Kom i gang med <span className="text-[#2F7E47]">4 trinn</span>
+          <h2 className="text-[28px] md:text-4xl md:text-[40px] font-bold text-custom-black mb-4">
+            Kom i gang med <span className="text-custom-green">4 trinn</span>
           </h2>
-          <p className="text-[#0A0A0A] text-[12px] md:text-base font-light">
+          <p className="text-custom-black text-[12px] md:text-base font-light">
             Enkelt, raskt og trygt – slik finner du ditt neste oppdrag
           </p>
         </div>
@@ -53,26 +52,32 @@ export function HowItWorks() {
               >
                 {/* Top Right Green Badge */}
                 <div
-                  className="absolute top-0 right-7.5 md:right-4 w-10 h-14 bg-[#2F7E47] text-white font-bold flex items-center justify-center text-sm"
+                  className="absolute top-0 right-7.5 md:right-4 w-10 h-14 bg-custom-green text-white font-bold flex items-center justify-center text-sm"
                   style={{
-                    clipPath: "polygon(0 0, 100% 0, 100% 100%, 50% 85%, 0 100%)",
+                    clipPath:
+                      "polygon(0 0, 100% 0, 100% 100%, 50% 85%, 0 100%)",
                   }}
                 >
                   {step.id}
                 </div>
 
                 {/* Icon Container with Neumorphic effect */}
-                <div className="size-14 bg-white rounded-lg flex items-center justify-center
-                shadow-[inset_0_2px_10px_rgba(0,0,0,0.05),0_5px_15px_rgba(0,0,0,0.05)] border border-gray-100 mb-12">
-                  <Icon className="size-6 text-[#2F7E47]" strokeWidth={1.5} />
+                <div
+                  className="size-14 bg-white rounded-lg flex items-center justify-center
+                shadow-[inset_0_2px_10px_rgba(0,0,0,0.05),0_5px_15px_rgba(0,0,0,0.05)] border border-gray-100 mb-12"
+                >
+                  <Icon
+                    className="size-6 text-custom-green"
+                    strokeWidth={1.5}
+                  />
                 </div>
 
                 {/* Text Content */}
                 <div className="mt-auto">
-                  <h3 className="text-xl font-bold text-[#0A0A0A] mb-3.5">
+                  <h3 className="text-xl font-bold text-custom-black mb-3.5">
                     {step.title}
                   </h3>
-                  <p className="text-[#0A0A0A] text-sm font-light leading-relaxed">
+                  <p className="text-custom-black text-sm font-light leading-relaxed">
                     {step.description}
                   </p>
                 </div>
