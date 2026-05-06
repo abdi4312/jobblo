@@ -91,7 +91,7 @@ export const ProfileImage = ({
             className="w-full h-full object-cover"
           />
         ) : (
-          <span className="text-4xl text-[#2F7E47] font-bold">
+          <span className="text-4xl text-custom-green font-bold">
             {name ? name.charAt(0).toUpperCase() : "?"}
           </span>
         )}
@@ -102,13 +102,13 @@ export const ProfileImage = ({
           <div className="flex gap-2">
             <button
               onClick={handleButtonClick}
-              className="px-5 py-2 bg-transparent text-[#2F7E47] border-2 border-[#2F7E47] rounded-full text-sm font-semibold hover:bg-[#2F7E47] hover:text-white transition-all duration-200 active:scale-95 shadow-sm"
+              className="px-5 py-2 bg-transparent text-custom-green border-2 border-[#2F7E47] rounded-full text-sm font-semibold hover:bg-custom-green hover:text-white transition-all duration-200 active:scale-95 shadow-sm"
             >
               Velg fra galleri
             </button>
             <button
               onClick={handleCameraClick}
-              className="p-2 bg-transparent text-[#2F7E47] border-2 border-[#2F7E47] rounded-full text-sm font-semibold hover:bg-[#2F7E47] hover:text-white transition-all duration-200 active:scale-95 shadow-sm"
+              className="p-2 bg-transparent text-custom-green border-2 border-[#2F7E47] rounded-full text-sm font-semibold hover:bg-custom-green hover:text-white transition-all duration-200 active:scale-95 shadow-sm"
               title="Ta bilde"
             >
               <Camera size={20} />
@@ -119,7 +119,7 @@ export const ProfileImage = ({
             <button
               onClick={handleUploadClick}
               disabled={isUploading}
-              className="px-5 py-2 bg-[#2F7E47] text-white rounded-full text-sm font-semibold hover:bg-[#205a32] transition-all duration-200 active:scale-95 shadow-md flex items-center gap-2"
+              className="px-5 py-2 bg-custom-green text-white rounded-full text-sm font-semibold hover:bg-[#205a32] transition-all duration-200 active:scale-95 shadow-md flex items-center gap-2"
             >
               {isUploading ? "Laster opp..." : "Lagre bilde"}
             </button>

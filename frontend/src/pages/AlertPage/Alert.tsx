@@ -14,7 +14,7 @@ import {
 import type { AlertType } from "../../features/notifications/types";
 import { NotificationSkeleton } from "../../components/Loading/NotificationSkeleton";
 import { NotificationItem } from "../../components/Notifications/NotificationItem";
-import { NotificationTabs } from "../../components/Notifications/NotificationTabs";
+import { NotificationSwitcher } from "../../components/Notifications/NotificationSwitcher";
 
 /**
  * Alert page component - Displays user notifications with filtering and actions
@@ -114,7 +114,7 @@ export default function Alert() {
         {unreadCountData?.count !== undefined && unreadCountData.count >= 5 && (
           <button
             onClick={handleMarkAllAsRead}
-            className="flex items-center gap-2 text-[16px] text-[#2F7E47] font-bold hover:opacity-70 transition-opacity"
+            className="flex items-center gap-2 text-[16px] text-custom-green font-bold hover:opacity-70 transition-opacity"
           >
             <CheckCheck size={20} />
             Mark alle som lest
@@ -123,7 +123,7 @@ export default function Alert() {
       </div>
 
       {/* Tabs Section */}
-      <NotificationTabs
+      <NotificationSwitcher
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -162,7 +162,7 @@ export default function Alert() {
               <button
                 onClick={() => fetchNextPage()}
                 disabled={isFetchingNextPage}
-                className="px-10 py-3.5 border-2 border-[#2F7E47] text-[#2F7E47] rounded-2xl font-bold hover:bg-[#2F7E47] hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-10 py-3.5 border-2 border-[#2F7E47] text-custom-green rounded-2xl font-bold hover:bg-custom-green hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isFetchingNextPage ? "Laster..." : "Se mer"}
               </button>

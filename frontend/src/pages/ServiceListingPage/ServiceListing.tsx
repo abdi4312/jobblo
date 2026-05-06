@@ -209,8 +209,8 @@ const ServiceListing = () => {
                     onClick={() => toggleCategory(cat.name)}
                     className={`flex-1 text-left font-medium py-2 px-3 rounded-xl transition-all duration-200 ${
                       selectedCategories.includes(cat.name)
-                        ? "bg-[#2F7E4711] text-[#2F7E47]"
-                        : "text-gray-700 hover:bg-gray-50 hover:text-[#2F7E47]"
+                        ? "bg-[#2F7E4711] text-custom-green"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-custom-green"
                     }`}
                   >
                     <span className="flex items-center gap-2">
@@ -218,7 +218,7 @@ const ServiceListing = () => {
                       <span
                         className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                           selectedCategories.includes(cat.name)
-                            ? "bg-[#2F7E4722] text-[#2F7E47]"
+                            ? "bg-[#2F7E4722] text-custom-green"
                             : "bg-gray-100 text-gray-400"
                         }`}
                       >
@@ -231,7 +231,7 @@ const ServiceListing = () => {
                       onClick={() => toggleExpand(cat._id)}
                       className={`p-2 rounded-lg transition-all duration-200 ${
                         expandedCategories.includes(cat._id)
-                          ? "bg-[#2F7E4711] text-[#2F7E47]"
+                          ? "bg-[#2F7E4711] text-custom-green"
                           : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                       }`}
                     >
@@ -251,7 +251,7 @@ const ServiceListing = () => {
                         onClick={() => toggleCategory(sub.name)}
                         className={`w-full text-left py-2 px-3 rounded-xl text-sm transition-all duration-200 ${
                           selectedCategories.includes(sub.name)
-                            ? "bg-[#2F7E4711] text-[#2F7E47] font-semibold"
+                            ? "bg-[#2F7E4711] text-custom-green font-semibold"
                             : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
                         }`}
                       >
@@ -260,7 +260,7 @@ const ServiceListing = () => {
                           <span
                             className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
                               selectedCategories.includes(sub.name)
-                                ? "bg-[#2F7E4722] text-[#2F7E47]"
+                                ? "bg-[#2F7E4722] text-custom-green"
                                 : "bg-gray-100 text-gray-300"
                             }`}
                           >
@@ -278,11 +278,15 @@ const ServiceListing = () => {
       </section>
 
       {/* 2. Map View Link/Button */}
-      <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:border-[#2F7E4733] transition-all cursor-pointer group overflow-hidden">
+      <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:border-custom-green-light transition-all cursor-pointer group overflow-hidden">
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.05)] group-hover:scale-105 transition-transform z-10">
-              <MapIcon className="text-[#2F7E47]" size={28} strokeWidth={1.5} />
+              <MapIcon
+                className="text-custom-green"
+                size={28}
+                strokeWidth={1.5}
+              />
             </div>
             <div>
               <h4 className="text-xl font-bold text-gray-900">Kartvisning</h4>
@@ -373,7 +377,7 @@ const ServiceListing = () => {
           {(priceRange.min !== 0 || priceRange.max !== 100000) && (
             <button
               onClick={handlePriceReset}
-              className="text-sm font-bold text-[#2F7E47] hover:text-[#2F7E47] transition-colors"
+              className="text-sm font-bold text-custom-green hover:text-custom-green transition-colors"
             >
               Reset
             </button>
@@ -509,7 +513,7 @@ const ServiceListing = () => {
               onSubmit={handleSearchSubmit}
               className="relative flex-1 group"
             >
-              <div className="absolute left-8 top-1/2 -translate-y-1/2 text-[#2F7E47] transition-all duration-200 z-10 flex items-center justify-center w-8 h-8">
+              <div className="absolute left-8 top-1/2 -translate-y-1/2 text-custom-green transition-all duration-200 z-10 flex items-center justify-center w-8 h-8">
                 <Search size={20} strokeWidth={2} />
               </div>
               <input
@@ -530,7 +534,7 @@ const ServiceListing = () => {
                       search: "",
                     });
                   }}
-                  className="absolute right-8 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-full text-[#2F7E47] transition-colors"
+                  className="absolute right-8 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-full text-custom-green transition-colors"
                 >
                   <X size={18} strokeWidth={2.5} />
                 </button>
@@ -543,7 +547,7 @@ const ServiceListing = () => {
                 onClick={() => setIsSortOpen(!isSortOpen)}
                 className="flex items-center justify-center bg-white w-12 h-12 sm:w-14 sm:h-14 rounded-2xl shadow-[0_4px_25px_rgba(0,0,0,0.06)] cursor-pointer transition-all hover:bg-gray-50 active:scale-95"
               >
-                <ArrowUpDown size={22} className="text-[#2F7E47]" />
+                <ArrowUpDown size={22} className="text-custom-green" />
               </button>
 
               {isSortOpen && (
@@ -560,13 +564,13 @@ const ServiceListing = () => {
                       }}
                       className={`w-full flex items-center justify-between px-4 py-3 md:px-6 md:py-4 rounded-[18px] md:rounded-[24px] text-left font-bold text-sm md:text-[17px] transition-colors ${
                         selectedSort.value === option.value
-                          ? "bg-[#2F7E4711] text-[#2F7E47]"
-                          : "text-[#0A0A0A] hover:bg-gray-50"
+                          ? "bg-[#2F7E4711] text-custom-green"
+                          : "text-custom-black hover:bg-gray-50"
                       }`}
                     >
                       <span>{option.label}</span>
                       {selectedSort.value === option.value && (
-                        <Check size={18} className="text-[#2F7E47]" />
+                        <Check size={18} className="text-custom-green" />
                       )}
                     </button>
                   ))}

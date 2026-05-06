@@ -2,7 +2,8 @@ import { useOutletContext } from "react-router-dom";
 import type { SettingsContextType } from "../../../pages/SettingsPage";
 
 export const AddressesView = () => {
-  const { form, handleChange, handleUpdate, updateUser, user } = useOutletContext<SettingsContextType>();
+  const { form, handleChange, handleUpdate, updateUser, user } =
+    useOutletContext<SettingsContextType>();
 
   // Logikk: Sjekk om det er gjort endringer i noen av de tre feltene
   const isUnchanged =
@@ -16,7 +17,10 @@ export const AddressesView = () => {
     <section className="flex flex-col gap-6 max-w-2xl">
       {/* Gateadresse */}
       <div className="relative group">
-        <label htmlFor="address" className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight">
+        <label
+          htmlFor="address"
+          className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight"
+        >
           Gateadresse
         </label>
         <input
@@ -30,7 +34,10 @@ export const AddressesView = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Postnummer */}
         <div className="relative group">
-          <label htmlFor="postNumber" className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight">
+          <label
+            htmlFor="postNumber"
+            className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight"
+          >
             Postnummer
           </label>
           <input
@@ -43,7 +50,10 @@ export const AddressesView = () => {
 
         {/* Sted (Poststed) */}
         <div className="relative group">
-          <label htmlFor="postSted" className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight">
+          <label
+            htmlFor="postSted"
+            className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight"
+          >
             Sted
           </label>
           <input
@@ -61,9 +71,10 @@ export const AddressesView = () => {
         onClick={handleUpdate}
         disabled={isDisabled}
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
-          ${isDisabled
-            ? "bg-[#2F7E47] cursor-not-allowed opacity-80"
-            : "bg-[#2F7E47] hover:bg-[#2F7E47] active:scale-[0.98]"
+          ${
+            isDisabled
+              ? "bg-custom-green cursor-not-allowed opacity-80"
+              : "bg-custom-green hover:bg-custom-green active:scale-[0.98]"
           }`}
       >
         {updateUser?.isPending ? "Lagrer..." : "Lagre adresser"}

@@ -96,7 +96,7 @@ export default function MineAnnonser() {
           <Button
             label="Lag din første annonse"
             onClick={() => navigate("/publish-job")}
-            className="bg-[#2F7E47] text-white px-6 py-2 rounded-xl"
+            className="bg-custom-green text-white px-6 py-2 rounded-xl"
           />
         </div>
       ) : (
@@ -131,7 +131,7 @@ export default function MineAnnonser() {
                   )}
 
                   <div
-                    className="absolute top-4 right-2 bg-[#2F7E47] px-3 py-1.5 text-white rounded-[20px] flex items-center justify-center"
+                    className="absolute top-4 right-2 bg-custom-green px-3 py-1.5 text-white rounded-[20px] flex items-center justify-center"
                     style={{ backgroundColor: badgeColor }}
                   >
                     <span className="text-[12px]">
@@ -139,7 +139,7 @@ export default function MineAnnonser() {
                     </span>
                   </div>
 
-                  <div className="absolute flex justify-between items-center text-[#0A0A0A] bottom-4 left-4.5 right-4.5">
+                  <div className="absolute flex justify-between items-center text-custom-black bottom-4 left-4.5 right-4.5">
                     {/* Venstre side: Lokasjonsmerke */}
                     <div className="bg-[#D9D9D9]/80 px-3 py-1.5 rounded-[20px] flex items-center justify-center gap-1.5 backdrop-blur-sm">
                       <MapPin size={13} />
@@ -156,18 +156,18 @@ export default function MineAnnonser() {
                         handleEdit(job);
                       }}
                     >
-                      <Pencil size={20} className="text-[#2F7E47]" />
+                      <Pencil size={20} className="text-custom-green" />
                     </div>
                   </div>
                 </div>
 
                 {/* Tittel */}
                 <div className="gap-3 p-4">
-                  <h2 className="text-[#0A0A0A] whitespace-nowrap overflow-hidden text-ellipsis font-bold text-[20px]">
+                  <h2 className="text-custom-black whitespace-nowrap overflow-hidden text-ellipsis font-bold text-[20px]">
                     {job.title}
                   </h2>
 
-                  <p className="text-[#0A0A0A] text-base font-light">
+                  <p className="text-custom-black text-base font-light">
                     {job.description}
                   </p>
                 </div>

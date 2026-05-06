@@ -1,7 +1,12 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Plus, ChevronRight, Check } from "lucide-react";
-import { useFavoriteLists, useCreateFavoriteList, useAddServiceToFavoriteList, useRemoveServiceFromFavoriteList } from "../../../features/favoriteLists/hooks";
+import {
+  useFavoriteLists,
+  useCreateFavoriteList,
+  useAddServiceToFavoriteList,
+  useRemoveServiceFromFavoriteList,
+} from "../../../features/favoriteLists/hooks";
 import type { Jobs } from "../../../types/Jobs";
 
 interface AddToListModalProps {
@@ -16,7 +21,11 @@ interface FavoriteList {
   services?: Array<{ _id?: string; images?: string[] } | string>;
 }
 
-const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose }) => {
+const AddToListModal: React.FC<AddToListModalProps> = ({
+  job,
+  isOpen,
+  onClose,
+}) => {
   const { data: lists = [], isLoading } = useFavoriteLists();
   const createListMutation = useCreateFavoriteList();
   const addToListMutation = useAddServiceToFavoriteList();
@@ -78,21 +87,21 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose })
             {showCreateNew ? (
               <button
                 onClick={() => setShowCreateNew(false)}
-                className="text-[#0A0A0A] font-semibold text-[15px] hover:opacity-70 transition-opacity"
+                className="text-custom-black font-semibold text-[15px] hover:opacity-70 transition-opacity"
               >
                 Back
               </button>
             ) : (
               <button
                 onClick={() => setShowCreateNew(true)}
-                className="text-[#0A0A0A] font-semibold text-[15px] hover:opacity-70 transition-opacity"
+                className="text-custom-black font-semibold text-[15px] hover:opacity-70 transition-opacity"
               >
                 New list
               </button>
             )}
           </div>
           <div className="flex-2 text-center">
-            <h2 className="text-[#0A0A0A] font-bold text-lg">
+            <h2 className="text-custom-black font-bold text-lg">
               {showCreateNew ? "New list" : "Add to list"}
             </h2>
           </div>
@@ -111,7 +120,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose })
         <div className="p-6 min-h-55 max-h-[60vh] overflow-y-auto custom-scrollbar">
           {isLoading ? (
             <div className="flex justify-center items-center py-10">
-              <div className="animate-spin w-8 h-8 border-4 border-gray-200 border-t-[#2F7E47] rounded-full" />
+              <div className="animate-spin w-8 h-8 border-4 border-gray-200 border-t-custom-green rounded-full" />
             </div>
           ) : showCreateNew ? (
             <form onSubmit={handleCreateNew} className="space-y-4">
@@ -125,7 +134,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose })
                   value={newListName}
                   onChange={(e) => setNewListName(e.target.value)}
                   placeholder="E.g. Summer Jobs"
-                  className="w-full px-4 py-3 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-[#2F7E47] outline-none transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-custom-green outline-none transition-all"
                 />
               </div>
               <div className="flex gap-3">
@@ -139,7 +148,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose })
                 <button
                   type="submit"
                   disabled={!newListName.trim() || createListMutation.isPending}
-                  className="flex-1 py-3 bg-[#2F7E47] text-white font-semibold rounded-2xl hover:bg-[#235e35] disabled:opacity-50 transition-all shadow-md active:scale-95"
+                  className="flex-1 py-3 bg-custom-green text-white font-semibold rounded-2xl hover:bg-[#235e35] disabled:opacity-50 transition-all shadow-md active:scale-95"
                 >
                   {createListMutation.isPending ? "Creating..." : "Create List"}
                 </button>
@@ -150,7 +159,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose })
               <p className="text-lg font-medium">You have no lists yet</p>
               <button
                 onClick={() => setShowCreateNew(true)}
-                className="mt-4 flex items-center gap-2 text-[#2F7E47] font-bold hover:underline"
+                className="mt-4 flex items-center gap-2 text-custom-green font-bold hover:underline"
               >
                 <Plus size={20} /> Create your first list
               </button>
@@ -167,7 +176,10 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose })
                     <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 group-hover:bg-gray-200 transition-colors">
                       {(() => {
                         const firstService = list.services?.[0];
-                        const imageUrl = firstService && typeof firstService !== 'string' ? firstService.images?.[0] : undefined;
+                        const imageUrl =
+                          firstService && typeof firstService !== "string"
+                            ? firstService.images?.[0]
+                            : undefined;
                         return imageUrl ? (
                           <img
                             src={imageUrl}
@@ -180,14 +192,14 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose })
                       })()}
                     </div>
                     <div className="text-left">
-                      <p className="font-bold text-[#0A0A0A]">{list.name}</p>
+                      <p className="font-bold text-custom-black">{list.name}</p>
                       <p className="text-sm text-gray-500">
                         {list.services?.length || 0} items
                       </p>
                     </div>
                   </div>
                   {isJobInList(list) ? (
-                    <div className="w-6 h-6 bg-[#2F7E47] rounded-full flex items-center justify-center text-white">
+                    <div className="w-6 h-6 bg-custom-green rounded-full flex items-center justify-center text-white">
                       <Check size={14} strokeWidth={3} />
                     </div>
                   ) : (

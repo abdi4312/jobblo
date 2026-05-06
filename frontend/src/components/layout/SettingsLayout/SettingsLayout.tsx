@@ -168,7 +168,7 @@ export function SettingsLayout() {
                         onClick={() => navigate(link.path)}
                         className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
                           isActive
-                            ? "bg-[#2F7E4733] text-rose-600 md:text-gray-900 shadow-sm md:shadow-none border border-rose-100 md:border-0"
+                            ? "bg-custom-green-light text-rose-600 md:text-gray-900 shadow-sm md:shadow-none border border-rose-100 md:border-0"
                             : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent"
                         }`}
                       >

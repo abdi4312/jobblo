@@ -148,12 +148,12 @@ export const DefaultResults = ({
         <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center shrink-0">
           <SlidersHorizontal
             size={24}
-            className="text-gray-900 group-hover:text-[#2F7E47] transition-colors"
+            className="text-gray-900 group-hover:text-custom-green transition-colors"
             strokeWidth={1.5}
           />
         </div>
         <div>
-          <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight group-hover:text-[#2F7E47] transition-colors">
+          <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight group-hover:text-custom-green transition-colors">
             All Jobs
           </h3>
           <p className="text-[15px] text-gray-500 font-medium mt-1">

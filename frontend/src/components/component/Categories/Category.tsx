@@ -22,8 +22,7 @@ export function Category() {
         <div className="pb-6 overflow-auto custom-scrollbar px-0.5">
           <div className="flex gap-2 max-w-282.5 mx-auto">
             <div
-              className="min-w-30.75 p-6.5 flex items-center rounded-[20px] bg-white/60
-              shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white cursor-pointer hover:bg-white transition-all duration-300"
+              className="box-card-custom min-w-30.75 p-6.5 flex items-center hover:bg-white transition-all duration-300"
               onClick={() => navigate("/search/job/all")}
             >
               <div className="flex flex-col gap-2 w-full py-2 items-center">
@@ -33,7 +32,7 @@ export function Category() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-[12px] sm:text-[14px] font-medium text-center text-[#0A0A0A] block">
+                  <span className="text-[12px] sm:text-[14px] font-medium text-center text-custom-black block">
                     Alle
                   </span>
                 </div>
@@ -50,8 +49,7 @@ export function Category() {
               return (
                 <div
                   key={item._id}
-                  className="min-w-30.75 p-6.5 flex items-center rounded-[20px] bg-white/60
-                  shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white cursor-pointer hover:bg-white transition-all duration-300"
+                  className="box-card-custom min-w-30.75 p-6.5 flex items-center hover:bg-white transition-all duration-300"
                   onClick={() => handleCategoryClick(item.name)}
                 >
                   <div className="flex flex-col gap-2 w-full py-2 items-center">
@@ -61,7 +59,7 @@ export function Category() {
                       </span>
                     </div>
                     <div>
-                      <span className="text-[12px] sm:text-[14px] font-medium text-center text-[#0A0A0A] block">
+                      <span className="text-[12px] sm:text-[14px] font-medium text-center text-custom-black block">
                         {item.name}
                       </span>
                     </div>

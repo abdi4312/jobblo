@@ -29,7 +29,7 @@ export default function AnmeldelserPage() {
         rating: 5,
         date: "04.01.2002",
         comment: "Veldig stort og fin vegg, jeg er sjalu",
-        jobTitle: "Stor og lang vegg trengs maling"
+        jobTitle: "Stor og lang vegg trengs maling",
       },
       {
         id: "2",
@@ -38,8 +38,8 @@ export default function AnmeldelserPage() {
         rating: 4,
         date: "04.01.2002",
         comment: "Knuste den benken og fikk pengene",
-        jobTitle: "Benk trengs knuses"
-      }
+        jobTitle: "Benk trengs knuses",
+      },
     ];
 
     const fakeGivenReviews: DisplayReview[] = [
@@ -50,7 +50,7 @@ export default function AnmeldelserPage() {
         rating: 5,
         date: "12.11.2025",
         comment: "Fantastisk service! Veldig fornøyd med resultatet.",
-        jobTitle: "Hagearbeid"
+        jobTitle: "Hagearbeid",
       },
       {
         id: "4",
@@ -59,8 +59,8 @@ export default function AnmeldelserPage() {
         rating: 5,
         date: "08.11.2025",
         comment: "Rask og effektiv, anbefales!",
-        jobTitle: "Flyttehjelp"
-      }
+        jobTitle: "Flyttehjelp",
+      },
     ];
 
     setReceivedReviews(fakeReceivedReviews);
@@ -70,13 +70,16 @@ export default function AnmeldelserPage() {
     setLoading(false);
   }, []);
 
-  const currentReviews = activeTab === "received" ? receivedReviews : givenReviews;
+  const currentReviews =
+    activeTab === "received" ? receivedReviews : givenReviews;
 
   return (
     <div className="min-h-[70vh] max-w-300 mx-auto p-2 ms:p-5 overflow-hidden">
       {/* Rating Summary */}
       <div className="bg-[#FFFFFF1A] flex flex-col gap-6 shadow-sm py-6">
-        <h1 className="text-[30px] font-bold text-[#101828] text-center">Amneldenser</h1>
+        <h1 className="text-[30px] font-bold text-[#101828] text-center">
+          Amneldenser
+        </h1>
         {!loading && totalReviews > 0 && (
           <div className="text-center py-4 px-5 mx-5 mb-5 bg-[#FFFFFFB2] rounded-lg">
             <div className="text-[28px] font-semibold text-[#4A5565]">
@@ -107,24 +110,30 @@ export default function AnmeldelserPage() {
         </div>
       </div>
 
-
       {/* Reviews List */}
       <div className="py-10 flex gap-6 flex-col">
         {loading ? (
-          <p className="text-center text-gray-500 py-10">Laster anmeldelser...</p>
+          <p className="text-center text-gray-500 py-10">
+            Laster anmeldelser...
+          </p>
         ) : error ? (
           <p className="text-center text-red-600 py-10">{error}</p>
         ) : currentReviews.length === 0 ? (
-          <p className="text-center text-gray-500 italic py-10">Ingen anmeldelser ennå</p>
+          <p className="text-center text-gray-500 italic py-10">
+            Ingen anmeldelser ennå
+          </p>
         ) : (
           currentReviews.map((review) => (
-            <div key={review.id} className="bg-[#FFFFFF1A] p-6 shadow-sm rounded-xl flex justify-between flex-wrap">
+            <div
+              key={review.id}
+              className="bg-[#FFFFFF1A] p-6 shadow-sm rounded-xl flex justify-between flex-wrap"
+            >
               {/* Section Header */}
               <div>
                 <div className="text-[12px] font-semibold text-[#000000 ] mb-2">
                   Du {activeTab === "received" ? "la ut" : "la ut"}
                 </div>
-                <div className="text-[16px] md:text-[20px] font-semibold mb-3 text-[#0A0A0A]">
+                <div className="text-[16px] md:text-[20px] font-semibold mb-3 text-custom-black">
                   {review.jobTitle}
                 </div>
               </div>
@@ -133,7 +142,7 @@ export default function AnmeldelserPage() {
               <div className="p-4 w-full max-w-182.5 bg-[#FFFFFF1A] rounded-xl mb-2 shadow-sm">
                 <div className="flex items-start gap-3 mb-3">
                   {/* Star Icon with Rating Number */}
-                  <div className="relative flex text-[#2F7E47] p-3 bg-[#FFFFFF1A] shadow-sm rounded-[14px] items-center justify-center shrink-0">
+                  <div className="relative flex text-custom-green p-3 bg-[#FFFFFF1A] shadow-sm rounded-[14px] items-center justify-center shrink-0">
                     <Star size={45} />
                     <span className="absolute text-[18px] font-bold pt-0.5">
                       {review.rating}
@@ -142,7 +151,7 @@ export default function AnmeldelserPage() {
 
                   {/* Name and Role */}
                   <div className="flex-1">
-                    <div className="font-semibold text-[16px] md:text-[20px] md:font-bold mb-0.5 text-[#0A0A0A]">
+                    <div className="font-semibold text-[16px] md:text-[20px] md:font-bold mb-0.5 text-custom-black">
                       {review.reviewerName}
                     </div>
                     <div className="text-[12px] font-light text-[#000000]">
@@ -169,13 +178,15 @@ export default function AnmeldelserPage() {
                       Svar
                     </span>
                   </button> */}
-                  <button className="px-3 py-1.5 bg-[#FFFFFF1A] text-[16px] text-[#212121] font-medium shadow-sm rounded-[14px] hover:bg-[#2F7E4740]">Rapporter</button>
-                  <button className="px-3 py-1.5 bg-[#FFFFFF1A] text-[16px] text-[#212121] font-medium shadow-sm rounded-[14px] hover:bg-[#2F7E4740]">svar</button>
+                  <button className="px-3 py-1.5 bg-[#FFFFFF1A] text-[16px] text-[#212121] font-medium shadow-sm rounded-[14px] hover:bg-[#2F7E4740]">
+                    Rapporter
+                  </button>
+                  <button className="px-3 py-1.5 bg-[#FFFFFF1A] text-[16px] text-[#212121] font-medium shadow-sm rounded-[14px] hover:bg-[#2F7E4740]">
+                    svar
+                  </button>
                 </div>
               </div>
-
             </div>
-
           ))
         )}
       </div>

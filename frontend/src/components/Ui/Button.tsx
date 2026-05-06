@@ -1,99 +1,61 @@
-import { Link } from "react-router-dom";
-import type { ReactNode } from "react";
+import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
+import { Slot } from "radix-ui";
 
-interface ButtonProps {
-  label?: string;
-  onClick?: (
-    e: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>,
-  ) => void;
-  to?: string; // internal route
-  href?: string; // external link
-  icon?: ReactNode; // react icon / svg
-  iconImage?: string; // image path
-  iconPosition?: "left" | "right";
-  variant?: "primary" | "secondary" | "outline";
-  size?: "sm" | "md" | "lg";
-  disabled?: boolean;
-  className?: string;
-  children?: ReactNode;
+import { cn } from "@/lib/utils";
+
+const buttonVariants = cva(
+  "inline-flex items-center w-full justify-center whitespace-nowrap rounded-md text-base font-normal transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 duration-300 transform",
+  {
+    variants: {
+      variant: {
+        default:
+          "bg-custom-green text-base font-normal text-white shadow hover:bg-custom-green/90",
+        destructive:
+          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+        outline:
+          "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
+        secondary:
+          "bg-[#F8F9FA] text-[#475467] hover:bg-[#F2F4F7] shadow-none font-semibold",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+        true:"bg-white text-custom-black border-none shadow-sm",
+        false:"bg-transparent text-[#475467] border-none"
+      },
+      size: {
+        default: "px-4 py-2 rounded-[14px]",
+        sm: "px-3 py-2 rounded-[12px]",
+        lg: "px-6 py-2 rounded-[20px]",
+        xl: "px-8 py-2 rounded-[24px]",
+        xxl: "px-12 py-2 rounded-[28px]",
+        icon: "h-9 w-9",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  },
+);
+
+function Button({
+  className,
+  variant,
+  size,
+  asChild = false,
+  ...props
+}: React.ComponentProps<"button"> &
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean;
+  }) {
+  const Comp = asChild ? Slot.Root : "button";
+
+  return (
+    <Comp
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    />
+  );
 }
 
-export const Button = ({
-  label,
-  onClick,
-  to,
-  href,
-  icon,
-  iconImage,
-  iconPosition = "left",
-  variant = "primary",
-  size = "md",
-  disabled = false,
-  className = "",
-  children,
-}: ButtonProps) => {
-  const baseStyles =
-    "inline-flex items-center justify-center cursor-pointer gap-2 transition-all font-medium cursor-pointer";
-
-  const variants = {
-    primary: "bg-[#2F7E47] text-white text-[16px] font-semibold",
-    secondary: "bg-gray-200 text-black hover:bg-gray-300",
-    outline: "border border-black text-black hover:bg-black hover:text-white",
-  };
-
-  const sizes = {
-    sm: "px-3 py-1.5 text-sm",
-    md: "px-4 py-2 text-[15px]",
-    lg: "px-6 py-3 text-base rounded-[10px]",
-  };
-
-  const content = (
-    <>
-      {iconPosition === "left" && icon}
-      {iconImage && (
-        <img src={iconImage} alt="icon" className="w-4 h-4 object-contain" />
-      )}
-      {label && <span>{label}</span>}
-      {children}
-      {iconPosition === "right" && icon}
-    </>
-  );
-
-  const classes = `
-    ${baseStyles}
-    ${variants[variant]}
-    ${sizes[size]}
-    ${disabled ? "opacity-80 pointer-events-none" : "hover:bg-[#2F7E47]"}
-    ${className}
-  `;
-
-  // 👉 Internal link
-  if (to) {
-    return (
-      <Link to={to} className={classes}>
-        {content}
-      </Link>
-    );
-  }
-
-  // 👉 External link
-  if (href) {
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={classes}
-      >
-        {content}
-      </a>
-    );
-  }
-
-  // 👉 Normal button
-  return (
-    <button onClick={onClick} disabled={disabled} className={classes}>
-      {content}
-    </button>
-  );
-};
+export { Button, buttonVariants };

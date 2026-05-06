@@ -24,12 +24,12 @@ export const SessionsView = () => {
 
   const getDeviceIcon = (device: string) => {
     if (device?.toLowerCase().includes("mobile") || device?.toLowerCase().includes("android") || device?.toLowerCase().includes("iphone")) {
-      return <Smartphone size={24} className="text-[#E08835]" />;
+      return <Smartphone size={24} className="text-orange-custom" />;
     }
     if (device?.toLowerCase().includes("tablet") || device?.toLowerCase().includes("ipad")) {
-      return <Tablet size={24} className="text-[#E08835]" />;
+      return <Tablet size={24} className="text-orange-custom" />;
     }
-    return <Monitor size={24} className="text-[#E08835]" />;
+    return <Monitor size={24} className="text-orange-custom" />;
   };
 
   return (

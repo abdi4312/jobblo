@@ -1,5 +1,5 @@
 import React from "react";
-
+import { Button } from "../Ui/button/Button";
 interface FilterButtonProps {
   label: string;
   isActive: boolean;
@@ -7,16 +7,18 @@ interface FilterButtonProps {
 }
 
 export const FilterButton: React.FC<FilterButtonProps> = ({ label, isActive, onClick }) => (
-  <button
-    className={`py-2.5 px-6 rounded-2xl text-[14px] font-semibold transition-all duration-200 ${
-      isActive
-        ? "bg-[#212529] text-white"
-        : "bg-[#F8F9FA] text-[#495057] hover:bg-[#E9ECEF]"
-    }`}
+  <Button
+    // className={`py-2.5 px-6 box-card-custom rounded-2xl text-[14px] font-semibold transition-all duration-200 ${
+    //   isActive
+    //     ? "bg-[#212529] text-white"
+    //     : "bg-[#F8F9FA] text-[#495057] hover:bg-[#E9ECEF]"
+    // }`}
+    variant={isActive ? "true" : "false"}
+    size="lg"
     onClick={onClick}
   >
     {label}
-  </button>
+  </Button>
 );
 
 export const EmptyChatState = () => (
@@ -27,7 +29,7 @@ export const EmptyChatState = () => (
       </span>
     </div>
     <p className="text-[18px] font-medium text-[#495057]">Velg en samtale</p>
-    <p className="text-[14px] text-[#6C757D] mt-2 text-center max-w-[280px]">
+    <p className="text-[14px] text-[#6C757D] mt-2 text-center max-w-70">
       Velg en samtale fra listen til venstre for å begynne å chatte.
     </p>
   </div>
