@@ -12,7 +12,7 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({
 }) => {
   return (
     <div className="flex justify-center mb-12">
-      <div className="inline-flex box-card-custom w-full max-w-100 ">
+      <div className="inline-flex box-card-custom w-full max-w-100">
         <Button
           label="Business"
           variant={userType === "business" ? "true" : "false"}
