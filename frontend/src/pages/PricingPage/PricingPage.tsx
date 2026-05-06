@@ -291,26 +291,18 @@ export default function PricingPage() {
         </div>
 
         <div className="flex justify-center mb-12">
-          <div className="inline-flex bg-[#F2F4F7] rounded-[14px] p-1">
+          <div className="inline-flex box-card-custom w-full max-w-100 ">
             <Button
               label="Business"
-              variant={userType === "business" ? "outline" : "secondary"}
+              variant={userType === "business" ? "true" : "false"}
+              size="lg"
               onClick={() => setUserType("business")}
-              className={`h-12! px-10! font-bold! rounded-[10px]! transition-all! duration-300! ${
-                userType === "business"
-                  ? "!bg-white !text-[#101828] !border-none shadow-sm"
-                  : "!bg-transparent !text-[#475467] !border-none"
-              }`}
             />
             <Button
               label="Individual"
-              variant={userType === "private" ? "outline" : "secondary"}
+              variant={userType === "private" ? "true" : "false"}
+              size="lg"
               onClick={() => setUserType("private")}
-              className={`h-12! px-10! font-bold! rounded-[10px]! transition-all! duration-300! ${
-                userType === "private"
-                  ? "!bg-white !text-[#101828] !border-none shadow-sm"
-                  : "!bg-transparent !text-[#475467] !border-none"
-              }`}
             />
           </div>
         </div>
@@ -327,14 +319,14 @@ export default function PricingPage() {
               return (
                 <div
                   key={plan._id}
-                  className={`flex flex-col bg-white rounded-3xl p-8 transition-all duration-300 relative ${
+                  className={`box-card-custom flex flex-col rounded-3xl p-8 transition-all duration-300 relative ${
                     isPopular
-                      ? "ring-2 ring-orange-custom shadow-2xl scale-105 z-10"
-                      : "border border-[#E9ECEF] shadow-sm hover:shadow-md"
+                      ? "ring-2 ring-custom-green/50 shadow-2xl scale-105 z-10"
+                      : "box-card-custom"
                   }`}
                 >
                   {isPopular && (
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[linear-gradient(180deg,#55E480_-131.16%,#2F7E47_184.59%)] px-6 py-1.5 rounded-full shadow-lg">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-orange-custom px-6 py-1.5 rounded-full shadow-lg">
                       <p className="text-sm font-bold text-white uppercase tracking-wider">
                         Most Popular
                       </p>
@@ -342,43 +334,40 @@ export default function PricingPage() {
                   )}
 
                   <div className="mb-8">
-                    <h3 className="text-2xl font-bold text-[#212529] mb-2">
+                    <h3 className="text-2xl font-bold text-custom-black mb-2">
                       {plan.name}
                     </h3>
-                    <p className="text-base text-[#6C757D]">
+                    <p className="text-base text-custom-black/70">
                       For serious freelancers
                     </p>
                   </div>
 
                   <div className="mb-8">
                     <div className="flex items-baseline gap-1">
-                      <span className="text-5xl font-black text-[#212529]">
+                      <span className="text-5xl font-black text-custom-black">
                         {plan.price}
                       </span>
-                      <span className="text-xl text-[#6C757D]">kr</span>
+                      <span className="text-xl text-custom-black/70">kr</span>
                     </div>
-                    <p className="text-sm text-[#ADB5BD] mt-1">per month</p>
+                    <p className="text-sm text-custom-black/70 mt-1">per month</p>
                   </div>
 
-                  <Button
-                    label="Upgrade now"
-                    onClick={() => handleUpgradeClick(plan)}
-                    className={`w-full py-4 rounded-2xl font-bold transition-all mb-8 ${
+                    <Button label="Upgrade now" onClick={() => handleUpgradeClick(plan)}
+                    size="default" variant="default" className={`w-full mb-8 py-4 font-bold ${
                       isPopular
-                        ? "!bg-orange-custom !text-white hover:!bg-black shadow-lg"
-                        : "!bg-transparent !text-orange-custom !border-2 !border-orange-custom hover:!bg-orange-custom hover:!text-white"
-                    }`}
-                  />
+                        ? "bg-custom-green text-white"
+                        : "bg-transparent text-custom-green border-2 border-custom-green hover:bg-custom-green hover:text-white"
+                    }`}/>
 
                   <div className="flex-1">
-                    <p className="text-sm font-bold text-[#212529] uppercase tracking-wider mb-4 px-1">
+                    <p className="text-sm font-bold text-custom-black uppercase tracking-wider mb-4 px-1">
                       Features
                     </p>
                     <ul className="space-y-4">
                       {plan.featuresText?.map((feature, i) => (
                         <li
                           key={i}
-                          className="flex items-start gap-3 text-[15px] text-[#495057]"
+                          className="flex items-start gap-3 text-[15px] text-custom-black/70"
                         >
                           <div className="mt-1 shrink-0 w-5 h-5 rounded-full bg-[#E0883515] flex items-center justify-center text-orange-custom">
                             <Check size={12} strokeWidth={3} />
