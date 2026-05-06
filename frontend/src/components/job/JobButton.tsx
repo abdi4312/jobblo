@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from '../Ui/Button';
+import { Button } from '../Ui/button/Button';
 import { Bookmark, MessageCircle } from 'lucide-react';
 import { TailSpin } from "react-loader-spinner";
 import { useUserStore } from '../../stores/userStore';
@@ -62,7 +62,7 @@ const JobButton: React.FC<JobButtonProps> = ({
                 />
 
                 {/* Lagre / Save Button */}
-                <Button
+                {/* <Button
                     onClick={handleHeartClick}
                     disabled={isLoading}
                     label={isInAnyList ? 'Lagret' : 'Lagre'}
@@ -72,7 +72,7 @@ const JobButton: React.FC<JobButtonProps> = ({
                             ? 'bg-[#F0B100]! border-[#F0B100]! text-white!'
                             : 'bg-transparent! text-custom-green! border-custom-green! hover:bg-custom-green! hover:text-white!'}
                     `}
-                />
+                /> */}
             </div>
 
             {job && (
