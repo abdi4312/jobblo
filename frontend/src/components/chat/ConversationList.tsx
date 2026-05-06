@@ -57,7 +57,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
           <p className="text-sm text-[#666] mt-2">Ingen meldinger</p>
         </div>
       ) : (
-        <div className="flex flex-col">
+        <div className="flex flex-col box-card-custom">
           {filteredChats.map((chat) => {
             const otherPerson =
               chat.clientId?._id === user?._id
@@ -75,15 +75,15 @@ const ConversationList: React.FC<ConversationListProps> = ({
               <div
                 key={chat._id}
                 onClick={() => navigate(`/messages/${chat._id}`)}
-                className={`relative flex items-center p-4 gap-4 cursor-pointer transition-all ${
+                className={`relative flex items-center border-b border-custom-green-light p-4 gap-4 cursor-pointer transition-all ${
                   isActive
                     ? "bg-custom-green-light opacity-80"
-                    : "bg-white hover:bg-[#F8F9FA]"
+                    : "hover:bg-[#F8F9FA]"
                 }`}
               >
                 {/* Avatar-seksjon */}
                 <div className="relative shrink-0">
-                  <div className="w-[56px] h-[56px] rounded-full p-[2px] bg-white border border-[#E9ECEF]">
+                  <div className="w-[56px] h-[56px] rounded-full p-[2px]">
                     {otherPerson?.avatarUrl ? (
                       <img
                         src={otherPerson.avatarUrl}
