@@ -124,8 +124,7 @@ export function Guide() {
             {features.map((feature, idx) => (
               <div
                 key={idx}
-                className="group flex items-start gap-6 bg-white/60 p-6 rounded-xl border border-white
-                shadow-[0_10px_30px_rgba(0,0,0,0.04)] hover:bg-white transition-all duration-300 cursor-default"
+                className="box-card-custom group flex items-start gap-6 p-6 rounded-xl hover:bg-white transition-all duration-300 cursor-default"
               >
                 {/* Neumorphic Icon Container */}
                 <div

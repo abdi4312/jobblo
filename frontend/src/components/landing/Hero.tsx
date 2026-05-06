@@ -50,13 +50,13 @@ export function Hero() {
 
           {/* Stats Section */}
           <div className="flex text-center justify-center md:justify-start gap-3">
-            <div className="p-3 bg-white/40 backdrop-blur-sm rounded-xl border border-white/20 min-w-35">
+            <div className="p-3 box-card-custom rounded-[6px] min-w-35"> 
               <h2 className="text-custom-green text-[24px] font-bold">5000+</h2>
-              <p className="text-[#676767] font-light">Aktive oppdrag</p>
+              <p className="text-custom-black/70 font-light">Aktive oppdrag</p>
             </div>
-            <div className="p-3 bg-white/40 backdrop-blur-sm rounded-xl border border-white/20 min-w-35">
+            <div className="p-3 box-card-custom rounded-[6px] min-w-35">
               <h2 className="text-custom-green text-[24px] font-bold">5000+</h2>
-              <p className="text-[#676767] font-light">Aktive oppdrag</p>
+              <p className="text-custom-black/70 font-light">Aktive oppdrag</p>
             </div>
           </div>
         </div>

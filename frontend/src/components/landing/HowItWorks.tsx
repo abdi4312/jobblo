@@ -48,7 +48,7 @@ export function HowItWorks() {
             return (
               <div
                 key={step.id}
-                className="relative bg-white/60 p-6 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.04)] flex flex-col items-start min-h-61 border border-white"
+                className="relative box-card-custom p-6 rounded-xl flex flex-col items-start min-h-61"
               >
                 {/* Top Right Green Badge */}
                 <div
