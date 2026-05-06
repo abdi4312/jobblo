@@ -71,7 +71,7 @@ export const TopResults = ({
             {searchResults.categories.total > 3 && (
               <button
                 onClick={() => onSeeAll("Categories")}
-                className="text-[14px] font-bold text-[#2F7E47] hover:underline transition-all"
+                className="text-[14px] font-bold text-custom-green hover:underline transition-all"
               >
                 Se alle
               </button>
@@ -110,7 +110,7 @@ export const TopResults = ({
             {searchResults.people.total > 3 && (
               <button
                 onClick={() => onSeeAll("People")}
-                className="text-[14px] font-bold text-[#2F7E47] hover:underline transition-all"
+                className="text-[14px] font-bold text-custom-green hover:underline transition-all"
               >
                 Se alle
               </button>

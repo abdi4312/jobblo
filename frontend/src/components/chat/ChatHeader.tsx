@@ -35,7 +35,7 @@ function ChatHeader({
   }, []);
 
   return (
-    <div className="px-6 py-4 flex bg-white border-b border-[#F8F9FA] justify-between items-center shrink-0">
+    <div className="px-6 py-4 flex rounded-none justify-between items-center shrink-0">
       <div className="flex items-center gap-4 flex-1 min-w-0">
         {/* Back button for mobile */}
         {isMobile && (
@@ -104,7 +104,7 @@ function ChatHeader({
           </button>
 
           {showMenu && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-[#F1F3F5] py-2 z-[100] animate-in fade-in zoom-in duration-200 origin-top-right">
+            <div className="absolute right-0 mt-2 w-64 box-card-custom rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-[#F1F3F5] py-2 z-[100] animate-in fade-in zoom-in duration-200 origin-top-right">
               {/* Send Contract Option (Mobile only) */}
               {isMobile && !contract?._id && hasService && (
                 <button

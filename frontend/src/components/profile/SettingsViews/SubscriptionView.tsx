@@ -51,7 +51,7 @@ export function SubscriptionView() {
       {/* Current Plan Card */}
       <section>
         <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <Package className="text-[#E08835]" size={20} />
+          <Package className="text-orange-custom" size={20} />
           Gjeldende abonnement
         </h3>
         <div className="bg-gradient-to-br from-[#2d4a3e] to-[#1a2e26] rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
@@ -85,13 +85,13 @@ export function SubscriptionView() {
       {/* Transaction History */}
       <section>
         <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <History className="text-[#E08835]" size={20} />
+          <History className="text-orange-custom" size={20} />
           Kjøpshistorikk
         </h3>
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-            <Loader2 className="animate-spin text-[#E08835] mb-2" size={32} />
+            <Loader2 className="animate-spin text-orange-custom mb-2" size={32} />
             <p className="text-gray-500 font-medium">Laster transaksjoner...</p>
           </div>
         ) : transactions.length > 0 ? (
@@ -122,7 +122,7 @@ export function SubscriptionView() {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-[#E0883515] flex items-center justify-center text-[#E08835]">
+                          <div className="w-8 h-8 rounded-lg bg-[#E0883515] flex items-center justify-center text-orange-custom">
                             <CreditCard size={16} />
                           </div>
                           <span className="font-bold text-gray-900">
@@ -165,6 +165,7 @@ export function SubscriptionView() {
                 </p>
                 <div className="flex gap-2">
                   <button
+                    title="Forrige side"
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
                     className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
@@ -172,6 +173,7 @@ export function SubscriptionView() {
                     <ArrowLeft size={18} />
                   </button>
                   <button
+                    title="Neste side"
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
                     className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
@@ -194,7 +196,7 @@ export function SubscriptionView() {
             </p>
             <button
               onClick={() => (window.location.href = "/membership")}
-              className="mt-4 text-[#E08835] font-bold text-sm hover:underline"
+              className="mt-4 text-orange-custom font-bold text-sm hover:underline"
             >
               Se planer
             </button>

@@ -82,7 +82,7 @@ export function ContractMessage({
       {!showContract && (
         <div>
           <div className="flex justify-center -mt-3">
-            <div className="w-full bg-[#2F7E4733] border border-[#E0883526] rounded-[6px] py-1 px-4 flex items-center justify-between">
+            <div className="w-full bg-custom-green-light border border-[#E0883526] rounded-[6px] py-1 px-4 flex items-center justify-between">
               {/* Left Side: Icon & Text */}
               <div className="flex items-center gap-3 truncate">
                 <span className="text-[20px] shrink-0">
@@ -98,7 +98,7 @@ export function ContractMessage({
               <button
                 onClick={() => navigate(`/contracts/${contract._id}`)}
                 // onClick={() => setShowContract(true)}
-                className="flex items-center gap-0.5 pl-2 py-0.5 bg-[#2F7E4733] border-none rounded-lg text-[12px] font-bold cursor-pointer hover:bg-[#2F7E4733] hover:text-white transition-all duration-300 shrink-0"
+                className="flex items-center gap-0.5 pl-2 py-0.5 bg-custom-green-light border-none rounded-lg text-[12px] font-bold cursor-pointer hover:bg-custom-green-light hover:text-white transition-all duration-300 shrink-0"
               >
                 View Details
                 <span className="material-symbols-outlined text-[16px]">
@@ -111,7 +111,7 @@ export function ContractMessage({
       )}
 
       {showContract && (
-        <div className="bg-white border border-[#E08835] rounded-xl p-4 mb-3 max-w-106.5 ">
+        <div className="bg-white border border-orange-custom rounded-xl p-4 mb-3 max-w-106.5 ">
           {/* Header */}
           <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-[#e0e0e0]">
             <div className="flex items-center gap-2">
@@ -123,7 +123,7 @@ export function ContractMessage({
               </h4>
             </div>
             <div
-              className="bg-[#E0883526] p-2 rounded-[7px] cursor-pointer text-[#E08835] hover:bg-[#E08835] hover:text-white transition-colors"
+              className="bg-orange-custom p-2 rounded-[7px] cursor-pointer text-orange-custom hover:bg-orange-custom hover:text-white transition-colors"
               onClick={() => setShowContract(false)}
             >
               <X size={18} />
@@ -138,14 +138,14 @@ export function ContractMessage({
 
             {contract?.price && (
               <div className="text-sm p-[8px_12px] bg-[#E0883526] rounded-md mb-2">
-                <strong className="text-[#E08835] mr-2">Agreed Price:</strong>{" "}
+                <strong className="text-orange-custom mr-2">Agreed Price:</strong>{" "}
                 {contract.price} kr
               </div>
             )}
 
             {contract?.scheduledDate && (
               <div className="text-sm p-[8px_12px] bg-[#E0883526] rounded-md mb-2">
-                <strong className="text-[#E08835] mr-2">Scheduled:</strong>{" "}
+                <strong className="text-orange-custom mr-2">Scheduled:</strong>{" "}
                 {new Date(contract.scheduledDate).toLocaleDateString("en-US")}
               </div>
             )}

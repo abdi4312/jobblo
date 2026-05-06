@@ -15,6 +15,7 @@ import {
 import type { AlertType } from "../../features/notifications/types";
 import { dateFormatter } from "../../utils/dateFormatter";
 import { timeFormatter } from "../../utils/timeFormatter";
+import { Button } from "../../components/Ui/button/Button";
 
 interface NotificationItemProps {
   alert: AlertType;
@@ -148,7 +149,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         <div className="flex-1 flex flex-col sm:flex-row justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex items-center justify-between sm:justify-start">
-              <h2 className="text-[18px] font-bold text-[#0A0A0A]">
+              <h2 className="text-[18px] font-bold text-custom-black">
                 {config.title}
               </h2>
 
@@ -177,12 +178,12 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
               </div>
             </div>
 
-            <p className="text-[16px] font-medium text-[#0A0A0A] leading-6">
+            <p className="text-[16px] font-medium text-custom-black leading-6">
               {alert.content}
             </p>
 
             <div className="inline-block">
-              <span className="bg-[#2F7E471A] text-[#2F7E47] text-[14px] font-medium px-4 py-1 rounded-full">
+              <span className="bg-[#2F7E471A] text-custom-green text-[14px] font-medium px-4 py-1 rounded-full">
                 {alert.type}
               </span>
             </div>
@@ -194,7 +195,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
           </div>
 
           {/* Desktop Actions & Button */}
-          <div className="flex flex-col justify-between items-end min-w-[120px]">
+          <div className="flex flex-col justify-between items-end min-w-30">
             <div className="hidden sm:flex gap-4 items-center">
               {alert.read ? (
                 <CheckCheck size={20} className="text-green-600" />
@@ -218,8 +219,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
               />
             </div>
 
-            <button
-              className="bg-[#3F8F6B] text-white text-[14px] font-semibold px-6 py-2.5 rounded-2xl hover:bg-[#367a5b] transition-all self-end mt-4 sm:mt-0"
+            <Button
+              variant="default"
               onClick={(e) => {
                 e.stopPropagation();
                 if (isClickable && alert.senderId?._id) {
@@ -228,7 +229,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
               }}
             >
               {isClickable ? "Se profil" : "Se søknad"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

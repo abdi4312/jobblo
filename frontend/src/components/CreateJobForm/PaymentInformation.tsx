@@ -65,7 +65,7 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
             <Wallet size={22} />
           </div>
           <div>
-            <h2 className="font-bold text-lg md:text-xl text-[#0A0A0A]">
+            <h2 className="font-bold text-lg md:text-xl text-custom-black">
               Betalingsmetode
             </h2>
             <p className="text-gray-500 text-xs md:text-sm">
@@ -141,7 +141,7 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
               }
             }}
             placeholder="0"
-            className="w-full pl-16 md:pl-20 pr-4 md:pr-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-lg md:text-xl font-bold text-[#0A0A0A] outline-none focus:border-[#2D7A4D] transition-all"
+            className="w-full pl-16 md:pl-20 pr-4 md:pr-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-lg md:text-xl font-bold text-custom-black outline-none focus:border-[#2D7A4D] transition-all"
           />
         </div>
         {paymentType === "Timepris" && (

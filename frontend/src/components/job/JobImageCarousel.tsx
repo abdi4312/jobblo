@@ -1,5 +1,5 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import React, { useState } from 'react';
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useState } from "react";
 
 interface JobImageCarouselProps {
   images?: string[];
@@ -13,7 +13,7 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
   const jobImages =
     images && images.length > 0
       ? images
-      : ['https://api.dicebear.com/7.x/avataaars/svg?seed=default'];
+      : ["https://api.dicebear.com/7.x/avataaars/svg?seed=default"];
 
   const handlePrevious = () =>
     setCurrentIndex((prev) => (prev === 0 ? jobImages.length - 1 : prev - 1));
@@ -47,7 +47,7 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
   };
 
   return (
-    <div 
+    <div
       className="relative w-full overflow-hidden group bg-gray-100 aspect-4/3 sm:aspect-16/8 md:aspect-16/7"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
@@ -68,7 +68,7 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
         <button
           onClick={handlePrevious}
           aria-label="Forrige bilde"
-          className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-10 p-2 sm:p-2.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white hover:text-[#0A0A0A] hover:scale-110"
+          className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-10 p-2 sm:p-2.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white hover:text-custom-black hover:scale-110"
         >
           <ChevronLeft size={18} strokeWidth={2.5} />
         </button>
@@ -79,7 +79,7 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
         <button
           onClick={handleNext}
           aria-label="Neste bilde"
-          className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-10 p-2 sm:p-2.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white hover:text-[#0A0A0A] hover:scale-110"
+          className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-10 p-2 sm:p-2.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white hover:text-custom-black hover:scale-110"
         >
           <ChevronRight size={18} strokeWidth={2.5} />
         </button>
@@ -95,8 +95,8 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
               aria-label={`Gå til bilde ${idx + 1}`}
               className={`rounded-full transition-all duration-300 cursor-pointer ${
                 idx === currentIndex
-                  ? 'w-5 h-1.5 sm:w-6 sm:h-2 bg-[#2F7E47]'
-                  : 'w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/60 hover:bg-white'
+                  ? "w-5 h-1.5 sm:w-6 sm:h-2 bg-custom-green"
+                  : "w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/60 hover:bg-white"
               }`}
             />
           ))}

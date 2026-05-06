@@ -55,7 +55,7 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({
       >
         {/* Header */}
         <div className="relative flex items-center justify-center p-6 border-b border-gray-100">
-          <h2 className="text-[#0A0A0A] font-bold text-lg">Bidragsytere</h2>
+          <h2 className="text-custom-black font-bold text-lg">Bidragsytere</h2>
           <button
             onClick={onClose}
             className="absolute right-6 p-1 hover:bg-gray-100 rounded-full transition-colors"
@@ -69,9 +69,9 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({
           {/* Add Contributor Link */}
           <button
             onClick={onAddContributor}
-            className="flex items-center gap-3 px-3 py-4 text-[#0A0A0A] font-bold hover:bg-gray-50 rounded-2xl transition-all mb-2"
+            className="flex items-center gap-3 px-3 py-4 text-custom-black font-bold hover:bg-gray-50 rounded-2xl transition-all mb-2"
           >
-            <div className="w-12 h-12 rounded-full bg-[#2F7E4711] flex items-center justify-center text-[#2F7E47]">
+            <div className="w-12 h-12 rounded-full bg-[#2F7E4711] flex items-center justify-center text-custom-green">
               <Plus size={24} />
             </div>
             <span>Legg til bidragsyter</span>
@@ -93,13 +93,13 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({
                         alt=""
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[#2F7E47] bg-[#2F7E4711]">
+                      <div className="w-full h-full flex items-center justify-center text-custom-green bg-[#2F7E4711]">
                         <User size={20} />
                       </div>
                     )}
                   </div>
                   <div className="text-left">
-                    <p className="font-bold text-[#0A0A0A] text-base leading-tight">
+                    <p className="font-bold text-custom-black text-base leading-tight">
                       {owner.name} {owner.lastName}
                     </p>
                     <p className="text-sm text-gray-400 font-medium">
@@ -129,13 +129,13 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({
                           alt=""
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#2F7E47] bg-[#2F7E4711]">
+                        <div className="w-full h-full flex items-center justify-center text-custom-green bg-[#2F7E4711]">
                           <User size={20} />
                         </div>
                       )}
                     </div>
                     <div className="text-left">
-                      <p className="font-bold text-[#0A0A0A] text-base leading-tight">
+                      <p className="font-bold text-custom-black text-base leading-tight">
                         {user.name} {user.lastName}
                       </p>
                       <p className="text-sm text-gray-400 font-medium">
@@ -147,7 +147,7 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({
                   <button
                     onClick={() => handleRemove(user._id)}
                     disabled={removeContributorMutation.isPending}
-                    className="px-6 py-2 border border-gray-300 rounded-2xl font-bold text-[#0A0A0A] hover:bg-gray-50 transition-all active:scale-[0.98]"
+                    className="px-6 py-2 border border-gray-300 rounded-2xl font-bold text-custom-black hover:bg-gray-50 transition-all active:scale-[0.98]"
                   >
                     Fjern
                   </button>

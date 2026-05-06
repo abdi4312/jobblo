@@ -104,7 +104,7 @@ export function ItemsGrid({
               {userSkills.map((skill: string) => (
                 <span
                   key={skill}
-                  className="px-4 py-1 bg-[#2F7E4715] rounded-md text-sm font-bold text-[#2F7E47] border border-[#2F7E4720]"
+                  className="px-4 py-1 bg-[#2F7E4715] rounded-md text-sm font-bold text-custom-green border border-[#2F7E4720]"
                 >
                   {skill}
                 </span>
@@ -124,7 +124,7 @@ export function ItemsGrid({
               {availabilityText.split("\n").map((time: string) => (
                 <div
                   key={time}
-                  className="p-4 rounded-xl bg-[#2F7E4715] text-[#2F7E47] border border-[#2F7E4720] shadow-sm font-medium"
+                  className="p-4 rounded-xl bg-[#2F7E4715] text-custom-green border border-[#2F7E4720] shadow-sm font-medium"
                 >
                   {time}
                 </div>
@@ -162,7 +162,7 @@ export function ItemsGrid({
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
                   {project.category && (
-                    <span className="text-[#2F7E47] bg-white/90 backdrop-blur-sm text-[10px] font-bold px-3 py-1 rounded-full w-fit mb-2">
+                    <span className="text-custom-green bg-white/90 backdrop-blur-sm text-[10px] font-bold px-3 py-1 rounded-full w-fit mb-2">
                       {project.category}
                     </span>
                   )}
@@ -257,8 +257,12 @@ export function ItemsGrid({
                   </div>
                 </div>
                 <div className="flex items-center gap-1 bg-[#2F7E4710] px-3 py-1.5 rounded-xl">
-                  <Star size={14} fill="#2F7E47" className="text-[#2F7E47]" />
-                  <span className="text-sm font-bold text-[#2F7E47]">
+                  <Star
+                    size={14}
+                    fill="#2F7E47"
+                    className="text-custom-green"
+                  />
+                  <span className="text-sm font-bold text-custom-green">
                     {review.rating}.0
                   </span>
                 </div>
@@ -363,7 +367,7 @@ export function ItemsGrid({
                 className="flex justify-center mt-10 min-h-[100px]"
               >
                 {isFetchingNextPage ? (
-                  <div className="flex items-center gap-2 bg-[#2F7E47] text-white px-8 py-2 rounded-full font-bold">
+                  <div className="flex items-center gap-2 bg-custom-green text-white px-8 py-2 rounded-full font-bold">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Laster mer...
                   </div>

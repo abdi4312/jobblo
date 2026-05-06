@@ -1,0 +1,61 @@
+import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useUserStore } from "../../stores/userStore";
+import { useUserProfile } from "./hooks";
+import { App } from "antd";
+import { toast } from "react-hot-toast";
+
+export const useProfileLogic = () => {
+  const { userId } = useParams<{ userId: string }>();
+  const currentUser = useUserStore((state) => state.user);
+  const logout = useUserStore((state) => state.logout);
+  const navigate = useNavigate();
+  const { modal } = App.useApp();
+  const [activeTab, setActiveTab] = useState("Om meg");
+  const [profileType, setProfileType] = useState<"seeker" | "poster">("seeker");
+
+  const { data: profileUser, isLoading } = useUserProfile(userId);
+
+  const userToDisplay = userId ? profileUser : currentUser;
+  const isOwnProfile = !userId || userId === currentUser?._id;
+
+  const handleProfileTypeChange = (type: "seeker" | "poster") => {
+    setProfileType(type);
+    setActiveTab(type === "seeker" ? "Om meg" : "Aktive");
+  };
+
+  const handleLogout = () => {
+    modal.confirm({
+      title: "Er du sikker?",
+      content: "Vil du virkelig logge ut?",
+      okText: "Ja, logg ut",
+      cancelText: "Avbryt",
+      onOk() {
+        logout();
+        toast.success("Du har blitt logget ut");
+        navigate("/");
+      },
+    });
+  };
+
+  const isBlockedByMe =
+    userId &&
+    currentUser?.blockedUsers?.some(
+      (id: any) =>
+        (typeof id === "string" ? id : id._id)?.toString() === userId,
+    );
+
+  return {
+    userId,
+    userToDisplay,
+    isOwnProfile,
+    isLoading,
+    activeTab,
+    setActiveTab,
+    profileType,
+    handleProfileTypeChange,
+    handleLogout,
+    isBlockedByMe,
+    navigate,
+  };
+};

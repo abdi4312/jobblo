@@ -22,7 +22,7 @@ export const HistorySection = ({
               e.stopPropagation();
               onClear();
             }}
-            className="text-[14px] font-bold text-[#2F7E47] hover:underline transition-all"
+            className="text-[14px] font-bold text-custom-green hover:underline transition-all"
           >
             Tøm logg
           </button>

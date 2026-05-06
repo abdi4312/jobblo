@@ -37,7 +37,7 @@ export function ProfileNav({
   const tabs = profileType === "seeker" ? seekerTabs : posterTabs;
 
   return (
-    <div className="border-b border-gray-200 bg-white">
+    <div className="box-card-custom rounded-none">
       <div className="max-w-300 mx-auto px-4 sm:px-6">
         <div className="flex justify-around md:justify-around md:gap-20">
           {tabs.map((tab) => {

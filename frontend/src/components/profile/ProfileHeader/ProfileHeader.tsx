@@ -93,7 +93,7 @@ export function ProfileHeader({
                 @{user?.name.toLowerCase().replace(/\s+/g, "") || "guest"}
               </h2>
               {user?.verified && (
-                <span className="flex items-center gap-1 bg-[#2F7E47] text-white text-[10px] font-bold px-2 py-1 rounded-full w-fit">
+                <span className="flex items-center gap-1 bg-custom-green text-white text-[10px] font-bold px-2 py-1 rounded-full w-fit">
                   Verifisert
                 </span>
               )}

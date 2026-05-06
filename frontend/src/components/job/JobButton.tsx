@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from '../Ui/Button';
+import { Button } from '../Ui/button/Button';
 import { Bookmark, MessageCircle } from 'lucide-react';
 import { TailSpin } from "react-loader-spinner";
 import { useUserStore } from '../../stores/userStore';
@@ -57,12 +57,12 @@ const JobButton: React.FC<JobButtonProps> = ({
                     className={`flex-1 h-12 text-[14px]! rounded-xl font-semibold! transition-all! whitespace-nowrap
                         ${isOwnJob
                             ? 'bg-gray-100! text-gray-400! cursor-not-allowed!'
-                            : 'bg-[#2F7E47]! text-white! hover:bg-[#266b3c]!'} 
+                            : 'bg-custom-green! text-white! hover:bg-[#266b3c]!'} 
                     `}
                 />
 
                 {/* Lagre / Save Button */}
-                <Button
+                {/* <Button
                     onClick={handleHeartClick}
                     disabled={isLoading}
                     label={isInAnyList ? 'Lagret' : 'Lagre'}
@@ -70,9 +70,9 @@ const JobButton: React.FC<JobButtonProps> = ({
                     className={`h-12 px-5 border rounded-xl text-[14px]! font-semibold! transition-all! whitespace-nowrap
                         ${isInAnyList
                             ? 'bg-[#F0B100]! border-[#F0B100]! text-white!'
-                            : 'bg-transparent! text-[#2F7E47]! border-[#2F7E47]! hover:bg-[#2F7E47]! hover:text-white!'}
+                            : 'bg-transparent! text-custom-green! border-custom-green! hover:bg-custom-green! hover:text-white!'}
                     `}
-                />
+                /> */}
             </div>
 
             {job && (

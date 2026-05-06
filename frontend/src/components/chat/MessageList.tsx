@@ -29,10 +29,10 @@ function MessageList({
   }, {});
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 bg-white space-y-8">
+    <div className="flex-1 overflow-y-auto p-6 rounded-none space-y-8">
       {uniqueMessages.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-[#ADB5BD]">
-          <div className="w-16 h-16 rounded-full bg-[#F8F9FA] flex items-center justify-center mb-4">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4">
             <span className="material-symbols-outlined text-[32px] text-[#CED4DA]">chat</span>
           </div>
           <p className="m-0 font-medium">Ingen meldinger ennå</p>
@@ -74,7 +74,7 @@ function MessageList({
                   <div className={`flex flex-col max-w-[80%] sm:max-w-[60%] ${isSentByMe ? "items-end" : "items-start"}`}>
                     <div
                       className={`px-5 py-3 rounded-2xl text-[15px] leading-relaxed shadow-sm ${isSentByMe
-                        ? "bg-[#2F7E4733] text-[#212529] rounded-tr-none"
+                        ? "bg-custom-green-light text-[#212529] rounded-tr-none"
                         : "bg-[#F8F9FA] text-[#212529] rounded-tl-none border border-[#F1F3F5]"
                         }`}
                     >
