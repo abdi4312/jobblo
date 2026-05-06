@@ -14,7 +14,7 @@ import {
 import type { AlertType } from "../../features/notifications/types";
 import { NotificationSkeleton } from "../../components/Loading/NotificationSkeleton";
 import { NotificationItem } from "../../components/Notifications/NotificationItem";
-import { NotificationTabs } from "../../components/Notifications/NotificationTabs";
+import { NotificationSwitcher } from "../../components/Notifications/NotificationSwitcher";
 
 /**
  * Alert page component - Displays user notifications with filtering and actions
@@ -123,7 +123,7 @@ export default function Alert() {
       </div>
 
       {/* Tabs Section */}
-      <NotificationTabs
+      <NotificationSwitcher
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={setActiveTab}

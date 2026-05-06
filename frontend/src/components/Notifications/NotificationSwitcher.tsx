@@ -6,13 +6,13 @@ interface Tab {
   label: string;
 }
 
-interface NotificationTabsProps {
+interface NotificationSwitcherProps {
   tabs: Tab[];
   activeTab: string;
   onTabChange: (id: string) => void;
 }
 
-export const NotificationTabs: React.FC<NotificationTabsProps> = ({
+export const NotificationSwitcher: React.FC<NotificationSwitcherProps> = ({
   tabs,
   activeTab,
   onTabChange,
