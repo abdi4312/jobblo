@@ -59,7 +59,7 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
       {/* 1. Payment Type Section */}
-      <div className="bg-white/60 p-4 md:p-6 rounded-2xl border border-white/40 shadow-sm">
+      <div className="box-card-custom p-4 md:p-6 rounded-[14px]">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 bg-[#2D7A4D]/10 rounded-full flex items-center justify-center text-[#2D7A4D] shrink-0">
             <Wallet size={22} />
@@ -115,7 +115,7 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
       </div>
 
       {/* 2. Price Section */}
-      <div className="bg-white/60 p-4 md:p-6 rounded-2xl border border-white/40 shadow-sm">
+      <div className="box-card-custom p-4 md:p-6 rounded-[14px]">
         <div className="flex items-center justify-between mb-4 md:mb-6">
           <label className="text-[11px] md:text-sm font-bold text-gray-700 uppercase tracking-wider">
             {paymentType === "Timepris"
@@ -156,12 +156,11 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
       </div>
 
       {/* 3. Urgent Section */}
-      <div
-        className={`p-4 md:p-6 rounded-2xl border-2 transition-all duration-300 flex items-center justify-between cursor-pointer relative ${
+      <div className={`p-4 md:p-6 rounded-2xl border-2 transition-all duration-300 flex items-center justify-between cursor-pointer relative ${
           !isPaidSubscriber
-            ? "border-gray-100 bg-gray-50/50 grayscale opacity-80"
+            ? "box-card-custom"
             : urgent
-              ? "border-red-200 bg-red-50"
+              ? "border-custom-green-light bg-custom-green-light"
               : "border-gray-100 bg-white/60"
         }`}
         onClick={() => {
@@ -187,24 +186,22 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
         )}
         <div className="flex items-center gap-3 md:gap-4">
           <div
-            className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 ${urgent && isPaidSubscriber ? "bg-red-500 text-white" : "bg-gray-100 text-gray-400"}`}
+            className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 ${urgent && isPaidSubscriber ? "bg-custom-green text-white" : "bg-gray-100 text-gray-400"}`}
           >
             <AlertCircle size={20} className="md:w-6 md:h-6" />
           </div>
           <div>
             <p
-              className={`text-sm md:text-base font-bold ${urgent && isPaidSubscriber ? "text-red-700" : "text-gray-700"}`}
+              className={`text-sm md:text-base font-bold ${urgent && isPaidSubscriber ? "text-custom-green" : "text-custom-black"}`}
             >
               Haster oppdraget?
             </p>
-            <p className="text-[10px] md:text-sm text-gray-500">
+            <p className="text-[10px] md:text-sm text-custom-black">
               Gjør det mer synlig for potensielle hjelpere
             </p>
           </div>
         </div>
-        <div
-          className={`w-10 h-6 md:w-14 md:h-8 rounded-full p-1 transition-colors duration-300 shrink-0 ${urgent && isPaidSubscriber ? "bg-red-500" : "bg-gray-200"}`}
-        >
+        <div className={`w-10 h-6 md:w-14 md:h-8 rounded-full p-1 transition-colors duration-300 shrink-0 ${urgent && isPaidSubscriber ? "bg-custom-green" : "bg-gray-200"}`}>
           <div
             className={`w-4 h-4 md:w-6 md:h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${urgent && isPaidSubscriber ? "translate-x-4 md:translate-x-6" : "translate-x-0"}`}
           />

@@ -44,13 +44,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 
         {!loading && icon && iconPosition === "left" && (
-          <span className="mr-2">{icon}</span>
+          <span className="mr-1">{icon}</span>
         )}
 
         {label ?? children}
 
         {!loading && icon && iconPosition === "right" && (
-          <span className="ml-2">{icon}</span>
+          <span className="ml-1">{icon}</span>
         )}
       </ShadcnButton>
     );

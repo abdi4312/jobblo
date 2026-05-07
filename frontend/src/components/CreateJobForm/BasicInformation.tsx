@@ -176,7 +176,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* 1. Title Section */}
-      <div className="bg-white/60 p-4 md:p-6 rounded-2xl border border-white/40 shadow-sm">
+      <div className="box-card-custom rounded-[14px] p-4 md:p-6">
         <div className="flex items-center justify-between mb-4">
           <label className="text-[11px] md:text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
             Tittel <span className="text-red-500">*</span>
@@ -244,7 +244,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
       </div>
 
       {/* 2. Category Section */}
-      <div className="bg-white/60 p-4 md:p-6 rounded-2xl border border-white/40 shadow-sm">
+      <div className="box-card-custom rounded-[14px] p-4 md:p-6">
         <label className="text-[11px] md:text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 mb-4">
           Velg kategori <span className="text-red-500">*</span>
         </label>
@@ -309,7 +309,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
       </div>
 
       {/* 3. Description Section */}
-      <div className="bg-white/60 p-4 md:p-6 rounded-2xl border border-white/40 shadow-sm">
+      <div className="box-card-custom rounded-[14px] p-4 md:p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex flex-col gap-1">
             <label className="text-[11px] md:text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
@@ -360,7 +360,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
       </div>
 
       {/* 4. Skills/Tags Section */}
-      <div className="bg-white/60 p-4 md:p-6 rounded-2xl border border-white/40 shadow-sm">
+      <div className="box-card-custom rounded-[14px] p-4 md:p-6">
         <label className="text-[11px] md:text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 mb-4">
           Ferdigheter / Tags
         </label>
@@ -373,6 +373,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
               >
                 {tag}
                 <button
+                  title="Fjern taggen"
                   type="button"
                   onClick={() => handleRemoveTag(tag)}
                   className="hover:text-red-500 transition-colors"
@@ -403,6 +404,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
               />
             </div>
             <button
+              title="Legg til taggen"
               type="button"
               onClick={handleAddTag}
               className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-all"

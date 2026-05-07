@@ -33,7 +33,7 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
       {/* 1. Location Section */}
-      <div className="bg-white/60 p-4 md:p-6 rounded-2xl border border-white/40 shadow-sm">
+      <div className="box-card-custom rounded-[14px] p-4 md:p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 bg-[#2D7A4D]/10 rounded-full flex items-center justify-center text-[#2D7A4D] shrink-0">
             <MapPin size={22} />
@@ -79,7 +79,7 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
       </div>
 
       {/* 2. Time Section */}
-      <div className="bg-white/60 p-4 md:p-6 rounded-2xl border border-white/40 shadow-sm">
+      <div className="box-card-custom rounded-[14px] p-4 md:p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 bg-[#2D7A4D]/10 rounded-full flex items-center justify-center text-[#2D7A4D] shrink-0">
             <Calendar size={22} />
@@ -100,6 +100,7 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               Fra dato
             </label>
             <input
+              
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
@@ -126,7 +127,7 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
       </div>
 
       {/* 3. Duration Section */}
-      <div className="bg-white/60 p-4 md:p-6 rounded-2xl border border-white/40 shadow-sm">
+      <div className="box-card-custom rounded-[14px] p-4 md:p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 bg-[#2D7A4D]/10 rounded-full flex items-center justify-center text-[#2D7A4D] shrink-0">
             <Clock size={22} />
