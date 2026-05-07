@@ -6,6 +6,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import { useNavigate } from "react-router-dom";
 import { usePublicHeroes } from "../../../features/hero/hooks";
+import { BannerSkeleton } from "../../Loading/BannerSkeleton";
 
 export function Banner() {
   const navigate = useNavigate();
@@ -23,12 +24,11 @@ export function Banner() {
     }
   };
 
-  if (loading) return null;
+  if (loading) return <BannerSkeleton />;
 
   return (
     <div className="w-full max-w-300 mx-auto py-8 px-2 md:px-4 overflow-hidden">
       <div className="flex items-center justify-between gap-3 md:gap-8">
-
         {/* Left Arrow */}
         <button
           id="banner-prev"
@@ -41,13 +41,12 @@ export function Banner() {
 
         {/* Banner Card */}
         <div className="flex-1 min-w-0 bg-white p-2 md:p-4 rounded-[30px] md:rounded-[48px] shadow-sm border border-gray-100 overflow-hidden relative h-95 md:h-125">
-
           <Swiper
             // 2. Modules mein Autoplay add karein
             modules={[Navigation, Autoplay]}
             navigation={{
-              prevEl: '#banner-prev',
-              nextEl: '#banner-next',
+              prevEl: "#banner-prev",
+              nextEl: "#banner-next",
             }}
             // 3. Autoplay config add karein (5000ms = 5 sec)
             autoplay={{
@@ -55,7 +54,6 @@ export function Banner() {
               disableOnInteraction: false, // User click kare tab bhi auto chalta rahe
             }}
             speed={700}
-
             loop={banners.length > 1}
             spaceBetween={16}
             slidesPerView={1}
@@ -70,13 +68,13 @@ export function Banner() {
                   {/* Right Side Image with Gradient Overlay */}
                   <div
                     className="absolute top-0 bottom-0 w-[80%] md:w-[70%]"
-                    style={{ right: '-2px' }}
+                    style={{ right: "-2px" }}
                   >
                     {/* Gradient overlay to blend green into image */}
                     <div
                       className="absolute inset-0 z-10"
                       style={{
-                        background: `linear-gradient(to right, ${data.bgColor} 0%, ${data.bgColor}E6 15%, transparent 100%)`
+                        background: `linear-gradient(to right, ${data.bgColor} 0%, ${data.bgColor}E6 15%, transparent 100%)`,
                       }}
                     ></div>
                     <img
@@ -99,7 +97,8 @@ export function Banner() {
                       <button
                         onClick={() => handleButtonClick(data.buttonUrl)}
                         className="bg-[#F5F1EB] text-[#132A22] font-semibold text-sm md:text-lg py-3 px-6 md:py-4 md:px-10
-                      rounded-xl md:rounded-[20px] w-max hover:bg-white hover:scale-105 transition-all duration-300">
+                      rounded-xl md:rounded-[20px] w-max hover:bg-white hover:scale-105 transition-all duration-300"
+                      >
                         {data.buttonText}
                       </button>
                     </div>
@@ -112,7 +111,6 @@ export function Banner() {
               </SwiperSlide>
             ))}
           </Swiper>
-
         </div>
 
         {/* Right Arrow */}
@@ -124,7 +122,6 @@ export function Banner() {
         >
           <ChevronRight size={24} strokeWidth={1} />
         </button>
-
       </div>
     </div>
   );
