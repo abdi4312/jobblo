@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { ConversationSkeleton } from "../Loading/ConversationSkeleton";
 
 interface ConversationUser {
   _id: string;
@@ -46,9 +47,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   return (
     <div className="flex-1 overflow-y-auto overflow-x-hidden">
       {loading ? (
-        <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-[#999] p-10">
-          <p className="animate-pulse">Laster...</p>
-        </div>
+        <ConversationSkeleton />
       ) : filteredChats.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-[#999] p-10 text-center">
           <span className="material-symbols-outlined text-[36px] text-[#ccc]">
