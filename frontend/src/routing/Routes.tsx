@@ -32,6 +32,7 @@ import {
 } from "../components/profile/SettingsViews";
 
 import OAuthSuccess from "../pages/OAuthSuccess.tsx";
+import SettingsPage from "../pages/SettingsPage.tsx";
 
 // =======================
 // Loading
@@ -40,7 +41,7 @@ import OAuthSuccess from "../pages/OAuthSuccess.tsx";
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
     {/* <div className="w-10 h-10 border-4 border-custom-green/30 border-t-custom-green rounded-full animate-spin" /> */}
-    <Lottie animation={Loging} loop autoplay />
+    <Lottie animationData={Loging} loop autoplay />
   </div>
 );
 
@@ -66,9 +67,6 @@ const JobListingPage = lazy(() =>
 );
 const ProfilePage = lazy(() =>
   import("../pages").then((m) => ({ default: m.ProfilePage })),
-);
-const SettingsPage = lazy(() =>
-  import("../pages").then((m) => ({ default: m.SettingsPage })),
 );
 
 const LeggUtOppdrag = lazy(
@@ -237,29 +235,30 @@ export const routes: RouteObject[] = [
 
         children: [
           {
-            index: true,
-            element: withSuspense(SettingsPage),
+            path: "",
+            element: <SettingsPage />,
+            children: [
+              { index: true, element: <UsernameView /> },
+              { path: "name", element: <NameView /> },
+              { path: "bio", element: <BioView /> },
+              { path: "picture", element: <PictureView /> },
+              { path: "email", element: <EmailView /> },
+              { path: "phone", element: <PhoneView /> },
+              { path: "addresses", element: <AddressesView /> },
+              { path: "password", element: <PasswordView /> },
+              { path: "delete-account", element: <DeleteAccountView /> },
+              { path: "location", element: <LocationView /> },
+              { path: "upcoming", element: <UpcomingPreviewView /> },
+              { path: "visibility", element: <VisibilityView /> },
+              { path: "blocked", element: <BlockedUsersView /> },
+              { path: "cookies", element: <CookiesView /> },
+              { path: "sessions", element: <SessionsView /> },
+              { path: "about", element: <AboutView /> },
+              { path: "notifications", element: <NotificationsView /> },
+              { path: "subscriptions", element: <SubscriptionView /> },
+              { path: "seeker", element: <SeekerSettingsView /> },
+            ],
           },
-
-          { path: "", element: <UsernameView /> },
-          { path: "name", element: <NameView /> },
-          { path: "bio", element: <BioView /> },
-          { path: "picture", element: <PictureView /> },
-          { path: "email", element: <EmailView /> },
-          { path: "phone", element: <PhoneView /> },
-          { path: "addresses", element: <AddressesView /> },
-          { path: "password", element: <PasswordView /> },
-          { path: "delete-account", element: <DeleteAccountView /> },
-          { path: "location", element: <LocationView /> },
-          { path: "upcoming", element: <UpcomingPreviewView /> },
-          { path: "visibility", element: <VisibilityView /> },
-          { path: "blocked", element: <BlockedUsersView /> },
-          { path: "cookies", element: <CookiesView /> },
-          { path: "sessions", element: <SessionsView /> },
-          { path: "about", element: <AboutView /> },
-          { path: "notifications", element: <NotificationsView /> },
-          { path: "subscriptions", element: <SubscriptionView /> },
-          { path: "seeker", element: <SeekerSettingsView /> },
         ],
       },
 
