@@ -81,6 +81,7 @@ export function Banner() {
                       src={data.image}
                       alt="promo banner"
                       className="w-full h-full object-cover object-center"
+                      loading="lazy"
                     />
                   </div>
 
