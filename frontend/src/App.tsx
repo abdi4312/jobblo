@@ -4,6 +4,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import Header from "./components/layout/header/Header.tsx";
 import Footer from "./components/layout/footer/Footer.tsx";
 import { ScrollToTop } from "./components/shared/ScrollToTop.tsx";
+import { CookieBanner } from "./components/shared/CookieBanner.tsx";
 import { App as AntApp } from "antd";
 import { useAuth } from "./features/auth/hook/useAuth.ts";
 import { Toaster } from "react-hot-toast";
@@ -38,6 +39,7 @@ export default function App() {
       />
       <AntApp>
         <ScrollToTop />
+        <CookieBanner />
         <Header />
         <Outlet />
         {!isMessagesPage && <Footer />}
