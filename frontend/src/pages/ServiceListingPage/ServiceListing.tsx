@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import {
   SlidersHorizontal,
@@ -15,7 +15,11 @@ import {
 } from "lucide-react";
 import { Slider } from "antd";
 import { JobCard } from "../../components/component/jobCard/JobCard";
-import { MapComponent } from "../../components/component/map/MapComponent";
+const MapComponent = lazy(() =>
+  import("../../components/component/map/MapComponent").then((module) => ({
+    default: module.MapComponent,
+  })),
+);
 import { useJobs } from "../../features/jobsList/hooks";
 import { useFilterOptions } from "../../features/jobsList/filterHooks";
 
@@ -298,10 +302,21 @@ const ServiceListing = () => {
 
           {/* Real Map Preview */}
           <div className="w-full h-[180px] rounded-2xl overflow-hidden relative border border-gray-50 group-hover:border-[#ff8a7a]/20 transition-all">
-            <MapComponent
-              coordinates={[10.7522, 59.9139]} // Default to Oslo center for preview
-              circleRadius={5000} // 5km radius
-            />
+            <Suspense
+              fallback={
+                <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center text-gray-400">
+                  Laster kart...
+                </div>
+              }
+            >
+              <MapComponent
+                coordinates={
+                  jobs.find((j) => j.location?.coordinates)?.location
+                    ?.coordinates || [10.7522, 59.9139]
+                }
+                circleRadius={5000}
+              />
+            </Suspense>
             {/* Overlay to catch clicks and prevent map interaction inside sidebar */}
             <div className="absolute inset-0 bg-transparent z-50 cursor-pointer" />
 

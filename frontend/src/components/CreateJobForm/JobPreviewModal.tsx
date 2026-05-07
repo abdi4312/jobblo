@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, lazy, Suspense } from "react";
 import {
   ChevronLeft,
   X,
@@ -9,7 +9,11 @@ import {
   Share2,
 } from "lucide-react";
 import { dateFormatter } from "../../utils/dateFormatter";
-import { MapComponent } from "../component/map/MapComponent";
+const MapComponent = lazy(() =>
+  import("../component/map/MapComponent").then((module) => ({
+    default: module.MapComponent,
+  })),
+);
 
 interface JobPreviewModalProps {
   showPreview: boolean;
@@ -216,7 +220,15 @@ export const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
                   Kart over lokasjon
                 </h2>
                 <div className="h-48 rounded-lg overflow-hidden bg-gray-100">
-                  <MapComponent coordinates={[lng, lat]} circleRadius={800} />
+                  <Suspense
+                    fallback={
+                      <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center text-gray-400">
+                        Laster kart...
+                      </div>
+                    }
+                  >
+                    <MapComponent coordinates={[lng, lat]} circleRadius={800} />
+                  </Suspense>
                 </div>
               </div>
             )}

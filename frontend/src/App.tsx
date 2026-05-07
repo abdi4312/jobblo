@@ -9,6 +9,8 @@ import { App as AntApp } from "antd";
 import { useAuth } from "./features/auth/hook/useAuth.ts";
 import { Toaster } from "react-hot-toast";
 import MainLoading from "./assets/loading/main-loading.gif";
+import Lottie from "lottie-react";
+import Loging from "./assets/animations/loading.json";
 
 export default function App() {
   const { isLoadingUser } = useAuth();
@@ -17,7 +19,8 @@ export default function App() {
   if (isLoadingUser) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <img src={MainLoading} alt="Loading..." className="w-36 h-36" />
+        {/* <img src={MainLoading} alt="Loading..." className="w-36 h-36" /> */}
+        <Lottie animationData={Loging} loop autoplay />
       </div>
     );
   }

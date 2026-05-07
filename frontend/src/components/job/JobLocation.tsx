@@ -1,6 +1,10 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { ExternalLink } from "lucide-react";
-import { MapComponent } from "../component/map/MapComponent";
+const MapComponent = lazy(() =>
+  import("../component/map/MapComponent").then((module) => ({
+    default: module.MapComponent,
+  })),
+);
 
 interface JobLocationProps {
   location?: {
@@ -43,10 +47,18 @@ const JobLocation: React.FC<JobLocationProps> = ({ location }) => {
       {/* Map Section */}
       {hasCoordinates && (
         <div className="w-full h-[250px] relative">
-          <MapComponent
-            coordinates={location!.coordinates!}
-            circleRadius={radius}
-          />
+          <Suspense
+            fallback={
+              <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center text-gray-400">
+                Laster kart...
+              </div>
+            }
+          >
+            <MapComponent
+              coordinates={location!.coordinates!}
+              circleRadius={radius}
+            />
+          </Suspense>
           <a
             href={googleMapsUrl}
             target="_blank"

@@ -24,6 +24,8 @@ export function Hero() {
           src={HeroImage}
           alt="Hero image"
           className="w-75 sm:w-100 lg:w-138.75 md:max-w-140.75 h-auto object-contain mx-auto"
+          loading="eager"
+          fetchPriority="high"
         />
       </div>
 
