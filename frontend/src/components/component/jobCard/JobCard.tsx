@@ -83,6 +83,7 @@ export const JobCard = ({ job, isOwner }: JobCardProps) => {
             src={job.images[0]}
             alt={job.title}
             className="w-full h-full object-cover"
+            loading="lazy"
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-100 gap-2">

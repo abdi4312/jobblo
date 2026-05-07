@@ -10,9 +10,13 @@ import {
 import JobButton from "../../components/job/JobButton.tsx";
 import { JobDetailSkeleton } from "../../components/Loading/JobDetailSkeleton.tsx";
 import { useFavoriteToggle } from "../../features/favorites/hook/useFavoriteToggle.ts";
-import { MapComponent } from "../../components/component/map/MapComponent";
+import { lazy, Suspense, useState } from "react";
+const MapComponent = lazy(() =>
+  import("../../components/component/map/MapComponent").then((module) => ({
+    default: module.MapComponent,
+  })),
+);
 import { Share2, MapPin, Star, Bookmark, Zap } from "lucide-react";
-import { useState } from "react";
 import { dateFormatter } from "../../utils/dateFormatter";
 import { ShareModal } from "../../components/shared/ShareModal/ShareModal";
 
@@ -277,10 +281,18 @@ const JobListingDetailPage = () => {
                   Kart over lokasjon
                 </h2>
                 <div className="h-48 rounded-lg overflow-hidden bg-gray-100">
-                  <MapComponent
-                    coordinates={job.location.coordinates}
-                    circleRadius={800}
-                  />
+                  <Suspense
+                    fallback={
+                      <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center text-gray-400">
+                        Laster kart...
+                      </div>
+                    }
+                  >
+                    <MapComponent
+                      coordinates={[lng, lat]}
+                      circleRadius={job?.location?.radius || 1000}
+                    />
+                  </Suspense>
                 </div>
               </div>
             )}
