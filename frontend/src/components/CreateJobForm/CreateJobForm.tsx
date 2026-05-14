@@ -68,6 +68,10 @@ export default function CreateJobForm({
     setPaymentType,
     urgent,
     setUrgent,
+    fromDate,
+    setFromDate,
+    toDate,
+    setToDate,
     phone,
     setPhone,
     email,
@@ -234,10 +238,10 @@ export default function CreateJobForm({
                 setDurationValue={setDurationValue}
                 durationUnit={durationUnit}
                 setDurationUnit={setDurationUnit}
-                fromDate={""} // These were not used in the original component's Step 2 props but were in state
-                setFromDate={() => {}}
-                toDate={""}
-                setToDate={() => {}}
+                fromDate={fromDate}
+                setFromDate={setFromDate}
+                toDate={toDate}
+                setToDate={setToDate}
               />
               <PaymentInformation
                 paymentType={paymentType}
