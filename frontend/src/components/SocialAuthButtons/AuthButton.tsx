@@ -1,3 +1,5 @@
+import {Button} from "../../components/Ui/button/Button";
+import vippsLogo from "../../assets/icons/vipps.png";
 export default function SocialAuthButtons() {
   const handleGoogle = () => {
     window.location.href = `${import.meta.env.VITE_MAIN_URL}/api/auth/google`;
@@ -43,6 +45,9 @@ export default function SocialAuthButtons() {
         <span>Continue with Google</span>
       </button>
 
+      
+
+
       {/* Apple Button */}
       {/* <button
         onClick={handleVipps}
@@ -58,10 +63,11 @@ export default function SocialAuthButtons() {
       <button
         type="button"
         onClick={handleVipps}
-        className="flex items-center justify-center gap-[10px] h-12 rounded-lg border border-[#2d2d2d] bg-[#1f1f1f] text-white text-[15px] font-medium cursor-pointer transition-all duration-200 ease-in-out hover:bg-[#2a2a2a]"
+        className="flex items-center justify-center gap-2.5 h-12 rounded-lg border border-[#2d2d2d] bg-[#1f1f1f]
+        text-white text-[15px] font-medium cursor-pointer transition-all duration-200 ease-in-out hover:bg-[#2a2a2a]"
       >
-        <span className="text-[20px] -mt-[2px]">
-          {/* <img className="w-[18px] h-[18px]" alt="vipps mobilepay logo" src={vippsLogo}></img> */}
+        <span className="text-[20px] -mt-0.5">
+          <img className="w-12.5 h-8.75" alt="vipps mobilepay logo" src={vippsLogo}></img>
         </span>
         <span>Continue with Vipps</span>
       </button>
