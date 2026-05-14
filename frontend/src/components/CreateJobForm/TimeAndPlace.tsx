@@ -100,11 +100,11 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               Fra dato
             </label>
             <input
-              
+              required
               type="date"
-              value={fromDate}
+              value={fromDate ? fromDate.split("T")[0] : ""}
               onChange={(e) => setFromDate(e.target.value)}
-              className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-sm md:text-base outline-none focus:border-[#2D7A4D] transition-all"
+              className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-sm md:text-base outline-none focus:border-[#2D7A4D] transition-all cursor-pointer"
             />
           </div>
           <div className="space-y-2">
@@ -112,10 +112,11 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               Til dato
             </label>
             <input
+              required
               type="date"
-              value={toDate}
+              value={toDate ? toDate.split("T")[0] : ""}
               onChange={(e) => setToDate(e.target.value)}
-              className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-sm md:text-base outline-none focus:border-[#2D7A4D] transition-all"
+              className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-sm md:text-base outline-none focus:border-[#2D7A4D] transition-all cursor-pointer"
             />
           </div>
         </div>
@@ -143,28 +144,28 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
-                    <input
-                        type="number"
-                        value={durationValue}
-                        onChange={(e) => setDurationValue(e.target.value)}
-                        placeholder="0"
-                        className="flex-1 px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-sm md:text-base outline-none focus:border-[#2D7A4D] transition-all"
-                    />
-                    <div className="relative">
-                        <select
-                            value={durationUnit}
-                            onChange={(e) => setDurationUnit(e.target.value)}
-                            className="w-full sm:w-32 md:w-40 px-4 md:px-4 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-sm md:text-base font-bold text-[#2D7A4D] outline-none focus:border-[#2D7A4D] transition-all appearance-none cursor-pointer pr-10"
-                        >
-                            <option value="minutes">Minutter</option>
-                            <option value="hours">Timer</option>
-                            <option value="days">Dager</option>
-                        </select>
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#2D7A4D]">
-                            <Clock size={16} />
-                        </div>
-                    </div>
-                </div>
+          <input
+            type="number"
+            value={durationValue}
+            onChange={(e) => setDurationValue(e.target.value)}
+            placeholder="0"
+            className="flex-1 px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-sm md:text-base outline-none focus:border-[#2D7A4D] transition-all"
+          />
+          <div className="relative">
+            <select
+              value={durationUnit}
+              onChange={(e) => setDurationUnit(e.target.value)}
+              className="w-full sm:w-32 md:w-40 px-4 md:px-4 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-sm md:text-base font-bold text-[#2D7A4D] outline-none focus:border-[#2D7A4D] transition-all appearance-none cursor-pointer pr-10"
+            >
+              <option value="minutes">Minutter</option>
+              <option value="hours">Timer</option>
+              <option value="days">Dager</option>
+            </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#2D7A4D]">
+              <Clock size={16} />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
