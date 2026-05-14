@@ -1,9 +1,4 @@
-import {
-  required,
-  email,
-  strongPassword,
-  matchField,
-} from "./rules";
+import { required, email, strongPassword, matchField } from "./rules";
 
 export type LoginFormValues = {
   email: string;
@@ -16,6 +11,9 @@ export type RegisterFormValues = {
   email: string;
   password: string;
   confirmPassword: string;
+  role: string;
+  companyName?: string;
+  orgNumber?: string;
 };
 
 export const loginValidationSchema = {
@@ -30,9 +28,7 @@ export const loginValidationSchema = {
 };
 
 export const registerValidationSchema = {
-  name: [
-    required<RegisterFormValues>("name", "Vennligst skriv inn fornavn"),
-  ],
+  name: [required<RegisterFormValues>("name", "Vennligst skriv inn fornavn")],
 
   lastName: [
     required<RegisterFormValues>("lastName", "Vennligst skriv inn etternavn"),
@@ -62,4 +58,6 @@ export const registerValidationSchema = {
       "Passordene matcher ikke",
     ),
   ],
+
+  role: [required<RegisterFormValues>("role", "Vennligst velg brukertype")],
 };
