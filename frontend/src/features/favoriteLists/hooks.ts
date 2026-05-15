@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { favoriteListsApi } from "./api";
-import type { CreateListDTO, AddServiceToListDTO, UpdateListDTO } from "./types";
+import type {
+  CreateListDTO,
+  AddServiceToListDTO,
+  UpdateListDTO,
+} from "./types";
+import { useUserStore } from "../../stores/userStore";
 import { toast } from "react-hot-toast";
 
 export const favoriteListsKeys = {
@@ -10,17 +15,20 @@ export const favoriteListsKeys = {
 };
 
 export const useFavoriteLists = (userId?: string) => {
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   return useQuery({
     queryKey: favoriteListsKeys.userLists(userId),
     queryFn: () => favoriteListsApi.getUserLists(userId),
+    enabled: isAuthenticated,
   });
 };
 
 export const useFavoriteList = (listId: string) => {
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   return useQuery({
     queryKey: favoriteListsKeys.list(listId),
     queryFn: () => favoriteListsApi.getListById(listId),
-    enabled: !!listId,
+    enabled: isAuthenticated && !!listId,
   });
 };
 
@@ -42,10 +50,13 @@ export const useCreateFavoriteList = () => {
 export const useUpdateFavoriteList = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ listId, data }: { listId: string, data: UpdateListDTO }) => favoriteListsApi.updateList(listId, data),
+    mutationFn: ({ listId, data }: { listId: string; data: UpdateListDTO }) =>
+      favoriteListsApi.updateList(listId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: favoriteListsKeys.all });
-      queryClient.invalidateQueries({ queryKey: favoriteListsKeys.list(variables.listId) });
+      queryClient.invalidateQueries({
+        queryKey: favoriteListsKeys.list(variables.listId),
+      });
       toast.success("List updated successfully");
     },
   });
@@ -57,7 +68,9 @@ export const useAddContributor = () => {
     mutationFn: ({ listId, userId }: { listId: string; userId: string }) =>
       favoriteListsApi.addContributor(listId, userId),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: favoriteListsKeys.list(variables.listId) });
+      queryClient.invalidateQueries({
+        queryKey: favoriteListsKeys.list(variables.listId),
+      });
       toast.success("Contributor added successfully");
     },
     onError: (error: unknown) => {
@@ -73,7 +86,9 @@ export const useRemoveContributor = () => {
     mutationFn: ({ listId, userId }: { listId: string; userId: string }) =>
       favoriteListsApi.removeContributor(listId, userId),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: favoriteListsKeys.list(variables.listId) });
+      queryClient.invalidateQueries({
+        queryKey: favoriteListsKeys.list(variables.listId),
+      });
       toast.success("Contributor removed");
     },
   });
@@ -82,7 +97,8 @@ export const useRemoveContributor = () => {
 export const useAddServiceToFavoriteList = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: AddServiceToListDTO) => favoriteListsApi.addServiceToList(data),
+    mutationFn: (data: AddServiceToListDTO) =>
+      favoriteListsApi.addServiceToList(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: favoriteListsKeys.all });
       toast.success("Added to list");
@@ -97,11 +113,18 @@ export const useAddServiceToFavoriteList = () => {
 export const useRemoveServiceFromFavoriteList = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ listId, serviceId }: { listId: string; serviceId: string }) =>
-      favoriteListsApi.removeServiceFromList(listId, serviceId),
+    mutationFn: ({
+      listId,
+      serviceId,
+    }: {
+      listId: string;
+      serviceId: string;
+    }) => favoriteListsApi.removeServiceFromList(listId, serviceId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: favoriteListsKeys.all });
-      queryClient.invalidateQueries({ queryKey: favoriteListsKeys.list(variables.listId) });
+      queryClient.invalidateQueries({
+        queryKey: favoriteListsKeys.list(variables.listId),
+      });
       toast.success("Removed from list");
     },
   });

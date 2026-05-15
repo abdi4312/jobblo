@@ -48,16 +48,16 @@ export const useAuth = () => {
   });
 
   const logoutMutation = useMutation({
-    mutationFn: logoutUser,
+    mutationFn: async () => {
+      await setStoreLogout();
+    },
     onSuccess: () => {
-      setStoreLogout();
       queryClient.clear();
       toast.success("Logged out successfully");
       navigate("/login");
     },
     onError: () => {
       // Still logout locally if server logout fails
-      setStoreLogout();
       queryClient.clear();
       navigate("/login");
     },

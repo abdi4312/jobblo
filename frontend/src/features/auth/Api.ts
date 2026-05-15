@@ -13,6 +13,9 @@ export async function registerUser(userData: {
   email: string;
   password: string;
   lastName: string;
+  role?: string;
+  companyName?: string;
+  orgNumber?: string;
 }) {
   const res = await mainLink.post("/api/auth/register", userData);
   return res.data;

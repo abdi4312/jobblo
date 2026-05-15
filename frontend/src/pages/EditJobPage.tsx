@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Modal } from 'antd';
 import styles from './EditJobPage.module.css';
 import { BackNavigation } from '../components/shared/BackNavigation/BackNavigation';
 import { ImageUploadSection } from '../components/shared/ImageUploadSection/ImageUploadSection';

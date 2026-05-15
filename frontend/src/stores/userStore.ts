@@ -46,17 +46,22 @@ export const useUserStore = create<UserState>()(
         }),
 
       logout: async () => {
+        // Prevent multiple simultaneous logout calls
+        const { isAuthenticated, tokens } = useUserStore.getState();
+        if (!isAuthenticated && !tokens) return;
+
+        // Clear state immediately to prevent other triggers
+        set({
+          user: null,
+          tokens: null,
+          isAuthenticated: false,
+        });
+
         try {
           await logoutUser();
           disconnectSocket(); // 🔌 Disconnect socket on logout
         } catch (error) {
           console.error("Logout error:", error);
-        } finally {
-          set({
-            user: null,
-            tokens: null,
-            isAuthenticated: false,
-          });
         }
       },
 

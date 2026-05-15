@@ -19,9 +19,11 @@ const userSchema = new mongoose.Schema(
     bio: { type: String },
     role: {
       type: String,
-      enum: ["user", "superAdmin", "provider"],
+      enum: ["user", "superAdmin", "provider", "company"],
       default: "user",
     },
+    companyName: { type: String, trim: true },
+    orgNumber: { type: String, trim: true },
     birthDate: { type: String },
     gender: { type: String },
     address: { type: String },
