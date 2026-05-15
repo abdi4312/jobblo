@@ -70,32 +70,38 @@ export const useBlockUser = () => {
 };
 
 export const useBlockedUsers = (page = 1, limit = 10) => {
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   return useQuery({
     queryKey: ["blockedUsers", page, limit],
     queryFn: () => getBlockedUsers(page, limit),
+    enabled: isAuthenticated,
   });
 };
 
 export const useSearchUsers = (query?: string) => {
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   return useQuery({
     queryKey: ["searchUsers", query],
     queryFn: () => searchUsers(query),
-    enabled: !!query && query.length >= 2,
+    enabled: isAuthenticated && !!query && query.length >= 2,
   });
 };
 
 export const useTopUsers = () => {
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   return useQuery({
     queryKey: ["topUsers"],
     queryFn: () => getTopUsers(),
+    enabled: isAuthenticated,
   });
 };
 
 export const useUnifiedSearch = (query: string) => {
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   return useQuery({
     queryKey: ["unifiedSearch", query],
     queryFn: () => searchAll(query),
-    enabled: query.length >= 2,
+    enabled: isAuthenticated && query.length >= 2,
   });
 };
 
@@ -104,6 +110,7 @@ export const useInfiniteSearch = (
   type: string,
   limit: number = 10,
 ) => {
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   return useInfiniteQuery({
     queryKey: ["infiniteSearch", query, type, limit],
     queryFn: ({ pageParam = 1 }) => searchAll(query, type, pageParam, limit),
@@ -114,7 +121,7 @@ export const useInfiniteSearch = (
       return undefined;
     },
     initialPageParam: 1,
-    enabled: query.length >= 2 && !!type,
+    enabled: isAuthenticated && query.length >= 2 && !!type,
   });
 };
 

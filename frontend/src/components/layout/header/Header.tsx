@@ -1,5 +1,5 @@
 import * as Icons from "../../../assets/icons";
-import { VippsButton } from "../../component/button/VippsButton.tsx";
+import { Button } from "../../Ui/button/Button";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUserStore } from "../../../stores/userStore";
 import { toast } from "react-hot-toast";
@@ -428,8 +428,12 @@ export default function Header() {
 
           {/* Vipps Button in Sidebar for mobile logout users */}
           {!Auth && (
-            <div className="p-4">
-              <VippsButton />
+            <div className="px-4">
+              <Button
+                label="Register/Log in"
+                className="rounded-lg"
+                onClick={() => navigate("/login")}
+              />
             </div>
           )}
         </div>
