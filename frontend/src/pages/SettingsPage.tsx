@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { useLocation, Outlet, useNavigate } from "react-router-dom";
 import { useUserStore } from "../stores/userStore";
 import { useUpdateUser } from "../features/profile/hooks";
 
 interface UserData {
   _id?: string;
   name?: string;
+  lastName?: string;
   email?: string;
   avatarUrl?: string;
+  bannerUrl?: string;
   phone?: string;
   bio?: string;
 }
@@ -18,24 +20,12 @@ interface UpdateUserResult {
 }
 
 export type SettingsContextType = {
-  user: UserData | null;
-  form: {
-    name: string;
-    lastName: string;
-    bio: string;
-    phone: string;
-    address: string;
-    postNumber: string;
-    postSted: string;
-    country: string;
-    email: string;
-    availabilityText: string;
-    skills: string[];
-  };
-  updateUser: UpdateUserResult;
+  user: any;
+  form: any;
+  updateUser: any;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   cameraInputRef: React.RefObject<HTMLInputElement | null>;
-  handleChange: (key: string, value: string) => void;
+  handleChange: (key: string, value: any) => void;
   handleUpdate: () => void;
   handlePhotoSelect: () => void;
   handleCameraSelect: () => void;
@@ -43,6 +33,8 @@ export type SettingsContextType = {
 };
 
 export default function SettingsPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const user = useUserStore((state) => state.user);
   const updateUser = useUpdateUser();
   const [form, setForm] = useState({
@@ -114,15 +106,27 @@ export default function SettingsPage() {
     const file = event.target.files?.[0];
     if (file) {
       console.log("File selected:", file.name);
-      if (!user?._id) return;
+      if (!user?._id) {
+        toast.error("User not found");
+        return;
+      }
 
       const formData = new FormData();
-      formData.append("avatar", file);
+      // Check path directly from location for reliability
+      const isBanner = window.location.pathname.includes("banner");
+      console.log("Is banner upload:", isBanner);
+
+      formData.append(isBanner ? "banner" : "avatar", file);
 
       updateUser.mutate({
         userId: user._id,
-        data: formData,
+        data: formData as any,
       });
+
+      // Reset input value so same file can be selected again if needed
+      if (event.target) {
+        event.target.value = "";
+      }
     }
   };
 

@@ -50,6 +50,9 @@ export function SettingsLayout() {
     { name: "Fornavn og etternavn", path: "/settings/name", icon: User },
     { name: "Bio", path: "/settings/bio", icon: PenLine },
     { name: "Last opp profilbilde", path: "/settings/picture", icon: Image },
+    ...(user?.role === "company"
+      ? [{ name: "Last opp banner", path: "/settings/banner", icon: Image }]
+      : []),
     { name: "Jobbsøker-profil", path: "/settings/seeker", icon: Briefcase },
   ];
 
