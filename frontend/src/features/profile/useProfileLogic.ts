@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useUserStore } from "../../stores/userStore";
 import { useUserProfile } from "./hooks";
@@ -18,6 +18,14 @@ export const useProfileLogic = () => {
 
   const userToDisplay = userId ? profileUser : currentUser;
   const isOwnProfile = !userId || userId === currentUser?._id;
+
+  // Set default profile type for companies
+  useEffect(() => {
+    if (userToDisplay?.role === "company") {
+      setProfileType("poster");
+      setActiveTab("Aktive");
+    }
+  }, [userToDisplay?.role]);
 
   const handleProfileTypeChange = (type: "seeker" | "poster") => {
     setProfileType(type);

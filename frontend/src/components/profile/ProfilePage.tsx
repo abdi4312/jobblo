@@ -31,7 +31,7 @@ export default function ProfilePage() {
 
   if (!userToDisplay) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+      <div className="flex flex-col items-center justify-center min-h-100 gap-4">
         <h2 className="text-2xl font-bold">Bruker ikke funnet</h2>
         <button
           onClick={() => navigate("/")}
@@ -45,7 +45,8 @@ export default function ProfilePage() {
 
   return (
     <div className="">
-      <div className="bg-white border-b border-gray-100">
+      {/* <div className="bg-white border-b border-gray-100"> */}
+      <div className="">
         <ProfileHeader
           user={userToDisplay}
           handlelogout={handleLogout}
@@ -58,10 +59,12 @@ export default function ProfilePage() {
         <BlockedUserView />
       ) : (
         <>
-          <ProfileTypeSwitcher
-            profileType={profileType}
-            onTypeChange={handleProfileTypeChange}
-          />
+          {userToDisplay?.role !== "company" && (
+            <ProfileTypeSwitcher
+              profileType={profileType}
+              onTypeChange={handleProfileTypeChange}
+            />
+          )}
           <ProfileNav
             activeTab={activeTab}
             onTabChange={setActiveTab}
