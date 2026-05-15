@@ -28,12 +28,14 @@ interface UpdateUserData {
 }
 
 export const useUpdateUser = () => {
+  const queryClient = useQueryClient();
   const { fetchProfile } = useUserStore((state) => state);
 
   return useMutation({
     mutationFn: ({ userId, data }: { userId: string; data: any }) =>
       updateUser(userId, data),
-    onSuccess: () => {
+    onSuccess: (_, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ["userProfile", userId] });
       fetchProfile();
       toast.success("Oppdatert!");
     },
@@ -136,12 +138,12 @@ export const useUserReviews = (userId: string | undefined, role?: string) => {
 
 export const useAddPortfolioItem = () => {
   const queryClient = useQueryClient();
-  const { fetchProfile } = useUserStore((state) => state);
+  const { fetchProfile, user } = useUserStore((state) => state);
 
   return useMutation({
     mutationFn: (data: FormData) => addPortfolioItem(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
       fetchProfile();
       toast.success("Portfolio-element lagt til!");
     },
@@ -155,12 +157,12 @@ export const useAddPortfolioItem = () => {
 
 export const useDeletePortfolioItem = () => {
   const queryClient = useQueryClient();
-  const { fetchProfile } = useUserStore((state) => state);
+  const { fetchProfile, user } = useUserStore((state) => state);
 
   return useMutation({
     mutationFn: (itemId: string) => deletePortfolioItem(itemId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
       fetchProfile();
       toast.success("Portfolio-element slettet");
     },
