@@ -60,4 +60,21 @@ export const registerValidationSchema = {
   ],
 
   role: [required<RegisterFormValues>("role", "Vennligst velg brukertype")],
+
+  companyName: [
+    {
+      test: (values: RegisterFormValues) =>
+        values.role !== "company" ||
+        (!!values.companyName && values.companyName.trim() !== ""),
+      message: "Vennligst skriv inn bedriftsnavn",
+    },
+  ],
+
+  orgNumber: [
+    {
+      test: (values: RegisterFormValues) =>
+        values.role !== "company" || /^\d{9}$/.test(values.orgNumber || ""),
+      message: "Organisasjonsnummer må være nøyaktig 9 siffer",
+    },
+  ],
 };

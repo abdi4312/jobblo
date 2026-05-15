@@ -59,15 +59,9 @@ const withSuspense = (Component: React.ComponentType) => (
 // Pages
 // =======================
 
-const LandingPage = lazy(() =>
-  import("../pages").then((m) => ({ default: m.LandingPage })),
-);
-const JobListingPage = lazy(() =>
-  import("../pages").then((m) => ({ default: m.JobListingPage })),
-);
-const ProfilePage = lazy(() =>
-  import("../pages").then((m) => ({ default: m.ProfilePage })),
-);
+const LandingPage = lazy(() => import("../pages/LandingPage/LandingPage.tsx"));
+const JobListingPage = lazy(() => import("../pages/ExplorePage/JobListingPage.tsx"));
+const ProfilePage = lazy(() => import("../pages/ProfilePage/ProfilePage.tsx"));
 
 const LeggUtOppdrag = lazy(
   () => import("../pages/LeggUtOppdragPage/LeggUtOppdrag.tsx"),
