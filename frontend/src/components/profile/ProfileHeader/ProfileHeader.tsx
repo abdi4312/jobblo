@@ -231,13 +231,13 @@ export function ProfileHeader({
           </div>
 
           {/* Bio Section */}
-          <div className="max-w-300 mx-auto mt-6 pl-4 md:pl-0">
+          {/* <div className="max-w-300 mx-auto mt-6 pl-4 md:pl-0">
             <div className="flex flex-col gap-1">
               <p className="text-[15px] text-gray-800 leading-snug font-medium max-w-2xl">
                 {user?.bio}
               </p>
             </div>
-          </div>
+          </div> */}
         </div>
 
         <BlockModal

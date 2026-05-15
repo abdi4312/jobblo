@@ -7,6 +7,7 @@ import {
   User,
   Award,
 } from "lucide-react";
+import { useUserStore } from "../../../stores/userStore";
 
 interface ProfileNavProps {
   activeTab: string;
@@ -21,6 +22,7 @@ export function ProfileNav({
   isOwnProfile = false,
   profileType = "seeker",
 }: ProfileNavProps) {
+  const userStoreUser = useUserStore((state) => state.user);
   const seekerTabs = [
     { name: "Om meg", icon: User },
     { name: "Fullførte", icon: Briefcase },
@@ -34,7 +36,19 @@ export function ProfileNav({
     { name: "Vurderinger", icon: Star },
   ];
 
-  const tabs = profileType === "seeker" ? seekerTabs : posterTabs;
+  const companyTabs = [
+    { name: "Portfolio", icon: LayoutGrid },
+    { name: "Aktive", icon: Briefcase },
+    { name: "Tidligere", icon: Clock },
+    { name: "Vurderinger", icon: Star },
+  ];
+
+  const tabs =
+    profileType === "seeker"
+      ? seekerTabs
+      : userStoreUser?.role === "company"
+        ? companyTabs
+        : posterTabs;
 
   return (
     <div className="box-card-custom rounded-none">

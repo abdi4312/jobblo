@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, Outlet, useNavigate } from "react-router-dom";
 import { useUserStore } from "../stores/userStore";
 import { useUpdateUser } from "../features/profile/hooks";
+import { toast } from "react-hot-toast";
 
 interface UserData {
   _id?: string;
@@ -49,6 +50,11 @@ export default function SettingsPage() {
     email: "",
     availabilityText: "",
     skills: [],
+    companyName: "",
+    orgNumber: "",
+    orgType: "",
+    locations: [],
+    website: "",
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -67,6 +73,11 @@ export default function SettingsPage() {
       email: user.email || "",
       availabilityText: (user as any).availabilityText || "",
       skills: (user as any).skills || [],
+      companyName: user.companyName || "",
+      orgNumber: user.orgNumber || "",
+      orgType: user.orgType || "",
+      locations: user.locations || [],
+      website: user.website || "",
     });
   }, [user]);
 
@@ -90,6 +101,11 @@ export default function SettingsPage() {
         email: form.email,
         availabilityText: form.availabilityText,
         skills: form.skills,
+        companyName: form.companyName,
+        orgNumber: form.orgNumber,
+        orgType: form.orgType,
+        locations: form.locations,
+        website: form.website,
       },
     });
   };

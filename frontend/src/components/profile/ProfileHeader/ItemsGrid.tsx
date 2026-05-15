@@ -1,5 +1,15 @@
 import { EmptyState } from "./EmptyState";
-import { Star } from "lucide-react";
+import {
+  Star,
+  ChevronDown,
+  Mail,
+  Plus,
+  Phone,
+  Building,
+  Globe,
+  MapPin,
+  Award,
+} from "lucide-react";
 import { useParams } from "react-router-dom";
 import {
   useUserProfile,
@@ -81,6 +91,195 @@ export function ItemsGrid({
   const jobs = (jobsData?.pages.flatMap((page) => page.data) ||
     []) as unknown as Jobs[];
 
+  // Company Portfolio View
+  if (user?.role === "company" && activeTab === "Portfolio") {
+    const userSkills =
+      user?.skills && user.skills.length > 0
+        ? user.skills
+        : [
+            "Murer",
+            "Murertjenester",
+            "Gulvavretting",
+            "Maler",
+            "Gulvbelegg",
+            "Snekker",
+            "Gulvlegging",
+            "Tregulv",
+          ];
+    const userLocations =
+      user?.locations && user.locations.length > 0
+        ? user.locations
+        : [
+            "Oslo",
+            "Trondheim",
+            "Steinkjer",
+            "Namsos",
+            "Frøya",
+            "Osen",
+            "Oppdal",
+            "Rennebu",
+          ];
+
+    return (
+      <div className="max-w-300 mx-auto py-10 px-4 md:px-0 flex flex-col md:flex-row gap-12">
+        {/* Left Side: Main Content */}
+        <div className="flex-1 flex flex-col gap-12">
+          {/* Services Section */}
+          <section>
+            <h3 className="text-[20px] font-bold text-gray-900 mb-4">
+              Dette tilbyr vi
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              {userSkills.slice(0, 12).map((skill: string) => (
+                <span
+                  key={skill}
+                  className="px-5 py-2 box-card-custom rounded-lg text-[14px] font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+                >
+                  {skill}
+                </span>
+              ))}
+              {userSkills.length > 12 && (
+                <button className="text-[14px] font-bold text-custom-black hover:underline flex items-center gap-1 ml-2">
+                  Vis alle ({userSkills.length}) <ChevronDown size={14} />
+                </button>
+              )}
+            </div>
+          </section>
+
+          {/* Locations Section */}
+          <section>
+            <h3 className="text-[20px] font-bold text-gray-900 mb-4">
+              Her kan vi hjelpe deg
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              {userLocations.slice(0, 12).map((loc: string) => (
+                <span
+                  key={loc}
+                  className="px-5 py-2 bg-custom-green-light rounded-lg text-[14px] font-medium text-custom-black hover:bg-[#D1EDFB] transition-colors"
+                >
+                  {loc}
+                </span>
+              ))}
+              {userLocations.length > 12 && (
+                <button className="text-[14px] font-bold text-custom-black hover:underline flex items-center gap-1 ml-2">
+                  Vis alle ({userLocations.length}) <ChevronDown size={14} />
+                </button>
+              )}
+            </div>
+          </section>
+
+          <div className="h-px bg-gray-200" />
+
+          {/* About Us Section */}
+          <section>
+            <h2 className="text-[32px] font-bold text-gray-900 mb-6">Om oss</h2>
+            <div className="flex flex-col gap-6 text-[16px] text-gray-800 leading-relaxed font-medium whitespace-pre-wrap">
+              {user?.bio || (
+                <>
+                  <p>
+                    Vi er et nytt selskap her, men vi har mer enn 5 års
+                    erfaring. Snekkere med lang erfaring i bygg aur
+                    snekkerfaget, bruk oss for ditt oppdrag.
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <p>Vi tilbyr deg:</p>
+                    <ul className="list-none flex flex-col gap-2">
+                      <li>
+                        - snekkerarbeid (gips, maling, legging av gulv, vinduer
+                        og dører, etc.)
+                      </li>
+                      <li>
+                        - flyttetjenester (forsikring, pakking, transport)
+                      </li>
+                      <li>- renhold (flyttevask og byggvask)</li>
+                    </ul>
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+        </div>
+
+        {/* Right Side: Sidebar */}
+        <div className="w-full md:w-95 flex flex-col gap-8">
+          {/* Action Box */}
+          <div className= " box-card-custom p-8 rounded-2xl flex flex-col items-center text-center gap-6">
+            <h4 className="text-[20px] font-bold text-gray-900">stoler</h4>
+            <p className="text-[14px] text-gray-600 font-medium">
+              Velg denne bedriften til å gjennomføre oppdraget ditt eller send
+              en melding.
+            </p>
+            <div className="flex flex-col gap-3 w-full">
+              <button className="w-full bg-[#1F093D] text-white py-3.5 rounded-full font-bold flex items-center justify-center gap-2 hover:bg-[#2D0D58] transition-colors">
+                <Plus size={18} /> Velg bedrift
+              </button>
+              <button className="w-full bg-white border border-[#1F093D] text-[#1F093D] py-3.5 rounded-full font-bold flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
+                <Mail size={18} /> Send melding til bedriften
+              </button>
+            </div>
+            <button className="text-[14px] font-bold text-[#0066A2] hover:underline flex items-center gap-1">
+              <ChevronDown size={14} className="rotate-90" /> Tilbake til
+              oppdraget
+            </button>
+          </div>
+
+          {/* Contact Info */}
+          <div className="flex flex-col gap-6 p-4 box-card-custom">
+            <h3 className="text-[20px] font-bold text-custom-black text-center mb-2">
+              Kontaktinformasjon
+            </h3>
+            <div className="flex flex-col gap-2">
+              <button className="flex items-center gap-4 text-gray-600 hover:text-gray-900 transition-colors group">
+                <div className="p-2 rounded-lg group-hover:bg-gray-100 transition-colors">
+                  <Phone size={22} />
+                </div>
+                <span className="font-bold text-[15px]">Vis telefonnummer</span>
+              </button>
+              <button className="flex items-center gap-4 text-gray-600 hover:text-gray-900 transition-colors group">
+                <div className="p-2 rounded-lg group-hover:bg-gray-100 transition-colors">
+                  <Mail size={22} />
+                </div>
+                <span className="font-bold text-[15px]">Vis e-postadresse</span>
+              </button>
+              <div className="flex items-center gap-4 text-gray-600 group">
+                <div className="p-2 rounded-lg group-hover:bg-gray-100 transition-colors">
+                  <MapPin size={22} />
+                </div>
+                <span className="font-bold text-[15px]">
+                  Sagmyrvegen 7, 7549 TANEM
+                </span>
+              </div>
+              <div className="flex items-center gap-4 text-gray-600 group">
+                <div className="p-2 rounded-lg group-hover:bg-gray-100 transition-colors">
+                  <Award size={22} />
+                </div>
+                <span className="font-bold text-[15px]">
+                  Org.nummer: {user?.orgNumber || "930331481"}
+                </span>
+              </div>
+              <div className="flex items-center gap-4 text-gray-600 group">
+                <div className="p-2 rounded-lg group-hover:bg-gray-100 transition-colors">
+                  <Building size={22} />
+                </div>
+                <span className="font-bold text-[15px]">
+                  Organisasjonstype: Aksjeselskap
+                </span>
+              </div>
+              <button className="flex items-center gap-4 text-gray-600 hover:text-gray-900 transition-colors group">
+                <div className="p-2 rounded-lg group-hover:bg-gray-100 transition-colors">
+                  <Globe size={22} />
+                </div>
+                <span className="font-bold text-[15px]">
+                  Besøk bedriftens nettside
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Seeker Specific Content
   if (profileType === "seeker") {
     if (activeTab === "Om meg") {
@@ -97,6 +296,14 @@ export function ItemsGrid({
 
       return (
         <div className="max-w-300 mx-auto pt-5 flex flex-col gap-6">
+          {/* Bio Section */}
+          <div className="bg-white/60 p-8 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white">
+            <h3 className="text-xl font-bold mb-4">Om meg</h3>
+            <p className="text-gray-700 leading-relaxed font-medium whitespace-pre-wrap">
+              {user?.bio || "Ingen beskrivelse lagt til ennå."}
+            </p>
+          </div>
+
           {/* Skills Section */}
           <div className="bg-white/60 p-8 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white">
             <h3 className="text-xl font-bold mb-6">Mine ferdigheter</h3>
