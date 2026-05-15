@@ -278,9 +278,15 @@ exports.updateUser = async (req, res) => {
     }
 
     // ⭐ HANDLE AVATAR UPLOAD
-    if (req.file) {
-      updates.avatarUrl = req.file.path;
-      updates.avatarPublicId = req.file.filename;
+    if (req.files) {
+      if (req.files.avatar && req.files.avatar[0]) {
+        updates.avatarUrl = req.files.avatar[0].path;
+        updates.avatarPublicId = req.files.avatar[0].filename;
+      }
+      if (req.files.banner && req.files.banner[0]) {
+        updates.bannerUrl = req.files.banner[0].path;
+        updates.bannerPublicId = req.files.banner[0].filename;
+      }
     }
 
     if (Object.keys(updates).length === 0) {
@@ -293,12 +299,21 @@ exports.updateUser = async (req, res) => {
     if (!user) return res.status(404).json({ error: "User not found" });
 
     // Delete old avatar if a new one is uploaded
-    if (req.file && user.avatarPublicId) {
-      const cloudinary = require("../config/cloudinary");
+    const cloudinary = require("../config/cloudinary");
+    if (req.files && req.files.avatar && user.avatarPublicId) {
       try {
         await cloudinary.uploader.destroy(user.avatarPublicId);
       } catch (err) {
         console.error("Old avatar deletion error:", err);
+      }
+    }
+
+    // Delete old banner if a new one is uploaded
+    if (req.files && req.files.banner && user.bannerPublicId) {
+      try {
+        await cloudinary.uploader.destroy(user.bannerPublicId);
+      } catch (err) {
+        console.error("Old banner deletion error:", err);
       }
     }
 
@@ -363,7 +378,7 @@ exports.addPortfolioItem = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       userId,
       { $push: { portfolio: updates } },
-      { new: true }
+      { new: true },
     );
 
     res.status(201).json(user.portfolio[user.portfolio.length - 1]);
@@ -380,7 +395,7 @@ exports.deletePortfolioItem = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       userId,
       { $pull: { portfolio: { _id: itemId } } },
-      { new: true }
+      { new: true },
     );
 
     res.json({ message: "Portfolio item deleted" });

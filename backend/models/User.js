@@ -16,6 +16,8 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, unique: true, sparse: true },
     avatarUrl: { type: String },
     avatarPublicId: { type: String },
+    bannerUrl: { type: String },
+    bannerPublicId: { type: String },
     bio: { type: String },
     role: {
       type: String,

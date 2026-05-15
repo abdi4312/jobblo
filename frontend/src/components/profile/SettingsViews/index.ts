@@ -1,5 +1,6 @@
 export * from "./UsernameView";
 export * from "./PictureView";
+export * from "./BannerView";
 export * from "./NameView";
 export * from "./BioView";
 export * from "./EmailView";

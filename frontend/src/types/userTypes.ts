@@ -6,6 +6,11 @@ export type User = {
   email: string;
   password: string;
   avatarUrl?: string;
+  avatarPublicId?: string;
+  bannerUrl?: string;
+  bannerPublicId?: string;
+  companyName?: string;
+  orgNumber?: string;
   bio?: string;
   role?: string;
   subscription?: string;

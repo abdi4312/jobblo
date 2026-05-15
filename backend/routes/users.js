@@ -130,7 +130,10 @@ router.get("/:id", authenticate, userController.getUserById);
 router.put(
   "/:id",
   authenticate,
-  upload.single("avatar"),
+  upload.fields([
+    { name: "avatar", maxCount: 1 },
+    { name: "banner", maxCount: 1 },
+  ]),
   userController.updateUser,
 );
 router.delete("/:id", authenticate, userController.deleteUser);

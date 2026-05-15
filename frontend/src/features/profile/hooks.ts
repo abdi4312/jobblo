@@ -31,15 +31,16 @@ export const useUpdateUser = () => {
   const { fetchProfile } = useUserStore((state) => state);
 
   return useMutation({
-    mutationFn: ({ userId, data }: { userId: string; data: UpdateUserData }) =>
+    mutationFn: ({ userId, data }: { userId: string; data: any }) =>
       updateUser(userId, data),
     onSuccess: () => {
       fetchProfile();
       toast.success("Oppdatert!");
     },
-    onError: (error: unknown) => {
-      const err = error as { message?: string };
-      toast.error(err.message || "Kunne ikke oppdatere");
+    onError: (error: any) => {
+      const message =
+        error.response?.data?.error || error.message || "Kunne ikke oppdatere";
+      toast.error(message);
     },
   });
 };
