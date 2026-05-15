@@ -264,6 +264,11 @@ exports.updateUser = async (req, res) => {
       "availabilityText",
       "skills",
       "portfolio",
+      "companyName",
+      "orgNumber",
+      "orgType",
+      "locations",
+      "website",
     ];
 
     if (req.user.role === "superAdmin") {
