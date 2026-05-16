@@ -20,6 +20,7 @@ interface PaymentInformationProps {
   urgent: boolean;
   setUrgent: (val: boolean) => void;
   subscription?: string;
+  errors?: any;
 }
 
 export const PaymentInformation: React.FC<PaymentInformationProps> = ({
@@ -32,6 +33,7 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
   urgent,
   setUrgent,
   subscription = "Standard",
+  errors,
 }) => {
   const isPaidSubscriber = subscription !== "Standard";
 
@@ -119,12 +121,9 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
         <div className="flex items-center justify-between mb-4 md:mb-6">
           <label className="text-[11px] md:text-sm font-bold text-gray-700 uppercase tracking-wider">
             {paymentType === "Timepris"
-              ? "Timepris (NOK)"
-              : "Antatt budsjett (NOK)"}
+              ? "Timepris (NOK) *"
+              : "Antatt budsjett (NOK) *"}
           </label>
-          <span className="text-[9px] md:text-xs font-bold text-[#2D7A4D] bg-[#2D7A4D]/10 px-2 md:px-3 py-0.5 md:py-1 rounded-full uppercase">
-            Valgfritt
-          </span>
         </div>
         <div className="relative">
           <span className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm md:text-lg">
@@ -141,9 +140,15 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
               }
             }}
             placeholder="0"
-            className="w-full pl-16 md:pl-20 pr-4 md:pr-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-lg md:text-xl font-bold text-custom-black outline-none focus:border-[#2D7A4D] transition-all"
+            className={`w-full pl-16 md:pl-20 pr-4 md:pr-6 py-3 md:py-4 rounded-xl border bg-white text-lg md:text-xl font-bold text-custom-black outline-none transition-all
+              ${errors?.price ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5"}`}
           />
         </div>
+        {errors?.price && (
+          <p className="mt-2 text-red-500 text-[10px] md:text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+            <AlertCircle size={12} /> {errors.price}
+          </p>
+        )}
         {paymentType === "Timepris" && (
           <div className="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100 flex items-center gap-3">
             <Info size={16} className="text-blue-500 shrink-0" />
@@ -156,7 +161,8 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
       </div>
 
       {/* 3. Urgent Section */}
-      <div className={`p-4 md:p-6 rounded-2xl border-2 transition-all duration-300 flex items-center justify-between cursor-pointer relative ${
+      <div
+        className={`p-4 md:p-6 rounded-2xl border-2 transition-all duration-300 flex items-center justify-between cursor-pointer relative ${
           !isPaidSubscriber
             ? "box-card-custom"
             : urgent
@@ -201,7 +207,9 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
             </p>
           </div>
         </div>
-        <div className={`w-10 h-6 md:w-14 md:h-8 rounded-full p-1 transition-colors duration-300 shrink-0 ${urgent && isPaidSubscriber ? "bg-custom-green" : "bg-gray-200"}`}>
+        <div
+          className={`w-10 h-6 md:w-14 md:h-8 rounded-full p-1 transition-colors duration-300 shrink-0 ${urgent && isPaidSubscriber ? "bg-custom-green" : "bg-gray-200"}`}
+        >
           <div
             className={`w-4 h-4 md:w-6 md:h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${urgent && isPaidSubscriber ? "translate-x-4 md:translate-x-6" : "translate-x-0"}`}
           />

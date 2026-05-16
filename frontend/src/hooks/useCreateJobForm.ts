@@ -1,8 +1,13 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import toast from "react-hot-toast";
 import { generateFullJobListing } from "../api/aiAPI";
 import { useUserStore } from "../stores/userStore";
 import { usePaymentCalculation } from "./usePaymentCalculation";
+import { useForm } from "./useForm";
+import {
+  jobValidationSchema,
+  type JobFormValues,
+} from "../validations/jobValidations";
 
 interface InitialData {
   title?: string;
@@ -30,19 +35,52 @@ export const useCreateJobForm = (
   onSubmit?: (formData: FormData) => void,
 ) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [title, setTitle] = useState(initialData?.title || "");
-  const [description, setDescription] = useState(
-    initialData?.description || "",
+
+  // Using the shared useForm hook for validation flow
+  const {
+    values,
+    errors,
+    handleChange: handleFormChange,
+    validate,
+    setValues,
+    setErrors,
+    setMultipleValues,
+  } = useForm<JobFormValues>(
+    {
+      title: initialData?.title || "",
+      description: initialData?.description || "",
+      categories: initialData?.categories || "",
+      address: initialData?.address || "",
+      city: initialData?.city || "",
+      phone: initialData?.phone || "",
+      email: initialData?.email || "",
+      price: initialData?.price || "",
+      durationValue: initialData?.durationValue || "",
+      fromDate: initialData?.fromDate || "",
+      toDate: initialData?.toDate || "",
+    },
+    jobValidationSchema,
   );
-  const [address, setAddress] = useState(initialData?.address || "");
-  const [city, setCity] = useState(initialData?.city || "");
-  const [categories, setCategories] = useState(initialData?.categories || "");
+
+  // Individual states that are not part of the primary validation schema or need special handling
   const [equipment, setEquipment] = useState(initialData?.equipment || "");
-  const [fromDate, setFromDate] = useState(initialData?.fromDate || "");
-  const [toDate, setToDate] = useState(initialData?.toDate || "");
-  const [durationValue, setDurationValue] = useState(
-    initialData?.durationValue || "",
+  const durationValue = values.durationValue;
+  const fromDate = values.fromDate;
+  const toDate = values.toDate;
+
+  const setDurationValue = useCallback(
+    (val: string) => handleFormChange("durationValue", val),
+    [handleFormChange],
   );
+  const setFromDate = useCallback(
+    (val: string) => handleFormChange("fromDate", val),
+    [handleFormChange],
+  );
+  const setToDate = useCallback(
+    (val: string) => handleFormChange("toDate", val),
+    [handleFormChange],
+  );
+
   const [durationUnit, setDurationUnit] = useState(
     initialData?.durationUnit || "hours",
   );
@@ -62,8 +100,11 @@ export const useCreateJobForm = (
     initialData,
   );
 
-  const [phone, setPhone] = useState(initialData?.phone || "");
-  const [email, setEmail] = useState(initialData?.email || "");
+  // Sync price from usePaymentCalculation to useForm
+  useEffect(() => {
+    handleFormChange("price", price);
+  }, [price, handleFormChange]);
+
   const [tags, setTags] = useState<string[]>([]);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [currentImages, setCurrentImages] = useState<string[]>(
@@ -77,6 +118,36 @@ export const useCreateJobForm = (
   const [showSmartFillInput, setShowSmartFillInput] = useState(false);
 
   const currentUser = useUserStore((state) => state.user);
+
+  // Wrappers to maintain compatibility with existing components
+  const setTitle = useCallback(
+    (val: string) => handleFormChange("title", val),
+    [handleFormChange],
+  );
+  const setDescription = useCallback(
+    (val: string) => handleFormChange("description", val),
+    [handleFormChange],
+  );
+  const setAddress = useCallback(
+    (val: string) => handleFormChange("address", val),
+    [handleFormChange],
+  );
+  const setCity = useCallback(
+    (val: string) => handleFormChange("city", val),
+    [handleFormChange],
+  );
+  const setCategories = useCallback(
+    (val: string | string[]) => handleFormChange("categories", val),
+    [handleFormChange],
+  );
+  const setPhone = useCallback(
+    (val: string) => handleFormChange("phone", val),
+    [handleFormChange],
+  );
+  const setEmail = useCallback(
+    (val: string) => handleFormChange("email", val),
+    [handleFormChange],
+  );
 
   const handleAiSmartFill = async () => {
     if (!smartFillPrompt || smartFillPrompt.length < 5) {
@@ -101,12 +172,13 @@ export const useCreateJobForm = (
           estimatedPrice: aiEstimatedPrice,
         } = response.data;
 
-        setTitle(aiTitle);
-        setDescription(aiDesc);
-
-        if (aiCategory) {
-          setCategories(aiCategory.trim());
-        }
+        setMultipleValues({
+          title: aiTitle,
+          description: aiDesc,
+          categories: aiCategory ? aiCategory.trim() : values.categories,
+          durationValue: aiDuration?.value || values.durationValue,
+          price: aiEstimatedPrice || values.price,
+        });
 
         setTags(aiSkills);
 
@@ -150,35 +222,32 @@ export const useCreateJobForm = (
     const savedData = localStorage.getItem("jobFormData");
     if (savedData && !initialData) {
       const data = JSON.parse(savedData);
-      setTitle(data.title || "");
-      setDescription(data.description || "");
-      setPrice(data.price || "");
-      setAddress(data.address || "");
-      setCity(data.city || "");
-      setCategories(data.categories || "");
+      setValues({
+        title: data.title || "",
+        description: data.description || "",
+        categories: data.categories || "",
+        address: data.address || "",
+        city: data.city || "",
+        phone: data.phone || "",
+        email: data.email || "",
+        price: data.price || "",
+        durationValue: data.durationValue || "",
+        fromDate: data.fromDate || "",
+        toDate: data.toDate || "",
+      });
       setUrgent(data.urgent || false);
       setEquipment(data.equipment || "");
-      setFromDate(data.fromDate || "");
-      setToDate(data.toDate || "");
-      setDurationValue(data.durationValue || "");
       setDurationUnit(data.durationUnit || "hours");
       setHourlyRate(data.hourlyRate || "");
       setPaymentType(data.paymentType || "Fastpris");
-      setPhone(data.phone || "");
-      setEmail(data.email || "");
       setTags(data.tags || []);
       setCurrentStep(data.currentStep || 1);
     }
-  }, [initialData, setPrice, setUrgent, setHourlyRate, setPaymentType]);
+  }, [initialData, setUrgent, setHourlyRate, setPaymentType, setValues]);
 
   useEffect(() => {
     const dataToSave = {
-      title,
-      description,
-      price,
-      address,
-      city,
-      categories,
+      ...values,
       urgent,
       equipment,
       fromDate,
@@ -187,19 +256,12 @@ export const useCreateJobForm = (
       durationUnit,
       hourlyRate,
       paymentType,
-      phone,
-      email,
       tags,
       currentStep,
     };
     localStorage.setItem("jobFormData", JSON.stringify(dataToSave));
   }, [
-    title,
-    description,
-    price,
-    address,
-    city,
-    categories,
+    values,
     urgent,
     equipment,
     fromDate,
@@ -208,45 +270,87 @@ export const useCreateJobForm = (
     durationUnit,
     hourlyRate,
     paymentType,
-    phone,
-    email,
     tags,
     currentStep,
   ]);
 
   const validateStep = (step: number) => {
+    const currentErrors: Partial<Record<keyof JobFormValues, string>> = {};
+    let isValid = true;
+
     if (step === 1) {
-      return (
-        title.trim() !== "" &&
-        description.trim().length >= 20 &&
-        categories !== "" &&
-        (selectedImages.length > 0 || currentImages.length > 0)
-      );
+      // Validate Step 1 fields
+      const fieldsToValidate: (keyof JobFormValues)[] = [
+        "title",
+        "description",
+        "categories",
+      ];
+      fieldsToValidate.forEach((field) => {
+        const rules = jobValidationSchema[field];
+        if (rules) {
+          for (const rule of rules) {
+            if (!rule.test(values)) {
+              currentErrors[field] = rule.message;
+              isValid = false;
+              break;
+            }
+          }
+        }
+      });
+
+      // Special check for images
+      if (selectedImages.length === 0 && currentImages.length === 0) {
+        currentErrors["images" as any] = "Vennligst last opp minst ett bilde.";
+        isValid = false;
+      }
+    } else if (step === 2) {
+      // Validate Step 2 fields
+      const fieldsToValidate: (keyof JobFormValues)[] = [
+        "address",
+        "city",
+        "price",
+        "durationValue",
+        "fromDate",
+        "toDate",
+      ];
+      fieldsToValidate.forEach((field) => {
+        const rules = jobValidationSchema[field];
+        if (rules) {
+          for (const rule of rules) {
+            if (!rule.test(values)) {
+              currentErrors[field] = rule.message;
+              isValid = false;
+              break;
+            }
+          }
+        }
+      });
+    } else if (step === 3) {
+      // Validate Step 3 fields
+      const fieldsToValidate: (keyof JobFormValues)[] = ["email"];
+      fieldsToValidate.forEach((field) => {
+        const rules = jobValidationSchema[field];
+        if (rules) {
+          for (const rule of rules) {
+            if (!rule.test(values)) {
+              currentErrors[field] = rule.message;
+              isValid = false;
+              break;
+            }
+          }
+        }
+      });
     }
-    if (step === 2) {
-      return address.trim() !== "" && city.trim() !== "";
-    }
-    if (step === 3) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (email && !emailRegex.test(email)) return false;
-      return true;
-    }
-    return true;
+
+    setErrors((prev) => ({ ...prev, ...currentErrors }));
+    return isValid;
   };
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
       setCurrentStep((prev) => Math.min(prev + 1, 3));
     } else {
-      let msg = "Vennligst fyll ut alle påkrevde felt riktig.";
-      if (currentStep === 1) {
-        if (description.length < 20) {
-          msg = "Beskrivelsen må være minst 20 tegn.";
-        } else if (selectedImages.length === 0 && currentImages.length === 0) {
-          msg = "Vennligst last opp minst ett bilde.";
-        }
-      }
-      toast.error(msg);
+      toast.error("Vennligst fyll ut alle påkrevde felt riktig.");
     }
   };
 
@@ -255,32 +359,39 @@ export const useCreateJobForm = (
   };
 
   const handleFinalSubmit = async () => {
+    if (!validateStep(3)) {
+      toast.error("Vennligst fyll ut alle påkrevde felt riktig.");
+      return;
+    }
+
     if (!onSubmit) return;
     setIsSubmitting(true);
     try {
       const formData = new FormData();
 
-      formData.append("title", title);
-      formData.append("description", description);
-      formData.append("price", price.toString());
+      formData.append("title", values.title);
+      formData.append("description", values.description);
+      formData.append("price", values.price.toString());
       if (hourlyRate) formData.append("hourlyRate", hourlyRate.toString());
       formData.append("urgent", urgent.toString());
       formData.append("equipment", equipment);
       formData.append("paymentType", paymentType);
-      formData.append("phone", phone);
-      formData.append("email", email);
+      formData.append("phone", values.phone);
+      formData.append("email", values.email);
 
       if (fromDate) formData.append("fromDate", fromDate);
       if (toDate) formData.append("toDate", toDate);
 
-      formData.append("location[address]", address);
-      formData.append("location[city]", city);
+      formData.append("location[address]", values.address);
+      formData.append("location[city]", values.city);
       formData.append("location[type]", "Point");
       formData.append("location[coordinates][0]", "10.7461");
       formData.append("location[coordinates][1]", "59.9127");
 
-      if (categories) {
-        const catArray = Array.isArray(categories) ? categories : [categories];
+      if (values.categories) {
+        const catArray = Array.isArray(values.categories)
+          ? values.categories
+          : [values.categories];
         catArray.forEach((cat) => formData.append("categories", cat));
       }
 
@@ -329,22 +440,22 @@ export const useCreateJobForm = (
     ];
 
     return {
-      title,
-      description,
-      price: price ? parseInt(price.toString()) : 0,
+      title: values.title,
+      description: values.description,
+      price: values.price ? parseInt(values.price.toString()) : 0,
       hourlyRate: hourlyRate ? parseInt(hourlyRate.toString()) : 0,
       images: previewImages,
       tags:
         tags.length > 0
           ? tags
-          : categories
-            ? Array.isArray(categories)
-              ? categories
-              : [categories]
+          : values.categories
+            ? Array.isArray(values.categories)
+              ? values.categories
+              : [values.categories]
             : [],
       location: {
-        address,
-        city,
+        address: values.address,
+        city: values.city,
         coordinates: [10.7461, 59.9127] as [number, number],
       },
       duration: {
@@ -365,35 +476,30 @@ export const useCreateJobForm = (
       },
     };
   }, [
-    title,
-    description,
-    price,
+    values,
+    hourlyRate,
     currentImages,
     selectedImages,
-    categories,
-    address,
-    city,
+    tags,
     durationValue,
     durationUnit,
     fromDate,
     toDate,
     currentUser,
-    tags,
-    hourlyRate,
   ]);
 
   return {
     currentStep,
     setCurrentStep,
-    title,
+    title: values.title,
     setTitle,
-    description,
+    description: values.description,
     setDescription,
-    address,
+    address: values.address,
     setAddress,
-    city,
+    city: values.city,
     setCity,
-    categories,
+    categories: values.categories,
     setCategories,
     equipment,
     setEquipment,
@@ -405,7 +511,7 @@ export const useCreateJobForm = (
     setDurationValue,
     durationUnit,
     setDurationUnit,
-    price,
+    price: values.price,
     setPrice,
     hourlyRate,
     setHourlyRate,
@@ -413,9 +519,9 @@ export const useCreateJobForm = (
     setPaymentType,
     urgent,
     setUrgent,
-    phone,
+    phone: values.phone,
     setPhone,
-    email,
+    email: values.email,
     setEmail,
     tags,
     setTags,
@@ -441,5 +547,6 @@ export const useCreateJobForm = (
     handleCancel,
     previewJobData,
     currentUser,
+    errors, // Exporting errors for validation display
   };
 };
