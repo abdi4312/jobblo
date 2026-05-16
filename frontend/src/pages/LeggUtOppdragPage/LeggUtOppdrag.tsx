@@ -53,7 +53,7 @@ export default function LeggUtOppdrag() {
       if (response.data) {
         console.log(isEditMode ? "Job updated" : "Job created");
         toast.success(isEditMode ? "Oppdrag oppdatert!" : "Oppdrag publisert!");
-        navigate(-1);
+        navigate("/");
       } else {
         console.error("Failed. Status:", response.status);
         toast.error(`Kunne ikke lagre oppdrag. Status: ${response.status}`);

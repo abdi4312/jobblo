@@ -1,4 +1,5 @@
 import React from "react";
+import { AlertCircle } from "lucide-react";
 
 interface ContactInformationProps {
   phone: string;
@@ -13,6 +14,7 @@ interface ContactInformationProps {
     price: string | number;
     paymentType: string;
   };
+  errors?: any;
 }
 
 export const ContactInformation: React.FC<ContactInformationProps> = ({
@@ -21,6 +23,7 @@ export const ContactInformation: React.FC<ContactInformationProps> = ({
   email,
   setEmail,
   summary,
+  errors,
 }) => {
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
@@ -50,8 +53,14 @@ export const ContactInformation: React.FC<ContactInformationProps> = ({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="din@epost.no"
-              className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white outline-none focus:border-[#2D7A4D] transition-all"
+              className={`w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white outline-none transition-all
+                ${errors?.email ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5"}`}
             />
+            {errors?.email && (
+              <p className="mt-1 text-red-500 text-[10px] md:text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+                <AlertCircle size={12} /> {errors.email}
+              </p>
+            )}
           </div>
         </div>
       </div>
