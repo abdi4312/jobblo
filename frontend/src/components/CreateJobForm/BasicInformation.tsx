@@ -1,6 +1,15 @@
 import React, { useState, useMemo } from "react";
 import { useCategories } from "../../features/categories/hooks";
-import { Search, Info, Check, Sparkles, Loader2, X, Plus } from "lucide-react";
+import {
+  Search,
+  Info,
+  Check,
+  Sparkles,
+  Loader2,
+  X,
+  Plus,
+  AlertCircle,
+} from "lucide-react";
 import type { CategoryType } from "../../features/categories/types";
 import mainLink from "../../api/mainURLs";
 import toast from "react-hot-toast";
@@ -19,6 +28,7 @@ interface BasicInformationProps {
   setDurationValue: (val: string) => void;
   setDurationUnit: (val: string) => void;
   setHourlyRate: (val: string) => void;
+  errors?: any;
 }
 
 export const BasicInformation: React.FC<BasicInformationProps> = ({
@@ -35,6 +45,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
   setDurationValue,
   setDurationUnit,
   setHourlyRate,
+  errors,
 }) => {
   const { data: categoryData = [], isLoading, error } = useCategories();
   const [searchTerm, setSearchTerm] = useState("");
@@ -237,14 +248,21 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
           onChange={(e) => setTitle(e.target.value.slice(0, 70))}
           required
           placeholder="F.eks. Malearbeid i stue"
-          className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200
-        bg-white text-base md:text-lg font-medium outline-none focus:border-[#2D7A4D]
-         focus:ring-4 focus:ring-[#2D7A4D]/5 transition-all"
+          className={`w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border
+        bg-white text-base md:text-lg font-medium outline-none focus:ring-4 transition-all
+         ${errors?.title ? "border-red-500 focus:border-red-500 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-[#2D7A4D]/5"}`}
         />
+        {errors?.title && (
+          <p className="mt-2 text-red-500 text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+            <AlertCircle size={14} /> {errors.title}
+          </p>
+        )}
       </div>
 
       {/* 2. Category Section */}
-      <div className="box-card-custom rounded-[14px] p-4 md:p-6">
+      <div
+        className={`box-card-custom rounded-[14px] p-4 md:p-6 border transition-colors ${errors?.categories ? "border-red-500" : "border-transparent"}`}
+      >
         <label className="text-[11px] md:text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 mb-4">
           Velg kategori <span className="text-red-500">*</span>
         </label>
@@ -306,6 +324,11 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
             })
           )}
         </div>
+        {errors?.categories && (
+          <p className="mt-4 text-red-500 text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+            <AlertCircle size={14} /> {errors.categories}
+          </p>
+        )}
       </div>
 
       {/* 3. Description Section */}
@@ -345,9 +368,9 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
             }
             required
             placeholder="Gi en detaljert beskrivelse..."
-            className="min-h-[150px] md:min-h-[200px] w-full bg-white p-4 md:p-6 resize-none border
-            border-gray-200 rounded-2xl outline-none focus:border-[#2D7A4D] focus:ring-4
-          focus:ring-[#2D7A4D]/5 transition-all text-sm md:text-base text-gray-700 leading-relaxed"
+            className={`min-h-[150px] md:min-h-[200px] w-full bg-white p-4 md:p-6 resize-none border
+            rounded-2xl outline-none focus:ring-4 transition-all text-sm md:text-base text-gray-700 leading-relaxed
+            ${errors?.description ? "border-red-500 focus:border-red-500 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-[#2D7A4D]/5"}`}
           />
           <div className="absolute bottom-3 md:bottom-4 right-3 md:right-4 flex items-center gap-2">
             <span
@@ -357,6 +380,11 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
             </span>
           </div>
         </div>
+        {errors?.description && (
+          <p className="mt-2 text-red-500 text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+            <AlertCircle size={14} /> {errors.description}
+          </p>
+        )}
       </div>
 
       {/* 4. Skills/Tags Section */}

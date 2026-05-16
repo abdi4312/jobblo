@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, Calendar, Clock, Info } from "lucide-react";
+import { MapPin, Calendar, Clock, Info, AlertCircle } from "lucide-react";
 
 interface TimeAndPlaceProps {
   address: string;
@@ -14,6 +14,7 @@ interface TimeAndPlaceProps {
   setFromDate: (val: string) => void;
   toDate: string;
   setToDate: (val: string) => void;
+  errors?: any;
 }
 
 export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
@@ -29,6 +30,7 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
   setFromDate,
   toDate,
   setToDate,
+  errors,
 }) => {
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
@@ -59,8 +61,14 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               onChange={(e) => setAddress(e.target.value)}
               required
               placeholder="F.eks. Storgata 1"
-              className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-sm md:text-base outline-none focus:border-[#2D7A4D] transition-all"
+              className={`w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all
+                ${errors?.address ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5"}`}
             />
+            {errors?.address && (
+              <p className="mt-1 text-red-500 text-[10px] md:text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+                <AlertCircle size={12} /> {errors.address}
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <label className="text-[11px] md:text-[13px] font-bold text-gray-400 uppercase tracking-wider ml-1">
@@ -72,8 +80,14 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               onChange={(e) => setCity(e.target.value)}
               required
               placeholder="F.eks. Oslo"
-              className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-sm md:text-base outline-none focus:border-[#2D7A4D] transition-all"
+              className={`w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all
+                ${errors?.city ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5"}`}
             />
+            {errors?.city && (
+              <p className="mt-1 text-red-500 text-[10px] md:text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+                <AlertCircle size={12} /> {errors.city}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -97,27 +111,39 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <div className="space-y-2">
             <label className="text-[11px] md:text-[13px] font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Fra dato
+              Fra dato *
             </label>
             <input
               required
               type="date"
               value={fromDate ? fromDate.split("T")[0] : ""}
               onChange={(e) => setFromDate(e.target.value)}
-              className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-sm md:text-base outline-none focus:border-[#2D7A4D] transition-all cursor-pointer"
+              className={`w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all cursor-pointer
+                ${errors?.fromDate ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5"}`}
             />
+            {errors?.fromDate && (
+              <p className="mt-1 text-red-500 text-[10px] md:text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+                <AlertCircle size={12} /> {errors.fromDate}
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <label className="text-[11px] md:text-[13px] font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Til dato
+              Til dato *
             </label>
             <input
               required
               type="date"
               value={toDate ? toDate.split("T")[0] : ""}
               onChange={(e) => setToDate(e.target.value)}
-              className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-sm md:text-base outline-none focus:border-[#2D7A4D] transition-all cursor-pointer"
+              className={`w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all cursor-pointer
+                ${errors?.toDate ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5"}`}
             />
+            {errors?.toDate && (
+              <p className="mt-1 text-red-500 text-[10px] md:text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+                <AlertCircle size={12} /> {errors.toDate}
+              </p>
+            )}
           </div>
         </div>
 
@@ -135,7 +161,7 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
           </div>
           <div>
             <h2 className="font-bold text-lg md:text-xl text-custom-black">
-              Forventet varighet
+              Forventet varighet *
             </h2>
             <p className="text-gray-500 text-xs md:text-sm">
               Hvor lang tid antar du oppdraget tar?
@@ -144,14 +170,22 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
-          <input
-            type="number"
-            value={durationValue}
-            onChange={(e) => setDurationValue(e.target.value)}
-            placeholder="0"
-            className="flex-1 px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-sm md:text-base outline-none focus:border-[#2D7A4D] transition-all"
-          />
-          <div className="relative">
+          <div className="flex-1 space-y-2">
+            <input
+              type="number"
+              value={durationValue}
+              onChange={(e) => setDurationValue(e.target.value)}
+              placeholder="0"
+              className={`w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all
+                ${errors?.durationValue ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5"}`}
+            />
+            {errors?.durationValue && (
+              <p className="mt-1 text-red-500 text-[10px] md:text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+                <AlertCircle size={12} /> {errors.durationValue}
+              </p>
+            )}
+          </div>
+          <div className="relative h-fit">
             <select
               value={durationUnit}
               onChange={(e) => setDurationUnit(e.target.value)}

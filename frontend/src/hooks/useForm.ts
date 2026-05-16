@@ -64,6 +64,21 @@ export function useForm<T extends Record<string, unknown>>(
     setErrors({});
   }, [initialValues]);
 
+  const setMultipleValues = useCallback((newValues: Partial<T>) => {
+    setValues((prev) => ({
+      ...prev,
+      ...newValues,
+    }));
+
+    setErrors((prev) => {
+      const updatedErrors = { ...prev };
+      (Object.keys(newValues) as Array<keyof T>).forEach((field) => {
+        delete updatedErrors[field];
+      });
+      return updatedErrors;
+    });
+  }, []);
+
   return {
     values,
     errors,
@@ -72,5 +87,6 @@ export function useForm<T extends Record<string, unknown>>(
     resetForm,
     setValues,
     setErrors,
+    setMultipleValues,
   };
 }

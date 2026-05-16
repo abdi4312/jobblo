@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, Sparkles, Loader2 } from "lucide-react";
+import { Image, Sparkles, Loader2, AlertCircle } from "lucide-react";
 import { ImageUpload } from "./ImageUpload";
 import { BasicInformation } from "./BasicInformation";
 import { TimeAndPlace } from "./TimeAndPlace";
@@ -94,16 +94,14 @@ export default function CreateJobForm({
     handleCancel,
     previewJobData,
     currentUser,
+    errors,
   } = useCreateJobForm(userId, initialData, isEditMode, onSubmit);
 
   return (
     <div className="max-w-300 mx-auto py-8">
       <StepIndicator currentStep={currentStep} />
 
-      <form
-        onSubmit={(e) => e.preventDefault()}
-        className="overflow-hidden"
-      >
+      <form onSubmit={(e) => e.preventDefault()} className="overflow-hidden">
         <div className="p-1">
           {currentStep === 1 && (
             <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -188,14 +186,16 @@ export default function CreateJobForm({
                 </div>
               </div>
 
-              <div className="box-card-custom rounded-[14px] p-4 md:p-6 ">
+              <div
+                className={`box-card-custom rounded-[14px] p-4 md:p-6 border transition-colors ${errors?.images ? "border-red-500" : "border-transparent"}`}
+              >
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 bg-[#2D7A4D]/10 rounded-full flex items-center justify-center text-[#2D7A4D]">
                     <Image size={22} />
                   </div>
                   <div>
                     <h2 className="font-bold text-lg md:text-xl text-custom-black">
-                      Last opp bilder
+                      Last opp bilder <span className="text-red-500">*</span>
                     </h2>
                     <p className="text-gray-500 text-xs md:text-sm">
                       Vis frem oppdraget med inntil 6 bilder
@@ -207,6 +207,11 @@ export default function CreateJobForm({
                   existingImages={currentImages}
                   onExistingImageRemove={handleExistingImageRemove}
                 />
+                {errors?.images && (
+                  <p className="mt-4 text-red-500 text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+                    <AlertCircle size={14} /> {errors.images}
+                  </p>
+                )}
               </div>
 
               <BasicInformation
@@ -223,6 +228,7 @@ export default function CreateJobForm({
                 setDurationValue={setDurationValue}
                 setDurationUnit={setDurationUnit}
                 setHourlyRate={setHourlyRate}
+                errors={errors}
               />
             </div>
           )}
@@ -242,6 +248,7 @@ export default function CreateJobForm({
                 setFromDate={setFromDate}
                 toDate={toDate}
                 setToDate={setToDate}
+                errors={errors}
               />
               <PaymentInformation
                 paymentType={paymentType}
@@ -253,6 +260,7 @@ export default function CreateJobForm({
                 urgent={urgent}
                 setUrgent={setUrgent}
                 subscription={currentUser?.subscription || "Standard"}
+                errors={errors}
               />
             </div>
           )}
@@ -271,6 +279,7 @@ export default function CreateJobForm({
                 price,
                 paymentType,
               }}
+              errors={errors}
             />
           )}
         </div>
