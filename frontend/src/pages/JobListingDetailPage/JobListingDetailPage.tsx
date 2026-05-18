@@ -8,6 +8,7 @@ import {
 } from "../../features/jobDetail/hook.ts";
 
 import JobButton from "../../components/job/JobButton.tsx";
+import RelatedJobs from "../../components/job/RelatedJobs.tsx";
 import { JobDetailSkeleton } from "../../components/Loading/JobDetailSkeleton.tsx";
 import { useFavoriteToggle } from "../../features/favorites/hook/useFavoriteToggle.ts";
 import { lazy, Suspense, useState } from "react";
@@ -362,6 +363,23 @@ const JobListingDetailPage = () => {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Recommended Jobs Section */}
+        <div className="mt-12 pt-12 border-t border-gray-100">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                Anbefalte oppdrag
+              </h2>
+              <p className="text-gray-500">Basert på lokasjon og kategori</p>
+            </div>
+          </div>
+          <RelatedJobs
+            coordinates={job?.location?.coordinates}
+            categories={job?.categories}
+            currentJobId={job?._id}
+          />
         </div>
       </div>
 

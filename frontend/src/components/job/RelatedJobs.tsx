@@ -1,34 +1,37 @@
 import { useNavigate } from "react-router-dom";
 import { MapPin } from "lucide-react";
-import { useNearbyJobsQuery } from "../../features/jobDetail/hook.ts";
-import { JobCard } from "../Explore/jobs/JobCard.tsx";
-import { JobCardSkeleton } from "../Loading/JobCardSkeleton.tsx";
+import { useRecommendedJobsQuery } from "../../features/jobDetail/hook.ts";
+import { JobCard } from "../component/jobCard/JobCard";
+import { JobCardSkeleton } from "../Loading/JobCardSkeleton";
 import type { Jobs } from "../../types/Jobs";
 
 interface RelatedJobsProps {
   coordinates?: [number, number];
+  categories?: string[];
   currentJobId?: string;
 }
 
-const RelatedJobs: React.FC<RelatedJobsProps> = ({ coordinates, currentJobId }) => {
+const RelatedJobs: React.FC<RelatedJobsProps> = ({
+  coordinates,
+  categories,
+  currentJobId,
+}) => {
   const navigate = useNavigate();
 
-  const { data: nearbyJobs = [], isLoading: isNearbyLoading } = useNearbyJobsQuery(
-    coordinates,
-    currentJobId || ""
-  );
+  const { data: recommendedJobs = [], isLoading: isRecommendedLoading } =
+    useRecommendedJobsQuery(coordinates, categories, currentJobId || "");
 
-  if (isNearbyLoading) {
+  if (isRecommendedLoading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-        {[1, 2, 3, 4].map((i) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
           <JobCardSkeleton key={i} />
         ))}
       </div>
     );
   }
 
-  if (nearbyJobs.length === 0) {
+  if (recommendedJobs.length === 0) {
     return (
       <div className="py-10 px-4">
         <div className="flex flex-col items-center justify-center p-10 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl">
@@ -39,7 +42,7 @@ const RelatedJobs: React.FC<RelatedJobsProps> = ({ coordinates, currentJobId }) 
             Ingen jobber funnet
           </h4>
           <p className="text-gray-500 text-center text-sm leading-relaxed">
-            Vi fant ingen jobber i nærheten akkurat nå.
+            Vi fant ingen anbefalte jobber akkurat nå.
           </p>
           <button
             onClick={() => navigate("/job-listing")}
@@ -54,7 +57,7 @@ const RelatedJobs: React.FC<RelatedJobsProps> = ({ coordinates, currentJobId }) 
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-      {nearbyJobs.map((job: Jobs) => (
+      {recommendedJobs.map((job: Jobs) => (
         <JobCard key={job._id} job={job} />
       ))}
     </div>
