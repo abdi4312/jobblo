@@ -7,6 +7,8 @@ import { ScrollToTop } from "./components/shared/ScrollToTop.tsx";
 import { CookieBanner } from "./components/shared/CookieBanner.tsx";
 import { App as AntApp } from "antd";
 import { useAuth } from "./features/auth/hook/useAuth.ts";
+import { useOrderApprovalSocket } from "./features/notifications/hooks";
+import { useUserStore } from "./stores/userStore";
 import { Toaster } from "react-hot-toast";
 import MainLoading from "./assets/loading/main-loading.gif";
 import Lottie from "lottie-react";
@@ -14,7 +16,11 @@ import Loging from "./assets/animations/loading.json";
 
 export default function App() {
   const { isLoadingUser } = useAuth();
+  const user = useUserStore((state) => state.user);
   const location = useLocation();
+
+  // Listen for order approvals globally
+  useOrderApprovalSocket(user?._id);
 
   if (isLoadingUser) {
     return (

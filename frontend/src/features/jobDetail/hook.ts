@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getJobDetail,
   createChat,
@@ -6,6 +6,14 @@ import {
   getNearbyJobs,
 } from "./jobApi";
 import { fetchJobs } from "../jobsList/jobListingAPI";
+import {
+  createOrder,
+  updateOrderStatus,
+  getAllOrders,
+  createJobRequest,
+  getMyJobRequests,
+  updateJobRequestStatus,
+} from "../../api/orderAPI";
 import type { Jobs } from "../../types/Jobs";
 
 export const useJobDetailQuery = (id: string) => {
@@ -13,6 +21,71 @@ export const useJobDetailQuery = (id: string) => {
     queryKey: ["jobDetail", id],
     queryFn: () => getJobDetail(id),
     enabled: !!id,
+  });
+};
+
+export const useAllOrdersQuery = (isAuthenticated: boolean) => {
+  return useQuery({
+    queryKey: ["orders"],
+    queryFn: getAllOrders,
+    enabled: isAuthenticated,
+  });
+};
+
+export const useMyJobRequestsQuery = (isAuthenticated: boolean) => {
+  return useQuery({
+    queryKey: ["jobRequests"],
+    queryFn: getMyJobRequests,
+    enabled: isAuthenticated,
+  });
+};
+
+export const useCreateJobRequestMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createJobRequest,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jobRequests"] });
+    },
+  });
+};
+
+export const useUpdateJobRequestStatusMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      requestId,
+      status,
+    }: {
+      requestId: string;
+      status: string;
+    }) => updateJobRequestStatus(requestId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jobRequests"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+};
+
+export const useCreateOrderMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createOrder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
+};
+
+export const useUpdateOrderStatusMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, status }: { orderId: string; status: string }) =>
+      updateOrderStatus(orderId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
   });
 };
 

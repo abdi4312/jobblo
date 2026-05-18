@@ -78,6 +78,9 @@ const contractSchema = new mongoose.Schema(
       default: "draft",
     },
 
+    useSafePay: { type: Boolean, default: false },
+    editCount: { type: Number, default: 0, max: 3 },
+
     // PDF-versjon
     pdfUrl: String,
   },

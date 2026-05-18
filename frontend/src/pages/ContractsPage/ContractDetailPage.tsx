@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getAllContracts, signContract } from "../../api/contractAPI";
+import {
+  getAllContracts,
+  signContract,
+  updateContract,
+} from "../../api/contractAPI";
 import type { Contract } from "../../api/contractAPI";
 import { getAllOrders, updateOrderStatus } from "../../api/orderAPI";
 import type { Order } from "../../api/orderAPI";
@@ -20,7 +24,13 @@ import {
   CheckCircle,
   Star,
   Send,
+  Shield,
+  Edit3,
+  Save,
+  X,
+  History,
 } from "lucide-react";
+import { Button } from "../../components/Ui/button/Button";
 
 export function ContractDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +39,14 @@ export function ContractDetailPage() {
   const [contract, setContract] = useState<Contract | null>(null);
   const [order, setOrder] = useState<Order | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const [useSafePay, setUseSafePay] = useState(false);
+
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [editPrice, setEditPrice] = useState(0);
+  const [editAddress, setEditAddress] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Review state
   const [rating, setRating] = useState(5);
@@ -51,6 +69,10 @@ export function ContractDetailPage() {
       const currentContract = fetchedContracts.find((c) => c._id === id);
       if (currentContract) {
         setContract(currentContract);
+        setUseSafePay(currentContract.useSafePay || false);
+        setEditContent(currentContract.content);
+        setEditPrice(currentContract.price);
+        setEditAddress(currentContract.address || "");
         const relatedOrder = fetchedOrders.find((o) =>
           typeof o.contractId === "string"
             ? o.contractId === currentContract._id
@@ -81,10 +103,31 @@ export function ContractDetailPage() {
     }
   };
 
+  const handleUpdateContract = async () => {
+    if (!contract) return;
+    try {
+      setIsUpdating(true);
+      await updateContract(contract._id, {
+        content: editContent,
+        price: editPrice,
+        address: editAddress,
+      });
+      toast.success("Kontrakt oppdatert! Begge må signere na nytt.");
+      setIsEditing(false);
+      fetchData();
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.error || "Kunne ikke oppdatere kontrakt",
+      );
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleSignContract = async () => {
     if (!contract) return;
     try {
-      await signContract(contract._id);
+      await signContract(contract._id, useSafePay);
       toast.success("Kontrakt signert!");
       fetchData();
     } catch (error: any) {
@@ -152,6 +195,8 @@ export function ContractDetailPage() {
   const needsMySignature =
     (isClient && !contract.signedByCustomer) ||
     (isProvider && !contract.signedByProvider);
+
+  const canEdit = (contract.editCount || 0) < 3 && contract.status !== "signed";
 
   // Statusvisning
   const getStatusDisplay = () => {
@@ -242,302 +287,457 @@ export function ContractDetailPage() {
 
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 relative z-10">
               <div>
-                <span
-                  className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border mb-4 shadow-sm ${statusDisplay.color}`}
-                >
-                  {statusDisplay.label}
-                </span>
-                <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                <div className="flex items-center gap-2 mb-4">
+                  <span
+                    className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border shadow-sm ${statusDisplay.color}`}
+                  >
+                    {statusDisplay.label}
+                  </span>
+
+                  {contract.useSafePay && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border shadow-sm bg-blue-50 text-blue-700 border-blue-100">
+                      <Shield size={12} fill="currentColor" fillOpacity={0.2} />
+                      SafePay Aktiv
+                    </span>
+                  )}
+
+                  {(contract.editCount || 0) > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border shadow-sm bg-amber-50 text-amber-700 border-amber-100">
+                      <History size={12} />
+                      Endret {contract.editCount}/3
+                    </span>
+                  )}
+                </div>
+
+                <h1 className="text-3xl md:text-4xl font-extrabold text-custom-black leading-tight mb-2">
                   {contract.serviceSnapshot?.title ||
                     contract.serviceId?.title ||
-                    "Kontraktsavtale"}
+                    "Oppdragskontrakt"}
                 </h1>
+                <p className="text-slate-500 font-medium flex items-center gap-2">
+                  <FileText size={16} />
+                  Opprettet{" "}
+                  {format(new Date(contract.createdAt), "dd. MMMM yyyy")}
+                </p>
               </div>
 
-              <div className="md:text-right flex flex-col md:items-end p-5 md:p-6 bg-slate-50 border border-slate-100 rounded-2xl md:min-w-[200px]">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
-                  Avtalt pris
-                </span>
-                <div className="text-3xl font-black text-custom-green flex items-end gap-1">
-                  {contract.price}{" "}
-                  <span className="text-sm font-bold text-slate-400 mb-1">
-                    NOK
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mt-10 p-6 bg-slate-50/50 rounded-2xl border border-slate-100/60">
-              <div>
-                <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Din rolle
-                </span>
-                <span className="font-semibold text-slate-800">
-                  {isClient ? "Kunde" : "Tjenesteyter"}
-                </span>
-              </div>
-              <div>
-                <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Motpart
-                </span>
-                <span className="font-semibold text-slate-800">
-                  {isClient
-                    ? contract.providerSnapshot?.name ||
-                      contract.providerId?.name
-                    : contract.customerSnapshot?.name ||
-                      contract.clientId?.name}
-                </span>
-              </div>
-              <div>
-                <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Planlagt dato
-                </span>
-                <span className="font-semibold text-slate-800 flex items-center gap-1.5">
-                  <Clock size={14} className="text-emerald-500" />
-                  {contract.scheduledDate
-                    ? format(
-                        new Date(contract.scheduledDate),
-                        "dd. MMM yyyy - HH:mm",
-                      )
-                    : "Ikke bestemt"}
-                </span>
+              <div className="flex flex-wrap gap-3">
+                {canEdit && !isEditing && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditing(true)}
+                    className="rounded-xl border-slate-200 font-bold flex items-center gap-2 px-6"
+                  >
+                    <Edit3 size={18} />
+                    Rediger kontrakt
+                  </Button>
+                )}
+                {isEditing && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsEditing(false)}
+                      className="rounded-xl border-slate-200 font-bold flex items-center gap-2 px-6 text-red-500"
+                    >
+                      <X size={18} />
+                      Avbryt
+                    </Button>
+                    <Button
+                      variant="default"
+                      onClick={handleUpdateContract}
+                      disabled={isUpdating}
+                      className="bg-custom-green hover:bg-custom-green/90 text-white rounded-xl font-bold flex items-center gap-2 px-6 shadow-md"
+                    >
+                      {isUpdating ? (
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      ) : (
+                        <Save size={18} />
+                      )}
+                      Lagre endringer
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Hovedinnholdslayout */}
-          <div className="grid lg:grid-cols-[1.8fr_1fr] divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
-            {/* Venstre kolonne: Kontraktsvilkår */}
-            <div className="p-8 md:p-10">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <FileText size={16} /> Vilkår og innhold
-              </h3>
-              <div className="prose prose-slate max-w-none">
-                <div className="bg-[#FCFDFD] border border-slate-100 rounded-2xl p-6 text-[15px] text-slate-700 whitespace-pre-wrap leading-relaxed shadow-inner min-h-[300px]">
-                  {contract.content}
+          <div className="p-8 md:p-10">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+              <div className="lg:col-span-2 space-y-10">
+                {/* SafePay Info Box */}
+                {contract.useSafePay && (
+                  <div className="mb-8 bg-blue-50/50 border border-blue-100 rounded-2xl p-6 flex gap-4">
+                    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center shrink-0 shadow-sm">
+                      <Shield size={24} />
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-blue-900 mb-1">
+                        SafePay Escrow Aktiv
+                      </h4>
+                      <p className="text-sm text-blue-700 leading-relaxed font-medium">
+                        Betalingen for dette oppdraget er beskyttet av SafePay.
+                        Pengene holdes trygt til oppdraget er markert som
+                        fullført og godkjent av begge parter.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Kontraktsinnhold Section */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-1 h-1 rounded-full bg-custom-green"></div>
+                    Kontraktsvilkår
+                  </h3>
+
+                  {isEditing ? (
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">
+                          Avtalt Pris (NOK)
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={editPrice}
+                            onChange={(e) =>
+                              setEditPrice(Number(e.target.value))
+                            }
+                            className="w-full h-12 bg-white border border-slate-200 rounded-xl px-4 font-bold focus:border-custom-green outline-none transition-all"
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">
+                            kr
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">
+                          Adresse
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={editAddress}
+                            onChange={(e) => setEditAddress(e.target.value)}
+                            className="w-full h-12 bg-white border border-slate-200 rounded-xl px-4 font-bold focus:border-custom-green outline-none transition-all"
+                            placeholder="Skriv inn adresse..."
+                          />
+                          <MapPin
+                            size={18}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">
+                          Kontraktsinnhold
+                        </label>
+                        <textarea
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          className="w-full min-h-[300px] bg-white border border-slate-200 rounded-2xl p-6 font-medium leading-relaxed focus:border-custom-green outline-none transition-all"
+                          placeholder="Skriv inn kontraktsvilkårene her..."
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-sm relative group">
+                      <div className="absolute top-4 right-4 text-slate-50 group-hover:text-slate-100 transition-colors">
+                        <PenTool size={64} strokeWidth={1} />
+                      </div>
+                      <div className="relative z-10">
+                        <div className="whitespace-pre-wrap text-slate-700 leading-relaxed font-medium">
+                          {contract.content}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {contract.address && (
-                <div className="mt-6 flex items-start gap-4 bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                  <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center shrink-0">
-                    <MapPin className="text-custom-green" size={18} />
+              {/* Høyre sidepanel */}
+              <div className="space-y-8">
+                {/* Partenes informasjon */}
+                <div className="bg-slate-50 border border-slate-100 rounded-3xl p-6 space-y-6">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <div className="w-1 h-1 rounded-full bg-custom-green"></div>
+                    Partene & Detaljer
+                  </h3>
+
+                  <div className="space-y-4">
+                    {/* Customer */}
+                    <div className="flex items-center gap-3 bg-white p-3 rounded-xl shadow-sm border border-slate-50">
+                      <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center font-bold">
+                        {contract.customerSnapshot?.name?.[0] || "K"}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">
+                          Oppdragsgiver
+                        </p>
+                        <h4 className="text-sm font-bold text-custom-black">
+                          {contract.customerSnapshot?.name}
+                        </h4>
+                      </div>
+                      {contract.signedByCustomer ? (
+                        <CheckCircle2 size={16} className="text-emerald-500" />
+                      ) : (
+                        <Clock size={16} className="text-slate-300" />
+                      )}
+                    </div>
+
+                    {/* Provider */}
+                    <div className="flex items-center gap-3 bg-white p-3 rounded-xl shadow-sm border border-slate-50">
+                      <div className="w-10 h-10 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center font-bold">
+                        {contract.providerSnapshot?.name?.[0] || "T"}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">
+                          Tilbyder
+                        </p>
+                        <h4 className="text-sm font-bold text-custom-black">
+                          {contract.providerSnapshot?.name}
+                        </h4>
+                      </div>
+                      {contract.signedByProvider ? (
+                        <CheckCircle2 size={16} className="text-emerald-500" />
+                      ) : (
+                        <Clock size={16} className="text-slate-300" />
+                      )}
+                    </div>
+
+                    {/* Address Display */}
+                    {(contract.address || editAddress) && (
+                      <div className="flex items-start gap-3 bg-white p-3 rounded-xl shadow-sm border border-slate-50">
+                        <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-lg flex items-center justify-center shrink-0">
+                          <MapPin size={20} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase">
+                            Oppdragsadresse
+                          </p>
+                          <h4 className="text-sm font-bold text-custom-black leading-tight">
+                            {contract.address || editAddress}
+                          </h4>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                      Sted for tjenesten
-                    </span>
-                    <span className="text-sm font-medium text-slate-800">
-                      {contract.address}
-                    </span>
+
+                  <div className="pt-4 border-t border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      Avtalt Pris
+                    </p>
+                    <div className="text-2xl font-black text-custom-green">
+                      kr {contract.price.toLocaleString()}
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Høyre kolonne: Handlinger og statuskontroll */}
-            <div className="p-8 md:p-10 bg-slate-50/30">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">
-                Status og handlinger
-              </h3>
-
-              <div className="space-y-6">
-                {/* Signaturboks */}
-                {needsMySignature && contract.status !== "cancelled" ? (
-                  <div className="bg-white border-2 border-blue-100 rounded-2xl p-8 shadow-[0_8px_30px_rgb(59,130,246,0.08)] text-center relative overflow-hidden">
-                    <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <PenTool size={28} strokeWidth={2} />
+                <div className="space-y-6">
+                  {/* SafePay Toggle for Signing */}
+                  {needsMySignature && contract.status !== "cancelled" && (
+                    <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-blue-800 font-bold">
+                          <Shield size={18} />
+                          <span>Bruk SafePay?</span>
+                        </div>
+                        <button
+                          onClick={() => setUseSafePay(!useSafePay)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                            useSafePay ? "bg-blue-600" : "bg-gray-200"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              useSafePay ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      <p className="text-[13px] text-blue-700 leading-relaxed font-medium">
+                        Ved å aktivere SafePay vil betalingen holdes trygt i
+                        escrow til oppdraget er fullført.
+                      </p>
                     </div>
-                    <p className="font-extrabold text-lg text-slate-900 mb-2">
-                      Signatur kreves
-                    </p>
-                    <p className="text-sm font-medium text-slate-500 mb-6 leading-relaxed">
-                      Vennligst gå gjennom vilkårene til venstre. Hvis alt ser
-                      greit ut, vennligst signer for å gå videre.
-                    </p>
-                    <button
-                      onClick={handleSignContract}
-                      className="w-full py-3.5 bg-custom-green text-white font-bold rounded-xl hover:bg-custom-green hover:shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all"
-                    >
-                      Signer kontrakt
-                    </button>
-                  </div>
-                ) : !needsMySignature &&
-                  contract.status === "pending_signatures" ? (
-                  <div className="bg-white border border-slate-100 rounded-2xl p-8 text-center shadow-sm">
-                    <div className="w-16 h-16 bg-orange-50 text-orange-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Clock size={28} strokeWidth={2} />
-                    </div>
-                    <p className="font-extrabold text-lg text-slate-900 mb-2">
-                      Venter på motpart
-                    </p>
-                    <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                      Du har signert denne kontrakten. Vi venter nå på at den
-                      andre parten skal signere.
-                    </p>
-                  </div>
-                ) : null}
+                  )}
 
-                {/* Signed / Order Controls */}
-                {contract.status === "signed" && order && (
-                  <div className="bg-white border border-emerald-100 rounded-2xl p-6 md:p-8 shadow-sm">
-                    {order.status === "completed" ? (
-                      <div className="space-y-6">
-                        <div className="text-center py-2">
-                          <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <CheckCircle size={28} strokeWidth={2.5} />
-                          </div>
-                          <p className="font-extrabold text-xl text-slate-900 mb-2">
-                            Oppdrag Fullført!
-                          </p>
-                          <p className="text-sm font-medium text-slate-500 leading-relaxed mb-6">
-                            Oppdraget er markert som ferdig. Gi en vurdering for
-                            å hjelpe andre i fellesskapet.
+                  {/* Signaturboks */}
+                  {needsMySignature && contract.status !== "cancelled" ? (
+                    <div className="bg-white border-2 border-emerald-50 rounded-3xl p-6 shadow-lg shadow-emerald-900/5 space-y-4">
+                      <div className="text-center">
+                        <h4 className="font-bold text-custom-black mb-1">
+                          Klar for å signere?
+                        </h4>
+                        <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                          Ved å signere aksepterer du vilkårene i kontrakten.
+                        </p>
+                      </div>
+                      <Button
+                        variant="default"
+                        onClick={handleSignContract}
+                        className="w-full h-12 bg-custom-green hover:bg-custom-green/90 text-white rounded-xl font-bold"
+                      >
+                        Signer kontrakt nå
+                      </Button>
+                    </div>
+                  ) : contract.status === "signed" ? (
+                    <div className="space-y-4">
+                      <div className="bg-emerald-50 border border-emerald-100 rounded-3xl p-6 text-center space-y-3">
+                        <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                          <CheckCircle size={24} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-emerald-900">
+                            Signert!
+                          </h4>
+                          <p className="text-xs text-emerald-700 font-medium">
+                            Ordren er nå bindende.
                           </p>
                         </div>
+                      </div>
 
-                        {!hasReviewed ? (
-                          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
-                            <div className="flex flex-col items-center gap-3">
-                              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                Din vurdering
-                              </span>
-                              <div className="flex gap-2">
+                      {/* Review Section */}
+                      {order && order.status === "completed" && (
+                        <div className="bg-white border border-slate-100 rounded-3xl p-6 space-y-6 shadow-sm">
+                          <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                            <Star
+                              size={18}
+                              className="text-amber-400 fill-amber-400"
+                            />
+                            {hasReviewed ? "Din vurdering" : "Gi en vurdering"}
+                          </h4>
+
+                          {hasReviewed ? (
+                            <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                              <div className="flex gap-1">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    size={16}
+                                    className={
+                                      i < (existingReview?.rating || 0)
+                                        ? "text-amber-400 fill-amber-400"
+                                        : "text-slate-200"
+                                    }
+                                  />
+                                ))}
+                              </div>
+                              <p className="text-sm text-slate-600 italic leading-relaxed">
+                                "{existingReview?.comment || "Ingen kommentar"}"
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              <div className="flex justify-center gap-2 py-2">
                                 {[1, 2, 3, 4, 5].map((star) => (
                                   <button
-                                    title={`Gi ${star} stjern`}
                                     key={star}
                                     onClick={() => setRating(star)}
-                                    className="transition-transform active:scale-90"
+                                    className="transition-transform hover:scale-110 active:scale-95"
                                   >
                                     <Star
                                       size={32}
-                                      fill={star <= rating ? "#F0B100" : "none"}
                                       className={
                                         star <= rating
-                                          ? "text-[#F0B100]"
-                                          : "text-slate-300"
+                                          ? "text-amber-400 fill-amber-400"
+                                          : "text-slate-200"
                                       }
                                     />
                                   </button>
                                 ))}
                               </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider ml-1">
-                                Kommentar (valgfritt)
-                              </label>
                               <textarea
                                 value={comment}
                                 onChange={(e) => setComment(e.target.value)}
-                                placeholder="Hvordan var din opplevelse?"
-                                className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-medium outline-none focus:ring-2 focus:ring-[#2F7E47]/10 focus:border-[#2F7E47] transition-all resize-none"
-                                rows={3}
+                                placeholder="Hvordan var din opplevelse? (Valgfritt)"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium focus:border-custom-green outline-none min-h-[100px] transition-all"
+                              />
+                              <Button
+                                variant="default"
+                                onClick={handleSubmitReview}
+                                disabled={isSubmittingReview}
+                                className="w-full bg-custom-green hover:bg-custom-green/90 text-white rounded-xl h-12 font-bold"
+                                label={
+                                  isSubmittingReview
+                                    ? "Sender..."
+                                    : "Send vurdering"
+                                }
                               />
                             </div>
+                          )}
+                        </div>
+                      )}
 
-                            <button
-                              onClick={handleSubmitReview}
-                              disabled={isSubmittingReview}
-                              className="w-full py-3.5 bg-black text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-50"
-                            >
-                              {isSubmittingReview ? (
-                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              ) : (
-                                <>
-                                  <Send size={18} />
-                                  Send vurdering
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 text-center space-y-4">
-                            <div className="flex flex-col items-center gap-2">
-                              <div className="flex gap-1">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <Star
-                                    key={star}
-                                    size={20}
-                                    fill={
-                                      star <= (existingReview?.rating || rating)
-                                        ? "#F0B100"
-                                        : "none"
+                      {/* Order Management for Provider */}
+                      {order && order.status !== "completed" && isProvider && (
+                        <div className="bg-white border border-slate-100 rounded-3xl p-6 space-y-6 shadow-sm overflow-hidden">
+                          <div className="space-y-4">
+                            <div className="flex flex-col gap-4 border-b border-slate-50 pb-4">
+                              <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                                Ordrehåndtering
+                              </h4>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                  Status:
+                                </span>
+                                <div className="flex-1">
+                                  <select
+                                    title="Velg oppdater status"
+                                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-lg p-2 px-3 shadow-sm outline-none cursor-pointer hover:border-slate-300 transition-all"
+                                    value={order.status}
+                                    onChange={(e) =>
+                                      handleUpdateOrderStatus(e.target.value)
                                     }
-                                    className={
-                                      star <= (existingReview?.rating || rating)
-                                        ? "text-[#F0B100]"
-                                        : "text-slate-300"
-                                    }
-                                  />
-                                ))}
+                                  >
+                                    <option value="accepted">Akseptert</option>
+                                    <option value="in_progress">
+                                      I arbeid
+                                    </option>
+                                    <option value="completed">Fullført</option>
+                                    <option value="cancelled">Avbryt</option>
+                                  </select>
+                                </div>
                               </div>
-                              <p className="text-custom-green font-bold">
-                                Takk for din vurdering!
-                              </p>
                             </div>
-                            {(existingReview?.comment || comment) && (
-                              <p className="text-sm text-slate-600 italic px-4">
-                                "{existingReview?.comment || comment}"
-                              </p>
-                            )}
+
+                            <div className="grid grid-cols-1 gap-3">
+                              {order.status === "accepted" && (
+                                <Button
+                                  variant="default"
+                                  onClick={() =>
+                                    handleUpdateOrderStatus("in_progress")
+                                  }
+                                  className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-14 font-bold shadow-lg shadow-blue-100 transition-all hover:-translate-y-0.5"
+                                  label="Start Arbeid"
+                                />
+                              )}
+                              {order.status === "in_progress" && (
+                                <Button
+                                  variant="default"
+                                  onClick={() =>
+                                    handleUpdateOrderStatus("completed")
+                                  }
+                                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-14 font-bold shadow-lg shadow-emerald-100 transition-all hover:-translate-y-0.5"
+                                  label="Marker som Fullført"
+                                />
+                              )}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    ) : isProvider ? (
-                      <div className="space-y-5">
-                        <div>
-                          <p className="font-extrabold text-slate-900 text-lg mb-1">
-                            Manage Order
-                          </p>
-                          <p className="text-sm font-medium text-slate-500">
-                            Update the job status to notify the client.
+                        </div>
+                      )}
+
+                      {/* Order Management for Client */}
+                      {order && order.status === "in_progress" && isClient && (
+                        <div className="bg-white border border-slate-100 rounded-3xl p-6 text-center shadow-sm">
+                          <p className="text-sm text-slate-600 font-medium">
+                            Tilbyderen jobber nå med oppdraget.
                           </p>
                         </div>
-
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                            Current Status
-                          </label>
-                          <select
-                            title="Velg status"
-                            className="w-full border-slate-200 bg-slate-50 text-slate-800 font-bold rounded-xl shadow-sm focus:ring-[#3F8F6B] focus:border-[#3F8F6B] text-sm py-3.5 px-4 border outline-none cursor-pointer hover:bg-slate-100 transition-colors"
-                            value={order.status}
-                            onChange={(e) =>
-                              handleUpdateOrderStatus(e.target.value)
-                            }
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="accepted">Accepted</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                            <option value="declined">Declined</option>
-                          </select>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-2">
-                        <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <CheckCircle size={28} strokeWidth={2.5} />
-                        </div>
-                        <p className="font-extrabold text-lg text-slate-900 mb-2">
-                          Contract Active
-                        </p>
-                        <p className="text-sm font-medium text-slate-500 leading-relaxed">
-                          The provider is currently managing this order. No
-                          further action is required from you unless notified.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {contract.status === "cancelled" && (
-                  <div className="bg-rose-50 border border-rose-100 text-rose-600 font-bold rounded-2xl p-6 text-center">
-                    This contract was cancelled.
-                  </div>
-                )}
+                      )}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
           </div>

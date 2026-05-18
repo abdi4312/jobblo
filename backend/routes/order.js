@@ -66,6 +66,9 @@ const { authenticate } = require('../middleware/auth');
  *         description: Mangler eller ugyldig autentisering
  */
 router.get('/', authenticate, orderController.getAllOrders);
+router.post('/request', authenticate, orderController.createJobRequest);
+router.get('/requests/my', authenticate, orderController.getMyJobRequests);
+router.patch('/request/:id', authenticate, orderController.updateJobRequestStatus);
 
 /**
  * @swagger

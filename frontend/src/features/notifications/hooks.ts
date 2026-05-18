@@ -13,6 +13,8 @@ import {
 } from "./api";
 import { useEffect } from "react";
 import { initSocket } from "../../socket/socket";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 
 export const useNotifications = (userId: string | undefined) => {
   return useInfiniteQuery({
@@ -27,6 +29,33 @@ export const useNotifications = (userId: string | undefined) => {
   });
 };
 
+export const useOrderApprovalSocket = (userId: string | undefined) => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const socket = initSocket();
+    socket.emit("join", userId);
+
+    const handleOrderApproved = (data: { orderId: string; chatId: string }) => {
+      toast.success("Din forespørsel er godkjent! Du blir nå tatt til chatten.");
+      queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
+      queryClient.invalidateQueries({ queryKey: ["orders", userId] });
+      setTimeout(() => {
+        navigate(`/messages/${data.chatId}`);
+      }, 2000);
+    };
+
+    socket.on("order_approved", handleOrderApproved);
+
+    return () => {
+      socket.off("order_approved", handleOrderApproved);
+    };
+  }, [userId, navigate, queryClient]);
+};
+
 export const useUnreadCount = (userId: string | undefined) => {
   const queryClient = useQueryClient();
 
@@ -34,6 +63,9 @@ export const useUnreadCount = (userId: string | undefined) => {
     if (!userId) return;
 
     const socket = initSocket();
+
+    // Join user room
+    socket.emit("join", userId);
 
     const handleNewNotification = () => {
       queryClient.invalidateQueries({ queryKey: ["unreadCount", userId] });

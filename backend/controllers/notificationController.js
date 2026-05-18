@@ -34,7 +34,9 @@ exports.getAllNotifications = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit))
       .populate("userId", "name email")
-      .populate("senderId", "name lastName avatarUrl");
+      .populate("senderId", "name lastName avatarUrl")
+      .populate("orderId")
+      .populate("requestId");
 
     // Response format with metadata
     res.json({
@@ -72,7 +74,9 @@ exports.markAsRead = async (req, res) => {
       { new: true },
     )
       .populate("userId", "name email")
-      .populate("senderId", "name lastName avatarUrl");
+      .populate("senderId", "name lastName avatarUrl")
+      .populate("orderId")
+      .populate("requestId");
 
     res.json(updatedNotification);
   } catch (error) {
