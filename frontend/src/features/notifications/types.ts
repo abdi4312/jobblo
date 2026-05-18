@@ -13,6 +13,8 @@ export interface AlertType {
   } | null;
   type: string;
   content: string;
+  orderId?: string | { _id: string; status: string };
+  requestId?: string | { _id: string; status: string };
   read: boolean;
   createdAt: string;
   updatedAt: string;

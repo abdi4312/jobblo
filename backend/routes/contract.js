@@ -205,6 +205,7 @@ router.post("/", authenticate, contractController.createContract);
  *         description: Contract not found
  */
 router.patch("/:id/sign", authenticate, contractController.signContract);
+router.patch("/:id", authenticate, contractController.updateContract);
 
 /**
  * @swagger

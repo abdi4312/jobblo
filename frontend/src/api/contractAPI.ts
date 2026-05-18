@@ -65,14 +65,16 @@ export type Contract = {
   providerSignature?: string;
   customerIp?: string;
   providerIp?: string;
-  status: 'draft' | 'pending_signatures' | 'signed' | 'cancelled';
+  status: "draft" | "pending_signatures" | "signed" | "cancelled";
+  useSafePay?: boolean;
+  editCount?: number;
   pdfUrl?: string;
   createdAt: string;
   updatedAt: string;
   // Legacy field for backwards compatibility
   orderId?: string | ContractOrder;
   contract?: string; // Legacy field
-}
+};
 
 export type CreateContractPayload = {
   serviceId: string;
@@ -80,33 +82,61 @@ export type CreateContractPayload = {
   price: number;
   scheduledDate?: string;
   address?: string;
-}
+};
 
 /**
  * Get contract by ID
  */
-export const getContractById = async (serviceId: string): Promise<Contract | null> => {
+export const getContractById = async (
+  serviceId: string,
+): Promise<Contract | null> => {
   const response = await mainLink.get(`/api/contracts/${serviceId}`);
-    const contractsArray = response.data.contracts;
-    if (Array.isArray(contractsArray) && contractsArray.length > 0) {
-      return contractsArray[0];
-    }
-    return null;
+  const contractsArray = response.data.contracts;
+  if (Array.isArray(contractsArray) && contractsArray.length > 0) {
+    return contractsArray[0];
+  }
+  return null;
 };
 
 /**
  * Create a new contract for an order
  */
-export const createContract = async (payload: CreateContractPayload): Promise<Contract> => {
+export const createContract = async (
+  payload: CreateContractPayload,
+): Promise<Contract> => {
   const response = await mainLink.post("/api/contracts", payload);
+  return response.data.contract;
+};
+
+/**
+ * Update a contract
+ */
+export const updateContract = async (
+  contractId: string,
+  payload: {
+    content?: string;
+    price?: number;
+    scheduledDate?: string;
+    address?: string;
+  },
+): Promise<Contract> => {
+  const response = await mainLink.patch(
+    `/api/contracts/${contractId}`,
+    payload,
+  );
   return response.data.contract;
 };
 
 /**
  * Sign a contract (customer or provider)
  */
-export const signContract = async (contractId: string): Promise<Contract> => {
-  const response = await mainLink.patch(`/api/contracts/${contractId}/sign`);
+export const signContract = async (
+  contractId: string,
+  useSafePay?: boolean,
+): Promise<Contract> => {
+  const response = await mainLink.patch(`/api/contracts/${contractId}/sign`, {
+    useSafePay,
+  });
   return response.data.contract;
 };
 

@@ -1,7 +1,7 @@
 import React from "react";
 import { format } from "date-fns/format";
 import { formatDistanceToNow, isPast } from "date-fns";
-import { Clock, Briefcase, PenTool, ChevronRight } from "lucide-react";
+import { Clock, Briefcase, PenTool, ChevronRight, Shield, History } from "lucide-react";
 import type { Contract } from "../../../api/contractAPI";
 import type { Order } from "../../../api/orderAPI";
 import { Button } from "../Ui/button/Button";
@@ -131,6 +131,16 @@ export const ContractCard: React.FC<ContractCardProps> = ({
                 "Contract Agreement"}
             </h3>
             <div className="flex items-center gap-3">
+              {contract.useSafePay && (
+                <div className="flex items-center gap-1 text-blue-600 text-xs font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                   <Shield size={12} /> SafePay
+                </div>
+              )}
+              {(contract.editCount || 0) > 0 && (
+                <div className="flex items-center gap-1 text-amber-600 text-xs font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
+                   <History size={12} /> {contract.editCount}/3
+                </div>
+              )}
               <span className="font-extrabold text-slate-900 bg-slate-50 px-3 py-1 rounded-md border border-slate-100 text-sm">
                 {contract.price} NOK
               </span>
@@ -140,7 +150,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
           <div className="flex flex-wrap items-center gap-y-3 gap-x-4 text-sm mb-4">
             <div className="flex items-center gap-1.5 text-slate-600">
               <span className="font-semibold text-slate-400 uppercase text-[10px] tracking-wider">
-                {isClient ? "Provider" : "Client"}:
+                {isClient ? "Tilbyder" : "Kunde"}:
               </span>
               <span className="font-medium">
                 {isClient
@@ -155,7 +165,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
               <div className="flex items-center gap-1.5 text-slate-600">
                 <Clock size={14} className="text-[#3F8F6B]" />
                 <span className="font-medium">
-                  {format(new Date(contract.scheduledDate), "MMM dd, yyyy - HH:mm")}
+                  {format(new Date(contract.scheduledDate), "MMM dd, yyyy")}
                 </span>
               </div>
             )}
@@ -192,7 +202,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
               isProvider && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    Oppdater Status:
+                    Status:
                   </span>
                   <select
                     title="Velg oppdater status"

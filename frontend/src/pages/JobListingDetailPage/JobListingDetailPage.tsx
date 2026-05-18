@@ -5,6 +5,8 @@ import {
   useJobDetailQuery,
   useSendMessageMutation,
   useStripeMutation,
+  useCreateJobRequestMutation,
+  useMyJobRequestsQuery,
 } from "../../features/jobDetail/hook.ts";
 
 import JobButton from "../../components/job/JobButton.tsx";
@@ -29,9 +31,16 @@ const JobListingDetailPage = () => {
 
   const sendMessageMutation = useSendMessageMutation();
   const stripeMutation = useStripeMutation();
+  const createJobRequestMutation = useCreateJobRequestMutation();
 
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const currentUser = useUserStore((state) => state.user);
+
+  const { data: jobRequests } = useMyJobRequestsQuery(isAuth);
+  const hasRequested = jobRequests?.some(
+    (req) =>
+      req.serviceId?._id === id && req.customerId?._id === currentUser?._id,
+  );
 
   const {
     isFavorited,
@@ -44,55 +53,34 @@ const JobListingDetailPage = () => {
   const [lng, lat] = job?.location?.coordinates || [0, 0];
   const hasCoordinates = job?.location?.coordinates && (lng !== 0 || lat !== 0);
 
-  const handleSendMessage = async (providerId: string) => {
+  const handleCreateOrder = async () => {
     if (!isAuth) {
-      toast.error("Vennligst logg inn for å sende melding");
+      toast.error("Vennligst logg inn for å sende forespørsel");
       navigate("/login");
       return;
     }
     if (!job?._id) return;
 
-    sendMessageMutation.mutate(
-      { providerId, serviceId: job._id },
+    createJobRequestMutation.mutate(
+      { serviceId: job._id },
       {
-        onSuccess: (data) => {
-          navigate(`/messages/${data._id}`);
+        onSuccess: () => {
+          toast.success("Forespørsel sendt! Venter på godkjenning.");
+          // Redirection removed as per user request
         },
-        onError: async (err: unknown) => {
-          const error = err as {
-            response?: {
-              status?: number;
-              data?: {
-                paymentRequired?: boolean;
-                amount?: number;
-                message?: string;
-              };
-            };
-          };
-          const status = error.response?.status;
-          const data = error.response?.data;
-
-          if (status === 402 && data?.paymentRequired) {
-            try {
-              const paymentSession = await stripeMutation.mutateAsync({
-                amount: data.amount || 0,
-                providerId,
-                serviceId: job._id,
-              });
-              window.location.href = paymentSession.url;
-            } catch {
-              toast.error("Kunne ikke starte betaling");
-            }
-            return;
-          }
-          toast.error(data?.message || "Kunne ikke opprette samtale");
+        onError: (err: any) => {
+          toast.error(
+            err.response?.data?.error || "Kunne ikke sende forespørsel",
+          );
         },
       },
     );
   };
 
   const isMessageLoading =
-    sendMessageMutation.isPending || stripeMutation.isPending;
+    sendMessageMutation.isPending ||
+    stripeMutation.isPending ||
+    createJobRequestMutation.isPending;
 
   const handleShare = () => {
     setIsShareModalOpen(true);
@@ -226,13 +214,12 @@ const JobListingDetailPage = () => {
             {/* Contact Button */}
             {job._id && (
               <JobButton
-                handleSendMessage={() =>
-                  job.userId?._id && handleSendMessage(job.userId._id)
-                }
+                handleSendMessage={handleCreateOrder}
                 id={job._id}
                 job={job}
                 isOwnJob={isOwnJob}
                 isMsgLoading={isMessageLoading}
+                hasRequested={hasRequested}
               />
             )}
 

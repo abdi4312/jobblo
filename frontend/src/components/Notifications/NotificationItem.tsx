@@ -11,11 +11,14 @@ import {
   AlertTriangle,
   RefreshCcw,
   Bell,
+  Shield,
+  ShieldOff,
 } from "lucide-react";
 import type { AlertType } from "../../features/notifications/types";
 import { dateFormatter } from "../../utils/dateFormatter";
 import { timeFormatter } from "../../utils/timeFormatter";
 import { Button } from "../../components/Ui/button/Button";
+import { useUpdateJobRequestStatusMutation } from "../../features/jobDetail/hook";
 
 interface NotificationItemProps {
   alert: AlertType;
@@ -105,6 +108,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
   onDelete,
   onNavigate,
 }) => {
+  const updateStatusMutation = useUpdateJobRequestStatusMutation();
+
   const config =
     notificationConfig[alert.type as keyof typeof notificationConfig] ||
     notificationConfig.general;
@@ -119,6 +124,34 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
   };
 
   const isClickable = alert.type === "follow" || alert.type === "favorite";
+  const isRequestNotification = alert.type === "order" && alert.requestId;
+
+  // Check if request is already handled
+  const requestStatus =
+    typeof alert.requestId === "object" && alert.requestId !== null
+      ? (alert.requestId as any).status
+      : "pending";
+
+  const isHandled = requestStatus !== "pending";
+
+  const handleStatusUpdate = async (status: string) => {
+    if (!alert.requestId) return;
+    const requestId =
+      typeof alert.requestId === "string"
+        ? alert.requestId
+        : alert.requestId._id;
+
+    try {
+      await updateStatusMutation.mutateAsync({
+        requestId,
+        status,
+      });
+      toast.success(status === "accepted" ? "Godkjent!" : "Avvist");
+      onMarkAsRead(alert._id);
+    } catch (error) {
+      toast.error("Kunne ikke oppdatere status");
+    }
+  };
 
   return (
     <div
@@ -195,7 +228,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
           </div>
 
           {/* Desktop Actions & Button */}
-          <div className="flex flex-col justify-between items-end min-w-30">
+          <div className="flex flex-col justify-between items-end min-w-30 gap-4">
             <div className="hidden sm:flex gap-4 items-center">
               {alert.read ? (
                 <CheckCheck size={20} className="text-green-600" />
@@ -219,17 +252,60 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
               />
             </div>
 
-            <Button
-              variant="default"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isClickable && alert.senderId?._id) {
-                  onNavigate(`/profile/${alert.senderId._id}`);
-                }
-              }}
-            >
-              {isClickable ? "Se profil" : "Se søknad"}
-            </Button>
+            {isRequestNotification ? (
+              <div className="flex gap-2">
+                {isHandled ? (
+                  <span
+                    className={`text-[14px] font-bold px-4 py-1.5 rounded-full ${
+                      requestStatus === "accepted"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {requestStatus === "accepted" ? "Godkjent" : "Avvist"}
+                  </span>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-red-500 text-red-500 hover:bg-red-50"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStatusUpdate("declined");
+                      }}
+                      disabled={updateStatusMutation.isPending}
+                    >
+                      Avvis
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="bg-custom-green hover:bg-custom-green/90 text-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStatusUpdate("accepted");
+                      }}
+                      disabled={updateStatusMutation.isPending}
+                    >
+                      Godkjenn
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Button
+                variant="default"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isClickable && alert.senderId?._id) {
+                    onNavigate(`/profile/${alert.senderId._id}`);
+                  }
+                }}
+              >
+                {isClickable ? "Se profil" : "Se varsel"}
+              </Button>
+            )}
           </div>
         </div>
       </div>

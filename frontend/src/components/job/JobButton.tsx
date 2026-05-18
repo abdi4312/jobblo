@@ -1,68 +1,87 @@
-import React, { useState } from 'react';
-import { Button } from '../Ui/button/Button';
-import { Bookmark, MessageCircle } from 'lucide-react';
+import React, { useState } from "react";
+import { Button } from "../Ui/button/Button";
+import { Bookmark, MessageCircle } from "lucide-react";
 import { TailSpin } from "react-loader-spinner";
-import { useUserStore } from '../../stores/userStore';
-import AddToListModal from '../Explore/jobs/AddToListModal';
-import { useNavigate } from 'react-router-dom';
-import { useFavoriteLists } from '../../features/favoriteLists/hooks';
-import type { Jobs } from '../../types/Jobs';
+import { useUserStore } from "../../stores/userStore";
+import AddToListModal from "../Explore/jobs/AddToListModal";
+import { useNavigate } from "react-router-dom";
+import { useFavoriteLists } from "../../features/favoriteLists/hooks";
+import type { Jobs } from "../../types/Jobs";
 
 interface JobButtonProps {
-    handleSendMessage: () => void;
-    handleFavoriteClick?: () => void; // Optional now
-    isFavorited?: boolean; // Optional now
-    isOwnJob: boolean;
-    isMsgLoading: boolean; // Button action loading (spinner)
-    id: string;
-    job?: Jobs; // Added job prop to pass to modal
+  handleSendMessage: () => void;
+  handleFavoriteClick?: () => void; // Optional now
+  isFavorited?: boolean; // Optional now
+  isOwnJob: boolean;
+  isMsgLoading: boolean; // Button action loading (spinner)
+  id: string;
+  job?: Jobs; // Added job prop to pass to modal
+  hasRequested?: boolean;
 }
 
 const JobButton: React.FC<JobButtonProps> = ({
-    id,
-    handleSendMessage,
-    isOwnJob,
-    isMsgLoading,
-    job
-}
-) => {
-    const isAuth = useUserStore((state) => state.isAuthenticated);
-    const navigate = useNavigate();
-    const { data: lists = [], isLoading } = useFavoriteLists();
-    const [isModalOpen, setIsModalOpen] = useState(false);
+  id,
+  handleSendMessage,
+  isOwnJob,
+  isMsgLoading,
+  job,
+  hasRequested,
+}) => {
+  const isAuth = useUserStore((state) => state.isAuthenticated);
+  const navigate = useNavigate();
+  const { data: lists = [], isLoading } = useFavoriteLists();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // Check if job is in ANY of the user's lists
-    const isInAnyList = lists.some((list) =>
-        list.services?.some((s) => (typeof s === 'string' ? s === id : s._id === id))
-    );
+  // Check if job is in ANY of the user's lists
+  const isInAnyList = lists.some((list) =>
+    list.services?.some((s) =>
+      typeof s === "string" ? s === id : s._id === id,
+    ),
+  );
 
-    const handleHeartClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (!isAuth) {
-            navigate("/login");
-            return;
-        }
-        setIsModalOpen(true);
-    };
+  const handleHeartClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuth) {
+      navigate("/login");
+      return;
+    }
+    setIsModalOpen(true);
+  };
 
-    return (
-        <div className="flex flex-col gap-3">
-            <div className="flex gap-3">
-                {/* Søk / Apply Button */}
-                <Button
-                    onClick={handleSendMessage}
-                    disabled={isOwnJob || isMsgLoading}
-                    label={isMsgLoading ? '' : (isOwnJob ? 'Din annonse' : 'Søk på oppdraget')}
-                    icon={isMsgLoading ? <TailSpin height={18} width={18} color="#ffffff" /> : <MessageCircle size={18} />}
-                    className={`flex-1 h-12 text-[14px]! rounded-xl font-semibold! transition-all! whitespace-nowrap
-                        ${isOwnJob
-                            ? 'bg-gray-100! text-gray-400! cursor-not-allowed!'
-                            : 'bg-custom-green! text-white! hover:bg-[#266b3c]!'} 
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex gap-3">
+        {/* Søk / Apply Button */}
+        <Button
+          onClick={handleSendMessage}
+          disabled={isOwnJob || isMsgLoading || hasRequested}
+          label={
+            isMsgLoading
+              ? ""
+              : isOwnJob
+                ? "Din annonse"
+                : hasRequested
+                  ? "Forespørsel sendt"
+                  : "Order Now"
+          }
+          icon={
+            isMsgLoading ? (
+              <TailSpin height={18} width={18} color="#ffffff" />
+            ) : (
+              <MessageCircle size={18} />
+            )
+          }
+          className={`flex-1 h-12 text-[14px]! rounded-xl font-semibold! transition-all! whitespace-nowrap
+                        ${
+                          isOwnJob || hasRequested
+                            ? "bg-gray-100! text-gray-400! cursor-not-allowed!"
+                            : "bg-custom-green! text-white! hover:bg-[#266b3c]!"
+                        } 
                     `}
-                />
+        />
 
-                {/* Lagre / Save Button */}
-                {/* <Button
+        {/* Lagre / Save Button */}
+        {/* <Button
                     onClick={handleHeartClick}
                     disabled={isLoading}
                     label={isInAnyList ? 'Lagret' : 'Lagre'}
@@ -73,17 +92,17 @@ const JobButton: React.FC<JobButtonProps> = ({
                             : 'bg-transparent! text-custom-green! border-custom-green! hover:bg-custom-green! hover:text-white!'}
                     `}
                 /> */}
-            </div>
+      </div>
 
-            {job && (
-                <AddToListModal
-                    job={job}
-                    isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
-                />
-            )}
-        </div>
-    );
+      {job && (
+        <AddToListModal
+          job={job}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
+      )}
+    </div>
+  );
 };
 
 export default JobButton;
