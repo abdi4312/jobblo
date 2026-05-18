@@ -1,4 +1,5 @@
 const Service = require("../models/Service");
+const JobRequest = require("../models/JobRequest");
 const mongoose = require("mongoose");
 
 // ------------------- Get All Services -------------------
@@ -89,7 +90,22 @@ exports.getServiceById = async (req, res) => {
     ).populate("userId", "name avatarUrl averageRating verified");
 
     if (!service) return res.status(404).json({ error: "Service not found" });
-    res.json(service);
+
+    // Fetch applicant count if maxApplicants is set
+    let applicantCount = 0;
+    if (service.maxApplicants > 0) {
+      applicantCount = await JobRequest.countDocuments({
+        serviceId: service._id,
+        status: { $in: ["pending", "accepted"] },
+      });
+    }
+
+    const serviceData = service.toObject();
+    serviceData.currentApplicants = applicantCount;
+    serviceData.isLimitReached =
+      service.maxApplicants > 0 && applicantCount >= service.maxApplicants;
+
+    res.json(serviceData);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -134,8 +150,22 @@ exports.getServiceDetails = async (req, res) => {
     // Similar services
     const similarServices = await findSimilarServices(service);
 
+    // Fetch applicant count if maxApplicants is set
+    let applicantCount = 0;
+    if (service.maxApplicants > 0) {
+      applicantCount = await JobRequest.countDocuments({
+        serviceId: service._id,
+        status: { $in: ["pending", "accepted"] },
+      });
+    }
+
+    const serviceData = service.toObject();
+    serviceData.currentApplicants = applicantCount;
+    serviceData.isLimitReached =
+      service.maxApplicants > 0 && applicantCount >= service.maxApplicants;
+
     res.json({
-      service,
+      service: serviceData,
       provider: service.userId,
       stats,
       similarServices,
@@ -399,7 +429,21 @@ exports.updateLocation = async (req, res) => {
 
     if (!service) return res.status(404).json({ error: "Service not found" });
 
-    res.json(service);
+    // Fetch applicant count if maxApplicants is set
+    let applicantCount = 0;
+    if (service.maxApplicants > 0) {
+      applicantCount = await JobRequest.countDocuments({
+        serviceId: service._id,
+        status: { $in: ["pending", "accepted"] },
+      });
+    }
+
+    const serviceData = service.toObject();
+    serviceData.currentApplicants = applicantCount;
+    serviceData.isLimitReached =
+      service.maxApplicants > 0 && applicantCount >= service.maxApplicants;
+
+    res.json(serviceData);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

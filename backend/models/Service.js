@@ -80,7 +80,7 @@ const serviceSchema = new mongoose.Schema(
     },
 
     views: { type: Number, default: 0 },
-
+    maxApplicants: { type: Number, default: 0 }, // 0 means unlimited
     timeEntries: [timeEntrySchema],
   },
   { timestamps: true },

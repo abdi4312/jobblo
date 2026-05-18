@@ -46,6 +46,22 @@ exports.createJobRequest = async (req, res) => {
     if (providerId.toString() === customerId)
       return res.status(400).json({ error: "Cannot request your own service" });
 
+    // --- CHECK APPLICATION LIMIT ---
+    if (service.maxApplicants > 0) {
+      const applicantCount = await JobRequest.countDocuments({
+        serviceId,
+        status: { $in: ["pending", "accepted"] }
+      });
+
+      if (applicantCount >= service.maxApplicants) {
+        return res.status(400).json({ 
+          error: "Søknadsfristen er nådd. Dette oppdraget tar ikke imot flere søknader.",
+          limitReached: true 
+        });
+      }
+    }
+    // -------------------------------
+
     // Check if a request already exists
     const existingRequest = await JobRequest.findOne({
       serviceId,
