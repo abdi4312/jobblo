@@ -63,12 +63,14 @@ export interface Contract {
   providerSignature?: string;
   customerIp?: string;
   providerIp?: string;
-  status: 'draft' | 'pending_signatures' | 'signed' | 'cancelled';
+  status: "draft" | "pending_signatures" | "signed" | "cancelled";
+  useSafePay?: boolean;
+  editCount?: number;
   pdfUrl?: string;
   createdAt: string;
   updatedAt: string;
   orderId?: string | ContractOrder;
-  contract?: string; 
+  contract?: string;
 }
 
 export type CreateContractPayload = {

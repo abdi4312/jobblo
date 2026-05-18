@@ -46,6 +46,18 @@ const notificationSchema = new mongoose.Schema(
       default: null,
     },
 
+    orderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+      default: null,
+    },
+
+    requestId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "JobRequest",
+      default: null,
+    },
+
     readBy: [
       {
         type: mongoose.Schema.Types.ObjectId,

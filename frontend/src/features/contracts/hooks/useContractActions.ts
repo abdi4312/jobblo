@@ -9,7 +9,13 @@ export const useContractActions = (serviceId: string) => {
 
   // 1. Sign Contract Mutation
   const signMutation = useMutation({
-    mutationFn: (contractId: string) => signContract(contractId),
+    mutationFn: ({
+      contractId,
+      useSafePay,
+    }: {
+      contractId: string;
+      useSafePay?: boolean;
+    }) => signContract(contractId, useSafePay),
     onSuccess: (updatedContract) => {
       // TanStack Query ka cache update
       queryClient.setQueryData(["contract", serviceId], updatedContract);

@@ -3,6 +3,7 @@ const Notification = require("../models/Notification");
 const Order = require("../models/Order");
 const Contract = require("../models/Contract");
 const Service = require("../models/Service");
+const Payment = require("../models/Payment");
 const mongoose = require("mongoose");
 
 // Helper to validate ObjectId
@@ -160,6 +161,7 @@ exports.createContract = async (req, res) => {
 exports.signContract = async (req, res) => {
   try {
     const { id } = req.params;
+    const { useSafePay } = req.body; // 👈 Get preference from sign request
     const userId = req.userId;
 
     if (!isValidId(id)) {
@@ -169,6 +171,11 @@ exports.signContract = async (req, res) => {
     const contract = await Contract.findById(id);
     if (!contract) {
       return res.status(404).json({ error: "Contract not found" });
+    }
+
+    // Update SafePay preference if provided (only if not already signed)
+    if (useSafePay !== undefined) {
+      contract.useSafePay = useSafePay === true;
     }
 
     const isClient = contract.clientId.toString() === userId;
@@ -197,6 +204,63 @@ exports.signContract = async (req, res) => {
     // ✅ STATUS FLOW
     if (contract.signedByCustomer && contract.signedByProvider) {
       contract.status = "signed";
+
+      const service = await Service.findById(contract.serviceId);
+      if (!service) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+
+      // 🚀 CREATE ORDER NOW
+      const order = await Order.create({
+        serviceId: contract.serviceId,
+        customerId: contract.clientId,
+        providerId: contract.providerId,
+        price: contract.price,
+        contractId: contract._id,
+        scheduledDate: contract.scheduledDate,
+        status: "accepted", // Since both signed the contract
+        location: { address: contract.address || service?.location?.address },
+      });
+
+      // 🚀 START SAFEPAY (Payment entry)
+      if (contract.useSafePay) {
+        await Payment.create({
+          orderId: order._id,
+          amount: contract.price,
+          status: "pending",
+        });
+      }
+
+      // Detailed Notifications
+      await Notification.insertMany([
+        {
+          userId: contract.clientId,
+          type: "order",
+          referenceId: order._id,
+          content: `Kontrakten for ${service.title} er nå fullstendig signert aur ordren create ho gayi hai!`,
+        },
+        {
+          userId: contract.providerId,
+          type: "order",
+          referenceId: order._id,
+          content: `Kontrakten for ${service.title} er nå fullstendig signert aur ordren create ho gayi hai!`,
+        },
+      ]);
+
+      // Notify both parties via Socket
+      const io = req.app.get("io");
+      if (io) {
+        io.to(`user_${contract.clientId}`).emit("order_created", order);
+        io.to(`user_${contract.providerId}`).emit("order_created", order);
+        io.to(`user_${contract.clientId}`).emit("new_notification", {
+          content: `Kontrakten for ${service.title} er nå fullstendig signert aur ordren create ho gayi hai!`,
+          type: "order",
+        });
+        io.to(`user_${contract.providerId}`).emit("new_notification", {
+          content: `Kontrakten for ${service.title} er nå fullstendig signert aur ordren create ho gayi hai!`,
+          type: "order",
+        });
+      }
     } else {
       contract.status = "pending_signatures";
     }
@@ -232,54 +296,6 @@ exports.signContract = async (req, res) => {
       }
     }
 
-    if (contract.status === "signed") {
-      const order = await Order.findOne({ contractId: contract._id });
-      if (order) {
-        return res.status(400).json({ error: "Order already exists" });
-      }
-
-      const service = await Service.findById(contract.serviceId);
-      if (!service) {
-        return res.status(404).json({ error: "Service not found" });
-      }
-
-      const orderCreate = await Order.create({
-        serviceId: contract.serviceId,
-        customerId: contract.clientId,
-        providerId: contract.providerId,
-        contractId: contract._id,
-        scheduledDate: contract.scheduledDate,
-        price: contract.price,
-        status: "pending",
-        location: { address: contract.address || service?.location?.address },
-      });
-
-      await Notification.insertMany([
-        {
-          userId: contract.clientId,
-          type: "order",
-          referenceId: orderCreate._id,
-          content: `Your order for ${service.title} has been created.`,
-        },
-        {
-          userId: contract.providerId,
-          type: "order",
-          referenceId: orderCreate._id,
-          content: `You received a new order for ${service.title}.`,
-        },
-      ]);
-
-      // Emit realtime notifications for full signature
-      io.to(`user_${contract.clientId}`).emit("new_notification", {
-        content: `Kontrakten for ${service.title} er nå fullstendig signert og ordren er opprettet!`,
-        type: "order",
-      });
-      io.to(`user_${contract.providerId}`).emit("new_notification", {
-        content: `Kontrakten for ${service.title} er nå fullstendig signert og ordren er opprettet!`,
-        type: "order",
-      });
-    }
-
     await contract.save();
 
     // --- SOCKET EMIT ---
@@ -296,6 +312,96 @@ exports.signContract = async (req, res) => {
     });
   } catch (err) {
     console.error("SIGN CONTRACT ERROR:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/**
+ * PATCH /api/contracts/:id
+ * Update contract content (max 3 times)
+ */
+exports.updateContract = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content, price, scheduledDate, address } = req.body;
+    const userId = req.userId;
+
+    if (!isValidId(id)) {
+      return res.status(400).json({ error: "Invalid contract ID format" });
+    }
+
+    const contract = await Contract.findById(id);
+    if (!contract) {
+      return res.status(404).json({ error: "Contract not found" });
+    }
+
+    // Authorization
+    const isClient = contract.clientId.toString() === userId;
+    const isProvider = contract.providerId.toString() === userId;
+
+    if (!isClient && !isProvider) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    // Check edit count
+    if (contract.editCount >= 3) {
+      return res.status(400).json({
+        error: "Kontrakten kan ikke endres mer enn 3 ganger.",
+      });
+    }
+
+    // Cannot edit if already signed by both
+    if (contract.status === "signed") {
+      return res.status(400).json({
+        error: "Signert kontrakt kan ikke endres.",
+      });
+    }
+
+    // Save previous version
+    contract.previousVersions.push({
+      content: contract.content,
+      timestamp: new Date(),
+    });
+
+    // Update fields
+    if (content) contract.content = content;
+    if (price) contract.price = price;
+    if (scheduledDate) contract.scheduledDate = scheduledDate;
+    if (address) contract.address = address;
+
+    // Reset signatures and increment edit count
+    contract.signedByCustomer = false;
+    contract.signedByProvider = false;
+    contract.signedByCustomerAt = undefined;
+    contract.signedByProviderAt = undefined;
+    contract.editCount += 1;
+    contract.status = "pending_signatures";
+
+    await contract.save();
+
+    // Notify other party
+    const recipientId = isClient ? contract.providerId : contract.clientId;
+    const io = req.app.get("io");
+    if (io) {
+      const notification = await Notification.create({
+        userId: recipientId,
+        type: "alert",
+        referenceId: contract._id,
+        content: `Kontrakten har blitt endret av motparten. Vennligst se gjennom og signer på nytt.`,
+      });
+      io.to(`user_${recipientId}`).emit("new_notification", notification);
+      io.to(`service_${contract.serviceId}`).emit("contract_updated", {
+        contract,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Contract updated successfully",
+      contract,
+    });
+  } catch (err) {
+    console.error("UPDATE CONTRACT ERROR:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 };
