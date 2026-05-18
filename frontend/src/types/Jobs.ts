@@ -22,6 +22,9 @@ export type Jobs = {
   favCount?: number;
   status: "open" | "closed";
   tags: string[];
+  maxApplicants?: number;
+  currentApplicants?: number;
+  isLimitReached?: boolean;
   equipment: "utstyrfri" | "delvis utstyr" | "trengs utstyr";
   createdAt: string;
   updatedAt: string;

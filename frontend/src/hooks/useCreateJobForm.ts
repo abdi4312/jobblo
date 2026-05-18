@@ -85,6 +85,10 @@ export const useCreateJobForm = (
     initialData?.durationUnit || "hours",
   );
 
+  const [maxApplicants, setMaxApplicants] = useState<string | number>(
+    initialData?.maxApplicants || 0,
+  );
+
   const {
     price,
     setPrice,
@@ -236,6 +240,7 @@ export const useCreateJobForm = (
         toDate: data.toDate || "",
       });
       setUrgent(data.urgent || false);
+      setMaxApplicants(data.maxApplicants || 0);
       setEquipment(data.equipment || "");
       setDurationUnit(data.durationUnit || "hours");
       setHourlyRate(data.hourlyRate || "");
@@ -249,6 +254,7 @@ export const useCreateJobForm = (
     const dataToSave = {
       ...values,
       urgent,
+      maxApplicants,
       equipment,
       fromDate,
       toDate,
@@ -374,6 +380,7 @@ export const useCreateJobForm = (
       formData.append("price", values.price.toString());
       if (hourlyRate) formData.append("hourlyRate", hourlyRate.toString());
       formData.append("urgent", urgent.toString());
+      formData.append("maxApplicants", maxApplicants.toString());
       formData.append("equipment", equipment);
       formData.append("paymentType", paymentType);
       formData.append("phone", values.phone);
@@ -519,6 +526,8 @@ export const useCreateJobForm = (
     setPaymentType,
     urgent,
     setUrgent,
+    maxApplicants,
+    setMaxApplicants,
     phone: values.phone,
     setPhone,
     email: values.email,

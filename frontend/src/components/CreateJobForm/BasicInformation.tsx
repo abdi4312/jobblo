@@ -28,6 +28,8 @@ interface BasicInformationProps {
   setDurationValue: (val: string) => void;
   setDurationUnit: (val: string) => void;
   setHourlyRate: (val: string) => void;
+  maxApplicants: string | number;
+  setMaxApplicants: (val: string | number) => void;
   errors?: any;
 }
 
@@ -45,6 +47,8 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
   setDurationValue,
   setDurationUnit,
   setHourlyRate,
+  maxApplicants,
+  setMaxApplicants,
   errors,
 }) => {
   const { data: categoryData = [], isLoading, error } = useCategories();
@@ -439,6 +443,42 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
             >
               <Plus size={18} />
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Max Applicants Section */}
+      <div className="box-card-custom rounded-[14px] p-4 md:p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-[#2D7A4D]/10 rounded-full flex items-center justify-center text-[#2D7A4D]">
+            <Plus size={22} />
+          </div>
+          <div>
+            <h2 className="font-bold text-lg md:text-xl text-custom-black">
+              Maks antall søkere
+            </h2>
+            <p className="text-gray-500 text-xs md:text-sm">
+              Hvor mange søknader ønsker du å motta før oppdraget skjules? (0
+              for ubegrenset)
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <input
+            type="number"
+            min="0"
+            value={maxApplicants}
+            onChange={(e) => setMaxApplicants(e.target.value)}
+            placeholder="F.eks. 5"
+            className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white outline-none focus:border-[#2D7A4D] transition-all text-sm font-bold"
+          />
+          <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex gap-3">
+            <Info size={18} className="text-blue-500 shrink-0" />
+            <p className="text-[11px] md:text-xs text-blue-700 leading-relaxed">
+              Når grensen er nådd, vil "Søk nå"-knappen bli deaktivert for andre
+              brukere. Dette hjelper deg med å unngå for mange henvendelser.
+            </p>
           </div>
         </div>
       </div>
