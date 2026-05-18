@@ -68,6 +68,8 @@ export default function CreateJobForm({
     setPaymentType,
     urgent,
     setUrgent,
+    maxApplicants,
+    setMaxApplicants,
     fromDate,
     setFromDate,
     toDate,
@@ -228,6 +230,8 @@ export default function CreateJobForm({
                 setDurationValue={setDurationValue}
                 setDurationUnit={setDurationUnit}
                 setHourlyRate={setHourlyRate}
+                maxApplicants={maxApplicants}
+                setMaxApplicants={setMaxApplicants}
                 errors={errors}
               />
             </div>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button } from "../Ui/button/Button";
-import { Bookmark, MessageCircle } from "lucide-react";
+import { Bookmark, MessageCircle, AlertCircle } from "lucide-react";
 import { TailSpin } from "react-loader-spinner";
 import { useUserStore } from "../../stores/userStore";
 import AddToListModal from "../Explore/jobs/AddToListModal";
@@ -48,13 +48,24 @@ const JobButton: React.FC<JobButtonProps> = ({
     setIsModalOpen(true);
   };
 
+  const isLimitReached = job?.isLimitReached;
+
   return (
     <div className="flex flex-col gap-3">
+      {isLimitReached && !isOwnJob && !hasRequested && (
+        <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-center gap-2 text-red-600 text-xs font-bold">
+          <AlertCircle size={14} />
+          <span>
+            Søknadsfristen er nådd. Dette oppdraget tar ikke imot flere
+            søknader.
+          </span>
+        </div>
+      )}
       <div className="flex gap-3">
         {/* Søk / Apply Button */}
         <Button
           onClick={handleSendMessage}
-          disabled={isOwnJob || isMsgLoading || hasRequested}
+          disabled={isOwnJob || isMsgLoading || hasRequested || isLimitReached}
           label={
             isMsgLoading
               ? ""
@@ -62,7 +73,9 @@ const JobButton: React.FC<JobButtonProps> = ({
                 ? "Din annonse"
                 : hasRequested
                   ? "Forespørsel sendt"
-                  : "Order Now"
+                  : isLimitReached
+                    ? "Fulltegnet"
+                    : "Order Now"
           }
           icon={
             isMsgLoading ? (
