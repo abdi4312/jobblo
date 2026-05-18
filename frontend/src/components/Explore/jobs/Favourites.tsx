@@ -1,15 +1,39 @@
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { FAVOURITES_DATA } from "../../../data/favourites";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { useFeaturedFavourites } from "../../../features/explore/hooks";
+import { useNavigate } from "react-router-dom";
 
 import "swiper/css";
 
 export function Favourites() {
+  const navigate = useNavigate();
+  const { data: featuredData, isLoading } = useFeaturedFavourites();
+
   const columns = [];
-  for (let i = 0; i < FAVOURITES_DATA.length; i += 2) {
-    columns.push(FAVOURITES_DATA.slice(i, i + 2));
+  if (featuredData) {
+    for (let i = 0; i < featuredData.length; i += 2) {
+      columns.push(featuredData.slice(i, i + 2));
+    }
   }
+
+  const handleItemClick = (item: any) => {
+    if (item.type === "job") {
+      navigate(`/job-listing/${item.originalId}`);
+    } else if (item.type === "provider" || item.type === "business") {
+      navigate(`/profile/${item.originalId}`);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="w-full py-16 flex justify-center items-center">
+        <Loader2 className="animate-spin text-custom-green" size={40} />
+      </div>
+    );
+  }
+
+  if (!featuredData || featuredData.length === 0) return null;
 
   return (
     <div className="w-full py-16 overflow-hidden">
@@ -79,11 +103,12 @@ export function Favourites() {
                 {col.map((item) => (
                   <div
                     key={item.id}
+                    onClick={() => handleItemClick(item)}
                     className="relative aspect-[3.5/4] md:aspect-[4/4.5] rounded-[20px] overflow-hidden group cursor-pointer bg-gray-200"
                   >
                     {/* Image */}
                     <img
-                      src={`${item.image}?auto=format&fit=crop&w=500&q=80`}
+                      src={item.image}
                       alt={item.title}
                       loading="lazy"
                       decoding="async"

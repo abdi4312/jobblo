@@ -79,6 +79,8 @@ const serviceSchema = new mongoose.Schema(
       default: "utstyrfri",
     },
 
+    views: { type: Number, default: 0 },
+
     timeEntries: [timeEntrySchema],
   },
   { timestamps: true },

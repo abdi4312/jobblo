@@ -35,6 +35,7 @@ const jobbloShopRouter = require("./routes/shop");
 const upcomingFeatureRouter = require("./routes/upcomingFeature");
 const listsRouter = require("./routes/lists");
 const aiRouter = require("./routes/ai");
+const exploreRouter = require("./routes/explore");
 
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./swagger");
@@ -115,6 +116,7 @@ app.use("/api/jobbloShop", jobbloShopRouter);
 app.use("/api/lists", listsRouter);
 app.use("/api/upcoming-features", upcomingFeatureRouter);
 app.use("/api/ai", aiRouter);
+app.use("/api/explore", exploreRouter);
 
 // Error handler
 app.use(function (req, res, next) {

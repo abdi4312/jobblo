@@ -82,10 +82,12 @@ exports.getAllServices = async (req, res) => {
 
 exports.getServiceById = async (req, res) => {
   try {
-    const service = await Service.findById(req.params.id).populate(
-      "userId",
-      "name avatarUrl averageRating verified",
-    );
+    const service = await Service.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views: 1 } },
+      { new: true },
+    ).populate("userId", "name avatarUrl averageRating verified");
+
     if (!service) return res.status(404).json({ error: "Service not found" });
     res.json(service);
   } catch (err) {
