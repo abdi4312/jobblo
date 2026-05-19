@@ -7,6 +7,8 @@ import {
   MapPin,
   GraduationCap,
   Pencil,
+  ShieldCheck,
+  Crown,
 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -92,9 +94,11 @@ export function ProfileHeader({
                 icon={<Pencil size={16} />}
                 className="font-bold px-8 cursor-pointer box-card-custom! rounded-lg! hidden md:flex text-custom-black!"
               />
-              <Button onClick={() => navigate("/settings/banner")}
+              <Button
+                onClick={() => navigate("/settings/banner")}
                 icon={<Pencil size={16} />}
-                className="font-bold cursor-pointer box-card-custom! rounded-lg! text-custom-black! md:hidden"/>
+                className="font-bold cursor-pointer box-card-custom! rounded-lg! text-custom-black! md:hidden"
+              />
             </div>
           )}
         </div>
@@ -129,9 +133,28 @@ export function ProfileHeader({
 
             {/* User Info */}
             <div className="flex-1 text-center md:text-left mb-2">
-              <h1 className="text-[32px] font-bold text-gray-900 leading-tight">
-                {fullName}
-              </h1>
+              <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
+                <h1 className="text-[32px] font-bold text-gray-900 leading-tight">
+                  {fullName}
+                </h1>
+                <div className="flex gap-2">
+                  {(user as any)?.isTrusted && (
+                    <div
+                      className="flex items-center gap-1 bg-[#E8F5E9] text-[#2E7D32] text-[10px] font-bold px-2.5 py-1 rounded-full border border-[#2E7D32]/20 shadow-sm"
+                      title="Trusted Provider"
+                    >
+                      <ShieldCheck size={14} />
+                      TRUSTED
+                    </div>
+                  )}
+                  {user?.subscription && user.subscription !== "Standard" && (
+                    <div className="flex items-center gap-1 bg-[#FFF8E1] text-[#F57C00] text-[10px] font-bold px-2.5 py-1 rounded-full border border-[#F57C00]/20 shadow-sm">
+                      <Crown size={14} />
+                      {user.subscription.toUpperCase()}
+                    </div>
+                  )}
+                </div>
+              </div>
 
               <div className="flex flex-col gap-1.5 mt-1">
                 <div className="flex justify-center md:justify-start gap-6 mb-1">
@@ -324,11 +347,25 @@ export function ProfileHeader({
               <h2 className="text-xl sm:text-3xl font-bold text-gray-900 tracking-tight leading-none">
                 @{user?.name.toLowerCase().replace(/\s+/g, "") || "guest"}
               </h2>
-              {user?.verified && (
-                <span className="flex items-center gap-1 bg-custom-green text-white text-[10px] font-bold px-2 py-1 rounded-full w-fit">
-                  Verifisert
-                </span>
-              )}
+              <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                {user?.verified && (
+                  <span className="flex items-center gap-1 bg-custom-green text-white text-[10px] font-bold px-2 py-1 rounded-full w-fit">
+                    Verifisert
+                  </span>
+                )}
+                {(user as any)?.isTrusted && (
+                  <span className="flex items-center gap-1 bg-[#E8F5E9] text-[#2E7D32] text-[10px] font-bold px-2 py-1 rounded-full border border-[#2E7D32]/20 shadow-sm">
+                    <ShieldCheck size={12} />
+                    TRUSTED
+                  </span>
+                )}
+                {user?.subscription && user.subscription !== "Standard" && (
+                  <span className="flex items-center gap-1 bg-[#FFF8E1] text-[#F57C00] text-[10px] font-bold px-2 py-1 rounded-full border border-[#F57C00]/20 shadow-sm">
+                    <Crown size={12} />
+                    {user.subscription.toUpperCase()}
+                  </span>
+                )}
+              </div>
             </div>
 
             <p className="text-[13px] font-bold text-gray-400 uppercase tracking-wide mb-5">
