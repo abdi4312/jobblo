@@ -1,32 +1,62 @@
-import HeroImage from "../../assets/images/Hero/hero_img.png";
+import { useHomeHero } from "../../features/homeHero/hooks";
 import Search from "./search";
+import HeroDefaultImage from "../../assets/images/Hero/hero_img.png";
 
-export function Hero() {
+export function HomeHero() {
+  const { data: hero, isLoading, isError } = useHomeHero();
+
+  if (isLoading) {
+    return (
+      <div className="max-w-300 mx-auto min-h-100 flex items-center justify-center animate-pulse bg-gray-50 rounded-3xl mb-12 lg:mb-24">
+        <div className="text-gray-400 font-medium">Laster...</div>
+      </div>
+    );
+  }
+
+  // Static content as requested
+  const staticContent = {
+    title1: "Små jobber.",
+    title2: "Store muligheter.",
+    subtitle: "Finn eller tilby hjelp til hagearbeid, flytting, maling og mer – raskt og enkelt i ditt nærområde",
+  };
+
+  const mediaUrl = hero?.mediaUrl || HeroDefaultImage;
+  const mediaType = hero?.mediaType || "image";
+
   return (
     <div className="max-w-300 mx-auto md:flex md:flex-row mb-12 lg:mb-24 relative min-h-auto">
-      {/* Background Image for Mobile and Desktop */}
+      {/* Background Media for Mobile */}
       <div className="flex flex-col gap-2 items-center justify-center text-center mb-4 md:hidden">
         <h2 className="text-[20px] font-medium text-custom-black leading-5">
-          Små jobber.
+          {staticContent.title1}
         </h2>
         <h2 className="text-[28px] md:text-[64px] text-custom-green font-semibold leading-5">
-          Store muligheter.
+          {staticContent.title2}
         </h2>
 
         <p className="text-[12px] text-custom-black font-normal max-w-75">
-          Finn eller tilby hjelp til hagearbeid, flytting, maling og mer – raskt
-          og enkelt i ditt nærområde
+          {staticContent.subtitle}
         </p>
       </div>
 
       <div className="md:absolute relative right-0 bottom-0 md:top-0 w-full md:w-auto">
-        <img
-          src={HeroImage}
-          alt="Hero image"
-          className="w-75 sm:w-100 lg:w-138.75 md:max-w-140.75 h-auto object-contain mx-auto"
-          loading="eager"
-          fetchPriority="high"
-        />
+        {mediaType === "video" ? (
+          <video
+            src={mediaUrl}
+            className="w-75 sm:w-100 lg:w-138.75 md:max-w-140.75 h-full min-h-71 max-h-71 sm:min-h-121 sm:max-h-121 lg:min-h-141 lg:max-h-141 object-cover mx-auto rounded-tr-[350px] rounded-tl-[350px]"
+            autoPlay
+            loop
+            muted
+            playsInline
+          />
+        ) : (
+          <img
+            src={mediaUrl}
+            alt="Hero"
+            className="w-75 sm:w-100 lg:w-138.75 md:max-w-140.75 object-cover mx-auto min-h-71 max-h-71 sm:min-h-121 sm:max-h-121 lg:min-h-141 lg:max-h-141 rounded-tr-[350px] rounded-tl-[350px]"
+            loading="eager"
+          />
+        )}
       </div>
 
       {/* Content Overlay */}
@@ -35,15 +65,14 @@ export function Hero() {
           {/* Text Section */}
           <div className="max-w-[70%] lg:max-w-full hidden md:block">
             <h2 className="md:text-[24px] lg:text-[32px] font-medium text-custom-black tracking-[2px]">
-              Små jobber.
+              {staticContent.title1}
             </h2>
             <h2 className="md:text-[32px] lg:text-[64px] text-custom-green font-semibold tracking-[2px] leading-tight">
-              Store muligheter.
+              {staticContent.title2}
             </h2>
 
             <p className="text-base text-custom-black font-light md:max-w-100.75 lg:max-w-131.75 mt-4">
-              Finn eller tilby hjelp til hagearbeid, flytting, maling og mer –
-              raskt og enkelt i ditt nærområde
+              {staticContent.subtitle}
             </p>
           </div>
 
