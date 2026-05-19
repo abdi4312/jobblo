@@ -138,8 +138,49 @@ router.put(
 );
 router.delete("/:id", authenticate, userController.deleteUser);
 router.get("/:id/services", authenticate, userController.getUserServices);
-router.post("/portfolio", authenticate, upload.single("image"), userController.addPortfolioItem);
-router.delete("/portfolio/:itemId", authenticate, userController.deletePortfolioItem);
+router.post(
+  "/portfolio",
+  authenticate,
+  upload.single("image"),
+  userController.addPortfolioItem,
+);
+router.delete(
+  "/portfolio/:itemId",
+  authenticate,
+  userController.deletePortfolioItem,
+);
+
+router.post(
+  "/previous-projects",
+  authenticate,
+  upload.single("image"),
+  userController.addPreviousProject,
+);
+router.delete(
+  "/previous-projects/:projectId",
+  authenticate,
+  userController.deletePreviousProject,
+);
+
+router.post(
+  "/certifications",
+  authenticate,
+  upload.single("file"),
+  userController.addCertification,
+);
+router.delete(
+  "/certifications/:certId",
+  authenticate,
+  userController.deleteCertification,
+);
+
+router.post("/experience", authenticate, userController.addExperience);
+router.delete(
+  "/experience/:expId",
+  authenticate,
+  userController.deleteExperience,
+);
+
 router.get("/", authenticate, requireAdmin, userController.getAllUsers);
 router.post("/:id/block", authenticate, userController.blockUser);
 

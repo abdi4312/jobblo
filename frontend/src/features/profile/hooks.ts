@@ -12,6 +12,12 @@ import {
   getUserReviews,
   addPortfolioItem,
   deletePortfolioItem,
+  addPreviousProject,
+  deletePreviousProject,
+  addCertification,
+  deleteCertification,
+  addExperience,
+  deleteExperience,
   searchAll,
   searchUsers,
   updateUser,
@@ -168,6 +174,114 @@ export const useDeletePortfolioItem = () => {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || "Kunne ikke slette element");
+    },
+  });
+};
+
+export const useAddPreviousProject = () => {
+  const queryClient = useQueryClient();
+  const { fetchProfile, user } = useUserStore((state) => state);
+
+  return useMutation({
+    mutationFn: (data: FormData) => addPreviousProject(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
+      fetchProfile();
+      toast.success("Prosjekt lagt til!");
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.error || "Kunne ikke legge til prosjekt",
+      );
+    },
+  });
+};
+
+export const useDeletePreviousProject = () => {
+  const queryClient = useQueryClient();
+  const { fetchProfile, user } = useUserStore((state) => state);
+
+  return useMutation({
+    mutationFn: (projectId: string) => deletePreviousProject(projectId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
+      fetchProfile();
+      toast.success("Prosjekt slettet");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Kunne ikke slette prosjekt");
+    },
+  });
+};
+
+export const useAddCertification = () => {
+  const queryClient = useQueryClient();
+  const { fetchProfile, user } = useUserStore((state) => state);
+
+  return useMutation({
+    mutationFn: (data: FormData) => addCertification(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
+      fetchProfile();
+      toast.success("Sertifisering lagt til!");
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.error || "Kunne ikke legge til sertifisering",
+      );
+    },
+  });
+};
+
+export const useDeleteCertification = () => {
+  const queryClient = useQueryClient();
+  const { fetchProfile, user } = useUserStore((state) => state);
+
+  return useMutation({
+    mutationFn: (certId: string) => deleteCertification(certId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
+      fetchProfile();
+      toast.success("Sertifisering slettet");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Kunne ikke slette");
+    },
+  });
+};
+
+export const useAddExperience = () => {
+  const queryClient = useQueryClient();
+  const { fetchProfile, user } = useUserStore((state) => state);
+
+  return useMutation({
+    mutationFn: (data: any) => addExperience(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
+      fetchProfile();
+      toast.success("Erfaring lagt til!");
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.error || "Kunne ikke legge til erfaring",
+      );
+    },
+  });
+};
+
+export const useDeleteExperience = () => {
+  const queryClient = useQueryClient();
+  const { fetchProfile, user } = useUserStore((state) => state);
+
+  return useMutation({
+    mutationFn: (expId: string) => deleteExperience(expId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
+      fetchProfile();
+      toast.success("Erfaring slettet");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Kunne ikke slette erfaring");
     },
   });
 };
