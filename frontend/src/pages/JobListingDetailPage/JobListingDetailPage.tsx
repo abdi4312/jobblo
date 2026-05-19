@@ -19,7 +19,15 @@ const MapComponent = lazy(() =>
     default: module.MapComponent,
   })),
 );
-import { Share2, MapPin, Star, Bookmark, Zap } from "lucide-react";
+import {
+  Share2,
+  MapPin,
+  Star,
+  Bookmark,
+  Zap,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { dateFormatter } from "../../utils/dateFormatter";
 import { ShareModal } from "../../components/shared/ShareModal/ShareModal";
 
@@ -86,6 +94,18 @@ const JobListingDetailPage = () => {
     setIsShareModalOpen(true);
   };
 
+  const handleNextImage = () => {
+    if (!job?.images) return;
+    setSelectedImageIndex((prev) => (prev + 1) % job.images.length);
+  };
+
+  const handlePrevImage = () => {
+    if (!job?.images) return;
+    setSelectedImageIndex(
+      (prev) => (prev - 1 + job.images.length) % job.images.length,
+    );
+  };
+
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";
     return dateFormatter.toShortDate(dateString);
@@ -125,13 +145,41 @@ const JobListingDetailPage = () => {
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Left - Image */}
           <div className="relative lg:sticky lg:top-20 lg:h-fit">
-            <div className="rounded-xl overflow-hidden shadow-sm max-h-125">
+            <div className="group relative rounded-xl overflow-hidden shadow-sm max-h-125 bg-gray-50">
               {job.images && job.images.length > 0 ? (
-                <img
-                  src={job.images[selectedImageIndex]}
-                  alt={job.title}
-                  className="w-full max-h-125 h-full object-contain"
-                />
+                <>
+                  <img
+                    src={job.images[selectedImageIndex]}
+                    alt={job.title}
+                    className="w-full max-h-125 h-full object-contain transition-all duration-300"
+                  />
+
+                  {/* Navigation Arrows */}
+                  {job.images.length > 1 && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePrevImage();
+                        }}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-md transition-all opacity-0 group-hover:opacity-100 z-20"
+                        aria-label="Previous image"
+                      >
+                        <ChevronLeft size={24} className="text-gray-700" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleNextImage();
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-md transition-all opacity-0 group-hover:opacity-100 z-20"
+                        aria-label="Next image"
+                      >
+                        <ChevronRight size={24} className="text-gray-700" />
+                      </button>
+                    </>
+                  )}
+                </>
               ) : (
                 <div className="w-full h-96 bg-gray-200 flex items-center justify-center">
                   <span className="text-gray-400">Ingen bilde</span>
