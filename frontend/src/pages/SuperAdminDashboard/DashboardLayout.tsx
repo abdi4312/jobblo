@@ -96,6 +96,12 @@ const DashboardLayout: React.FC = () => {
             to="/dashboard/carousel"
           />
 
+          <SidebarItem
+            icon={<ImageIcon size={20} />}
+            label="Home Hero"
+            to="/dashboard/home-hero"
+          />
+
           {/* PROTECTED LINK: Only for superAdmin */}
           {isSuperAdmin && (
             <SidebarItem
