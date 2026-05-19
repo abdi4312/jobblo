@@ -70,6 +70,7 @@ export default function ProfilePage() {
             onTabChange={setActiveTab}
             isOwnProfile={isOwnProfile}
             profileType={profileType}
+            userRole={userToDisplay?.role}
           />
           <ItemsGrid
             activeTab={activeTab}

@@ -285,7 +285,7 @@ const JobListingDetailPage = () => {
               </div>
             )}
 
-            {/* Seller Info */}
+            {/* Seller/Company Info */}
             <div
               className="bg-white rounded-xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
               onClick={() =>
@@ -305,14 +305,34 @@ const JobListingDetailPage = () => {
                   </div>
                 )}
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold text-gray-900">
-                      {job.userId?.name || "Ukjent selger"}
+                      {job.userId?.role === "company" && job.userId?.companyName
+                        ? job.userId.companyName
+                        : job.userId?.name || "Ukjent"}
                     </p>
-                    <span className="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full">
-                      Ikke verifisert
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {job.userId?.role === "company" && (
+                        <span className="px-2 py-0.5 bg-[#0066A2] text-white text-[10px] font-bold rounded-full uppercase tracking-wider">
+                          Bedrift
+                        </span>
+                      )}
+                      <span
+                        className={`px-2 py-0.5 text-white text-[10px] font-bold rounded-full uppercase tracking-wider ${job.userId?.verified ? "bg-custom-green" : "bg-gray-500"}`}
+                      >
+                        {job.userId?.verified
+                          ? "Verifisert"
+                          : "Ikke verifisert"}
+                      </span>
+                    </div>
                   </div>
+
+                  {job.userId?.role === "company" && job.userId?.orgNumber && (
+                    <p className="text-xs font-semibold text-gray-500 mt-0.5">
+                      Org.nr: {job.userId.orgNumber}
+                    </p>
+                  )}
+
                   <div className="flex items-center gap-3 mt-1">
                     <div className="flex items-center gap-1 text-sm text-yellow-500">
                       <Star size={14} fill="currentColor" />
@@ -330,7 +350,7 @@ const JobListingDetailPage = () => {
                           clipRule="evenodd"
                         />
                       </svg>
-                      <span>12 fullførte</span>
+                      <span>{job.userId?.completedJobs || "0"} fullførte</span>
                     </div>
                   </div>
                 </div>
