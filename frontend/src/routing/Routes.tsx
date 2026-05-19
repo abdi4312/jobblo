@@ -61,7 +61,9 @@ const withSuspense = (Component: React.ComponentType) => (
 // =======================
 
 const LandingPage = lazy(() => import("../pages/LandingPage/LandingPage.tsx"));
-const JobListingPage = lazy(() => import("../pages/ExplorePage/JobListingPage.tsx"));
+const JobListingPage = lazy(
+  () => import("../pages/ExplorePage/JobListingPage.tsx"),
+);
 const ProfilePage = lazy(() => import("../pages/ProfilePage/ProfilePage.tsx"));
 
 const LeggUtOppdrag = lazy(
@@ -145,6 +147,9 @@ const VoucherPage = lazy(
 );
 const CarouselPage = lazy(
   () => import("../pages/SuperAdminDashboard/CarouselPage.tsx"),
+);
+const HomeHeroPage = lazy(
+  () => import("../pages/SuperAdminDashboard/HomeHeroPage.tsx"),
 );
 const NotificationsPage = lazy(
   () => import("../pages/SuperAdminDashboard/NotificationsPage.tsx"),
@@ -388,6 +393,10 @@ export const routes: RouteObject[] = [
       {
         path: "carousel",
         element: withSuspense(CarouselPage),
+      },
+      {
+        path: "home-hero",
+        element: withSuspense(HomeHeroPage),
       },
 
       {
