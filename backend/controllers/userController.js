@@ -417,10 +417,10 @@ exports.deletePortfolioItem = async (req, res) => {
 
 exports.addPreviousProject = async (req, res) => {
   try {
-    const { title, description, year } = req.body;
+    const { title, description, category, date, link } = req.body;
     const userId = req.userId;
 
-    const projectData = { title, description, year };
+    const projectData = { title, description, category, date, link };
 
     if (req.file) {
       projectData.imageUrl = req.file.path;
@@ -459,10 +459,10 @@ exports.deletePreviousProject = async (req, res) => {
 
 exports.addCertification = async (req, res) => {
   try {
-    const { title, issuedBy, date } = req.body;
+    const { title, issuedBy, date, description } = req.body;
     const userId = req.userId;
 
-    const certData = { title, issuedBy, date };
+    const certData = { title, issuedBy, date, description };
 
     if (req.file) {
       certData.url = req.file.path;
@@ -499,6 +499,42 @@ exports.deleteCertification = async (req, res) => {
     });
 
     res.json({ message: "Certification deleted" });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// ------------------- Experience Management -------------------
+
+exports.addExperience = async (req, res) => {
+  try {
+    const { title, company, startDate, endDate, description } = req.body;
+    const userId = req.userId;
+
+    const expData = { title, company, startDate, endDate, description };
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $push: { experience: expData } },
+      { new: true },
+    );
+
+    res.status(201).json(user.experience[user.experience.length - 1]);
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+exports.deleteExperience = async (req, res) => {
+  try {
+    const { expId } = req.params;
+    const userId = req.userId;
+
+    await User.findByIdAndUpdate(userId, {
+      $pull: { experience: { _id: expId } },
+    });
+
+    res.json({ message: "Experience deleted" });
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }

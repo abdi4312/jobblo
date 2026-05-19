@@ -82,5 +82,12 @@ exports.upsertSubscription = async ({
   }
 
   await subscription.save();
+
+  // 🔄 Also update the User model for quick access/display
+  const User = require("../models/User");
+  await User.findByIdAndUpdate(userId, {
+    subscription: planName,
+  });
+
   return subscription;
 };

@@ -65,3 +65,39 @@ export const deletePortfolioItem = async (itemId: string) => {
   const response = await mainLink.delete(`/api/users/portfolio/${itemId}`);
   return response.data;
 };
+
+export const addPreviousProject = async (data: FormData) => {
+  const response = await mainLink.post("/api/users/previous-projects", data, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+};
+
+export const deletePreviousProject = async (projectId: string) => {
+  const response = await mainLink.delete(
+    `/api/users/previous-projects/${projectId}`,
+  );
+  return response.data;
+};
+
+export const addCertification = async (data: FormData) => {
+  const response = await mainLink.post("/api/users/certifications", data, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data;
+};
+
+export const deleteCertification = async (certId: string) => {
+  const response = await mainLink.delete(`/api/users/certifications/${certId}`);
+  return response.data;
+};
+
+export const addExperience = async (data: any) => {
+  const response = await mainLink.post("/api/users/experience", data);
+  return response.data;
+};
+
+export const deleteExperience = async (expId: string) => {
+  const response = await mainLink.delete(`/api/users/experience/${expId}`);
+  return response.data;
+};

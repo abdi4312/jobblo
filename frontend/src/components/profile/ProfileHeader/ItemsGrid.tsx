@@ -306,10 +306,42 @@ export function ItemsGrid({
 
           {/* Experience Section */}
           <div className="bg-white/60 p-8 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white">
-            <h3 className="text-xl font-bold mb-4">Erfaring</h3>
-            <p className="text-gray-700 leading-relaxed font-medium whitespace-pre-wrap">
-              {user?.experience || "Ingen erfaring lagt til ennå."}
-            </p>
+            <h3 className="text-xl font-bold mb-6">Erfaring</h3>
+            {Array.isArray((user as any)?.experience) &&
+            (user as any).experience.length > 0 ? (
+              <div className="flex flex-col gap-6">
+                {(user as any).experience.map((exp: any, idx: number) => (
+                  <div
+                    key={exp._id || idx}
+                    className={`flex flex-col gap-1 ${idx !== 0 ? "pt-6 border-t border-gray-100" : ""}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-bold text-gray-900">{exp.title}</h4>
+                      <span className="text-xs font-bold text-custom-green bg-custom-green/10 px-3 py-1 rounded-full">
+                        {new Date(exp.startDate).getFullYear()} -{" "}
+                        {exp.endDate
+                          ? new Date(exp.endDate).getFullYear()
+                          : "Nåværende"}
+                      </span>
+                    </div>
+                    <p className="text-sm font-bold text-gray-500">
+                      {exp.company}
+                    </p>
+                    {exp.description && (
+                      <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+                        {exp.description}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-700 leading-relaxed font-medium whitespace-pre-wrap">
+                {typeof user?.experience === "string"
+                  ? user.experience
+                  : "Ingen erfaring lagt til ennå."}
+              </p>
+            )}
           </div>
 
           {/* Skills Section */}
@@ -409,10 +441,29 @@ export function ItemsGrid({
                   )}
                   <div>
                     <h4 className="font-bold text-lg">{project.title}</h4>
-                    <p className="text-sm text-gray-500 mb-2">{project.year}</p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-bold text-custom-green bg-custom-green/10 px-2 py-0.5 rounded-full">
+                        {project.category}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {project.date
+                          ? new Date(project.date).getFullYear()
+                          : project.year}
+                      </span>
+                    </div>
                     <p className="text-gray-600 text-sm line-clamp-2">
                       {project.description}
                     </p>
+                    {project.link && (
+                      <a
+                        href={project.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-bold text-blue-600 hover:underline mt-2 inline-block"
+                      >
+                        Se prosjektet
+                      </a>
+                    )}
                   </div>
                 </div>
               ))}
