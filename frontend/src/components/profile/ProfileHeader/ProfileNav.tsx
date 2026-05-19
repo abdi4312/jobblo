@@ -14,6 +14,7 @@ interface ProfileNavProps {
   onTabChange: (tabName: string) => void;
   isOwnProfile?: boolean;
   profileType?: "seeker" | "poster";
+  userRole?: string;
 }
 
 export function ProfileNav({
@@ -21,6 +22,7 @@ export function ProfileNav({
   onTabChange,
   isOwnProfile = false,
   profileType = "seeker",
+  userRole,
 }: ProfileNavProps) {
   const userStoreUser = useUserStore((state) => state.user);
   const seekerTabs = [
@@ -46,7 +48,7 @@ export function ProfileNav({
   const tabs =
     profileType === "seeker"
       ? seekerTabs
-      : userStoreUser?.role === "company"
+      : userRole === "company" || userStoreUser?.role === "company"
         ? companyTabs
         : posterTabs;
 

@@ -57,7 +57,7 @@ exports.getAllServices = async (req, res) => {
     }
 
     const services = await Service.find(query)
-      .populate("userId", "name")
+      .populate("userId", "name avatarUrl verified role orgNumber companyName")
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
       .sort(sortOption);
@@ -87,7 +87,10 @@ exports.getServiceById = async (req, res) => {
       req.params.id,
       { $inc: { views: 1 } },
       { new: true },
-    ).populate("userId", "name avatarUrl averageRating verified");
+    ).populate(
+      "userId",
+      "name avatarUrl averageRating verified role orgNumber companyName",
+    );
 
     if (!service) return res.status(404).json({ error: "Service not found" });
 
@@ -196,7 +199,7 @@ async function findSimilarServices(service) {
 
     let similar = await Service.find(query)
       .limit(6)
-      .populate("userId", "name avatarUrl verified")
+      .populate("userId", "name avatarUrl verified role orgNumber companyName")
       .populate("categories", "name")
       .sort({ createdAt: -1 });
 
@@ -214,7 +217,10 @@ async function findSimilarServices(service) {
         },
       })
         .limit(6)
-        .populate("userId", "name avatarUrl verified")
+        .populate(
+          "userId",
+          "name avatarUrl verified role orgNumber companyName",
+        )
         .populate("categories", "name");
 
       if (nearby.length > 0) similar = nearby;
@@ -547,7 +553,10 @@ exports.getMyPostedServices = async (req, res) => {
   try {
     const services = await Service.find({ userId: req.userId })
       .populate("categories")
-      .populate("userId", "name email")
+      .populate(
+        "userId",
+        "name email avatarUrl verified role orgNumber companyName",
+      )
       .sort({ _id: -1 });
 
     res.json(services);

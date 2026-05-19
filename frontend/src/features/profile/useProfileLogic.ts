@@ -23,7 +23,7 @@ export const useProfileLogic = () => {
   useEffect(() => {
     if (userToDisplay?.role === "company") {
       setProfileType("poster");
-      setActiveTab("Aktive");
+      setActiveTab("Portfolio");
     }
   }, [userToDisplay?.role]);
 
