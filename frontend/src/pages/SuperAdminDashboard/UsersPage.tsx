@@ -36,6 +36,8 @@ const UsersPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [debouncedRole, setDebouncedRole] = useState("");
   const [stats, setStats] = useState({ total: 0, new: 0, activeMonth: 0 });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,14 +53,14 @@ const UsersPage = () => {
     try {
       setLoading(true);
       const response = await mainLink.get(
-        `/api/admin/users?page=${currentPage}&limit=${limit}&search=${searchTerm}&role=${roleFilter}`,
+        `/api/admin/users?page=${currentPage}&limit=${limit}&search=${debouncedSearch}&role=${debouncedRole}`,
       );
-      setUsers(response.data.users);
-      setTotalPages(response.data.totalPages);
+      setUsers(response.data.users || []);
+      setTotalPages(response.data.totalPages || 1);
       setStats({
         total: response.data.totalUsers || 0,
         activeMonth: response.data.activeThisMonth || 0,
-        new: response.data.users.filter(
+        new: (response.data.users || []).filter(
           (u: User) =>
             new Date(u.createdAt).toDateString() === new Date().toDateString(),
         ).length,
@@ -68,22 +70,21 @@ const UsersPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, limit, searchTerm, roleFilter]);
+  }, [currentPage, limit, debouncedSearch, debouncedRole]);
 
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
 
+  // Handle debounced search and filter changes
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      if (currentPage !== 1) {
-        setCurrentPage(1);
-      } else {
-        fetchUsers();
-      }
+      setDebouncedSearch(searchTerm);
+      setDebouncedRole(roleFilter);
+      setCurrentPage(1);
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, roleFilter, currentPage, fetchUsers]);
+  }, [searchTerm, roleFilter]);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -223,50 +224,52 @@ const UsersPage = () => {
           handleDelete={handleDelete}
         />
 
-        {/* Aapka Original Pagination Logic */}
-        <div className="flex justify-center items-center mt-10 gap-2">
-          <button
-            disabled={currentPage === 1 || loading}
-            onClick={() => setCurrentPage((prev) => prev - 1)}
-            className="p-2 hover:bg-gray-100 disabled:opacity-20 rounded-full transition-colors"
-          >
-            <ChevronLeft size={20} />
-          </button>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center mt-10 gap-2">
+            <button
+              disabled={currentPage === 1 || loading}
+              onClick={() => setCurrentPage((prev) => prev - 1)}
+              className="p-2 hover:bg-gray-100 disabled:opacity-20 rounded-full transition-colors"
+            >
+              <ChevronLeft size={20} />
+            </button>
 
-          {(() => {
-            const maxVisible = 8;
-            let startPage = Math.max(
-              1,
-              currentPage - Math.floor(maxVisible / 2),
-            );
-            let endPage = startPage + maxVisible - 1;
-            if (endPage > totalPages) {
-              endPage = totalPages;
-              startPage = Math.max(1, endPage - maxVisible + 1);
-            }
-            return Array.from(
-              { length: endPage - startPage + 1 },
-              (_, i) => startPage + i,
-            ).map((num) => (
-              <button
-                key={num}
-                onClick={() => setCurrentPage(num)}
-                className={`w-10 h-10 rounded-full flex justify-center items-center font-bold transition-all 
-                ${currentPage === num ? "bg-[#2d4a3e] text-white shadow-md scale-110" : "text-gray-400 hover:bg-gray-50"}`}
-              >
-                {num}
-              </button>
-            ));
-          })()}
+            {(() => {
+              const maxVisible = 8;
+              let startPage = Math.max(
+                1,
+                currentPage - Math.floor(maxVisible / 2),
+              );
+              let endPage = startPage + maxVisible - 1;
+              if (endPage > totalPages) {
+                endPage = totalPages;
+                startPage = Math.max(1, endPage - maxVisible + 1);
+              }
+              return Array.from(
+                { length: Math.max(0, endPage - startPage + 1) },
+                (_, i) => startPage + i,
+              ).map((num) => (
+                <button
+                  key={num}
+                  onClick={() => setCurrentPage(num)}
+                  className={`w-10 h-10 rounded-full flex justify-center items-center font-bold transition-all 
+                  ${currentPage === num ? "bg-[#2d4a3e] text-white shadow-md scale-110" : "text-gray-400 hover:bg-gray-50"}`}
+                >
+                  {num}
+                </button>
+              ));
+            })()}
 
-          <button
-            disabled={currentPage === totalPages || loading}
-            onClick={() => setCurrentPage((prev) => prev + 1)}
-            className="p-2 hover:bg-gray-100 disabled:opacity-20 rounded-full transition-colors"
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
+            <button
+              disabled={currentPage === totalPages || loading}
+              onClick={() => setCurrentPage((prev) => prev + 1)}
+              className="p-2 hover:bg-gray-100 disabled:opacity-20 rounded-full transition-colors"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        )}
       </div>
 
       <CreateUserModal
