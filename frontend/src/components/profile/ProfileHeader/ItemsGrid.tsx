@@ -203,7 +203,7 @@ export function ItemsGrid({
         {/* Right Side: Sidebar */}
         <div className="w-full md:w-95 flex flex-col gap-8">
           {/* Action Box */}
-          <div className= " box-card-custom p-8 rounded-2xl flex flex-col items-center text-center gap-6">
+          <div className=" box-card-custom p-8 rounded-2xl flex flex-col items-center text-center gap-6">
             <h4 className="text-[20px] font-bold text-gray-900">stoler</h4>
             <p className="text-[14px] text-gray-600 font-medium">
               Velg denne bedriften til å gjennomføre oppdraget ditt eller send
@@ -304,6 +304,14 @@ export function ItemsGrid({
             </p>
           </div>
 
+          {/* Experience Section */}
+          <div className="bg-white/60 p-8 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white">
+            <h3 className="text-xl font-bold mb-4">Erfaring</h3>
+            <p className="text-gray-700 leading-relaxed font-medium whitespace-pre-wrap">
+              {user?.experience || "Ingen erfaring lagt til ennå."}
+            </p>
+          </div>
+
           {/* Skills Section */}
           <div className="bg-white/60 p-8 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white">
             <h3 className="text-xl font-bold mb-6">Mine ferdigheter</h3>
@@ -341,48 +349,134 @@ export function ItemsGrid({
         </div>
       );
     }
+  }
 
-    if (activeTab === "Portfolio") {
-      const portfolioItems = (user as any)?.portfolio || [];
+  if (activeTab === "Portfolio" && profileType === "seeker") {
+    const portfolioItems = (user as any)?.portfolio || [];
+    const previousProjects = (user as any)?.previousProjects || [];
 
-      if (portfolioItems.length === 0) {
-        return (
-          <EmptyState
-            title="Ingen portfolio-elementer ennå"
-            description="Denne brukeren har ikke lagt til noe i sin portfolio"
-          />
-        );
-      }
-
+    if (portfolioItems.length === 0 && previousProjects.length === 0) {
       return (
-        <div className="max-w-300 mx-auto p-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-            {portfolioItems.map((project: any) => (
-              <div
-                key={project._id || project.id}
-                className="group relative aspect-square bg-gray-100 rounded-[2rem] overflow-hidden border border-gray-100 cursor-pointer shadow-sm hover:shadow-md transition-all duration-300"
-              >
-                <img
-                  src={project.imageUrl || project.image}
-                  alt={project.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
-                  {project.category && (
-                    <span className="text-custom-green bg-white/90 backdrop-blur-sm text-[10px] font-bold px-3 py-1 rounded-full w-fit mb-2">
-                      {project.category}
-                    </span>
-                  )}
-                  <h4 className="text-white font-bold text-sm md:text-base">
-                    {project.title}
-                  </h4>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <EmptyState
+          title="Ingen portfolio-elementer ennå"
+          description="Denne brukeren har ikke lagt til noe i sin portfolio"
+        />
       );
     }
+
+    return (
+      <div className="max-w-300 mx-auto p-6 flex flex-col gap-12">
+        {portfolioItems.length > 0 && (
+          <section>
+            <h3 className="text-2xl font-bold mb-6">Portfolio</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              {portfolioItems.map((project: any) => (
+                <div
+                  key={project._id || project.id}
+                  className="group relative aspect-square bg-gray-100 rounded-[2rem] overflow-hidden border border-gray-100 cursor-pointer shadow-sm hover:shadow-md transition-all duration-300"
+                >
+                  <img
+                    src={project.imageUrl || project.image}
+                    alt={project.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+                    <h4 className="text-white font-bold text-sm md:text-base">
+                      {project.title}
+                    </h4>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {previousProjects.length > 0 && (
+          <section>
+            <h3 className="text-2xl font-bold mb-6">Tidligere prosjekter</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {previousProjects.map((project: any) => (
+                <div
+                  key={project._id || project.id}
+                  className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex gap-4"
+                >
+                  {project.imageUrl && (
+                    <img
+                      src={project.imageUrl}
+                      className="w-24 h-24 rounded-xl object-cover"
+                      alt=""
+                    />
+                  )}
+                  <div>
+                    <h4 className="font-bold text-lg">{project.title}</h4>
+                    <p className="text-sm text-gray-500 mb-2">{project.year}</p>
+                    <p className="text-gray-600 text-sm line-clamp-2">
+                      {project.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    );
+  }
+
+  if (activeTab === "Sertifiseringer") {
+    const certifications = (user as any)?.certifications || [];
+
+    if (certifications.length === 0) {
+      return (
+        <EmptyState
+          title="Ingen sertifiseringer ennå"
+          description="Brukeren har ikke lagt til noen sertifiseringer eller fagbrev"
+        />
+      );
+    }
+
+    return (
+      <div className="max-w-300 mx-auto p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {certifications.map((cert: any) => (
+            <div
+              key={cert._id || cert.id}
+              className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-6"
+            >
+              <div className="w-16 h-16 bg-custom-green/10 rounded-2xl flex items-center justify-center text-custom-green">
+                <Award size={32} />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-bold text-lg text-gray-900">
+                  {cert.title}
+                </h4>
+                <p className="text-sm text-gray-500">
+                  Utstedt av: {cert.issuedBy}
+                </p>
+                {cert.date && (
+                  <p className="text-xs text-gray-400">
+                    {new Date(cert.date).toLocaleDateString("no-NO", {
+                      year: "numeric",
+                      month: "long",
+                    })}
+                  </p>
+                )}
+              </div>
+              {cert.url && (
+                <a
+                  href={cert.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-custom-green font-bold text-sm hover:underline"
+                >
+                  Vis bevis
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   // Poster Specific Content

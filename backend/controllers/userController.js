@@ -255,6 +255,7 @@ exports.updateUser = async (req, res) => {
       "phone",
       "lastName",
       "bio",
+      "experience",
       "birthDate",
       "gender",
       "address",
@@ -264,6 +265,7 @@ exports.updateUser = async (req, res) => {
       "availabilityText",
       "skills",
       "portfolio",
+      "previousProjects",
       "companyName",
       "orgNumber",
       "orgType",
@@ -273,6 +275,8 @@ exports.updateUser = async (req, res) => {
 
     if (req.user.role === "superAdmin") {
       allowedUpdates.push("role");
+      allowedUpdates.push("verified");
+      allowedUpdates.push("isTrusted");
     }
 
     const updates = {};
@@ -404,6 +408,97 @@ exports.deletePortfolioItem = async (req, res) => {
     );
 
     res.json({ message: "Portfolio item deleted" });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// ------------------- Previous Projects Management -------------------
+
+exports.addPreviousProject = async (req, res) => {
+  try {
+    const { title, description, year } = req.body;
+    const userId = req.userId;
+
+    const projectData = { title, description, year };
+
+    if (req.file) {
+      projectData.imageUrl = req.file.path;
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $push: { previousProjects: projectData } },
+      { new: true },
+    );
+
+    res
+      .status(201)
+      .json(user.previousProjects[user.previousProjects.length - 1]);
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+exports.deletePreviousProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.userId;
+
+    await User.findByIdAndUpdate(userId, {
+      $pull: { previousProjects: { _id: projectId } },
+    });
+
+    res.json({ message: "Previous project deleted" });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// ------------------- Certifications Management -------------------
+
+exports.addCertification = async (req, res) => {
+  try {
+    const { title, issuedBy, date } = req.body;
+    const userId = req.userId;
+
+    const certData = { title, issuedBy, date };
+
+    if (req.file) {
+      certData.url = req.file.path;
+      certData.publicId = req.file.filename;
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $push: { certifications: certData } },
+      { new: true },
+    );
+
+    res.status(201).json(user.certifications[user.certifications.length - 1]);
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+exports.deleteCertification = async (req, res) => {
+  try {
+    const { certId } = req.params;
+    const userId = req.userId;
+
+    const user = await User.findById(userId);
+    const cert = user.certifications.id(certId);
+
+    if (cert && cert.publicId) {
+      const cloudinary = require("../config/cloudinary");
+      await cloudinary.uploader.destroy(cert.publicId);
+    }
+
+    await User.findByIdAndUpdate(userId, {
+      $pull: { certifications: { _id: certId } },
+    });
+
+    res.json({ message: "Certification deleted" });
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }

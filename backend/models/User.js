@@ -50,7 +50,9 @@ const userSchema = new mongoose.Schema(
       default: "private",
       required: true,
     },
+    experience: { type: String },
     verified: { type: Boolean, default: false },
+    isTrusted: { type: Boolean, default: false },
     lastLogin: { type: Date },
     availability: [{ start: Date, end: Date }],
     availabilityText: { type: String },
@@ -61,6 +63,23 @@ const userSchema = new mongoose.Schema(
         description: { type: String },
         imageUrl: { type: String },
         link: { type: String },
+      },
+    ],
+    previousProjects: [
+      {
+        title: { type: String },
+        description: { type: String },
+        imageUrl: { type: String },
+        year: { type: String },
+      },
+    ],
+    certifications: [
+      {
+        title: { type: String },
+        url: { type: String },
+        publicId: { type: String },
+        issuedBy: { type: String },
+        date: { type: Date },
       },
     ],
     earnings: { type: Number, default: 0 },

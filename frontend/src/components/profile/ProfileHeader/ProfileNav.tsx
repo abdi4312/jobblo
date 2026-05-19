@@ -30,6 +30,7 @@ export function ProfileNav({
     { name: "Fullførte", icon: Briefcase },
     { name: "Vurderinger", icon: Star },
     { name: "Portfolio", icon: LayoutGrid },
+    { name: "Sertifiseringer", icon: Award },
   ];
 
   const posterTabs = [
@@ -40,6 +41,7 @@ export function ProfileNav({
 
   const companyTabs = [
     { name: "Portfolio", icon: LayoutGrid },
+    { name: "Sertifiseringer", icon: Award },
     { name: "Aktive", icon: Briefcase },
     { name: "Tidligere", icon: Clock },
     { name: "Vurderinger", icon: Star },
