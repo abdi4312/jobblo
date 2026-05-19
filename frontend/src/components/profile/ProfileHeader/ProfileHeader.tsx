@@ -212,9 +212,9 @@ export function ProfileHeader({
                 </>
               ) : (
                 <>
-                  <button className="bg-[#1877F2] hover:bg-[#166fe5] text-white px-6 py-2 rounded-lg font-bold transition-all shadow-sm">
+                  {/* <button className="bg-[#1877F2] hover:bg-[#166fe5] text-white px-6 py-2 rounded-lg font-bold transition-all shadow-sm">
                     Send melding
-                  </button>
+                  </button> */}
                   <button className="bg-[#E4E6EB] hover:bg-[#D8DADF] text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-all">
                     <Star size={18} />
                     {user?.averageRating?.toFixed(1) || "5.0"}
