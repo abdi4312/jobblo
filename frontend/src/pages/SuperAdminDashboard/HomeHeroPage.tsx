@@ -208,6 +208,7 @@ const HomeHeroPage: React.FC = () => {
                 )}
               </div>
               <input
+                title="Upload Media"
                 id="media"
                 type="file"
                 ref={fileInputRef}

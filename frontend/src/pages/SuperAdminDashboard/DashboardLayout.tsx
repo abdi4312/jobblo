@@ -12,6 +12,7 @@ import {
   X,
   Bell,
   Rocket,
+  ShieldCheck,
 } from "lucide-react";
 import { useUserStore } from "../../stores/userStore";
 import { toast } from "react-hot-toast";
@@ -55,7 +56,7 @@ const DashboardLayout: React.FC = () => {
             </span>
           </div>
           <div className="md:hidden">
-            <button className="p-1" onClick={() => setIsMobileMenuOpen(false)}>
+            <button title="Close Sidebar" className="p-1" onClick={() => setIsMobileMenuOpen(false)}>
               <X size={20} />
             </button>
           </div>
@@ -117,6 +118,13 @@ const DashboardLayout: React.FC = () => {
           />
           {isSuperAdmin && (
             <SidebarItem
+              icon={<ShieldCheck size={20} />}
+              label="Plans & Features"
+              to="/dashboard/plans"
+            />
+          )}
+          {isSuperAdmin && (
+            <SidebarItem
               icon={<Rocket size={20} />}
               label="Roadmap"
               to="/dashboard/roadmap"
@@ -135,11 +143,12 @@ const DashboardLayout: React.FC = () => {
       </aside>
 
       {/* --- Main Content Area --- */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
         <header className="h-20 bg-white border-b flex items-center justify-between px-4 md:px-8 shrink-0">
           <div className="flex items-center gap-4 flex-1">
             <div className="md:hidden">
               <button
+                title="Open Sidebar"
                 className="p-2 hover:bg-gray-100 rounded-lg"
                 onClick={() => setIsMobileMenuOpen(true)}
               >
@@ -203,9 +212,10 @@ const SidebarItem = ({ icon, label, to, end = false }: SidebarItemProps) => (
     end={end}
     className={({ isActive }) => `
       flex items-center gap-3 p-3.5 rounded-xl transition-all duration-200 group
-      ${isActive
-        ? "bg-[#2d4a3e] text-white shadow-md shadow-green-900/20"
-        : "!text-black hover:bg-gray-50 hover:text-green-900"
+      ${
+        isActive
+          ? "bg-[#2d4a3e] text-white shadow-md shadow-green-900/20"
+          : "!text-black hover:bg-gray-50 hover:text-green-900"
       }
     `}
   >
