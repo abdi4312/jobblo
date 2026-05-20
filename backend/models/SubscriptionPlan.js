@@ -21,6 +21,10 @@ const planSchema = new mongoose.Schema(
       perContactPrice: { type: Number, default: 0 },
       ContactUnlock: { type: Number, default: 0 },
       maxContact: { type: Number, default: 0 },
+      visibilityLevel: { type: Number, default: 0 }, // Weighted sorting
+      locationPrecision: { type: String, enum: ["exact", "approximate"], default: "approximate" },
+      hasBadge: { type: Boolean, default: false },
+      hasAnalytics: { type: Boolean, default: false },
     },
 
     // 🖼️ UI ONLY

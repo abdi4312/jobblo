@@ -4,6 +4,7 @@ const SubscriptionPlan = require("../models/SubscriptionPlan");
 const Subscription = require("../models/Subscription");
 const Transaction = require("../models/Transaction");
 const Service = require("../models/Service");
+const GlobalConfig = require("../models/GlobalConfig");
 const stripe = require("../config/stripe");
 
 exports.checkSubscription = async (req, res, next) => {
@@ -54,7 +55,20 @@ exports.checkSubscription = async (req, res, next) => {
       return res.status(403).json({ message: "No subscription found" });
     }
 
-    const { plan, endDate, planType, startDate } = subscription.currentPlan; // 👈 startDate nikalein
+    const { plan, endDate, planType, startDate } = subscription.currentPlan;
+
+    // --- FREE JOBS UNDER 10,000 NOK RULE ---
+    if (serviceId && planType === "private") {
+      const freeUnder10kConfig = await GlobalConfig.findOne({
+        key: "FREE_PRIVATE_JOBS_UNDER_10000",
+      });
+      if (freeUnder10kConfig && freeUnder10kConfig.value === true) {
+        const service = await Service.findById(serviceId);
+        if (service && service.price < 10000) {
+          return next(); // Free contact for private users if job is under 10k
+        }
+      }
+    }
 
     if (plan !== "Standard" && new Date(endDate) < new Date()) {
       return res.status(403).json({ message: "Subscription expired" });

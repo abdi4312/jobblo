@@ -37,6 +37,7 @@ const listsRouter = require("./routes/lists");
 const aiRouter = require("./routes/ai");
 const exploreRouter = require("./routes/explore");
 const homeHeroRouter = require("./routes/homeHero");
+const globalConfigRouter = require("./routes/globalConfig");
 
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./swagger");
@@ -100,6 +101,7 @@ app.use("/api/favorites", favoritesRouter);
 app.use("/api/messages", messagesRouter);
 app.use("/api/upload", uploadRouter);
 app.use("/api/home-hero", homeHeroRouter);
+app.use("/api/config", globalConfigRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/admin", adminRouter);
