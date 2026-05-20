@@ -13,9 +13,11 @@ interface CheckoutViewProps {
   isApplyingPromo: boolean;
   discountInfo: {
     originalPrice: number;
-    discountPercent: number;
+    discountAmount: number;
     finalPrice: number;
     code: string;
+    type: "percentage" | "fixed";
+    amount: number;
   } | null;
   setDiscountInfo: (info: any) => void;
   isRedirecting: boolean;
@@ -85,11 +87,13 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   <div className="flex justify-between text-[#22C55E] font-medium">
                     <span className="flex items-center gap-1">
                       <Tag size={14} />
-                      Discount ({discountInfo.discountPercent}%)
+                      Discount (
+                      {discountInfo.type === "percentage"
+                        ? `${discountInfo.amount}%`
+                        : `${discountInfo.amount} kr`}
+                      )
                     </span>
-                    <span>
-                      -{selectedPlan.price - discountInfo.finalPrice} kr
-                    </span>
+                    <span>-{discountInfo.discountAmount} kr</span>
                   </div>
                 )}
 
@@ -111,20 +115,18 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   Included features
                 </p>
                 <ul className="space-y-3">
-                  {selectedPlan.featuresText
-                    ?.slice(0, 4)
-                    .map((feature, i) => (
-                      <li
-                        key={i}
-                        className="flex items-start gap-3 text-sm text-[#495057]"
-                      >
-                        <Check
-                          size={14}
-                          className="text-custom-green mt-0.5 shrink-0"
-                        />
-                        {feature}
-                      </li>
-                    ))}
+                  {selectedPlan.featuresText?.slice(0, 4).map((feature, i) => (
+                    <li
+                      key={i}
+                      className="flex items-start gap-3 text-sm text-[#495057]"
+                    >
+                      <Check
+                        size={14}
+                        className="text-custom-green mt-0.5 shrink-0"
+                      />
+                      {feature}
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>

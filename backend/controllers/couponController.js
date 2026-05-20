@@ -1,5 +1,6 @@
 const SubscriptionPlan = require("../models/SubscriptionPlan");
 const calculateDiscount = require("../utils/calculateDiscount");
+const { validateCouponLogic } = require("../utils/couponValidation");
 
 const Coupon = require("../models/Coupon");
 
@@ -8,19 +9,32 @@ const Coupon = require("../models/Coupon");
 // =========================
 exports.createCoupon = async (req, res) => {
   try {
-    const { name, code, amount, expiresDate } = req.body;
+    const {
+      name,
+      code,
+      type,
+      amount,
+      activeDate,
+      expiresDate,
+      usageLimit,
+      targetPlanType,
+    } = req.body;
 
     const existing = await Coupon.findOne({ code });
-    if (existing) 
+    if (existing)
       return res.status(400).json({ error: "Coupon code already exists" });
 
     const coupon = await Coupon.create({
       createdBy: req.user._id,
       name,
       code,
+      type: type || "percentage",
       amount,
+      activeDate: activeDate || Date.now(),
       expiresDate,
-      usedBy: [] // Initialize empty array
+      usageLimit: usageLimit || 0,
+      targetPlanType: targetPlanType || "all",
+      usedBy: [],
     });
 
     res.status(201).json(coupon);
@@ -37,7 +51,7 @@ exports.getAllCoupons = async (req, res) => {
     // 1. Automatically mark expired coupons as inactive (Ye step pehle hi hona chahiye)
     await Coupon.updateMany(
       { expiresDate: { $lt: new Date() }, active: true },
-      { $set: { active: false } }
+      { $set: { active: false } },
     );
 
     // 2. Pagination Logic
@@ -60,9 +74,8 @@ exports.getAllCoupons = async (req, res) => {
       coupons,
       currentPage: page,
       totalPages: Math.ceil(totalCoupons / limit),
-      totalCoupons
+      totalCoupons,
     });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -74,7 +87,17 @@ exports.getAllCoupons = async (req, res) => {
 exports.updateCoupon = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, code, amount, expiresDate, active } = req.body;
+    const {
+      name,
+      code,
+      type,
+      amount,
+      activeDate,
+      expiresDate,
+      usageLimit,
+      targetPlanType,
+      active,
+    } = req.body;
 
     const updateFields = {};
 
@@ -86,8 +109,20 @@ exports.updateCoupon = async (req, res) => {
       updateFields.code = code.toUpperCase().trim();
     }
 
+    if (type) updateFields.type = type;
+
     if (amount !== undefined) {
       updateFields.amount = Number(amount);
+    }
+
+    if (usageLimit !== undefined) updateFields.usageLimit = Number(usageLimit);
+    if (targetPlanType) updateFields.targetPlanType = targetPlanType;
+
+    if (activeDate && activeDate.trim() !== "") {
+      const parsedActiveDate = new Date(activeDate);
+      if (!isNaN(parsedActiveDate.getTime())) {
+        updateFields.activeDate = parsedActiveDate;
+      }
     }
 
     let parsedExpiryDate;
@@ -113,7 +148,7 @@ exports.updateCoupon = async (req, res) => {
     const updatedCoupon = await Coupon.findByIdAndUpdate(
       id,
       { $set: updateFields },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!updatedCoupon) {
@@ -140,8 +175,7 @@ exports.deleteCoupon = async (req, res) => {
   try {
     const { id } = req.params;
     const coupon = await Coupon.findByIdAndDelete(id);
-    if (!coupon) 
-      return res.status(404).json({ error: "Coupon not found" });
+    if (!coupon) return res.status(404).json({ error: "Coupon not found" });
 
     res.json({ message: "Coupon deleted" });
   } catch (err) {
@@ -150,45 +184,43 @@ exports.deleteCoupon = async (req, res) => {
 };
 
 // =========================
-// Redeem Coupon (User)
+// Validate Coupon (User)
 // =========================
 exports.validateCoupon = async (req, res) => {
   try {
     const { code, planId } = req.body;
-    console.log(code, planId);
     const userId = req.user._id;
 
-    const coupon = await Coupon.findOne({ code: code.toUpperCase() });
-    
-    if (!coupon || !coupon.active)
-      return res.status(400).json({ error: "Invalid coupon" });
+    if (!code || !planId) {
+      return res.status(400).json({ error: "Code and Plan ID are required" });
+    }
 
-    if (coupon.expiresDate < new Date())
-      return res.status(400).json({ error: "Coupon expired" });
+    const [coupon, plan] = await Promise.all([
+      Coupon.findOne({ code: code.toUpperCase() }),
+      SubscriptionPlan.findById(planId),
+    ]);
 
-    const used = coupon.usedBy.some(
-      (id) => id.toString() === userId.toString()
-    );
-    if (used)
-      return res.status(400).json({ error: "Coupon already used" });
-
-    const plan = await SubscriptionPlan.findById(planId);
     if (!plan) return res.status(404).json({ error: "Plan not found" });
 
-    // 🔥 DISCOUNT CALCULATION
+    // logic moved to utils/couponValidation.js
+    validateCouponLogic(coupon, plan, userId);
+
     const pricing = calculateDiscount(plan.price, coupon);
 
     res.json({
       success: true,
-      coupon: coupon.code,
-      discountPercent:
-      coupon.amount <= 100 ? coupon.amount : null,
-      originalPrice: pricing.originalPrice,
-      discountAmount: pricing.discountAmount,
-      finalPrice: pricing.finalPrice,
+      message: "Coupon validated successfully",
+      data: {
+        code: coupon.code,
+        type: coupon.type,
+        amount: coupon.amount,
+        originalPrice: pricing.originalPrice,
+        discountAmount: pricing.discountAmount,
+        finalPrice: pricing.finalPrice,
+        couponId: coupon._id,
+      },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(400).json({ error: err.message });
   }
 };
-
