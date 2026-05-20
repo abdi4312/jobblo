@@ -62,6 +62,7 @@ const ServicesPage: React.FC = () => {
 
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <select
+            title="Select Per Page"
             value={limit}
             onChange={(e) => {
               setLimit(Number(e.target.value));
@@ -105,6 +106,7 @@ const ServicesPage: React.FC = () => {
       {totalPages > 1 && (
         <div className="flex justify-center items-center mt-12 gap-2">
           <button
+            title="Previous Page"
             disabled={currentPage === 1 || loading}
             onClick={() => setCurrentPage((p) => p - 1)}
             className="p-2 disabled:opacity-20 hover:bg-gray-50 rounded-full transition-all"
@@ -144,6 +146,7 @@ const ServicesPage: React.FC = () => {
           })()}
 
           <button
+            title="Next Page"
             disabled={currentPage === totalPages || loading}
             onClick={() => setCurrentPage((p) => p + 1)}
             className="p-2 disabled:opacity-20 hover:bg-gray-50 rounded-full transition-all"

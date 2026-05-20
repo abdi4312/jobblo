@@ -224,6 +224,7 @@ const VoucherPage: React.FC = () => {
                       </td>
                       <td className="flex py-5 px-4 text-right space-x-2">
                         <button
+                          title="Edit Coupon"
                           onClick={() => {
                             setEditingCoupon(voucher);
                             setIsModalOpen(true);
@@ -233,6 +234,7 @@ const VoucherPage: React.FC = () => {
                           <Edit3 size={18} />
                         </button>
                         <button
+                          title="Delete Coupon"
                           onClick={() => handleDelete(voucher._id)}
                           className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                         >
@@ -251,6 +253,7 @@ const VoucherPage: React.FC = () => {
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-2 mt-4">
             <button
+              title="Previous Page"
               disabled={currentPage === 1}
               className="p-2 text-gray-400 disabled:opacity-30"
               onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
@@ -267,6 +270,7 @@ const VoucherPage: React.FC = () => {
               </button>
             ))}
             <button
+              title="Next Page"
               disabled={currentPage === totalPages}
               className="p-2 text-gray-400 disabled:opacity-30"
               onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}

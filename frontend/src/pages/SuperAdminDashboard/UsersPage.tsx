@@ -205,6 +205,7 @@ const UsersPage = () => {
               />
             </div>
             <select
+              title="Select Role"
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
               className="bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-sm font-semibold outline-none"
@@ -228,6 +229,7 @@ const UsersPage = () => {
         {totalPages > 1 && (
           <div className="flex justify-center items-center mt-10 gap-2">
             <button
+              title="Previous Page"
               disabled={currentPage === 1 || loading}
               onClick={() => setCurrentPage((prev) => prev - 1)}
               className="p-2 hover:bg-gray-100 disabled:opacity-20 rounded-full transition-colors"
@@ -262,6 +264,7 @@ const UsersPage = () => {
             })()}
 
             <button
+              title="Next Page"
               disabled={currentPage === totalPages || loading}
               onClick={() => setCurrentPage((prev) => prev + 1)}
               className="p-2 hover:bg-gray-100 disabled:opacity-20 rounded-full transition-colors"

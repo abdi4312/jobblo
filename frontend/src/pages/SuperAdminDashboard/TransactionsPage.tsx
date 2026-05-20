@@ -172,6 +172,7 @@ const TransactionPage: React.FC = () => {
               size={18}
             />
             <select
+              title="Select Transaction Type"
               value={selectedType}
               onChange={(e) => {
                 setSelectedType(e.target.value);
@@ -202,6 +203,7 @@ const TransactionPage: React.FC = () => {
         {totalPages > 1 && (
           <div className="flex justify-center items-center py-10 gap-4 border-t border-slate-50 mt-auto">
             <button
+              title="Previous Page"
               disabled={currentPage === 1 || loading}
               onClick={() => setCurrentPage((p) => p - 1)}
               className="p-3 disabled:opacity-20 hover:bg-slate-50 rounded-2xl border border-slate-100 transition-all text-slate-600"
@@ -220,6 +222,7 @@ const TransactionPage: React.FC = () => {
               </span>
             </div>
             <button
+              title="Next Page"
               disabled={currentPage === totalPages || loading}
               onClick={() => setCurrentPage((p) => p + 1)}
               className="p-3 disabled:opacity-20 hover:bg-slate-50 rounded-2xl border border-slate-100 transition-all text-slate-600"

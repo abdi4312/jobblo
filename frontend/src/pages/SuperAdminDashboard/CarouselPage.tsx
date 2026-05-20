@@ -236,6 +236,7 @@ const CarouselPage: React.FC = () => {
         {totalPages > 1 && (
           <div className="flex justify-center items-center mt-12 gap-2">
             <button
+              title="Previous Page"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((p) => p - 1)}
               className="p-2 disabled:opacity-20 hover:bg-gray-50 rounded-full transition-all"
@@ -244,6 +245,7 @@ const CarouselPage: React.FC = () => {
             </button>
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
               <button
+                title={`Go to Page ${num}`}
                 key={num}
                 onClick={() => setCurrentPage(num)}
                 className={`w-10 h-10 text-center flex items-center justify-center rounded-full font-bold transition-all ${
@@ -256,6 +258,7 @@ const CarouselPage: React.FC = () => {
               </button>
             ))}
             <button
+              title="Next Page"
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage((p) => p + 1)}
               className="p-2 disabled:opacity-20 hover:bg-gray-50 rounded-full transition-all"

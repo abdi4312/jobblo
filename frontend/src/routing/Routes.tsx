@@ -160,6 +160,9 @@ const TransactionsPage = lazy(
 const RoadmapAdminPage = lazy(
   () => import("../pages/SuperAdminDashboard/RoadmapAdminPage.tsx"),
 );
+const PlansAdminPage = lazy(
+  () => import("../pages/SuperAdminDashboard/PlansAdminPage.tsx"),
+);
 
 // =======================
 // Routes
@@ -412,6 +415,11 @@ export const routes: RouteObject[] = [
       {
         path: "roadmap",
         element: withSuspense(RoadmapAdminPage),
+      },
+
+      {
+        path: "plans",
+        element: withSuspense(PlansAdminPage),
       },
 
       {
