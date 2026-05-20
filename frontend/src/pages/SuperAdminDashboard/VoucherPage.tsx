@@ -9,7 +9,11 @@ interface Voucher {
   name: string;
   code: string;
   amount: number;
+  type: "percentage" | "fixed";
+  usageLimit: number;
+  targetPlanType: "all" | "private" | "business";
   active: boolean;
+  activeDate: string;
   expiresDate: string;
   usedBy: string[];
 }
@@ -25,7 +29,9 @@ const VoucherPage: React.FC = () => {
   const fetchCoupons = useCallback(async () => {
     setIsLoading(true);
     try {
-      const resp = await mainLink.get(`/api/coupons?page=${currentPage}&limit=8`);
+      const resp = await mainLink.get(
+        `/api/coupons?page=${currentPage}&limit=8`,
+      );
       if (resp.data) {
         setVouchers(resp.data.coupons);
         setTotalPages(resp.data.totalPages);
@@ -50,7 +56,7 @@ const VoucherPage: React.FC = () => {
       confirmButtonColor: "#2d4a3e",
       cancelButtonColor: "#f87171",
       confirmButtonText: "Yes, delete it!",
-      borderRadius: "20px"
+      borderRadius: "20px",
     });
 
     if (result.isConfirmed) {
@@ -61,7 +67,7 @@ const VoucherPage: React.FC = () => {
           text: "Coupon has been deleted.",
           icon: "success",
           timer: 1500,
-          showConfirmButton: false
+          showConfirmButton: false,
         });
         fetchCoupons();
       } catch {
@@ -70,21 +76,46 @@ const VoucherPage: React.FC = () => {
     }
   };
 
-  const handleSubmitCoupon = async (data: { name: string; code: string; amount: string; expiresDate: string }) => {
+  const handleSubmitCoupon = async (data: {
+    name: string;
+    code: string;
+    amount: number;
+    type: "percentage" | "fixed";
+    usageLimit: number;
+    targetPlanType: "all" | "private" | "business";
+    activeDate?: string;
+    expiresDate?: string;
+  }) => {
     try {
       const payload = {
         name: data.name,
         code: data.code,
-        amount: Number(data.amount),
+        amount: data.amount,
+        type: data.type,
+        usageLimit: data.usageLimit,
+        targetPlanType: data.targetPlanType,
+        activeDate: data.activeDate,
         expiresDate: data.expiresDate,
       };
 
       if (editingCoupon) {
         await mainLink.put(`/api/coupons/${editingCoupon._id}`, payload);
-        Swal.fire({ icon: "success", title: "Updated!", text: "Coupon updated! ✨", timer: 2000, showConfirmButton: false });
+        Swal.fire({
+          icon: "success",
+          title: "Updated!",
+          text: "Coupon updated! ✨",
+          timer: 2000,
+          showConfirmButton: false,
+        });
       } else {
         await mainLink.post("/api/coupons", payload);
-        Swal.fire({ icon: "success", title: "Created!", text: "Coupon created! 🎉", timer: 2000, showConfirmButton: false });
+        Swal.fire({
+          icon: "success",
+          title: "Created!",
+          text: "Coupon created! 🎉",
+          timer: 2000,
+          showConfirmButton: false,
+        });
       }
 
       setIsModalOpen(false);
@@ -92,16 +123,25 @@ const VoucherPage: React.FC = () => {
       fetchCoupons();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
-      Swal.fire("Error", err.response?.data?.error || "Operation failed", "error");
+      Swal.fire(
+        "Error",
+        err.response?.data?.error || "Operation failed",
+        "error",
+      );
     }
   };
 
   return (
     <div className="animate-in fade-in duration-500 relative">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Coupon Management</h1>
+        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">
+          Coupon Management
+        </h1>
         <button
-          onClick={() => { setEditingCoupon(null); setIsModalOpen(true); }}
+          onClick={() => {
+            setEditingCoupon(null);
+            setIsModalOpen(true);
+          }}
           className="bg-[#2d4a3e] text-white px-6 py-2.5 rounded-xl flex items-center gap-2 hover:bg-[#233b31] transition-all font-bold text-sm shadow-md active:scale-95"
         >
           <Plus size={18} /> Add New Coupon
@@ -115,37 +155,89 @@ const VoucherPage: React.FC = () => {
               <tr className="text-gray-400 text-xs font-bold uppercase tracking-widest border-b border-gray-50">
                 <th className="pb-6 px-4">Name</th>
                 <th className="pb-6 px-4">Code</th>
-                <th className="pb-6 px-4">UsedBy</th>
-                <th className="pb-6 px-4">Price</th>
+                <th className="pb-6 px-4">Usage</th>
+                <th className="pb-6 px-4">Discount</th>
+                <th className="pb-6 px-4">Target</th>
                 <th className="pb-6 px-4 text-center">Status</th>
-                <th className="pb-6 px-4">Expires At</th>
+                <th className="pb-6 px-4">Active From</th>
+                <th className="pb-6 px-4">Expires</th>
                 <th className="pb-6 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50/50">
               {isLoading ? (
-                <tr><td colSpan={6} className="py-20 text-center text-gray-400 font-medium">Loading...</td></tr>
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="py-20 text-center text-gray-400 font-medium"
+                  >
+                    Loading...
+                  </td>
+                </tr>
               ) : vouchers.length === 0 ? (
-                <tr><td colSpan={6} className="py-20 text-center text-gray-400 font-medium">No coupons found.</td></tr>
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="py-20 text-center text-gray-400 font-medium"
+                  >
+                    No coupons found.
+                  </td>
+                </tr>
               ) : (
                 vouchers.map((voucher: Voucher) => {
                   // status check logic: agar active false ho ya date guzar chuki ho toh Expired
                   const isExpired = new Date(voucher.expiresDate) < new Date();
-                  const currentStatus = !voucher.active || isExpired ? "Expired" : "Active";
+                  const currentStatus =
+                    !voucher.active || isExpired ? "Expired" : "Active";
 
                   return (
-                    <tr key={voucher._id} className="group hover:bg-gray-50/30 transition-all">
-                      <td className="py-5 px-4 text-gray-600 font-medium">{voucher.name}</td>
-                      <td className="py-5 px-4 text-gray-400 font-medium tracking-wider">{voucher.code}</td>
-                      <td className="py-5 px-4 text-gray-800 font-bold">{voucher.usedBy.length || 0}</td>
-                      <td className="py-5 px-4 text-gray-800 font-bold">{voucher.amount} NOK</td>
+                    <tr
+                      key={voucher._id}
+                      className="group hover:bg-gray-50/30 transition-all"
+                    >
+                      <td className="py-5 px-4 text-gray-600 font-medium">
+                        {voucher.name}
+                      </td>
+                      <td className="py-5 px-4 text-gray-400 font-medium tracking-wider">
+                        {voucher.code}
+                      </td>
+                      <td className="py-5 px-4 text-gray-800 font-bold">
+                        {voucher.usedBy.length} / {voucher.usageLimit || "∞"}
+                      </td>
+                      <td className="py-5 px-4 text-gray-800 font-bold">
+                        {voucher.amount}
+                        {voucher.type === "percentage" ? "%" : " NOK"}
+                      </td>
+                      <td className="py-5 px-4 text-gray-500 font-medium capitalize">
+                        {voucher.targetPlanType}
+                      </td>
                       <td className="py-5 px-4 text-center">
                         <StatusBadge status={currentStatus} />
                       </td>
-                      <td className="py-5 px-4 text-gray-500 font-medium">{new Date(voucher.expiresDate).toLocaleDateString()}</td>
+                      <td className="py-5 px-4 text-gray-500 font-medium">
+                        {new Date(
+                          voucher.activeDate || voucher.expiresDate,
+                        ).toLocaleDateString()}
+                      </td>
+                      <td className="py-5 px-4 text-gray-500 font-medium">
+                        {new Date(voucher.expiresDate).toLocaleDateString()}
+                      </td>
                       <td className="flex py-5 px-4 text-right space-x-2">
-                        <button onClick={() => { setEditingCoupon(voucher); setIsModalOpen(true); }} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"><Edit3 size={18} /></button>
-                        <button onClick={() => handleDelete(voucher._id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={18} /></button>
+                        <button
+                          onClick={() => {
+                            setEditingCoupon(voucher);
+                            setIsModalOpen(true);
+                          }}
+                          className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Edit3 size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(voucher._id)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       </td>
                     </tr>
                   );
@@ -158,27 +250,64 @@ const VoucherPage: React.FC = () => {
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-2 mt-4">
-            <button disabled={currentPage === 1} className="p-2 text-gray-400 disabled:opacity-30" onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}><ChevronLeft size={20} /></button>
+            <button
+              disabled={currentPage === 1}
+              className="p-2 text-gray-400 disabled:opacity-30"
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+            >
+              <ChevronLeft size={20} />
+            </button>
             {[...Array(totalPages)].map((_, i) => (
-              <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-10 h-10 rounded-full font-bold transition-all border ${currentPage === i + 1 ? "bg-white border-gray-200 shadow-sm scale-110" : "text-gray-400 border-transparent"}`}>{i + 1}</button>
+              <button
+                key={i}
+                onClick={() => setCurrentPage(i + 1)}
+                className={`w-10 h-10 rounded-full font-bold transition-all border ${currentPage === i + 1 ? "bg-white border-gray-200 shadow-sm scale-110" : "text-gray-400 border-transparent"}`}
+              >
+                {i + 1}
+              </button>
             ))}
-            <button disabled={currentPage === totalPages} className="p-2 text-gray-400 disabled:opacity-30" onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}><ChevronRight size={20} /></button>
+            <button
+              disabled={currentPage === totalPages}
+              className="p-2 text-gray-400 disabled:opacity-30"
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+            >
+              <ChevronRight size={20} />
+            </button>
           </div>
         )}
       </div>
 
-      {isModalOpen && <CreateCouponForm onClose={() => { setIsModalOpen(false); setEditingCoupon(null); }} onSubmit={handleSubmitCoupon} initialData={editingCoupon} />}
+      {isModalOpen && (
+        <CreateCouponForm
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingCoupon(null);
+          }}
+          onSubmit={handleSubmitCoupon}
+          initialData={editingCoupon}
+        />
+      )}
     </div>
   );
 };
 
-const StatusBadge = ({ status }: { status: "Active" | "Expired" | "InActive" }) => {
-  const styles = { 
-    Active: "bg-emerald-500 text-white shadow-emerald-100", 
-    Expired: "bg-rose-400 text-white shadow-rose-100", 
-    InActive: "bg-amber-400 text-white shadow-amber-100" 
+const StatusBadge = ({
+  status,
+}: {
+  status: "Active" | "Expired" | "InActive";
+}) => {
+  const styles = {
+    Active: "bg-emerald-500 text-white shadow-emerald-100",
+    Expired: "bg-rose-400 text-white shadow-rose-100",
+    InActive: "bg-amber-400 text-white shadow-amber-100",
   };
-  return <span className={`${styles[status] || "bg-gray-400"} px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider inline-block min-w-[90px] text-center shadow-md`}>{status}</span>;
+  return (
+    <span
+      className={`${styles[status] || "bg-gray-400"} px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider inline-block min-w-[90px] text-center shadow-md`}
+    >
+      {status}
+    </span>
+  );
 };
 
 export default VoucherPage;

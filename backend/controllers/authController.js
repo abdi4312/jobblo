@@ -32,7 +32,8 @@ const allowedRoles = ["user", "company"];
 const sanitizeUser = (user) => {
   if (!user) return null;
 
-  const userObject = typeof user.toObject === "function" ? user.toObject() : user;
+  const userObject =
+    typeof user.toObject === "function" ? user.toObject() : user;
 
   delete userObject.password;
   delete userObject.__v;
@@ -123,7 +124,9 @@ exports.register = async (req, res) => {
       orgNumber,
     } = req.body;
 
-    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
 
     const validationError = validateRegisterInput({
       name,
@@ -138,7 +141,9 @@ exports.register = async (req, res) => {
       return res.status(400).json({ error: validationError });
     }
 
-    const existingUser = await User.findOne({ email: normalizedEmail }).select("_id");
+    const existingUser = await User.findOne({ email: normalizedEmail }).select(
+      "_id",
+    );
 
     if (existingUser) {
       return res.status(400).json({ error: "Email already exists" });
@@ -176,6 +181,7 @@ exports.register = async (req, res) => {
 
     return res.status(201).json({
       user: sanitizeUser(user),
+      accessToken,
     });
   } catch (error) {
     if (createdUserId) {
@@ -201,13 +207,17 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
 
     if (!normalizedEmail || !password) {
       return res.status(400).json({ error: "Email and password are required" });
     }
 
-    const user = await User.findOne({ email: normalizedEmail }).select("+password");
+    const user = await User.findOne({ email: normalizedEmail }).select(
+      "+password",
+    );
 
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
@@ -225,6 +235,7 @@ exports.login = async (req, res) => {
 
     return res.json({
       user: sanitizeUser(user),
+      accessToken,
     });
   } catch (error) {
     return sendServerError(res, error, "Login failed");
@@ -329,7 +340,7 @@ exports.refreshToken = async (req, res) => {
 
     setAuthCookies(res, accessToken, newRefreshToken);
 
-    return res.json({ message: "Token refreshed" });
+    return res.json({ message: "Token refreshed", accessToken });
   } catch (error) {
     return sendServerError(res, error, "Refresh token failed");
   }

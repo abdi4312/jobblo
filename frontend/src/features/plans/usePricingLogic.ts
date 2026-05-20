@@ -14,9 +14,11 @@ export const usePricingLogic = () => {
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [discountInfo, setDiscountInfo] = useState<{
     originalPrice: number;
-    discountPercent: number;
+    discountAmount: number;
     finalPrice: number;
     code: string;
+    type: "percentage" | "fixed";
+    amount: number;
   } | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
@@ -40,14 +42,21 @@ export const usePricingLogic = () => {
         code: promoCode.trim(),
       });
 
+      // Backend returns { success: true, data: { ... } }
       setDiscountInfo({
-        ...res.data,
+        ...res.data.data,
         code: promoCode.trim(),
       });
-      toast.success("Promo code activated! 🎉");
+      toast.success(res.data.message || "Promo code activated! 🎉");
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      toast.error(err?.response?.data?.message || "Invalid coupon code");
+      const err = error as {
+        response?: { data?: { error?: string; message?: string } };
+      };
+      toast.error(
+        err?.response?.data?.error ||
+          err?.response?.data?.message ||
+          "Invalid coupon code",
+      );
       setDiscountInfo(null);
     } finally {
       setIsApplyingPromo(false);

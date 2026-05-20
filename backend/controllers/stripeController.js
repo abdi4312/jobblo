@@ -4,6 +4,7 @@ const User = require("../models/User");
 const stripe = require("../config/stripe");
 const SubscriptionPlan = require("../models/SubscriptionPlan");
 const calculateDiscount = require("../utils/calculateDiscount");
+const { validateCouponLogic } = require("../utils/couponValidation");
 const { upsertTransaction } = require("../utils/transaction");
 const { upsertSubscription } = require("../utils/subscription");
 
@@ -27,17 +28,15 @@ exports.createCheckoutSession = async (req, res) => {
 
     if (couponCode) {
       const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
-      if (!coupon) return res.status(404).json({ message: "Coupon not found" });
-      if (!coupon.active)
-        return res.status(400).json({ message: "Coupon is not active" });
-      if (coupon.expiresDate < new Date())
-        return res.status(400).json({ message: "Coupon expired" });
 
-      // calculate discounted price
+      // logic moved to utils/couponValidation.js
+      validateCouponLogic(coupon, plan, user._id);
+
+      // Calculate discounted price
       const pricing = calculateDiscount(plan.price, coupon);
       finalPrice = pricing.finalPrice;
       appliedCoupon = coupon.code;
-      couponId = coupon._id; // ✅ store coupon ObjectId
+      couponId = coupon._id;
     }
 
     // 3️⃣ Create Stripe customer
@@ -110,9 +109,7 @@ exports.checkoutSessionStatus = async (req, res) => {
     const couponId = metadata.couponId || null;
     const autoRenew = metadata.autoRenew === "true";
 
-    const amount = session.amount_total
-      ? session.amount_total / 100
-      : 0;
+    const amount = session.amount_total ? session.amount_total / 100 : 0;
 
     // ===============================
     // 🔹 TRANSACTION (UTIL)

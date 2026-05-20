@@ -28,7 +28,7 @@ const DashboardLayout: React.FC = () => {
     navigate("/");
   };
   return (
-    <div className="flex !mt-[-70px]">
+    <div className="flex">
       {/* Overlay for Mobile */}
       {isMobileMenuOpen && (
         <div
