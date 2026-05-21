@@ -10,5 +10,6 @@ export interface Plan {
   featuresText: string[];
   entitlements: {
     freeContact: number;
+    ContactUnlock?: number;
   };
 }

@@ -14,6 +14,8 @@ export type User = {
   bio?: string;
   role?: string;
   subscription?: string;
+  planType?: "business" | "private";
+  monthlyContactUsage?: number;
   verified?: boolean;
   birthDate?: string;
   gender?: string;

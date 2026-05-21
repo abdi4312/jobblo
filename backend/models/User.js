@@ -41,7 +41,15 @@ const userSchema = new mongoose.Schema(
     country: { type: String },
     subscription: {
       type: String,
-      enum: ["Standard", "Start", "Pro", "Premium", "Fleksibel", "Job Pluss"],
+      enum: [
+        "Standard",
+        "Plus",
+        "Pro",
+        "Start",
+        "Premium",
+        "Fleksibel",
+        "Jobblo Pluss",
+      ],
       default: "Standard",
     },
     planType: {
@@ -143,6 +151,18 @@ const userSchema = new mongoose.Schema(
         createdAt: { type: Date, default: Date.now },
       },
     ],
+    // 📊 CONTACT LIMIT TRACKING
+    monthlyContactUsage: {
+      type: Number,
+      default: 0,
+    },
+    lastContactReset: {
+      type: Date,
+      default: Date.now,
+    },
+    stripeCustomerId: {
+      type: String,
+    },
   },
   { timestamps: true },
 );

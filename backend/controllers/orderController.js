@@ -80,6 +80,14 @@ exports.createJobRequest = async (req, res) => {
       providerId,
     });
 
+    // --- INCREMENT CONTACT USAGE ---
+    if (!req.isFreeContact) {
+      await User.findByIdAndUpdate(customerId, {
+        $inc: { monthlyContactUsage: 1 },
+      });
+    }
+    // -------------------------------
+
     await jobRequest.populate("serviceId");
     await jobRequest.populate("customerId", "name");
 

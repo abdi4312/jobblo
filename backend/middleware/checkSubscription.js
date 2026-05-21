@@ -1,9 +1,9 @@
-const transaction = require("../utils/transaction");
-const Chat = require("../models/ChatMessage");
+const User = require("../models/User");
 const SubscriptionPlan = require("../models/SubscriptionPlan");
 const Subscription = require("../models/Subscription");
 const Transaction = require("../models/Transaction");
 const Service = require("../models/Service");
+const JobRequest = require("../models/JobRequest");
 const GlobalConfig = require("../models/GlobalConfig");
 const stripe = require("../config/stripe");
 
@@ -12,114 +12,22 @@ exports.checkSubscription = async (req, res, next) => {
     const userId = req.user._id;
     const { serviceId, sessionId } = req.body;
 
-    // --- STRIPE SESSION VERIFICATION (Bypass all limits if just paid) ---
-    if (sessionId) {
-      try {
-        const session = await stripe.checkout.sessions.retrieve(sessionId);
+    // 1. Get User with usage info
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-        if (session.payment_status !== "paid") {
-          return next();
-        }
+    // --- MONTHLY RESET LOGIC ---
+    const now = new Date();
+    const lastReset = new Date(user.lastContactReset || user.createdAt);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-        const metadata = session.metadata || {};
-
-        await transaction.upsertTransaction({
-          userId: metadata.userId || userId,
-          serviceId: metadata.serviceId || null,
-
-          planId: metadata.planId || null,
-          planName: metadata.planName || null,
-          planType: metadata.planType || null,
-
-          stripeSessionId: sessionId,
-          amount: session.amount_total ? session.amount_total / 100 : 0,
-
-          currency: session.currency || "nok",
-          status: "succeeded",
-          type: "extra_contact",
-
-          discountAmount: Number(metadata.discountAmount || 0),
-          discountCoupon: metadata.coupon || null,
-          coupon: metadata.couponId || null,
-        });
-
-        return next();
-      } catch (err) {
-        console.error("Stripe verification error:", err.message);
-      }
+    if (lastReset < thirtyDaysAgo) {
+      user.monthlyContactUsage = 0;
+      user.lastContactReset = now;
+      await user.save();
     }
 
-    // 1. Check Subscription Plan
-    const subscription = await Subscription.findOne({ userId });
-    if (!subscription || !subscription.currentPlan) {
-      return res.status(403).json({ message: "No subscription found" });
-    }
-
-    const { plan, endDate, planType, startDate } = subscription.currentPlan;
-
-    // --- FREE JOBS UNDER 10,000 NOK RULE ---
-    if (serviceId && planType === "private") {
-      const freeUnder10kConfig = await GlobalConfig.findOne({
-        key: "FREE_PRIVATE_JOBS_UNDER_10000",
-      });
-      if (freeUnder10kConfig && freeUnder10kConfig.value === true) {
-        const service = await Service.findById(serviceId);
-        if (service && service.price < 10000) {
-          return next(); // Free contact for private users if job is under 10k
-        }
-      }
-    }
-
-    if (plan !== "Standard" && new Date(endDate) < new Date()) {
-      return res.status(403).json({ message: "Subscription expired" });
-    }
-
-    const planDoc = await SubscriptionPlan.findOne({
-      name: plan,
-      type: planType,
-      isActive: true,
-    });
-
-    if (!planDoc) {
-      return res.status(403).json({ message: "Invalid subscription plan" });
-    }
-
-    const { freeContact, perContactPrice, maxContact, ContactUnlock } =
-      planDoc.entitlements;
-
-    // 1a. Per-service unlock window: wait ContactUnlock minutes after job posted
-    if (serviceId && typeof ContactUnlock === "number") {
-      const service = await Service.findById(serviceId).select("createdAt");
-      if (!service) {
-        return res.status(404).json({ message: "Service not found" });
-      }
-
-      const unlockAt = new Date(
-        service.createdAt.getTime() + ContactUnlock * 60 * 1000,
-      );
-      if (Date.now() < unlockAt.getTime()) {
-        const minutesLeft = Math.ceil(
-          (unlockAt.getTime() - Date.now()) / 60000,
-        );
-        return res
-          .status(403)
-          .json({ message: `Contact unlocks in ${minutesLeft} minutes` });
-      }
-    }
-
-    // 2. Count used contacts (Reset Logic)
-    // Hum sirf wahi chats count karenge jo current plan ke startDate ke baad hui hain
-    const countFilterDate =
-      new Date(startDate) > new Date(Date.now() - 72 * 60 * 60 * 1000)
-        ? new Date(startDate)
-        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-    const usedContacts = await Chat.countDocuments({
-      clientId: userId,
-      createdAt: { $gte: countFilterDate }, // 👈 Limit reset here
-    });
-
-    // 3. Check if user already paid for THIS specific contact
+    // --- STRIPE SESSION VERIFICATION (Bypass if just paid for extra contact) ---
     if (serviceId) {
       const paidContact = await Transaction.findOne({
         userId: userId,
@@ -127,44 +35,105 @@ exports.checkSubscription = async (req, res, next) => {
         status: "succeeded",
         type: "extra_contact",
       });
-      if (paidContact) return next();
+      if (paidContact) {
+        return next();
+      }
     }
 
-    // 🚫 Limits Check
-    if (usedContacts >= maxContact) {
-      return res
-        .status(403)
-        .json({ message: "Maximum monthly contacts reached" });
+    // 2. Check Subscription Plan
+    const subscription = await Subscription.findOne({ userId });
+    // Default to Standard if no subscription found
+    const currentPlanName = subscription?.currentPlan?.plan || "Standard";
+    const currentPlanType = user.planType || "private";
+
+    // 3. Get Plan Details
+    const planDoc = await SubscriptionPlan.findOne({
+      name: currentPlanName,
+      type: currentPlanType,
+      isActive: true,
+    });
+
+    if (!planDoc) {
+      return res.status(403).json({ message: "Invalid subscription plan" });
     }
 
-    if (usedContacts < freeContact) {
-      // 👈 Change: < instead of <= to be precise
-      return next();
+    const { freeContact, perContactPrice, ContactUnlock } =
+      planDoc.entitlements;
+
+    if (sessionId) {
+      try {
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        if (session.payment_status === "paid") {
+          return next();
+        }
+      } catch (err) {
+        console.error("Stripe verification error:", err.message);
+      }
     }
 
-    // (Optional) keep legacy last-chat unlock? Commented out to prioritize per-service unlock
-    // const lastChat = await Chat.findOne(
-    //   { clientId: userId },
-    //   { createdAt: 1 },
-    //   { sort: { createdAt: -1 } },
-    // );
-    // if (lastChat) {
-    //   const unlockAt = new Date(lastChat.createdAt.getTime() + ContactUnlock * 60 * 1000);
-    //   if (new Date() < unlockAt) {
-    //     return res.status(403).json({
-    //       message: `Next contact unlocks in ${ContactUnlock} minutes`,
-    //     });
-    //   }
-    // }
+    // --- FREE JOBS UNDER 10,000 NOK RULE (Private Users Only) ---
+    let isFreeUnder10k = false;
+    if (serviceId && currentPlanType === "private") {
+      const freeUnder10kConfig = await GlobalConfig.findOne({
+        key: "FREE_PRIVATE_JOBS_UNDER_10000",
+      });
 
-    // 💳 PAYMENT REQUIRED
+      if (freeUnder10kConfig && freeUnder10kConfig.value === true) {
+        const service = await Service.findById(serviceId);
+        if (service && service.price < 10000) {
+          req.isFreeContact = true; // Mark as free for controller
+          isFreeUnder10k = true;
+          return next(); // Free access for jobs under 10k for private users
+        }
+      }
+    }
+
+    // 5. Check Monthly Limit
+    const currentUsage = user.monthlyContactUsage || 0;
+    const hasFreeContactsLeft = currentUsage < freeContact;
+
+    if (hasFreeContactsLeft) {
+      return next(); // Still has monthly free contacts
+    }
+
+    // 6. Contact Unlock Cooldown (ONLY applies after free contacts are exhausted)
+    if (typeof ContactUnlock === "number" && ContactUnlock > 0) {
+      const lastRequest = await JobRequest.findOne({ customerId: userId }).sort(
+        {
+          createdAt: -1,
+        },
+      );
+
+      if (lastRequest) {
+        const unlockAt = new Date(
+          lastRequest.createdAt.getTime() + ContactUnlock * 60 * 1000,
+        );
+        const now = new Date();
+
+        if (now < unlockAt) {
+          const minutesLeft = Math.ceil(
+            (unlockAt.getTime() - now.getTime()) / 60000,
+          );
+          return res.status(403).json({
+            message: `Du må vente ${ContactUnlock} minutter mellom hver forespørsel. Neste åpner om ${minutesLeft} minutter.`,
+            isDelayed: true,
+            unlockAt: unlockAt.toISOString(),
+          });
+        }
+      }
+    }
+
+    // If we are here, monthly limit is reached AND cooldown is over (if any)
     return res.status(402).json({
-      message: "Free contacts finished",
+      message: "Du har nådd din månedlige grense for kontakter.",
       paymentRequired: true,
-      amount: perContactPrice,
-      currency: "NOK",
+      upgradeRequired: true,
+      limit: freeContact,
+      usage: currentUsage,
+      perContactPrice,
     });
   } catch (error) {
+    console.error("checkSubscription Error:", error);
     res.status(500).json({ message: error.message });
   }
 };

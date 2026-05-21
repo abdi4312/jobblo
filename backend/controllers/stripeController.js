@@ -1,6 +1,7 @@
 const Coupon = require("../models/Coupon");
 const Subscription = require("../models/Subscription");
 const User = require("../models/User");
+const Service = require("../models/Service");
 const stripe = require("../config/stripe");
 const SubscriptionPlan = require("../models/SubscriptionPlan");
 const calculateDiscount = require("../utils/calculateDiscount");
@@ -174,14 +175,17 @@ exports.checkoutSessionStatus = async (req, res) => {
 exports.createExtraContactPayment = async (req, res) => {
   try {
     const user = req.user;
-    const { amount, serviceId, providerId } = req.body;
+    const { amount, serviceId } = req.body;
 
     // Validate required fields
-    if (!amount || !serviceId || !providerId) {
+    if (!amount || !serviceId) {
       return res
         .status(400)
-        .json({ message: "Amount, serviceId, and providerId are required" });
+        .json({ message: "Amount and serviceId are required" });
     }
+
+    const service = await Service.findById(serviceId);
+    if (!service) return res.status(404).json({ message: "Service not found" });
 
     let stripeCustomerId = user.stripeCustomerId;
     if (!stripeCustomerId) {
@@ -202,25 +206,64 @@ exports.createExtraContactPayment = async (req, res) => {
         {
           price_data: {
             currency: "nok",
-            product_data: { name: "Extra Contact" },
-            unit_amount: amount * 100,
+            product_data: {
+              name: "Extra Contact",
+              description: `Contact for: ${service.title}`,
+            },
+            unit_amount: Math.round(amount * 100),
           },
           quantity: 1,
         },
       ],
 
-      success_url: `${process.env.FRONTEND_URL}contact/success?session_id={CHECKOUT_SESSION_ID}&serviceId=${serviceId}&providerId=${providerId}`,
-      cancel_url: `${process.env.FRONTEND_URL}`,
+      success_url: `${process.env.FRONTEND_URL}contact/success?session_id={CHECKOUT_SESSION_ID}&serviceId=${serviceId}`,
+      cancel_url: `${process.env.FRONTEND_URL}services/${serviceId}`,
       metadata: {
         userId: String(user._id),
         type: "extra_contact",
         serviceId,
-        providerId,
       },
     });
 
     res.json({ url: session.url });
   } catch (error) {
+    console.error("Extra Contact Payment Error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.extraContactPaymentStatus = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status !== "paid") {
+      return res.json({ payment_status: session.payment_status });
+    }
+
+    const { userId, serviceId, type } = session.metadata;
+
+    if (type !== "extra_contact") {
+      return res.status(400).json({ message: "Invalid payment type" });
+    }
+
+    // 1. Log Transaction
+    await upsertTransaction({
+      userId,
+      serviceId,
+      stripeSessionId: sessionId,
+      amount: session.amount_total / 100,
+      currency: session.currency,
+      status: "succeeded",
+      type: "extra_contact",
+    });
+
+    // 2. We don't increment monthlyContactUsage here because this was a PAID contact.
+    // The checkSubscription middleware will bypass the limit check if a transaction for this serviceId exists.
+
+    res.json({ payment_status: "paid", serviceId });
+  } catch (error) {
+    console.error("Extra Contact Status Error:", error);
     res.status(500).json({ message: error.message });
   }
 };

@@ -20,6 +20,11 @@ export const getConfigs = async () => {
   return res.data;
 };
 
+export const getConfigByKey = async (key: string) => {
+  const res = await mainLink.get(`/api/config/${key}`);
+  return res.data;
+};
+
 export const updateConfig = async (key: string, value: any) => {
   const res = await mainLink.post("/api/config/update", { key, value });
   return res.data;
