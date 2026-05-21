@@ -17,6 +17,7 @@ interface JobButtonProps {
   id: string;
   job?: Jobs; // Added job prop to pass to modal
   hasRequested?: boolean;
+  isTimerActive?: boolean; // Added for cooldown state
 }
 
 const JobButton: React.FC<JobButtonProps> = ({
@@ -26,6 +27,7 @@ const JobButton: React.FC<JobButtonProps> = ({
   isMsgLoading,
   job,
   hasRequested,
+  isTimerActive,
 }) => {
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const navigate = useNavigate();
@@ -65,7 +67,13 @@ const JobButton: React.FC<JobButtonProps> = ({
         {/* Søk / Apply Button */}
         <Button
           onClick={handleSendMessage}
-          disabled={isOwnJob || isMsgLoading || hasRequested || isLimitReached}
+          disabled={
+            isOwnJob ||
+            isMsgLoading ||
+            hasRequested ||
+            isLimitReached ||
+            isTimerActive
+          }
           label={
             isMsgLoading
               ? ""
@@ -75,7 +83,9 @@ const JobButton: React.FC<JobButtonProps> = ({
                   ? "Forespørsel sendt"
                   : isLimitReached
                     ? "Fulltegnet"
-                    : "Order Now"
+                    : isTimerActive
+                      ? "Cooldown"
+                      : "Order Now"
           }
           icon={
             isMsgLoading ? (

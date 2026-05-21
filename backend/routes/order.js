@@ -1,7 +1,8 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const orderController = require('../controllers/orderController');
-const { authenticate } = require('../middleware/auth');
+const orderController = require("../controllers/orderController");
+const { authenticate } = require("../middleware/auth");
+const { checkSubscription } = require("../middleware/checkSubscription");
 
 /**
  * @swagger
@@ -65,10 +66,19 @@ const { authenticate } = require('../middleware/auth');
  *       401:
  *         description: Mangler eller ugyldig autentisering
  */
-router.get('/', authenticate, orderController.getAllOrders);
-router.post('/request', authenticate, orderController.createJobRequest);
-router.get('/requests/my', authenticate, orderController.getMyJobRequests);
-router.patch('/request/:id', authenticate, orderController.updateJobRequestStatus);
+router.get("/", authenticate, orderController.getAllOrders);
+router.post(
+  "/request",
+  authenticate,
+  checkSubscription,
+  orderController.createJobRequest,
+);
+router.get("/requests/my", authenticate, orderController.getMyJobRequests);
+router.patch(
+  "/request/:id",
+  authenticate,
+  orderController.updateJobRequestStatus,
+);
 
 /**
  * @swagger
@@ -97,7 +107,7 @@ router.patch('/request/:id', authenticate, orderController.updateJobRequestStatu
  *       404:
  *         description: Ordre ikke funnet
  */
-router.get('/:id', authenticate, orderController.getOrderById);
+router.get("/:id", authenticate, orderController.getOrderById);
 
 /**
  * @swagger
@@ -134,7 +144,7 @@ router.get('/:id', authenticate, orderController.getOrderById);
  *       404:
  *         description: Tjeneste ikke funnet
  */
-router.post('/', authenticate, orderController.createOrder);
+router.post("/", authenticate, orderController.createOrder);
 
 /**
  * @swagger
@@ -176,7 +186,7 @@ router.post('/', authenticate, orderController.createOrder);
  *       404:
  *         description: Ordre ikke funnet
  */
-router.patch('/:id', authenticate, orderController.updateOrder);
+router.patch("/:id", authenticate, orderController.updateOrder);
 
 /**
  * @swagger
@@ -200,6 +210,6 @@ router.patch('/:id', authenticate, orderController.updateOrder);
  *       404:
  *         description: Ordre ikke funnet
  */
-router.delete('/:id', authenticate, orderController.deleteOrder);
+router.delete("/:id", authenticate, orderController.deleteOrder);
 
 module.exports = router;

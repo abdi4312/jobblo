@@ -14,28 +14,32 @@ function ContactSuccessPage() {
     const params = new URLSearchParams(location.search);
     const sessionId = params.get("session_id");
     const serviceId = params.get("serviceId");
-    const providerId = params.get("providerId");
 
     // Agar required params missing ho to home redirect
-    if (!sessionId || !serviceId || !providerId) {
+    if (!sessionId || !serviceId) {
       toast.error("Ugyldige parametere. Du blir sendt til forsiden.");
       navigate("/", { replace: true });
       return;
     }
 
-    // Chat creation
+    // Payment and Job Request creation
     if (!hasCreatedChat.current) {
       hasCreatedChat.current = true; // Strict Mode double render prevention
 
+      // First verify payment and let backend handle transactions
       mainLink
-        .post("/api/chats/create", { providerId, serviceId, sessionId })
+        .get(`/api/stripe/extra-contact-status/${sessionId}`)
+        .then(() => {
+          // Then create job request (which will now pass middleware because of transaction)
+          return mainLink.post("/api/orders/request", { serviceId, sessionId });
+        })
         .then((res) => {
-          toast.success("Samtale opprettet!");
-          navigate(`/messages/${res.data._id}`, { replace: true });
+          toast.success("Forespørsel sendt! Venter på godkjenning.");
+          navigate(`/job-listing/${serviceId}`, { replace: true });
         })
         .catch((err) => {
-          console.error("Chat creation failed:", err);
-          toast.error("Kunne ikke opprette samtale");
+          console.error("Payment verification or request failed:", err);
+          toast.error(err.response?.data?.message || "Kunne ikke fullføre forespørselen");
           setLoading(false);
         });
     }

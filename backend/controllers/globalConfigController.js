@@ -12,10 +12,23 @@ exports.getConfigs = async (req, res) => {
 
 exports.getConfigByKey = async (req, res) => {
   try {
-    const config = await GlobalConfig.findOne({ key: req.params.key });
+    const { key } = req.params;
+    let config = await GlobalConfig.findOne({ key });
+
+    // Fallback defaults if config is missing in DB
     if (!config) {
+      const defaults = {
+        ADS_FOR_NON_SUBSCRIBERS: { value: false },
+        FREE_PRIVATE_JOBS_UNDER_10000: { value: false },
+      };
+
+      if (defaults[key]) {
+        return res.status(200).json({ key, ...defaults[key], isDefault: true });
+      }
+
       return res.status(404).json({ message: "Config not found" });
     }
+
     res.status(200).json(config);
   } catch (err) {
     console.error(err);
@@ -29,7 +42,7 @@ exports.updateConfig = async (req, res) => {
     const config = await GlobalConfig.findOneAndUpdate(
       { key },
       { value },
-      { new: true, upsert: true }
+      { new: true, upsert: true },
     );
     res.status(200).json({ message: "Config updated successfully", config });
   } catch (err) {
@@ -57,7 +70,7 @@ exports.initializeConfigs = async (req, res) => {
       await GlobalConfig.findOneAndUpdate(
         { key: config.key },
         { $setOnInsert: config },
-        { upsert: true }
+        { upsert: true },
       );
     }
 
