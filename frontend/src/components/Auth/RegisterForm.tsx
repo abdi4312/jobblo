@@ -55,8 +55,8 @@ export const RegisterForm = () => {
   };
 
   return (
-    <div className="w-full lg:w-[50%] flex items-center justify-center p-4">
-      <div className="w-full max-w-120 box-card-custom p-8">
+    <div className="w-full lg:w-[50%] flex items-center justify-center box-card-custom rounded-none p-4">
+      <div className="w-full max-w-120 p-8">
         <div className="mb-6">
           <h1 className="text-[28px] font-bold text-black leading-tight mb-2">
             Bli med i markedsplassen
@@ -67,81 +67,66 @@ export const RegisterForm = () => {
         </div>
 
         <form onSubmit={handleRegister} className="flex flex-col gap-5">
-          <div className="grid grid-cols-2 gap-4">
-            {/* First Name */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wider">
-                Fornavn
-              </label>
-              <Input
-                type="text"
-                value={values.name}
-                placeholder="Ola"
-                onChange={(e) => handleChange("name", e.target.value)}
-                error={errors.name}
-                className="rounded-lg border-black focus:border-black placeholder:text-gray-400 h-11"
-              />
-            </div>
-
-            {/* Last Name */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wider">
-                Etternavn
-              </label>
-              <Input
-                type="text"
-                value={values.lastName}
-                placeholder="Nordmann"
-                onChange={(e) => handleChange("lastName", e.target.value)}
-                error={errors.lastName}
-                className="rounded-lg border-black focus:border-black placeholder:text-gray-400 h-11"
-              />
-            </div>
-          </div>
-
-          {/* User Type Selection */}
+          {/* User Type Selection (Moved to top) */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wider">
               Jeg er en
             </label>
-            <div className="relative">
-              <select
-                id="role"
-                name="role"
-                title="Velg brukertype"
-                value={values.role}
-                onChange={(e) => handleChange("role", e.target.value)}
-                className={`w-full h-11 rounded-lg border border-black bg-white px-4 py-2 text-sm appearance-none cursor-pointer focus:outline-none ${
-                  errors.role ? "border-red-500" : "border-black"
-                }`}
-              >
-                <option value="user">Vanlig bruker (Jobbsøker)</option>
-                <option value="company">Bedrift (Arbeidsgiver)</option>
-              </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                <svg
-                  width="12"
-                  height="8"
-                  viewBox="0 0 12 8"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M1 1L6 6L11 1"
-                    stroke="black"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                label="Privatperson"
+                className={`flex-1 rounded-[8px] h-11 font-semibold border border-zinc-700
+                ${values.role === "user" ? "bg-custom-green" : "bg-transparent text-custom-black hover:bg-custom-green-light"}`}
+                onClick={() => handleChange("role", "user")}
+              />
+              <Button
+                type="button"
+                label="Firma"
+                className={`flex-1 rounded-[8px] h-11 font-semibold border border-zinc-700
+                ${values.role === "company" ? "bg-custom-green" : "bg-transparent text-custom-black hover:bg-custom-green-light"}`}
+                onClick={() => handleChange("role", "company")}
+              />
             </div>
             {errors.role && (
               <p className="text-xs text-red-500 mt-1">{errors.role}</p>
             )}
           </div>
 
-          {/* Conditional Company Fields */}
-          {values.role === "company" && (
+          {/* Conditional Name Fields */}
+          {values.role === "user" ? (
+            <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              {/* First Name */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wider">
+                  Fornavn
+                </label>
+                <Input
+                  type="text"
+                  value={values.name}
+                  placeholder="Ola"
+                  onChange={(e) => handleChange("name", e.target.value)}
+                  error={errors.name}
+                  className="rounded-lg border-black focus:border-black placeholder:text-gray-400 h-11"
+                />
+              </div>
+
+              {/* Last Name */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wider">
+                  Etternavn
+                </label>
+                <Input
+                  type="text"
+                  value={values.lastName}
+                  placeholder="Nordmann"
+                  onChange={(e) => handleChange("lastName", e.target.value)}
+                  error={errors.lastName}
+                  className="rounded-lg border-black focus:border-black placeholder:text-gray-400 h-11"
+                />
+              </div>
+            </div>
+          ) : (
             <div className="flex flex-col gap-5 animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wider">

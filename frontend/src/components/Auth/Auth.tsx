@@ -13,10 +13,10 @@ export default function Auth() {
     return (
         <>
             <div>
-                <img src={LoginImg} alt="Login_img" className="w-full h-full object-cover absolute inset-0" />
+                {/* <img src={LoginImg} alt="Login_img" className="w-full h-full object-cover absolute inset-0" /> */}
             </div>
 
-            <div className="flex flex-col justify-between absolute inset-0 p-[40px] text-white z-10">
+            <div className="flex flex-col justify-between bg-[#1a3a1a] absolute inset-0 p-[40px] text-white z-10">
                 <div className="flex flex-col gap-5">
                     <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(-1)}>
                         <span><ArrowLeft size={20} /></span>

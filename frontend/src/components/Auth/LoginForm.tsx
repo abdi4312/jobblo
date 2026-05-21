@@ -37,8 +37,8 @@ export const LoginForm = () => {
   };
 
   return (
-    <div className="w-full lg:w-[50%] flex items-center justify-center p-4">
-      <div className="w-full max-w-120 box-card-custom p-8">
+    <div className="w-full lg:w-[50%] flex items-center box-card-custom rounded-none justify-center p-4">
+      <div className="w-full max-w-120 p-8">
         <div className="mb-8">
           <h1 className="text-[28px] font-bold text-black leading-tight mb-2">
             Finn en ekspert
@@ -97,7 +97,7 @@ export const LoginForm = () => {
           </div>
 
           {/* Remember Me */}
-          <div className="flex items-center gap-3 mt-1">
+          {/* <div className="flex items-center gap-3 mt-1">
             <div
               className={`w-5 h-5 rounded-full border border-black flex items-center justify-center cursor-pointer ${
                 rememberMe ? "bg-black" : "bg-white"
@@ -107,7 +107,7 @@ export const LoginForm = () => {
               {rememberMe && <div className="w-2 h-2 rounded-full bg-white" />}
             </div>
             <span className="text-sm text-[#4B5563]">Husk meg i 30 dager</span>
-          </div>
+          </div> */}
 
           {/* Sign In Button */}
           <Button

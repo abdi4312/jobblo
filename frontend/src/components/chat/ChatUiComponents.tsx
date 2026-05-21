@@ -1,20 +1,4 @@
 import React from "react";
-import { Button } from "../Ui/button/Button";
-interface FilterButtonProps {
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-}
-
-export const FilterButton: React.FC<FilterButtonProps> = ({ label, isActive, onClick }) => (
-  <Button
-    variant={isActive ? "true" : "false"}
-    size="lg"
-    onClick={onClick}
-  >
-    {label}
-  </Button>
-);
 
 export const EmptyChatState = () => (
   <div className="flex flex-col items-center justify-center h-full text-[#ADB5BD]">
