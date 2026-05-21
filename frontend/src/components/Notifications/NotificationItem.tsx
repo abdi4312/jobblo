@@ -148,6 +148,11 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
       });
       toast.success(status === "accepted" ? "Godkjent!" : "Avvist");
       onMarkAsRead(alert._id);
+
+      // Auto-navigation removed as per user request
+      // if (status === "accepted" && res.conversationId) {
+      //   onNavigate(`/messages/${res.conversationId}`);
+      // }
     } catch (error) {
       toast.error("Kunne ikke oppdatere status");
     }

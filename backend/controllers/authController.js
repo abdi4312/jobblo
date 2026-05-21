@@ -71,7 +71,10 @@ const validateRegisterInput = ({
   companyName,
   orgNumber,
 }) => {
-  if (!name || !email || !password) {
+  // If role is company, we use companyName as the primary name
+  const effectiveName = role === "company" ? companyName : name;
+
+  if (!effectiveName || !email || !password) {
     return "Name, email and password are required";
   }
 
@@ -152,8 +155,11 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const user = await User.create({
-      name: String(name).trim(),
-      lastName: lastName ? String(lastName).trim() : undefined,
+      name:
+        role === "company"
+          ? String(companyName).trim()
+          : String(name || "").trim(),
+      lastName: role === "user" ? String(lastName || "").trim() : undefined,
       email: normalizedEmail,
       password: hashedPassword,
       role,

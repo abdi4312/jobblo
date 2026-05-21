@@ -28,10 +28,21 @@ export const loginValidationSchema = {
 };
 
 export const registerValidationSchema = {
-  name: [required<RegisterFormValues>("name", "Vennligst skriv inn fornavn")],
+  name: [
+    {
+      test: (values: RegisterFormValues) =>
+        values.role !== "user" || (!!values.name && values.name.trim() !== ""),
+      message: "Vennligst skriv inn fornavn",
+    },
+  ],
 
   lastName: [
-    required<RegisterFormValues>("lastName", "Vennligst skriv inn etternavn"),
+    {
+      test: (values: RegisterFormValues) =>
+        values.role !== "user" ||
+        (!!values.lastName && values.lastName.trim() !== ""),
+      message: "Vennligst skriv inn etternavn",
+    },
   ],
 
   email: [

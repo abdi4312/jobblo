@@ -1,5 +1,5 @@
 import React from "react";
-import { FilterButton } from "../../components/chat/ChatUiComponents";
+import { CustomSwitcher } from "../../components/Ui/CustomSwitcher";
 import ConversationList from "../../components/chat/ConversationList";
 import type { FilterType } from "../../features/chat/useChatLogic";
 
@@ -37,16 +37,12 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         <h1 className="text-[24px] font-bold text-[#212529] m-0">Chat</h1>
       </div>
 
-      <div className="flex gap-2 box-card-custom mx-3 mb-3">
-        {filterTypes.map((filter) => (
-          <FilterButton
-            key={filter}
-            label={filter}
-            isActive={activeFilter === filter}
-            onClick={() => setActiveFilter(filter)}
-          />
-        ))}
-      </div>
+      <CustomSwitcher
+        options={filterTypes.map((f) => ({ id: f, label: f }))}
+        value={activeFilter}
+        onChange={(val) => setActiveFilter(val as FilterType)}
+        className="mx-3 mb-3 !py-0"
+      />
 
       <ConversationList
         loading={chatsLoading}
