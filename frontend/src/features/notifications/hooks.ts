@@ -40,12 +40,13 @@ export const useOrderApprovalSocket = (userId: string | undefined) => {
     socket.emit("join", userId);
 
     const handleOrderApproved = (data: { orderId: string; chatId: string }) => {
-      toast.success("Din forespørsel er godkjent! Du blir nå tatt til chatten.");
+      toast.success("Din forespørsel er godkjent!");
       queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
       queryClient.invalidateQueries({ queryKey: ["orders", userId] });
-      setTimeout(() => {
-        navigate(`/messages/${data.chatId}`);
-      }, 2000);
+      // Auto-navigation removed as per user request
+      // setTimeout(() => {
+      //   navigate(`/messages/${data.chatId}`);
+      // }, 2000);
     };
 
     socket.on("order_approved", handleOrderApproved);

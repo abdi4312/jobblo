@@ -56,7 +56,7 @@ function ContactSuccessPage() {
             ariaLabel="loading"
           />
           <p className="mt-4 text-gray-700 text-lg">
-            Vi gjør klar samtalen din, vennligst vent...
+            Bekrefter betaling, vennligst vent...
           </p>
         </>
       )}

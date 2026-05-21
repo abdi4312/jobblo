@@ -4,7 +4,7 @@ import { ProfileNav } from "./ProfileHeader/ProfileNav";
 import { Spinner } from "../Ui/Spinner";
 import { useProfileLogic } from "../../features/profile/useProfileLogic";
 import { BlockedUserView } from "./ProfilePageComponents/BlockedUserView";
-import { ProfileTypeSwitcher } from "./ProfilePageComponents/ProfileTypeSwitcher";
+import { CustomSwitcher } from "../Ui/CustomSwitcher";
 
 export default function ProfilePage() {
   const {
@@ -60,9 +60,15 @@ export default function ProfilePage() {
       ) : (
         <>
           {userToDisplay?.role !== "company" && (
-            <ProfileTypeSwitcher
-              profileType={profileType}
-              onTypeChange={handleProfileTypeChange}
+            <CustomSwitcher
+              options={[
+                { id: "seeker", label: "Jobbsøker" },
+                { id: "poster", label: "Oppdragsgiver" },
+              ]}
+              value={profileType}
+              onChange={(val) =>
+                handleProfileTypeChange(val as "seeker" | "poster")
+              }
             />
           )}
           <ProfileNav

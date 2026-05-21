@@ -4,7 +4,7 @@ import { LoginForm } from "../../components/Auth/LoginForm.tsx";
 export default function LoginPage() {
   return (
     <>
-      <div className="min-h-screen">
+      <div className="min-h-screen max-w-5xl md:my-3.5 mx-auto">
         <div className="flex mx-auto">
           <div className="w-[50%] relative 2xl:mix-h-236 min-h-screen overflow-hidden hidden lg:block">
             <Auth />

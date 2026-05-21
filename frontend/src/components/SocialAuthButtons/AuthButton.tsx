@@ -42,7 +42,7 @@ export default function SocialAuthButtons() {
             </clipPath>
           </defs>
         </svg>
-        <span>Continue with Google</span>
+        <span>Fortsett med Google</span>
       </button>
 
       
@@ -68,8 +68,9 @@ export default function SocialAuthButtons() {
       >
         <span className="text-[20px] -mt-0.5">
           <img className="w-12.5 h-8.75" alt="vipps mobilepay logo" src={vippsLogo}></img>
+          
         </span>
-        <span>Continue with Vipps</span>
+        <span>Fortsett med Vipps</span>
       </button>
     </div>
   );
