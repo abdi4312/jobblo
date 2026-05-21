@@ -4,7 +4,7 @@ import { JobCardSkeleton } from "../../Loading/JobCardSkeleton";
 import type { Tab } from "../../../types/tabs";
 import { useEffect, useRef, useState } from "react";
 import { useUserStore } from "../../../stores/userStore";
-import { getConfigs } from "../../../features/plans/api";
+import { getConfigByKey } from "../../../features/plans/api";
 
 interface JobsContainerProps {
   selectedCategories?: string[];
@@ -13,6 +13,7 @@ interface JobsContainerProps {
   activeTab?: Tab;
 }
 
+// Jobs container component for displaying job listings
 export default function JobsContainer({
   selectedCategories = [],
   searchQuery = "",
@@ -34,10 +35,7 @@ export default function JobsContainer({
   useEffect(() => {
     const checkAds = async () => {
       try {
-        const configs = await getConfigs();
-        const adsConfig = configs.find(
-          (c: any) => c.key === "ADS_FOR_NON_SUBSCRIBERS",
-        );
+        const adsConfig = await getConfigByKey("ADS_FOR_NON_SUBSCRIBERS");
         if (
           adsConfig &&
           adsConfig.value === true &&
@@ -46,7 +44,7 @@ export default function JobsContainer({
           setShowAds(true);
         }
       } catch (err) {
-        console.error("Error fetching configs:", err);
+        console.error("Error fetching ads config:", err);
       }
     };
     checkAds();

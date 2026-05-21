@@ -13,7 +13,7 @@ import JobButton from "../../components/job/JobButton.tsx";
 import RelatedJobs from "../../components/job/RelatedJobs.tsx";
 import { JobDetailSkeleton } from "../../components/Loading/JobDetailSkeleton.tsx";
 import { useFavoriteToggle } from "../../features/favorites/hook/useFavoriteToggle.ts";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 const MapComponent = lazy(() =>
   import("../../components/component/map/MapComponent").then((module) => ({
     default: module.MapComponent,
@@ -30,12 +30,30 @@ import {
 } from "lucide-react";
 import { dateFormatter } from "../../utils/dateFormatter";
 import { ShareModal } from "../../components/shared/ShareModal/ShareModal";
+import { UpgradeModal } from "../../components/shared/UpgradeModal";
+import { BuyContactModal } from "../../components/shared/BuyContactModal";
+import mainLink from "../../api/mainURLs";
+
+import { usePlans } from "../../features/plans/hooks";
+import { getConfigByKey } from "../../features/plans/api";
 
 const JobListingDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
+  const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
+  const [isTimerActive, setIsTimerActive] = useState(false);
+  const [unlockTime, setUnlockTime] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState<string>("");
+  const [upgradeInfo, setUpgradeInfo] = useState<{
+    message?: string;
+    limit?: number;
+    usage?: number;
+    perContactPrice?: number;
+  }>({});
 
   const sendMessageMutation = useSendMessageMutation();
   const stripeMutation = useStripeMutation();
@@ -44,11 +62,9 @@ const JobListingDetailPage = () => {
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const currentUser = useUserStore((state) => state.user);
 
+  const { data: plans } = usePlans();
   const { data: jobRequests } = useMyJobRequestsQuery(isAuth);
-  const hasRequested = jobRequests?.some(
-    (req) =>
-      req.serviceId?._id === id && req.customerId?._id === currentUser?._id,
-  );
+  const [freeJobsToggle, setFreeJobsToggle] = useState(false);
 
   const {
     isFavorited,
@@ -57,6 +73,72 @@ const JobListingDetailPage = () => {
   } = useFavoriteToggle(id!, isAuth);
   const { data: job, isLoading: isJobLoading } = useJobDetailQuery(id!);
   const isOwnJob = job?.userId?._id === currentUser?._id;
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const config = await getConfigByKey("FREE_PRIVATE_JOBS_UNDER_10000");
+        setFreeJobsToggle(config?.value === true);
+      } catch (err) {
+        console.error("Error fetching free jobs config:", err);
+      }
+    };
+    fetchConfig();
+  }, []);
+
+  useEffect(() => {
+    if (isAuth && currentUser && plans && jobRequests && job) {
+      // Bypass cooldown if job is under 10k and toggle is ON (Private users only)
+      const isFreeUnder10k =
+        currentUser.planType === "private" &&
+        freeJobsToggle &&
+        job.price < 10000;
+
+      if (isFreeUnder10k) {
+        setIsTimerActive(false);
+        setUnlockTime(null);
+        return;
+      }
+
+      const currentPlan = plans.find(
+        (p) =>
+          p.name === (currentUser.subscription || "Standard") &&
+          p.type === (currentUser.planType || "private"),
+      );
+
+      const usage = currentUser.monthlyContactUsage || 0;
+      const freeLimit = currentPlan?.entitlements?.freeContact || 0;
+
+      if (currentPlan && usage >= freeLimit) {
+        const cooldownMinutes = currentPlan.entitlements.ContactUnlock || 0;
+        if (cooldownMinutes > 0) {
+          // Get the most recent request
+          const lastRequest = [...jobRequests].sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          )[0];
+
+          if (lastRequest) {
+            const unlockAt = new Date(
+              new Date(lastRequest.createdAt).getTime() +
+                cooldownMinutes * 60 * 1000,
+            );
+            const now = new Date();
+
+            if (now < unlockAt) {
+              setUnlockTime(unlockAt.toISOString());
+              setIsTimerActive(true);
+            }
+          }
+        }
+      }
+    }
+  }, [isAuth, currentUser, plans, jobRequests, job, freeJobsToggle]);
+
+  const hasRequested = jobRequests?.some(
+    (req) =>
+      req.serviceId?._id === id && req.customerId?._id === currentUser?._id,
+  );
 
   const [lng, lat] = job?.location?.coordinates || [0, 0];
   const hasCoordinates = job?.location?.coordinates && (lng !== 0 || lat !== 0);
@@ -77,6 +159,25 @@ const JobListingDetailPage = () => {
           // Redirection removed as per user request
         },
         onError: (err: any) => {
+          if (err.response?.status === 403 && err.response?.data?.isDelayed) {
+            setUnlockTime(err.response.data.unlockAt);
+            setIsTimerActive(true);
+            toast.error(err.response.data.message);
+            return;
+          }
+          if (
+            err.response?.status === 402 ||
+            err.response?.data?.upgradeRequired
+          ) {
+            setUpgradeInfo({
+              message: err.response.data.message,
+              limit: err.response.data.limit,
+              usage: err.response.data.usage,
+              perContactPrice: err.response.data.perContactPrice,
+            });
+            setIsBuyModalOpen(true); // Show BuyContactModal instead of UpgradeModal
+            return;
+          }
           toast.error(
             err.response?.data?.error || "Kunne ikke sende forespørsel",
           );
@@ -85,14 +186,61 @@ const JobListingDetailPage = () => {
     );
   };
 
+  const handleBuyContact = async () => {
+    if (!job?._id || !upgradeInfo.perContactPrice) return;
+
+    setIsPaymentRedirecting(true);
+    try {
+      const res = await mainLink.post(
+        "/api/stripe/create-extra-contact-payment",
+        {
+          amount: upgradeInfo.perContactPrice,
+          serviceId: job._id,
+        },
+      );
+      window.location.href = res.data.url;
+    } catch (error: any) {
+      console.error("Payment redirect failed:", error);
+      toast.error(
+        error.response?.data?.message || "Kunne ikke starte betaling",
+      );
+      setIsPaymentRedirecting(false);
+    }
+  };
+
   const isMessageLoading =
     sendMessageMutation.isPending ||
     stripeMutation.isPending ||
-    createJobRequestMutation.isPending;
+    createJobRequestMutation.isPending ||
+    isPaymentRedirecting;
 
   const handleShare = () => {
     setIsShareModalOpen(true);
   };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isTimerActive && unlockTime) {
+      const calculateTimeLeft = () => {
+        const difference =
+          new Date(unlockTime).getTime() - new Date().getTime();
+        if (difference <= 0) {
+          setIsTimerActive(false);
+          setUnlockTime(null);
+          setTimeLeft("");
+          return;
+        }
+
+        const minutes = Math.floor(difference / 1000 / 60);
+        const seconds = Math.floor((difference / 1000) % 60);
+        setTimeLeft(`${minutes}:${seconds < 10 ? `0${seconds}` : seconds}`);
+      };
+
+      calculateTimeLeft();
+      interval = setInterval(calculateTimeLeft, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerActive, unlockTime]);
 
   const handleNextImage = () => {
     if (!job?.images) return;
@@ -261,14 +409,39 @@ const JobListingDetailPage = () => {
 
             {/* Contact Button */}
             {job._id && (
-              <JobButton
-                handleSendMessage={handleCreateOrder}
-                id={job._id}
-                job={job}
-                isOwnJob={isOwnJob}
-                isMsgLoading={isMessageLoading}
-                hasRequested={hasRequested}
-              />
+              <div className="space-y-3">
+                <JobButton
+                  handleSendMessage={handleCreateOrder}
+                  id={job._id}
+                  job={job}
+                  isOwnJob={isOwnJob}
+                  isMsgLoading={isMessageLoading}
+                  hasRequested={hasRequested}
+                  isTimerActive={isTimerActive}
+                />
+
+                {isTimerActive && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                    <div className="bg-amber-100 p-2 rounded-lg">
+                      <Zap size={20} className="text-amber-600 animate-pulse" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-amber-900">
+                        Åpner for deg om {timeLeft}
+                      </p>
+                      <p className="text-xs text-amber-700">
+                        Oppgrader til Plus eller Pro for umiddelbar tilgang
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => navigate("/pricing")}
+                      className="ml-auto text-xs font-bold text-amber-900 underline hover:text-amber-700"
+                    >
+                      Oppgrader
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Description */}
@@ -443,6 +616,20 @@ const JobListingDetailPage = () => {
         onClose={() => setIsShareModalOpen(false)}
         url={window.location.href}
         title={job.title || "Jobblo Oppdrag"}
+      />
+
+      <UpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        {...upgradeInfo}
+      />
+
+      <BuyContactModal
+        isOpen={isBuyModalOpen}
+        onClose={() => setIsBuyModalOpen(false)}
+        onConfirm={handleBuyContact}
+        price={upgradeInfo.perContactPrice || 0}
+        isLoading={isPaymentRedirecting}
       />
     </div>
   );

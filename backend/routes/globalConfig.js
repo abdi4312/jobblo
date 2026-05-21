@@ -3,9 +3,11 @@ const router = express.Router();
 const globalConfigController = require("../controllers/globalConfigController");
 const { authenticate, requireAdmin } = require("../middleware/auth");
 
-// Public access for some configs might be needed, but for now let's keep it protected for admin management
+// Admin only access to see ALL configs
 router.get("/", authenticate, requireAdmin, globalConfigController.getConfigs);
-router.get("/:key", globalConfigController.getConfigByKey); // Some might be public
+
+// Public access to fetch specific config by key (for UI feature flags)
+router.get("/:key", globalConfigController.getConfigByKey);
 router.post(
   "/update",
   authenticate,
