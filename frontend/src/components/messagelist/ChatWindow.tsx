@@ -2,7 +2,6 @@ import React from "react";
 import ChatHeader from "../../components/chat/ChatHeader";
 import MessageList from "../../components/chat/MessageList";
 import MessageInput from "../../components/chat/MessageInput";
-import { ContractMessage } from "../../components/chat/ContractMessage/ContractMessage";
 import { EmptyChatState } from "../../components/chat/ChatUiComponents";
 import { ChatWindowSkeleton } from "../Loading/ChatWindowSkeleton";
 
@@ -11,8 +10,6 @@ interface ChatWindowProps {
   isMobile: boolean;
   activeChatLoading: boolean;
   otherUser: any;
-  contract: any;
-  setShowCreateContract: (show: boolean) => void;
   isOtherUserOnline: boolean;
   activeChat: any;
   userId: string;
@@ -30,8 +27,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   isMobile,
   activeChatLoading,
   otherUser,
-  contract,
-  setShowCreateContract,
   isOtherUserOnline,
   activeChat,
   userId,
@@ -56,21 +51,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           <ChatHeader
             isMobile={isMobile}
             otherUser={otherUser ?? undefined}
-            contract={contract ?? undefined}
-            setShowCreateContract={setShowCreateContract}
             isOnline={isOtherUserOnline}
             hasService={!!activeChat?.serviceId?._id}
           />
 
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            {contract && userId && (
-              <div className="px-6 py-4 border-b border-[#F8F9FA] rounded-none">
-                <ContractMessage
-                  contract={contract}
-                  currentUserId={String(userId)}
-                />
-              </div>
-            )}
 
             <MessageList
               messages={messages}

@@ -13,7 +13,6 @@ export const useChatLogic = () => {
 
   const [activeFilter, setActiveFilter] = useState<FilterType>("All");
   const [newMessage, setNewMessage] = useState("");
-  const [showCreateContract, setShowCreateContract] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1200);
 
   const {
@@ -22,7 +21,6 @@ export const useChatLogic = () => {
     onlineUsers,
     chatsQuery,
     activeChatQuery,
-    contractQuery,
     sendMutation,
     playSendSound,
   } = useChatSocket(conversationId);
@@ -30,7 +28,6 @@ export const useChatLogic = () => {
   const chats = chatsQuery.data || [];
   const activeChat = activeChatQuery.data;
   const messages = activeChat?.messages || [];
-  const contract = contractQuery.data;
 
   const otherUser = activeChat
     ? activeChat.clientId?._id === userId
@@ -116,20 +113,16 @@ export const useChatLogic = () => {
     setActiveFilter,
     newMessage,
     setNewMessage,
-    showCreateContract,
-    setShowCreateContract,
     isMobile,
     userId,
     user,
     onlineUsers,
     chatsQuery,
     activeChatQuery,
-    contractQuery,
     sendMutation,
     chats,
     activeChat,
     messages,
-    contract,
     otherUser,
     isOtherUserOnline,
     handleSend,

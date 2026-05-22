@@ -12,7 +12,7 @@ export const useChatSocket = (conversationId?: string) => {
   const { playSendSound } = useNotificationSound();
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
-  const { chatsQuery, activeChatQuery, contractQuery, sendMutation } =
+  const { chatsQuery, activeChatQuery, sendMutation } =
     useChatQueries(conversationId);
 
   useEffect(() => {
@@ -51,9 +51,7 @@ export const useChatSocket = (conversationId?: string) => {
       setOnlineUsers(onlineUserIds);
     };
 
-    const handleContractUpdate = () => {
-      queryClient.invalidateQueries({ queryKey: ["contract"] });
-    };
+
 
     socket.on("receive-message", handleReceiveMessage);
     socket.on("messages-read", handleMessagesRead);
@@ -62,16 +60,9 @@ export const useChatSocket = (conversationId?: string) => {
     const serviceId = activeChatQuery.data?.serviceId?._id;
     if (serviceId) {
       socket.emit("join_service", serviceId);
-      socket.on("contract_created", handleContractUpdate);
-      socket.on("contract_signed", handleContractUpdate);
     }
 
     return () => {
-      socket.off("receive-message", handleReceiveMessage);
-      socket.off("messages-read", handleMessagesRead);
-      socket.off("get-online-users", handleUserOnline);
-      socket.off("contract_created", handleContractUpdate);
-      socket.off("contract_signed", handleContractUpdate);
       if (conversationId) socket.emit("leave-chat", conversationId);
     };
   }, [
@@ -87,7 +78,6 @@ export const useChatSocket = (conversationId?: string) => {
     onlineUsers,
     chatsQuery,
     activeChatQuery,
-    contractQuery,
     sendMutation,
     playSendSound,
   };

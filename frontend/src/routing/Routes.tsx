@@ -78,16 +78,7 @@ const AnmeldelserPage = lazy(
   () => import("../pages/AnmeldelserPage/AnmeldelserPage.tsx"),
 );
 
-const ContractsPage = lazy(() =>
-  import("../pages/ContractsPage/ContractsPage.tsx").then((m) => ({
-    default: m.ContractsPage,
-  })),
-);
-const ContractDetailPage = lazy(() =>
-  import("../pages/ContractsPage/ContractDetailPage.tsx").then((m) => ({
-    default: m.ContractDetailPage,
-  })),
-);
+
 const ListDetailPage = lazy(() =>
   import("../pages/FavoritesPage/ListDetail/ListDetailPage.tsx").then((m) => ({
     default: m.ListDetailPage,
@@ -271,17 +262,7 @@ export const routes: RouteObject[] = [
         element: withSuspense(AnmeldelserPage),
       },
 
-      {
-        path: "contracts",
-        element: <ProtectedRoute>{withSuspense(ContractsPage)}</ProtectedRoute>,
-      },
 
-      {
-        path: "contracts/:id",
-        element: (
-          <ProtectedRoute>{withSuspense(ContractDetailPage)}</ProtectedRoute>
-        ),
-      },
 
       {
         path: "favorites/list/:listId",

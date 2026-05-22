@@ -1,5 +1,4 @@
 import { useChatLogic } from "../../features/chat/useChatLogic";
-import { CreateContractModal } from "../../components/chat/CreateContractModal/CreateContractModal";
 import { ChatSidebar } from "../../components/messagelist/ChatSidebar";
 import { ChatWindow } from "../../components/messagelist/ChatWindow";
 
@@ -15,19 +14,15 @@ export function MessagesPageSplit() {
     setActiveFilter,
     newMessage,
     setNewMessage,
-    showCreateContract,
-    setShowCreateContract,
     isMobile,
     userId,
     user,
     onlineUsers,
     chatsQuery,
     activeChatQuery,
-    contractQuery,
     sendMutation,
     activeChat,
     messages,
-    contract,
     otherUser,
     isOtherUserOnline,
     handleSend,
@@ -57,8 +52,6 @@ export function MessagesPageSplit() {
           isMobile={isMobile}
           activeChatLoading={activeChatQuery.isLoading}
           otherUser={otherUser}
-          contract={contract}
-          setShowCreateContract={setShowCreateContract}
           isOtherUserOnline={isOtherUserOnline}
           activeChat={activeChat}
           userId={String(userId)}
@@ -71,18 +64,6 @@ export function MessagesPageSplit() {
           sending={sendMutation.isPending}
         />
       </div>
-
-      {showCreateContract && userId && otherUser && activeChat?.serviceId?._id && (
-        <CreateContractModal
-          isOpen={showCreateContract}
-          onClose={() => setShowCreateContract(false)}
-          serviceId={activeChat.serviceId._id}
-          serviceTitle={activeChat.serviceId.title || "Service"}
-          otherUserId={otherUser._id}
-          currentUserId={String(userId)}
-          onContractCreated={() => queryClient.invalidateQueries({ queryKey: ["contract"] })}
-        />
-      )}
     </div>
   );
 }

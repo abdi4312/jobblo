@@ -34,7 +34,6 @@ export interface Chat {
   updatedAt?: string;
   deletedFor?: string[];
   orderId?: string;
-  contractId?: string;
 }
 
 /**

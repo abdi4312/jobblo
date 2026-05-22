@@ -233,7 +233,6 @@ export default function Header() {
       path: "/alerts",
       badgeCount: unreadNotificationsCount,
     },
-    { name: "Kontrakt", icon: <FileText size={18} />, path: "/contracts" },
     { name: "Profil", icon: <User size={18} />, path: "/profile" },
   ];
 
