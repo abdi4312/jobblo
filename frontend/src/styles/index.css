@@ -174,3 +174,16 @@ body {
 @utility box-card-custom {
   @apply rounded-[20px] bg-white/60 shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white cursor-pointer;
 }
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(-1.5deg);
+  }
+}
+
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+}
