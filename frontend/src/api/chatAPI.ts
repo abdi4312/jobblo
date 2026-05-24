@@ -39,8 +39,8 @@ export interface Chat {
 /**
  * Create a new chat or get existing chat with a provider
  */
-export const createOrGetChat = async (providerId: string): Promise<Chat> => {
-  const response = await mainLink.post("/api/chats/create", { providerId });
+export const createOrGetChat = async (providerId: string, serviceId: string): Promise<Chat> => {
+  const response = await mainLink.post("/api/chats/create", { providerId, serviceId });
   return response.data;
 };
 

@@ -7,7 +7,15 @@ import { useState, useEffect } from "react";
 import { getMyChats } from "../../../api/chatAPI";
 import { initSocket } from "../../../socket/socket";
 import { NavLink } from "react-router-dom";
-import { Bell, FileText, Home, MessageCircle, Plus, User } from "lucide-react";
+import {
+  Bell,
+  FileText,
+  Home,
+  MessageCircle,
+  Plus,
+  User,
+  Users,
+} from "lucide-react";
 import { useUnreadCount } from "../../../features/notifications/hooks";
 import { useNotificationSound } from "../../../hooks/useNotificationSound";
 
@@ -221,6 +229,11 @@ export default function Header() {
   const navLinkUse: NavLinkItem[] = [
     { name: "Legg ut oppdrag", icon: <Plus size={20} />, path: "/publish-job" },
     { name: "Hjem", icon: <Home size={25} />, path: "/home" },
+    {
+      name: "Søkere",
+      icon: <Users size={18} />,
+      path: "/my-applicants",
+    },
     {
       name: "Meldinger",
       icon: <MessageCircle size={18} />,

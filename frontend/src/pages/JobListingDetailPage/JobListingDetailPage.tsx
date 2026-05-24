@@ -151,6 +151,17 @@ const JobListingDetailPage = () => {
     }
     if (!job?._id) return;
 
+    if (isOwnJob) {
+      navigate(`/job-applicants/${job._id}`);
+      return;
+    }
+
+    // Prevent ordering own job even if button is clicked somehow
+    if (job.userId?._id === currentUser?._id) {
+      toast.error("Du kan ikke bestille ditt eget oppdrag.");
+      return;
+    }
+
     createJobRequestMutation.mutate(
       { serviceId: job._id },
       {

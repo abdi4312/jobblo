@@ -78,7 +78,6 @@ const AnmeldelserPage = lazy(
   () => import("../pages/AnmeldelserPage/AnmeldelserPage.tsx"),
 );
 
-
 const ListDetailPage = lazy(() =>
   import("../pages/FavoritesPage/ListDetail/ListDetailPage.tsx").then((m) => ({
     default: m.ListDetailPage,
@@ -90,6 +89,21 @@ const SupportPage = lazy(() => import("../pages/SupportPage/SupportPage.tsx"));
 const MineAnnonser = lazy(() => import("../pages/MyJobsPage/MineAnnonser.tsx"));
 const JobListingDetailPage = lazy(
   () => import("../pages/JobListingDetailPage/JobListingDetailPage.tsx"),
+);
+const ApplicantsPage = lazy(
+  () => import("../pages/ApplicantsPage/ApplicantsPage.tsx"),
+);
+const MyApplicantsOverview = lazy(
+  () => import("../pages/ApplicantsPage/MyApplicantsOverview.tsx"),
+);
+const SafePayCheckout = lazy(
+  () => import("../pages/SafePayPage/SafePayCheckout.tsx"),
+);
+const SafePaySuccess = lazy(
+  () => import("../pages/SafePayPage/SafePaySuccess.tsx"),
+);
+const SafePayApproval = lazy(
+  () => import("../pages/SafePayPage/SafePayApproval.tsx"),
 );
 const CoinsPage = lazy(() => import("../pages/CoinsPage/CoinsPage.tsx"));
 const MessagesPageSplit = lazy(() =>
@@ -190,6 +204,41 @@ export const routes: RouteObject[] = [
       },
 
       {
+        path: "job-applicants/:serviceId",
+        element: (
+          <ProtectedRoute>{withSuspense(ApplicantsPage)}</ProtectedRoute>
+        ),
+      },
+
+      {
+        path: "my-applicants",
+        element: (
+          <ProtectedRoute>{withSuspense(MyApplicantsOverview)}</ProtectedRoute>
+        ),
+      },
+
+      {
+        path: "safepay/checkout/:orderId",
+        element: (
+          <ProtectedRoute>{withSuspense(SafePayCheckout)}</ProtectedRoute>
+        ),
+      },
+
+      {
+        path: "safepay/success",
+        element: (
+          <ProtectedRoute>{withSuspense(SafePaySuccess)}</ProtectedRoute>
+        ),
+      },
+
+      {
+        path: "safepay/approval/:orderId",
+        element: (
+          <ProtectedRoute>{withSuspense(SafePayApproval)}</ProtectedRoute>
+        ),
+      },
+
+      {
         path: "profile",
         element: <ProtectedRoute>{withSuspense(ProfilePage)}</ProtectedRoute>,
       },
@@ -261,8 +310,6 @@ export const routes: RouteObject[] = [
         path: "Anmeldelser",
         element: withSuspense(AnmeldelserPage),
       },
-
-
 
       {
         path: "favorites/list/:listId",
