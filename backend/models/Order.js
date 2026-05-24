@@ -53,8 +53,6 @@ const orderSchema = new mongoose.Schema({
     },
     paymentId: String,
 
-    // Kontrakt
-    contractId: { type: mongoose.Schema.Types.ObjectId, ref: 'Contract' },
 
     // Hendelser (history)
     history: [{

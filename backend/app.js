@@ -24,7 +24,6 @@ const adminRouter = require("./routes/admin");
 const reviewsRouter = require("./routes/review");
 const categoryRouter = require("./routes/category");
 const filterRouter = require("./routes/filter");
-const contractsRouter = require("./routes/contract");
 const heroSelectRouter = require("./routes/hero");
 const chatRouter = require("./routes/chat");
 const couponRouter = require("./routes/coupon");
@@ -38,7 +37,9 @@ const aiRouter = require("./routes/ai");
 const exploreRouter = require("./routes/explore");
 const homeHeroRouter = require("./routes/homeHero");
 const globalConfigRouter = require("./routes/globalConfig");
-
+const applicantsRouter = require("./routes/applicant");
+const safePayRouter = require("./routes/safePay");
+const safePayCheckoutRouter = require("./routes/safePayCheckout");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./swagger");
 
@@ -109,7 +110,6 @@ app.use("/api", reviewsRouter);
 app.use("/api/categories", categoryRouter);
 app.use("/api/plans", subscriptionPlanRouter);
 app.use("/api/filter", filterRouter);
-app.use("/api/contracts", contractsRouter);
 app.use("/api/hero", heroSelectRouter);
 app.use("/api/chats", chatRouter);
 app.use("/api/stripe", stripeRouter);
@@ -118,10 +118,12 @@ app.use("/api/transactions", transactionRoutes);
 app.use("/api/admin/transactions", transactionRoutes);
 app.use("/api/jobbloShop", jobbloShopRouter);
 app.use("/api/lists", listsRouter);
-app.use("/api/upcoming-features", upcomingFeatureRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/explore", exploreRouter);
-
+app.use("/api/applicants", applicantsRouter);
+app.use("/api/safepay", safePayRouter);
+app.use("/api/safepay-checkout", safePayCheckoutRouter);
+app.use("/api/upcomingFeatures", upcomingFeatureRouter);
 // Error handler
 app.use(function (req, res, next) {
   next(createError(404));

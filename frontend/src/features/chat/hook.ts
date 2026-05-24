@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getMyChats, getChatById, sendMessage } from "../../api/chatAPI";
-import { getContractById } from "../../api/contractAPI";
 
 export const useChatQueries = (conversationId?: string) => {
   const queryClient = useQueryClient();
@@ -18,13 +17,6 @@ export const useChatQueries = (conversationId?: string) => {
     refetchOnWindowFocus: false,
   });
 
-  const serviceId = activeChatQuery.data?.serviceId?._id;
-  const contractQuery = useQuery({
-    queryKey: ["contract", serviceId],
-    queryFn: () => getContractById(serviceId!),
-    enabled: !!serviceId,
-  });
-
   const sendMutation = useMutation({
     mutationFn: ({ id, text }: { id: string; text: string }) => sendMessage(id, text),
     onSuccess: () => {
@@ -33,5 +25,5 @@ export const useChatQueries = (conversationId?: string) => {
     },
   });
 
-  return { chatsQuery, activeChatQuery, contractQuery, sendMutation };
+  return { chatsQuery, activeChatQuery, sendMutation };
 };

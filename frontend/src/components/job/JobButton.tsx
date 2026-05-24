@@ -68,17 +68,13 @@ const JobButton: React.FC<JobButtonProps> = ({
         <Button
           onClick={handleSendMessage}
           disabled={
-            isOwnJob ||
-            isMsgLoading ||
-            hasRequested ||
-            isLimitReached ||
-            isTimerActive
+            (!isOwnJob && (isMsgLoading || hasRequested || isLimitReached || isTimerActive))
           }
           label={
             isMsgLoading
               ? ""
               : isOwnJob
-                ? "Din annonse"
+                ? "Se søkere"
                 : hasRequested
                   ? "Forespørsel sendt"
                   : isLimitReached
@@ -96,7 +92,7 @@ const JobButton: React.FC<JobButtonProps> = ({
           }
           className={`flex-1 h-12 text-[14px]! rounded-xl font-semibold! transition-all! whitespace-nowrap
                         ${
-                          isOwnJob || hasRequested
+                          !isOwnJob && (hasRequested || isLimitReached || isTimerActive)
                             ? "bg-gray-100! text-gray-400! cursor-not-allowed!"
                             : "bg-custom-green! text-white! hover:bg-[#266b3c]!"
                         } 

@@ -53,9 +53,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("contract_updated", (data) => {
-    io.emit("contract_updated", data);
-  });
 
   socket.on("disconnect", () => {
     console.log(`Socket disconnected: ${socket.id}`);

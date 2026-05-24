@@ -5,8 +5,6 @@ import { useNavigate } from "react-router-dom";
 interface ChatHeaderProps {
   isMobile: boolean;
   otherUser?: { avatarUrl?: string; name?: string; _id?: string };
-  contract?: { status?: string; _id?: string };
-  setShowCreateContract: (show: boolean) => void;
   isOnline: boolean;
   hasService: boolean;
 }
@@ -14,8 +12,6 @@ interface ChatHeaderProps {
 function ChatHeader({
   isMobile,
   otherUser,
-  contract,
-  setShowCreateContract,
   isOnline,
   hasService,
 }: ChatHeaderProps) {
@@ -81,18 +77,7 @@ function ChatHeader({
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Send Contract Button (Desktop only) */}
-        {!contract?._id && !isMobile && hasService && (
-          <button
-            className="flex items-center bg-[#212529] hover:bg-black rounded-xl px-4 py-2 gap-2 text-white transition-colors shrink-0"
-            onClick={() => setShowCreateContract(true)}
-          >
-            <ReceiptText size={16} />
-            <span className="text-[14px] font-semibold whitespace-nowrap">
-              Send Contract
-            </span>
-          </button>
-        )}
+
 
         <div className="relative" ref={menuRef}>
           <button
@@ -105,21 +90,7 @@ function ChatHeader({
 
           {showMenu && (
             <div className="absolute right-0 mt-2 w-64 box-card-custom rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-[#F1F3F5] py-2 z-[100] animate-in fade-in zoom-in duration-200 origin-top-right">
-              {/* Send Contract Option (Mobile only) */}
-              {isMobile && !contract?._id && hasService && (
-                <button
-                  className="w-full text-left px-6 py-4 text-[16px] font-bold text-[#FF8E8E] hover:bg-[#F8F9FA] transition-colors border-b border-[#F8F9FA]"
-                  onClick={() => {
-                    setShowCreateContract(true);
-                    setShowMenu(false);
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <ReceiptText size={18} />
-                    <span>Send Contract</span>
-                  </div>
-                </button>
-              )}
+
 
               <button
                 className="w-full text-left px-6 py-4 text-[16px] font-bold text-[#212529] hover:bg-[#F8F9FA] transition-colors"
