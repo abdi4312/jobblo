@@ -37,7 +37,7 @@ export const LoginForm = () => {
   };
 
   return (
-    <div className="w-full lg:w-[50%] flex items-center box-card-custom rounded-none justify-center p-4">
+    <div className="w-full lg:w-[50%] flex items-center justify-center p-4">
       <div className="w-full max-w-120 p-8">
         <div className="mb-8">
           <h1 className="text-[28px] font-bold text-black leading-tight mb-2">

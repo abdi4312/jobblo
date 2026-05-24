@@ -1,60 +1,49 @@
-import LoginImg from "../../assets/images/Login/loginnstandard-img.png";
-import Logo from "../../assets/images/Login/jobblo-logo.png";
-import { ArrowLeft } from "lucide-react";
-import {  useNavigate } from "react-router-dom";
+import LoginImgL from "../../assets/images/Login/left.png";
+import LoginImgR from "../../assets/images/Login/right.png";
+import LogoBG from "../../assets/images/Login/loginpage-bg.png";
+import LogoHande from "../../assets/images/Login/login-hande.png";
 
 export default function Auth() {
-    const navigate = useNavigate();
-    const list = [
-        { number: "5000+", name: "Aktive oppdrag" },
-        { number: "15k+", name: "Brukere" },
-        { number: "4.8★", name: "Vurdering" }
-    ];
-    return (
-        <>
-            <div>
-                {/* <img src={LoginImg} alt="Login_img" className="w-full h-full object-cover absolute inset-0" /> */}
+  return (
+    <div className="w-full h-full p-4 flex items-center justify-center select-none">
+      <div className="relative w-full h-full rounded-[36px] overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.12)] border border-white/20 flex items-center justify-center bg-[#eae4d9]">
+        {/* Background Image */}
+        <img
+          src={LogoBG}
+          alt="Background"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        />
+
+        {/* Hand Illustration */}
+        <img
+          src={LogoHande}
+          alt="Hand illustration"
+          className="absolute w-[200px] right-0 top-0 max-w-[200px] object-contain pointer-events-none z-30"
+        />
+
+        {/* Phone Mockups Wrapper */}
+        <div className="absolute inset-x-0 top-18 bottom-0 flex items-start justify-center overflow-hidden">
+          <div className="relative w-full h-full mx-auto flex items-start justify-center pt-[10%]">
+            {/* Left Phone Mockup */}
+            <div className="w-[39%] h-[84%] relative z-10">
+              <img
+                src={LoginImgL}
+                alt="Jobblo Left Phone"
+                className="w-full h-full object-contain object-top pointer-events-none filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.12)]"
+              />
             </div>
 
-            <div className="flex flex-col justify-between bg-[#1a3a1a] absolute inset-0 p-[40px] text-white z-10">
-                <div className="flex flex-col gap-5">
-                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(-1)}>
-                        <span><ArrowLeft size={20} /></span>
-                        <p>Tilbake</p>
-                    </div>
-                    <div>
-                        <img src={Logo} alt="Logo" className="max-w-[151px] max-h-[54px]" />
-                    </div>
-                </div>
-
-                <div className="flex flex-col gap-8">
-                    <div>
-                        <h1 className="text-[48px] font-bold leading-15">Små jobber.</h1>
-                        <h1 className="text-[48px] font-bold text-orange-custom leading-15">Store muligheter.</h1>
-                    </div>
-
-                    <div className="max-w-97.25">
-                        <p className="text-[20px] font-normal">
-                            Bli med Norges ledende plattform for lokale oppdrag og fleksibelt arbeid
-                        </p>
-                    </div>
-
-                    <div className="flex gap-5 justify-between max-w-[485px]">
-                        {list.map((item, index) => (
-                            <div key={index} className="flex flex-col items-center">
-                                <p className="text-[30px] font-bold text-[#FFFFFF]">{item.number}</p>
-                                <p className="text-[14px] font-normal text-[#FFFFFF]">{item.name}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                    <p className="font-normal text-base leading-5">"Jobblo har gjort det så enkelt å finne oppdrag i nærområdet mitt"</p>
-                    <p className="font-normal text-[14px] leading-5">— Maria, Oslo</p>
-                </div>
-
+            {/* Right Phone Mockup */}
+            <div className="w-[39%] h-[84%] pt-10 relative z-20">
+              <img
+                src={LoginImgR}
+                alt="Jobblo Right Phone"
+                className="w-full h-full object-contain object-top"
+              />
             </div>
-        </>
-    )
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

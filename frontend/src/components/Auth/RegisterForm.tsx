@@ -55,7 +55,7 @@ export const RegisterForm = () => {
   };
 
   return (
-    <div className="w-full lg:w-[50%] flex items-center justify-center box-card-custom rounded-none p-4">
+    <div className="w-full lg:w-[50%] flex items-center justify-center p-4">
       <div className="w-full max-w-120 p-8">
         <div className="mb-6">
           <h1 className="text-[28px] font-bold text-black leading-tight mb-2">
