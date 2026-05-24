@@ -2,7 +2,6 @@ const Order = require("../models/Order");
 const Service = require("../models/Service");
 const mongoose = require("mongoose");
 const Chat = require("../models/ChatMessage");
-const Contract = require("../models/Contract");
 const Notification = require("../models/Notification");
 const Payment = require("../models/Payment");
 const JobRequest = require("../models/JobRequest");
@@ -168,33 +167,7 @@ exports.updateJobRequestStatus = async (req, res) => {
         });
       }
 
-      // 2. Create automatic Contract (DRAFT)
       const service = await Service.findById(jobRequest.serviceId);
-      const customer = await User.findById(jobRequest.customerId);
-      const provider = await User.findById(jobRequest.providerId);
-
-      const contract = await Contract.create({
-        serviceId: jobRequest.serviceId,
-        clientId: jobRequest.customerId,
-        providerId: jobRequest.providerId,
-        price: service.price || 0,
-        content: `Standard kontrakt for ${service.title}`,
-        status: "pending_signatures",
-        useSafePay: false,
-        serviceSnapshot: {
-          title: service.title,
-          description: service.description,
-          category: service.category,
-        },
-        customerSnapshot: {
-          userId: customer._id,
-          name: customer.name,
-        },
-        providerSnapshot: {
-          userId: provider._id,
-          name: provider.name,
-        },
-      });
 
       // 3. Notify Customer
       const notification = await Notification.create({
@@ -202,7 +175,7 @@ exports.updateJobRequestStatus = async (req, res) => {
         senderId: jobRequest.providerId,
         requestId: jobRequest._id,
         type: "order",
-        content: `Din forespørsel for "${service.title}" er godkjent! Kontrakt er opprettet.`,
+        content: `Din forespørsel for "${service.title}" er godkjent!`,
       });
 
       const io = req.app.get("io");
@@ -276,7 +249,6 @@ exports.getAllOrders = async (req, res) => {
       .populate("serviceId")
       .populate("customerId", "name email")
       .populate("providerId", "name email")
-      .populate("contractId")
       .sort({ createdAt: -1 });
 
     res.json(orders);
@@ -298,8 +270,7 @@ exports.getOrderById = async (req, res) => {
     const order = await Order.findById(id)
       .populate("serviceId")
       .populate("customerId", "name")
-      .populate("providerId", "name")
-      .populate("contractId");
+      .populate("providerId", "name");
 
     if (!order) return res.status(404).json({ error: "Order not found" });
 
@@ -487,40 +458,16 @@ exports.updateOrder = async (req, res) => {
           });
         }
 
-        // 2. Create automatic Contract
         await order.populate("serviceId");
         await order.populate("customerId", "name");
         await order.populate("providerId", "name");
 
-        const contract = await Contract.create({
-          serviceId: order.serviceId._id,
-          clientId: order.customerId._id,
-          providerId: order.providerId._id,
-          price: order.price || order.serviceId.price || 0,
-          content: `Standard kontrakt for ${order.serviceId.title}`,
-          status: "pending_signatures",
-          useSafePay: true,
-          serviceSnapshot: {
-            title: order.serviceId.title,
-            description: order.serviceId.description,
-            category: order.serviceId.category,
-          },
-          customerSnapshot: {
-            userId: order.customerId._id,
-            name: order.customerId.name,
-          },
-          providerSnapshot: {
-            userId: order.providerId._id,
-            name: order.providerId.name,
-          },
-        });
-
-        updates.contractId = contract._id;
+        const orderPrice = order.price || order.serviceId.price || 0;
 
         // 🚀 3. Start SafePay (optional/pending)
         await Payment.create({
           orderId: order._id,
-          amount: contract.price,
+          amount: orderPrice,
           status: "pending", // Escrow status
         });
 

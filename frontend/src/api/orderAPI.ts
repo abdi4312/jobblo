@@ -1,8 +1,5 @@
 import mainLink from "./mainURLs";
 
-interface ContractId {
-  _id: string;
-}
 
 export interface Order {
   _id: string;
@@ -39,7 +36,6 @@ export interface Order {
     lng?: number;
   };
   paymentStatus: "unpaid" | "pending" | "paid" | "refunded";
-  contractId?: string | ContractId;
   createdAt: string;
   updatedAt: string;
 }

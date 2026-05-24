@@ -36,8 +36,6 @@ const { checkSubscription } = require("../middleware/checkSubscription");
  *           enum: [pending, accepted, declined, in_progress, completed, cancelled, awaiting_payment, paid]
  *         price:
  *           type: number
- *         contractId:
- *           type: string
  *         createdAt:
  *           type: string
  *           format: date-time
