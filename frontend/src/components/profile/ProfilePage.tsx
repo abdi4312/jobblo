@@ -44,47 +44,62 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="">
-      {/* <div className="bg-white border-b border-gray-100"> */}
-      <div className="">
+    <div className="bg-[#f5f0e8] min-h-screen">
+      <div className="hero-band h-[130px] bg-[#1a3a1a] relative">
+        <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle,#fff_1px,transparent_1px)] bg-[length:24px_24px]"></div>
+      </div>
+      
+      <div className="max-w-[900px] mx-auto px-6 pb-12">
         <ProfileHeader
           user={userToDisplay}
           handlelogout={handleLogout}
           isOwnProfile={isOwnProfile}
           profileType={profileType}
         />
-      </div>
 
-      {isBlockedByMe ? (
-        <BlockedUserView />
-      ) : (
-        <>
-          {userToDisplay?.role !== "company" && (
-            <CustomSwitcher
-              options={[
-                { id: "seeker", label: "Jobbsøker" },
-                { id: "poster", label: "Oppdragsgiver" },
-              ]}
-              value={profileType}
-              onChange={(val) =>
-                handleProfileTypeChange(val as "seeker" | "poster")
-              }
-            />
-          )}
-          <ProfileNav
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            isOwnProfile={isOwnProfile}
-            profileType={profileType}
-            userRole={userToDisplay?.role}
-          />
-          <ItemsGrid
-            activeTab={activeTab}
-            user={userToDisplay}
-            profileType={profileType}
-          />
-        </>
-      )}
+        {isBlockedByMe ? (
+          <BlockedUserView />
+        ) : (
+          <>
+            <div className="flex flex-col gap-6">
+              {userToDisplay?.role !== "company" && (
+                <div className="flex bg-white border border-black/5 rounded-full p-1 w-fit mb-2">
+                  {[
+                    { id: "seeker", label: "Som jobbsøker" },
+                    { id: "poster", label: "Som oppdragsgiver" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      onClick={() => handleProfileTypeChange(opt.id as "seeker" | "poster")}
+                      className={`px-5 py-2 text-[13px] rounded-full transition-all ${
+                        profileType === opt.id
+                          ? "bg-custom-green text-white font-medium shadow-sm"
+                          : "text-black/40 hover:text-black/60"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <ProfileNav
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                isOwnProfile={isOwnProfile}
+                profileType={profileType}
+                userRole={userToDisplay?.role}
+              />
+              
+              <ItemsGrid
+                activeTab={activeTab}
+                user={userToDisplay}
+                profileType={profileType}
+              />
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

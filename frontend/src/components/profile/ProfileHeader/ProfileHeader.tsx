@@ -9,6 +9,9 @@ import {
   Pencil,
   ShieldCheck,
   Crown,
+  MessageCircle,
+  Mail,
+  User as UserIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -311,215 +314,132 @@ export function ProfileHeader({
         </div>
       )}
 
-      <div className="bg-[#F6F1E8] px-4 sm:px-18 pt-8 pb-10">
-        <div className="max-w-300 mx-auto flex flex-col items-center sm:items-start sm:flex-row gap-8 sm:gap-10 relative">
-          {/* Profile Picture Column */}
-          <div className="flex flex-col items-center gap-3">
-            <div className="relative group cursor-pointer">
-              <div
-                className={`w-32 h-32 sm:w-42 sm:h-42 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-md`}
-              >
-                <img
-                  src={
-                    user?.avatarUrl ||
-                    "https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332"
-                  }
-                  alt="Profile"
-                  className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
-                />
+      <div className="relative mb-5">
+        <div className="flex flex-col md:flex-row items-end justify-between -mt-[52px]">
+          {/* Left Section: Avatar and Info */}
+          <div className="flex items-end gap-4">
+            <div className="relative">
+              <div className="w-[100px] h-[100px] rounded-full bg-[#c8d8c8] border-4 border-[#f5f0e8] overflow-hidden flex items-center justify-center text-[36px] font-medium text-[#1a3a1a]">
+                {user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={fullName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  user?.name?.[0] || "U"
+                )}
               </div>
-              {isOwnProfile && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none sm:pointer-events-auto">
-                  <button
-                    onClick={() => navigate("/settings/picture")}
-                    className="bg-white/90 backdrop-blur-sm border border-gray-200 px-4 py-1.5 rounded-full text-sm font-bold text-gray-800 shadow-sm opacity-0 group-hover:opacity-100 transition-all hover:bg-white"
-                  >
-                    Rediger bilde
-                  </button>
+              {user?.verified && (
+                <div className="absolute bottom-1 right-1 w-6 h-6 bg-custom-green rounded-full border-2 border-[#f5f0e8] flex items-center justify-center">
+                  <ShieldCheck size={12} className="text-white" />
                 </div>
               )}
             </div>
-          </div>
 
-          {/* User Info & Actions Column */}
-          <div className="flex flex-col items-center sm:items-start flex-1 sm:pt-1">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-3">
-              <h2 className="text-xl sm:text-3xl font-bold text-gray-900 tracking-tight leading-none">
+            <div className="pb-2.5">
+              <div className="text-[12px] text-custom-green mb-0.5 font-medium">
                 @{user?.name.toLowerCase().replace(/\s+/g, "") || "guest"}
-              </h2>
-              <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                {user?.verified && (
-                  <span className="flex items-center gap-1 bg-custom-green text-white text-[10px] font-bold px-2 py-1 rounded-full w-fit">
-                    Verifisert
-                  </span>
-                )}
-                {(user as any)?.isTrusted && (
-                  <span className="flex items-center gap-1 bg-[#E8F5E9] text-[#2E7D32] text-[10px] font-bold px-2 py-1 rounded-full border border-[#2E7D32]/20 shadow-sm">
-                    <ShieldCheck size={12} />
-                    TRUSTED
-                  </span>
-                )}
-                {user?.subscription && user.subscription !== "Standard" && (
-                  <span className="flex items-center gap-1 bg-[#FFF8E1] text-[#F57C00] text-[10px] font-bold px-2 py-1 rounded-full border border-[#F57C00]/20 shadow-sm">
-                    <Crown size={12} />
-                    {user.subscription.toUpperCase()}
-                  </span>
-                )}
               </div>
-            </div>
-
-            <p className="text-[13px] font-bold text-gray-400 uppercase tracking-wide mb-5">
-              Ble en Jobblo i{" "}
-              {user?.createdAt
-                ? new Date(user.createdAt).toLocaleString("no-NO", {
-                    month: "long",
-                    year: "numeric",
-                  })
-                : "desember 2019"}
-            </p>
-
-            {/* Stats Row */}
-            <div className="flex gap-6 mb-6">
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-gray-900">
-                  {user?.reviewCount || 0}
-                </span>
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  Fullførte
+              <h1 className="text-[22px] font-medium text-custom-black mb-0.5 leading-tight">
+                {fullName}
+              </h1>
+              <div className="text-[12px] text-black/40 flex items-center gap-1">
+                <MapPin size={13} />
+                <span>
+                  {typeof user?.postSted === "object"
+                    ? user.postSted.city
+                    : user?.postSted || "Oslo"}
+                  , Norge · Medlem siden{" "}
+                  {user?.createdAt
+                    ? new Date(user.createdAt).toLocaleDateString("no-NO", {
+                        month: "long",
+                        year: "numeric",
+                      })
+                    : "desember 2019"}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-gray-900">
-                  {user?.averageRating?.toFixed(1) || "5.0"}
-                </span>
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  Rating
-                </span>
-              </div>
-            </div>
-
-            <div className="relative flex gap-3">
-              {isOwnProfile ? (
-                <>
-                  <button
-                    className="flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl
-                   text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm"
-                    onClick={() => navigate("/settings/seeker")}
-                  >
-                    <Settings size={18} className="text-gray-800" />
-                    <span>Jobbsøkerinnstillinger</span>
-                  </button>
-
-                  <div className="relative">
-                    <button
-                      onClick={() => setIsMenuOpen(!isMenuOpen)}
-                      className={`flex items-center gap-2 bg-white px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all ${isMenuOpen ? "bg-gray-50" : ""}`}
-                    >
-                      <span>Mer</span>
-                      <ChevronDown
-                        size={18}
-                        className={`transition-transform duration-200 ${isMenuOpen ? "rotate-180" : ""}`}
-                      />
-                    </button>
-
-                    {isMenuOpen && (
-                      <div className="absolute top-[calc(100%+12px)] right-0 bg-white border border-gray-100 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.12)] py-4 px-5 min-w-[260px] z-50 animate-in fade-in slide-in-from-top-2">
-                        <div className="flex flex-col gap-3">
-                          <button
-                            onClick={() => navigate("/settings")}
-                            className="flex items-center w-full text-lg font-medium text-black hover:text-gray-600 transition-colors"
-                          >
-                            Innstillinger
-                          </button>
-                          <div className="h-px bg-gray-100 my-1" />
-                          <button
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              handlelogout();
-                            }}
-                            className="flex items-center w-full text-lg font-medium text-[#EA1717] hover:text-red-700 transition-colors"
-                          >
-                            Log ut av Jobblo
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <button
-                    disabled={isBlockedByMe}
-                    className={`flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm ${isBlockedByMe ? "opacity-40 cursor-not-allowed" : ""}`}
-                  >
-                    <Star size={18} className="text-gray-800" />
-                    <span>
-                      {user?.averageRating || "5.0"} ({user?.reviewCount || "0"}
-                      )
-                    </span>
-                  </button>
-
-                  <div className="relative">
-                    <button
-                      onClick={() => setIsMenuOpen(!isMenuOpen)}
-                      className={`flex items-center gap-2 bg-white border border-gray-200 px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all shadow-sm ${isMenuOpen ? "bg-gray-50" : ""}`}
-                    >
-                      <span>Mer</span>
-                      <ChevronDown
-                        size={18}
-                        className={`transition-transform duration-200 ${isMenuOpen ? "rotate-180" : ""}`}
-                      />
-                    </button>
-
-                    {isMenuOpen && (
-                      <div className="absolute top-[calc(100%+12px)] right-0 bg-white border border-gray-100 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.12)] py-4 px-5 min-w-[200px] z-50 animate-in fade-in slide-in-from-top-2">
-                        <div className="flex flex-col gap-3">
-                          <button
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              if (isBlockedByMe) {
-                                handleUnblock();
-                              } else {
-                                setIsBlockModalOpen(true);
-                              }
-                            }}
-                            className="flex items-center w-full text-[16px] font-medium text-black hover:text-gray-600 transition-colors py-1"
-                          >
-                            {isBlockedByMe
-                              ? "Fjern blokkering"
-                              : "Blokker bruker"}
-                          </button>
-                          <div className="h-px bg-gray-100 my-0.5" />
-                          <button
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              toast("Report user feature coming soon");
-                            }}
-                            className="flex items-center w-full text-[16px] font-medium text-black hover:text-gray-600 transition-colors py-1"
-                          >
-                            Rapport bruker
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
             </div>
           </div>
-        </div>
 
-        {/* Bio Section */}
-        <div className="max-w-300 mx-auto mt-6 pl-4">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-[20px] font-bold text-gray-900 leading-tight">
-              {user?.name || "Bruker Name"}
-            </h1>
-            <p className="text-[15px] text-gray-800 leading-snug font-medium max-w-2xl">
-              {user?.bio}
-            </p>
+          {/* Right Section: Actions */}
+          <div className="flex gap-2 pb-2.5">
+            {isOwnProfile ? (
+              <>
+                <button
+                  onClick={() => navigate("/settings/seeker")}
+                  className="px-4.5 py-2.5 bg-transparent border border-black/20 rounded-full text-[13px] text-custom-black flex items-center gap-1.5 hover:bg-black/5 transition-colors"
+                >
+                  <Settings size={14} />
+                  <span>Innstillinger</span>
+                </button>
+                <button
+                  onClick={() => navigate("/settings")}
+                  className="px-4.5 py-2.5 bg-custom-green text-white rounded-full text-[13px] flex items-center gap-1.5 hover:bg-[#25633a] transition-colors"
+                >
+                  <Pencil size={14} />
+                  <span>Rediger profil</span>
+                </button>
+              </>
+            ) : (
+              <button className="px-4.5 py-2.5 bg-custom-green text-white rounded-full text-[13px] flex items-center gap-1.5 hover:bg-[#25633a] transition-colors">
+                <MessageCircle size={14} />
+                <span>Send melding</span>
+              </button>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-5">
+        {[
+          { label: "Fullførte oppdrag", val: user?.reviewCount || 0 },
+          {
+            label: "Snittrating",
+            val: user?.averageRating?.toFixed(1) || "5.0",
+          },
+          {
+            label: "Utlagte oppdrag",
+            val: (user as any)?.postedJobsCount || 0,
+          },
+          { label: "Svarprosent", val: "100%" },
+          {
+            label: "Totalt tjent",
+            val: `${(user as any)?.totalEarned || 0} kr`,
+          },
+        ].map((stat, i) => (
+          <div
+            key={i}
+            className="bg-white border border-black/5 rounded-[14px] p-3.5 text-center"
+          >
+            <strong className="block text-[20px] font-medium text-custom-green mb-0.5">
+              {stat.val}
+            </strong>
+            <span className="text-[10px] text-black/40 uppercase tracking-wider">
+              {stat.label}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Trust Badges */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        <span className="flex items-center gap-1.5 bg-white border border-black/5 rounded-full px-3 py-1.5 text-[12px] text-black/60">
+          <ShieldCheck size={14} className="text-custom-green" /> SafePay-bruker
+        </span>
+        <span className="flex items-center gap-1.5 bg-white border border-black/5 rounded-full px-3 py-1.5 text-[12px] text-black/60">
+          <Mail size={14} className="text-custom-green" /> E-post verifisert
+        </span>
+        <span className="flex items-center gap-1.5 bg-white border border-black/5 rounded-full px-3 py-1.5 text-[12px] text-black/60">
+          <Star size={14} className="text-custom-green" /> Topprating (
+          {user?.averageRating?.toFixed(1) || "5.0"})
+        </span>
+        {!user?.verified && (
+          <span className="flex items-center gap-1.5 bg-white border border-black/5 rounded-full px-3 py-1.5 text-[12px] text-black/20">
+            <UserIcon size={14} /> ID ikke verifisert
+          </span>
+        )}
       </div>
 
       <BlockModal
