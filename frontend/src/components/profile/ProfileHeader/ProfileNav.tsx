@@ -55,33 +55,29 @@ export function ProfileNav({
         : posterTabs;
 
   return (
-    <div className="box-card-custom rounded-none">
-      <div className="max-w-300 mx-auto px-4 sm:px-6">
-        <div className="flex justify-around md:justify-around md:gap-20">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.name;
-            return (
-              <button
-                key={tab.name}
-                onClick={() => onTabChange(tab.name)}
-                className={`flex items-center gap-3 py-4.5 px-1 border-b-[3px] w-full justify-center text-lg font-bold mb-[-1.5px] whitespace-nowrap ${
-                  isActive
-                    ? "border-black text-black"
-                    : "border-transparent text-gray-400 hover:text-gray-900"
-                }`}
-              >
-                <Icon
-                  size={22}
-                  className={isActive ? "text-black" : "text-gray-400"}
-                  strokeWidth={isActive ? 2.5 : 2}
-                />
-                <span className="hidden md:flex">{tab.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+    <div className="flex border-b border-black/5 mb-5">
+      {tabs.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = activeTab === tab.name;
+        return (
+          <button
+            key={tab.name}
+            onClick={() => onTabChange(tab.name)}
+            className={`flex items-center gap-1.5 py-3 px-4.5 text-[13px] border-b-2 transition-all whitespace-nowrap ${
+              isActive
+                ? "border-custom-green text-custom-green font-medium"
+                : "border-transparent text-black/40 hover:text-black/60"
+            }`}
+          >
+            <Icon
+              size={14}
+              className={isActive ? "text-custom-green" : "text-black/40"}
+              strokeWidth={isActive ? 2.5 : 2}
+            />
+            <span>{tab.name}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
