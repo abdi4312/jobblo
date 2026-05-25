@@ -1,5 +1,4 @@
 import { Search } from "lucide-react";
-import { Input as AppInput } from "../../Ui/Input";
 
 interface SearchInputProps {
   value: string;
@@ -9,17 +8,19 @@ interface SearchInputProps {
 
 export const SearchInput = ({ value, onChange, onFocus }: SearchInputProps) => {
   return (
-    <div className="gap-3 p-3 bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 w-full md:min-w-137.5 lg:min-w-162.5 transition-all duration-300">
-      <div className="flex">
-        <AppInput
-          className="bg-transparent! outline-none! border-0 text-[20px] pl-12.5 w-full placeholder:text-gray-900"
-          placeholder="Hva leter du etter?"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={onFocus}
-          icon={<Search size={25} color="#0A0A0A" />}
-        />
-      </div>
+    <div className="flex items-center bg-white border border-black/15 rounded-full p-1.5 pl-4.5 max-w-[480px]">
+      <Search size={18} className="text-black/40 mr-2.5" />
+      <input
+        type="text"
+        className="flex-1 border-none bg-transparent text-[14px] text-custom-black outline-none placeholder:text-black/40"
+        placeholder="Hva leter du etter?"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={onFocus}
+      />
+      <button className="px-5 py-2.5 bg-custom-green text-white rounded-full text-[13px] font-medium cursor-pointer hover:bg-[#25633a] transition-colors whitespace-nowrap ml-2">
+        Søk
+      </button>
     </div>
   );
 };
