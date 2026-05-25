@@ -9,6 +9,11 @@ import {
   Globe,
   MapPin,
   Award,
+  Briefcase,
+  User,
+  ShieldCheck,
+  Pencil,
+  Bookmark,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import {
@@ -290,92 +295,155 @@ export function ItemsGrid({
         "Rengjøring",
         "Flytting",
       ];
-      const availabilityText =
-        (user as any)?.availabilityText ||
-        "Mandag - Fredag: 08:00 - 16:00\nLørdag: 10:00 - 14:00\nSøndag: Stengt";
+      const availability = [
+        { name: "Man", on: true },
+        { name: "Tir", on: false },
+        { name: "Ons", on: true },
+        { name: "Tor", on: false },
+        { name: "Fre", on: true },
+        { name: "Lør", on: true },
+        { name: "Søn", on: false },
+      ];
 
       return (
-        <div className="max-w-300 mx-auto pt-5 flex flex-col gap-6">
-          {/* Bio Section */}
-          <div className="bg-white/60 p-8 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white">
-            <h3 className="text-xl font-bold mb-4">Om meg</h3>
-            <p className="text-gray-700 leading-relaxed font-medium whitespace-pre-wrap">
-              {user?.bio || "Ingen beskrivelse lagt til ennå."}
-            </p>
-          </div>
-
-          {/* Experience Section */}
-          <div className="bg-white/60 p-8 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white">
-            <h3 className="text-xl font-bold mb-6">Erfaring</h3>
-            {Array.isArray((user as any)?.experience) &&
-            (user as any).experience.length > 0 ? (
-              <div className="flex flex-col gap-6">
-                {(user as any).experience.map((exp: any, idx: number) => (
-                  <div
-                    key={exp._id || idx}
-                    className={`flex flex-col gap-1 ${idx !== 0 ? "pt-6 border-t border-gray-100" : ""}`}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-4">
+          <div className="flex flex-col gap-3.5">
+            {/* Bio Card */}
+            <div className="bg-white border border-black/5 rounded-[14px] p-5">
+              <div className="flex items-center justify-between mb-3.5">
+                <h3 className="text-[14px] font-medium text-custom-black flex items-center gap-1.5">
+                  <User size={16} className="text-custom-green" /> Om meg
+                </h3>
+                {isOwner && (
+                  <button
+                    onClick={() => navigate("/settings")}
+                    className="text-[12px] text-custom-green flex items-center gap-1 hover:underline"
                   >
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-bold text-gray-900">{exp.title}</h4>
-                      <span className="text-xs font-bold text-custom-green bg-custom-green/10 px-3 py-1 rounded-full">
-                        {new Date(exp.startDate).getFullYear()} -{" "}
-                        {exp.endDate
-                          ? new Date(exp.endDate).getFullYear()
-                          : "Nåværende"}
-                      </span>
-                    </div>
-                    <p className="text-sm font-bold text-gray-500">
-                      {exp.company}
-                    </p>
-                    {exp.description && (
-                      <p className="text-sm text-gray-600 mt-2 leading-relaxed">
-                        {exp.description}
-                      </p>
-                    )}
+                    <Pencil size={12} /> Rediger
+                  </button>
+                )}
+              </div>
+              <p className="text-[13px] text-black/60 leading-relaxed">
+                {user?.bio || "Ingen beskrivelse lagt til ennå."}
+              </p>
+            </div>
+
+            {/* Skills Card */}
+            <div className="bg-white border border-black/5 rounded-[14px] p-5">
+              <div className="flex items-center justify-between mb-3.5">
+                <h3 className="text-[14px] font-medium text-custom-black flex items-center gap-1.5">
+                  <Plus size={16} className="text-custom-green" /> Mine
+                  ferdigheter
+                </h3>
+                {isOwner && (
+                  <button
+                    onClick={() => navigate("/settings")}
+                    className="text-[12px] text-custom-green flex items-center gap-1 hover:underline"
+                  >
+                    <Plus size={12} /> Legg til
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {userSkills.map((skill: string) => (
+                  <span
+                    key={skill}
+                    className="bg-[#f0faf0] text-[#166534] border border-[#c6f0d8] rounded-full px-3 py-1 text-[12px]"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Availability Card */}
+            <div className="bg-white border border-black/5 rounded-[14px] p-5">
+              <div className="flex items-center justify-between mb-3.5">
+                <h3 className="text-[14px] font-medium text-custom-black flex items-center gap-1.5">
+                  <Plus size={16} className="text-custom-green" />{" "}
+                  Tilgjengelighet denne uken
+                </h3>
+                {isOwner && (
+                  <button
+                    onClick={() => navigate("/settings")}
+                    className="text-[12px] text-custom-green flex items-center gap-1 hover:underline"
+                  >
+                    <Pencil size={12} /> Rediger
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {availability.map((day) => (
+                  <div
+                    key={day.name}
+                    className={`rounded-lg p-2 text-center text-[11px] border ${day.on ? "bg-[#f0faf0] text-[#166534] border-[#c6f0d8]" : "bg-[#f9f9f7] text-black/20 border-[#f0ede6]"}`}
+                  >
+                    <div className="font-medium mb-0.5">{day.name}</div>
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full mx-auto ${day.on ? "bg-custom-green" : "bg-black/10"}`}
+                    ></div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-gray-700 leading-relaxed font-medium whitespace-pre-wrap">
-                {typeof user?.experience === "string"
-                  ? user.experience
-                  : "Ingen erfaring lagt til ennå."}
-              </p>
-            )}
-          </div>
-
-          {/* Skills Section */}
-          <div className="bg-white/60 p-8 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white">
-            <h3 className="text-xl font-bold mb-6">Mine ferdigheter</h3>
-            <div className="flex flex-wrap gap-3">
-              {userSkills.map((skill: string) => (
-                <span
-                  key={skill}
-                  className="px-4 py-1 bg-[#2F7E4715] rounded-md text-sm font-bold text-custom-green border border-[#2F7E4720]"
-                >
-                  {skill}
-                </span>
-              ))}
-              {userSkills.length === 0 && (
-                <p className="text-gray-400">
-                  Ingen ferdigheter lagt til ennå.
-                </p>
-              )}
             </div>
           </div>
 
-          {/* Availability Section */}
-          <div className="bg-white/60 p-8 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white">
-            <h3 className="text-xl font-bold mb-6">Min tilgjengelighet</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {availabilityText.split("\n").map((time: string) => (
-                <div
-                  key={time}
-                  className="p-4 rounded-xl bg-[#2F7E4715] text-custom-green border border-[#2F7E4720] shadow-sm font-medium"
-                >
-                  {time}
+          <div className="flex flex-col gap-3.5">
+            {/* Rating Sidebar Card */}
+            <div className="bg-white border border-black/5 rounded-[14px] p-4.5">
+              <h3 className="text-[13px] font-medium text-custom-black flex items-center gap-1.5 mb-3.5">
+                <Star size={15} className="text-custom-green" /> Din rating
+              </h3>
+              <div className="flex items-center gap-3.5 mb-3">
+                <div className="text-[40px] font-medium text-custom-black leading-none">
+                  {user?.averageRating?.toFixed(1) || "5.0"}
                 </div>
-              ))}
+                <div>
+                  <div className="text-[#ca8a04] text-[16px] mb-0.5">★★★★★</div>
+                  <div className="text-[11px] text-black/30">
+                    {user?.reviewCount || 0} vurderinger
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                {[5, 4, 3, 2, 1].map((s) => (
+                  <div
+                    key={s}
+                    className="flex items-center gap-2 text-[11px] text-black/30"
+                  >
+                    <span className="w-4">{s}★</span>
+                    <div className="flex-1 h-1 bg-[#f0ede6] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[#ca8a04]"
+                        style={{ width: s === 5 ? "100%" : "0%" }}
+                      ></div>
+                    </div>
+                    <span className="w-4 text-right">
+                      {s === 5 ? user?.reviewCount || 0 : 0}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* SafePay History Card */}
+            <div className="bg-white border border-black/5 rounded-[14px] p-4.5 text-center">
+              <h3 className="text-[13px] font-medium text-custom-black flex items-center gap-1.5 mb-3.5 text-left">
+                <ShieldCheck size={15} className="text-custom-green" />{" "}
+                SafePay-historikk
+              </h3>
+              <div className="py-2">
+                <strong className="block text-[28px] font-medium text-custom-green">
+                  {(user as any)?.totalEarned || 0} kr
+                </strong>
+                <span className="text-[11px] text-black/40">
+                  Utbetalt via SafePay
+                </span>
+              </div>
+              <p className="text-[11px] text-black/30 mt-2 leading-relaxed">
+                Alle utbetalinger er gjort trygt gjennom SafePay — ingen
+                kontantoppgjør.
+              </p>
             </div>
           </div>
         </div>
@@ -581,50 +649,48 @@ export function ItemsGrid({
     }
 
     return (
-      <div className="max-w-300 mx-auto p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {displayReviews.map((review: any) => (
-            <div
-              key={review._id || review.id}
-              className="bg-white/60 p-6 rounded-xl border border-white shadow-sm flex flex-col gap-4"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {displayReviews.map((review: any) => (
+          <div
+            key={review._id || review.id}
+            className="bg-white border border-black/5 p-5 rounded-[14px] flex flex-col gap-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full overflow-hidden bg-[#c8d8c8] flex items-center justify-center text-[14px] font-medium text-[#1a3a1a]">
+                  {review.reviewerId?.avatarUrl || review.avatar ? (
                     <img
                       src={review.reviewerId?.avatarUrl || review.avatar}
                       alt={review.reviewerId?.name || review.author}
                       className="w-full h-full object-cover"
                     />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-gray-900">
-                      {review.reviewerId?.name || review.author}
-                    </h4>
-                    <p className="text-xs text-gray-400 font-medium">
-                      {review.createdAt
-                        ? new Date(review.createdAt).toLocaleDateString("no-NO")
-                        : review.date}
-                    </p>
-                  </div>
+                  ) : (
+                    (review.reviewerId?.name || review.author)?.[0] || "U"
+                  )}
                 </div>
-                <div className="flex items-center gap-1 bg-[#2F7E4710] px-3 py-1.5 rounded-xl">
-                  <Star
-                    size={14}
-                    fill="#2F7E47"
-                    className="text-custom-green"
-                  />
-                  <span className="text-sm font-bold text-custom-green">
-                    {review.rating}.0
-                  </span>
+                <div>
+                  <h4 className="text-[13px] font-medium text-custom-black">
+                    {review.reviewerId?.name || review.author}
+                  </h4>
+                  <p className="text-[11px] text-black/30">
+                    {review.createdAt
+                      ? new Date(review.createdAt).toLocaleDateString("no-NO")
+                      : review.date}
+                  </p>
                 </div>
               </div>
-              <p className="text-gray-600 leading-relaxed italic text-sm">
-                "{review.comment}"
-              </p>
+              <div className="flex items-center gap-1 bg-[#f0faf0] px-2.5 py-1 rounded-full border border-[#c6f0d8]">
+                <Star size={12} fill="#16a34a" className="text-custom-green" />
+                <span className="text-[12px] font-medium text-custom-green">
+                  {review.rating}.0
+                </span>
+              </div>
             </div>
-          ))}
-        </div>
+            <p className="text-[13px] text-black/60 leading-relaxed italic">
+              "{review.comment}"
+            </p>
+          </div>
+        ))}
       </div>
     );
   }
@@ -655,89 +721,69 @@ export function ItemsGrid({
       activeTab === "Fullførte" ||
       activeTab === "Tidligere") &&
     jobs.length > 0;
-  const showLists = activeTab === "Lister" && lists.length > 0;
 
-  // For "Fullførte" and "Tidligere", we might want to filter jobs that are completed.
-  // Assuming job status exists. If not, we just show all for now.
-  const filteredJobs =
-    activeTab === "Fullførte" || activeTab === "Tidligere"
-      ? jobs.filter(
-          (job) => job.status === "completed" || job.status === "closed",
-        )
-      : jobs;
+  if (showJobs) {
+    const displayJobs =
+      activeTab === "Fullførte" || activeTab === "Tidligere"
+        ? jobs.filter(
+            (job) => job.status === "completed" || job.status === "closed",
+          )
+        : jobs;
 
-  const displayJobs = filteredJobs.length > 0 ? filteredJobs : jobs; // Fallback to all if no filtered jobs for sample
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {displayJobs.map((job: Jobs) => (
+          <div
+            key={job._id}
+            className="flex flex-col cursor-pointer group"
+            onClick={() => navigate(`/job-listing/${job._id}`)}
+          >
+            {/* Image Container */}
+            <div className="relative aspect-[4/5] rounded-[20px] overflow-hidden bg-white mb-3 shadow-sm border border-black/5">
+              {job.mediaUrl || (job as any).images?.[0] ? (
+                <img
+                  src={job.mediaUrl || (job as any).images?.[0]}
+                  alt={job.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-[#f9f9f7] text-black/10">
+                  <Briefcase size={40} strokeWidth={1} />
+                </div>
+              )}
+              {/* Bookmark Icon */}
+              <div className="absolute bottom-3 right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md border border-black/5 hover:scale-110 transition-transform">
+                <Bookmark size={14} className="text-black/80" />
+              </div>
+            </div>
+
+            {/* Info Container */}
+            <div className="px-1">
+              <h4 className="text-[14px] font-bold text-custom-black mb-0.5 truncate">
+                {job.title}
+              </h4>
+              <div className="text-[14px] font-bold text-custom-black mb-1">
+                {job.price} kr
+              </div>
+              <p className="text-[13px] text-black/40 truncate">
+                {typeof job.location === "object"
+                  ? job.location.city || job.location.address
+                  : job.location || "Oslo"}
+              </p>
+            </div>
+          </div>
+        ))}
+        {hasNextPage && <div ref={loadMoreRef} className="h-4 w-full" />}
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen p-4 md:p-6">
-      <div className="max-w-300 mx-auto">
-        {showLists ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {lists.map((list: List) => {
-              const latestService = list.services?.[list.services.length - 1];
-              const backgroundImage = latestService?.images?.[0] || "";
-
-              return (
-                <div
-                  key={list._id}
-                  onClick={() => navigate(`/favorites/list/${list._id}`)}
-                  className="relative aspect-4/5 w-full rounded-3xl overflow-hidden cursor-pointer group shadow-sm"
-                >
-                  {backgroundImage ? (
-                    <img
-                      src={backgroundImage}
-                      alt={list.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-300">
-                      <span className="text-sm">Ingen bilder</span>
-                    </div>
-                  )}
-
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
-
-                  <div className="absolute bottom-6 left-6 right-6">
-                    <h2 className="text-white font-bold text-lg md:text-xl drop-shadow-md truncate">
-                      {list.name}
-                    </h2>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : showJobs ? (
-          <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {displayJobs.map((job: Jobs) => (
-                <JobCard key={job._id} job={job} isOwner={isOwner} />
-              ))}
-            </div>
-            {hasNextPage && (
-              <div
-                ref={loadMoreRef}
-                className="flex justify-center mt-10 min-h-[100px]"
-              >
-                {isFetchingNextPage ? (
-                  <div className="flex items-center gap-2 bg-custom-green text-white px-8 py-2 rounded-full font-bold">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Laster mer...
-                  </div>
-                ) : (
-                  <div className="h-4 w-full" />
-                )}
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="flex items-center justify-center">
-            <EmptyState
-              title={currentEmptyState.title}
-              description={currentEmptyState.description}
-            />
-          </div>
-        )}
-      </div>
+    <div className="flex items-center justify-center min-h-[200px]">
+      <EmptyState
+        title={currentEmptyState.title}
+        description={currentEmptyState.description}
+      />
     </div>
   );
 }
