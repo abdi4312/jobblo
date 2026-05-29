@@ -56,7 +56,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
           <p className="text-sm text-[#666] mt-2">Ingen meldinger</p>
         </div>
       ) : (
-        <div className="flex flex-col box-card-custom">
+        <div className="flex flex-col">
           {filteredChats.map((chat) => {
             const otherPerson =
               chat.clientId?._id === user?._id
@@ -65,8 +65,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
 
             const hasUnread = isUnread(chat);
             const isActive = conversationId === chat._id;
-            const serviceImage =
-              chat.serviceId?.images?.[0] || chat.serviceId?.image;
+            const hasSafePay = chat.serviceId;
             const isOnline =
               otherPerson?._id && onlineUsers.includes(otherPerson._id);
 
@@ -74,68 +73,62 @@ const ConversationList: React.FC<ConversationListProps> = ({
               <div
                 key={chat._id}
                 onClick={() => navigate(`/messages/${chat._id}`)}
-                className={`relative flex items-center border-b border-custom-green-light p-4 gap-4 cursor-pointer transition-all ${
-                  isActive
-                    ? "bg-custom-green-light opacity-80"
-                    : "hover:bg-[#F8F9FA]"
+                className={`relative flex items-center gap-[10px] px-[14px] py-[11px] cursor-pointer border-b border-black/[0.04] transition-all ${
+                  isActive ? "bg-[#f0faf0]" : "hover:bg-[#f9f9f7]"
                 }`}
               >
                 {/* Avatar-seksjon */}
                 <div className="relative shrink-0">
-                  <div className="w-[56px] h-[56px] rounded-full p-[2px]">
+                  <div className="w-[38px] h-[38px] rounded-full bg-[#dcfce7] text-[#166534] text-[13px] font-medium flex items-center justify-center overflow-hidden">
                     {otherPerson?.avatarUrl ? (
                       <img
                         src={otherPerson.avatarUrl}
                         alt={otherPerson.name}
-                        className="w-full h-full rounded-full object-cover"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full rounded-full bg-[#F1F3F5] flex items-center justify-center text-[#495057] font-bold text-lg">
-                        {otherPerson?.name?.charAt(0) || "U"}
-                      </div>
+                      <span>{otherPerson?.name?.charAt(0) || "U"}</span>
                     )}
                   </div>
                   {isOnline && (
-                    <div className="absolute bottom-[2px] right-[2px] w-[14px] h-[14px] bg-[#22C55E] rounded-full border-2 border-white shadow-sm"></div>
+                    <div className="absolute bottom-[1px] right-[1px] w-[8px] h-[8px] bg-[#16a34a] rounded-full border-[1.5px] border-white"></div>
                   )}
                 </div>
 
                 {/* Innholdsseksjon */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2 mb-0.5">
-                    <h2
-                      className={`text-[17px] font-bold truncate flex-1 ${isActive ? "text-[#212529]" : "text-[#495057]"}`}
+                  <div className="flex items-baseline justify-between mb-0.5">
+                    <span
+                      className={`text-[13px] truncate ${
+                        hasUnread
+                          ? "font-bold text-custom-black"
+                          : "text-custom-black"
+                      }`}
                     >
                       {otherPerson?.name || "Ukjent"}
-                    </h2>
-                    {hasUnread && !isActive && (
-                      <div className="w-2.5 h-2.5 bg-custom-green rounded-full shrink-0"></div>
-                    )}
-                    <span className="text-[13px] text-[#868E96] font-normal whitespace-nowrap">
+                    </span>
+                    <span className="text-[11px] text-[#aaa]">
                       {formatTime(chat.updatedAt || "")}
                     </span>
                   </div>
-                  <p
-                    className={`text-[15px] truncate leading-tight ${hasUnread ? "text-[#212529] font-bold" : "text-[#868E96]"}`}
-                  >
-                    {chat.lastMessage || "Start samtale..."}
-                  </p>
-                </div>
-
-                {/* Tjenestebilde / Miniatyrbilde */}
-                {serviceImage && (
-                  <div className="shrink-0 ml-2 relative">
-                    <img
-                      src={serviceImage}
-                      alt="Tjeneste"
-                      className="w-14 h-14 rounded-2xl object-cover border border-[#F1F3F5] shadow-sm"
-                    />
-                    {chat.serviceId?.isSold && (
-                      <div className="absolute top-0 right-0 bg-[#FF8E8E] text-white text-[9px] font-black px-1.5 py-0.5 rounded-bl-lg rounded-tr-lg uppercase tracking-tighter">
-                        Solgt
-                      </div>
+                  <div className="flex items-center gap-2">
+                    <p
+                      className={`text-[12px] truncate flex-1 ${
+                        hasUnread ? "text-[#333] font-medium" : "text-[#888]"
+                      }`}
+                    >
+                      {chat.lastMessage || "Start samtale..."}
+                    </p>
+                    {hasUnread && (
+                      <div className="w-[8px] h-[8px] bg-[#16a34a] rounded-full shrink-0"></div>
                     )}
                   </div>
+                </div>
+
+                {hasSafePay && (
+                  <span className="text-[9px] bg-[#f0faf0] text-[#166534] rounded-full px-[6px] py-[2px] border border-[#c6f0d8] shrink-0">
+                    SafePay
+                  </span>
                 )}
               </div>
             );

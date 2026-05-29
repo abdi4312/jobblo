@@ -18,7 +18,8 @@ export const useChatQueries = (conversationId?: string) => {
   });
 
   const sendMutation = useMutation({
-    mutationFn: ({ id, text }: { id: string; text: string }) => sendMessage(id, text),
+    mutationFn: ({ id, text }: { id: string; text: string }) =>
+      sendMessage(id, text),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chat", conversationId] });
       queryClient.invalidateQueries({ queryKey: ["chats"] });

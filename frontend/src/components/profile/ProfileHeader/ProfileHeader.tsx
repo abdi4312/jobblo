@@ -380,6 +380,12 @@ export function ProfileHeader({
                   <Pencil size={14} />
                   <span>Rediger profil</span>
                 </button>
+                <button
+                  onClick={handlelogout}
+                  className="px-4.5 py-2.5 bg-red-500 text-white rounded-full text-[13px] flex items-center gap-1.5 hover:bg-red-600 transition-colors"
+                >
+                  <span>Logg ut</span>
+                </button>
               </>
             ) : (
               <button className="px-4.5 py-2.5 bg-custom-green text-white rounded-full text-[13px] flex items-center gap-1.5 hover:bg-[#25633a] transition-colors">
