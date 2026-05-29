@@ -1,5 +1,6 @@
-import { SendHorizontal } from "lucide-react";
+import { Paperclip, Image, Send } from "lucide-react";
 import React, { useRef, useEffect } from "react";
+import { toast } from "react-hot-toast";
 
 interface MessageInputProps {
   newMessage: string;
@@ -15,6 +16,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   sending,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Focus input on mount and whenever sending finishes
   useEffect(() => {
@@ -23,43 +25,52 @@ const MessageInput: React.FC<MessageInputProps> = ({
     }
   }, [sending]);
 
+  const handleAttachClick = () => {
+    toast("Attachment feature coming soon!");
+  };
+
+  const handleImageClick = () => {
+    toast("Image upload feature coming soon!");
+  };
+
   return (
-    <div className="p-6 rounded-none flex items-center gap-4">
-      <button className="w-12 h-12 rounded-full bg-custom-green-light text-custom-green flex items-center justify-center hover:bg-[#2F7E4744] transition-colors shrink-0">
-        <span className="material-symbols-outlined text-[28px]">add</span>
+    <div className="bg-white border-t border-black/[0.08] px-[14px] py-[10px] flex items-center gap-[8px] shrink-0">
+      <button
+        onClick={handleAttachClick}
+        className="w-[30px] h-[30px] rounded-[7px] border-none bg-transparent flex items-center justify-center cursor-pointer text-[#888] hover:bg-[#f5f0e8] transition-colors"
+      >
+        <Paperclip size={17} />
       </button>
-
-      <div className="flex-1 relative flex items-center">
-        <input
-          ref={inputRef}
-          type="text"
-          value={newMessage}
-          autoFocus
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Skriv en melding..."
-          className="w-full box-card-custom border-none rounded-full py-3.5 px-6 text-[15px] text-[#212529] placeholder-[#ADB5BD] focus:ring-2 focus:ring-custom-green-light outline-none transition-all"
-          disabled={sending}
-        />
-      </div>
-
+      <button
+        onClick={handleImageClick}
+        className="w-[30px] h-[30px] rounded-[7px] border-none bg-transparent flex items-center justify-center cursor-pointer text-[#888] hover:bg-[#f5f0e8] transition-colors"
+      >
+        <Image size={17} />
+      </button>
+      <input
+        ref={inputRef}
+        type="text"
+        value={newMessage}
+        autoFocus
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+          }
+        }}
+        onChange={(e) => setNewMessage(e.target.value)}
+        placeholder="Skriv en melding..."
+        className="flex-1 bg-[#f9f9f7] border border-black/[0.08] rounded-full px-[14px] py-[8px] text-[13px] text-custom-black outline-none placeholder:text-[#888] font-sans"
+        disabled={sending}
+      />
       <button
         title="Send"
         type="submit"
-        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shrink-0 shadow-sm ${
-          !newMessage.trim() || sending
-            ? "bg-[#F1F3F5] text-[#ADB5BD] cursor-not-allowed"
-            : "bg-custom-green text-white hover:bg-custom-green hover:scale-105 active:scale-95"
-        }`}
+        className={`w-[34px] h-[34px] bg-[#16a34a] rounded-full border-none flex items-center justify-center cursor-pointer shrink-0 hover:bg-[#138e3f] transition-colors`}
         disabled={!newMessage.trim() || sending}
         onClick={handleSend}
       >
-        <SendHorizontal size={22} />
+        <Send size={15} className="text-white" />
       </button>
     </div>
   );
