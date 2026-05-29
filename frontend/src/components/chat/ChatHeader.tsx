@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { ReceiptText, MoreHorizontal } from "lucide-react";
+import { User, MoreHorizontal, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 
 interface ChatHeaderProps {
   isMobile: boolean;
@@ -30,82 +31,100 @@ function ChatHeader({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleUserClick = () => {
+    if (otherUser?._id) {
+      navigate(`/profile/${otherUser._id}`);
+    }
+  };
+
   return (
-    <div className="px-6 py-4 flex rounded-none justify-between items-center shrink-0">
-      <div className="flex items-center gap-4 flex-1 min-w-0">
-        {/* Back button for mobile */}
-        {isMobile && (
-          <button
-            className="p-2 hover:bg-[#F8F9FA] rounded-full transition-all shrink-0 text-[#495057]"
-            onClick={() => navigate("/messages")}
-            aria-label="Back"
-          >
-            <span className="material-symbols-outlined text-[24px]">
-              arrow_back
-            </span>
-          </button>
+    <div className="bg-white border-b border-black/[0.08] px-[18px] py-[11px] flex items-center gap-[10px] shrink-0">
+      {/* Back button for mobile */}
+      {isMobile && (
+        <button
+          className="p-2 hover:bg-[#f9f9f7] rounded-full transition-all shrink-0 text-custom-black"
+          onClick={() => navigate("/messages")}
+          aria-label="Back"
+        >
+          <ChevronLeft size={20} />
+        </button>
+      )}
+
+      <div className="relative shrink-0">
+        <div className="w-[50px] h-[50px] rounded-full bg-[#dcfce7] text-[#166534] text-[18px] font-medium flex items-center justify-center overflow-hidden">
+          {otherUser?.avatarUrl ? (
+            <img
+              src={otherUser.avatarUrl}
+              alt={otherUser.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span>{otherUser?.name?.charAt(0) || "U"}</span>
+          )}
+        </div>
+        {/* Online Status Indicator */}
+        {isOnline && (
+          <div className="absolute bottom-[2px] right-[2px] w-[10px] h-[10px] bg-[#16a34a] rounded-full border-[2px] border-white"></div>
         )}
-
-        <div className="relative shrink-0">
-          <div className="w-12 h-12 rounded-full bg-[#F1F3F5] flex items-center justify-center text-[#495057] font-bold text-lg overflow-hidden border border-[#E9ECEF]">
-            {otherUser?.avatarUrl ? (
-              <img
-                src={otherUser.avatarUrl}
-                alt={otherUser.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span>{otherUser?.name?.charAt(0) || "U"}</span>
-            )}
-          </div>
-          {/* Online Status Indicator */}
-          <div
-            className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${isOnline ? "bg-[#22C55E]" : "bg-[#ADB5BD]"}`}
-          ></div>
-        </div>
-
-        <div className="min-w-0 flex flex-col">
-          <h3 className="m-0 text-[18px] font-bold text-[#212529] truncate leading-tight">
-            {otherUser?.name || "Chat"}
-          </h3>
-          <p
-            className={`text-[13px] font-medium m-0 ${isOnline ? "text-[#22C55E]" : "text-[#868E96]"}`}
-          >
-            {isOnline ? "Online now" : "Offline"}
-          </p>
-        </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="min-w-0 flex flex-col flex-1">
+        <h3 className="m-0 text-[18px] font-bold text-custom-black truncate leading-tight">
+          {otherUser?.name || "Chat"}
+        </h3>
+        <p className="text-[13px] font-medium m-0 text-[#888]">
+          {isOnline ? "Online" : "Offline"} · 4.9 ★ · 38 oppdrag
+        </p>
+      </div>
 
+      <div className="flex items-center gap-[8px]">
+        {!isMobile && (
+          <button
+            onClick={handleUserClick}
+            className="w-[40px] h-[40px] border border-black/[0.1] rounded-[10px] bg-white flex items-center justify-center cursor-pointer text-[#16a34a] hover:bg-[#f9f9f7] transition-colors"
+          >
+            <User size={18} />
+          </button>
+        )}
 
         <div className="relative" ref={menuRef}>
           <button
             aria-label="More options"
-            className={`p-2 rounded-full transition-colors text-[#495057] ${showMenu ? "bg-[#F8F9FA]" : "hover:bg-[#F8F9FA]"}`}
+            className={`w-[40px] h-[40px] border border-black/[0.1] rounded-[10px] bg-white flex items-center justify-center cursor-pointer text-[#16a34a] transition-colors ${showMenu ? "bg-[#f9f9f7]" : "hover:bg-[#f9f9f7]"}`}
             onClick={() => setShowMenu(!showMenu)}
           >
-            <MoreHorizontal size={24} />
+            <MoreHorizontal size={18} />
           </button>
 
           {showMenu && (
-            <div className="absolute right-0 mt-2 w-64 box-card-custom rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-[#F1F3F5] py-2 z-[100] animate-in fade-in zoom-in duration-200 origin-top-right">
-
-
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-black/[0.08] py-2 z-[100] animate-in fade-in zoom-in duration-200 origin-top-right">
+              {isMobile && (
+                <button
+                  className="w-full text-left px-6 py-4 text-[16px] font-bold text-custom-black hover:bg-[#f9f9f7] transition-colors"
+                  onClick={() => {
+                    setShowMenu(false);
+                    if (otherUser?._id) {
+                      navigate(`/profile/${otherUser._id}`);
+                    }
+                  }}
+                >
+                  View Profile
+                </button>
+              )}
               <button
-                className="w-full text-left px-6 py-4 text-[16px] font-bold text-[#212529] hover:bg-[#F8F9FA] transition-colors"
+                className="w-full text-left px-6 py-4 text-[16px] font-bold text-custom-black hover:bg-[#f9f9f7] transition-colors"
                 onClick={() => {
-                  // Add archive logic here
                   setShowMenu(false);
+                  toast("Archive feature coming soon!");
                 }}
               >
                 Archive this thread
               </button>
               <button
-                className="w-full text-left px-6 py-4 text-[16px] font-bold text-[#212529] hover:bg-[#F8F9FA] transition-colors"
+                className="w-full text-left px-6 py-4 text-[16px] font-bold text-custom-black hover:bg-[#f9f9f7] transition-colors"
                 onClick={() => {
-                  // Add report logic here
                   setShowMenu(false);
+                  toast("Report feature coming soon!");
                 }}
               >
                 Report chat

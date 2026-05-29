@@ -1,5 +1,5 @@
 import React from "react";
-import { CustomSwitcher } from "../../components/Ui/CustomSwitcher";
+import { Search } from "lucide-react";
 import ConversationList from "../../components/chat/ConversationList";
 import type { FilterType } from "../../features/chat/useChatLogic";
 
@@ -28,21 +28,46 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   formatTime,
   onlineUsers,
 }) => {
-  const filterTypes = ["All", "Purchases", "Sales"] as FilterType[];
+  const filterTypes = ["Alle", "Kjøper", "Selger"] as const;
+  const filterMap: Record<typeof filterTypes[number], FilterType> = {
+    "Alle": "All",
+    "Kjøper": "Purchases",
+    "Selger": "Sales",
+  };
+  
   return (
     <div
-      className={`${conversationId && isMobile ? "hidden" : "flex"} flex-col w-full md:max-w-90 border-r border-[#F1F3F5] overflow-hidden`}
+      className={`${conversationId && isMobile ? "hidden" : "flex"} flex-col w-full md:w-[260px] bg-white border-r border-black/[0.08] overflow-hidden shrink-0`}
     >
-      <div className="p-6 flex items-center justify-between border-b border-[#F8F9FA]">
-        <h1 className="text-[24px] font-bold text-[#212529] m-0">Chat</h1>
+      <div className="p-[14px] pb-[10px]">
+        <h1 className="text-[15px] font-medium text-custom-black mb-[10px]">
+          Meldinger
+        </h1>
+        <div className="flex items-center gap-[7px] bg-[#f9f9f7] border border-black/[0.08] rounded-full px-[12px] py-[7px]">
+          <Search size={14} className="text-[#bbb]" />
+          <input
+            type="text"
+            placeholder="Søk i samtaler..."
+            className="flex-1 border-none bg-transparent text-[12px] text-custom-black outline-none placeholder:text-[#bbb]"
+          />
+        </div>
       </div>
 
-      <CustomSwitcher
-        options={filterTypes.map((f) => ({ id: f, label: f }))}
-        value={activeFilter}
-        onChange={(val) => setActiveFilter(val as FilterType)}
-        className="mx-3 mb-3 !py-0"
-      />
+      <div className="flex border-b border-black/[0.07] px-[10px]">
+        {filterTypes.map((label) => (
+          <button
+            key={label}
+            onClick={() => setActiveFilter(filterMap[label])}
+            className={`px-[10px] py-[8px] text-[12px] font-medium cursor-pointer border-b-[2px] transition-colors ${
+              activeFilter === filterMap[label]
+                ? "text-[#16a34a] border-[#16a34a]"
+                : "text-[#888] border-transparent"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       <ConversationList
         loading={chatsLoading}
