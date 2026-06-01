@@ -44,7 +44,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="bg-[#f5f0e8] min-h-screen">
+    <div className="bg-[#f5f0e8] min-h-screen -mt-6">
       <div className="hero-band h-[130px] bg-[#1a3a1a] relative">
         <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle,#fff_1px,transparent_1px)] bg-[length:24px_24px]"></div>
       </div>

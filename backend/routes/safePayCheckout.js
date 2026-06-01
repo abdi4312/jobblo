@@ -18,5 +18,10 @@ router.post(
   authenticate,
   SafePayCheckoutController.approveAndPayout,
 );
+router.get(
+  "/status/:sessionId",
+  authenticate,
+  SafePayCheckoutController.checkoutSessionStatus,
+);
 
 module.exports = router;

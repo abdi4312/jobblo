@@ -21,6 +21,7 @@ import {
   searchAll,
   searchUsers,
   updateUser,
+  getSafePayHistory,
 } from "./api";
 import { useUserStore } from "../../stores/userStore";
 import { toast } from "react-hot-toast";
@@ -138,6 +139,14 @@ export const useUserReviews = (userId: string | undefined, role?: string) => {
   return useQuery({
     queryKey: ["userReviews", userId, role],
     queryFn: () => getUserReviews(userId!, role),
+    enabled: !!userId,
+  });
+};
+
+export const useSafePayHistory = (userId: string | undefined) => {
+  return useQuery({
+    queryKey: ["safePayHistory", userId],
+    queryFn: () => getSafePayHistory(userId!),
     enabled: !!userId,
   });
 };

@@ -18,3 +18,4 @@ export * from "./AboutView";
 export * from "./SubscriptionView";
 export * from "./NotificationsView";
 export * from "./SeekerSettingsView";
+export * from "./SafePayHistoryView";

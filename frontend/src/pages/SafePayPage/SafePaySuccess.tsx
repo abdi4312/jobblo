@@ -4,6 +4,8 @@ import { CheckCircle2, ArrowRight, ShieldCheck } from "lucide-react";
 import { Button } from "../../components/Ui/button/Button";
 import SafePaySteps from "../../components/SafePay/SafePaySteps";
 import { toast } from "react-hot-toast";
+import { useQuery } from "@tanstack/react-query";
+import mainLink from "../../api/mainURLs";
 
 const SafePaySuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -11,11 +13,22 @@ const SafePaySuccess: React.FC = () => {
   const orderId = searchParams.get("orderId");
   const sessionId = searchParams.get("session_id");
 
+  // Check payment status
+  const { isLoading, error } = useQuery({
+    queryKey: ["safepay-status", sessionId],
+    queryFn: async () => {
+      if (!sessionId) return;
+      const res = await mainLink.get(`/api/safepay-checkout/status/${sessionId}`);
+      return res.data;
+    },
+    enabled: !!sessionId,
+  });
+
   useEffect(() => {
-    if (sessionId) {
-      toast.success("Betalingen var vellykket!");
+    if (error) {
+      toast.error("Kunne ikke bekrefte betalingen");
     }
-  }, [sessionId]);
+  }, [error]);
 
   return (
     <div className="min-h-screen bg-[#f5f0e8] font-sans flex flex-col items-center py-12 px-6">
