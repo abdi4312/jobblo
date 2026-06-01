@@ -8,7 +8,7 @@ export function HomeHero() {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1100px] mx-auto min-h-[400px] flex items-center justify-center animate-pulse bg-gray-50 rounded-3xl mb-12">
+      <div className="max-w-275 mx-auto min-h-100 flex items-center justify-center animate-pulse bg-gray-50 rounded-3xl mb-12">
         <div className="text-gray-400 font-medium">Laster...</div>
       </div>
     );
@@ -25,8 +25,8 @@ export function HomeHero() {
   const mediaType = hero?.mediaType || "image";
 
   return (
-    <div className="bg-[#f5f0e8] pt-15 pb-12">
-      <div className="max-w-[1100px] mx-auto grid grid-cols-1 md:grid-cols-2 items-center gap-10 px-12">
+    <div className="bg-[#f5f0e8] pt-5 pb-12">
+      <div className="max-w-275 mx-auto grid grid-cols-1 md:grid-cols-2 items-center gap-10 px-5 sm:px-12">
         {/* Left Content */}
         <div className="hero-left">
           <div className="flex items-center gap-1.5 text-[13px] text-custom-green font-medium mb-2.5">
@@ -34,12 +34,12 @@ export function HomeHero() {
             <span>Norges lokale jobbplattform</span>
           </div>
           
-          <h1 className="text-[42px] font-normal text-custom-black leading-[1.15] mb-1.5">
+          <h1 className="text-[32px] sm:text-[42px] font-normal text-custom-black leading-[1.15] mb-1.5">
             {staticContent.title1}<br />
             <em className="text-custom-green not-italic font-medium">{staticContent.title2}</em>
           </h1>
           
-          <p className="text-[15px] text-custom-black/70 leading-relaxed mb-7 max-w-[440px]">
+          <p className="text-[15px] text-custom-black/70 leading-relaxed mb-7 max-w-110">
             {staticContent.subtitle}
           </p>
 
@@ -48,15 +48,15 @@ export function HomeHero() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="bg-white border border-black/10 rounded-xl p-2.5 px-4 min-w-[120px]">
+            <div className="bg-white border border-black/10 rounded-xl p-2.5 px-4 min-w-30">
               <strong className="block text-[18px] font-medium text-custom-green">5 000+</strong>
               <span className="text-[11px] text-custom-black/50">Aktive oppdrag</span>
             </div>
-            <div className="bg-white border border-black/10 rounded-xl p-2.5 px-4 min-w-[120px]">
+            <div className="bg-white border border-black/10 rounded-xl p-2.5 px-4 min-w-30">
               <strong className="block text-[18px] font-medium text-custom-green">15 000+</strong>
               <span className="text-[11px] text-custom-black/50">Brukere</span>
             </div>
-            <div className="bg-white border border-black/10 rounded-xl p-2.5 px-4 min-w-[120px]">
+            <div className="bg-white border border-black/10 rounded-xl p-2.5 px-4 min-w-30">
               <strong className="block text-[18px] font-medium text-custom-green">4.8 ★</strong>
               <span className="text-[11px] text-custom-black/50">Snittrating</span>
             </div>
@@ -65,7 +65,7 @@ export function HomeHero() {
 
         {/* Right Content - Image */}
         <div className="flex justify-center items-center">
-          <div className="w-[340px] h-[380px] bg-[#e8e0d0] rounded-[50%_50%_50%_50%_/_60%_60%_40%_40%] overflow-hidden flex items-end justify-center relative">
+          <div className="w-85 h-95 bg-[#e8e0d0] rounded-[50%_50%_50%_50%/60%_60%_40%_40%] overflow-hidden flex items-end justify-center relative">
             {mediaType === "video" ? (
               <video
                 src={mediaUrl}
