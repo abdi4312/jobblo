@@ -316,7 +316,7 @@ export function ItemsGrid({
                 </h3>
                 {isOwner && (
                   <button
-                    onClick={() => navigate("/settings")}
+                    onClick={() => navigate("/settings/bio")}
                     className="text-[12px] text-custom-green flex items-center gap-1 hover:underline"
                   >
                     <Pencil size={12} /> Rediger
@@ -337,7 +337,7 @@ export function ItemsGrid({
                 </h3>
                 {isOwner && (
                   <button
-                    onClick={() => navigate("/settings")}
+                    onClick={() => navigate("/settings/seeker")}
                     className="text-[12px] text-custom-green flex items-center gap-1 hover:underline"
                   >
                     <Plus size={12} /> Legg til
@@ -365,7 +365,7 @@ export function ItemsGrid({
                 </h3>
                 {isOwner && (
                   <button
-                    onClick={() => navigate("/settings")}
+                    onClick={() => navigate("/settings/seeker")}
                     className="text-[12px] text-custom-green flex items-center gap-1 hover:underline"
                   >
                     <Pencil size={12} /> Rediger
@@ -427,24 +427,29 @@ export function ItemsGrid({
             </div>
 
             {/* SafePay History Card */}
-            <div className="bg-white border border-black/5 rounded-[14px] p-4.5 text-center">
-              <h3 className="text-[13px] font-medium text-custom-black flex items-center gap-1.5 mb-3.5 text-left">
-                <ShieldCheck size={15} className="text-custom-green" />{" "}
-                SafePay-historikk
-              </h3>
-              <div className="py-2">
-                <strong className="block text-[28px] font-medium text-custom-green">
-                  {(user as any)?.totalEarned || 0} kr
-                </strong>
-                <span className="text-[11px] text-black/40">
-                  Utbetalt via SafePay
-                </span>
+            {isOwner && (
+              <div
+                className="bg-white border border-black/5 rounded-[14px] p-4.5 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => navigate("/settings/safepay")}
+              >
+                <h3 className="text-[13px] font-medium text-custom-black flex items-center gap-1.5 mb-3.5 text-left">
+                  <ShieldCheck size={15} className="text-custom-green" />{" "}
+                  SafePay-historikk
+                </h3>
+                <div className="py-2">
+                  <strong className="block text-[28px] font-medium text-custom-green">
+                    {(user as any)?.totalEarned || 0} kr
+                  </strong>
+                  <span className="text-[11px] text-black/40">
+                    Utbetalt via SafePay
+                  </span>
+                </div>
+                <p className="text-[11px] text-black/30 mt-2 leading-relaxed">
+                  Alle utbetalinger er gjort trygt gjennom SafePay — ingen
+                  kontantoppgjør.
+                </p>
               </div>
-              <p className="text-[11px] text-black/30 mt-2 leading-relaxed">
-                Alle utbetalinger er gjort trygt gjennom SafePay — ingen
-                kontantoppgjør.
-              </p>
-            </div>
+            )}
           </div>
         </div>
       );

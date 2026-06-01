@@ -101,3 +101,8 @@ export const deleteExperience = async (expId: string) => {
   const response = await mainLink.delete(`/api/users/experience/${expId}`);
   return response.data;
 };
+
+export const getSafePayHistory = async (userId: string) => {
+  const response = await mainLink.get(`/api/safepay/history/${userId}`);
+  return response.data;
+};

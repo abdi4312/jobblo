@@ -29,7 +29,7 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section className="py-15 px-12 max-w-[1100px] mx-auto">
+    <section className="py-7 px-5 sm:px-12 max-w-275 mx-auto">
       <div className="text-center mb-9">
         <h2 className="text-[28px] font-normal text-custom-black">
           Kom i gang med <em className="text-custom-green not-italic">4 trinn</em>

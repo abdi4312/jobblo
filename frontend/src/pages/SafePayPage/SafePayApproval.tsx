@@ -115,6 +115,7 @@ const SafePayApproval: React.FC = () => {
   }
 
   const { order: orderData, calculation } = order;
+  const isOrderCompleted = orderData.status === "completed";
 
   if (isSuccess) {
     return (
@@ -237,8 +238,10 @@ const SafePayApproval: React.FC = () => {
             {checklist.map((item) => (
               <div
                 key={item.id}
-                onClick={() => toggleCheck(item.id)}
-                className={`flex items-center gap-3 p-3.5 rounded-xl cursor-pointer border transition-all ${item.checked ? "bg-[#f0faf0] border-[#c6f0d8]" : "bg-[#f9f9f7] border-transparent hover:border-black/10"}`}
+                onClick={
+                  !isOrderCompleted ? () => toggleCheck(item.id) : undefined
+                }
+                className={`flex items-center gap-3 p-3.5 rounded-xl ${isOrderCompleted ? "cursor-not-allowed" : "cursor-pointer"} border transition-all ${item.checked ? "bg-[#f0faf0] border-[#c6f0d8]" : "bg-[#f9f9f7] border-transparent hover:border-black/10"}`}
               >
                 <div
                   className={`w-5.5 h-5.5 rounded-md border-2 flex items-center justify-center transition-all ${item.checked ? "bg-custom-green border-custom-green" : "bg-white border-[#c8d8c8]"}`}
@@ -273,10 +276,12 @@ const SafePayApproval: React.FC = () => {
                 <Star
                   key={star}
                   size={32}
-                  onClick={() =>
-                    setRatings((prev) => ({ ...prev, overall: star }))
+                  onClick={
+                    !isOrderCompleted
+                      ? () => setRatings((prev) => ({ ...prev, overall: star }))
+                      : undefined
                   }
-                  className={`cursor-pointer transition-all ${star <= ratings.overall ? "text-[#ca8a04] fill-[#ca8a04]" : "text-[#e8e0d0]"}`}
+                  className={`${isOrderCompleted ? "cursor-not-allowed" : "cursor-pointer"} transition-all ${star <= ratings.overall ? "text-[#ca8a04] fill-[#ca8a04]" : "text-[#e8e0d0]"}`}
                 />
               ))}
             </div>
@@ -298,10 +303,16 @@ const SafePayApproval: React.FC = () => {
                     <Star
                       key={star}
                       size={14}
-                      onClick={() =>
-                        setRatings((prev) => ({ ...prev, [cat.id]: star }))
+                      onClick={
+                        !isOrderCompleted
+                          ? () =>
+                              setRatings((prev) => ({
+                                ...prev,
+                                [cat.id]: star,
+                              }))
+                          : undefined
                       }
-                      className={`cursor-pointer ${star <= (ratings as any)[cat.id] ? "text-[#ca8a04] fill-[#ca8a04]" : "text-[#e8e0d0]"}`}
+                      className={`${isOrderCompleted ? "cursor-not-allowed" : "cursor-pointer"} ${star <= (ratings as any)[cat.id] ? "text-[#ca8a04] fill-[#ca8a04]" : "text-[#e8e0d0]"}`}
                     />
                   ))}
                 </div>
@@ -312,7 +323,8 @@ const SafePayApproval: React.FC = () => {
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            className="w-full bg-white border border-black/10 rounded-xl p-4 text-[13px] text-gray-800 outline-none focus:border-custom-green min-h-[100px]"
+            disabled={isOrderCompleted}
+            className={`w-full bg-white border border-black/10 rounded-xl p-4 text-[13px] text-gray-800 outline-none focus:border-custom-green min-h-[100px] ${isOrderCompleted ? "cursor-not-allowed bg-gray-50" : ""}`}
             placeholder="Skriv en kort kommentar om oppdraget... (valgfritt)"
           />
         </div>
@@ -360,10 +372,21 @@ const SafePayApproval: React.FC = () => {
           <Button
             onClick={handleApprove}
             loading={approveMutation.isPending}
-            className="w-full bg-custom-green text-white rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#14532d] transition-all shadow-lg mt-6"
+            disabled={isOrderCompleted}
+            className={
+              isOrderCompleted
+                ? "w-full bg-gray-300 text-gray-500 rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 shadow-lg mt-6 cursor-not-allowed"
+                : "w-full bg-custom-green text-white rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#14532d] transition-all shadow-lg mt-6"
+            }
           >
-            <CircleCheck size={20} /> Godkjenn jobb og utbetal{" "}
-            {calculation.providerNet} kr
+            {isOrderCompleted ? (
+              "Jobb allerede godkjent!"
+            ) : (
+              <>
+                <CircleCheck size={20} /> Godkjenn jobb og utbetal{" "}
+                {calculation.providerNet} kr
+              </>
+            )}
           </Button>
 
           <div className="text-center mt-5">
