@@ -13,6 +13,7 @@ import {
   Bell,
   Clock,
   Briefcase,
+  ShieldCheck,
 } from "lucide-react";
 import { useUserStore } from "../../../stores/userStore";
 
@@ -60,6 +61,7 @@ export function SettingsLayout() {
     { name: "E-postadresse", path: "/settings/email", icon: AtSign },
     { name: "Telefonnummer", path: "/settings/phone", icon: Phone },
     { name: "Mine adresser", path: "/settings/addresses", icon: MapPin },
+    { name: "SafePay historikk", path: "/settings/safepay", icon: ShieldCheck },
     { name: "Endre passord", path: "/settings/password", icon: User },
     { name: "Økter", path: "/settings/sessions", icon: Monitor },
     {

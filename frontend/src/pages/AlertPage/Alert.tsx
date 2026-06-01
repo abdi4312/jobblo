@@ -156,7 +156,7 @@ export default function Alert() {
 
   return (
     <div className="min-h-screen bg-[#f5f0e8]">
-      <div className="max-w-[680px] mx-auto px-6 py-10">
+      <div className="max-w-170 mx-auto px-5 py-3 sm:px-6 sm:py-5">
         {/* Header */}
         <div className="mb-5">
           <h1 className="text-[22px] font-medium text-[#1a1a1a]">Varsler</h1>
@@ -204,7 +204,7 @@ export default function Alert() {
               filteredNotifications.map((notification) => (
                 <div
                   key={notification._id}
-                  className={`flex items-center gap-3.5 px-[18px] py-4 border-b border-black/[0.05] last:border-b-0 ${
+                  className={`flex flex-col sm:flex-row items-start sm:items-center gap-3.5 px-[14px] sm:px-[18px] py-4 border-b border-black/[0.05] last:border-b-0 ${
                     !notification.read ? "bg-[#f7fdf7]" : ""
                   }`}
                 >
@@ -226,14 +226,14 @@ export default function Alert() {
                   </div>
 
                   {/* Body */}
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 w-full">
                     <div className="text-[13px] font-medium text-[#1a1a1a] mb-0.5">
                       {getNotificationTitle(notification.type, notification)}
                     </div>
                     <div className="text-[12px] text-[#666] mb-1.5 leading-[1.4]">
                       {notification.content}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[10px] bg-[#f0faf0] text-[#16a34a] rounded-full px-2 py-0.5 border border-[#c6f0d8]">
                         {notification.type}
                       </span>
@@ -245,7 +245,7 @@ export default function Alert() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto justify-end sm:justify-start mt-2 sm:mt-0">
                     {!notification.read && (
                       <div className="w-[7px] h-[7px] bg-[#16a34a] rounded-full flex-shrink-0"></div>
                     )}
@@ -267,6 +267,7 @@ export default function Alert() {
                     </button>
                     {!notification.read && (
                       <button
+                        title="Markere som lest"
                         className="w-7 h-7 rounded-full border-none bg-transparent flex items-center justify-center cursor-pointer text-[#bbb] hover:bg-[#f5f0e8] hover:text-[#555] transition-colors"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -277,6 +278,7 @@ export default function Alert() {
                       </button>
                     )}
                     <button
+                      title="Slett varsel"
                       className="w-7 h-7 rounded-full border-none bg-transparent flex items-center justify-center cursor-pointer text-[#bbb] hover:bg-[#f5f0e8] hover:text-[#dc2626] transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();

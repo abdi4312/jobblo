@@ -124,6 +124,10 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    completedJobs: {
+      type: Number,
+      default: 0,
+    },
 
     favorites: [
       {
@@ -168,6 +172,15 @@ const userSchema = new mongoose.Schema(
 );
 
 // Add index to prevent duplicate OAuth providers
+// Virtual field for totalEarned (maps to earnings)
+userSchema.virtual("totalEarned").get(function () {
+  return this.earnings || 0;
+});
+
+// Ensure virtuals are included when converting to JSON
+userSchema.set("toJSON", { virtuals: true });
+userSchema.set("toObject", { virtuals: true });
+
 userSchema.index({
   "oauthProviders.provider": 1,
   "oauthProviders.providerId": 1,

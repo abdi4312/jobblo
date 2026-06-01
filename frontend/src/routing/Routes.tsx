@@ -30,6 +30,7 @@ import {
   SubscriptionView,
   NotificationsView,
   SeekerSettingsView,
+  SafePayHistoryView,
 } from "../components/profile/SettingsViews";
 
 import OAuthSuccess from "../pages/OAuthSuccess.tsx";
@@ -289,6 +290,7 @@ export const routes: RouteObject[] = [
               { path: "email", element: <EmailView /> },
               { path: "phone", element: <PhoneView /> },
               { path: "addresses", element: <AddressesView /> },
+              { path: "safepay", element: <SafePayHistoryView /> },
               { path: "password", element: <PasswordView /> },
               { path: "delete-account", element: <DeleteAccountView /> },
               { path: "location", element: <LocationView /> },
