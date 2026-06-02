@@ -130,6 +130,9 @@ export const useCreateJobForm = (
   const [smartFillPrompt, setSmartFillPrompt] = useState("");
   const [showSmartFillInput, setShowSmartFillInput] = useState(false);
 
+  // Flag to prevent save effect from running before load completes
+  const [isLoaded, setIsLoaded] = useState(false);
+
   const currentUser = useUserStore((state) => state.user);
 
   // Wrappers to maintain compatibility with existing components
@@ -230,23 +233,19 @@ export const useCreateJobForm = (
     }
   };
 
-  // Persistence - Load data on mount
+  // Persistence - Load data on mount (run only once)
   useEffect(() => {
     const loadData = async () => {
-      console.log(
-        "[useCreateJobForm] Loading data... initialData:",
-        initialData,
-      );
-      if (initialData) return;
+      // In edit mode or when initialData is provided, skip loading draft
+      if (initialData) {
+        setIsLoaded(true);
+        return;
+      }
 
       try {
         const { data, images } = await loadFormData();
-        console.log("[useCreateJobForm] Loaded data from IndexedDB:", {
-          data,
-          images,
-        });
         if (data) {
-          const valuesToSet = {
+          setValues({
             title: data.title || "",
             description: data.description || "",
             categories: data.categories || "",
@@ -258,13 +257,7 @@ export const useCreateJobForm = (
             durationValue: data.durationValue || "",
             fromDate: data.fromDate || "",
             toDate: data.toDate || "",
-          };
-          console.log("[useCreateJobForm] Setting values with:", valuesToSet);
-          setValues(valuesToSet);
-          console.log(
-            "[useCreateJobForm] Values set! Let's check current values after:",
-            values,
-          );
+          });
           setUrgent(data.urgent || false);
           setMaxApplicants(data.maxApplicants || 0);
           setEquipment(data.equipment || "");
@@ -281,30 +274,25 @@ export const useCreateJobForm = (
           setShowSmartFillInput(data.showSmartFillInput || false);
           setSmartFillPrompt(data.smartFillPrompt || "");
 
-          // Set selected images if any were saved
           if (images && images.length > 0) {
             setSelectedImages(images);
           }
         }
       } catch (err) {
         console.error("Error loading form data:", err);
+      } finally {
+        // Always mark as loaded so save effect can start
+        setIsLoaded(true);
       }
     };
     loadData();
-  }, [
-    initialData,
-    setUrgent,
-    setHourlyRate,
-    setPaymentType,
-    setValues,
-    setCurrentImages,
-    setImagesToDelete,
-    setShowSmartFillInput,
-    setSmartFillPrompt,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
 
-  // Persistence - Save data whenever it changes
+  // Persistence - Save data whenever it changes (only after initial load)
   useEffect(() => {
+    if (!isLoaded) return; // Don't save until draft has been loaded
+
     const saveData = async () => {
       try {
         const dataToSave = {
@@ -328,18 +316,14 @@ export const useCreateJobForm = (
           showSmartFillInput,
           smartFillPrompt,
         };
-        console.log("[useCreateJobForm] Saving data:", {
-          dataToSave,
-          selectedImages,
-        });
         await saveFormData(dataToSave, selectedImages);
-        console.log("[useCreateJobForm] Data saved successfully!");
       } catch (err) {
         console.error("Error saving form data:", err);
       }
     };
     saveData();
   }, [
+    isLoaded,
     values,
     urgent,
     equipment,
@@ -359,6 +343,7 @@ export const useCreateJobForm = (
     imagesToDelete,
     showSmartFillInput,
     smartFillPrompt,
+    maxApplicants,
   ]);
 
   const validateStep = (step: number) => {
