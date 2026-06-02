@@ -1,21 +1,32 @@
 import { Upload, Camera } from "lucide-react";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 interface ImageUploadProps {
   onImagesChange: (files: File[]) => void;
   existingImages?: string[];
   onExistingImageRemove?: (url: string) => void;
+  initialFiles?: File[];
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
   onImagesChange,
   existingImages = [],
   onExistingImageRemove,
+  initialFiles = [],
 }) => {
   const [previews, setPreviews] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle initial files
+  useEffect(() => {
+    if (initialFiles.length > 0 && selectedFiles.length === 0) {
+      const newPreviews = initialFiles.map((file) => URL.createObjectURL(file));
+      setPreviews(newPreviews);
+      setSelectedFiles(initialFiles);
+    }
+  }, [initialFiles]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);

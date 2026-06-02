@@ -35,6 +35,11 @@ const serviceSchema = new mongoose.Schema(
       address: { type: String },
       city: { type: String },
     },
+    
+    // Norway location codes
+    countyCode: { type: String, index: true },
+    municipalityCode: { type: String, index: true },
+    areaCode: { type: String, index: true },
 
     // Faktiske kategorinavn
     categories: [{ type: String, required: true }],

@@ -131,6 +131,9 @@ exports.applyFilters = async (req, res) => {
       searchKeyword,
       sortBy,
       type,
+      countyCodes,
+      municipalityCodes,
+      areaCodes,
       page = 1,
       limit = 20,
     } = req.body;
@@ -142,9 +145,28 @@ exports.applyFilters = async (req, res) => {
       query.categories = { $in: categories };
     }
 
-    // LOCATIONS (Cities)
+    // LOCATIONS (Cities - backward compatibility)
     if (Array.isArray(locations) && locations.length > 0) {
       query["location.city"] = { $in: locations };
+    }
+
+    // LOCATIONS BY CODES
+    const locationQueries = [];
+    
+    if (Array.isArray(areaCodes) && areaCodes.length > 0) {
+      locationQueries.push({ areaCode: { $in: areaCodes } });
+    }
+    
+    if (Array.isArray(municipalityCodes) && municipalityCodes.length > 0) {
+      locationQueries.push({ municipalityCode: { $in: municipalityCodes } });
+    }
+    
+    if (Array.isArray(countyCodes) && countyCodes.length > 0) {
+      locationQueries.push({ countyCode: { $in: countyCodes } });
+    }
+
+    if (locationQueries.length > 0) {
+      query.$or = locationQueries;
     }
 
     // PRIS

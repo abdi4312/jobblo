@@ -7,6 +7,9 @@ interface FetchJobsParams {
   limit?: number;
   categories?: string[];
   locations?: string[];
+  countyCodes?: string[];
+  municipalityCodes?: string[];
+  areaCodes?: string[];
   search?: string;
   sort?: string;
   userId?: string;
@@ -31,6 +34,9 @@ export const fetchJobs = async ({
   limit = 16,
   categories = [],
   locations = [],
+  countyCodes = [],
+  municipalityCodes = [],
+  areaCodes = [],
   search = "",
   sort = "",
   userId = "",
@@ -48,6 +54,9 @@ export const fetchJobs = async ({
       limit,
       category: categories.length ? categories.join(",") : undefined,
       location: locations.length ? locations.join(",") : undefined,
+      countyCodes: countyCodes.length ? countyCodes.join(",") : undefined,
+      municipalityCodes: municipalityCodes.length ? municipalityCodes.join(",") : undefined,
+      areaCodes: areaCodes.length ? areaCodes.join(",") : undefined,
       search: search || undefined,
       sort: sort || undefined,
       userId: userId || undefined,

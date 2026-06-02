@@ -52,6 +52,12 @@ export default function CreateJobForm({
     setAddress,
     city,
     setCity,
+    countyCode,
+    setCountyCode,
+    municipalityCode,
+    setMunicipalityCode,
+    areaCode,
+    setAreaCode,
     categories,
     setCategories,
     price,
@@ -78,6 +84,7 @@ export default function CreateJobForm({
     setPhone,
     email,
     setEmail,
+    selectedImages,
     setSelectedImages,
     currentImages,
     handleExistingImageRemove,
@@ -208,6 +215,7 @@ export default function CreateJobForm({
                   onImagesChange={(files) => setSelectedImages(files)}
                   existingImages={currentImages}
                   onExistingImageRemove={handleExistingImageRemove}
+                  initialFiles={selectedImages}
                 />
                 {errors?.images && (
                   <p className="mt-4 text-red-500 text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
@@ -244,6 +252,12 @@ export default function CreateJobForm({
                 setAddress={setAddress}
                 city={city}
                 setCity={setCity}
+                countyCode={countyCode}
+                setCountyCode={setCountyCode}
+                municipalityCode={municipalityCode}
+                setMunicipalityCode={setMunicipalityCode}
+                areaCode={areaCode}
+                setAreaCode={setAreaCode}
                 durationValue={durationValue as any}
                 setDurationValue={setDurationValue}
                 durationUnit={durationUnit}

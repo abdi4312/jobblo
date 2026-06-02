@@ -22,6 +22,11 @@ const MapComponent = lazy(() =>
 );
 import { useJobs } from "../../features/jobsList/hooks";
 import { useFilterOptions } from "../../features/jobsList/filterHooks";
+import {
+  getLocationTree,
+  getLocationStats,
+  type LocationNode,
+} from "../../api/locationAPI";
 
 const ServiceListing = () => {
   const { categoryName } = useParams();
@@ -44,9 +49,43 @@ const ServiceListing = () => {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [isUrgent, setIsUrgent] = useState(false);
 
+  // New location filter states
+  const [locationTree, setLocationTree] = useState<LocationNode[]>([]);
+  const [locationStats, setLocationStats] = useState<any>(null);
+  const [selectedCountyCodes, setSelectedCountyCodes] = useState<string[]>([]);
+  const [selectedMunicipalityCodes, setSelectedMunicipalityCodes] = useState<
+    string[]
+  >([]);
+  const [selectedAreaCodes, setSelectedAreaCodes] = useState<string[]>([]);
+  const [expandedCounties, setExpandedCounties] = useState<string[]>([]);
+  const [expandedMunicipalities, setExpandedMunicipalities] = useState<
+    string[]
+  >([]);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { data: filterOptions, isLoading: isFiltersLoading } =
     useFilterOptions();
+
+  // Fetch location data on mount
+  useEffect(() => {
+    const fetchLocations = async () => {
+      setIsLoadingLocations(true);
+      try {
+        const [tree, stats] = await Promise.all([
+          getLocationTree(),
+          getLocationStats(),
+        ]);
+        setLocationTree(tree);
+        setLocationStats(stats);
+      } catch (err) {
+        console.error("Failed to fetch location data:", err);
+      } finally {
+        setIsLoadingLocations(false);
+      }
+    };
+    fetchLocations();
+  }, []);
 
   const {
     data,
@@ -58,6 +97,9 @@ const ServiceListing = () => {
   } = useJobs({
     categories: selectedCategories,
     locations: selectedLocations,
+    countyCodes: selectedCountyCodes,
+    municipalityCodes: selectedMunicipalityCodes,
+    areaCodes: selectedAreaCodes,
     search: initialSearch,
     sort: selectedSort.value,
     minPrice: priceRange.min,
@@ -126,6 +168,47 @@ const ServiceListing = () => {
       prev.includes(catId)
         ? prev.filter((id) => id !== catId)
         : [...prev, catId],
+    );
+  };
+
+  // New location toggle functions
+  const toggleCounty = (countyCode: string) => {
+    setSelectedCountyCodes((prev) =>
+      prev.includes(countyCode)
+        ? prev.filter((c) => c !== countyCode)
+        : [...prev, countyCode],
+    );
+  };
+
+  const toggleMunicipality = (municipalityCode: string) => {
+    setSelectedMunicipalityCodes((prev) =>
+      prev.includes(municipalityCode)
+        ? prev.filter((m) => m !== municipalityCode)
+        : [...prev, municipalityCode],
+    );
+  };
+
+  const toggleArea = (areaCode: string) => {
+    setSelectedAreaCodes((prev) =>
+      prev.includes(areaCode)
+        ? prev.filter((a) => a !== areaCode)
+        : [...prev, areaCode],
+    );
+  };
+
+  const toggleCountyExpand = (countyCode: string) => {
+    setExpandedCounties((prev) =>
+      prev.includes(countyCode)
+        ? prev.filter((c) => c !== countyCode)
+        : [...prev, countyCode],
+    );
+  };
+
+  const toggleMunicipalityExpand = (municipalityCode: string) => {
+    setExpandedMunicipalities((prev) =>
+      prev.includes(municipalityCode)
+        ? prev.filter((m) => m !== municipalityCode)
+        : [...prev, municipalityCode],
     );
   };
 
@@ -333,51 +416,163 @@ const ServiceListing = () => {
         </div>
       </section>
 
-      {/* 3. Locations/Areas */}
+      {/* 3. Locations/Areas - New hierarchical filter */}
       <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-xl font-bold mb-4">Area</h3>
-        <div className="relative mb-4">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            size={16}
-          />
-          <input
-            type="text"
-            value={locationSearch}
-            onChange={(e) => setLocationSearch(e.target.value)}
-            placeholder="Narrow search"
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-xl text-sm border-none focus:ring-2 focus:ring-[#ff8a7a]/20 outline-none"
-          />
-        </div>
-        <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-2">
-          {isFiltersLoading ? (
+        <h3 className="text-xl font-bold mb-4">Område</h3>
+        <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar pr-2">
+          {isLoadingLocations ? (
             <div className="flex items-center gap-2 text-gray-400 py-4">
               <Loader2 size={16} className="animate-spin" />
-              <span className="text-sm">Loading...</span>
+              <span className="text-sm">Laster...</span>
             </div>
-          ) : filteredLocations.length === 0 ? (
-            <p className="text-sm text-gray-400">No areas found</p>
+          ) : locationTree.length === 0 ? (
+            <p className="text-sm text-gray-400">Ingen områder funnet</p>
           ) : (
-            filteredLocations.map((loc) => (
-              <label
-                key={loc.name}
-                className="flex items-center justify-between cursor-pointer group"
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedLocations.includes(loc.name)}
-                    onChange={() => toggleLocation(loc.name)}
-                    className="w-5 h-5 rounded-md border-gray-300 text-[#ff8a7a] focus:ring-[#ff8a7a]"
-                  />
-                  <span
-                    className={`text-sm transition-colors ${selectedLocations.includes(loc.name) ? "text-gray-900 font-bold" : "text-gray-600 group-hover:text-gray-900"}`}
+            locationTree.map((county) => (
+              <div key={county.code} className="space-y-1">
+                <div className="flex items-center justify-between group">
+                  <button
+                    onClick={() => toggleCounty(county.code)}
+                    className="flex-1 text-left font-medium py-1 px-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
                   >
-                    {loc.name}
-                  </span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedCountyCodes.includes(county.code)}
+                        onChange={(e) => e.stopPropagation()}
+                        onClick={() => toggleCounty(county.code)}
+                        className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green"
+                      />
+                      <span
+                        className={`text-sm ${selectedCountyCodes.includes(county.code) ? "text-custom-green font-bold" : "text-gray-700"}`}
+                      >
+                        {county.name}
+                      </span>
+                      {locationStats && (
+                        <span className="text-[10px] text-gray-400">
+                          ({locationStats.counties[county.code] || 0})
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                  {county.children && county.children.length > 0 && (
+                    <button
+                      onClick={() => toggleCountyExpand(county.code)}
+                      className="p-1 rounded-lg hover:bg-gray-100 text-gray-400"
+                    >
+                      {expandedCounties.includes(county.code) ? (
+                        <ChevronDown size={16} />
+                      ) : (
+                        <ChevronRight size={16} />
+                      )}
+                    </button>
+                  )}
                 </div>
-                <span className="text-[10px] text-gray-300">({loc.count})</span>
-              </label>
+
+                {/* Municipalities */}
+                {expandedCounties.includes(county.code) && county.children && (
+                  <div className="ml-6 border-l-2 border-gray-100 pl-3 space-y-1">
+                    {county.children.map((municipality) => (
+                      <div key={municipality.code} className="space-y-1">
+                        <div className="flex items-center justify-between group">
+                          <button
+                            onClick={() =>
+                              toggleMunicipality(municipality.code)
+                            }
+                            className="flex-1 text-left py-1 px-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
+                          >
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedMunicipalityCodes.includes(
+                                  municipality.code,
+                                )}
+                                onChange={(e) => e.stopPropagation()}
+                                onClick={() =>
+                                  toggleMunicipality(municipality.code)
+                                }
+                                className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green"
+                              />
+                              <span
+                                className={`text-sm ${selectedMunicipalityCodes.includes(municipality.code) ? "text-custom-green font-bold" : "text-gray-600"}`}
+                              >
+                                {municipality.name}
+                              </span>
+                              {locationStats && (
+                                <span className="text-[10px] text-gray-400">
+                                  (
+                                  {locationStats.municipalities[
+                                    municipality.code
+                                  ] || 0}
+                                  )
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                          {municipality.children &&
+                            municipality.children.length > 0 && (
+                              <button
+                                onClick={() =>
+                                  toggleMunicipalityExpand(municipality.code)
+                                }
+                                className="p-1 rounded-lg hover:bg-gray-100 text-gray-400"
+                              >
+                                {expandedMunicipalities.includes(
+                                  municipality.code,
+                                ) ? (
+                                  <ChevronDown size={14} />
+                                ) : (
+                                  <ChevronRight size={14} />
+                                )}
+                              </button>
+                            )}
+                        </div>
+
+                        {/* Areas */}
+                        {expandedMunicipalities.includes(municipality.code) &&
+                          municipality.children && (
+                            <div className="ml-6 border-l-2 border-gray-100 pl-3 space-y-1">
+                              {municipality.children.map((area) => (
+                                <div
+                                  key={area.code}
+                                  className="flex items-center justify-between group"
+                                >
+                                  <button
+                                    onClick={() => toggleArea(area.code)}
+                                    className="flex-1 text-left py-1 px-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedAreaCodes.includes(
+                                          area.code,
+                                        )}
+                                        onChange={(e) => e.stopPropagation()}
+                                        onClick={() => toggleArea(area.code)}
+                                        className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green"
+                                      />
+                                      <span
+                                        className={`text-sm ${selectedAreaCodes.includes(area.code) ? "text-custom-green font-bold" : "text-gray-500"}`}
+                                      >
+                                        {area.name}
+                                      </span>
+                                      {locationStats && (
+                                        <span className="text-[10px] text-gray-400">
+                                          ({locationStats.areas[area.code] || 0}
+                                          )
+                                        </span>
+                                      )}
+                                    </div>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))
           )}
         </div>

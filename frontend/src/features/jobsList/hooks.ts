@@ -5,6 +5,9 @@ import type { Tab } from "../../types/tabs";
 interface UseJobsParams {
   categories?: string[];
   locations?: string[];
+  countyCodes?: string[];
+  municipalityCodes?: string[];
+  areaCodes?: string[];
   search?: string;
   sort?: string;
   limit?: number;
@@ -18,6 +21,9 @@ interface UseJobsParams {
 export const useJobs = ({
   categories = [],
   locations = [],
+  countyCodes = [],
+  municipalityCodes = [],
+  areaCodes = [],
   search = "",
   sort = "",
   limit = 16,
@@ -32,6 +38,9 @@ export const useJobs = ({
       "jobs",
       categories,
       locations,
+      countyCodes,
+      municipalityCodes,
+      areaCodes,
       search,
       sort,
       userId,
@@ -48,6 +57,9 @@ export const useJobs = ({
         limit,
         categories,
         locations,
+        countyCodes,
+        municipalityCodes,
+        areaCodes,
         search,
         sort,
         userId,

@@ -16,6 +16,9 @@ exports.getAllServices = async (req, res) => {
       page = 1,
       limit = 25,
       urgent,
+      countyCodes,
+      municipalityCodes,
+      areaCodes,
     } = req.query;
 
     const query = {};
@@ -44,6 +47,25 @@ exports.getAllServices = async (req, res) => {
       query.price = {};
       if (minPrice) query.price.$gte = Number(minPrice);
       if (maxPrice) query.price.$lte = Number(maxPrice);
+    }
+
+    // Location code filters
+    const locationQueries = [];
+    if (countyCodes) {
+      const codes = countyCodes.split(",").map((c) => c.trim());
+      locationQueries.push({ countyCode: { $in: codes } });
+    }
+    if (municipalityCodes) {
+      const codes = municipalityCodes.split(",").map((c) => c.trim());
+      locationQueries.push({ municipalityCode: { $in: codes } });
+    }
+    if (areaCodes) {
+      const codes = areaCodes.split(",").map((c) => c.trim());
+      locationQueries.push({ areaCode: { $in: codes } });
+    }
+
+    if (locationQueries.length > 0) {
+      query.$or = locationQueries;
     }
 
     // Construct sort object
@@ -238,7 +260,14 @@ async function findSimilarServices(service) {
 exports.createService = async (req, res) => {
   try {
     const userId = req.userId;
-    const { images, imageMetadata, ...serviceData } = req.body;
+    const {
+      images,
+      imageMetadata,
+      countyCode,
+      municipalityCode,
+      areaCode,
+      ...serviceData
+    } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(userId))
       return res.status(400).json({ error: "Invalid user ID format" });
@@ -279,7 +308,13 @@ exports.createService = async (req, res) => {
       if (imageMetadata) serviceData.imageMetadata = imageMetadata;
     }
 
-    const service = await Service.create({ ...serviceData, userId });
+    const service = await Service.create({
+      ...serviceData,
+      userId,
+      countyCode,
+      municipalityCode,
+      areaCode,
+    });
 
     res.status(201).json(service);
   } catch (err) {
@@ -360,8 +395,13 @@ exports.updateService = async (req, res) => {
       }
     }
 
-    // Update other fields
-    Object.assign(service, req.body);
+    // Update other fields (including location codes)
+    const { countyCode, municipalityCode, areaCode, ...otherFields } = req.body;
+    Object.assign(service, otherFields);
+    if (countyCode !== undefined) service.countyCode = countyCode;
+    if (municipalityCode !== undefined)
+      service.municipalityCode = municipalityCode;
+    if (areaCode !== undefined) service.areaCode = areaCode;
 
     await service.save();
 
