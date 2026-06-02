@@ -17,6 +17,11 @@ export function useForm<T extends Record<string, unknown>>(
   validationSchema: ValidationSchema<T> = {},
 ) {
   const [values, setValues] = useState<T>(initialValues);
+
+  const setValuesWithLog = useCallback((newValues: T | ((prev: T) => T)) => {
+    console.log("[useForm] setValues called with:", newValues);
+    setValues(newValues);
+  }, []);
   const [errors, setErrors] = useState<{ [K in keyof T]?: string }>({});
 
   const handleChange = useCallback(
@@ -85,7 +90,7 @@ export function useForm<T extends Record<string, unknown>>(
     handleChange,
     validate,
     resetForm,
-    setValues,
+    setValues: setValuesWithLog,
     setErrors,
     setMultipleValues,
   };

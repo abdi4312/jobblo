@@ -1,11 +1,32 @@
 import React from "react";
-import { MapPin, Calendar, Clock, Info, AlertCircle } from "lucide-react";
+import {
+  MapPin,
+  Calendar,
+  Clock,
+  Info,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
+import { useLocationTree } from "../../features/locations/hooks";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../Ui/select";
 
 interface TimeAndPlaceProps {
   address: string;
   setAddress: (val: string) => void;
   city: string;
   setCity: (val: string) => void;
+  countyCode?: string;
+  setCountyCode?: (val: string) => void;
+  municipalityCode?: string;
+  setMunicipalityCode?: (val: string) => void;
+  areaCode?: string;
+  setAreaCode?: (val: string) => void;
   durationValue: string | number;
   setDurationValue: (val: string) => void;
   durationUnit: string;
@@ -22,6 +43,12 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
   setAddress,
   city,
   setCity,
+  countyCode,
+  setCountyCode,
+  municipalityCode,
+  setMunicipalityCode,
+  areaCode,
+  setAreaCode,
   durationValue,
   setDurationValue,
   durationUnit,
@@ -32,6 +59,19 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
   setToDate,
   errors,
 }) => {
+  const { data: locationTree = [], isLoading } = useLocationTree();
+
+  // Get selected county
+  const selectedCounty = locationTree.find((c) => c.code === countyCode);
+  // Get selected municipality from county's children
+  const selectedMunicipality = selectedCounty?.children?.find(
+    (m) => m.code === municipalityCode,
+  );
+  // Get selected area from municipality's children
+  const selectedArea = selectedMunicipality?.children?.find(
+    (a) => a.code === areaCode,
+  );
+
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
       {/* 1. Location Section */}
@@ -45,12 +85,103 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               Hvor skal det gjøres?
             </h2>
             <p className="text-gray-500 text-xs md:text-sm">
-              Oppgi adresse og by for oppdraget
+              Oppgi adresse og lokasjon for oppdraget
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          {/* County */}
+          <div className="space-y-2">
+            <label className="text-[11px] md:text-[13px] font-bold text-gray-400 uppercase tracking-wider ml-1">
+              Fylke
+            </label>
+            <Select
+              value={countyCode || undefined}
+              onValueChange={(value) => {
+                setCountyCode?.(value || "");
+                setMunicipalityCode?.("");
+                setAreaCode?.("");
+              }}
+              disabled={isLoading}
+            >
+              <SelectTrigger className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5">
+                <SelectValue placeholder="Velg fylke" />
+              </SelectTrigger>
+              <SelectContent>
+                {locationTree.map((county) => (
+                  <SelectItem key={county.code} value={county.code}>
+                    {county.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Municipality */}
+          <div className="space-y-2">
+            <label className="text-[11px] md:text-[13px] font-bold text-gray-400 uppercase tracking-wider ml-1">
+              Kommune
+            </label>
+            <Select
+              value={municipalityCode || undefined}
+              onValueChange={(value) => {
+                const newMunicipalityCode = value || "";
+                setMunicipalityCode?.(newMunicipalityCode);
+                setAreaCode?.("");
+                // Also update city text field with municipality name
+                const county = locationTree.find((c) => c.code === countyCode);
+                const municipality = county?.children?.find(
+                  (m) => m.code === newMunicipalityCode,
+                );
+                if (municipality) {
+                  setCity(municipality.name);
+                } else {
+                  setCity?.("");
+                }
+              }}
+              disabled={!countyCode || isLoading}
+            >
+              <SelectTrigger className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5">
+                <SelectValue placeholder="Velg kommune" />
+              </SelectTrigger>
+              <SelectContent>
+                {selectedCounty?.children?.map((municipality) => (
+                  <SelectItem key={municipality.code} value={municipality.code}>
+                    {municipality.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Area */}
+          {selectedMunicipality?.children &&
+            selectedMunicipality.children.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-[11px] md:text-[13px] font-bold text-gray-400 uppercase tracking-wider ml-1">
+                  Bydel / Område
+                </label>
+                <Select
+                  value={areaCode || undefined}
+                  onValueChange={(value) => setAreaCode?.(value || "")}
+                  disabled={!municipalityCode || isLoading}
+                >
+                  <SelectTrigger className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5">
+                    <SelectValue placeholder="Velg bydel (valgfritt)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {selectedMunicipality.children.map((area) => (
+                      <SelectItem key={area.code} value={area.code}>
+                        {area.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+          {/* Address */}
           <div className="space-y-2">
             <label className="text-[11px] md:text-[13px] font-bold text-gray-400 uppercase tracking-wider ml-1">
               Gateadresse *
@@ -70,6 +201,8 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               </p>
             )}
           </div>
+
+          {/* City (kept for backwards compatibility) */}
           <div className="space-y-2">
             <label className="text-[11px] md:text-[13px] font-bold text-gray-400 uppercase tracking-wider ml-1">
               By / Sted *
@@ -78,10 +211,12 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               type="text"
               value={city}
               onChange={(e) => setCity(e.target.value)}
+              disabled={!!municipalityCode}
               required
               placeholder="F.eks. Oslo"
               className={`w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all
-                ${errors?.city ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5"}`}
+                ${errors?.city ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5"}
+                ${!!municipalityCode ? "opacity-60 cursor-not-allowed" : ""}`}
             />
             {errors?.city && (
               <p className="mt-1 text-red-500 text-[10px] md:text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
@@ -114,6 +249,7 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               Fra dato *
             </label>
             <input
+              title="Velg fra dato"
               required
               type="date"
               value={fromDate ? fromDate.split("T")[0] : ""}
@@ -132,6 +268,7 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               Til dato *
             </label>
             <input
+              title="Velg til dato"
               required
               type="date"
               value={toDate ? toDate.split("T")[0] : ""}
@@ -185,19 +322,20 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               </p>
             )}
           </div>
-          <div className="relative h-fit">
-            <select
-              value={durationUnit}
-              onChange={(e) => setDurationUnit(e.target.value)}
-              className="w-full sm:w-32 md:w-40 px-4 md:px-4 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-sm md:text-base font-bold text-[#2D7A4D] outline-none focus:border-[#2D7A4D] transition-all appearance-none cursor-pointer pr-10"
+          <div className="h-fit">
+            <Select
+              value={durationUnit || undefined}
+              onValueChange={(value) => setDurationUnit(value)}
             >
-              <option value="minutes">Minutter</option>
-              <option value="hours">Timer</option>
-              <option value="days">Dager</option>
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#2D7A4D]">
-              <Clock size={16} />
-            </div>
+              <SelectTrigger className="w-full sm:w-32 md:w-40 px-4 md:px-4 py-3 md:py-4 rounded-xl border border-gray-200 bg-white text-sm md:text-base font-bold text-[#2D7A4D]">
+                <SelectValue placeholder="Velg" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="minutes">Minutter</SelectItem>
+                <SelectItem value="hours">Timer</SelectItem>
+                <SelectItem value="days">Dager</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>

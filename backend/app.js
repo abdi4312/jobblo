@@ -40,6 +40,7 @@ const globalConfigRouter = require("./routes/globalConfig");
 const applicantsRouter = require("./routes/applicant");
 const safePayRouter = require("./routes/safePay");
 const safePayCheckoutRouter = require("./routes/safePayCheckout");
+const locationFilterRouter = require("./routes/locationFilter");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./swagger");
 
@@ -124,6 +125,7 @@ app.use("/api/applicants", applicantsRouter);
 app.use("/api/safepay", safePayRouter);
 app.use("/api/safepay-checkout", safePayCheckoutRouter);
 app.use("/api/upcomingFeatures", upcomingFeatureRouter);
+app.use("/api/location-filter", locationFilterRouter);
 // Error handler
 app.use(function (req, res, next) {
   next(createError(404));
