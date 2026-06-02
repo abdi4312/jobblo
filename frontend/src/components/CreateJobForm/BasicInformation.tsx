@@ -111,7 +111,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
         }
         if (aiDuration && aiDuration.value) {
           setDurationValue(aiDuration.value.toString());
-          setDurationUnit(aiDuration.unit || "hours");
+          setDurationUnit(aiDuration.unit || "minutes");
         }
         toast.success("Beskrivelse generert med AI!");
       }
@@ -159,7 +159,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
 
         if (aiDuration && aiDuration.value) {
           setDurationValue(aiDuration.value.toString());
-          setDurationUnit(aiDuration.unit || "hours");
+          setDurationUnit(aiDuration.unit || "minutes");
         }
 
         if (estimatedPrice) {

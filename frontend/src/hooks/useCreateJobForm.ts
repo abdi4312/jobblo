@@ -8,6 +8,7 @@ import {
   jobValidationSchema,
   type JobFormValues,
 } from "../validations/jobValidations";
+import { saveFormData, loadFormData, clearFormData } from "../utils/indexedDB";
 
 interface InitialData {
   title?: string;
@@ -15,6 +16,9 @@ interface InitialData {
   price?: string | number;
   address?: string;
   city?: string;
+  countyCode?: string;
+  municipalityCode?: string;
+  areaCode?: string;
   categories?: string | string[];
   urgent?: boolean;
   equipment?: string;
@@ -64,6 +68,11 @@ export const useCreateJobForm = (
 
   // Individual states that are not part of the primary validation schema or need special handling
   const [equipment, setEquipment] = useState(initialData?.equipment || "");
+  const [countyCode, setCountyCode] = useState(initialData?.countyCode || "");
+  const [municipalityCode, setMunicipalityCode] = useState(
+    initialData?.municipalityCode || "",
+  );
+  const [areaCode, setAreaCode] = useState(initialData?.areaCode || "");
   const durationValue = values.durationValue;
   const fromDate = values.fromDate;
   const toDate = values.toDate;
@@ -82,7 +91,7 @@ export const useCreateJobForm = (
   );
 
   const [durationUnit, setDurationUnit] = useState(
-    initialData?.durationUnit || "hours",
+    initialData?.durationUnit || "minutes",
   );
 
   const [maxApplicants, setMaxApplicants] = useState<string | number>(
@@ -120,6 +129,9 @@ export const useCreateJobForm = (
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [smartFillPrompt, setSmartFillPrompt] = useState("");
   const [showSmartFillInput, setShowSmartFillInput] = useState(false);
+
+  // Flag to prevent save effect from running before load completes
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const currentUser = useUserStore((state) => state.user);
 
@@ -198,7 +210,7 @@ export const useCreateJobForm = (
 
         if (aiDuration && aiDuration.value) {
           setDurationValue(aiDuration.value.toString());
-          setDurationUnit(aiDuration.unit || "hours");
+          setDurationUnit(aiDuration.unit || "minutes");
         }
 
         if (locationRelevance === "remote") {
@@ -221,55 +233,103 @@ export const useCreateJobForm = (
     }
   };
 
-  // Persistence
+  // Persistence - Load data on mount (run only once)
   useEffect(() => {
-    const savedData = localStorage.getItem("jobFormData");
-    if (savedData && !initialData) {
-      const data = JSON.parse(savedData);
-      setValues({
-        title: data.title || "",
-        description: data.description || "",
-        categories: data.categories || "",
-        address: data.address || "",
-        city: data.city || "",
-        phone: data.phone || "",
-        email: data.email || "",
-        price: data.price || "",
-        durationValue: data.durationValue || "",
-        fromDate: data.fromDate || "",
-        toDate: data.toDate || "",
-      });
-      setUrgent(data.urgent || false);
-      setMaxApplicants(data.maxApplicants || 0);
-      setEquipment(data.equipment || "");
-      setDurationUnit(data.durationUnit || "hours");
-      setHourlyRate(data.hourlyRate || "");
-      setPaymentType(data.paymentType || "Fastpris");
-      setTags(data.tags || []);
-      setCurrentStep(data.currentStep || 1);
-    }
-  }, [initialData, setUrgent, setHourlyRate, setPaymentType, setValues]);
+    const loadData = async () => {
+      // In edit mode or when initialData is provided, skip loading draft
+      if (initialData) {
+        setIsLoaded(true);
+        return;
+      }
 
-  useEffect(() => {
-    const dataToSave = {
-      ...values,
-      urgent,
-      maxApplicants,
-      equipment,
-      fromDate,
-      toDate,
-      durationValue,
-      durationUnit,
-      hourlyRate,
-      paymentType,
-      tags,
-      currentStep,
+      try {
+        const { data, images } = await loadFormData();
+        if (data) {
+          setValues({
+            title: data.title || "",
+            description: data.description || "",
+            categories: data.categories || "",
+            address: data.address || "",
+            city: data.city || "",
+            phone: data.phone || "",
+            email: data.email || "",
+            price: data.price || "",
+            durationValue: data.durationValue || "",
+            fromDate: data.fromDate || "",
+            toDate: data.toDate || "",
+          });
+          setUrgent(data.urgent || false);
+          setMaxApplicants(data.maxApplicants || 0);
+          setEquipment(data.equipment || "");
+          setCountyCode(data.countyCode || "");
+          setMunicipalityCode(data.municipalityCode || "");
+          setAreaCode(data.areaCode || "");
+          setDurationUnit(data.durationUnit || "minutes");
+          setHourlyRate(data.hourlyRate || "");
+          setPaymentType(data.paymentType || "Fastpris");
+          setTags(data.tags || []);
+          setCurrentStep(data.currentStep || 1);
+          setCurrentImages(data.currentImages || []);
+          setImagesToDelete(data.imagesToDelete || []);
+          setShowSmartFillInput(data.showSmartFillInput || false);
+          setSmartFillPrompt(data.smartFillPrompt || "");
+
+          if (images && images.length > 0) {
+            setSelectedImages(images);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading form data:", err);
+      } finally {
+        // Always mark as loaded so save effect can start
+        setIsLoaded(true);
+      }
     };
-    localStorage.setItem("jobFormData", JSON.stringify(dataToSave));
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
+
+  // Persistence - Save data whenever it changes (only after initial load)
+  useEffect(() => {
+    if (!isLoaded) return; // Don't save until draft has been loaded
+
+    const saveData = async () => {
+      try {
+        const dataToSave = {
+          ...values,
+          urgent,
+          maxApplicants,
+          equipment,
+          countyCode,
+          municipalityCode,
+          areaCode,
+          fromDate,
+          toDate,
+          durationValue,
+          durationUnit,
+          hourlyRate,
+          paymentType,
+          tags,
+          currentStep,
+          currentImages,
+          imagesToDelete,
+          showSmartFillInput,
+          smartFillPrompt,
+        };
+        await saveFormData(dataToSave, selectedImages);
+      } catch (err) {
+        console.error("Error saving form data:", err);
+      }
+    };
+    saveData();
   }, [
+    isLoaded,
     values,
     urgent,
     equipment,
+    countyCode,
+    municipalityCode,
+    areaCode,
     fromDate,
     toDate,
     durationValue,
@@ -278,6 +338,12 @@ export const useCreateJobForm = (
     paymentType,
     tags,
     currentStep,
+    selectedImages,
+    currentImages,
+    imagesToDelete,
+    showSmartFillInput,
+    smartFillPrompt,
+    maxApplicants,
   ]);
 
   const validateStep = (step: number) => {
@@ -394,6 +460,10 @@ export const useCreateJobForm = (
       formData.append("location[type]", "Point");
       formData.append("location[coordinates][0]", "10.7461");
       formData.append("location[coordinates][1]", "59.9127");
+      if (countyCode) formData.append("countyCode", countyCode);
+      if (municipalityCode)
+        formData.append("municipalityCode", municipalityCode);
+      if (areaCode) formData.append("areaCode", areaCode);
 
       if (values.categories) {
         const catArray = Array.isArray(values.categories)
@@ -421,7 +491,7 @@ export const useCreateJobForm = (
         formData.append("userId", userId);
       }
 
-      localStorage.removeItem("jobFormData");
+      await clearFormData();
       await onSubmit(formData);
     } catch (error) {
       console.error("Submission error:", error);
@@ -435,8 +505,8 @@ export const useCreateJobForm = (
     setImagesToDelete((prev) => [...prev, url]);
   };
 
-  const handleCancel = () => {
-    localStorage.removeItem("jobFormData");
+  const handleCancel = async () => {
+    await clearFormData();
     window.location.reload();
   };
 
@@ -506,6 +576,12 @@ export const useCreateJobForm = (
     setAddress,
     city: values.city,
     setCity,
+    countyCode,
+    setCountyCode,
+    municipalityCode,
+    setMunicipalityCode,
+    areaCode,
+    setAreaCode,
     categories: values.categories,
     setCategories,
     equipment,
