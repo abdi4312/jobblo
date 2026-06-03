@@ -111,3 +111,41 @@ exports.getFeaturedFavourites = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+/**
+ * GET /api/explore/stats
+ * Returns dashboard stats: active jobs count, total users, average rating
+ */
+exports.getDashboardStats = async (req, res) => {
+  try {
+    // Count active jobs (status open or active)
+    const activeJobsCount = await Service.countDocuments({
+      status: { $in: ["open", "active"] },
+    });
+
+    // Count total users
+    const totalUsersCount = await User.countDocuments();
+
+    // Calculate average rating across all users who have reviews
+    const usersWithRatings = await User.find({ reviewCount: { $gt: 0 } });
+    let averageRating = 0;
+    if (usersWithRatings.length > 0) {
+      const totalRating = usersWithRatings.reduce(
+        (sum, user) => sum + user.averageRating,
+        0
+      );
+      averageRating = totalRating / usersWithRatings.length;
+      // Round to 1 decimal place
+      averageRating = Math.round(averageRating * 10) / 10;
+    }
+
+    res.json({
+      activeJobs: activeJobsCount,
+      totalUsers: totalUsersCount,
+      averageRating: averageRating,
+    });
+  } catch (err) {
+    console.error("Explore Stats Error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};

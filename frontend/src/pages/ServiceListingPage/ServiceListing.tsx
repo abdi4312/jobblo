@@ -32,6 +32,9 @@ const ServiceListing = () => {
   const { categoryName } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
+  const decodedCategoryName = categoryName
+    ? decodeURIComponent(categoryName)
+    : undefined;
 
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [selectedSort, setSelectedSort] = useState({
@@ -41,7 +44,9 @@ const ServiceListing = () => {
   const [localSearch, setLocalSearch] = useState(initialSearch);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    categoryName && categoryName !== "all" ? [categoryName] : [],
+    decodedCategoryName && decodedCategoryName !== "all"
+      ? [decodedCategoryName]
+      : [],
   );
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [locationSearch, setLocationSearch] = useState("");
@@ -66,6 +71,15 @@ const ServiceListing = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { data: filterOptions, isLoading: isFiltersLoading } =
     useFilterOptions();
+
+  // Update selectedCategories when categoryName param changes
+  useEffect(() => {
+    if (decodedCategoryName && decodedCategoryName !== "all") {
+      setSelectedCategories([decodedCategoryName]);
+    } else {
+      setSelectedCategories([]);
+    }
+  }, [decodedCategoryName]);
 
   // Fetch location data on mount
   useEffect(() => {
@@ -730,7 +744,7 @@ const ServiceListing = () => {
                 type="text"
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
-                placeholder={categoryName || "Search..."}
+                placeholder={decodedCategoryName || "Search..."}
                 className="w-full pl-12 pr-12 h-12 sm:h-14 bg-white rounded-full text-sm sm:text-base shadow-[0_4px_25px_rgba(0,0,0,0.06)] border-2 border-transparent focus:border-[#ff8a7a]/10 focus:ring-4 focus:ring-[#ff8a7a]/5 outline-none transition-all placeholder:text-gray-300 text-gray-900 font-normal no-underline decoration-transparent"
                 style={{ textDecoration: "none" }}
               />

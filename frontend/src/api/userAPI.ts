@@ -1,6 +1,18 @@
 import { useUserStore } from "../stores/userStore";
 import  mainLink  from "./mainURLs"; // ensure mainLink is Axios instance
 
+export interface TopUser {
+  _id: string;
+  name: string;
+  lastName: string;
+  avatarUrl?: string;
+  averageRating: number;
+  reviewCount: number;
+  skills?: string[];
+  locations?: string[];
+  hourlyRate?: number;
+}
+
 export async function userLogin(email: string, password: string) {
   try {
     // POST login request
@@ -33,4 +45,12 @@ export async function registerUser(userData: {
     console.error("Registration failed:", error.response?.data || error.message);
     throw err;
   }
+}
+
+/**
+ * Get top rated users (recommended workers)
+ */
+export async function getTopUsers(): Promise<TopUser[]> {
+  const response = await mainLink.get("/api/users/top");
+  return response.data;
 }
