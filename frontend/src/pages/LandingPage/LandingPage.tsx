@@ -7,15 +7,24 @@ import { TrustBar } from "../../components/landing/TrustBar.tsx";
 import { CTABand } from "../../components/landing/CTABand.tsx";
 
 export default function LandingPage() {
-  return (
-    <div className="bg-[#f5f0e8]">
-      <HomeHero />
-      <TrustBar />
-      <Categories />
-      <Jobs />
-      <Guide />
-      <HowItWorks />
-      <CTABand />
-    </div>
-  );
+    return (
+        <div className="bg-[#f5f0e8]">
+            <HomeHero />
+            <TrustBar />
+            <Categories />
+            <Jobs />
+
+            <ins className="adsbygoogle"
+                 style={{ display: "block" }}
+                 data-ad-client="ca-pub-9283724335529773"
+                 data-ad-slot="1582904938"
+                 data-ad-format="auto"
+                 data-full-width-responsive="true">
+            </ins>
+
+            <Guide />
+            <HowItWorks />
+            <CTABand />
+        </div>
+    );
 }
