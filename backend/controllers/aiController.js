@@ -37,26 +37,27 @@ exports.generateJobInfo = async (req, res) => {
       - DO NOT switch to any other language.
 
       Requirements:
-      1. A professional and engaging job description (around 100-150 words).
-      2. A list of 3-5 required skills for this job.
-      3. A fair hourly rate in NOK (Norwegian Krone) for this type of work.
-      4. An estimated total price based on the duration.
-      5. Category: If the current category is not appropriate, suggest the best one from this list: [${categoryNames}].
+      1. A professional, engaging, and SPECIFIC job description (100-150 words). Include typical tasks, expectations, and any relevant details for the Norwegian market.
+      2. A list of 3-5 RELEVANT, specific skills required for this job in Norway.
+      3. A fair hourly rate in NOK (Norwegian Krone) for this type of work (based on Norwegian market rates - e.g., 350-600 NOK/hour for skilled work).
+      4. An estimated total price based on a realistic duration for this task.
+      5. Category: Choose the most appropriate one ONLY from this list: [${categoryNames}].
       
       OTHER RULES: 
       - PERSPECTIVE: The user is the HIRER. Write the description from the perspective of "I need help with..." or "I am looking for someone to...". 
       - DO NOT write as if you are offering a service.
-      - PRICING: Base the hourlyRate on the local Norwegian market context.
+      - PRICING: Base the hourlyRate on REALISTIC Norwegian market rates (considering both skilled and unskilled work appropriately).
       - CALCULATION: The "estimatedPrice" MUST be "hourlyRate" * "duration.value".
+      - DURATION: Choose a realistic duration (value + unit: hours/days) for this type of task.
       
       Respond strictly in JSON format:
       {
         "description": "...",
-        "skills": ["...", "..."],
-        "hourlyRate": 400,
-        "estimatedPrice": 800,
+        "skills": ["...", "...", "...", "..."],
+        "hourlyRate": 450,
+        "estimatedPrice": 900,
         "category": "...",
-        "duration": { "value": 1, "unit": "hours" }
+        "duration": { "value": 2, "unit": "hours" }
       }
     `;
 
@@ -122,29 +123,26 @@ exports.generateTitle = async (req, res) => {
       - DO NOT switch to any other language.
 
       Requirements:
-      1. A professional and catchy job title (max 60 characters).
-      2. A list of 3-5 required skills.
-      3. A fair hourly rate in NOK (Norwegian Krone) for this work in Norway.
-      4. An estimated duration for the task.
-      5. An estimated total price (hourlyRate * duration).
+      1. A professional, catchy, and SPECIFIC job title (max 60 characters).
+      2. A list of 3-5 RELEVANT, specific skills for this work in Norway.
+      3. A fair hourly rate in NOK (Norwegian Krone) for this work (based on realistic Norwegian market rates).
+      4. A realistic estimated duration for the task (value + unit: hours/days).
+      5. An estimated total price (hourlyRate * duration.value).
       
       OTHER RULES: 
-      - PERSPECTIVE: The user is the HIRER. Write from the perspective of "I need help with..." or "I am looking for someone to...". 
-      - DO NOT write as if you are offering a service.
-      - PRICING: Base the hourlyRate on the local Norwegian market context.
-      - CALCULATION: "estimatedPrice" MUST be "hourlyRate" * "duration.value".
+      - PRICING: Base the hourlyRate on REALISTIC Norwegian market rates (consider both skilled and unskilled work appropriately).
+      - CALCULATION: "estimatedPrice" MUST be exactly "hourlyRate" * "duration.value".
       
       Respond strictly in JSON format:
       {
         "title": "...",
-        "skills": ["...", "..."],
-        "hourlyRate": 400,
-        "estimatedPrice": 800,
+        "skills": ["...", "...", "...", "..."],
+        "hourlyRate": 450,
+        "estimatedPrice": 900,
         "duration": { "value": 2, "unit": "hours" }
       }
     `;
 
-    // Hum explicitly gpt-4o use karte hain kyunke ye JSON mode ke liye behtar hai
     const response = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL || "gpt-4o",
       messages: [
@@ -211,31 +209,31 @@ exports.generateFullJobListing = async (req, res) => {
       - DO NOT switch to any other language.
 
       Requirements:
-      1. Title: A professional and catchy job title.
-      2. Description: A detailed and engaging job description (100-200 words).
+      1. Title: A professional, catchy, and SPECIFIC job title.
+      2. Description: A detailed, engaging, and SPECIFIC job description (100-200 words). Include typical tasks, expectations, and relevant details for the Norwegian market.
       3. Category: Choose the most appropriate category ONLY from: [${categoryNames}].
-      4. Skills: A list of 3-5 required skills.
-      5. Hourly Rate: A fair hourly rate in NOK for this service in Norway.
-      6. Duration: Estimated time required to complete the task.
-      7. Location Relevance: Whether the job needs to be on-site or can be done remotely.
-      8. Price Range: A suggested total price range (min-max) based on hourlyRate * duration.
-      9. Pricing Reasoning: Explain the hourly rate and duration in the same language as the prompt.
+      4. Skills: A list of 3-5 RELEVANT, specific skills required for this job in Norway.
+      5. Hourly Rate: A fair hourly rate in NOK for this service in Norway (based on realistic Norwegian market rates - e.g., 350-600 NOK/hour for skilled work).
+      6. Duration: Realistic estimated time required to complete the task (value + unit: hours/days).
+      7. Location Relevance: Whether the job needs to be on-site or can be done remotely (choose one: "on-site" or "remote").
+      8. Price Range: A suggested total price range (min-max) based on hourlyRate * duration (consider slight variations in time).
+      9. Pricing Reasoning: Clearly explain why you chose that hourly rate and duration, referencing Norwegian market context (in the same language as the prompt).
       
       OTHER RULES: 
       - PERSPECTIVE: The user is the HIRER. Write from the perspective of "I need help with..." or "I am looking for someone to...". 
       - DO NOT write as if you are offering a service.
-      - PRICING: Base the hourlyRate on the local Norwegian market context.
+      - PRICING: Base the hourlyRate on REALISTIC Norwegian market rates (consider both skilled and unskilled work appropriately).
       
       Respond strictly in JSON format:
       {
         "title": "...",
         "description": "...",
         "category": "...",
-        "skills": ["...", "..."],
-        "hourlyRate": 400,
+        "skills": ["...", "...", "...", "..."],
+        "hourlyRate": 450,
         "duration": { "value": 2, "unit": "hours" },
-        "locationRelevance": "on-site/remote",
-        "priceRange": { "min": 700, "max": 900 },
+        "locationRelevance": "on-site",
+        "priceRange": { "min": 800, "max": 1000 },
         "pricingReasoning": "..."
       }
     `;
