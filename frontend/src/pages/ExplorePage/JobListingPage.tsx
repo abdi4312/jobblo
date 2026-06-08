@@ -130,17 +130,27 @@ export default function JobListingPage() {
       avatarUrl: user.avatarUrl,
     })) || [];
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "God morgen";
+    if (hour >= 12 && hour < 18) return "God ettermiddag";
+    return "God kveld";
+  };
+
   const userName = user?.name || "Gust";
+  const greeting = getGreeting();
 
   return (
     <div className="bg-[#f5f0e8] py-4 px-3 sm:py-5 sm:px-5">
       <div className="max-w-[860px] mx-auto">
         {/* Hero Section */}
-        <div className="bg-[#1a3a1a] rounded-[12px] sm:rounded-[16px] p-4 sm:p-6 mb-4 sm:mb-5
-        flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div
+          className="bg-[#1a3a1a] rounded-[12px] sm:rounded-[16px] p-4 sm:p-6 mb-4 sm:mb-5
+        flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        >
           <div>
             <h2 className="text-lg sm:text-xl font-normal text-white leading-[1.35] mb-1">
-              God morgen, {userName}.
+              {greeting}, {userName}.
               <br />
               Hva trenger du hjelp med
               <em className="text-[#4ade80] not-italic">i dag?</em>
@@ -148,8 +158,10 @@ export default function JobListingPage() {
             <p className="text-xs text-white/55 mb-3 sm:mb-4">
               5 nye oppdrag i nærheten av Oslo siden i går
             </p>
-            <button className="px-4 sm:px-[18px] py-2 sm:py-[9px] bg-transparent text-white border
-             border-white/50 rounded-full text-xs sm:text-sm cursor-pointer">
+            <button
+              className="px-4 sm:px-[18px] py-2 sm:py-[9px] bg-transparent text-white border
+             border-white/50 rounded-full text-xs sm:text-sm cursor-pointer"
+            >
               Se alle oppdrag nær meg
             </button>
           </div>
