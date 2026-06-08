@@ -374,7 +374,7 @@ export function ProfileHeader({
                   <span>Innstillinger</span>
                 </button>
                 <button
-                  onClick={() => navigate("/settings")}
+                  onClick={() => navigate("/settings/bio")}
                   className="px-4.5 py-2.5 bg-custom-green text-white rounded-full text-[13px] flex items-center gap-1.5 hover:bg-[#25633a] transition-colors"
                 >
                   <Pencil size={14} />
