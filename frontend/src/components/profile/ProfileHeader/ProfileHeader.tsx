@@ -388,10 +388,13 @@ export function ProfileHeader({
                 </button>
               </>
             ) : (
-              <button className="px-4.5 py-2.5 bg-custom-green text-white rounded-full text-[13px] flex items-center gap-1.5 hover:bg-[#25633a] transition-colors">
-                <MessageCircle size={14} />
-                <span>Send melding</span>
-              </button>
+              // <button className="px-4.5 py-2.5 bg-custom-green text-white rounded-full text-[13px] flex items-center gap-1.5 hover:bg-[#25633a] transition-colors">
+              //   <MessageCircle size={14} />
+              //   <span>Send melding</span>
+              // </button>
+              <div>
+
+              </div>
             )}
           </div>
         </div>
