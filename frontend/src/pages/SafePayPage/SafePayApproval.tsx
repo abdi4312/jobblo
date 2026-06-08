@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -23,6 +23,136 @@ import { toast } from "react-hot-toast";
 import { Button } from "../../components/Ui/button/Button";
 import SafePaySteps from "../../components/SafePay/SafePaySteps";
 
+// Reusable Star Rating Component
+interface StarRatingProps {
+  value: number;
+  onChange: (value: number) => void;
+  disabled?: boolean;
+  size?: number;
+  showLabel?: boolean;
+}
+
+const StarRating: React.FC<StarRatingProps> = ({
+  value,
+  onChange,
+  disabled = false,
+  size = 32,
+  showLabel = true,
+}) => {
+  const [hoverValue, setHoverValue] = useState<number | null>(null);
+  const [lastTappedStar, setLastTappedStar] = useState<number | null>(null);
+  const starContainerRef = useRef<HTMLDivElement>(null);
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+
+  const labels = {
+    1: "Svært misfornøyd",
+    2: "Misfornøyd",
+    3: "Greit",
+    4: "Fornøyd",
+    5: "Svært fornøyd",
+  };
+
+  const displayValue = hoverValue !== null ? hoverValue : value;
+
+  const handleStarClick = (starValue: number) => {
+    if (disabled) return;
+    // Mobile behavior: tap same star to deselect
+    if (lastTappedStar === starValue) {
+      onChange(0);
+      setLastTappedStar(null);
+    } else {
+      onChange(starValue);
+      setLastTappedStar(starValue);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, starValue: number) => {
+    if (disabled) return;
+    switch (e.key) {
+      case "ArrowLeft":
+        e.preventDefault();
+        onChange(Math.max(1, value - 1));
+        break;
+      case "ArrowRight":
+        e.preventDefault();
+        onChange(Math.min(5, value + 1));
+        break;
+      case "Enter":
+      case " ":
+        e.preventDefault();
+        handleStarClick(starValue);
+        break;
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-start gap-2">
+      {/* Aria-live region for screen readers */}
+      <div aria-live="polite" className="sr-only">
+        {displayValue > 0
+          ? labels[displayValue as keyof typeof labels]
+          : "Ingen vurdering valgt"}
+      </div>
+
+      <div
+        ref={starContainerRef}
+        className="flex gap-1.5"
+        role="radiogroup"
+        aria-label="Vurdering"
+      >
+        {[1, 2, 3, 4, 5].map((star) => {
+          const isFilled = star <= displayValue;
+          const isHovered =
+            hoverValue !== null && star <= hoverValue && !disabled;
+          const isEmpty = !isFilled && !isHovered;
+
+          return (
+            <button
+              key={star}
+              type="button"
+              role="radio"
+              aria-checked={star === value}
+              aria-label={`Gi ${star} av 5 stjerner - ${labels[star as keyof typeof labels]}`}
+              tabIndex={disabled ? -1 : 0}
+              onMouseEnter={() => !disabled && setHoverValue(star)}
+              onMouseLeave={() => !disabled && setHoverValue(null)}
+              onClick={() => handleStarClick(star)}
+              onKeyDown={(e) => handleKeyDown(e, star)}
+              onFocus={() => setFocusedIndex(star)}
+              onBlur={() => setFocusedIndex(null)}
+              className={`
+                transition-all duration-200
+                ${!disabled ? "cursor-pointer" : "cursor-default"}
+                ${!disabled ? "hover:scale-115" : ""}
+                ${focusedIndex === star ? "outline-none ring-2 ring-[#F59E0B] rounded-full" : ""}
+              `}
+            >
+              <Star
+                size={size}
+                className={`
+                  transition-all duration-200
+                  ${isFilled ? "text-[#F59E0B] fill-[#F59E0B]" : ""}
+                  ${isHovered && !disabled ? "text-[#F59E0B] fill-[#F59E0B]/50" : ""}
+                  ${isEmpty ? "text-[#d1d5db] stroke-[#d1d5db] fill-none" : ""}
+                `}
+              />
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Contextual Label */}
+      {showLabel && displayValue > 0 && (
+        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+          <p className="text-sm font-medium text-gray-700">
+            {labels[displayValue as keyof typeof labels]}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const SafePayApproval: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
@@ -37,16 +167,32 @@ const SafePayApproval: React.FC = () => {
   ]);
 
   const [ratings, setRatings] = useState({
-    overall: 5,
-    punctuality: 5,
-    quality: 4,
-    communication: 5,
-    tidiness: 4,
+    overall: 0,
+    punctuality: 0,
+    quality: 0,
+    communication: 0,
+    tidiness: 0,
   });
 
-  const [comment, setComment] = useState(
-    "Veldig fornøyd! Kristoffer møtte opp presis og gjorde en grundig jobb. Hagen ser fantastisk ut.",
-  );
+  const [comment, setComment] = useState("");
+
+  // Mock reviews data for post-submission state
+  const mockReviews = [
+    {
+      id: "1",
+      reviewerName: "Ola Nordmann",
+      rating: 5,
+      date: "15. mai 2026",
+      comment: "Fantastisk jobb! Veldig fornøyd med resultatet.",
+    },
+    {
+      id: "2",
+      reviewerName: "Kari Hansen",
+      rating: 4,
+      date: "20. april 2026",
+      comment: "God jobb, men kunne vært litt mer grundig.",
+    },
+  ];
 
   // Fetch Order Details
   const {
@@ -262,110 +408,204 @@ const SafePayApproval: React.FC = () => {
 
         {/* Rating Section */}
         <div className="bg-white border border-black/5 rounded-2xl p-6 mb-4 shadow-sm">
-          <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
-            <Star size={18} className="text-custom-green" /> Gi{" "}
-            {orderData.providerId.name} en vurdering
-          </div>
+          {!isSuccess ? (
+            <>
+              <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
+                <Star size={18} className="text-custom-green" /> Gi{" "}
+                {orderData.providerId.name} en vurdering
+              </div>
 
-          <div className="mb-6">
-            <p className="text-[13px] text-gray-500 mb-2">
-              Helhetlig opplevelse
-            </p>
-            <div className="flex gap-1.5">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                  key={star}
-                  size={32}
-                  onClick={
-                    !isOrderCompleted
-                      ? () => setRatings((prev) => ({ ...prev, overall: star }))
-                      : undefined
+              <div className="mb-6">
+                <p className="text-[13px] text-gray-500 mb-2">
+                  Helhetlig opplevelse
+                </p>
+                <StarRating
+                  value={ratings.overall}
+                  onChange={(val) =>
+                    setRatings((prev) => ({ ...prev, overall: val }))
                   }
-                  className={`${isOrderCompleted ? "cursor-not-allowed" : "cursor-pointer"} transition-all ${star <= ratings.overall ? "text-[#ca8a04] fill-[#ca8a04]" : "text-[#e8e0d0]"}`}
+                  disabled={isOrderCompleted}
                 />
-              ))}
-            </div>
-          </div>
+              </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            {[
-              { id: "punctuality", label: "Punktlighet" },
-              { id: "quality", label: "Kvalitet" },
-              { id: "communication", label: "Kommunikasjon" },
-              { id: "tidiness", label: "Ryddighet" },
-            ].map((cat) => (
-              <div key={cat.id} className="bg-[#f9f9f7] rounded-xl p-3">
-                <div className="text-[11px] text-gray-400 uppercase font-bold mb-2 tracking-wider">
-                  {cat.label}
-                </div>
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      size={14}
-                      onClick={
-                        !isOrderCompleted
-                          ? () =>
-                              setRatings((prev) => ({
-                                ...prev,
-                                [cat.id]: star,
-                              }))
-                          : undefined
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                {[
+                  { id: "punctuality", label: "Punktlighet" },
+                  { id: "quality", label: "Kvalitet" },
+                  { id: "communication", label: "Kommunikasjon" },
+                  { id: "tidiness", label: "Ryddighet" },
+                ].map((cat) => (
+                  <div key={cat.id} className="bg-[#f9f9f7] rounded-xl p-3">
+                    <div className="text-[11px] text-gray-400 uppercase font-bold mb-2 tracking-wider">
+                      {cat.label}
+                    </div>
+                    <StarRating
+                      value={(ratings as any)[cat.id]}
+                      onChange={(val) =>
+                        setRatings((prev) => ({ ...prev, [cat.id]: val }))
                       }
-                      className={`${isOrderCompleted ? "cursor-not-allowed" : "cursor-pointer"} ${star <= (ratings as any)[cat.id] ? "text-[#ca8a04] fill-[#ca8a04]" : "text-[#e8e0d0]"}`}
+                      disabled={isOrderCompleted}
+                      size={14}
+                      showLabel={false}
                     />
-                  ))}
+                  </div>
+                ))}
+              </div>
+
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                disabled={isOrderCompleted}
+                className={`w-full bg-white border border-black/10 rounded-xl p-4 text-[13px] text-gray-800 outline-none focus:border-custom-green min-h-[100px] ${isOrderCompleted ? "cursor-not-allowed bg-gray-50" : ""}`}
+                placeholder="Skriv en anmeldelse..."
+              />
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
+                <Star size={18} className="text-[#F59E0B]" /> Vurderinger for{" "}
+                {orderData.providerId.name}
+              </div>
+
+              {/* Average Rating Summary */}
+              <div className="bg-[#f9f9f7] rounded-xl p-4 mb-6 flex items-center gap-4">
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-[#F59E0B]">4.7</div>
+                  <div className="text-sm text-gray-500">av 5</div>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-1 mb-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        size={20}
+                        className={
+                          star <= 5
+                            ? "text-[#F59E0B] fill-[#F59E0B]"
+                            : "text-[#d1d5db]"
+                        }
+                      />
+                    ))}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    4.7 / 5 · 12 vurderinger
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
 
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            disabled={isOrderCompleted}
-            className={`w-full bg-white border border-black/10 rounded-xl p-4 text-[13px] text-gray-800 outline-none focus:border-custom-green min-h-[100px] ${isOrderCompleted ? "cursor-not-allowed bg-gray-50" : ""}`}
-            placeholder="Skriv en kort kommentar om oppdraget... (valgfritt)"
-          />
+              {/* Individual Reviews */}
+              <div className="max-h-[300px] overflow-y-auto space-y-4">
+                {mockReviews.map((review) => (
+                  <div key={review.id} className="bg-[#f9f9f7] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-medium text-gray-900">
+                        {review.reviewerName}
+                      </div>
+                      <div className="text-xs text-gray-500">{review.date}</div>
+                    </div>
+                    <div className="flex items-center gap-1 mb-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          size={14}
+                          className={
+                            star <= review.rating
+                              ? "text-[#F59E0B] fill-[#F59E0B]"
+                              : "text-[#d1d5db]"
+                          }
+                        />
+                      ))}
+                    </div>
+                    <p className="text-sm text-gray-700">{review.comment}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Payout Panel */}
+        {/* Transaction Details Panel */}
         <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
-            <Wallet size={18} className="text-custom-green" /> Utbetaling til{" "}
-            {orderData.providerId.name}
+            <Wallet size={18} className="text-custom-green" />{" "}
+            Transaksjonsdetaljer
           </div>
 
-          <div className="bg-[#f0faf0] border border-[#c6f0d8] rounded-2xl p-6">
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
-                <span className="text-gray-500">Oppdragsbeløp</span>
-                <span className="text-gray-900 font-bold">
-                  {calculation.basePrice} kr
+          <div className="space-y-4">
+            {/* Transaction Info */}
+            <div className="bg-[#f9f9f7] rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  Transaksjons-ID
+                </span>
+                <span className="text-sm font-medium text-gray-700">
+                  #JB-{orderData._id?.substring(0, 8).toUpperCase()}
                 </span>
               </div>
-              <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
-                <span className="text-gray-500">SafePay-gebyr (3%)</span>
-                <span className="text-gray-900 font-bold">
-                  - {calculation.fee} kr
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  Dato
+                </span>
+                <span className="text-sm font-medium text-gray-700">
+                  {new Date(
+                    orderData.createdAt || Date.now(),
+                  ).toLocaleDateString("no-NO")}
                 </span>
               </div>
-              <div className="flex justify-between items-center pt-1">
-                <span className="text-gray-900 font-bold">
-                  {orderData.providerId.name} mottar
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  Status
                 </span>
-                <span className="text-[22px] font-bold text-custom-green">
-                  {calculation.providerNet} kr
+                <span
+                  className={`text-sm font-bold px-3 py-1 rounded-full ${
+                    orderData.status === "completed"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : orderData.status === "paid"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-amber-100 text-amber-700"
+                  }`}
+                >
+                  {orderData.status === "completed"
+                    ? "Fullført"
+                    : orderData.status === "paid"
+                      ? "Betalt"
+                      : "Venter"}
                 </span>
               </div>
             </div>
 
-            <div className="flex gap-2 text-[11px] text-[#166534] leading-relaxed">
-              <Clock size={14} className="shrink-0 mt-0.5" />
-              <p>
-                Pengene utbetales til {orderData.providerId.name} innen 1–2
-                virkedager etter godkjenning.
-              </p>
+            {/* Payout Breakdown */}
+            <div className="bg-[#f0faf0] border border-[#c6f0d8] rounded-2xl p-6">
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
+                  <span className="text-gray-500">Oppdragsbeløp</span>
+                  <span className="text-gray-900 font-bold">
+                    {calculation.basePrice} kr
+                  </span>
+                </div>
+                <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
+                  <span className="text-gray-500">SafePay-gebyr (3%)</span>
+                  <span className="text-gray-900 font-bold">
+                    - {calculation.fee} kr
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-1">
+                  <span className="text-gray-900 font-bold">
+                    {orderData.providerId.name} mottar
+                  </span>
+                  <span className="text-[22px] font-bold text-custom-green">
+                    {calculation.providerNet} kr
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-2 text-[11px] text-[#166534] leading-relaxed">
+                <Clock size={14} className="shrink-0 mt-0.5" />
+                <p>
+                  Pengene utbetales til {orderData.providerId.name} innen 1–2
+                  virkedager etter godkjenning.
+                </p>
+              </div>
             </div>
           </div>
 
