@@ -48,7 +48,7 @@ export default function ProfilePage() {
       <div className="hero-band h-[130px] bg-[#1a3a1a] relative">
         <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle,#fff_1px,transparent_1px)] bg-[length:24px_24px]"></div>
       </div>
-      
+
       <div className="max-w-[900px] mx-auto px-6 pb-12">
         <ProfileHeader
           user={userToDisplay}
@@ -70,7 +70,9 @@ export default function ProfilePage() {
                   ].map((opt) => (
                     <button
                       key={opt.id}
-                      onClick={() => handleProfileTypeChange(opt.id as "seeker" | "poster")}
+                      onClick={() =>
+                        handleProfileTypeChange(opt.id as "seeker" | "poster")
+                      }
                       className={`px-5 py-2 text-[13px] rounded-full transition-all ${
                         profileType === opt.id
                           ? "bg-custom-green text-white font-medium shadow-sm"
@@ -90,7 +92,7 @@ export default function ProfilePage() {
                 profileType={profileType}
                 userRole={userToDisplay?.role}
               />
-              
+
               <ItemsGrid
                 activeTab={activeTab}
                 user={userToDisplay}
