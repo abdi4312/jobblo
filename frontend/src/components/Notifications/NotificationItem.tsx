@@ -303,12 +303,18 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                 variant="default"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (isClickable && alert.senderId?._id) {
+                  if (alert.requestId) {
+                    const reqId = alert.requestId as any;
+                    if (reqId.serviceId) {
+                      const serviceId = typeof reqId.serviceId === 'object' ? reqId.serviceId._id : reqId.serviceId;
+                      onNavigate(`/job-applicants/${serviceId}`);
+                    }
+                  } else if (isClickable && alert.senderId?._id) {
                     onNavigate(`/profile/${alert.senderId._id}`);
                   }
                 }}
               >
-                {isClickable ? "Se profil" : "Se varsel"}
+                {isClickable ? "Se profil" : alert.requestId ? "Se søknad" : "Se varsel"}
               </Button>
             )}
           </div>

@@ -254,7 +254,20 @@ export default function Alert() {
                       onClick={() => {
                         // Navigate based on notification type
                         if (notification.orderId) {
-                          navigate(`/order/${notification.orderId._id}`);
+                          navigate(`/safepay/approval/${notification.orderId._id}`);
+                        } else if (notification.requestId) {
+                          // Check if requestId is an object with serviceId
+                          const reqId = notification.requestId as any;
+                          if (reqId.serviceId) {
+                            // If reqId.serviceId is an object, use its _id, otherwise use directly
+                            const serviceId =
+                              typeof reqId.serviceId === "object"
+                                ? reqId.serviceId._id
+                                : reqId.serviceId;
+                            navigate(`/job-applicants/${serviceId}`);
+                          } else {
+                            navigate(`/profile/${notification.senderId?._id}`);
+                          }
                         } else if (notification.senderId?._id) {
                           navigate(`/profile/${notification.senderId._id}`);
                         }
