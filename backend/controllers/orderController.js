@@ -49,13 +49,14 @@ exports.createJobRequest = async (req, res) => {
     if (service.maxApplicants > 0) {
       const applicantCount = await JobRequest.countDocuments({
         serviceId,
-        status: { $in: ["pending", "accepted"] }
+        status: { $in: ["pending", "accepted"] },
       });
 
       if (applicantCount >= service.maxApplicants) {
-        return res.status(400).json({ 
-          error: "Søknadsfristen er nådd. Dette oppdraget tar ikke imot flere søknader.",
-          limitReached: true 
+        return res.status(400).json({
+          error:
+            "Søknadsfristen er nådd. Dette oppdraget tar ikke imot flere søknader.",
+          limitReached: true,
         });
       }
     }
@@ -534,6 +535,11 @@ exports.updateOrder = async (req, res) => {
             serviceId: service._id,
           },
         },
+      });
+
+      // 2. Increment completedJobs for provider
+      await User.findByIdAndUpdate(order.providerId, {
+        $inc: { completedJobs: 1 },
       });
 
       updates.completedAt = new Date(); // optional but useful

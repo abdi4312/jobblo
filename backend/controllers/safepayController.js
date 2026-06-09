@@ -6,6 +6,7 @@ const Notification = require("../models/Notification");
 const Payment = require("../models/Payment");
 const User = require("../models/User");
 const SafePayHistory = require("../models/SafePayHistory");
+const Review = require("../models/Review");
 
 /**
  * POST /api/safepay/create-contract
@@ -36,6 +37,7 @@ exports.createContract = async (req, res) => {
 
     // 1. Verify service ownership (userId should be provider/owner of service)
     const service = await Service.findById(serviceId);
+    console.log("createContract: service:", service);
     if (!service) {
       return res.status(404).json({ error: "Oppdraget ble ikke funnet" });
     }
@@ -47,7 +49,8 @@ exports.createContract = async (req, res) => {
     }
 
     // Bug 11: Check service/order status
-    if (service.status === "completed" || service.status === "cancelled") {
+    console.log("createContract: service.status:", service.status);
+    if (service.status === "completed" || service.status === "closed") {
       return res
         .status(400)
         .json({ error: "Denne tjenesten er ikke lenger tilgjengelig" });
@@ -91,12 +94,9 @@ exports.createContract = async (req, res) => {
     }
 
     // Bug 3: Prevent duplicate contract
-    // In Order: customerId is service owner (who pays), providerId is applicant (who works)
-    const existingOrder = await Order.findOne({
-      serviceId,
-      customerId: userId,
-      providerId: applicantId,
-    });
+    // Check if there's ANY existing order for this service (regardless of provider)
+    const existingOrder = await Order.findOne({ serviceId });
+    console.log("createContract: existingOrder:", existingOrder);
     if (existingOrder) {
       return res.status(400).json({ error: "Kontrakt finnes allerede" });
     }
@@ -128,14 +128,17 @@ exports.createContract = async (req, res) => {
 
     await order.save();
 
+    // Update service status to in_progress
+    await Service.findByIdAndUpdate(serviceId, { status: "in_progress" });
+
     // 3. Update JobRequest status if provided (Bug 4)
     if (requestId) {
       await JobRequest.findOneAndUpdate(
         {
           _id: requestId,
           serviceId,
-          customerId: userId,
-          providerId: applicantId,
+          customerId: applicantId,
+          providerId: userId,
         },
         { status: "accepted" },
       );
@@ -146,12 +149,12 @@ exports.createContract = async (req, res) => {
       );
     } else {
       await JobRequest.findOneAndUpdate(
-        { serviceId, customerId: userId, providerId: applicantId },
+        { serviceId, customerId: applicantId, providerId: userId },
         { status: "accepted" },
       );
       // Mark other requests as declined
       await JobRequest.updateMany(
-        { serviceId, providerId: { $ne: applicantId }, status: "pending" },
+        { serviceId, customerId: { $ne: applicantId }, status: "pending" },
         { status: "declined" },
       );
     }
@@ -415,10 +418,66 @@ exports.completeJobAndPayout = async (req, res) => {
     });
     await safePayHistory.save();
 
-    // 4. Update provider's earnings (only net amount after fees)
-    await User.findByIdAndUpdate(order.providerId, {
-      $inc: { earnings: netProvider },
+    // Update service status to completed
+    await Service.findByIdAndUpdate(service._id, { status: "completed" });
+
+    // Determine who is reviewing who (customer is reviewing provider in this case)
+    const reviewerId = userId;
+    const revieweeId = order.providerId;
+    const revieweeRole = "poster";
+    console.log("completeJobAndPayout: Review info:", {
+      reviewerId,
+      revieweeId,
+      revieweeRole,
     });
+
+    // Check if a review for this order already exists
+    let review = await Review.findOne({ orderId: order._id, reviewerId });
+    if (!review) {
+      // Create the review document
+      console.log("completeJobAndPayout: Creating new review");
+      review = await Review.create({
+        orderId: order._id,
+        serviceId: service._id,
+        reviewerId,
+        revieweeId,
+        revieweeRole,
+        rating: ratings.overall,
+        comment: comment || "",
+      });
+      console.log("completeJobAndPayout: Review created:", review);
+    } else {
+      console.log("completeJobAndPayout: Review already exists:", review);
+    }
+
+    // Update reviewee's stats (provider)
+    const reviewee = await User.findById(revieweeId);
+    console.log("completeJobAndPayout: Found reviewee:", reviewee);
+    if (reviewee) {
+      // Calculate new average rating from all reviews
+      const allReviews = await Review.find({ revieweeId, revieweeRole });
+      console.log(
+        "completeJobAndPayout: All reviews for reviewee:",
+        allReviews,
+      );
+      const reviewCount = allReviews.length;
+      const averageRating =
+        reviewCount > 0
+          ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
+          : 0;
+      console.log("completeJobAndPayout: Calculated stats:", {
+        reviewCount,
+        averageRating,
+      });
+
+      // Update provider's stats
+      reviewee.completedJobs = (reviewee.completedJobs || 0) + 1;
+      reviewee.averageRating = parseFloat(averageRating.toFixed(1));
+      reviewee.reviewCount = reviewCount;
+      reviewee.earnings = (reviewee.earnings || 0) + netProvider;
+      await reviewee.save();
+      console.log("completeJobAndPayout: Saved reviewee:", reviewee);
+    }
 
     // Bug 6: Add TODO comment about real payout
     // TODO: Integrate with actual payment gateway to release funds to provider
