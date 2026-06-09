@@ -44,9 +44,19 @@ exports.getApplicantsForService = async (req, res) => {
           status: "completed",
         });
 
-        // Calculate fake response time/rate based on when they joined or just use defaults for now
-        // since these aren't directly tracked in the DB schema provided.
-        const responseRate = "98%";
+        // Calculate real response rate
+        const totalRequests = await JobRequest.countDocuments({
+          providerId: applicant._id,
+        });
+        const respondedRequests = await JobRequest.countDocuments({
+          providerId: applicant._id,
+          status: { $in: ["accepted", "declined"] },
+        });
+        const responseRatePercent =
+          totalRequests > 0
+            ? Math.round((respondedRequests / totalRequests) * 100)
+            : 100;
+        const responseRate = `${responseRatePercent}%`;
         const responseTime = "< 1t";
 
         return {

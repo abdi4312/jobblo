@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const Service = require("../models/Service");
+const JobRequest = require("../models/JobRequest");
 const mongoose = require("mongoose");
 const Category = require("../models/Category");
 const List = require("../models/List");
@@ -229,8 +230,31 @@ exports.getUserById = async (req, res) => {
     const user = await User.findById(id).select("-password");
 
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.json(user);
+
+    // Calculate posted jobs count
+    const postedJobsCount = await Service.countDocuments({ userId: id });
+
+    // Calculate response rate
+    const totalJobRequests = await JobRequest.countDocuments({
+      providerId: id,
+    });
+    const respondedJobRequests = await JobRequest.countDocuments({
+      providerId: id,
+      status: { $in: ["accepted", "declined"] },
+    });
+    const responseRate =
+      totalJobRequests > 0
+        ? Math.round((respondedJobRequests / totalJobRequests) * 100)
+        : 100;
+
+    // Convert user to object and add the stats
+    const userObj = user.toObject();
+    userObj.postedJobsCount = postedJobsCount;
+    userObj.responseRate = responseRate;
+
+    res.json(userObj);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 };

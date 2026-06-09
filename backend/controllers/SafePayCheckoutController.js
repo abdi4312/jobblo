@@ -5,6 +5,7 @@ const User = require("../models/User");
 const Payment = require("../models/Payment");
 const Notification = require("../models/Notification");
 const SafePayHistory = require("../models/SafePayHistory");
+const Review = require("../models/Review");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 exports.getCheckoutDetails = async (req, res) => {
@@ -408,20 +409,70 @@ exports.approveAndPayout = async (req, res) => {
       await safePayHistory.save();
     }
 
-    // Update provider stats
-    const provider = await User.findById(order.providerId);
-    if (provider) {
-      const currentCompleted = provider.completedJobs || 0;
-      const currentRating = provider.averageRating || 0;
+    // Determine who is reviewing who
+    const isCustomerReviewing = String(userId) === String(order.customerId);
+    const reviewerId = userId;
+    const revieweeId = isCustomerReviewing
+      ? order.providerId
+      : order.customerId;
+    const revieweeRole = isCustomerReviewing ? "poster" : "seeker";
+    console.log("approveAndPayout: Review info:", {
+      isCustomerReviewing,
+      reviewerId,
+      revieweeId,
+      revieweeRole,
+    });
 
-      const newRating =
-        (currentRating * currentCompleted + ratings.overall) /
-        (currentCompleted + 1);
+    // Check if a review for this order already exists
+    let review = await Review.findOne({
+      orderId: order._id,
+      reviewerId,
+    });
 
-      provider.completedJobs = currentCompleted + 1;
-      provider.averageRating = parseFloat(newRating.toFixed(1));
-      provider.earnings = (provider.earnings || 0) + netProvider;
-      await provider.save();
+    if (!review) {
+      // Create the review document
+      console.log("approveAndPayout: Creating new review");
+      review = await Review.create({
+        orderId: order._id,
+        serviceId: order.serviceId._id,
+        reviewerId,
+        revieweeId,
+        revieweeRole,
+        rating: ratings.overall,
+        comment: comment || "",
+      });
+      console.log("approveAndPayout: Review created:", review);
+    } else {
+      console.log("approveAndPayout: Review already exists:", review);
+    }
+
+    // Update the reviewee's stats
+    const reviewee = await User.findById(revieweeId);
+    console.log("approveAndPayout: Found reviewee:", reviewee);
+    if (reviewee) {
+      // Calculate new average rating from all reviews for this reviewee
+      const allReviews = await Review.find({ revieweeId, revieweeRole });
+      console.log("approveAndPayout: All reviews for reviewee:", allReviews);
+      const reviewCount = allReviews.length;
+      const averageRating =
+        reviewCount > 0
+          ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
+          : 0;
+      console.log("approveAndPayout: Calculated stats:", {
+        reviewCount,
+        averageRating,
+      });
+
+      // Only update completedJobs and earnings if the reviewee is the provider (they're the one doing the job)
+      if (isCustomerReviewing) {
+        reviewee.completedJobs = (reviewee.completedJobs || 0) + 1;
+        reviewee.earnings = (reviewee.earnings || 0) + netProvider;
+      }
+
+      reviewee.averageRating = parseFloat(averageRating.toFixed(1));
+      reviewee.reviewCount = reviewCount;
+      await reviewee.save();
+      console.log("approveAndPayout: Saved reviewee:", reviewee);
     }
 
     // 6. Keep as internal wallet update only, no real payout wording
