@@ -54,6 +54,25 @@ const orderSchema = new mongoose.Schema({
     paymentId: String,
 
 
+    // Checklist completion status (per order)
+    checklist: [{
+        id: { type: String, required: true },
+        text: { type: String, required: true },
+        checked: { type: Boolean, default: false },
+        checkedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        checkedAt: Date
+    }],
+
+    // Ratings & review
+    review: {
+        overall: { type: Number, min: 0, max: 5, default: 0 },
+        punctuality: { type: Number, min: 0, max: 5, default: 0 },
+        quality: { type: Number, min: 0, max: 5, default: 0 },
+        communication: { type: Number, min: 0, max: 5, default: 0 },
+        tidiness: { type: Number, min: 0, max: 5, default: 0 },
+        comment: { type: String, default: "" }
+    },
+
     // Hendelser (history)
     history: [{
         action: String,

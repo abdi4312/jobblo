@@ -266,6 +266,7 @@ exports.createService = async (req, res) => {
       countyCode,
       municipalityCode,
       areaCode,
+      checklist,
       ...serviceData
     } = req.body;
 
@@ -308,12 +309,32 @@ exports.createService = async (req, res) => {
       if (imageMetadata) serviceData.imageMetadata = imageMetadata;
     }
 
+    // Parse checklist (frontend sends it as JSON string)
+    let parsedChecklist = [];
+    if (checklist) {
+      try {
+        parsedChecklist =
+          typeof checklist === "string" ? JSON.parse(checklist) : checklist;
+        // Format checklist items with default values
+        parsedChecklist = parsedChecklist.map((item) => ({
+          id: item.id,
+          text: item.text,
+          checked: false,
+          checkedBy: null,
+          checkedAt: null,
+        }));
+      } catch (err) {
+        console.error("Failed to parse checklist:", err);
+      }
+    }
+
     const service = await Service.create({
       ...serviceData,
       userId,
       countyCode,
       municipalityCode,
       areaCode,
+      checklist: parsedChecklist,
     });
 
     res.status(201).json(service);
@@ -395,8 +416,40 @@ exports.updateService = async (req, res) => {
       }
     }
 
+    // ⭐ HANDLE CHECKLIST UPDATE
+    if (req.body.checklist) {
+      try {
+        let parsedChecklist =
+          typeof req.body.checklist === "string"
+            ? JSON.parse(req.body.checklist)
+            : req.body.checklist;
+
+        // Update checklist, preserving existing checked state if available
+        service.checklist = parsedChecklist.map((newItem) => {
+          const existingItem = service.checklist.find(
+            (item) => item.id === newItem.id,
+          );
+          return {
+            id: newItem.id,
+            text: newItem.text,
+            checked: existingItem ? existingItem.checked : false,
+            checkedBy: existingItem ? existingItem.checkedBy : null,
+            checkedAt: existingItem ? existingItem.checkedAt : null,
+          };
+        });
+      } catch (err) {
+        console.error("Failed to parse checklist:", err);
+      }
+    }
+
     // Update other fields (including location codes)
-    const { countyCode, municipalityCode, areaCode, ...otherFields } = req.body;
+    const {
+      countyCode,
+      municipalityCode,
+      areaCode,
+      checklist,
+      ...otherFields
+    } = req.body;
     Object.assign(service, otherFields);
     if (countyCode !== undefined) service.countyCode = countyCode;
     if (municipalityCode !== undefined)
@@ -581,6 +634,43 @@ exports.getTimeEntries = async (req, res) => {
     if (!service) return res.status(404).json({ error: "Service not found" });
 
     res.json(service.timeEntries);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// ------------------- Checklist -------------------
+
+exports.updateChecklistItem = async (req, res) => {
+  try {
+    const { id, itemId } = req.params;
+    const { checked } = req.body;
+    const userId = req.userId;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid service ID" });
+    }
+
+    const service = await Service.findById(id);
+    if (!service) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+
+    // Find the checklist item
+    const checklistItem = service.checklist.find((item) => item.id === itemId);
+    if (!checklistItem) {
+      return res.status(404).json({ error: "Checklist item not found" });
+    }
+
+    // Update the item
+    checklistItem.checked = checked;
+    checklistItem.checkedBy = checked ? userId : null;
+    checklistItem.checkedAt = checked ? new Date() : null;
+
+    await service.save();
+
+    res.json(service.checklist);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

@@ -112,7 +112,9 @@ const StarRating: React.FC<StarRatingProps> = ({
               type="button"
               role="radio"
               aria-checked={star === value}
-              aria-label={`Gi ${star} av 5 stjerner - ${labels[star as keyof typeof labels]}`}
+              aria-label={`Gi ${star} av 5 stjerner - ${
+                labels[star as keyof typeof labels]
+              }`}
               tabIndex={disabled ? -1 : 0}
               onMouseEnter={() => !disabled && setHoverValue(star)}
               onMouseLeave={() => !disabled && setHoverValue(null)}
@@ -124,7 +126,11 @@ const StarRating: React.FC<StarRatingProps> = ({
                 transition-all duration-200
                 ${!disabled ? "cursor-pointer" : "cursor-default"}
                 ${!disabled ? "hover:scale-115" : ""}
-                ${focusedIndex === star ? "outline-none ring-2 ring-[#F59E0B] rounded-full" : ""}
+                ${
+                  focusedIndex === star
+                    ? "outline-none ring-2 ring-[#F59E0B] rounded-full"
+                    : ""
+                }
               `}
             >
               <Star
@@ -132,7 +138,11 @@ const StarRating: React.FC<StarRatingProps> = ({
                 className={`
                   transition-all duration-200
                   ${isFilled ? "text-[#F59E0B] fill-[#F59E0B]" : ""}
-                  ${isHovered && !disabled ? "text-[#F59E0B] fill-[#F59E0B]/50" : ""}
+                  ${
+                    isHovered && !disabled
+                      ? "text-[#F59E0B] fill-[#F59E0B]/50"
+                      : ""
+                  }
                   ${isEmpty ? "text-[#d1d5db] stroke-[#d1d5db] fill-none" : ""}
                 `}
               />
@@ -157,14 +167,7 @@ const SafePayApproval: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const [isSuccess, setIsSuccess] = useState(false);
-
-  // Interactive states
-  const [checklist, setChecklist] = useState([
-    { id: 1, label: "Plenen er klippet", checked: true },
-    { id: 2, label: "Hagen er ryddet", checked: true },
-    { id: 3, label: "Klipper ble ryddet etter bruk", checked: false },
-    { id: 4, label: "Alt søppel er fjernet", checked: true },
-  ]);
+  const [showSkipDialog, setShowSkipDialog] = useState(false);
 
   const [ratings, setRatings] = useState({
     overall: 0,
@@ -176,31 +179,14 @@ const SafePayApproval: React.FC = () => {
 
   const [comment, setComment] = useState("");
 
-  // Mock reviews data for post-submission state
-  const mockReviews = [
-    {
-      id: "1",
-      reviewerName: "Ola Nordmann",
-      rating: 5,
-      date: "15. mai 2026",
-      comment: "Fantastisk jobb! Veldig fornøyd med resultatet.",
-    },
-    {
-      id: "2",
-      reviewerName: "Kari Hansen",
-      rating: 4,
-      date: "20. april 2026",
-      comment: "God jobb, men kunne vært litt mer grundig.",
-    },
-  ];
-
   // Fetch Order Details
   const {
-    data: order,
+    data: checkoutData,
     isLoading,
     error,
+    refetch,
   } = useQuery({
-    queryKey: ["safepay-approval", orderId],
+    queryKey: ["safepay-checkout", orderId],
     queryFn: async () => {
       const res = await mainLink.get(
         `/api/safepay-checkout/details/${orderId}`,
@@ -210,13 +196,26 @@ const SafePayApproval: React.FC = () => {
     enabled: !!orderId,
   });
 
-  const toggleCheck = (id: number) => {
-    setChecklist((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, checked: !item.checked } : item,
-      ),
-    );
-  };
+  // Initialize checklist from order data
+  const [checklist, setChecklist] = useState<
+    { id: string; text: string; checked: boolean }[]
+  >([]);
+
+  useEffect(() => {
+    if (checkoutData?.order?.checklist) {
+      setChecklist(checkoutData.order.checklist);
+    }
+    if (checkoutData?.order?.review) {
+      setRatings({
+        overall: checkoutData.order.review.overall || 0,
+        punctuality: checkoutData.order.review.punctuality || 0,
+        quality: checkoutData.order.review.quality || 0,
+        communication: checkoutData.order.review.communication || 0,
+        tidiness: checkoutData.order.review.tidiness || 0,
+      });
+      setComment(checkoutData.order.review.comment || "");
+    }
+  }, [checkoutData]);
 
   // Approval Mutation
   const approveMutation = useMutation({
@@ -237,8 +236,49 @@ const SafePayApproval: React.FC = () => {
     },
   });
 
+  // Mutation to update checklist items
+  const updateChecklistItemMutation = useMutation({
+    mutationFn: async ({
+      itemId,
+      checked,
+    }: {
+      itemId: string;
+      checked: boolean;
+    }) => {
+      const res = await mainLink.put(
+        `/api/safepay-checkout/contract/${orderId}/checklist/${itemId}`,
+        { checked },
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
   const handleApprove = () => {
+    const allChecked = checklist.every((item) => item.checked);
+    if (!allChecked && !showSkipDialog) {
+      return;
+    }
     approveMutation.mutate();
+  };
+
+  const handleSkipConfirm = () => {
+    setShowSkipDialog(false);
+    approveMutation.mutate();
+  };
+
+  // Update toggleCheck to call the mutation
+  const toggleCheck = (id: string) => {
+    const item = checklist.find((i) => i.id === id);
+    if (!item) return;
+
+    const newChecked = !item.checked;
+    setChecklist((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, checked: newChecked } : i)),
+    );
+    updateChecklistItemMutation.mutate({ itemId: id, checked: newChecked });
   };
 
   if (isLoading) {
@@ -249,7 +289,7 @@ const SafePayApproval: React.FC = () => {
     );
   }
 
-  if (error || !order) {
+  if (error || !checkoutData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#f5f0e8] p-4">
         <h2 className="text-xl font-bold text-gray-800 mb-2">
@@ -260,7 +300,7 @@ const SafePayApproval: React.FC = () => {
     );
   }
 
-  const { order: orderData, calculation } = order;
+  const { order: orderData, calculation } = checkoutData;
   const isOrderCompleted = orderData.status === "completed";
 
   if (isSuccess) {
@@ -272,15 +312,15 @@ const SafePayApproval: React.FC = () => {
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Jobb godkjent!</h1>
           <p className="text-white/60 mb-8">
-            Utbetaling er satt i gang til {orderData.providerId.name}{" "}
-            {orderData.providerId.lastName}
+            Pengene er lagt til {orderData.providerId.name}{" "}
+            {orderData.providerId.lastName} sin saldo.
           </p>
 
           <div className="text-[42px] font-bold text-[#4ade80] mb-1">
             {calculation.providerNet} kr
           </div>
           <div className="text-[12px] text-white/40 uppercase tracking-widest mb-10">
-            Utbetales innen 1–2 virkedager
+            Tilgjenelig innen 1–2 virkedager
           </div>
 
           <div className="flex flex-col gap-3">
@@ -312,7 +352,7 @@ const SafePayApproval: React.FC = () => {
         </button>
 
         <SafePaySteps
-          currentStep={isSuccess ? 4 : 4}
+          currentStep={4}
           orderId={orderId}
           serviceId={orderData.serviceId._id}
         />
@@ -331,7 +371,8 @@ const SafePayApproval: React.FC = () => {
                 {orderData.providerId.name} melder jobben som ferdig
               </h3>
               <p className="text-[12px] text-custom-green/80">
-                Lørdag 24. mai kl. 14:32 · {orderData.serviceId.title} ·{" "}
+                {new Date(orderData.updatedAt).toLocaleDateString("no-NO")} •{" "}
+                {orderData.serviceId.title} •{" "}
                 {orderData.serviceId.location?.city || "Oslo"}
               </p>
             </div>
@@ -360,55 +401,81 @@ const SafePayApproval: React.FC = () => {
                 {orderData.providerId.name} {orderData.providerId.lastName}
               </div>
               <div className="text-[12px] text-gray-500">
-                Fullførte oppdraget på ca. 1 time 45 min
-              </div>
-              <div className="flex gap-2 mt-1.5">
-                <span className="text-[10px] bg-[#f0faf0] text-[#166534] border border-[#c6f0d8] rounded-full px-2 py-0.5 font-medium uppercase tracking-wider">
-                  SafePay-bruker
-                </span>
-                <span className="text-[10px] bg-[#f0faf0] text-[#166534] border border-[#c6f0d8] rounded-full px-2 py-0.5 font-medium uppercase tracking-wider">
-                  BankID verifisert
-                </span>
+                {orderData.providerId.averageRating
+                  ? `${orderData.providerId.averageRating.toFixed(1)} av 5 stjerner`
+                  : "Ingen vurderinger enda"}
               </div>
             </div>
           </div>
         </div>
 
         {/* Checklist */}
-        <div className="bg-white border border-black/5 rounded-2xl p-6 mb-4 shadow-sm">
-          <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
-            <ListChecks size={18} className="text-custom-green" /> Sjekkliste —
-            ble jobben gjort riktig?
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-            {checklist.map((item) => (
-              <div
-                key={item.id}
-                onClick={
-                  !isOrderCompleted ? () => toggleCheck(item.id) : undefined
-                }
-                className={`flex items-center gap-3 p-3.5 rounded-xl ${isOrderCompleted ? "cursor-not-allowed" : "cursor-pointer"} border transition-all ${item.checked ? "bg-[#f0faf0] border-[#c6f0d8]" : "bg-[#f9f9f7] border-transparent hover:border-black/10"}`}
-              >
+        {checklist.length > 0 && (
+          <div className="bg-white border border-black/5 rounded-2xl p-6 mb-4 shadow-sm">
+            <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
+              <ListChecks size={18} className="text-custom-green" /> Sjekkliste
+              — ble jobben gjort riktig?
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              {checklist.map((item) => (
                 <div
-                  className={`w-5.5 h-5.5 rounded-md border-2 flex items-center justify-center transition-all ${item.checked ? "bg-custom-green border-custom-green" : "bg-white border-[#c8d8c8]"}`}
+                  key={item.id}
+                  onClick={
+                    !isOrderCompleted && !isSuccess
+                      ? () => toggleCheck(item.id)
+                      : undefined
+                  }
+                  className={`flex items-center gap-3 p-3.5 rounded-xl ${
+                    isOrderCompleted || isSuccess
+                      ? "cursor-not-allowed"
+                      : "cursor-pointer"
+                  } border transition-all ${
+                    item.checked
+                      ? "bg-[#f0faf0] border-[#c6f0d8]"
+                      : "bg-[#f9f9f7] border-transparent hover:border-black/10"
+                  }`}
                 >
-                  {item.checked && (
-                    <Check size={14} className="text-white" strokeWidth={3} />
-                  )}
+                  <div
+                    className={`w-5.5 h-5.5 rounded-md border-2 flex items-center justify-center transition-all ${
+                      item.checked
+                        ? "bg-custom-green border-custom-green"
+                        : "bg-white border-[#c8d8c8]"
+                    }`}
+                  >
+                    {item.checked && (
+                      <Check size={14} className="text-white" strokeWidth={3} />
+                    )}
+                  </div>
+                  <span
+                    className={`text-[13px] font-medium ${
+                      item.checked ? "text-[#166534]" : "text-gray-600"
+                    }`}
+                  >
+                    {item.text}
+                  </span>
                 </div>
-                <span
-                  className={`text-[13px] font-medium ${item.checked ? "text-[#166534]" : "text-gray-600"}`}
-                >
-                  {item.label}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            {/* Skip option */}
+            {!isSuccess &&
+              !isOrderCompleted &&
+              checklist.some((item) => !item.checked) && (
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={() => setShowSkipDialog(true)}
+                    className="text-sm text-gray-500 hover:text-gray-700 underline"
+                  >
+                    Hopp over sjekklisten og godkjenn uansett
+                  </button>
+                </div>
+              )}
           </div>
-        </div>
+        )}
 
         {/* Rating Section */}
         <div className="bg-white border border-black/5 rounded-2xl p-6 mb-4 shadow-sm">
-          {!isSuccess ? (
+          {!isOrderCompleted && !isSuccess ? (
             <>
               <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
                 <Star size={18} className="text-custom-green" /> Gi{" "}
@@ -456,7 +523,9 @@ const SafePayApproval: React.FC = () => {
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 disabled={isOrderCompleted}
-                className={`w-full bg-white border border-black/10 rounded-xl p-4 text-[13px] text-gray-800 outline-none focus:border-custom-green min-h-[100px] ${isOrderCompleted ? "cursor-not-allowed bg-gray-50" : ""}`}
+                className={`w-full bg-white border border-black/10 rounded-xl p-4 text-[13px] text-gray-800 outline-none focus:border-custom-green min-h-[100px] ${
+                  isOrderCompleted ? "cursor-not-allowed bg-gray-50" : ""
+                }`}
                 placeholder="Skriv en anmeldelse..."
               />
             </>
@@ -470,7 +539,11 @@ const SafePayApproval: React.FC = () => {
               {/* Average Rating Summary */}
               <div className="bg-[#f9f9f7] rounded-xl p-4 mb-6 flex items-center gap-4">
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-[#F59E0B]">4.7</div>
+                  <div className="text-4xl font-bold text-[#F59E0B]">
+                    {orderData.providerId.averageRating
+                      ? orderData.providerId.averageRating.toFixed(1)
+                      : "4.7"}
+                  </div>
                   <div className="text-sm text-gray-500">av 5</div>
                 </div>
                 <div className="flex-1">
@@ -480,7 +553,10 @@ const SafePayApproval: React.FC = () => {
                         key={star}
                         size={20}
                         className={
-                          star <= 5
+                          star <=
+                          (orderData.providerId.averageRating
+                            ? Math.round(orderData.providerId.averageRating)
+                            : 5)
                             ? "text-[#F59E0B] fill-[#F59E0B]"
                             : "text-[#d1d5db]"
                         }
@@ -488,37 +564,13 @@ const SafePayApproval: React.FC = () => {
                     ))}
                   </div>
                   <div className="text-sm text-gray-600">
-                    4.7 / 5 · 12 vurderinger
+                    {orderData.providerId.averageRating
+                      ? `${orderData.providerId.averageRating.toFixed(1)} av 5 • ${
+                          orderData.providerId.completedJobs || 0
+                        } fullførte jobber`
+                      : "4.7 av 5 · 12 vurderinger"}
                   </div>
                 </div>
-              </div>
-
-              {/* Individual Reviews */}
-              <div className="max-h-[300px] overflow-y-auto space-y-4">
-                {mockReviews.map((review) => (
-                  <div key={review.id} className="bg-[#f9f9f7] rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="font-medium text-gray-900">
-                        {review.reviewerName}
-                      </div>
-                      <div className="text-xs text-gray-500">{review.date}</div>
-                    </div>
-                    <div className="flex items-center gap-1 mb-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                          key={star}
-                          size={14}
-                          className={
-                            star <= review.rating
-                              ? "text-[#F59E0B] fill-[#F59E0B]"
-                              : "text-[#d1d5db]"
-                          }
-                        />
-                      ))}
-                    </div>
-                    <p className="text-sm text-gray-700">{review.comment}</p>
-                  </div>
-                ))}
               </div>
             </>
           )}
@@ -547,9 +599,7 @@ const SafePayApproval: React.FC = () => {
                   Dato
                 </span>
                 <span className="text-sm font-medium text-gray-700">
-                  {new Date(
-                    orderData.createdAt || Date.now(),
-                  ).toLocaleDateString("no-NO")}
+                  {new Date(orderData.createdAt).toLocaleDateString("no-NO")}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -612,11 +662,14 @@ const SafePayApproval: React.FC = () => {
           <Button
             onClick={handleApprove}
             loading={approveMutation.isPending}
-            disabled={isOrderCompleted}
+            disabled={
+              isOrderCompleted ||
+              (!checklist.every((item) => item.checked) && !showSkipDialog)
+            }
             className={
               isOrderCompleted
                 ? "w-full bg-gray-300 text-gray-500 rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 shadow-lg mt-6 cursor-not-allowed"
-                : "w-full bg-custom-green text-white rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#14532d] transition-all shadow-lg mt-6"
+                : "w-full bg-custom-green text-white rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#14532d] transition-all shadow-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
             }
           >
             {isOrderCompleted ? (
@@ -628,6 +681,35 @@ const SafePayApproval: React.FC = () => {
               </>
             )}
           </Button>
+
+          {/* Skip Confirmation Dialog */}
+          {showSkipDialog && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">
+                  Er du sikker?
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Du har ikke merket av alle sjekklisteelementer. Vil du
+                  fortsatt godkjenne jobben?
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowSkipDialog(false)}
+                    className="flex-1 py-3 border border-gray-300 rounded-full text-gray-700 font-bold hover:bg-gray-50"
+                  >
+                    Avbryt
+                  </button>
+                  <button
+                    onClick={handleSkipConfirm}
+                    className="flex-1 py-3 bg-red-500 text-white rounded-full font-bold hover:bg-red-600"
+                  >
+                    Ja, hopp over
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="text-center mt-5">
             <a

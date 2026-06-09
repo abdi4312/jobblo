@@ -18,10 +18,11 @@ exports.getCheckoutDetails = async (req, res) => {
     const order = await Order.findById(orderId)
       .populate({
         path: "serviceId",
-        select: "title location price duration equipment userId",
+        select: "title location price duration equipment userId checklist",
       })
       .populate("customerId", "name lastName avatarUrl")
-      .populate("providerId", "name lastName avatarUrl averageRating");
+      .populate("providerId", "name lastName avatarUrl averageRating")
+      .populate("checklist.checkedBy", "name lastName avatarUrl");
 
     if (!order) {
       return res.status(404).json({ error: "Kontrakten ble ikke funnet" });
@@ -335,6 +336,12 @@ exports.approveAndPayout = async (req, res) => {
         $set: {
           status: "completed",
           paymentStatus: "paid",
+          "review.overall": ratings.overall,
+          "review.punctuality": ratings.punctuality,
+          "review.quality": ratings.quality,
+          "review.communication": ratings.communication,
+          "review.tidiness": ratings.tidiness,
+          "review.comment": comment || "",
         },
         $push: {
           history: {

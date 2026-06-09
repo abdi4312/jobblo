@@ -6,7 +6,7 @@ interface StepIndicatorProps {
 }
 
 export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {
-  const steps = ["Grunnleggende", "Tid & Sted", "Kontakt"];
+  const steps = ["Grunnleggende", "Tid & Sted", "Sjekkliste", "Kontakt"];
   return (
     <div className="flex items-start justify-between mb-12 px-4 md:px-5 max-w-lg mx-auto relative">
       {/* Progress Line Container */}

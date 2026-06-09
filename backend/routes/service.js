@@ -346,4 +346,21 @@ router.post("/:id/time-entries", authenticate, serviceController.addTimeEntry);
  */
 router.get("/:id/time-entries", authenticate, serviceController.getTimeEntries);
 
+/**
+ * -------------------------------------------------------
+ *  CHECKLIST
+ * -------------------------------------------------------
+ */
+
+/**
+ * @swagger
+ * /api/services/{id}/checklist/{itemId}:
+ *   put:
+ *     summary: Update checklist item status
+ *     tags: [Tjenester]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.put("/:id/checklist/:itemId", authenticate, serviceController.updateChecklistItem);
+
 module.exports = router;
