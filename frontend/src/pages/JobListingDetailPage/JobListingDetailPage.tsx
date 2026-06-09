@@ -27,6 +27,7 @@ import {
   Zap,
   ChevronLeft,
   ChevronRight,
+  CheckCircle2,
 } from "lucide-react";
 import { dateFormatter } from "../../utils/dateFormatter";
 import { ShareModal } from "../../components/shared/ShareModal/ShareModal";
@@ -462,6 +463,43 @@ const JobListingDetailPage = () => {
                 {job.description || "Ingen beskrivelse tilgjengelig"}
               </p>
             </div>
+
+            {/* Checklist */}
+            {job.checklist && job.checklist.length > 0 && (
+              <div className="bg-white rounded-xl p-5 shadow-sm">
+                <h2 className="font-semibold text-gray-900 mb-3">Sjekkliste</h2>
+                <div className="space-y-2">
+                  {job.checklist.map((item: any, idx: number) => (
+                    <div key={idx} className="flex items-start gap-2">
+                      <div
+                        className={`mt-1 w-5 h-5 rounded border flex items-center justify-center shrink-0 ${
+                          item.checked
+                            ? "bg-custom-green border-custom-green"
+                            : "bg-gray-100 border-gray-300"
+                        }`}
+                      >
+                        {item.checked && (
+                          <CheckCircle2 size={14} className="text-white" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p
+                          className={`text-sm ${item.checked ? "text-gray-500 line-through" : "text-gray-700"}`}
+                        >
+                          {item.text}
+                        </p>
+                        {item.checkedBy && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            Merket av: {item.checkedBy.name} •{" "}
+                            {formatDate(item.checkedAt)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Details */}
             <div className="bg-white rounded-xl p-5 shadow-sm">

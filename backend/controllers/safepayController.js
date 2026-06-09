@@ -101,7 +101,13 @@ exports.createContract = async (req, res) => {
       return res.status(400).json({ error: "Kontrakt finnes allerede" });
     }
 
-    // 2. Create the Order (Contract)
+    // 2. Create the Order (Contract) with checklist initialized from service
+    const checklist = (service.checklist || []).map((item) => ({
+      id: item.id,
+      text: item.text,
+      checked: false,
+    }));
+
     const order = new Order({
       serviceId,
       customerId: userId, // Service owner is the customer (person who pays)
@@ -109,6 +115,7 @@ exports.createContract = async (req, res) => {
       status: "awaiting_payment",
       initialPrice: service.price,
       agreedPrice: service.price,
+      checklist,
       history: [
         {
           action: "contract_created",
@@ -349,6 +356,12 @@ exports.completeJobAndPayout = async (req, res) => {
         $set: {
           status: "completed",
           paymentStatus: "paid",
+          "review.overall": ratings.overall,
+          "review.punctuality": ratings.punctuality,
+          "review.quality": ratings.quality,
+          "review.communication": ratings.communication,
+          "review.tidiness": ratings.tidiness,
+          "review.comment": comment || "",
         },
         $push: {
           history: {
@@ -622,5 +635,113 @@ exports.getSafePayHistory = async (req, res) => {
     res
       .status(500)
       .json({ error: "Serverfeil ved henting av SafePay-historikk" });
+  }
+};
+
+/**
+ * PUT /api/safepay/contract/:orderId/checklist/:itemId
+ * Update checklist item (check/uncheck)
+ */
+exports.updateChecklistItem = async (req, res) => {
+  try {
+    const { orderId, itemId } = req.params;
+    const { checked } = req.body;
+    const userId = req.userId;
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ error: "Ugyldig orderId" });
+    }
+
+    let order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ error: "Kontrakten ble ikke funnet" });
+    }
+
+    if (
+      String(order.customerId) !== String(userId) &&
+      String(order.providerId) !== String(userId)
+    ) {
+      return res.status(403).json({ error: "Ikke autorisert" });
+    }
+
+    const checklistItemIndex = order.checklist.findIndex(
+      (item) => item.id === itemId,
+    );
+    if (checklistItemIndex === -1) {
+      return res
+        .status(404)
+        .json({ error: "Sjekklisteelement ble ikke funnet" });
+    }
+
+    const updateData = {
+      [`checklist.${checklistItemIndex}.checked`]: checked,
+    };
+
+    if (checked) {
+      updateData[`checklist.${checklistItemIndex}.checkedBy`] = userId;
+      updateData[`checklist.${checklistItemIndex}.checkedAt`] = new Date();
+    } else {
+      updateData[`checklist.${checklistItemIndex}.checkedBy`] = null;
+      updateData[`checklist.${checklistItemIndex}.checkedAt`] = null;
+    }
+
+    order = await Order.findByIdAndUpdate(
+      orderId,
+      { $set: updateData },
+      { new: true },
+    ).populate("checklist.checkedBy", "name lastName avatarUrl");
+
+    res.json({ message: "Sjekklisteelement oppdatert", order });
+  } catch (err) {
+    console.error("Error updating checklist item:", err);
+    res
+      .status(500)
+      .json({ error: "Serverfeil ved oppdatering av sjekklisteelement" });
+  }
+};
+
+/**
+ * GET /api/safepay-checkout/details/:orderId (to maintain compatibility)
+ * We'll add this function here for now
+ */
+exports.getCheckoutDetails = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ error: "Ugyldig orderId" });
+    }
+
+    const order = await Order.findById(orderId)
+      .populate("serviceId")
+      .populate("customerId", "name lastName avatarUrl")
+      .populate("providerId", "name lastName avatarUrl")
+      .populate("checklist.checkedBy", "name lastName avatarUrl");
+
+    if (!order) {
+      return res.status(404).json({ error: "Kontrakten ble ikke funnet" });
+    }
+
+    if (
+      String(order.customerId._id) !== String(req.userId) &&
+      String(order.providerId._id) !== String(req.userId)
+    ) {
+      return res.status(403).json({ error: "Ikke autorisert" });
+    }
+
+    // Calculate fee and net amount
+    const fee = Math.round(order.agreedPrice * 0.03);
+    const calculation = {
+      basePrice: order.agreedPrice,
+      fee,
+      providerNet: order.agreedPrice - fee,
+      totalCustomer: order.agreedPrice + fee,
+    };
+
+    res.json({ order, calculation });
+  } catch (err) {
+    console.error("Error fetching checkout details:", err);
+    res
+      .status(500)
+      .json({ error: "Serverfeil ved henting av utbetalingsdetaljer" });
   }
 };
