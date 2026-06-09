@@ -60,7 +60,7 @@ const serviceSchema = new mongoose.Schema(
     promoted: { type: Boolean, default: false },
     status: {
       type: String,
-      enum: ["open", "closed", "in_progress"],
+      enum: ["open", "closed", "in_progress", "completed"],
       default: "open",
     },
 

@@ -392,9 +392,7 @@ export function ProfileHeader({
               //   <MessageCircle size={14} />
               //   <span>Send melding</span>
               // </button>
-              <div>
-
-              </div>
+              <div></div>
             )}
           </div>
         </div>
@@ -403,16 +401,19 @@ export function ProfileHeader({
       {/* Stats Row */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-5">
         {[
-          { label: "Fullførte oppdrag", val: user?.reviewCount || 0 },
+          { label: "Fullførte oppdrag", val: user?.completedJobs || 0 },
           {
             label: "Snittrating",
-            val: user?.averageRating?.toFixed(1) || "5.0",
+            val: user?.averageRating?.toFixed(1) || "0.0",
           },
           {
             label: "Utlagte oppdrag",
             val: (user as any)?.postedJobsCount || 0,
           },
-          { label: "Svarprosent", val: "100%" },
+          {
+            label: "Svarprosent",
+            val: `${(user as any)?.responseRate || "0"}%`,
+          },
           {
             label: "Totalt tjent",
             val: `${(user as any)?.totalEarned || 0} kr`,

@@ -32,6 +32,15 @@ exports.createReview = async (req, res) => {
         .json({ error: "Rating must be a number between 1 and 5" });
     }
 
+    console.log("createReview: Creating review with data:", {
+      orderId,
+      serviceId,
+      reviewerId,
+      revieweeId,
+      revieweeRole,
+      rating,
+      comment,
+    });
     const review = await Review.create({
       orderId,
       serviceId,
@@ -41,19 +50,30 @@ exports.createReview = async (req, res) => {
       rating,
       comment,
     });
+    console.log("createReview: Review created:", review);
 
     // Update reviewee stats
     const allReviews = await Review.find({ revieweeId, revieweeRole });
+    console.log("createReview: All reviews for reviewee:", allReviews);
     const reviewCount = allReviews.length;
     const averageRating =
       allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount;
+    console.log("createReview: Calculated stats:", {
+      reviewCount,
+      averageRating,
+    });
 
     // We might want separate stats for seeker vs poster in the future,
     // but for now we update the main user stats
-    await User.findByIdAndUpdate(revieweeId, {
-      reviewCount,
-      averageRating: Math.round(averageRating * 10) / 10,
-    });
+    const updatedUser = await User.findByIdAndUpdate(
+      revieweeId,
+      {
+        reviewCount,
+        averageRating: Math.round(averageRating * 10) / 10,
+      },
+      { new: true },
+    );
+    console.log("createReview: Updated user:", updatedUser);
 
     const populatedReview = await Review.findById(review._id)
       .populate("reviewerId", "name username avatarUrl")
