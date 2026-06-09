@@ -8,6 +8,7 @@ import { StepIndicator } from "./StepIndicator";
 import { ContactInformation } from "./ContactInformation";
 import { FormActions } from "./FormActions";
 import { JobPreviewModal } from "./JobPreviewModal";
+import { ChecklistStep } from "./ChecklistStep";
 import { useCreateJobForm } from "../../hooks/useCreateJobForm";
 
 interface InitialData {
@@ -104,6 +105,8 @@ export default function CreateJobForm({
     previewJobData,
     currentUser,
     errors,
+    checklistItems,
+    setChecklistItems,
   } = useCreateJobForm(userId, initialData, isEditMode, onSubmit);
 
   return (
@@ -284,6 +287,16 @@ export default function CreateJobForm({
           )}
 
           {currentStep === 3 && (
+            <ChecklistStep
+              checklistItems={checklistItems}
+              setChecklistItems={setChecklistItems}
+              currentCategory={
+                Array.isArray(categories) ? categories[0] : categories
+              }
+            />
+          )}
+
+          {currentStep === 4 && (
             <ContactInformation
               phone={phone}
               setPhone={setPhone}

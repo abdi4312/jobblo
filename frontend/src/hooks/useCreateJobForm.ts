@@ -129,11 +129,48 @@ export const useCreateJobForm = (
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [smartFillPrompt, setSmartFillPrompt] = useState("");
   const [showSmartFillInput, setShowSmartFillInput] = useState(false);
+  const [checklistItems, setChecklistItems] = useState<
+    { id: string; text: string }[]
+  >([]);
 
   // Flag to prevent save effect from running before load completes
   const [isLoaded, setIsLoaded] = useState(false);
 
   const currentUser = useUserStore((state) => state.user);
+
+  // Category-based checklist suggestions
+  const getCategorySuggestions = (category: string): string[] => {
+    const suggestions: Record<string, string[]> = {
+      Rengjøring: ["Støvsuge", "Vaske gulv", "Rengjøre bad", "Tørke støv"],
+      Hagearbeid: ["Klippe plen", "Luke ugress", "Rydde løv", "Trimme hekk"],
+      Flyttehjelp: [
+        "Pakke bokser",
+        "Bære møbler",
+        "Montere møbler",
+        "Rydde gammel bolig",
+      ],
+      Snømåking: ["Måke innkjørsel", "Strø grus/salt", "Rydde trapper"],
+    };
+    return suggestions[category] || [];
+  };
+
+  // Auto-update checklist when category changes (only if checklist is empty)
+  useEffect(() => {
+    const category = Array.isArray(values.categories)
+      ? values.categories[0]
+      : values.categories;
+    if (category && checklistItems.length === 0) {
+      const suggestions = getCategorySuggestions(category);
+      if (suggestions.length > 0) {
+        setChecklistItems(
+          suggestions.map((text) => ({
+            id: Date.now() + Math.random().toString(36).substr(2, 9),
+            text,
+          })),
+        );
+      }
+    }
+  }, [values.categories]);
 
   // Wrappers to maintain compatibility with existing components
   const setTitle = useCallback(
@@ -273,6 +310,7 @@ export const useCreateJobForm = (
           setImagesToDelete(data.imagesToDelete || []);
           setShowSmartFillInput(data.showSmartFillInput || false);
           setSmartFillPrompt(data.smartFillPrompt || "");
+          setChecklistItems(data.checklistItems || []);
 
           if (images && images.length > 0) {
             setSelectedImages(images);
@@ -315,6 +353,7 @@ export const useCreateJobForm = (
           imagesToDelete,
           showSmartFillInput,
           smartFillPrompt,
+          checklistItems,
         };
         await saveFormData(dataToSave, selectedImages);
       } catch (err) {
@@ -344,6 +383,7 @@ export const useCreateJobForm = (
     showSmartFillInput,
     smartFillPrompt,
     maxApplicants,
+    checklistItems,
   ]);
 
   const validateStep = (step: number) => {
@@ -397,9 +437,9 @@ export const useCreateJobForm = (
           }
         }
       });
-    } else if (step === 3) {
-      // Validate Step 3 fields
-      const fieldsToValidate: (keyof JobFormValues)[] = ["email"];
+    } else if (step === 4) {
+      // Validate Step 4 fields (Contact Information)
+      const fieldsToValidate: (keyof JobFormValues)[] = ["email", "phone"];
       fieldsToValidate.forEach((field) => {
         const rules = jobValidationSchema[field];
         if (rules) {
@@ -420,7 +460,7 @@ export const useCreateJobForm = (
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep((prev) => Math.min(prev + 1, 3));
+      setCurrentStep((prev) => Math.min(prev + 1, 4));
     } else {
       toast.error("Vennligst fyll ut alle påkrevde felt riktig.");
     }
@@ -431,7 +471,7 @@ export const useCreateJobForm = (
   };
 
   const handleFinalSubmit = async () => {
-    if (!validateStep(3)) {
+    if (!validateStep(4)) {
       toast.error("Vennligst fyll ut alle påkrevde felt riktig.");
       return;
     }
@@ -486,6 +526,10 @@ export const useCreateJobForm = (
       imagesToDelete.forEach((url) => {
         formData.append("imagesToDelete", url);
       });
+
+      if (checklistItems.length > 0) {
+        formData.append("checklist", JSON.stringify(checklistItems));
+      }
 
       if (!isEditMode && userId) {
         formData.append("userId", userId);
@@ -633,5 +677,7 @@ export const useCreateJobForm = (
     previewJobData,
     currentUser,
     errors, // Exporting errors for validation display
+    checklistItems,
+    setChecklistItems,
   };
 };

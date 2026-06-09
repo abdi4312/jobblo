@@ -87,6 +87,17 @@ const serviceSchema = new mongoose.Schema(
     views: { type: Number, default: 0 },
     maxApplicants: { type: Number, default: 0 }, // 0 means unlimited
     timeEntries: [timeEntrySchema],
+
+    // Dynamic checklist for the job
+    checklist: [
+      {
+        id: { type: String, required: true },
+        text: { type: String, required: true },
+        checked: { type: Boolean, default: false },
+        checkedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        checkedAt: { type: Date },
+      },
+    ],
   },
   { timestamps: true },
 );

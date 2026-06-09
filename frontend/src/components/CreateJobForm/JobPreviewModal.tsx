@@ -168,9 +168,6 @@ export const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
             </div>
 
             {/* Preview Contact Button */}
-            <div className="w-full py-4 bg-custom-green text-white rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 opacity-50 cursor-not-allowed">
-              Send melding (Preview)
-            </div>
 
             {/* Description */}
             <div className="bg-white rounded-xl p-5 shadow-sm">

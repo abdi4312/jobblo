@@ -40,7 +40,7 @@ export const FormActions: React.FC<FormActionsProps> = ({
           onClick={() => setShowPreview(true)}
           className="px-8 py-3"
         />
-        {currentStep < 3 ? (
+        {currentStep < 4 ? (
           <Button
             type="button"
             label="Neste"
