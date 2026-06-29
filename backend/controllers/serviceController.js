@@ -108,6 +108,34 @@ exports.getAllServices = async (req, res) => {
         if (geoTotal > 0) {
           // We have nearby jobs, use them
           total = geoTotal;
+
+          // Add sort
+          let sortOption = { distance: 1 }; // Default sort by distance for geolocation
+          if (sort) {
+            switch (sort) {
+              case "price_low":
+                sortOption = { price: 1 };
+                break;
+              case "price_high":
+                sortOption = { price: -1 };
+                break;
+              case "newest":
+                sortOption = { createdAt: -1 };
+                break;
+              case "relevant":
+                sortOption = { distance: 1 }; // Default to distance for relevant
+                break;
+              default:
+                // Handle direct field sorting like "price" or "-price"
+                if (sort.startsWith("-")) {
+                  sortOption = { [sort.substring(1)]: -1 };
+                } else {
+                  sortOption = { [sort]: 1 };
+                }
+            }
+          }
+          geoDataPipeline.push({ $sort: sortOption });
+
           geoDataPipeline.push({ $skip: (page - 1) * limit });
           geoDataPipeline.push({ $limit: parseInt(limit) });
 
@@ -143,10 +171,26 @@ exports.getAllServices = async (req, res) => {
           // Add sort
           let sortOption = { createdAt: -1 };
           if (sort) {
-            if (sort.startsWith("-")) {
-              sortOption = { [sort.substring(1)]: -1 };
-            } else {
-              sortOption = { [sort]: 1 };
+            switch (sort) {
+              case "price_low":
+                sortOption = { price: 1 };
+                break;
+              case "price_high":
+                sortOption = { price: -1 };
+                break;
+              case "newest":
+                sortOption = { createdAt: -1 };
+                break;
+              case "relevant":
+                sortOption = { createdAt: -1 }; // Default to newest for relevant
+                break;
+              default:
+                // Handle direct field sorting like "price" or "-price"
+                if (sort.startsWith("-")) {
+                  sortOption = { [sort.substring(1)]: -1 };
+                } else {
+                  sortOption = { [sort]: 1 };
+                }
             }
           }
           fallbackDataPipeline.push({ $sort: sortOption });
@@ -200,10 +244,26 @@ exports.getAllServices = async (req, res) => {
         // Add sort
         let sortOption = { createdAt: -1 };
         if (sort) {
-          if (sort.startsWith("-")) {
-            sortOption = { [sort.substring(1)]: -1 };
-          } else {
-            sortOption = { [sort]: 1 };
+          switch (sort) {
+            case "price_low":
+              sortOption = { price: 1 };
+              break;
+            case "price_high":
+              sortOption = { price: -1 };
+              break;
+            case "newest":
+              sortOption = { createdAt: -1 };
+              break;
+            case "relevant":
+              sortOption = { createdAt: -1 }; // Default to newest for relevant
+              break;
+            default:
+              // Handle direct field sorting like "price" or "-price"
+              if (sort.startsWith("-")) {
+                sortOption = { [sort.substring(1)]: -1 };
+              } else {
+                sortOption = { [sort]: 1 };
+              }
           }
         }
         fallbackDataPipeline.push({ $sort: sortOption });
@@ -253,10 +313,26 @@ exports.getAllServices = async (req, res) => {
       // Add sort
       let sortOption = { createdAt: -1 };
       if (sort) {
-        if (sort.startsWith("-")) {
-          sortOption = { [sort.substring(1)]: -1 };
-        } else {
-          sortOption = { [sort]: 1 };
+        switch (sort) {
+          case "price_low":
+            sortOption = { price: 1 };
+            break;
+          case "price_high":
+            sortOption = { price: -1 };
+            break;
+          case "newest":
+            sortOption = { createdAt: -1 };
+            break;
+          case "relevant":
+            sortOption = { createdAt: -1 }; // Default to newest for relevant
+            break;
+          default:
+            // Handle direct field sorting like "price" or "-price"
+            if (sort.startsWith("-")) {
+              sortOption = { [sort.substring(1)]: -1 };
+            } else {
+              sortOption = { [sort]: 1 };
+            }
         }
       }
       dataPipeline.push({ $sort: sortOption });
