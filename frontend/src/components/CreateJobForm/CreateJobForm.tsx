@@ -45,6 +45,7 @@ export default function CreateJobForm({
 }: CreateJobFormProps) {
   const {
     currentStep,
+    setCurrentStep,
     title,
     setTitle,
     description,
@@ -111,7 +112,10 @@ export default function CreateJobForm({
 
   return (
     <div className="max-w-300 mx-auto py-8">
-      <StepIndicator currentStep={currentStep} />
+      <StepIndicator
+        currentStep={currentStep}
+        setCurrentStep={setCurrentStep}
+      />
 
       <form onSubmit={(e) => e.preventDefault()} className="overflow-hidden">
         <div className="p-1">
