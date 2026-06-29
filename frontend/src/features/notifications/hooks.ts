@@ -9,6 +9,7 @@ import {
   markAsRead,
   markAllAsRead,
   deleteNotification,
+  deleteAllNotifications,
   getUnreadCount,
 } from "./api";
 import { useEffect } from "react";
@@ -16,10 +17,10 @@ import { initSocket } from "../../socket/socket";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
-export const useNotifications = (userId: string | undefined) => {
+export const useNotifications = (userId: string | undefined, type?: string) => {
   return useInfiniteQuery({
-    queryKey: ["notifications", userId],
-    queryFn: ({ pageParam = 1 }) => getNotifications(userId!, pageParam),
+    queryKey: ["notifications", userId, type],
+    queryFn: ({ pageParam = 1 }) => getNotifications(userId!, pageParam, type),
     getNextPageParam: (lastPage) => {
       const nextPage = lastPage.currentPage + 1;
       return nextPage <= lastPage.totalPages ? nextPage : undefined;
@@ -113,6 +114,17 @@ export const useDeleteNotification = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: deleteNotification,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+    },
+  });
+};
+
+export const useDeleteAllNotifications = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteAllNotifications,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
       queryClient.invalidateQueries({ queryKey: ["unreadCount"] });

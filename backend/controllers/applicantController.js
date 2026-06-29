@@ -132,20 +132,50 @@ exports.getMyServicesWithApplicants = async (req, res) => {
       services.map(async (service) => {
         // Count job requests for this service
         const requests = await JobRequest.find({ serviceId: service._id })
-          .populate("customerId", "avatarUrl name")
+          .populate("customerId", "avatarUrl name lastName")
           .sort({ createdAt: -1 });
+
+        // Find active order to get selected worker
+        const activeOrder = await Order.findOne({
+          serviceId: service._id,
+          status: {
+            $in: ["awaiting_payment", "paid", "in_progress", "completed"],
+          },
+        }).populate("customerId", "name lastName avatarUrl");
+
+        // Last activity: use latest between service updatedAt, last request createdAt, last order updatedAt
+        let lastActivity = service.updatedAt;
+        if (requests.length > 0 && requests[0].createdAt > lastActivity) {
+          lastActivity = requests[0].createdAt;
+        }
+        if (activeOrder && activeOrder.updatedAt > lastActivity) {
+          lastActivity = activeOrder.updatedAt;
+        }
 
         return {
           _id: service._id,
           title: service.title,
           price: service.price,
           status: service.status,
+          location: service.location,
           applicantCount: requests.length,
           applicantAvatars: requests
             .slice(0, 3)
             .map((r) => r.customerId?.avatarUrl)
             .filter((url) => !!url),
           createdAt: service.createdAt,
+          updatedAt: service.updatedAt,
+          lastActivity,
+          categories: service.categories,
+          fromDate: service.fromDate,
+          toDate: service.toDate,
+          selectedWorker: activeOrder?.customerId
+            ? {
+                _id: activeOrder.customerId._id,
+                name: `${activeOrder.customerId.name} ${activeOrder.customerId.lastName || ""}`.trim(),
+                avatarUrl: activeOrder.customerId.avatarUrl,
+              }
+            : null,
         };
       }),
     );

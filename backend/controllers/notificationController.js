@@ -5,7 +5,7 @@ const mongoose = require("mongoose");
 // GET /api/notifications - Get all notifications for a user
 exports.getAllNotifications = async (req, res) => {
   try {
-    const { userId, page = 1, limit = 5 } = req.query;
+    const { userId, page = 1, limit = 5, type } = req.query;
 
     if (!userId) {
       return res
@@ -24,6 +24,11 @@ exports.getAllNotifications = async (req, res) => {
     const query = {
       $or: [{ userId: userId }, { userId: null, isSystem: true }],
     };
+
+    // Add type filter if provided
+    if (type && type !== "all") {
+      query.type = type;
+    }
 
     // 1. Get total count for frontend pagination controls
     const total = await Notification.countDocuments(query);
@@ -120,6 +125,23 @@ exports.deleteNotification = async (req, res) => {
     }
 
     res.json({ success: true, message: "Notification deleted" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// DELETE /api/notifications/delete-all - Delete all notifications for a user
+exports.deleteAllNotifications = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    await Notification.deleteMany({ userId });
+
+    res.json({ success: true, message: "All notifications deleted" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

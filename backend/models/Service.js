@@ -35,7 +35,7 @@ const serviceSchema = new mongoose.Schema(
       address: { type: String },
       city: { type: String },
     },
-    
+
     // Norway location codes
     countyCode: { type: String, index: true },
     municipalityCode: { type: String, index: true },
@@ -60,7 +60,17 @@ const serviceSchema = new mongoose.Schema(
     promoted: { type: Boolean, default: false },
     status: {
       type: String,
-      enum: ["open", "closed", "in_progress", "completed"],
+      enum: [
+        "open",
+        "closed",
+        "in_progress",
+        "completed",
+        "pending",
+        "waiting_for_approval",
+        "cancelled",
+        "expired",
+        "draft",
+      ],
       default: "open",
     },
 

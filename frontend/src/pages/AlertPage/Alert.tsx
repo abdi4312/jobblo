@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { Check, Trash2, Clock, ClipboardCheck } from "lucide-react";
+import { Check, Trash2, Clock, ClipboardCheck, MessageSquare, DollarSign, Star, Briefcase } from "lucide-react";
 
 import { useUserStore } from "../../stores/userStore";
 import {
@@ -9,16 +9,28 @@ import {
   useMarkAsRead,
   useMarkAllAsRead,
   useDeleteNotification,
+  useDeleteAllNotifications,
   useUnreadCount,
 } from "../../features/notifications/hooks";
 import type { AlertType } from "../../features/notifications/types";
 import { NotificationSkeleton } from "../../components/Loading/NotificationSkeleton";
 
+// Define category config
+const categories = [
+  { key: "all", label: "Alle" },
+  { key: "application", label: "Søknader", icon: <Briefcase size={14} /> },
+  { key: "payment", label: "Betalinger", icon: <DollarSign size={14} /> },
+  { key: "message", label: "Meldinger", icon: <MessageSquare size={14} /> },
+  { key: "review", label: "Anmeldelser", icon: <Star size={14} /> },
+  { key: "job_update", label: "Jobboppdateringer", icon: <ClipboardCheck size={14} /> },
+];
+
 /**
  * Alert page component - Displays user notifications with filtering and actions
  */
 export default function Alert() {
-  const [activeTab, setActiveTab] = useState("Alle");
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const user = useUserStore((state) => state.user);
   const userId = user?._id;
   const navigate = useNavigate();
@@ -30,7 +42,7 @@ export default function Alert() {
     hasNextPage,
     isFetchingNextPage,
     isLoading: isNotificationsLoading,
-  } = useNotifications(userId);
+  } = useNotifications(userId, activeCategory === "all" ? undefined : activeCategory);
 
   const { data: unreadCountData } = useUnreadCount(userId);
 
@@ -38,6 +50,7 @@ export default function Alert() {
   const markAsReadMutation = useMarkAsRead();
   const markAllAsReadMutation = useMarkAllAsRead();
   const deleteNotificationMutation = useDeleteNotification();
+  const deleteAllNotificationsMutation = useDeleteAllNotifications();
 
   /**
    * Flattening TanStack Query pages into a single array of notifications
@@ -55,13 +68,15 @@ export default function Alert() {
   }, [data]);
 
   /**
-   * Filtered notifications based on active tab
+   * Filtered notifications based on active category and unread only
    */
   const filteredNotifications = useMemo(() => {
-    return activeTab === "Alle"
-      ? allNotifications
-      : allNotifications.filter((a) => !a.read);
-  }, [allNotifications, activeTab]);
+    let filtered = allNotifications;
+    if (showUnreadOnly) {
+      filtered = filtered.filter((a) => !a.read);
+    }
+    return filtered;
+  }, [allNotifications, showUnreadOnly]);
 
   // --- Handlers ---
 
@@ -92,11 +107,31 @@ export default function Alert() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (!userId) return;
+    if (!confirm("Er du sikker på at du vil slette alle varsler?")) return;
+    try {
+      await deleteAllNotificationsMutation.mutateAsync(userId);
+      toast.success("Alle varsler slettet");
+    } catch (error) {
+      toast.error("Kunne ikke slette alle varsler");
+    }
+  };
+
   // Helper to get notification icon based on type
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case "ordre":
       case "order":
+      case "payment":
+        return <DollarSign size={18} className="text-[#16a34a]" />;
+      case "application":
+        return <Briefcase size={18} className="text-[#16a34a]" />;
+      case "message":
+        return <MessageSquare size={18} className="text-[#16a34a]" />;
+      case "review":
+        return <Star size={18} className="text-[#16a34a]" />;
+      case "job_update":
         return <ClipboardCheck size={18} className="text-[#16a34a]" />;
       case "favoritt":
       case "favorites":
@@ -115,6 +150,16 @@ export default function Alert() {
       case "ordre":
       case "order":
         return "Bestilling oppdatert";
+      case "payment":
+        return "Betaling mottatt";
+      case "application":
+        return "Ny søknad";
+      case "message":
+        return "Ny melding";
+      case "review":
+        return "Ny anmeldelse";
+      case "job_update":
+        return "Jobboppdatering";
       case "favoritt":
       case "favorites":
       case "favoritter":
@@ -162,29 +207,48 @@ export default function Alert() {
           <h1 className="text-[22px] font-medium text-[#1a1a1a]">Varsler</h1>
         </div>
 
-        {/* Tabs */}
-        <div className="flex bg-white border border-black/[0.08] rounded-full p-1 w-fit mb-6">
+        {/* Action buttons */}
+        <div className="flex flex-wrap items-center gap-3 mb-4">
           <button
-            onClick={() => setActiveTab("Alle")}
-            className={`px-5 py-1.5 text-[13px] rounded-full cursor-pointer border-none transition-all ${
-              activeTab === "Alle"
-                ? "bg-[#16a34a] text-white font-medium"
-                : "text-[#888] hover:text-[#666]"
-            }`}
+            onClick={handleMarkAllAsRead}
+            className="px-4 py-2 bg-[#16a34a] text-white rounded-full text-sm font-medium hover:bg-[#14532d] transition-colors"
           >
-            Alle
+            Marker alle som lest
           </button>
           <button
-            onClick={() => setActiveTab("Uleste")}
-            className={`px-5 py-1.5 text-[13px] rounded-full cursor-pointer border-none transition-all ${
-              activeTab === "Uleste"
-                ? "bg-[#16a34a] text-white font-medium"
-                : "text-[#888] hover:text-[#666]"
+            onClick={handleDeleteAll}
+            className="px-4 py-2 bg-white text-[#dc2626] border border-[#dc2626] rounded-full text-sm font-medium hover:bg-[#fee2e2] transition-colors"
+          >
+            Slett alle
+          </button>
+          <button
+            onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+            className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+              showUnreadOnly
+                ? "bg-[#16a34a] text-white border-[#16a34a]"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
             }`}
           >
-            Uleste{" "}
-            {unreadCountData?.count > 0 ? `(${unreadCountData.count})` : ""}
+            Vis kun uleste
           </button>
+        </div>
+
+        {/* Category Tabs */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {categories.map((category) => (
+            <button
+              key={category.key}
+              onClick={() => setActiveCategory(category.key)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                activeCategory === category.key
+                  ? "bg-[#16a34a] text-white"
+                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {category.icon}
+              {category.label}
+            </button>
+          ))}
         </div>
 
         {/* Notifications List */}
@@ -195,9 +259,9 @@ export default function Alert() {
             {filteredNotifications.length === 0 ? (
               <div className="p-10 text-center">
                 <p className="text-[#888] text-[13px]">
-                  {activeTab === "Alle"
-                    ? "Ingen nyheter ennå"
-                    : "Ingen uleste varsler"}
+                  {showUnreadOnly
+                    ? "Ingen uleste varsler"
+                    : "Ingen varsler"}
                 </p>
               </div>
             ) : (
@@ -276,7 +340,7 @@ export default function Alert() {
                       {notification.type === "følger" ||
                       notification.type === "favoritt"
                         ? "Se profil"
-                        : "Se søknad"}
+                        : "Se"}
                     </button>
                     {!notification.read && (
                       <button
