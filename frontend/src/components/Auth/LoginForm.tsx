@@ -132,11 +132,11 @@ export const LoginForm = () => {
         </div>
 
         <div className="mt-8 text-center">
-          <p className="text-sm text-[#6B7280]">
+          <p className="text-base text-[#6B7280]">
             Har du ikke konto?{" "}
             <button
               onClick={() => navigate("/register")}
-              className="font-bold text-black hover:underline"
+              className="font-bold text-black hover:underline p-3 inline-block text-lg"
             >
               Opprett en gratis
             </button>
