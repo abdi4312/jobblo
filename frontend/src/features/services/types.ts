@@ -45,7 +45,7 @@ export interface Service {
   categories: string[];
   images: string[];
   urgent: boolean;
-  status: string;
+  status: "open" | "closed" | "in_progress" | "completed" | "pending" | "waiting_for_approval" | "cancelled" | "expired" | "draft";
   tags: string[];
   equipment: string;
   imageMetadata: ImageMetadata[];

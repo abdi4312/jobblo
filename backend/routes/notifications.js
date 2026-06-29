@@ -163,6 +163,29 @@ router.delete("/:id", authenticate, notificationController.deleteNotification);
 
 /**
  * @swagger
+ * /api/notifications/delete-all:
+ *   delete:
+ *     summary: Slett alle notifikasjoner for en bruker
+ *     tags: [Notifikasjoner]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Alle notifikasjoner slettet
+ */
+router.delete("/delete-all", authenticate, notificationController.deleteAllNotifications);
+
+/**
+ * @swagger
  * /api/notifications/test:
  *   post:
  *     summary: Opprett en test-notifikasjon

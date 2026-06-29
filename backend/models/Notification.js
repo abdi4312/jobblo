@@ -27,6 +27,10 @@ const notificationSchema = new mongoose.Schema(
         "general",
         "follow",
         "favorite",
+        "application",
+        "payment",
+        "review",
+        "job_update",
       ],
     },
 
