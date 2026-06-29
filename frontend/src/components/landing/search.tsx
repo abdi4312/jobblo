@@ -50,8 +50,8 @@ function SearchComponent() {
       ? "categories"
       : activeTab === "People"
         ? "people"
-        : activeTab === "Lists"
-          ? "lists"
+        : activeTab === "Jobs"
+          ? "jobs"
           : "";
   const {
     data: infiniteData,
@@ -118,9 +118,9 @@ function SearchComponent() {
 
   const tabs = [
     { label: "Topp", value: "Top" },
+    { label: "Jobber", value: "Jobs" },
     { label: "Kategorier", value: "Categories" },
     { label: "Personer", value: "People" },
-    { label: "Lister", value: "Lists" },
   ];
 
   return (
