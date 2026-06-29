@@ -11,6 +11,14 @@ export interface UserResult {
   avatarUrl?: string;
 }
 
+export interface JobResult {
+  _id: string;
+  title: string;
+  description?: string;
+  price: number;
+  userId?: UserResult;
+}
+
 export interface ListResult {
   _id: string;
   name: string;
@@ -27,6 +35,10 @@ export interface UnifiedSearchResults {
   };
   people: {
     results: UserResult[];
+    total: number;
+  };
+  jobs: {
+    results: JobResult[];
     total: number;
   };
   lists: {
