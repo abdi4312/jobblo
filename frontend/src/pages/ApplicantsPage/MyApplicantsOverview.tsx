@@ -7,6 +7,7 @@ import {
   User,
   Clock,
   Filter,
+  Search,
 } from "lucide-react";
 import { useMyApplicantsOverviewQuery } from "../../features/applicants/hooks";
 
@@ -36,11 +37,37 @@ const MyApplicantsOverview: React.FC = () => {
   const [applicantFilter, setApplicantFilter] =
     useState<ApplicantFilter>("all");
   const [sortOption, setSortOption] = useState<SortOption>("newest");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredAndSortedServices = useMemo(() => {
     if (!services) return [];
 
     let filtered = [...services];
+
+    // Apply search filter
+    if (searchQuery) {
+      const lowercasedQuery = searchQuery.toLowerCase();
+      filtered = filtered.filter((service) => {
+        // Search by job title
+        const matchesTitle = service.title
+          .toLowerCase()
+          .includes(lowercasedQuery);
+        // Search by worker name (selected worker)
+        const matchesWorker =
+          service.selectedWorker &&
+          service.selectedWorker.name.toLowerCase().includes(lowercasedQuery);
+        // Search by category
+        const matchesCategory =
+          service.categories &&
+          service.categories.some((cat: string) =>
+            cat.toLowerCase().includes(lowercasedQuery),
+          );
+        // Search by job ID
+        const matchesId = service._id.toLowerCase().includes(lowercasedQuery);
+
+        return matchesTitle || matchesWorker || matchesCategory || matchesId;
+      });
+    }
 
     // Apply status filter
     if (statusFilter !== "all") {
@@ -75,7 +102,7 @@ const MyApplicantsOverview: React.FC = () => {
     });
 
     return filtered;
-  }, [services, statusFilter, applicantFilter, sortOption]);
+  }, [services, statusFilter, applicantFilter, sortOption, searchQuery]);
 
   if (isLoading) {
     return (
@@ -105,6 +132,23 @@ const MyApplicantsOverview: React.FC = () => {
     <div className="min-h-screen bg-[#f5f0e8] py-8 px-4 md:px-6">
       <div className="max-w-[1024px] mx-auto">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Mine søkere</h1>
+
+        {/* Search Input */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="Søk etter jobbnavn, arbeider, kategori eller jobb-ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-custom-green bg-white"
+            />
+          </div>
+        </div>
 
         {/* Filters & Sort */}
         <div className="bg-white rounded-2xl p-4 mb-6 border border-black/5">
