@@ -247,11 +247,11 @@ export const RegisterForm = () => {
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-custom-text">
+          <p className="text-base text-custom-text">
             Har du allerede en konto?{" "}
             <button
               onClick={() => navigate("/login")}
-              className="font-bold text-black hover:underline"
+              className="font-bold text-black hover:underline p-3 inline-block text-lg"
             >
               Logg inn
             </button>

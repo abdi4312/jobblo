@@ -18,7 +18,7 @@ export function Jobs() {
           Populære <em className="text-custom-green not-italic">oppdrag</em>
         </h2>
         <button
-          onClick={() => navigate("/search/job")}
+          onClick={() => navigate("/search/job/all")}
           className="text-[12px] sm:text-[14px] text-custom-green no-underline bg-transparent border-none cursor-pointer"
         >
           Se alle

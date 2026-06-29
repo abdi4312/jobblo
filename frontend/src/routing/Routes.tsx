@@ -380,20 +380,20 @@ export const routes: RouteObject[] = [
       },
 
       {
+        path: "login",
+        element: <PublicRoute>{withSuspense(LoginPage)}</PublicRoute>,
+      },
+
+      {
+        path: "register",
+        element: <PublicRoute>{withSuspense(RegisterPage)}</PublicRoute>,
+      },
+
+      {
         path: "*",
         element: withSuspense(NotFoundPage),
       },
     ],
-  },
-
-  {
-    path: "login",
-    element: <PublicRoute>{withSuspense(LoginPage)}</PublicRoute>,
-  },
-
-  {
-    path: "register",
-    element: <PublicRoute>{withSuspense(RegisterPage)}</PublicRoute>,
   },
 
   {

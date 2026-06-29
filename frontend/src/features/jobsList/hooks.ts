@@ -16,6 +16,9 @@ interface UseJobsParams {
   minPrice?: number;
   maxPrice?: number;
   tab?: Tab;
+  lat?: number;
+  lng?: number;
+  radius?: number;
 }
 
 export const useJobs = ({
@@ -32,6 +35,9 @@ export const useJobs = ({
   minPrice,
   maxPrice,
   tab = "Discover",
+  lat,
+  lng,
+  radius,
 }: UseJobsParams) => {
   return useInfiniteQuery({
     queryKey: [
@@ -48,6 +54,9 @@ export const useJobs = ({
       minPrice,
       maxPrice,
       tab,
+      lat,
+      lng,
+      radius,
     ],
 
     // TanStack Query v5 mein pageParam ko queryFn ke andar destruct karte hain
@@ -67,6 +76,9 @@ export const useJobs = ({
         minPrice,
         maxPrice,
         tab,
+        lat,
+        lng,
+        radius,
       }),
 
     // FIXED: Yeh property add karna zaroori hai

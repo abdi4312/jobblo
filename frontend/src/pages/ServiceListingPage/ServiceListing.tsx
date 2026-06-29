@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useLocation } from "react-router-dom";
 import {
   SlidersHorizontal,
   ArrowUpDown,
@@ -31,6 +31,8 @@ import {
 const ServiceListing = () => {
   const { categoryName } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const locationState = location.state as { lat?: number; lng?: number } | null;
   const initialSearch = searchParams.get("search") || "";
   const decodedCategoryName = categoryName
     ? decodeURIComponent(categoryName)
@@ -53,6 +55,7 @@ const ServiceListing = () => {
   const [priceRange, setPriceRange] = useState({ min: 0, max: 100000 });
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [isUrgent, setIsUrgent] = useState(false);
+  const [shouldUseLocation, setShouldUseLocation] = useState(true); // Track if we should use the initial location
 
   // New location filter states
   const [locationTree, setLocationTree] = useState<LocationNode[]>([]);
@@ -80,6 +83,21 @@ const ServiceListing = () => {
       setSelectedCategories([]);
     }
   }, [decodedCategoryName]);
+
+  // Disable location filter when any filter changes
+  useEffect(() => {
+    setShouldUseLocation(false);
+  }, [
+    selectedCategories,
+    selectedLocations,
+    selectedCountyCodes,
+    selectedMunicipalityCodes,
+    selectedAreaCodes,
+    priceRange,
+    isUrgent,
+    selectedSort,
+    initialSearch,
+  ]);
 
   // Fetch location data on mount
   useEffect(() => {
@@ -120,6 +138,8 @@ const ServiceListing = () => {
     maxPrice: priceRange.max,
     urgent: isUrgent,
     limit: 16,
+    lat: shouldUseLocation ? locationState?.lat : undefined,
+    lng: shouldUseLocation ? locationState?.lng : undefined,
   });
 
   const jobs = data?.pages.flatMap((page) => page.data) || [];
@@ -411,7 +431,7 @@ const ServiceListing = () => {
                   jobs.find((j) => j.location?.coordinates)?.location
                     ?.coordinates || [10.7522, 59.9139]
                 }
-                circleRadius={5000}
+                circleRadius={4000}
               />
             </Suspense>
             {/* Overlay to catch clicks and prevent map interaction inside sidebar */}
@@ -445,30 +465,27 @@ const ServiceListing = () => {
             locationTree.map((county) => (
               <div key={county.code} className="space-y-1">
                 <div className="flex items-center justify-between group">
-                  <button
+                  <div
                     onClick={() => toggleCounty(county.code)}
-                    className="flex-1 text-left font-medium py-1 px-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
+                    className="flex-1 flex items-center gap-2 cursor-pointer font-medium py-1 px-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
                   >
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedCountyCodes.includes(county.code)}
-                        onChange={(e) => e.stopPropagation()}
-                        onClick={() => toggleCounty(county.code)}
-                        className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green"
-                      />
-                      <span
-                        className={`text-sm ${selectedCountyCodes.includes(county.code) ? "text-custom-green font-bold" : "text-gray-700"}`}
-                      >
-                        {county.name}
+                    <input
+                      type="checkbox"
+                      checked={selectedCountyCodes.includes(county.code)}
+                      readOnly
+                      className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green cursor-pointer"
+                    />
+                    <span
+                      className={`text-sm ${selectedCountyCodes.includes(county.code) ? "text-custom-green font-bold" : "text-gray-700"}`}
+                    >
+                      {county.name}
+                    </span>
+                    {locationStats && (
+                      <span className="text-[10px] text-gray-400">
+                        ({locationStats.counties[county.code] || 0})
                       </span>
-                      {locationStats && (
-                        <span className="text-[10px] text-gray-400">
-                          ({locationStats.counties[county.code] || 0})
-                        </span>
-                      )}
-                    </div>
-                  </button>
+                    )}
+                  </div>
                   {county.children && county.children.length > 0 && (
                     <button
                       onClick={() => toggleCountyExpand(county.code)}
@@ -489,40 +506,35 @@ const ServiceListing = () => {
                     {county.children.map((municipality) => (
                       <div key={municipality.code} className="space-y-1">
                         <div className="flex items-center justify-between group">
-                          <button
+                          <div
                             onClick={() =>
                               toggleMunicipality(municipality.code)
                             }
-                            className="flex-1 text-left py-1 px-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
+                            className="flex-1 flex items-center gap-2 cursor-pointer py-1 px-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
                           >
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={selectedMunicipalityCodes.includes(
-                                  municipality.code,
-                                )}
-                                onChange={(e) => e.stopPropagation()}
-                                onClick={() =>
-                                  toggleMunicipality(municipality.code)
-                                }
-                                className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green"
-                              />
-                              <span
-                                className={`text-sm ${selectedMunicipalityCodes.includes(municipality.code) ? "text-custom-green font-bold" : "text-gray-600"}`}
-                              >
-                                {municipality.name}
-                              </span>
-                              {locationStats && (
-                                <span className="text-[10px] text-gray-400">
-                                  (
-                                  {locationStats.municipalities[
-                                    municipality.code
-                                  ] || 0}
-                                  )
-                                </span>
+                            <input
+                              type="checkbox"
+                              checked={selectedMunicipalityCodes.includes(
+                                municipality.code,
                               )}
-                            </div>
-                          </button>
+                              readOnly
+                              className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green cursor-pointer"
+                            />
+                            <span
+                              className={`text-sm ${selectedMunicipalityCodes.includes(municipality.code) ? "text-custom-green font-bold" : "text-gray-600"}`}
+                            >
+                              {municipality.name}
+                            </span>
+                            {locationStats && (
+                              <span className="text-[10px] text-gray-400">
+                                (
+                                {locationStats.municipalities[
+                                  municipality.code
+                                ] || 0}
+                                )
+                              </span>
+                            )}
+                          </div>
                           {municipality.children &&
                             municipality.children.length > 0 && (
                               <button
@@ -551,33 +563,29 @@ const ServiceListing = () => {
                                   key={area.code}
                                   className="flex items-center justify-between group"
                                 >
-                                  <button
+                                  <div
                                     onClick={() => toggleArea(area.code)}
-                                    className="flex-1 text-left py-1 px-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
+                                    className="flex-1 flex items-center gap-2 cursor-pointer py-1 px-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
                                   >
-                                    <div className="flex items-center gap-2">
-                                      <input
-                                        type="checkbox"
-                                        checked={selectedAreaCodes.includes(
-                                          area.code,
-                                        )}
-                                        onChange={(e) => e.stopPropagation()}
-                                        onClick={() => toggleArea(area.code)}
-                                        className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green"
-                                      />
-                                      <span
-                                        className={`text-sm ${selectedAreaCodes.includes(area.code) ? "text-custom-green font-bold" : "text-gray-500"}`}
-                                      >
-                                        {area.name}
-                                      </span>
-                                      {locationStats && (
-                                        <span className="text-[10px] text-gray-400">
-                                          ({locationStats.areas[area.code] || 0}
-                                          )
-                                        </span>
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedAreaCodes.includes(
+                                        area.code,
                                       )}
-                                    </div>
-                                  </button>
+                                      readOnly
+                                      className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green cursor-pointer"
+                                    />
+                                    <span
+                                      className={`text-sm ${selectedAreaCodes.includes(area.code) ? "text-custom-green font-bold" : "text-gray-500"}`}
+                                    >
+                                      {area.name}
+                                    </span>
+                                    {locationStats && (
+                                      <span className="text-[10px] text-gray-400">
+                                        ({locationStats.areas[area.code] || 0})
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                             </div>

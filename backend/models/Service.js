@@ -31,7 +31,7 @@ const serviceSchema = new mongoose.Schema(
     // Lokasjon
     location: {
       type: { type: String, enum: ["Point"], default: "Point" },
-      coordinates: { type: [Number], index: "2dsphere" },
+      coordinates: { type: [Number] },
       address: { type: String },
       city: { type: String },
     },

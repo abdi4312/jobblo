@@ -17,6 +17,9 @@ interface FetchJobsParams {
   minPrice?: number;
   maxPrice?: number;
   tab?: Tab;
+  lat?: number;
+  lng?: number;
+  radius?: number;
 }
 
 export interface JobsResponse {
@@ -44,6 +47,9 @@ export const fetchJobs = async ({
   minPrice,
   maxPrice,
   tab = "Discover",
+  lat,
+  lng,
+  radius,
 }: FetchJobsParams): Promise<JobsResponse> => {
   // Use the main services endpoint
   const url = "/api/services";
@@ -63,6 +69,9 @@ export const fetchJobs = async ({
       urgent: urgent || undefined,
       minPrice: minPrice !== undefined ? minPrice : undefined,
       maxPrice: maxPrice !== undefined ? maxPrice : undefined,
+      lat: lat !== undefined ? lat : undefined,
+      lng: lng !== undefined ? lng : undefined,
+      radius: radius !== undefined ? radius : undefined,
     },
   });
 
