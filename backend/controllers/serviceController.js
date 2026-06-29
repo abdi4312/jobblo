@@ -19,34 +19,38 @@ exports.getAllServices = async (req, res) => {
       countyCodes,
       municipalityCodes,
       areaCodes,
+      lat,
+      lng,
+      radius = 50000, // 50km default
     } = req.query;
 
-    const query = {};
+    // Build match stage first
+    const matchStage = {};
 
     if (userId) {
-      query.userId = userId;
+      matchStage.userId = userId;
     }
 
     if (urgent === "true") {
-      query.urgent = true;
+      matchStage.urgent = true;
     }
 
     if (category) {
       const categoriesArray = category.split(",").map((c) => c.trim());
-      query.categories = { $in: categoriesArray };
+      matchStage.categories = { $in: categoriesArray };
     }
 
     if (search) {
-      query.$or = [
+      matchStage.$or = [
         { title: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
       ];
     }
 
     if (minPrice || maxPrice) {
-      query.price = {};
-      if (minPrice) query.price.$gte = Number(minPrice);
-      if (maxPrice) query.price.$lte = Number(maxPrice);
+      matchStage.price = {};
+      if (minPrice) matchStage.price.$gte = Number(minPrice);
+      if (maxPrice) matchStage.price.$lte = Number(maxPrice);
     }
 
     // Location code filters
@@ -65,26 +69,233 @@ exports.getAllServices = async (req, res) => {
     }
 
     if (locationQueries.length > 0) {
-      query.$or = locationQueries;
-    }
-
-    // Construct sort object
-    let sortOption = { createdAt: -1 };
-    if (sort) {
-      if (sort.startsWith("-")) {
-        sortOption = { [sort.substring(1)]: -1 };
+      // If we already have $or from search, combine them
+      if (matchStage.$or) {
+        matchStage.$and = [matchStage.$or, { $or: locationQueries }];
+        delete matchStage.$or;
       } else {
-        sortOption = { [sort]: 1 };
+        matchStage.$or = locationQueries;
       }
     }
 
-    const services = await Service.find(query)
-      .populate("userId", "name avatarUrl verified role orgNumber companyName")
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit))
-      .sort(sortOption);
+    let total = 0;
+    let services = [];
 
-    const total = await Service.countDocuments(query);
+    // Try geolocation first if we have coordinates
+    if (lat && lng) {
+      try {
+        const geoDataPipeline = [];
+        geoDataPipeline.push({
+          $geoNear: {
+            near: {
+              type: "Point",
+              coordinates: [parseFloat(lng), parseFloat(lat)],
+            },
+            distanceField: "distance",
+            maxDistance: parseInt(radius),
+            spherical: true,
+            query: matchStage,
+            key: "location",
+          },
+        });
+
+        // Get count and data in one go for geolocation
+        const geoCountPipeline = [...geoDataPipeline];
+        geoCountPipeline.push({ $count: "total" });
+        const geoCountResult = await Service.aggregate(geoCountPipeline);
+        const geoTotal = geoCountResult[0]?.total || 0;
+
+        if (geoTotal > 0) {
+          // We have nearby jobs, use them
+          total = geoTotal;
+          geoDataPipeline.push({ $skip: (page - 1) * limit });
+          geoDataPipeline.push({ $limit: parseInt(limit) });
+
+          // Add user population
+          geoDataPipeline.push({
+            $lookup: {
+              from: "users",
+              localField: "userId",
+              foreignField: "_id",
+              as: "userId",
+            },
+          });
+          geoDataPipeline.push({
+            $unwind: {
+              path: "$userId",
+              preserveNullAndEmptyArrays: true,
+            },
+          });
+          geoDataPipeline.push({
+            $project: {
+              "userId.password": 0,
+              "userId.email": 0,
+              "userId.phone": 0,
+            },
+          });
+
+          services = await Service.aggregate(geoDataPipeline);
+        } else {
+          // No nearby jobs, fall back to all jobs
+          const fallbackDataPipeline = [];
+          fallbackDataPipeline.push({ $match: matchStage });
+
+          // Add sort
+          let sortOption = { createdAt: -1 };
+          if (sort) {
+            if (sort.startsWith("-")) {
+              sortOption = { [sort.substring(1)]: -1 };
+            } else {
+              sortOption = { [sort]: 1 };
+            }
+          }
+          fallbackDataPipeline.push({ $sort: sortOption });
+
+          // Get total count for fallback
+          const fallbackCountPipeline = [...fallbackDataPipeline];
+          fallbackCountPipeline.push({ $count: "total" });
+          const fallbackCountResult = await Service.aggregate(
+            fallbackCountPipeline,
+          );
+          total = fallbackCountResult[0]?.total || 0;
+
+          // Pagination
+          fallbackDataPipeline.push({ $skip: (page - 1) * limit });
+          fallbackDataPipeline.push({ $limit: parseInt(limit) });
+
+          // Populate user
+          fallbackDataPipeline.push({
+            $lookup: {
+              from: "users",
+              localField: "userId",
+              foreignField: "_id",
+              as: "userId",
+            },
+          });
+          fallbackDataPipeline.push({
+            $unwind: {
+              path: "$userId",
+              preserveNullAndEmptyArrays: true,
+            },
+          });
+          fallbackDataPipeline.push({
+            $project: {
+              "userId.password": 0,
+              "userId.email": 0,
+              "userId.phone": 0,
+            },
+          });
+
+          services = await Service.aggregate(fallbackDataPipeline);
+        }
+      } catch (geoErr) {
+        console.log(
+          "Geolocation failed, falling back to standard search:",
+          geoErr,
+        );
+        // If geolocation fails, fall back to standard search
+        const fallbackDataPipeline = [];
+        fallbackDataPipeline.push({ $match: matchStage });
+
+        // Add sort
+        let sortOption = { createdAt: -1 };
+        if (sort) {
+          if (sort.startsWith("-")) {
+            sortOption = { [sort.substring(1)]: -1 };
+          } else {
+            sortOption = { [sort]: 1 };
+          }
+        }
+        fallbackDataPipeline.push({ $sort: sortOption });
+
+        // Get total count
+        const fallbackCountPipeline = [...fallbackDataPipeline];
+        fallbackCountPipeline.push({ $count: "total" });
+        const fallbackCountResult = await Service.aggregate(
+          fallbackCountPipeline,
+        );
+        total = fallbackCountResult[0]?.total || 0;
+
+        // Pagination
+        fallbackDataPipeline.push({ $skip: (page - 1) * limit });
+        fallbackDataPipeline.push({ $limit: parseInt(limit) });
+
+        // Populate user
+        fallbackDataPipeline.push({
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "userId",
+          },
+        });
+        fallbackDataPipeline.push({
+          $unwind: {
+            path: "$userId",
+            preserveNullAndEmptyArrays: true,
+          },
+        });
+        fallbackDataPipeline.push({
+          $project: {
+            "userId.password": 0,
+            "userId.email": 0,
+            "userId.phone": 0,
+          },
+        });
+
+        services = await Service.aggregate(fallbackDataPipeline);
+      }
+    } else {
+      // No geolocation at all, use standard search
+      const dataPipeline = [];
+      dataPipeline.push({ $match: matchStage });
+
+      // Add sort
+      let sortOption = { createdAt: -1 };
+      if (sort) {
+        if (sort.startsWith("-")) {
+          sortOption = { [sort.substring(1)]: -1 };
+        } else {
+          sortOption = { [sort]: 1 };
+        }
+      }
+      dataPipeline.push({ $sort: sortOption });
+
+      // Get total count
+      const countPipeline = [...dataPipeline];
+      countPipeline.push({ $count: "total" });
+      const countResult = await Service.aggregate(countPipeline);
+      total = countResult[0]?.total || 0;
+
+      // Pagination
+      dataPipeline.push({ $skip: (page - 1) * limit });
+      dataPipeline.push({ $limit: parseInt(limit) });
+
+      // Populate user
+      dataPipeline.push({
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userId",
+        },
+      });
+      dataPipeline.push({
+        $unwind: {
+          path: "$userId",
+          preserveNullAndEmptyArrays: true,
+        },
+      });
+      dataPipeline.push({
+        $project: {
+          "userId.password": 0,
+          "userId.email": 0,
+          "userId.phone": 0,
+        },
+      });
+
+      services = await Service.aggregate(dataPipeline);
+    }
 
     res.json({
       data: services,

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useLocation } from "react-router-dom";
 import {
   SlidersHorizontal,
   ArrowUpDown,
@@ -31,6 +31,8 @@ import {
 const ServiceListing = () => {
   const { categoryName } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const locationState = location.state as { lat?: number; lng?: number } | null;
   const initialSearch = searchParams.get("search") || "";
   const decodedCategoryName = categoryName
     ? decodeURIComponent(categoryName)
@@ -53,6 +55,7 @@ const ServiceListing = () => {
   const [priceRange, setPriceRange] = useState({ min: 0, max: 100000 });
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [isUrgent, setIsUrgent] = useState(false);
+  const [shouldUseLocation, setShouldUseLocation] = useState(true); // Track if we should use the initial location
 
   // New location filter states
   const [locationTree, setLocationTree] = useState<LocationNode[]>([]);
@@ -80,6 +83,21 @@ const ServiceListing = () => {
       setSelectedCategories([]);
     }
   }, [decodedCategoryName]);
+
+  // Disable location filter when any filter changes
+  useEffect(() => {
+    setShouldUseLocation(false);
+  }, [
+    selectedCategories,
+    selectedLocations,
+    selectedCountyCodes,
+    selectedMunicipalityCodes,
+    selectedAreaCodes,
+    priceRange,
+    isUrgent,
+    selectedSort,
+    initialSearch,
+  ]);
 
   // Fetch location data on mount
   useEffect(() => {
@@ -120,6 +138,8 @@ const ServiceListing = () => {
     maxPrice: priceRange.max,
     urgent: isUrgent,
     limit: 16,
+    lat: shouldUseLocation ? locationState?.lat : undefined,
+    lng: shouldUseLocation ? locationState?.lng : undefined,
   });
 
   const jobs = data?.pages.flatMap((page) => page.data) || [];
