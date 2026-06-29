@@ -1,6 +1,13 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Users, Calendar, User, Clock } from "lucide-react";
+import {
+  ChevronRight,
+  Users,
+  Calendar,
+  User,
+  Clock,
+  Filter,
+} from "lucide-react";
 import { useMyApplicantsOverviewQuery } from "../../features/applicants/hooks";
 
 const formatDate = (date: Date | string) => {
@@ -11,9 +18,64 @@ const formatDate = (date: Date | string) => {
   });
 };
 
+type StatusFilter =
+  | "all"
+  | "open"
+  | "in_progress"
+  | "completed"
+  | "awaiting_payment"
+  | "waiting_for_approval";
+type ApplicantFilter = "all" | "has_applicants" | "no_applicants";
+type SortOption = "newest" | "oldest" | "price_high" | "price_low";
+
 const MyApplicantsOverview: React.FC = () => {
   const navigate = useNavigate();
   const { data: services, isLoading, error } = useMyApplicantsOverviewQuery();
+
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [applicantFilter, setApplicantFilter] =
+    useState<ApplicantFilter>("all");
+  const [sortOption, setSortOption] = useState<SortOption>("newest");
+
+  const filteredAndSortedServices = useMemo(() => {
+    if (!services) return [];
+
+    let filtered = [...services];
+
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((service) => service.status === statusFilter);
+    }
+
+    // Apply applicant filter
+    if (applicantFilter === "has_applicants") {
+      filtered = filtered.filter((service) => service.applicantCount > 0);
+    } else if (applicantFilter === "no_applicants") {
+      filtered = filtered.filter((service) => service.applicantCount === 0);
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (sortOption) {
+        case "newest":
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        case "oldest":
+          return (
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+        case "price_high":
+          return b.price - a.price;
+        case "price_low":
+          return a.price - b.price;
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [services, statusFilter, applicantFilter, sortOption]);
 
   if (isLoading) {
     return (
@@ -44,8 +106,78 @@ const MyApplicantsOverview: React.FC = () => {
       <div className="max-w-[1024px] mx-auto">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Mine søkere</h1>
 
+        {/* Filters & Sort */}
+        <div className="bg-white rounded-2xl p-4 mb-6 border border-black/5">
+          <div className="flex items-center gap-2 mb-4">
+            <Filter size={18} className="text-gray-600" />
+            <span className="font-medium text-gray-800">
+              Filter og sortering
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Status Filter */}
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-2 block">
+                Status
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as StatusFilter)
+                }
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-custom-green"
+              >
+                <option value="all">Alle</option>
+                <option value="open">Aktiv</option>
+                <option value="in_progress">I gang</option>
+                <option value="completed">Fullført</option>
+                <option value="awaiting_payment">Venter på betaling</option>
+                <option value="waiting_for_approval">
+                  Venter på godkjenning
+                </option>
+              </select>
+            </div>
+
+            {/* Applicant Filter */}
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-2 block">
+                Søkere
+              </label>
+              <select
+                value={applicantFilter}
+                onChange={(e) =>
+                  setApplicantFilter(e.target.value as ApplicantFilter)
+                }
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-custom-green"
+              >
+                <option value="all">Alle</option>
+                <option value="has_applicants">Har søkere</option>
+                <option value="no_applicants">Ingen søkere</option>
+              </select>
+            </div>
+
+            {/* Sort */}
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-2 block">
+                Sortering
+              </label>
+              <select
+                value={sortOption}
+                onChange={(e) => setSortOption(e.target.value as SortOption)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-custom-green"
+              >
+                <option value="newest">Nyeste først</option>
+                <option value="oldest">Eldste først</option>
+                <option value="price_high">Høyeste pris</option>
+                <option value="price_low">Laveste pris</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-4">
-          {services.map((service: any) => (
+          {filteredAndSortedServices.map((service: any) => (
             <div
               key={service._id}
               onClick={() => navigate(`/job-applicants/${service._id}`)}
@@ -60,14 +192,24 @@ const MyApplicantsOverview: React.FC = () => {
                           ? "bg-blue-100 text-blue-600"
                           : service.status === "open"
                             ? "bg-green-100 text-green-600"
-                            : "bg-gray-100 text-gray-600"
+                            : service.status === "awaiting_payment"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : service.status === "waiting_for_approval"
+                                ? "bg-purple-100 text-purple-700"
+                                : "bg-gray-100 text-gray-600"
                       }`}
                     >
                       {service.status === "in_progress"
                         ? "I GANG"
                         : service.status === "open"
                           ? "AKTIV"
-                          : "AVSLUTTET"}
+                          : service.status === "completed"
+                            ? "FULLFØRT"
+                            : service.status === "awaiting_payment"
+                              ? "VENTER PÅ BETALING"
+                              : service.status === "waiting_for_approval"
+                                ? "VENTER PÅ GODKJENNING"
+                                : "AVSLUTTET"}
                     </span>
                     <span className="text-[11px] text-gray-400 font-medium">
                       {service.location?.city || "Oslo"}
@@ -164,18 +306,12 @@ const MyApplicantsOverview: React.FC = () => {
             </div>
           ))}
 
-          {services.length === 0 && (
+          {filteredAndSortedServices.length === 0 && (
             <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
               <Users size={48} className="mx-auto text-gray-300 mb-4" />
               <p className="text-gray-500 font-medium">
-                Du har ingen aktive oppdrag ennå.
+                Ingen oppdrag som matcher filterene.
               </p>
-              <button
-                onClick={() => navigate("/publish-job")}
-                className="mt-4 text-custom-green font-bold hover:underline"
-              >
-                Legg ut et oppdrag
-              </button>
             </div>
           )}
         </div>
