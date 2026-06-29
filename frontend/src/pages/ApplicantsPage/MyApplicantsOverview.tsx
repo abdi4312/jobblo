@@ -1,7 +1,15 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Users } from "lucide-react";
+import { ChevronRight, Users, Calendar, User, Clock } from "lucide-react";
 import { useMyApplicantsOverviewQuery } from "../../features/applicants/hooks";
+
+const formatDate = (date: Date | string) => {
+  return new Date(date).toLocaleDateString("no-NO", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
 
 const MyApplicantsOverview: React.FC = () => {
   const navigate = useNavigate();
@@ -41,78 +49,116 @@ const MyApplicantsOverview: React.FC = () => {
             <div
               key={service._id}
               onClick={() => navigate(`/job-applicants/${service._id}`)}
-              className="bg-white rounded-[20px] p-4 md:p-6 flex items-center justify-between cursor-pointer hover:shadow-md transition-shadow border border-black/5"
+              className="bg-white rounded-[20px] p-4 md:p-6 cursor-pointer hover:shadow-md transition-shadow border border-black/5"
             >
-              <div className="flex flex-col gap-2 flex-1">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                      service.status === "in_progress"
-                        ? "bg-blue-100 text-blue-600"
+              <div className="flex items-start justify-between">
+                <div className="flex flex-col gap-3 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                        service.status === "in_progress"
+                          ? "bg-blue-100 text-blue-600"
+                          : service.status === "open"
+                            ? "bg-green-100 text-green-600"
+                            : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {service.status === "in_progress"
+                        ? "I GANG"
                         : service.status === "open"
-                          ? "bg-green-100 text-green-600"
-                          : "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {service.status === "in_progress"
-                      ? "I GANG"
-                      : service.status === "open"
-                        ? "AKTIV"
-                        : "AVSLUTTET"}
-                  </span>
-                  <span className="text-[11px] text-gray-400 font-medium">
-                    {service.location?.city || "Oslo"}
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 line-clamp-1">
-                  {service.title}
-                </h3>
-              </div>
+                          ? "AKTIV"
+                          : "AVSLUTTET"}
+                    </span>
+                    <span className="text-[11px] text-gray-400 font-medium">
+                      {service.location?.city || "Oslo"}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 line-clamp-1">
+                    {service.title}
+                  </h3>
 
-              <div className="flex items-center gap-8 md:gap-16">
-                {/* Applicants Count */}
-                <div className="flex flex-col items-end">
-                  <div className="flex items-center -space-x-2 mb-1">
-                    {service.applicantAvatars.map(
-                      (avatar: string, i: number) => (
-                        <img
-                          key={i}
-                          src={avatar}
-                          alt=""
-                          className="w-7 h-7 rounded-full border-2 border-white object-cover bg-gray-200"
-                        />
-                      ),
+                  {/* Additional Info Row */}
+                  <div className="flex flex-wrap gap-4 text-[12px] text-gray-500">
+                    {/* Date Created */}
+                    <div className="flex items-center gap-1">
+                      <Calendar size={14} />
+                      <span>Opprettet: {formatDate(service.createdAt)}</span>
+                    </div>
+                    {/* Last Activity */}
+                    <div className="flex items-center gap-1">
+                      <Clock size={14} />
+                      <span>
+                        Siste aktivitet: {formatDate(service.lastActivity)}
+                      </span>
+                    </div>
+                    {/* Categories */}
+                    {service.categories && service.categories.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        <span>Kategori: {service.categories.join(", ")}</span>
+                      </div>
                     )}
-                    {service.applicantCount > 0 &&
-                      service.applicantAvatars.length === 0 && (
-                        <div className="w-7 h-7 rounded-full border-2 border-white bg-custom-green flex items-center justify-center">
-                          <Users size={12} className="text-white" />
-                        </div>
+                    {/* Deadline */}
+                    {service.toDate && (
+                      <div className="flex items-center gap-1">
+                        <Calendar size={14} />
+                        <span>Frist: {formatDate(service.toDate)}</span>
+                      </div>
+                    )}
+                    {/* Selected Worker */}
+                    {service.selectedWorker && (
+                      <div className="flex items-center gap-1">
+                        <User size={14} />
+                        <span>Valgt: {service.selectedWorker.name}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-8 md:gap-16 ml-4">
+                  {/* Applicants Count */}
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center -space-x-2 mb-1">
+                      {service.applicantAvatars.map(
+                        (avatar: string, i: number) => (
+                          <img
+                            key={i}
+                            src={avatar}
+                            alt=""
+                            className="w-7 h-7 rounded-full border-2 border-white object-cover bg-gray-200"
+                          />
+                        ),
                       )}
+                      {service.applicantCount > 0 &&
+                        service.applicantAvatars.length === 0 && (
+                          <div className="w-7 h-7 rounded-full border-2 border-white bg-custom-green flex items-center justify-center">
+                            <Users size={12} className="text-white" />
+                          </div>
+                        )}
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[15px] font-bold text-gray-900">
+                        {service.applicantCount}
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-bold uppercase ml-1">
+                        Søkere
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[15px] font-bold text-gray-900">
-                      {service.applicantCount}
-                    </span>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase ml-1">
-                      Søkere
-                    </span>
-                  </div>
-                </div>
 
-                {/* Price */}
-                <div className="text-right hidden sm:block">
-                  <div className="text-[15px] font-bold text-gray-900">
-                    {service.price.toLocaleString("no-NO")} kr
+                  {/* Price */}
+                  <div className="text-right hidden sm:block">
+                    <div className="text-[15px] font-bold text-gray-900">
+                      {service.price.toLocaleString("no-NO")} kr
+                    </div>
+                    <div className="text-[10px] text-gray-400 font-bold uppercase">
+                      Pris
+                    </div>
                   </div>
-                  <div className="text-[10px] text-gray-400 font-bold uppercase">
-                    Pris
-                  </div>
-                </div>
 
-                {/* Arrow */}
-                <div className="text-gray-300">
-                  <ChevronRight size={24} />
+                  {/* Arrow */}
+                  <div className="text-gray-300">
+                    <ChevronRight size={24} />
+                  </div>
                 </div>
               </div>
             </div>
