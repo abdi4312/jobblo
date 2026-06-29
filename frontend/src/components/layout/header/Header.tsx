@@ -230,6 +230,11 @@ export default function Header() {
     { name: "Legg ut oppdrag", icon: <Plus size={20} />, path: "/publish-job" },
     { name: "Hjem", icon: <Home size={25} />, path: "/home" },
     {
+      name: "Mine Annonser",
+      icon: <FileText size={18} />,
+      path: "/mine-annonser",
+    },
+    {
       name: "Søkere",
       icon: <Users size={18} />,
       path: "/my-applicants",

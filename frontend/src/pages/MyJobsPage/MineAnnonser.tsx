@@ -8,9 +8,32 @@ import { useServiceActions } from "../../features/services/hooks";
 import type { Service } from "../../features/services/types";
 import { JobDetailCardSkeleton } from "../../components/Loading/JobDetailCardSkeleton";
 
+// Define the tabs configuration
+type TabConfig = {
+  id: string;
+  label: string;
+  statuses: Service["status"][];
+};
+
+const tabs: TabConfig[] = [
+  { id: "active", label: "Active Jobs", statuses: ["open"] },
+  { id: "pending", label: "Pending Applications", statuses: ["pending"] },
+  { id: "in_progress", label: "In Progress", statuses: ["in_progress"] },
+  {
+    id: "waiting_for_approval",
+    label: "Waiting for Approval",
+    statuses: ["waiting_for_approval"],
+  },
+  { id: "completed", label: "Completed Jobs", statuses: ["completed"] },
+  { id: "cancelled", label: "Cancelled Jobs", statuses: ["cancelled"] },
+  { id: "expired", label: "Expired Jobs", statuses: ["expired"] },
+  { id: "draft", label: "Draft Jobs", statuses: ["draft"] },
+];
+
 export default function MineAnnonser() {
   const navigate = useNavigate();
   const [editingService, setEditingService] = useState<Service | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("active");
 
   // TanStack Hooks
   const { data: services = [], isLoading, error } = useMyServices();
@@ -80,28 +103,55 @@ export default function MineAnnonser() {
     );
   }
 
+  // Find current tab's statuses
+  const currentTab = tabs.find((tab) => tab.id === activeTab)!;
+  // Filter services by current tab
+  const filteredServices = services.filter((service) =>
+    currentTab.statuses.includes(service.status),
+  );
+
   return (
     <div className="p-0 max-w-300 mx-auto min-h-screen">
-      {services.length === 0 ? (
+      {/* Tabs */}
+      <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200 px-4 py-4">
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                activeTab === tab.id
+                  ? "bg-custom-green text-white shadow-md"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {filteredServices.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
           <div className="bg-gray-100 p-6 rounded-full mb-4">
             <Pencil size={40} className="text-gray-400" />
           </div>
           <h3 className="text-xl font-bold text-gray-800 mb-2">
-            Du har ingen annonser
+            Ingen jobs i denne kategorien
           </h3>
           <p className="text-gray-500 mb-6">
-            Det ser ut som du ikke har lagt ut noen tjenester ennå.
+            Det ser ut som du ikke har noen jobs i {currentTab.label} ennå.
           </p>
-          <Button
-            label="Lag din første annonse"
-            onClick={() => navigate("/publish-job")}
-            className="bg-custom-green text-white px-6 py-2 rounded-xl"
-          />
+          {activeTab === "active" && (
+            <Button
+              label="Lag din første annonse"
+              onClick={() => navigate("/publish-job")}
+              className="bg-custom-green text-white px-6 py-2 rounded-xl"
+            />
+          )}
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 m-2 gap-2.5">
-          {services.map((job: Service) => {
+          {filteredServices.map((job: Service) => {
             const catName = Array.isArray(job.categories)
               ? job.categories[0]
               : job.categories;
