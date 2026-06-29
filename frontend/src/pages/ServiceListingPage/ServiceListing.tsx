@@ -431,7 +431,7 @@ const ServiceListing = () => {
                   jobs.find((j) => j.location?.coordinates)?.location
                     ?.coordinates || [10.7522, 59.9139]
                 }
-                circleRadius={5000}
+                circleRadius={4000}
               />
             </Suspense>
             {/* Overlay to catch clicks and prevent map interaction inside sidebar */}
