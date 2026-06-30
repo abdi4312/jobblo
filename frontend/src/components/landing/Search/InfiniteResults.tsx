@@ -30,7 +30,7 @@ export const InfiniteResults = ({
 }: InfiniteResultsProps) => {
   return (
     <div className="space-y-6">
-      {/* Search for "[query]" amongst all Jobs */}
+      {/* Search for "[query]" among all Jobs */}
       <SearchItem
         type="query"
         title={`Søk etter "${searchQuery}"`}
@@ -48,7 +48,9 @@ export const InfiniteResults = ({
       />
 
       <div className="flex items-center justify-between px-2">
-        <h4 className="text-[18px] font-bold text-[#1A1A1A]">{activeTab} Search Results</h4>
+        <h4 className="text-[18px] font-bold text-[#1A1A1A]">
+          {activeTab === "Jobs" ? "Jobber" : activeTab} Search Results
+        </h4>
         <button
           onClick={onBackToTop}
           className="text-[14px] font-bold px-4 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
@@ -104,17 +106,16 @@ export const InfiniteResults = ({
                   }}
                 />
               );
-            } else if (activeTab === 'Lists') {
+            } else if (activeTab === "Jobs") {
               return (
                 <SearchItem
                   key={item._id}
-                  type="list"
-                  title={item.name}
-                  count={item.services?.length}
-                  isPublic={true}
-                  image={item.services?.[0]?.images?.[0]}
+                  type="job"
+                  title={item.title}
+                  subtitle={item.description?.substring(0, 50) + "..." || "Se jobbdetaljer"}
+                  price={item.price}
                   onClick={() => {
-                    onNavigate(`/favorites/list/${item._id}`);
+                    onNavigate(`/service/${item._id}`);
                     onCloseDropdown();
                   }}
                 />

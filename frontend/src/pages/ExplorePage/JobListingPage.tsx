@@ -51,6 +51,41 @@ export default function JobListingPage() {
   const navigate = useNavigate();
   const { user } = useUserStore();
 
+  const checkTrackingConsent = () => {
+    const consent = localStorage.getItem("cookie-consent");
+    return consent === "accepted" || consent === "customised";
+  };
+
+  const handleNearbyJobsClick = () => {
+    if (!checkTrackingConsent()) {
+      // If no consent, just navigate to all jobs
+      navigate("/search/job/all");
+      return;
+    }
+
+    // Try to get user's location
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          // We have location, could pass to search page
+          navigate("/search/job/all", {
+            state: {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            },
+          });
+        },
+        () => {
+          // If geolocation fails, just go to all jobs
+          navigate("/search/job/all");
+        },
+      );
+    } else {
+      // If geolocation not available, just go to all jobs
+      navigate("/search/job/all");
+    }
+  };
+
   const initialState = location.state as {
     selectedCategory?: string;
     searchQuery?: string;
@@ -150,8 +185,11 @@ export default function JobListingPage() {
               5 nye oppdrag i nærheten av Oslo siden i går
             </p>
             <button
+              onClick={handleNearbyJobsClick}
               className="px-4 sm:px-[18px] py-2 sm:py-[9px] bg-transparent text-white border
-             border-white/50 rounded-full text-xs sm:text-sm cursor-pointer"
+             border-white/50 rounded-full text-xs sm:text-sm cursor-pointer
+             hover:bg-white/10 hover:border-white transition-all duration-200
+             active:bg-white/20"
             >
               Se alle oppdrag nær meg
             </button>

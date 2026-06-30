@@ -27,6 +27,7 @@ export const TopResults = ({
   const hasResults =
     searchResults?.categories?.results?.length > 0 ||
     searchResults?.people?.results?.length > 0 ||
+    searchResults?.jobs?.results?.length > 0 ||
     searchResults?.lists?.results?.length > 0;
 
   if (!hasResults) {
@@ -53,6 +54,38 @@ export const TopResults = ({
           onCloseDropdown();
         }}
       />
+
+      {/* Jobs */}
+      {searchResults?.jobs?.results?.length > 0 && (
+        <div className="space-y-5">
+          <div className="flex items-center justify-between px-2">
+            <h4 className="text-[18px] font-bold text-[#1A1A1A]">
+              Jobber
+            </h4>
+            {searchResults.jobs.total > 3 && (
+              <button
+                onClick={() => onSeeAll("Jobs")}
+                className="text-[14px] font-bold text-custom-green hover:underline transition-all"
+              >
+                Se alle
+              </button>
+            )}
+          </div>
+          {searchResults.jobs.results.map((job: any) => (
+            <SearchItem
+              key={job._id}
+              type="job"
+              title={job.title}
+              subtitle={job.description?.substring(0, 50) + "..." || "Se jobbdetaljer"}
+              price={job.price}
+              onClick={() => {
+                onNavigate(`/service/${job._id}`);
+                onCloseDropdown();
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Categories */}
       {searchResults?.categories?.results?.length > 0 && (
@@ -121,37 +154,6 @@ export const TopResults = ({
                   avatarUrl: p.avatarUrl,
                 });
                 onNavigate(`/profile/${p._id}`);
-                onCloseDropdown();
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Lists */}
-      {searchResults?.lists?.results?.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-2">
-            <h4 className="text-[18px] font-bold text-[#1A1A1A]">Offentlige lister</h4>
-            {searchResults.lists.total > 3 && (
-              <button
-                onClick={() => onSeeAll('Lists')}
-                className="text-[14px] font-bold px-4 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
-              >
-                Se alle
-              </button>
-            )}
-          </div>
-          {searchResults.lists.results.map((list: any) => (
-            <SearchItem
-              key={list._id}
-              type="list"
-              title={list.name}
-              count={list.services?.length}
-              isPublic={true}
-              image={list.services?.[0]?.images?.[0]}
-              onClick={() => {
-                onNavigate(`/favorites/list/${list._id}`);
                 onCloseDropdown();
               }}
             />

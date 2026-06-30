@@ -16,7 +16,7 @@ export function CTABand() {
       </div>
       <div className="flex gap-2.5">
         <button
-          onClick={() => navigate('/home')}
+          onClick={() => navigate("/search/job/all")}
           className="px-6 py-3 bg-[#4ade80] text-[#1a3a1a] rounded-full text-sm font-medium cursor-pointer hover:bg-[#3ce673] transition-colors"
         >
           Finn oppdrag

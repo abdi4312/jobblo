@@ -1,8 +1,8 @@
-import { User, Tag, HelpCircle } from 'lucide-react';
-import * as Icons from 'lucide-react';
+import { User, Tag, HelpCircle, Briefcase } from "lucide-react";
+import * as Icons from "lucide-react";
 
 interface SearchItemProps {
-  type: 'query' | 'user' | 'category' | 'list';
+  type: "query" | "user" | "category" | "list" | "job";
   title: string;
   subtitle?: string;
   avatarUrl?: string;
@@ -11,6 +11,7 @@ interface SearchItemProps {
   onClick: () => void;
   count?: number;
   isPublic?: boolean;
+  price?: number;
 }
 
 export const SearchItem = ({
@@ -23,6 +24,7 @@ export const SearchItem = ({
   onClick,
   count,
   isPublic,
+  price,
 }: SearchItemProps) => {
   const renderIcon = () => {
     if (type === 'user') {
@@ -63,6 +65,18 @@ export const SearchItem = ({
       );
     }
 
+    if (type === "job") {
+      return (
+        <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center flex-shrink-0">
+          <Briefcase
+            className="text-custom-green"
+            size={24}
+            strokeWidth={1.5}
+          />
+        </div>
+      );
+    }
+
     // Default query type
     return (
       <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center shrink-0">
@@ -86,9 +100,13 @@ export const SearchItem = ({
           {title}
         </h3>
         <p className="text-[15px] text-gray-500 font-medium mt-1">
-          {type === 'list'
-            ? `${count || 0} oppdrag · ${isPublic ? 'Offentlig' : 'Privat'}`
-            : subtitle}
+          {type === "list"
+            ? `${count || 0} oppdrag · ${isPublic ? "Offentlig" : "Privat"}`
+            : type === "job"
+              ? price !== undefined
+                ? `kr ${price}`
+                : subtitle
+              : subtitle}
         </p>
       </div>
     </div>

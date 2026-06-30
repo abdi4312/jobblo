@@ -39,7 +39,7 @@ export function MapComponent({
       <MapContainer
         className={styles.map}
         center={randomCenter}
-        zoom={13}
+        zoom={10}
         scrollWheelZoom={true}
         dragging={true}
         zoomControl={true}

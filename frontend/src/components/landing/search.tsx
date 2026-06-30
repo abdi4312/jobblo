@@ -43,13 +43,13 @@ function SearchComponent() {
 
   // Infinite Search for specific tab views
   const infiniteType =
-    activeTab === 'Categories'
-      ? 'categories'
-      : activeTab === 'People'
-        ? 'people'
-        : activeTab === 'Lists'
-          ? 'lists'
-          : '';
+    activeTab === "Categories"
+      ? "categories"
+      : activeTab === "People"
+        ? "people"
+        : activeTab === "Jobs"
+          ? "jobs"
+          : "";
   const {
     data: infiniteData,
     fetchNextPage,
@@ -108,10 +108,10 @@ function SearchComponent() {
   }, []);
 
   const tabs = [
-    { label: 'Topp', value: 'Top' },
-    { label: 'Kategorier', value: 'Categories' },
-    { label: 'Personer', value: 'People' },
-    { label: 'Lister', value: 'Lists' },
+    { label: "Topp", value: "Top" },
+    { label: "Jobber", value: "Jobs" },
+    { label: "Kategorier", value: "Categories" },
+    { label: "Personer", value: "People" },
   ];
 
   return (
