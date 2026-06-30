@@ -119,7 +119,7 @@ exports.getTopUsers = async (req, res) => {
   }
 };
 
-// Unified Search for Categories, People, and Public Lists with Pagination
+// Unified Search for Categories, People, Jobs, and Public Lists with Pagination
 exports.searchAll = async (req, res) => {
   try {
     const { query, type, page = 1, limit = 10 } = req.query;
@@ -128,6 +128,7 @@ exports.searchAll = async (req, res) => {
       return res.status(200).json({
         categories: { results: [], total: 0 },
         people: { results: [], total: 0 },
+        jobs: { results: [], total: 0 },
         lists: { results: [], total: 0 },
       });
     }
@@ -154,6 +155,17 @@ exports.searchAll = async (req, res) => {
         total = await User.countDocuments(queryObj);
         results = await User.find(queryObj)
           .select('name lastName avatarUrl email averageRating reviewCount')
+          .skip(skip)
+          .limit(numericLimit);
+      } else if (type === 'jobs') {
+        total = await Service.countDocuments({
+          $or: [{ title: regex }, { description: regex }],
+          status: { $nin: ['draft', 'cancelled', 'closed', 'expired'] },
+        });
+        results = await Service.find({
+          $or: [{ title: regex }, { description: regex }],
+          status: { $nin: ['draft', 'cancelled', 'closed', 'expired'] },
+        })
           .skip(skip)
           .limit(numericLimit);
       } else if (type === 'lists') {
@@ -184,7 +196,17 @@ exports.searchAll = async (req, res) => {
       isActive: true,
     }).limit(3);
 
-    // 2. Search People (Users)
+    // 2. Search Jobs (Services)
+    const jobsCount = await Service.countDocuments({
+      $or: [{ title: regex }, { description: regex }],
+      status: { $nin: ['draft', 'cancelled', 'closed', 'expired'] },
+    });
+    const jobs = await Service.find({
+      $or: [{ title: regex }, { description: regex }],
+      status: { $nin: ['draft', 'cancelled', 'closed', 'expired'] },
+    }).limit(3);
+
+    // 3. Search People (Users)
     const peopleCount = await User.countDocuments({
       $or: [{ name: regex }, { lastName: regex }, { email: regex }],
       _id: { $ne: req.userId },
@@ -196,7 +218,7 @@ exports.searchAll = async (req, res) => {
       .select('name lastName avatarUrl email averageRating reviewCount')
       .limit(3);
 
-    // 3. Search Public Lists
+    // 4. Search Public Lists
     const listsCount = await List.countDocuments({
       name: regex,
       public: true,
@@ -210,6 +232,7 @@ exports.searchAll = async (req, res) => {
 
     res.status(200).json({
       categories: { results: categories, total: categoriesCount },
+      jobs: { results: jobs, total: jobsCount },
       people: { results: people, total: peopleCount },
       lists: { results: lists, total: listsCount },
     });
