@@ -120,7 +120,9 @@
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .rewardCard:hover {
@@ -136,7 +138,7 @@
 }
 
 .category {
-  background-color: #F97316;
+  background-color: #f97316;
   color: white;
   padding: 4px 12px;
   border-radius: 20px;
@@ -148,7 +150,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background-color: #F97316;
+  background-color: #f97316;
   padding: 6px 12px;
   border-radius: 20px;
 }
@@ -184,7 +186,7 @@
 .redeemButton {
   width: 100%;
   padding: 12px;
-  background-color: #F97316;
+  background-color: #f97316;
   color: white;
   border: none;
   border-radius: 8px;

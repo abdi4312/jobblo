@@ -1,5 +1,5 @@
-import React from "react";
-import { Button } from "./button/Button";
+import React from 'react';
+import { Button } from './button/Button';
 
 interface SwitcherOption {
   id: string;
@@ -21,8 +21,8 @@ export const CustomSwitcher: React.FC<CustomSwitcherProps> = ({
   options,
   value,
   onChange,
-  maxWidth = "max-w-100",
-  className = "",
+  maxWidth = 'max-w-100',
+  className = '',
 }) => {
   return (
     <div className={`flex justify-center py-4 ${className}`}>
@@ -31,7 +31,7 @@ export const CustomSwitcher: React.FC<CustomSwitcherProps> = ({
           <Button
             key={option.id}
             label={option.label}
-            variant={value === option.id ? "true" : "false"}
+            variant={value === option.id ? 'true' : 'false'}
             size="lg"
             onClick={() => onChange(option.id)}
           />

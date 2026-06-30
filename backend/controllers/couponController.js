@@ -1,39 +1,30 @@
-const SubscriptionPlan = require("../models/SubscriptionPlan");
-const calculateDiscount = require("../utils/calculateDiscount");
-const { validateCouponLogic } = require("../utils/couponValidation");
+const SubscriptionPlan = require('../models/SubscriptionPlan');
+const calculateDiscount = require('../utils/calculateDiscount');
+const { validateCouponLogic } = require('../utils/couponValidation');
 
-const Coupon = require("../models/Coupon");
+const Coupon = require('../models/Coupon');
 
 // =========================
 // Create Coupon (Admin Only)
 // =========================
 exports.createCoupon = async (req, res) => {
   try {
-    const {
-      name,
-      code,
-      type,
-      amount,
-      activeDate,
-      expiresDate,
-      usageLimit,
-      targetPlanType,
-    } = req.body;
+    const { name, code, type, amount, activeDate, expiresDate, usageLimit, targetPlanType } =
+      req.body;
 
     const existing = await Coupon.findOne({ code });
-    if (existing)
-      return res.status(400).json({ error: "Coupon code already exists" });
+    if (existing) return res.status(400).json({ error: 'Coupon code already exists' });
 
     const coupon = await Coupon.create({
       createdBy: req.user._id,
       name,
       code,
-      type: type || "percentage",
+      type: type || 'percentage',
       amount,
       activeDate: activeDate || Date.now(),
       expiresDate,
       usageLimit: usageLimit || 0,
-      targetPlanType: targetPlanType || "all",
+      targetPlanType: targetPlanType || 'all',
       usedBy: [],
     });
 
@@ -51,7 +42,7 @@ exports.getAllCoupons = async (req, res) => {
     // 1. Automatically mark expired coupons as inactive (Ye step pehle hi hona chahiye)
     await Coupon.updateMany(
       { expiresDate: { $lt: new Date() }, active: true },
-      { $set: { active: false } },
+      { $set: { active: false } }
     );
 
     // 2. Pagination Logic
@@ -64,10 +55,7 @@ exports.getAllCoupons = async (req, res) => {
 
     // 4. Fetch Coupons with limit and skip
     // .sort({ createdAt: -1 }) add kiya hai taaki naye coupons pehle dikhein
-    const coupons = await Coupon.find()
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    const coupons = await Coupon.find().sort({ createdAt: -1 }).skip(skip).limit(limit);
 
     // 5. Send Response with Meta Data
     res.json({
@@ -101,11 +89,11 @@ exports.updateCoupon = async (req, res) => {
 
     const updateFields = {};
 
-    if (typeof name === "string" && name.trim()) {
+    if (typeof name === 'string' && name.trim()) {
       updateFields.name = name.trim();
     }
 
-    if (typeof code === "string" && code.trim()) {
+    if (typeof code === 'string' && code.trim()) {
       updateFields.code = code.toUpperCase().trim();
     }
 
@@ -118,7 +106,7 @@ exports.updateCoupon = async (req, res) => {
     if (usageLimit !== undefined) updateFields.usageLimit = Number(usageLimit);
     if (targetPlanType) updateFields.targetPlanType = targetPlanType;
 
-    if (activeDate && activeDate.trim() !== "") {
+    if (activeDate && activeDate.trim() !== '') {
       const parsedActiveDate = new Date(activeDate);
       if (!isNaN(parsedActiveDate.getTime())) {
         updateFields.activeDate = parsedActiveDate;
@@ -133,7 +121,7 @@ exports.updateCoupon = async (req, res) => {
     }
 
     // ✅ ACTIVE LOGIC
-    if (typeof active === "boolean") {
+    if (typeof active === 'boolean') {
       // agar frontend se active bheja ho
       updateFields.active = active;
     } else if (parsedExpiryDate) {
@@ -142,27 +130,27 @@ exports.updateCoupon = async (req, res) => {
     }
 
     if (Object.keys(updateFields).length === 0) {
-      return res.status(400).json({ error: "No valid fields to update" });
+      return res.status(400).json({ error: 'No valid fields to update' });
     }
 
     const updatedCoupon = await Coupon.findByIdAndUpdate(
       id,
       { $set: updateFields },
-      { new: true, runValidators: true },
+      { new: true, runValidators: true }
     );
 
     if (!updatedCoupon) {
-      return res.status(404).json({ error: "Coupon not found" });
+      return res.status(404).json({ error: 'Coupon not found' });
     }
 
     res.status(200).json({
       success: true,
-      message: "Coupon updated successfully",
+      message: 'Coupon updated successfully',
       data: updatedCoupon,
     });
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(400).json({ error: "Coupon code already exists" });
+      return res.status(400).json({ error: 'Coupon code already exists' });
     }
     res.status(500).json({ error: err.message });
   }
@@ -175,9 +163,9 @@ exports.deleteCoupon = async (req, res) => {
   try {
     const { id } = req.params;
     const coupon = await Coupon.findByIdAndDelete(id);
-    if (!coupon) return res.status(404).json({ error: "Coupon not found" });
+    if (!coupon) return res.status(404).json({ error: 'Coupon not found' });
 
-    res.json({ message: "Coupon deleted" });
+    res.json({ message: 'Coupon deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -192,7 +180,7 @@ exports.validateCoupon = async (req, res) => {
     const userId = req.user._id;
 
     if (!code || !planId) {
-      return res.status(400).json({ error: "Code and Plan ID are required" });
+      return res.status(400).json({ error: 'Code and Plan ID are required' });
     }
 
     const [coupon, plan] = await Promise.all([
@@ -200,7 +188,7 @@ exports.validateCoupon = async (req, res) => {
       SubscriptionPlan.findById(planId),
     ]);
 
-    if (!plan) return res.status(404).json({ error: "Plan not found" });
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
 
     // logic moved to utils/couponValidation.js
     validateCouponLogic(coupon, plan, userId);
@@ -209,7 +197,7 @@ exports.validateCoupon = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Coupon validated successfully",
+      message: 'Coupon validated successfully',
       data: {
         code: coupon.code,
         type: coupon.type,

@@ -1,10 +1,10 @@
-import { useJobs } from "../../../features/jobsList/hooks";
-import { JobCard } from "../../component/jobCard/JobCard";
-import { JobCardSkeleton } from "../../Loading/JobCardSkeleton";
-import type { Tab } from "../../../types/tabs";
-import { useEffect, useRef, useState } from "react";
-import { useUserStore } from "../../../stores/userStore";
-import { getConfigByKey } from "../../../features/plans/api";
+import { useJobs } from '../../../features/jobsList/hooks';
+import { JobCard } from '../../component/jobCard/JobCard';
+import { JobCardSkeleton } from '../../Loading/JobCardSkeleton';
+import type { Tab } from '../../../types/tabs';
+import { useEffect, useRef, useState } from 'react';
+import { useUserStore } from '../../../stores/userStore';
+import { getConfigByKey } from '../../../features/plans/api';
 
 interface JobsContainerProps {
   selectedCategories?: string[];
@@ -16,18 +16,17 @@ interface JobsContainerProps {
 // Jobs container component for displaying job listings
 export default function JobsContainer({
   selectedCategories = [],
-  searchQuery = "",
+  searchQuery = '',
   isUrgent = false,
-  activeTab = "Discover",
+  activeTab = 'Discover',
 }: JobsContainerProps) {
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useJobs({
-      categories: selectedCategories,
-      search: searchQuery,
-      urgent: isUrgent,
-      tab: activeTab,
-    });
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useJobs({
+    categories: selectedCategories,
+    search: searchQuery,
+    urgent: isUrgent,
+    tab: activeTab,
+  });
 
   const user = useUserStore((state) => state.user);
   const [showAds, setShowAds] = useState(false);
@@ -35,16 +34,12 @@ export default function JobsContainer({
   useEffect(() => {
     const checkAds = async () => {
       try {
-        const adsConfig = await getConfigByKey("ADS_FOR_NON_SUBSCRIBERS");
-        if (
-          adsConfig &&
-          adsConfig.value === true &&
-          user?.subscription === "Standard"
-        ) {
+        const adsConfig = await getConfigByKey('ADS_FOR_NON_SUBSCRIBERS');
+        if (adsConfig && adsConfig.value === true && user?.subscription === 'Standard') {
           setShowAds(true);
         }
       } catch (err) {
-        console.error("Error fetching ads config:", err);
+        console.error('Error fetching ads config:', err);
       }
     };
     checkAds();
@@ -59,7 +54,7 @@ export default function JobsContainer({
           fetchNextPage();
         }
       },
-      { threshold: 0.1 },
+      { threshold: 0.1 }
     );
 
     if (loadMoreRef.current) {
@@ -86,7 +81,7 @@ export default function JobsContainer({
               </p>
             </div>
             <button
-              onClick={() => (window.location.href = "/membership")}
+              onClick={() => (window.location.href = '/membership')}
               className="px-6 py-2.5 bg-white text-orange-600 rounded-full font-bold hover:bg-orange-50 transition-colors shadow-sm shrink-0"
             >
               Se Planer
@@ -98,9 +93,7 @@ export default function JobsContainer({
       )}
       <div className="grid gap-x-6 gap-y-8 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 justify-start items-start mx-auto w-full">
         {isLoading
-          ? Array.from({ length: 8 }).map((_, index) => (
-              <JobCardSkeleton key={index} />
-            ))
+          ? Array.from({ length: 8 }).map((_, index) => <JobCardSkeleton key={index} />)
           : jobs.map((job) => <JobCard key={job._id} job={job} />)}
       </div>
 
@@ -121,24 +114,19 @@ export default function JobsContainer({
               />
             </svg>
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
-            Ingen tjenester funnet
-          </h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Ingen tjenester funnet</h3>
           <p className="text-gray-500 max-w-xs">
-            {activeTab === "Favorites"
-              ? "Du har ikke lagt til noen tjenester i dine favoritter ennå."
-              : activeTab === "People’s"
-                ? "Ingen populære tjenester akkurat nå. Prøv igjen senere!"
-                : "Vi fant ingen tjenester som samsvarer med ditt søk eller kategori."}
+            {activeTab === 'Favorites'
+              ? 'Du har ikke lagt til noen tjenester i dine favoritter ennå.'
+              : activeTab === 'People’s'
+                ? 'Ingen populære tjenester akkurat nå. Prøv igjen senere!'
+                : 'Vi fant ingen tjenester som samsvarer med ditt søk eller kategori.'}
           </p>
         </div>
       )}
 
       {hasNextPage && (
-        <div
-          ref={loadMoreRef}
-          className="flex justify-center mt-12 pb-10 min-h-25"
-        >
+        <div ref={loadMoreRef} className="flex justify-center mt-12 pb-10 min-h-25">
           {isFetchingNextPage ? (
             <div className="flex items-center gap-2 px-10 py-3.5 bg-custom-green text-white rounded-full font-bold shadow-md">
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

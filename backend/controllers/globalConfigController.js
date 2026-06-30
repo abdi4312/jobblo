@@ -1,4 +1,4 @@
-const GlobalConfig = require("../models/GlobalConfig");
+const GlobalConfig = require('../models/GlobalConfig');
 
 exports.getConfigs = async (req, res) => {
   try {
@@ -6,7 +6,7 @@ exports.getConfigs = async (req, res) => {
     res.status(200).json(configs);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error fetching configs" });
+    res.status(500).json({ message: 'Server error fetching configs' });
   }
 };
 
@@ -26,13 +26,13 @@ exports.getConfigByKey = async (req, res) => {
         return res.status(200).json({ key, ...defaults[key], isDefault: true });
       }
 
-      return res.status(404).json({ message: "Config not found" });
+      return res.status(404).json({ message: 'Config not found' });
     }
 
     res.status(200).json(config);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error fetching config" });
+    res.status(500).json({ message: 'Server error fetching config' });
   }
 };
 
@@ -42,12 +42,12 @@ exports.updateConfig = async (req, res) => {
     const config = await GlobalConfig.findOneAndUpdate(
       { key },
       { value },
-      { new: true, upsert: true },
+      { new: true, upsert: true }
     );
-    res.status(200).json({ message: "Config updated successfully", config });
+    res.status(200).json({ message: 'Config updated successfully', config });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error updating config" });
+    res.status(500).json({ message: 'Server error updating config' });
   }
 };
 
@@ -55,14 +55,14 @@ exports.initializeConfigs = async (req, res) => {
   try {
     const defaultConfigs = [
       {
-        key: "FREE_PRIVATE_JOBS_UNDER_10000",
+        key: 'FREE_PRIVATE_JOBS_UNDER_10000',
         value: true,
-        description: "Private users get free contact for jobs under 10,000 NOK",
+        description: 'Private users get free contact for jobs under 10,000 NOK',
       },
       {
-        key: "ADS_FOR_NON_SUBSCRIBERS",
+        key: 'ADS_FOR_NON_SUBSCRIBERS',
         value: true,
-        description: "Enable ads for non-subscribers",
+        description: 'Enable ads for non-subscribers',
       },
     ];
 
@@ -70,13 +70,13 @@ exports.initializeConfigs = async (req, res) => {
       await GlobalConfig.findOneAndUpdate(
         { key: config.key },
         { $setOnInsert: config },
-        { upsert: true },
+        { upsert: true }
       );
     }
 
-    res.status(200).json({ message: "Configs initialized successfully" });
+    res.status(200).json({ message: 'Configs initialized successfully' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error initializing configs" });
+    res.status(500).json({ message: 'Server error initializing configs' });
   }
 };

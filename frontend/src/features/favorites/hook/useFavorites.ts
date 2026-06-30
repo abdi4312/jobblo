@@ -1,19 +1,19 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getFavorites, deleteFavorite, setFavorite, checkIsFavorited } from "../api"; 
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getFavorites, deleteFavorite, setFavorite, checkIsFavorited } from '../api';
 // import { toast } from "react-toastify";
-import toast from "react-hot-toast";
+import toast from 'react-hot-toast';
 
 export function useFavorites() {
   return useQuery({
-    queryKey: ["favorites"],
+    queryKey: ['favorites'],
     queryFn: getFavorites,
-    staleTime: 1000 * 60 * 5, 
+    staleTime: 1000 * 60 * 5,
   });
 }
 
 export const useFavoriteStatusQuery = (id: string, isAuth: boolean) => {
   return useQuery({
-    queryKey: ["favoriteStatus", id],
+    queryKey: ['favoriteStatus', id],
     queryFn: () => checkIsFavorited(id),
     enabled: !!id && isAuth,
   });
@@ -26,16 +26,16 @@ export function useFavoriteActions(onSuccessCallback?: () => void) {
   const addMutation = useMutation({
     mutationFn: (id: string) => setFavorite(id), // Explicitly passing ID
     onSuccess: (_, id) => {
-      toast.success("Lagt til i favoritter");
+      toast.success('Lagt til i favoritter');
       // Specific status aur list dono refresh honge
-      queryClient.invalidateQueries({ queryKey: ["favorites"] });
-      queryClient.invalidateQueries({ queryKey: ["favoriteStatus", id] });
+      queryClient.invalidateQueries({ queryKey: ['favorites'] });
+      queryClient.invalidateQueries({ queryKey: ['favoriteStatus', id] });
       onSuccessCallback?.();
     },
     onError: (err: unknown) => {
       const error = err as { response?: { data?: { error?: string } } };
-      console.error("Failed to add favorite", err);
-      toast.error(error?.response?.data?.error || "Kunne ikke legge til favoritt");
+      console.error('Failed to add favorite', err);
+      toast.error(error?.response?.data?.error || 'Kunne ikke legge til favoritt');
     },
   });
 
@@ -43,17 +43,17 @@ export function useFavoriteActions(onSuccessCallback?: () => void) {
   const removeMutation = useMutation({
     mutationFn: (id: string) => deleteFavorite(id), // Explicitly passing ID
     onSuccess: (_, id) => {
-      toast.success("Fjernet fra favoritter");
+      toast.success('Fjernet fra favoritter');
       // Specific status aur list dono refresh honge
-      queryClient.invalidateQueries({ queryKey: ["favorites"] });
-      queryClient.invalidateQueries({ queryKey: ["favoriteStatus", id] });
+      queryClient.invalidateQueries({ queryKey: ['favorites'] });
+      queryClient.invalidateQueries({ queryKey: ['favoriteStatus', id] });
       onSuccessCallback?.();
     },
     onError: (err: unknown) => {
       const error = err as { response?: { data?: { error?: string } } };
-      console.error("Failed to remove favorite", err);
+      console.error('Failed to remove favorite', err);
       // 404 error yahan catch hoga agar ID galat hai
-      toast.error(error?.response?.data?.error || "Kunne ikke fjerne favoritt");
+      toast.error(error?.response?.data?.error || 'Kunne ikke fjerne favoritt');
     },
   });
 

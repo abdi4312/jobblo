@@ -1,60 +1,60 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import CreateJobForm from "../../components/CreateJobForm/CreateJobForm";
-import { Clock4, MapPin, Pencil } from "lucide-react";
-import { Button } from "../../components/Ui/Button";
-import { useMyServices } from "../../features/services/hooks";
-import { useServiceActions } from "../../features/services/hooks";
-import type { Service } from "../../features/services/types";
-import { JobDetailCardSkeleton } from "../../components/Loading/JobDetailCardSkeleton";
-import mainLink from "../../api/mainURLs";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import CreateJobForm from '../../components/CreateJobForm/CreateJobForm';
+import { Clock4, MapPin, Pencil } from 'lucide-react';
+import { Button } from '../../components/Ui/Button';
+import { useMyServices } from '../../features/services/hooks';
+import { useServiceActions } from '../../features/services/hooks';
+import type { Service } from '../../features/services/types';
+import { JobDetailCardSkeleton } from '../../components/Loading/JobDetailCardSkeleton';
+import mainLink from '../../api/mainURLs';
+import { useQuery } from '@tanstack/react-query';
 
 // Define the tabs configuration
 type TabConfig = {
   id: string;
   label: string;
-  statuses: Service["status"][];
+  statuses: Service['status'][];
 };
 
 const tabs: TabConfig[] = [
-  { id: "active", label: "Active Jobs", statuses: ["open"] },
-  { id: "pending", label: "Pending Applications", statuses: ["pending"] },
-  { id: "in_progress", label: "In Progress", statuses: ["in_progress"] },
+  { id: 'active', label: 'Active Jobs', statuses: ['open'] },
+  { id: 'pending', label: 'Pending Applications', statuses: ['pending'] },
+  { id: 'in_progress', label: 'In Progress', statuses: ['in_progress'] },
   {
-    id: "waiting_for_approval",
-    label: "Waiting for Approval",
-    statuses: ["waiting_for_approval"],
+    id: 'waiting_for_approval',
+    label: 'Waiting for Approval',
+    statuses: ['waiting_for_approval'],
   },
-  { id: "completed", label: "Completed Jobs", statuses: ["completed"] },
-  { id: "cancelled", label: "Cancelled Jobs", statuses: ["cancelled"] },
-  { id: "expired", label: "Expired Jobs", statuses: ["expired"] },
-  { id: "draft", label: "Draft Jobs", statuses: ["draft"] },
+  { id: 'completed', label: 'Completed Jobs', statuses: ['completed'] },
+  { id: 'cancelled', label: 'Cancelled Jobs', statuses: ['cancelled'] },
+  { id: 'expired', label: 'Expired Jobs', statuses: ['expired'] },
+  { id: 'draft', label: 'Draft Jobs', statuses: ['draft'] },
 ];
 
 export default function MineAnnonser() {
   const navigate = useNavigate();
   const [editingService, setEditingService] = useState<Service | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("active");
+  const [activeTab, setActiveTab] = useState<string>('active');
 
   // Tanstack Hooks
   const { data: services = [], isLoading, error } = useMyServices();
   const { deleteMutation, updateMutation } = useServiceActions();
 
   const { data: orders = [] } = useQuery({
-    queryKey: ["my-orders"],
+    queryKey: ['my-orders'],
     queryFn: async () => {
-      const response = await mainLink.get("/api/orders");
+      const response = await mainLink.get('/api/orders');
       return response.data;
     },
   });
 
   const categoryColorMap: Record<string, string> = {
-    Rørlegger: "#2F7E47",
-    Renhold: "#2F7E47",
-    Maling: "#238CEB",
-    Hagearbeid: "#2F7E47",
-    Flytting: "#2F7E47",
+    Rørlegger: '#2F7E47',
+    Renhold: '#2F7E47',
+    Maling: '#238CEB',
+    Hagearbeid: '#2F7E47',
+    Flytting: '#2F7E47',
   };
 
   const handleEdit = (service: Service) => {
@@ -62,7 +62,7 @@ export default function MineAnnonser() {
   };
 
   const handleDelete = (serviceId: string) => {
-    if (confirm("Er du sikker på at du vil slette denne annonsen?")) {
+    if (confirm('Er du sikker på at du vil slette denne annonsen?')) {
       deleteMutation.mutate(serviceId);
     }
   };
@@ -71,7 +71,7 @@ export default function MineAnnonser() {
     if (editingService) {
       updateMutation.mutate(
         { id: editingService._id, data: jobData as unknown as Service },
-        { onSuccess: () => setEditingService(null) },
+        { onSuccess: () => setEditingService(null) }
       );
     }
   };
@@ -94,17 +94,17 @@ export default function MineAnnonser() {
               price: editingService.price.toString(),
               address: editingService.location.address,
               city: editingService.location.city,
-              categories: editingService.categories.join(", "),
+              categories: editingService.categories.join(', '),
               urgent: editingService.urgent,
-              equipment: editingService.equipment || "",
+              equipment: editingService.equipment || '',
               fromDate: editingService.fromDate
-                ? new Date(editingService.fromDate).toISOString().split("T")[0]
-                : "",
+                ? new Date(editingService.fromDate).toISOString().split('T')[0]
+                : '',
               toDate: editingService.toDate
-                ? new Date(editingService.toDate).toISOString().split("T")[0]
-                : "",
-              durationValue: editingService.duration?.value?.toString() || "",
-              durationUnit: editingService.duration?.unit || "hours",
+                ? new Date(editingService.toDate).toISOString().split('T')[0]
+                : '',
+              durationValue: editingService.duration?.value?.toString() || '',
+              durationUnit: editingService.duration?.unit || 'hours',
               images: editingService.images || [],
             }}
           />
@@ -117,7 +117,7 @@ export default function MineAnnonser() {
   const currentTab = tabs.find((tab) => tab.id === activeTab)!;
   // Filter services by current tab
   const filteredServices = services.filter((service) =>
-    currentTab.statuses.includes(service.status),
+    currentTab.statuses.includes(service.status)
   );
 
   return (
@@ -131,8 +131,8 @@ export default function MineAnnonser() {
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                 activeTab === tab.id
-                  ? "bg-custom-green text-white shadow-md"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? 'bg-custom-green text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               {tab.label}
@@ -145,16 +145,14 @@ export default function MineAnnonser() {
           <div className="bg-gray-100 p-6 rounded-full mb-4">
             <Pencil size={40} className="text-gray-400" />
           </div>
-          <h3 className="text-xl font-bold text-gray-800 mb-2">
-            Ingen jobs i denne kategorien
-          </h3>
+          <h3 className="text-xl font-bold text-gray-800 mb-2">Ingen jobs i denne kategorien</h3>
           <p className="text-gray-500 mb-6">
             Det ser ut som du ikke har noen jobs i {currentTab.label} ennå.
           </p>
-          {activeTab === "active" && (
+          {activeTab === 'active' && (
             <Button
               label="Lag din første annonse"
-              onClick={() => navigate("/publish-job")}
+              onClick={() => navigate('/publish-job')}
               className="bg-custom-green text-white px-6 py-2 rounded-xl"
             />
           )}
@@ -162,20 +160,18 @@ export default function MineAnnonser() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 m-2 gap-2.5">
           {filteredServices.map((job: Service) => {
-            const catName = Array.isArray(job.categories)
-              ? job.categories[0]
-              : job.categories;
-            const badgeColor = categoryColorMap[catName as string] || "#2F7E47";
+            const catName = Array.isArray(job.categories) ? job.categories[0] : job.categories;
+            const badgeColor = categoryColorMap[catName as string] || '#2F7E47';
             const handleCardClick = () => {
-              if (job.status === "completed") {
+              if (job.status === 'completed') {
                 const matchingOrder = orders.find((o: any) => {
                   let orderServiceId;
-                  if (typeof o.serviceId === "object" && o.serviceId !== null) {
+                  if (typeof o.serviceId === 'object' && o.serviceId !== null) {
                     orderServiceId = o.serviceId._id
                       ? o.serviceId._id.toString()
                       : o.serviceId.toString();
                   } else {
-                    orderServiceId = o.serviceId ? o.serviceId.toString() : "";
+                    orderServiceId = o.serviceId ? o.serviceId.toString() : '';
                   }
                   return orderServiceId === job._id.toString();
                 });
@@ -206,27 +202,21 @@ export default function MineAnnonser() {
                       className="w-full h-full p-2 object-cover rounded-t-2xl"
                     />
                   ) : (
-                    <span className="text-[#666] text-base">
-                      Ingen bilde tilgjengelig
-                    </span>
+                    <span className="text-[#666] text-base">Ingen bilde tilgjengelig</span>
                   )}
 
                   <div
                     className="absolute top-4 right-2 bg-custom-green px-3 py-1.5 text-white rounded-[20px] flex items-center justify-center"
                     style={{ backgroundColor: badgeColor }}
                   >
-                    <span className="text-[12px]">
-                      {catName || "Rørlegger"}
-                    </span>
+                    <span className="text-[12px]">{catName || 'Rørlegger'}</span>
                   </div>
 
                   <div className="absolute flex justify-between items-center text-custom-black bottom-4 left-4.5 right-4.5">
                     {/* Venstre side: Lokasjonsmerke */}
                     <div className="bg-[#D9D9D9]/80 px-3 py-1.5 rounded-[20px] flex items-center justify-center gap-1.5 backdrop-blur-sm">
                       <MapPin size={13} />
-                      <span className="text-[12px] font-normal">
-                        {job.location.city}
-                      </span>
+                      <span className="text-[12px] font-normal">{job.location.city}</span>
                     </div>
 
                     {/* Høyre side: Redigeringsikon */}
@@ -248,9 +238,7 @@ export default function MineAnnonser() {
                     {job.title}
                   </h2>
 
-                  <p className="text-custom-black text-base font-light">
-                    {job.description}
-                  </p>
+                  <p className="text-custom-black text-base font-light">{job.description}</p>
                 </div>
 
                 {/* Jobbdetaljer */}
@@ -261,7 +249,7 @@ export default function MineAnnonser() {
                     <h3 className="m-0 whitespace-nowrap overflow-hidden text-ellipsis text-[12px] font-normal">
                       {job.duration.value
                         ? `${job.duration.value} ${job.duration.unit}`
-                        : "Ikke angitt"}
+                        : 'Ikke angitt'}
                     </h3>
                   </div>
 

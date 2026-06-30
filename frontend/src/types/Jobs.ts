@@ -13,19 +13,19 @@ export type Jobs = {
   };
   duration: {
     value?: number;
-    unit: "minutes" | "hours" | "days";
+    unit: 'minutes' | 'hours' | 'days';
   };
   categories: string[];
   images: string[];
   urgent: boolean;
   promoted?: boolean;
   favCount?: number;
-  status: "open" | "closed";
+  status: 'open' | 'closed';
   tags: string[];
   maxApplicants?: number;
   currentApplicants?: number;
   isLimitReached?: boolean;
-  equipment: "utstyrfri" | "delvis utstyr" | "trengs utstyr";
+  equipment: 'utstyrfri' | 'delvis utstyr' | 'trengs utstyr';
   createdAt: string;
   updatedAt: string;
   timeEntries?: {

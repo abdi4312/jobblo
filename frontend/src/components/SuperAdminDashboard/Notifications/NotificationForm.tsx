@@ -1,5 +1,5 @@
-import React from "react";
-import { Send } from "lucide-react";
+import React from 'react';
+import { Send } from 'lucide-react';
 
 interface NotificationFormProps {
   formData: { type: string; content: string };
@@ -30,9 +30,11 @@ const NotificationForm: React.FC<NotificationFormProps> = ({
                 type="button"
                 onClick={() => setFormData({ ...formData, type: t.id })}
                 className={`flex items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all active:scale-95
-                  ${formData.type === t.id 
-                    ? "border-[#2d4a3e] bg-[#2d4a3e]/5 text-[#2d4a3e] font-bold" 
-                    : "border-gray-50 bg-gray-50 text-gray-400 font-medium hover:border-gray-200"}`}
+                  ${
+                    formData.type === t.id
+                      ? 'border-[#2d4a3e] bg-[#2d4a3e]/5 text-[#2d4a3e] font-bold'
+                      : 'border-gray-50 bg-gray-50 text-gray-400 font-medium hover:border-gray-200'
+                  }`}
               >
                 {t.icon}
                 <span className="text-sm">{t.label}</span>
@@ -56,15 +58,21 @@ const NotificationForm: React.FC<NotificationFormProps> = ({
         </div>
 
         <div className="bg-gray-50/50 rounded-3xl p-6 border border-dashed border-gray-200">
-          <h4 className="text-[10px] font-black text-gray-400 uppercase mb-4 tracking-tighter">Live Preview</h4>
+          <h4 className="text-[10px] font-black text-gray-400 uppercase mb-4 tracking-tighter">
+            Live Preview
+          </h4>
           <div className="flex gap-4 bg-white p-4 rounded-2xl shadow-sm max-w-sm border border-gray-50">
-            <div className={`h-10 w-10 shrink-0 rounded-full flex items-center justify-center ${notificationTypes.find(x => x.id === formData.type)?.color}`}>
-              {notificationTypes.find(x => x.id === formData.type)?.icon}
+            <div
+              className={`h-10 w-10 shrink-0 rounded-full flex items-center justify-center ${notificationTypes.find((x) => x.id === formData.type)?.color}`}
+            >
+              {notificationTypes.find((x) => x.id === formData.type)?.icon}
             </div>
             <div className="space-y-1">
-              <p className="text-xs font-bold text-gray-800 capitalize">{formData.type.replace('_', ' ')}</p>
+              <p className="text-xs font-bold text-gray-800 capitalize">
+                {formData.type.replace('_', ' ')}
+              </p>
               <p className="text-xs text-gray-500 line-clamp-2">
-                {formData.content || "Your message will appear here..."}
+                {formData.content || 'Your message will appear here...'}
               </p>
             </div>
           </div>
@@ -75,7 +83,14 @@ const NotificationForm: React.FC<NotificationFormProps> = ({
           disabled={loading || !formData.content}
           className="w-full bg-[#2d4a3e] text-white py-5 rounded-3xl font-bold flex items-center justify-center gap-3 shadow-xl hover:bg-[#1e332a] transition-all active:scale-95 disabled:opacity-50 disabled:grayscale"
         >
-          {loading ? <span className="animate-pulse">Creating Broadcast...</span> : <><Send size={20} /><span>Broadcast to All Users</span></>}
+          {loading ? (
+            <span className="animate-pulse">Creating Broadcast...</span>
+          ) : (
+            <>
+              <Send size={20} />
+              <span>Broadcast to All Users</span>
+            </>
+          )}
         </button>
       </form>
     </div>

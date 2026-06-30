@@ -1,16 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
-import {
-  Users,
-  UserPlus,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-} from "lucide-react";
-import mainLink from "../../api/mainURLs";
-import Swal from "sweetalert2";
-import UserTable from "../../components/SuperAdminDashboard/User/UserTable";
-import CreateUserModal from "../../components/SuperAdminDashboard/User/CreateUserModal";
+import React, { useState, useEffect, useCallback } from 'react';
+import { Users, UserPlus, Calendar, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import mainLink from '../../api/mainURLs';
+import Swal from 'sweetalert2';
+import UserTable from '../../components/SuperAdminDashboard/User/UserTable';
+import CreateUserModal from '../../components/SuperAdminDashboard/User/CreateUserModal';
 
 interface User {
   _id: string;
@@ -34,26 +27,26 @@ const UsersPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [limit] = useState(10);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [debouncedRole, setDebouncedRole] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [debouncedRole, setDebouncedRole] = useState('');
   const [stats, setStats] = useState({ total: 0, new: 0, activeMonth: 0 });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newUser, setNewUser] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    password: "",
-    role: "user",
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: 'user',
   });
 
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await mainLink.get(
-        `/api/admin/users?page=${currentPage}&limit=${limit}&search=${debouncedSearch}&role=${debouncedRole}`,
+        `/api/admin/users?page=${currentPage}&limit=${limit}&search=${debouncedSearch}&role=${debouncedRole}`
       );
       setUsers(response.data.users || []);
       setTotalPages(response.data.totalPages || 1);
@@ -61,8 +54,7 @@ const UsersPage = () => {
         total: response.data.totalUsers || 0,
         activeMonth: response.data.activeThisMonth || 0,
         new: (response.data.users || []).filter(
-          (u: User) =>
-            new Date(u.createdAt).toDateString() === new Date().toDateString(),
+          (u: User) => new Date(u.createdAt).toDateString() === new Date().toDateString()
         ).length,
       });
     } catch (error) {
@@ -90,24 +82,20 @@ const UsersPage = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await mainLink.post("/api/admin/users", newUser);
-      Swal.fire("Success!", "New user has been created.", "success");
+      await mainLink.post('/api/admin/users', newUser);
+      Swal.fire('Success!', 'New user has been created.', 'success');
       setIsModalOpen(false);
       fetchUsers();
       setNewUser({
-        name: "",
-        email: "",
-        phone: "",
-        password: "",
-        role: "user",
+        name: '',
+        email: '',
+        phone: '',
+        password: '',
+        role: 'user',
       });
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
-      Swal.fire(
-        "Error",
-        error.response?.data?.message || "Failed to create user",
-        "error",
-      );
+      Swal.fire('Error', error.response?.data?.message || 'Failed to create user', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -115,40 +103,38 @@ const UsersPage = () => {
 
   const handleRoleChange = async (id: string, newRole: string) => {
     const result = await Swal.fire({
-      title: "Update User Role?",
+      title: 'Update User Role?',
       text: `Change role to ${newRole.toUpperCase()}?`,
-      icon: "question",
+      icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: "#2d4a3e",
+      confirmButtonColor: '#2d4a3e',
     });
     if (result.isConfirmed) {
       try {
         await mainLink.put(`/api/admin/users/${id}/role`, { role: newRole });
-        setUsers((prev) =>
-          prev.map((u) => (u._id === id ? { ...u, role: newRole } : u)),
-        );
-        Swal.fire("Updated!", "User role changed.", "success");
+        setUsers((prev) => prev.map((u) => (u._id === id ? { ...u, role: newRole } : u)));
+        Swal.fire('Updated!', 'User role changed.', 'success');
       } catch {
-        Swal.fire("Error", "Failed to update role", "error");
+        Swal.fire('Error', 'Failed to update role', 'error');
       }
     }
   };
 
   const handleDelete = async (id: string) => {
     const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "Permanent delete!",
-      icon: "warning",
+      title: 'Are you sure?',
+      text: 'Permanent delete!',
+      icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: "#d33",
+      confirmButtonColor: '#d33',
     });
     if (result.isConfirmed) {
       try {
         await mainLink.delete(`/api/admin/users/${id}`);
         fetchUsers();
-        Swal.fire("Deleted!", "User removed.", "success");
+        Swal.fire('Deleted!', 'User removed.', 'success');
       } catch {
-        Swal.fire("Error", "Delete failed", "error");
+        Swal.fire('Error', 'Delete failed', 'error');
       }
     }
   };
@@ -161,8 +147,7 @@ const UsersPage = () => {
           onClick={() => setIsModalOpen(true)}
           className="bg-[#2d4a3e] text-white px-5 py-2.5 rounded-2xl flex items-center gap-2 hover:bg-[#1e332a] transition-all shadow-lg active:scale-95"
         >
-          <UserPlus size={18} />{" "}
-          <span className="font-bold text-sm">Add New User</span>
+          <UserPlus size={18} /> <span className="font-bold text-sm">Add New User</span>
         </button>
       </div>
 
@@ -239,10 +224,7 @@ const UsersPage = () => {
 
             {(() => {
               const maxVisible = 8;
-              let startPage = Math.max(
-                1,
-                currentPage - Math.floor(maxVisible / 2),
-              );
+              let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
               let endPage = startPage + maxVisible - 1;
               if (endPage > totalPages) {
                 endPage = totalPages;
@@ -250,13 +232,13 @@ const UsersPage = () => {
               }
               return Array.from(
                 { length: Math.max(0, endPage - startPage + 1) },
-                (_, i) => startPage + i,
+                (_, i) => startPage + i
               ).map((num) => (
                 <button
                   key={num}
                   onClick={() => setCurrentPage(num)}
                   className={`w-10 h-10 rounded-full flex justify-center items-center font-bold transition-all 
-                  ${currentPage === num ? "bg-[#2d4a3e] text-white shadow-md scale-110" : "text-gray-400 hover:bg-gray-50"}`}
+                  ${currentPage === num ? 'bg-[#2d4a3e] text-white shadow-md scale-110' : 'text-gray-400 hover:bg-gray-50'}`}
                 >
                   {num}
                 </button>
@@ -293,17 +275,11 @@ const StatCard = ({ icon, label, value, trend }: StatCardProps) => (
     <div className="flex items-center gap-4">
       <div className="p-4 bg-gray-50 rounded-[1.25rem]">{icon}</div>
       <div>
-        <p className="text-2xl font-black text-gray-800 leading-none mb-1">
-          {value}
-        </p>
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
-          {label}
-        </p>
+        <p className="text-2xl font-black text-gray-800 leading-none mb-1">{value}</p>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{label}</p>
       </div>
     </div>
-    <div className="text-green-500 font-black text-xs self-start mt-1">
-      ↗ {trend}
-    </div>
+    <div className="text-green-500 font-black text-xs self-start mt-1">↗ {trend}</div>
   </div>
 );
 

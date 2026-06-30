@@ -1,4 +1,4 @@
-import { Category } from "../../../components/component/Categories/Category.tsx";
+import { Category } from '../../../components/component/Categories/Category.tsx';
 
 export function Categories() {
   return (

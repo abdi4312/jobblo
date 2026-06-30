@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
-import { User, MoreHorizontal, ChevronLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
+import { useState, useEffect, useRef } from 'react';
+import { User, MoreHorizontal, ChevronLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 interface ChatHeaderProps {
   isMobile: boolean;
@@ -10,12 +10,7 @@ interface ChatHeaderProps {
   hasService: boolean;
 }
 
-function ChatHeader({
-  isMobile,
-  otherUser,
-  isOnline,
-  hasService,
-}: ChatHeaderProps) {
+function ChatHeader({ isMobile, otherUser, isOnline, hasService }: ChatHeaderProps) {
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -27,8 +22,8 @@ function ChatHeader({
         setShowMenu(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleUserClick = () => {
@@ -43,7 +38,7 @@ function ChatHeader({
       {isMobile && (
         <button
           className="p-2 hover:bg-[#f9f9f7] rounded-full transition-all shrink-0 text-custom-black"
-          onClick={() => navigate("/messages")}
+          onClick={() => navigate('/messages')}
           aria-label="Back"
         >
           <ChevronLeft size={20} />
@@ -59,7 +54,7 @@ function ChatHeader({
               className="w-full h-full object-cover"
             />
           ) : (
-            <span>{otherUser?.name?.charAt(0) || "U"}</span>
+            <span>{otherUser?.name?.charAt(0) || 'U'}</span>
           )}
         </div>
         {/* Online Status Indicator */}
@@ -70,10 +65,10 @@ function ChatHeader({
 
       <div className="min-w-0 flex flex-col flex-1">
         <h3 className="m-0 text-[18px] font-bold text-custom-black truncate leading-tight">
-          {otherUser?.name || "Chat"}
+          {otherUser?.name || 'Chat'}
         </h3>
         <p className="text-[13px] font-medium m-0 text-[#888]">
-          {isOnline ? "Online" : "Offline"} · 4.9 ★ · 38 oppdrag
+          {isOnline ? 'Online' : 'Offline'} · 4.9 ★ · 38 oppdrag
         </p>
       </div>
 
@@ -90,7 +85,7 @@ function ChatHeader({
         <div className="relative" ref={menuRef}>
           <button
             aria-label="More options"
-            className={`w-[40px] h-[40px] border border-black/[0.1] rounded-[10px] bg-white flex items-center justify-center cursor-pointer text-[#16a34a] transition-colors ${showMenu ? "bg-[#f9f9f7]" : "hover:bg-[#f9f9f7]"}`}
+            className={`w-[40px] h-[40px] border border-black/[0.1] rounded-[10px] bg-white flex items-center justify-center cursor-pointer text-[#16a34a] transition-colors ${showMenu ? 'bg-[#f9f9f7]' : 'hover:bg-[#f9f9f7]'}`}
             onClick={() => setShowMenu(!showMenu)}
           >
             <MoreHorizontal size={18} />
@@ -115,7 +110,7 @@ function ChatHeader({
                 className="w-full text-left px-6 py-4 text-[16px] font-bold text-custom-black hover:bg-[#f9f9f7] transition-colors"
                 onClick={() => {
                   setShowMenu(false);
-                  toast("Archive feature coming soon!");
+                  toast('Archive feature coming soon!');
                 }}
               >
                 Archive this thread
@@ -124,7 +119,7 @@ function ChatHeader({
                 className="w-full text-left px-6 py-4 text-[16px] font-bold text-custom-black hover:bg-[#f9f9f7] transition-colors"
                 onClick={() => {
                   setShowMenu(false);
-                  toast("Report feature coming soon!");
+                  toast('Report feature coming soon!');
                 }}
               >
                 Report chat

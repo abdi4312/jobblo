@@ -1,10 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
-import { getLocationTree, getLocationStats } from "./locationAPI";
-import type { LocationNode, LocationStats } from "../../api/locationAPI";
+import { useQuery } from '@tanstack/react-query';
+import { getLocationTree, getLocationStats } from './locationAPI';
+import type { LocationNode, LocationStats } from '../../api/locationAPI';
 
 export const useLocationTree = () => {
   return useQuery<LocationNode[]>({
-    queryKey: ["locationTree"],
+    queryKey: ['locationTree'],
     queryFn: getLocationTree,
 
     staleTime: 1000 * 60 * 60 * 5,
@@ -17,7 +17,7 @@ export const useLocationTree = () => {
 
 export const useLocationStats = () => {
   return useQuery<LocationStats>({
-    queryKey: ["locationStats"],
+    queryKey: ['locationStats'],
     queryFn: getLocationStats,
 
     staleTime: 1000 * 60 * 60 * 5,

@@ -1,20 +1,7 @@
-import React from "react";
-import {
-  MapPin,
-  Calendar,
-  Clock,
-  Info,
-  AlertCircle,
-  Loader2,
-} from "lucide-react";
-import { useLocationTree } from "../../features/locations/hooks";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../Ui/select";
+import React from 'react';
+import { MapPin, Calendar, Clock, Info, AlertCircle, Loader2 } from 'lucide-react';
+import { useLocationTree } from '../../features/locations/hooks';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../Ui/select';
 
 interface TimeAndPlaceProps {
   address: string;
@@ -64,13 +51,9 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
   // Get selected county
   const selectedCounty = locationTree.find((c) => c.code === countyCode);
   // Get selected municipality from county's children
-  const selectedMunicipality = selectedCounty?.children?.find(
-    (m) => m.code === municipalityCode,
-  );
+  const selectedMunicipality = selectedCounty?.children?.find((m) => m.code === municipalityCode);
   // Get selected area from municipality's children
-  const selectedArea = selectedMunicipality?.children?.find(
-    (a) => a.code === areaCode,
-  );
+  const selectedArea = selectedMunicipality?.children?.find((a) => a.code === areaCode);
 
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
@@ -99,9 +82,9 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
             <Select
               value={countyCode || undefined}
               onValueChange={(value) => {
-                setCountyCode?.(value || "");
-                setMunicipalityCode?.("");
-                setAreaCode?.("");
+                setCountyCode?.(value || '');
+                setMunicipalityCode?.('');
+                setAreaCode?.('');
               }}
               disabled={isLoading}
             >
@@ -126,18 +109,16 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
             <Select
               value={municipalityCode || undefined}
               onValueChange={(value) => {
-                const newMunicipalityCode = value || "";
+                const newMunicipalityCode = value || '';
                 setMunicipalityCode?.(newMunicipalityCode);
-                setAreaCode?.("");
+                setAreaCode?.('');
                 // Also update city text field with municipality name
                 const county = locationTree.find((c) => c.code === countyCode);
-                const municipality = county?.children?.find(
-                  (m) => m.code === newMunicipalityCode,
-                );
+                const municipality = county?.children?.find((m) => m.code === newMunicipalityCode);
                 if (municipality) {
                   setCity(municipality.name);
                 } else {
-                  setCity?.("");
+                  setCity?.('');
                 }
               }}
               disabled={!countyCode || isLoading}
@@ -156,30 +137,29 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
           </div>
 
           {/* Area */}
-          {selectedMunicipality?.children &&
-            selectedMunicipality.children.length > 0 && (
-              <div className="space-y-2">
-                <label className="text-[11px] md:text-[13px] font-bold text-gray-400 uppercase tracking-wider ml-1">
-                  Bydel / Område
-                </label>
-                <Select
-                  value={areaCode || undefined}
-                  onValueChange={(value) => setAreaCode?.(value || "")}
-                  disabled={!municipalityCode || isLoading}
-                >
-                  <SelectTrigger className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5">
-                    <SelectValue placeholder="Velg bydel (valgfritt)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {selectedMunicipality.children.map((area) => (
-                      <SelectItem key={area.code} value={area.code}>
-                        {area.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+          {selectedMunicipality?.children && selectedMunicipality.children.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-[11px] md:text-[13px] font-bold text-gray-400 uppercase tracking-wider ml-1">
+                Bydel / Område
+              </label>
+              <Select
+                value={areaCode || undefined}
+                onValueChange={(value) => setAreaCode?.(value || '')}
+                disabled={!municipalityCode || isLoading}
+              >
+                <SelectTrigger className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5">
+                  <SelectValue placeholder="Velg bydel (valgfritt)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedMunicipality.children.map((area) => (
+                    <SelectItem key={area.code} value={area.code}>
+                      {area.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Address */}
           <div className="space-y-2">
@@ -193,7 +173,7 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               required
               placeholder="F.eks. Storgata 1"
               className={`w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all
-                ${errors?.address ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5"}`}
+                ${errors?.address ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5' : 'border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5'}`}
             />
             {errors?.address && (
               <p className="mt-1 text-red-500 text-[10px] md:text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
@@ -215,8 +195,8 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               required
               placeholder="F.eks. Oslo"
               className={`w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all
-                ${errors?.city ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5"}
-                ${!!municipalityCode ? "opacity-60 cursor-not-allowed" : ""}`}
+                ${errors?.city ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5' : 'border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5'}
+                ${!!municipalityCode ? 'opacity-60 cursor-not-allowed' : ''}`}
             />
             {errors?.city && (
               <p className="mt-1 text-red-500 text-[10px] md:text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
@@ -234,12 +214,8 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
             <Calendar size={22} />
           </div>
           <div>
-            <h2 className="font-bold text-lg md:text-xl text-custom-black">
-              Når skal det gjøres?
-            </h2>
-            <p className="text-gray-500 text-xs md:text-sm">
-              Velg datoer som passer for deg
-            </p>
+            <h2 className="font-bold text-lg md:text-xl text-custom-black">Når skal det gjøres?</h2>
+            <p className="text-gray-500 text-xs md:text-sm">Velg datoer som passer for deg</p>
           </div>
         </div>
 
@@ -252,10 +228,10 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               title="Velg fra dato"
               required
               type="date"
-              value={fromDate ? fromDate.split("T")[0] : ""}
+              value={fromDate ? fromDate.split('T')[0] : ''}
               onChange={(e) => setFromDate(e.target.value)}
               className={`w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all cursor-pointer
-                ${errors?.fromDate ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5"}`}
+                ${errors?.fromDate ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5' : 'border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5'}`}
             />
             {errors?.fromDate && (
               <p className="mt-1 text-red-500 text-[10px] md:text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
@@ -271,10 +247,10 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               title="Velg til dato"
               required
               type="date"
-              value={toDate ? toDate.split("T")[0] : ""}
+              value={toDate ? toDate.split('T')[0] : ''}
               onChange={(e) => setToDate(e.target.value)}
               className={`w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all cursor-pointer
-                ${errors?.toDate ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5"}`}
+                ${errors?.toDate ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5' : 'border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5'}`}
             />
             {errors?.toDate && (
               <p className="mt-1 text-red-500 text-[10px] md:text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
@@ -297,9 +273,7 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
             <Clock size={22} />
           </div>
           <div>
-            <h2 className="font-bold text-lg md:text-xl text-custom-black">
-              Forventet varighet *
-            </h2>
+            <h2 className="font-bold text-lg md:text-xl text-custom-black">Forventet varighet *</h2>
             <p className="text-gray-500 text-xs md:text-sm">
               Hvor lang tid antar du oppdraget tar?
             </p>
@@ -314,7 +288,7 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
               onChange={(e) => setDurationValue(e.target.value)}
               placeholder="0"
               className={`w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all
-                ${errors?.durationValue ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5"}`}
+                ${errors?.durationValue ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5' : 'border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5'}`}
             />
             {errors?.durationValue && (
               <p className="mt-1 text-red-500 text-[10px] md:text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">

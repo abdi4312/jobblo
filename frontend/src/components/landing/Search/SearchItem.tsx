@@ -1,8 +1,8 @@
-import { User, Tag, HelpCircle } from "lucide-react";
-import * as Icons from "lucide-react";
+import { User, Tag, HelpCircle } from 'lucide-react';
+import * as Icons from 'lucide-react';
 
 interface SearchItemProps {
-  type: "query" | "user" | "category" | "list";
+  type: 'query' | 'user' | 'category' | 'list';
   title: string;
   subtitle?: string;
   avatarUrl?: string;
@@ -25,15 +25,11 @@ export const SearchItem = ({
   isPublic,
 }: SearchItemProps) => {
   const renderIcon = () => {
-    if (type === "user") {
+    if (type === 'user') {
       return (
         <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
           {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt=""
-              className="w-full h-full object-cover"
-            />
+            <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-100">
               <User className="text-gray-400" size={24} />
@@ -43,21 +39,17 @@ export const SearchItem = ({
       );
     }
 
-    if (type === "category") {
+    if (type === 'category') {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const LucideIcon = (Icons as any)[iconName || ""] || HelpCircle;
+      const LucideIcon = (Icons as any)[iconName || ''] || HelpCircle;
       return (
         <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center flex-shrink-0">
-          <LucideIcon
-            size={24}
-            className="text-custom-green"
-            strokeWidth={1.5}
-          />
+          <LucideIcon size={24} className="text-custom-green" strokeWidth={1.5} />
         </div>
       );
     }
 
-    if (type === "list") {
+    if (type === 'list') {
       return (
         <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-200 flex-shrink-0">
           {image ? (
@@ -94,8 +86,8 @@ export const SearchItem = ({
           {title}
         </h3>
         <p className="text-[15px] text-gray-500 font-medium mt-1">
-          {type === "list"
-            ? `${count || 0} oppdrag · ${isPublic ? "Offentlig" : "Privat"}`
+          {type === 'list'
+            ? `${count || 0} oppdrag · ${isPublic ? 'Offentlig' : 'Privat'}`
             : subtitle}
         </p>
       </div>

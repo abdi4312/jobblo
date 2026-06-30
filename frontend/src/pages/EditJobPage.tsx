@@ -29,56 +29,67 @@ export default function EditJobPage() {
     category: 'Hage',
     subcategory: 'Hugge tre',
     address: 'Oslo gate 16, 0512 Oslo',
-    description: 'Jeg trenger en som kan sage ned et tre som har vært i veien for oss. Treet er ca 7 meter høy og er ca 1 i diameter.',
+    description:
+      'Jeg trenger en som kan sage ned et tre som har vært i veien for oss. Treet er ca 7 meter høy og er ca 1 i diameter.',
     equipment: 'some',
     userEquipment: ['Sag', 'Vernehansker', 'Hørselvern', 'Øks'],
     startDate: '',
     endDate: '',
     startTime: '11:30',
-    endTime: ''
+    endTime: '',
   });
 
   const [images, setImages] = useState([
-    { id: '1', url: 'https://api.builder.io/api/v1/image/assets/TEMP/8c60d24c0d79fe73b0a0ca1fb5bbf190855847bd?width=256', description: '' },
-    { id: '2', url: 'https://api.builder.io/api/v1/image/assets/TEMP/65dce074b1661e7410c0035093326eb4eb74872d?width=256', description: '' },
-    { id: '3', url: 'https://api.builder.io/api/v1/image/assets/TEMP/f21c3775e77dcb8249427008eafb2fee63af9617?width=256', description: '' }
+    {
+      id: '1',
+      url: 'https://api.builder.io/api/v1/image/assets/TEMP/8c60d24c0d79fe73b0a0ca1fb5bbf190855847bd?width=256',
+      description: '',
+    },
+    {
+      id: '2',
+      url: 'https://api.builder.io/api/v1/image/assets/TEMP/65dce074b1661e7410c0035093326eb4eb74872d?width=256',
+      description: '',
+    },
+    {
+      id: '3',
+      url: 'https://api.builder.io/api/v1/image/assets/TEMP/f21c3775e77dcb8249427008eafb2fee63af9617?width=256',
+      description: '',
+    },
   ]);
 
   const equipmentOptions = [
     { value: 'all', label: 'Alt utstyret' },
     { value: 'some', label: 'Noe utstyr' },
-    { value: 'none', label: 'Ikke noe utstyr' }
+    { value: 'none', label: 'Ikke noe utstyr' },
   ];
 
   const handleInputChange = (field: keyof JobData, value: string | string[]) => {
-    setJobData(prev => ({ ...prev, [field]: value }));
+    setJobData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleImageRemove = (imageId: string) => {
-    setImages(prev => prev.filter(img => img.id !== imageId));
+    setImages((prev) => prev.filter((img) => img.id !== imageId));
   };
 
   const handleImageDescriptionChange = (imageId: string, description: string) => {
-    setImages(prev => prev.map(img => 
-      img.id === imageId ? { ...img, description } : img
-    ));
+    setImages((prev) => prev.map((img) => (img.id === imageId ? { ...img, description } : img)));
   };
 
   const handleAddImages = (files: File[]) => {
     // Handle adding new images
     console.log('Add images clicked:', files);
-    const newImages = files.map(file => ({
+    const newImages = files.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
       url: URL.createObjectURL(file),
-      description: ''
+      description: '',
     }));
-    setImages(prev => [...prev, ...newImages]);
+    setImages((prev) => [...prev, ...newImages]);
   };
 
   const handleChipRemove = (chip: string) => {
-    setJobData(prev => ({
+    setJobData((prev) => ({
       ...prev,
-      userEquipment: prev.userEquipment.filter(item => item !== chip)
+      userEquipment: prev.userEquipment.filter((item) => item !== chip),
     }));
   };
 
@@ -170,10 +181,7 @@ export default function EditJobPage() {
             <div className={styles.equipmentHeader}>
               <span className={styles.equipmentLabel}>Hvilket utstyr har du?</span>
             </div>
-            <ChipGroup
-              chips={jobData.userEquipment}
-              onChipRemove={handleChipRemove}
-            />
+            <ChipGroup chips={jobData.userEquipment} onChipRemove={handleChipRemove} />
           </div>
 
           <DateTimePicker

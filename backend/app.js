@@ -1,75 +1,70 @@
-require("dotenv").config(); // Laster inn .env-variabler
-const connectDB = require("./db"); // Importer db-filen
+require('dotenv').config(); // Laster inn .env-variabler
+const connectDB = require('./db'); // Importer db-filen
 connectDB(); // Koble til MongoDB
 
-const createError = require("http-errors");
-const express = require("express");
-const path = require("path");
-const cookieParser = require("cookie-parser");
-const logger = require("morgan");
-const cors = require("cors");
+const createError = require('http-errors');
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
+const cors = require('cors');
 
-require("dotenv").config({ path: path.join(__dirname, ".env") });
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-const indexRouter = require("./routes/index");
-const authRouter = require("./routes/auth");
-const usersRouter = require("./routes/users");
-const servicesRouter = require("./routes/service");
-const favoritesRouter = require("./routes/favorites");
-const messagesRouter = require("./routes/messages");
-const uploadRouter = require("./routes/upload");
-const ordersRouter = require("./routes/order");
-const notificationsRouter = require("./routes/notifications");
-const adminRouter = require("./routes/admin");
-const reviewsRouter = require("./routes/review");
-const categoryRouter = require("./routes/category");
-const filterRouter = require("./routes/filter");
-const heroSelectRouter = require("./routes/hero");
-const chatRouter = require("./routes/chat");
-const couponRouter = require("./routes/coupon");
-const subscriptionPlanRouter = require("./routes/subscriptionPlan");
-const stripeRouter = require("./routes/stripe");
-const transactionRoutes = require("./routes/transaction");
-const jobbloShopRouter = require("./routes/shop");
-const upcomingFeatureRouter = require("./routes/upcomingFeature");
-const listsRouter = require("./routes/lists");
-const aiRouter = require("./routes/ai");
-const exploreRouter = require("./routes/explore");
-const homeHeroRouter = require("./routes/homeHero");
-const globalConfigRouter = require("./routes/globalConfig");
-const applicantsRouter = require("./routes/applicant");
-const safePayRouter = require("./routes/safePay");
-const safePayCheckoutRouter = require("./routes/safePayCheckout");
-const locationFilterRouter = require("./routes/locationFilter");
-const swaggerUi = require("swagger-ui-express");
-const swaggerSpec = require("./swagger");
+const indexRouter = require('./routes/index');
+const authRouter = require('./routes/auth');
+const usersRouter = require('./routes/users');
+const servicesRouter = require('./routes/service');
+const favoritesRouter = require('./routes/favorites');
+const messagesRouter = require('./routes/messages');
+const uploadRouter = require('./routes/upload');
+const ordersRouter = require('./routes/order');
+const notificationsRouter = require('./routes/notifications');
+const adminRouter = require('./routes/admin');
+const reviewsRouter = require('./routes/review');
+const categoryRouter = require('./routes/category');
+const filterRouter = require('./routes/filter');
+const heroSelectRouter = require('./routes/hero');
+const chatRouter = require('./routes/chat');
+const couponRouter = require('./routes/coupon');
+const subscriptionPlanRouter = require('./routes/subscriptionPlan');
+const stripeRouter = require('./routes/stripe');
+const transactionRoutes = require('./routes/transaction');
+const jobbloShopRouter = require('./routes/shop');
+const upcomingFeatureRouter = require('./routes/upcomingFeature');
+const listsRouter = require('./routes/lists');
+const aiRouter = require('./routes/ai');
+const exploreRouter = require('./routes/explore');
+const homeHeroRouter = require('./routes/homeHero');
+const globalConfigRouter = require('./routes/globalConfig');
+const applicantsRouter = require('./routes/applicant');
+const safePayRouter = require('./routes/safePay');
+const safePayCheckoutRouter = require('./routes/safePayCheckout');
+const locationFilterRouter = require('./routes/locationFilter');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swagger');
 
 // CORS configuration
 const corsOptions = {
   origin: true, // Reflect request origin, or use an array of allowed origins
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "Accept",
-    "X-Requested-With",
-  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
   credentials: true,
   optionsSuccessStatus: 200,
 };
 
-const passport = require("./config/passport");
-const session = require("express-session");
-const useragent = require("express-useragent");
+const passport = require('./config/passport');
+const session = require('express-session');
+const useragent = require('express-useragent');
 
-const { apiLimiter } = require("./middleware/rateLimiter");
+const { apiLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
 
 app.use(cors(corsOptions));
 app.use(apiLimiter); // Apply general API rate limiting
 app.use(useragent.express());
-app.use(logger("dev"));
+app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
@@ -84,7 +79,7 @@ app.use(
       secure: false, // Set to true in production with HTTPS
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
-  }),
+  })
 );
 
 // Initialize Passport
@@ -92,40 +87,40 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Swagger UI
-app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
-app.use("/", indexRouter);
-app.use("/api/auth", authRouter);
-app.use("/api/users", usersRouter);
-app.use("/api/services", servicesRouter);
-app.use("/api/favorites", favoritesRouter);
-app.use("/api/messages", messagesRouter);
-app.use("/api/upload", uploadRouter);
-app.use("/api/home-hero", homeHeroRouter);
-app.use("/api/config", globalConfigRouter);
-app.use("/api/orders", ordersRouter);
-app.use("/api/notifications", notificationsRouter);
-app.use("/api/admin", adminRouter);
-app.use("/api", reviewsRouter);
-app.use("/api/categories", categoryRouter);
-app.use("/api/plans", subscriptionPlanRouter);
-app.use("/api/filter", filterRouter);
-app.use("/api/hero", heroSelectRouter);
-app.use("/api/chats", chatRouter);
-app.use("/api/stripe", stripeRouter);
-app.use("/api/coupons", couponRouter);
-app.use("/api/transactions", transactionRoutes);
-app.use("/api/admin/transactions", transactionRoutes);
-app.use("/api/jobbloShop", jobbloShopRouter);
-app.use("/api/lists", listsRouter);
-app.use("/api/ai", aiRouter);
-app.use("/api/explore", exploreRouter);
-app.use("/api/applicants", applicantsRouter);
-app.use("/api/safepay", safePayRouter);
-app.use("/api/safepay-checkout", safePayCheckoutRouter);
-app.use("/api/upcomingFeatures", upcomingFeatureRouter);
-app.use("/api/location-filter", locationFilterRouter);
+app.use('/', indexRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/services', servicesRouter);
+app.use('/api/favorites', favoritesRouter);
+app.use('/api/messages', messagesRouter);
+app.use('/api/upload', uploadRouter);
+app.use('/api/home-hero', homeHeroRouter);
+app.use('/api/config', globalConfigRouter);
+app.use('/api/orders', ordersRouter);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api', reviewsRouter);
+app.use('/api/categories', categoryRouter);
+app.use('/api/plans', subscriptionPlanRouter);
+app.use('/api/filter', filterRouter);
+app.use('/api/hero', heroSelectRouter);
+app.use('/api/chats', chatRouter);
+app.use('/api/stripe', stripeRouter);
+app.use('/api/coupons', couponRouter);
+app.use('/api/transactions', transactionRoutes);
+app.use('/api/admin/transactions', transactionRoutes);
+app.use('/api/jobbloShop', jobbloShopRouter);
+app.use('/api/lists', listsRouter);
+app.use('/api/ai', aiRouter);
+app.use('/api/explore', exploreRouter);
+app.use('/api/applicants', applicantsRouter);
+app.use('/api/safepay', safePayRouter);
+app.use('/api/safepay-checkout', safePayCheckoutRouter);
+app.use('/api/upcomingFeatures', upcomingFeatureRouter);
+app.use('/api/location-filter', locationFilterRouter);
 // Error handler
 app.use(function (req, res, next) {
   next(createError(404));

@@ -1,18 +1,15 @@
-const Message = require("../models/Message");
-const Notification = require("../models/Notification");
-const notificationController = require("./notificationController");
-const Order = require("../models/Order");
-const User = require("../models/User");
-const mongoose = require("mongoose");
+const Message = require('../models/Message');
+const Notification = require('../models/Notification');
+const notificationController = require('./notificationController');
+const Order = require('../models/Order');
+const User = require('../models/User');
+const mongoose = require('mongoose');
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 const isUserRelatedToOrder = ({ userId, order }) => {
-  return (
-    order.customerId.toString() === userId ||
-    order.providerId.toString() === userId
-  );
+  return order.customerId.toString() === userId || order.providerId.toString() === userId;
 };
 
 const canAccessMessage = ({ userId, order, message }) => {
@@ -34,7 +31,7 @@ exports.getAllMessages = async (req, res) => {
     const orders = await Order.find({
       $or: [{ customerId: userId }, { providerId: userId }],
     })
-      .select("_id")
+      .select('_id')
       .lean();
 
     const orderIds = orders.map((o) => o._id);
@@ -43,8 +40,8 @@ exports.getAllMessages = async (req, res) => {
       orderId: { $in: orderIds },
       deletedFor: { $ne: userId },
     })
-      .populate("senderId", "name email")
-      .populate("orderId", "serviceId customerId providerId status");
+      .populate('senderId', 'name email')
+      .populate('orderId', 'serviceId customerId providerId status');
 
     res.json(messages);
   } catch (error) {
@@ -61,19 +58,19 @@ exports.getMessagesForOrder = async (req, res) => {
     const { orderId } = req.params;
 
     if (!isValidId(orderId)) {
-      return res.status(400).json({ error: "Invalid order ID format" });
+      return res.status(400).json({ error: 'Invalid order ID format' });
     }
 
     const order = await Order.findById(orderId);
-    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
 
     if (!isUserRelatedToOrder({ userId: req.userId, order }))
-      return res.status(403).json({ error: "Not authorized" });
+      return res.status(403).json({ error: 'Not authorized' });
 
     const messages = await Message.find({
       orderId,
       deletedFor: { $ne: req.userId },
-    }).populate("senderId", "name email");
+    }).populate('senderId', 'name email');
 
     res.json(messages);
   } catch (error) {
@@ -89,25 +86,23 @@ exports.getMessageById = async (req, res) => {
     const { id } = req.params;
 
     if (!isValidId(id)) {
-      return res.status(400).json({ error: "Invalid message ID format" });
+      return res.status(400).json({ error: 'Invalid message ID format' });
     }
 
     const message = await Message.findById(id)
-      .populate("senderId", "name email")
-      .populate("orderId", "serviceId customerId providerId status");
+      .populate('senderId', 'name email')
+      .populate('orderId', 'serviceId customerId providerId status');
 
-    if (!message) return res.status(404).json({ error: "Message not found" });
+    if (!message) return res.status(404).json({ error: 'Message not found' });
 
     const order = message.orderId;
 
-    if (
-      !canAccessMessage({ userId: req.userId, order: message.orderId, message })
-    ) {
-      return res.status(403).json({ error: "Not authorized" });
+    if (!canAccessMessage({ userId: req.userId, order: message.orderId, message })) {
+      return res.status(403).json({ error: 'Not authorized' });
     }
 
     if (message.deletedFor.includes(req.userId)) {
-      return res.status(404).json({ error: "Message deleted" });
+      return res.status(404).json({ error: 'Message deleted' });
     }
 
     res.json(message);
@@ -124,25 +119,18 @@ exports.createMessage = async (req, res) => {
     const { orderId, content, images, type } = req.body;
     const senderId = req.userId;
 
-    if (!orderId)
-      return res.status(400).json({ error: "Order ID is required" });
+    if (!orderId) return res.status(400).json({ error: 'Order ID is required' });
 
     if (!content && (!images || images.length === 0))
-      return res
-        .status(400)
-        .json({ error: "Message must contain text or images" });
+      return res.status(400).json({ error: 'Message must contain text or images' });
 
-    if (!isValidId(orderId))
-      return res.status(400).json({ error: "Invalid order ID format" });
+    if (!isValidId(orderId)) return res.status(400).json({ error: 'Invalid order ID format' });
 
     const order = await Order.findById(orderId);
-    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
 
-    if (
-      order.customerId.toString() !== senderId &&
-      order.providerId.toString() !== senderId
-    ) {
-      return res.status(403).json({ error: "Not authorized" });
+    if (order.customerId.toString() !== senderId && order.providerId.toString() !== senderId) {
+      return res.status(403).json({ error: 'Not authorized' });
     }
 
     const message = await Message.create({
@@ -150,27 +138,25 @@ exports.createMessage = async (req, res) => {
       senderId,
       message: content,
       images: images || [],
-      type: type || "text",
+      type: type || 'text',
     });
 
-    await message.populate("senderId", "name email");
+    await message.populate('senderId', 'name email');
 
     const otherUser =
-      order.customerId.toString() === senderId
-        ? order.providerId
-        : order.customerId;
+      order.customerId.toString() === senderId ? order.providerId : order.customerId;
 
     // Create notification for recipient
-    await notificationController.createAndEmitNotification(req.app.get("io"), {
+    await notificationController.createAndEmitNotification(req.app.get('io'), {
       userId: otherUser,
-      type: "message",
+      type: 'message',
       content: `New message from ${message.senderId.name}`,
     });
 
     // Emit message for real-time delivery to connected users
-    const io = req.app.get("io");
+    const io = req.app.get('io');
     if (io) {
-      io.to(`chat-${orderId}`).emit("message:new", message);
+      io.to(`chat-${orderId}`).emit('message:new', message);
     }
 
     res.status(201).json(message);
@@ -185,35 +171,30 @@ exports.createMessage = async (req, res) => {
 exports.markAsRead = async (req, res) => {
   try {
     if (!req.userId) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const { id } = req.params;
 
-    if (!isValidId(id))
-      return res.status(400).json({ error: "Invalid message ID format" });
+    if (!isValidId(id)) return res.status(400).json({ error: 'Invalid message ID format' });
 
     const message = await Message.findById(id);
-    if (!message) return res.status(404).json({ error: "Message not found" });
+    if (!message) return res.status(404).json({ error: 'Message not found' });
 
     // Check if already read
     const alreadyRead =
       Array.isArray(message.readReceipts) &&
-      message.readReceipts.some(
-        (r) => r.userId && r.userId.toString() === req.userId,
-      );
+      message.readReceipts.some((r) => r.userId && r.userId.toString() === req.userId);
 
     if (alreadyRead) {
-      return res
-        .status(200)
-        .json({ success: true, message: "Message already marked as read" });
+      return res.status(200).json({ success: true, message: 'Message already marked as read' });
     }
 
     // Mark as read
     message.readReceipts.push({ userId: req.userId, readAt: Date.now() });
     await message.save();
 
-    res.json({ success: true, message: "Message marked as read" });
+    res.json({ success: true, message: 'Message marked as read' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -226,15 +207,14 @@ exports.markOrderMessagesAsRead = async (req, res) => {
   try {
     const { orderId } = req.params;
 
-    if (!isValidId(orderId))
-      return res.status(400).json({ error: "Invalid order ID format" });
+    if (!isValidId(orderId)) return res.status(400).json({ error: 'Invalid order ID format' });
 
     await Message.updateMany(
       {
         orderId,
-        "readReceipts.userId": { $ne: req.userId },
+        'readReceipts.userId': { $ne: req.userId },
       },
-      { $push: { readReceipts: { userId: req.userId, readAt: new Date() } } },
+      { $push: { readReceipts: { userId: req.userId, readAt: new Date() } } }
     );
 
     res.json({ success: true });
@@ -254,7 +234,7 @@ exports.deleteForMe = async (req, res) => {
       $addToSet: { deletedFor: req.userId },
     });
 
-    res.json({ success: true, message: "Message hidden" });
+    res.json({ success: true, message: 'Message hidden' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -266,18 +246,17 @@ exports.deleteForMe = async (req, res) => {
  */
 exports.deleteMessage = async (req, res) => {
   try {
-    if (!req.userId) return res.status(401).json({ error: "Unauthorized" });
+    if (!req.userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const { id } = req.params;
 
-    if (!isValidId(id))
-      return res.status(400).json({ error: "Invalid message ID format" });
+    if (!isValidId(id)) return res.status(400).json({ error: 'Invalid message ID format' });
 
     const message = await Message.findById(id);
-    if (!message) return res.status(404).json({ error: "Message not found" });
+    if (!message) return res.status(404).json({ error: 'Message not found' });
 
     if (message.senderId.toString() !== req.userId)
-      return res.status(403).json({ error: "Not allowed" });
+      return res.status(403).json({ error: 'Not allowed' });
 
     await Message.findByIdAndDelete(id);
 

@@ -1,6 +1,6 @@
-import { useOutletContext } from "react-router-dom";
-import type { SettingsContextType } from "../../../pages/SettingsPage";
-import { useState, useRef } from "react";
+import { useOutletContext } from 'react-router-dom';
+import type { SettingsContextType } from '../../../pages/SettingsPage';
+import { useState, useRef } from 'react';
 import {
   X,
   Plus,
@@ -10,7 +10,7 @@ import {
   FileText,
   Award,
   Calendar,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   useAddPortfolioItem,
   useDeletePortfolioItem,
@@ -20,12 +20,12 @@ import {
   useDeletePreviousProject,
   useAddCertification,
   useDeleteCertification,
-} from "../../../features/profile/hooks";
+} from '../../../features/profile/hooks';
 
 export const SeekerSettingsView = () => {
   const { form, handleChange, handleUpdate, updateUser, user } =
     useOutletContext<SettingsContextType>();
-  const [newSkill, setNewSkill] = useState("");
+  const [newSkill, setNewSkill] = useState('');
 
   // Mutations
   const addPortfolioMutation = useAddPortfolioItem();
@@ -40,9 +40,9 @@ export const SeekerSettingsView = () => {
   // --- Portfolio states ---
   const [isAddingPortfolio, setIsAddingPortfolio] = useState(false);
   const [portfolioForm, setPortfolioForm] = useState({
-    title: "",
-    description: "",
-    link: "",
+    title: '',
+    description: '',
+    link: '',
   });
   const [portfolioImage, setPortfolioImage] = useState<File | null>(null);
   const portfolioInputRef = useRef<HTMLInputElement>(null);
@@ -50,21 +50,21 @@ export const SeekerSettingsView = () => {
   // --- Experience states ---
   const [isAddingExperience, setIsAddingExperience] = useState(false);
   const [experienceForm, setExperienceForm] = useState({
-    title: "",
-    company: "",
-    startDate: "",
-    endDate: "",
-    description: "",
+    title: '',
+    company: '',
+    startDate: '',
+    endDate: '',
+    description: '',
   });
 
   // --- Previous Projects states ---
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [projectForm, setProjectForm] = useState({
-    title: "",
-    description: "",
-    category: "",
-    date: "",
-    link: "",
+    title: '',
+    description: '',
+    category: '',
+    date: '',
+    link: '',
   });
   const [projectImage, setProjectImage] = useState<File | null>(null);
   const projectInputRef = useRef<HTMLInputElement>(null);
@@ -72,10 +72,10 @@ export const SeekerSettingsView = () => {
   // --- Certification states ---
   const [isAddingCert, setIsAddingCert] = useState(false);
   const [certForm, setCertForm] = useState({
-    title: "",
-    issuedBy: "",
-    date: "",
-    description: "",
+    title: '',
+    issuedBy: '',
+    date: '',
+    description: '',
   });
   const [certFile, setCertFile] = useState<File | null>(null);
   const certInputRef = useRef<HTMLInputElement>(null);
@@ -88,30 +88,30 @@ export const SeekerSettingsView = () => {
 
   const addSkill = () => {
     if (newSkill.trim() && !form.skills.includes(newSkill.trim())) {
-      handleChange("skills", [...form.skills, newSkill.trim()]);
-      setNewSkill("");
+      handleChange('skills', [...form.skills, newSkill.trim()]);
+      setNewSkill('');
     }
   };
 
   const removeSkill = (skillToRemove: string) => {
     handleChange(
-      "skills",
-      form.skills.filter((s) => s !== skillToRemove),
+      'skills',
+      form.skills.filter((s) => s !== skillToRemove)
     );
   };
 
   // --- Handlers ---
   const handleAddPortfolio = () => {
     const formData = new FormData();
-    formData.append("title", portfolioForm.title);
-    formData.append("description", portfolioForm.description);
-    formData.append("link", portfolioForm.link);
-    if (portfolioImage) formData.append("image", portfolioImage);
+    formData.append('title', portfolioForm.title);
+    formData.append('description', portfolioForm.description);
+    formData.append('link', portfolioForm.link);
+    if (portfolioImage) formData.append('image', portfolioImage);
 
     addPortfolioMutation.mutate(formData, {
       onSuccess: () => {
         setIsAddingPortfolio(false);
-        setPortfolioForm({ title: "", description: "", link: "" });
+        setPortfolioForm({ title: '', description: '', link: '' });
         setPortfolioImage(null);
       },
     });
@@ -122,11 +122,11 @@ export const SeekerSettingsView = () => {
       onSuccess: () => {
         setIsAddingExperience(false);
         setExperienceForm({
-          title: "",
-          company: "",
-          startDate: "",
-          endDate: "",
-          description: "",
+          title: '',
+          company: '',
+          startDate: '',
+          endDate: '',
+          description: '',
         });
       },
     });
@@ -137,17 +137,17 @@ export const SeekerSettingsView = () => {
     Object.entries(projectForm).forEach(([key, value]) => {
       formData.append(key, value);
     });
-    if (projectImage) formData.append("image", projectImage);
+    if (projectImage) formData.append('image', projectImage);
 
     addProjectMutation.mutate(formData, {
       onSuccess: () => {
         setIsAddingProject(false);
         setProjectForm({
-          title: "",
-          description: "",
-          category: "",
-          date: "",
-          link: "",
+          title: '',
+          description: '',
+          category: '',
+          date: '',
+          link: '',
         });
         setProjectImage(null);
       },
@@ -159,12 +159,12 @@ export const SeekerSettingsView = () => {
     Object.entries(certForm).forEach(([key, value]) => {
       formData.append(key, value);
     });
-    if (certFile) formData.append("file", certFile);
+    if (certFile) formData.append('file', certFile);
 
     addCertMutation.mutate(formData, {
       onSuccess: () => {
         setIsAddingCert(false);
-        setCertForm({ title: "", issuedBy: "", date: "", description: "" });
+        setCertForm({ title: '', issuedBy: '', date: '', description: '' });
         setCertFile(null);
       },
     });
@@ -191,9 +191,7 @@ export const SeekerSettingsView = () => {
             placeholder="F.eks. Mandag - Fredag: 08:00 - 16:00"
             className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-gray-100 outline-none rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors resize-none"
             value={form.availabilityText}
-            onChange={(event) =>
-              handleChange("availabilityText", event.target.value)
-            }
+            onChange={(event) => handleChange('availabilityText', event.target.value)}
           />
         </div>
       </div>
@@ -208,7 +206,7 @@ export const SeekerSettingsView = () => {
             className="flex-1 bg-gray-100 outline-none rounded-xl px-4 py-3 text-gray-900 font-medium"
             value={newSkill}
             onChange={(e) => setNewSkill(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addSkill()}
+            onKeyDown={(e) => e.key === 'Enter' && addSkill()}
           />
           <button
             onClick={addSkill}
@@ -224,9 +222,7 @@ export const SeekerSettingsView = () => {
               key={skill}
               className="flex items-center gap-2 bg-[#2F7E4715] px-4 py-2 rounded-full border border-[#2F7E4720]"
             >
-              <span className="text-sm font-bold text-custom-green">
-                {skill}
-              </span>
+              <span className="text-sm font-bold text-custom-green">{skill}</span>
               <button
                 title="Fjern"
                 type="button"
@@ -247,11 +243,11 @@ export const SeekerSettingsView = () => {
         className={`w-full font-bold text-lg py-4 rounded-2xl text-white shadow-sm transition-all duration-200
           ${
             isDisabled
-              ? "bg-custom-green cursor-not-allowed opacity-80"
-              : "bg-custom-green hover:shadow-md active:scale-[0.98]"
+              ? 'bg-custom-green cursor-not-allowed opacity-80'
+              : 'bg-custom-green hover:shadow-md active:scale-[0.98]'
           }`}
       >
-        {updateUser?.isPending ? "Lagrer..." : "Lagre endringer"}
+        {updateUser?.isPending ? 'Lagrer...' : 'Lagre endringer'}
       </button>
 
       {/* Experience Section */}
@@ -345,14 +341,10 @@ export const SeekerSettingsView = () => {
             <div className="flex gap-3">
               <button
                 onClick={handleAddExperience}
-                disabled={
-                  addExperienceMutation.isPending || !experienceForm.title
-                }
+                disabled={addExperienceMutation.isPending || !experienceForm.title}
                 className="flex-1 bg-black text-white font-bold py-3 rounded-xl disabled:opacity-50"
               >
-                {addExperienceMutation.isPending
-                  ? "Lagrer..."
-                  : "Lagre erfaring"}
+                {addExperienceMutation.isPending ? 'Lagrer...' : 'Lagre erfaring'}
               </button>
               <button
                 onClick={() => setIsAddingExperience(false)}
@@ -372,20 +364,12 @@ export const SeekerSettingsView = () => {
             >
               <div>
                 <h4 className="font-bold text-gray-900">{exp.title}</h4>
-                <p className="text-sm font-bold text-custom-green">
-                  {exp.company}
-                </p>
+                <p className="text-sm font-bold text-custom-green">{exp.company}</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {new Date(exp.startDate).toLocaleDateString("no-NO")} -{" "}
-                  {exp.endDate
-                    ? new Date(exp.endDate).toLocaleDateString("no-NO")
-                    : "Nåværende"}
+                  {new Date(exp.startDate).toLocaleDateString('no-NO')} -{' '}
+                  {exp.endDate ? new Date(exp.endDate).toLocaleDateString('no-NO') : 'Nåværende'}
                 </p>
-                {exp.description && (
-                  <p className="text-sm text-gray-600 mt-2">
-                    {exp.description}
-                  </p>
-                )}
+                {exp.description && <p className="text-sm text-gray-600 mt-2">{exp.description}</p>}
               </div>
               <button
                 title="Slett"
@@ -423,35 +407,27 @@ export const SeekerSettingsView = () => {
                 placeholder="Prosjekt tittel"
                 className="bg-white rounded-xl px-4 py-3 outline-none border border-gray-200 font-medium"
                 value={projectForm.title}
-                onChange={(e) =>
-                  setProjectForm({ ...projectForm, title: e.target.value })
-                }
+                onChange={(e) => setProjectForm({ ...projectForm, title: e.target.value })}
               />
               <input
                 type="text"
                 placeholder="Kategori (f.eks. Maling, Snekker)"
                 className="bg-white rounded-xl px-4 py-3 outline-none border border-gray-200 font-medium"
                 value={projectForm.category}
-                onChange={(e) =>
-                  setProjectForm({ ...projectForm, category: e.target.value })
-                }
+                onChange={(e) => setProjectForm({ ...projectForm, category: e.target.value })}
               />
               <input
                 type="date"
                 className="bg-white rounded-xl px-4 py-3 outline-none border border-gray-200 font-medium"
                 value={projectForm.date}
-                onChange={(e) =>
-                  setProjectForm({ ...projectForm, date: e.target.value })
-                }
+                onChange={(e) => setProjectForm({ ...projectForm, date: e.target.value })}
               />
               <input
                 type="text"
                 placeholder="Link (valgfritt)"
                 className="bg-white rounded-xl px-4 py-3 outline-none border border-gray-200 font-medium"
                 value={projectForm.link}
-                onChange={(e) =>
-                  setProjectForm({ ...projectForm, link: e.target.value })
-                }
+                onChange={(e) => setProjectForm({ ...projectForm, link: e.target.value })}
               />
             </div>
             <textarea
@@ -459,9 +435,7 @@ export const SeekerSettingsView = () => {
               rows={2}
               className="bg-white rounded-xl px-4 py-3 outline-none border border-gray-200 font-medium resize-none"
               value={projectForm.description}
-              onChange={(e) =>
-                setProjectForm({ ...projectForm, description: e.target.value })
-              }
+              onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })}
             />
 
             <div
@@ -476,9 +450,9 @@ export const SeekerSettingsView = () => {
                 accept="image/*"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file && !file.type.startsWith("image/")) {
-                    import("react-hot-toast").then(({ toast }) =>
-                      toast.error("Vennligst velg et bilde format"),
+                  if (file && !file.type.startsWith('image/')) {
+                    import('react-hot-toast').then(({ toast }) =>
+                      toast.error('Vennligst velg et bilde format')
                     );
                     return;
                   }
@@ -506,7 +480,7 @@ export const SeekerSettingsView = () => {
                 disabled={addProjectMutation.isPending || !projectForm.title}
                 className="flex-1 bg-black text-white font-bold py-3 rounded-xl disabled:opacity-50"
               >
-                {addProjectMutation.isPending ? "Lagrer..." : "Lagre prosjekt"}
+                {addProjectMutation.isPending ? 'Lagrer...' : 'Lagre prosjekt'}
               </button>
               <button
                 onClick={() => setIsAddingProject(false)}
@@ -526,18 +500,14 @@ export const SeekerSettingsView = () => {
             >
               <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 shrink-0">
                 <img
-                  src={project.imageUrl || "/placeholder-project.png"}
+                  src={project.imageUrl || '/placeholder-project.png'}
                   className="w-full h-full object-cover"
                   alt=""
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-bold text-gray-900 truncate">
-                  {project.title}
-                </h4>
-                <p className="text-xs text-custom-green font-bold">
-                  {project.category}
-                </p>
+                <h4 className="font-bold text-gray-900 truncate">{project.title}</h4>
+                <p className="text-xs text-custom-green font-bold">{project.category}</p>
                 <p className="text-[10px] text-gray-400">
                   {project.date && new Date(project.date).getFullYear()}
                 </p>
@@ -577,9 +547,7 @@ export const SeekerSettingsView = () => {
               placeholder="Tittel"
               className="bg-white rounded-xl px-4 py-3 outline-none border border-gray-200 font-medium"
               value={portfolioForm.title}
-              onChange={(e) =>
-                setPortfolioForm({ ...portfolioForm, title: e.target.value })
-              }
+              onChange={(e) => setPortfolioForm({ ...portfolioForm, title: e.target.value })}
             />
             <textarea
               placeholder="Beskrivelse"
@@ -605,9 +573,9 @@ export const SeekerSettingsView = () => {
                 accept="image/*"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file && !file.type.startsWith("image/")) {
-                    import("react-hot-toast").then(({ toast }) =>
-                      toast.error("Vennligst velg et bilde format"),
+                  if (file && !file.type.startsWith('image/')) {
+                    import('react-hot-toast').then(({ toast }) =>
+                      toast.error('Vennligst velg et bilde format')
                     );
                     return;
                   }
@@ -631,12 +599,10 @@ export const SeekerSettingsView = () => {
             <div className="flex gap-3">
               <button
                 onClick={handleAddPortfolio}
-                disabled={
-                  addPortfolioMutation.isPending || !portfolioForm.title
-                }
+                disabled={addPortfolioMutation.isPending || !portfolioForm.title}
                 className="flex-1 bg-black text-white font-bold py-3 rounded-xl disabled:opacity-50"
               >
-                {addPortfolioMutation.isPending ? "Lagrer..." : "Lagre media"}
+                {addPortfolioMutation.isPending ? 'Lagrer...' : 'Lagre media'}
               </button>
               <button
                 onClick={() => setIsAddingPortfolio(false)}
@@ -654,15 +620,9 @@ export const SeekerSettingsView = () => {
               key={item._id}
               className="group relative aspect-square bg-gray-100 rounded-2xl overflow-hidden border border-gray-100"
             >
-              <img
-                src={item.imageUrl}
-                className="w-full h-full object-cover"
-                alt=""
-              />
+              <img src={item.imageUrl} className="w-full h-full object-cover" alt="" />
               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4 text-center">
-                <h5 className="text-white text-xs font-bold truncate w-full">
-                  {item.title}
-                </h5>
+                <h5 className="text-white text-xs font-bold truncate w-full">{item.title}</h5>
                 <button
                   onClick={() => deletePortfolioMutation.mutate(item._id)}
                   className="mt-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
@@ -699,26 +659,20 @@ export const SeekerSettingsView = () => {
                 placeholder="Tittel på sertifikat"
                 className="bg-white rounded-xl px-4 py-3 outline-none border border-gray-200 font-medium"
                 value={certForm.title}
-                onChange={(e) =>
-                  setCertForm({ ...certForm, title: e.target.value })
-                }
+                onChange={(e) => setCertForm({ ...certForm, title: e.target.value })}
               />
               <input
                 type="text"
                 placeholder="Utstedt av"
                 className="bg-white rounded-xl px-4 py-3 outline-none border border-gray-200 font-medium"
                 value={certForm.issuedBy}
-                onChange={(e) =>
-                  setCertForm({ ...certForm, issuedBy: e.target.value })
-                }
+                onChange={(e) => setCertForm({ ...certForm, issuedBy: e.target.value })}
               />
               <input
                 type="date"
                 className="bg-white rounded-xl px-4 py-3 outline-none border border-gray-200 font-medium"
                 value={certForm.date}
-                onChange={(e) =>
-                  setCertForm({ ...certForm, date: e.target.value })
-                }
+                onChange={(e) => setCertForm({ ...certForm, date: e.target.value })}
               />
             </div>
             <textarea
@@ -726,9 +680,7 @@ export const SeekerSettingsView = () => {
               rows={2}
               className="bg-white rounded-xl px-4 py-3 outline-none border border-gray-200 font-medium resize-none"
               value={certForm.description}
-              onChange={(e) =>
-                setCertForm({ ...certForm, description: e.target.value })
-              }
+              onChange={(e) => setCertForm({ ...certForm, description: e.target.value })}
             />
 
             <div
@@ -764,7 +716,7 @@ export const SeekerSettingsView = () => {
                 disabled={addCertMutation.isPending || !certForm.title}
                 className="flex-1 bg-black text-white font-bold py-3 rounded-xl disabled:opacity-50"
               >
-                {addCertMutation.isPending ? "Lagrer..." : "Lagre sertifikat"}
+                {addCertMutation.isPending ? 'Lagrer...' : 'Lagre sertifikat'}
               </button>
               <button
                 onClick={() => setIsAddingCert(false)}
@@ -786,9 +738,7 @@ export const SeekerSettingsView = () => {
                 <Award size={24} />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-bold text-gray-900 truncate">
-                  {cert.title}
-                </h4>
+                <h4 className="font-bold text-gray-900 truncate">{cert.title}</h4>
                 <p className="text-xs text-gray-500">{cert.issuedBy}</p>
               </div>
               <button

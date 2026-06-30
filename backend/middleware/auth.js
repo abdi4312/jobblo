@@ -1,6 +1,6 @@
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
-const Session = require("../models/Session");
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const Session = require('../models/Session');
 
 /**
  * Middleware to authenticate JWT tokens
@@ -16,19 +16,15 @@ const authenticate = async (req, res, next) => {
     let token = req.cookies.accessToken || req.cookies.token;
     const refreshToken = req.cookies.refreshToken;
 
-    if (
-      !token &&
-      req.headers.authorization &&
-      req.headers.authorization.startsWith("Bearer ")
-    ) {
-      token = req.headers.authorization.split(" ")[1];
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
     }
 
     if (!token) {
       return res.status(401).json({
-        error: "Authentication required",
-        message: "Please log in",
-        code: "TOKEN_MISSING",
+        error: 'Authentication required',
+        message: 'Please log in',
+        code: 'TOKEN_MISSING',
       });
     }
 
@@ -37,11 +33,11 @@ const authenticate = async (req, res, next) => {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
-      if (err.name === "TokenExpiredError") {
+      if (err.name === 'TokenExpiredError') {
         return res.status(401).json({
-          error: "Token expired",
-          message: "Please log in again or refresh token",
-          code: "TOKEN_EXPIRED",
+          error: 'Token expired',
+          message: 'Please log in again or refresh token',
+          code: 'TOKEN_EXPIRED',
         });
       }
       throw err;
@@ -51,8 +47,8 @@ const authenticate = async (req, res, next) => {
     const sessionId = decoded.sid;
     if (!sessionId) {
       return res.status(401).json({
-        error: "Invalid token",
-        message: "Session information missing from token",
+        error: 'Invalid token',
+        message: 'Session information missing from token',
       });
     }
 
@@ -63,12 +59,12 @@ const authenticate = async (req, res, next) => {
 
     if (!sessionExists) {
       // Clear cookies if session is invalid or revoked
-      res.clearCookie("accessToken");
-      res.clearCookie("refreshToken");
+      res.clearCookie('accessToken');
+      res.clearCookie('refreshToken');
       return res.status(401).json({
-        error: "Session revoked",
-        message: "Your session has been terminated or is invalid",
-        code: "SESSION_REVOKED",
+        error: 'Session revoked',
+        message: 'Your session has been terminated or is invalid',
+        code: 'SESSION_REVOKED',
       });
     }
 
@@ -77,12 +73,12 @@ const authenticate = async (req, res, next) => {
     await sessionExists.save();
 
     // Fetch user from database
-    const user = await User.findById(decoded.id).select("-password");
+    const user = await User.findById(decoded.id).select('-password');
 
     if (!user) {
       return res.status(401).json({
-        error: "User not found",
-        message: "Invalid authentication token",
+        error: 'User not found',
+        message: 'Invalid authentication token',
       });
     }
 
@@ -94,14 +90,14 @@ const authenticate = async (req, res, next) => {
     next();
   } catch (error) {
     // Already handled special cases above, only handle others here
-    if (error.name === "JsonWebTokenError") {
+    if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({
-        error: "Invalid token",
-        message: "Authentication token is malformed",
+        error: 'Invalid token',
+        message: 'Authentication token is malformed',
       });
     }
     return res.status(500).json({
-      error: "Authentication error",
+      error: 'Authentication error',
       message: error.message,
     });
   }
@@ -118,15 +114,15 @@ const authenticate = async (req, res, next) => {
 const requireAdmin = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
-      error: "Authentication required",
-      message: "Please authenticate first",
+      error: 'Authentication required',
+      message: 'Please authenticate first',
     });
   }
 
-  if (req.user.role !== "superAdmin") {
+  if (req.user.role !== 'superAdmin') {
     return res.status(403).json({
-      error: "Access denied",
-      message: "Admin privileges required",
+      error: 'Access denied',
+      message: 'Admin privileges required',
     });
   }
 

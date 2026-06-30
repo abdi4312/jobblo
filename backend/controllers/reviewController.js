@@ -1,13 +1,13 @@
-const Review = require("../models/Review");
-const Service = require("../models/Service");
-const User = require("../models/User");
-const mongoose = require("mongoose");
+const Review = require('../models/Review');
+const Service = require('../models/Service');
+const User = require('../models/User');
+const mongoose = require('mongoose');
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 function authorizeReviewAction(req, review) {
-  const isAdmin = req.user.role === "admin";
+  const isAdmin = req.user.role === 'admin';
   const isOwner = review.reviewerId.toString() === String(req.userId);
 
   // Only admin OR the review owner can proceed
@@ -16,23 +16,29 @@ function authorizeReviewAction(req, review) {
 
 exports.createReview = async (req, res) => {
   try {
-    const { orderId, serviceId, revieweeId, revieweeRole, rating, comment } =
-      req.body;
+    const {
+      orderId,
+      serviceId,
+      revieweeId,
+      revieweeRole,
+      rating,
+      comment,
+      photos,
+      recommendWorker,
+    } = req.body;
     const reviewerId = req.userId;
 
     // Validate IDs
     if (!isValidId(revieweeId)) {
-      return res.status(400).json({ error: "Invalid reviewee ID format" });
+      return res.status(400).json({ error: 'Invalid reviewee ID format' });
     }
 
     // Validate rating
-    if (typeof rating !== "number" || rating < 1 || rating > 5) {
-      return res
-        .status(400)
-        .json({ error: "Rating must be a number between 1 and 5" });
+    if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be a number between 1 and 5' });
     }
 
-    console.log("createReview: Creating review with data:", {
+    console.log('createReview: Creating review with data:', {
       orderId,
       serviceId,
       reviewerId,
@@ -40,6 +46,8 @@ exports.createReview = async (req, res) => {
       revieweeRole,
       rating,
       comment,
+      photos,
+      recommendWorker,
     });
     const review = await Review.create({
       orderId,
@@ -49,16 +57,17 @@ exports.createReview = async (req, res) => {
       revieweeRole,
       rating,
       comment,
+      photos: photos || [],
+      recommendWorker: recommendWorker || false,
     });
-    console.log("createReview: Review created:", review);
+    console.log('createReview: Review created:', review);
 
     // Update reviewee stats
     const allReviews = await Review.find({ revieweeId, revieweeRole });
-    console.log("createReview: All reviews for reviewee:", allReviews);
+    console.log('createReview: All reviews for reviewee:', allReviews);
     const reviewCount = allReviews.length;
-    const averageRating =
-      allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount;
-    console.log("createReview: Calculated stats:", {
+    const averageRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount;
+    console.log('createReview: Calculated stats:', {
       reviewCount,
       averageRating,
     });
@@ -71,22 +80,88 @@ exports.createReview = async (req, res) => {
         reviewCount,
         averageRating: Math.round(averageRating * 10) / 10,
       },
-      { new: true },
+      { new: true }
     );
-    console.log("createReview: Updated user:", updatedUser);
+    console.log('createReview: Updated user:', updatedUser);
 
     const populatedReview = await Review.findById(review._id)
-      .populate("reviewerId", "name username avatarUrl")
-      .populate("serviceId", "title");
+      .populate('reviewerId', 'name username avatarUrl')
+      .populate('serviceId', 'title');
 
     res.status(201).json(populatedReview);
   } catch (err) {
     if (err.code === 11000) {
-      return res
-        .status(400)
-        .json({ error: "Du har allerede gitt vurdering for dette oppdraget" });
+      return res.status(400).json({ error: 'Du har allerede gitt vurdering for dette oppdraget' });
     }
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+exports.updateReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating, comment, photos, recommendWorker } = req.body;
+    const userId = req.userId;
+
+    if (!isValidId(id)) {
+      return res.status(400).json({ error: 'Invalid review ID format' });
+    }
+
+    const review = await Review.findById(id);
+
+    if (!review) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+
+    // Authorization check
+    if (!authorizeReviewAction(req, review)) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Update review fields
+    if (rating !== undefined) {
+      if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+        return res.status(400).json({ error: 'Rating must be a number between 1 and 5' });
+      }
+      review.rating = rating;
+    }
+
+    if (comment !== undefined) {
+      review.comment = comment;
+    }
+
+    if (photos !== undefined) {
+      review.photos = photos;
+    }
+
+    if (recommendWorker !== undefined) {
+      review.recommendWorker = recommendWorker;
+    }
+
+    await review.save();
+
+    // Update reviewee stats
+    const allReviews = await Review.find({
+      revieweeId: review.revieweeId,
+      revieweeRole: review.revieweeRole,
+    });
+    const reviewCount = allReviews.length;
+    const averageRating =
+      reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
+
+    await User.findByIdAndUpdate(review.revieweeId, {
+      reviewCount,
+      averageRating: Math.round(averageRating * 10) / 10,
+    });
+
+    const populatedReview = await Review.findById(review._id)
+      .populate('reviewerId', 'name username avatarUrl')
+      .populate('serviceId', 'title');
+
+    res.json(populatedReview);
+  } catch (err) {
+    console.error('Error updating review:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -101,13 +176,13 @@ exports.getUserReviews = async (req, res) => {
     }
 
     const reviews = await Review.find(query)
-      .populate("reviewerId", "name username avatarUrl")
-      .populate("serviceId", "title")
+      .populate('reviewerId', 'name username avatarUrl')
+      .populate('serviceId', 'title')
       .sort({ createdAt: -1 });
 
     res.json(reviews);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -123,24 +198,38 @@ exports.getReviewByOrder = async (req, res) => {
     }
 
     const review = await Review.findOne(query)
-      .populate("reviewerId", "name username avatarUrl")
-      .populate("serviceId", "title");
+      .populate('reviewerId', 'name username avatarUrl')
+      .populate('serviceId', 'title');
 
     res.json(review);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+exports.getReviewByOrderId = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const review = await Review.findOne({ orderId })
+      .populate('reviewerId', 'name username avatarUrl')
+      .populate('serviceId', 'title');
+
+    res.json(review);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
 exports.getAllReviews = async (req, res) => {
   try {
     const reviews = await Review.find({})
-      .populate("reviewerId", "name avatarUrl")
-      .populate("serviceId", "title");
+      .populate('reviewerId', 'name avatarUrl')
+      .populate('serviceId', 'title');
 
     res.json(reviews);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -149,18 +238,18 @@ exports.deleteReview = async (req, res) => {
     const { id } = req.params;
 
     if (!isValidId(id)) {
-      return res.status(400).json({ error: "Invalid review ID format" });
+      return res.status(400).json({ error: 'Invalid review ID format' });
     }
 
     const review = await Review.findById(id);
 
     if (!review) {
-      return res.status(404).json({ error: "Review not found" });
+      return res.status(404).json({ error: 'Review not found' });
     }
 
     // Authorization check
     if (!authorizeReviewAction(req, review)) {
-      return res.status(403).json({ error: "Not authorized" });
+      return res.status(403).json({ error: 'Not authorized' });
     }
 
     // Delete review
@@ -173,18 +262,16 @@ exports.deleteReview = async (req, res) => {
     });
     const reviewCount = allReviews.length;
     const averageRating =
-      reviewCount > 0
-        ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
-        : 0;
+      reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
 
     await User.findByIdAndUpdate(review.revieweeId, {
       reviewCount,
       averageRating: Math.round(averageRating * 10) / 10,
     });
 
-    res.json({ message: "Review deleted successfully" });
+    res.json({ message: 'Review deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -196,13 +283,13 @@ exports.getLatestReviews = async (req, res) => {
     const reviews = await Review.find()
       .sort({ _id: -1 }) // Sort by newest first
       .limit(limit)
-      .populate("reviewerId", "name avatarUrl")
-      .populate("serviceId", "title userId")
+      .populate('reviewerId', 'name avatarUrl')
+      .populate('serviceId', 'title userId')
       .populate({
-        path: "serviceId",
+        path: 'serviceId',
         populate: {
-          path: "userId",
-          select: "name avatarUrl",
+          path: 'userId',
+          select: 'name avatarUrl',
         },
       });
 
@@ -212,6 +299,6 @@ exports.getLatestReviews = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };

@@ -15,12 +15,7 @@ export const validationLogic = {
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
 
-    return (
-      password.length >= minLength &&
-      hasUpperCase &&
-      hasLowerCase &&
-      hasNumber
-    );
+    return password.length >= minLength && hasUpperCase && hasLowerCase && hasNumber;
   },
 
   isValidPhone: (phone: string): boolean => {
@@ -33,7 +28,7 @@ export const validationLogic = {
   },
 
   isPositiveNumber: (value: number | string): boolean => {
-    const num = typeof value === "string" ? Number(value) : value;
+    const num = typeof value === 'string' ? Number(value) : value;
     return !Number.isNaN(num) && num > 0;
   },
 };

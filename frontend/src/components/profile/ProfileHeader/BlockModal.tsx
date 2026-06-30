@@ -1,4 +1,4 @@
-import type { User } from "../../../types/userTypes";
+import type { User } from '../../../types/userTypes';
 
 interface BlockModalProps {
   user: User | null;
@@ -9,14 +9,7 @@ interface BlockModalProps {
   type: 'block' | 'unblock';
 }
 
-export function BlockModal({
-  user,
-  isOpen,
-  onClose,
-  onConfirm,
-  isPending,
-  type
-}: BlockModalProps) {
+export function BlockModal({ user, isOpen, onClose, onConfirm, isPending, type }: BlockModalProps) {
   if (!isOpen || !user) return null;
 
   return (
@@ -27,7 +20,10 @@ export function BlockModal({
           <div className="relative mb-8">
             <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-gray-50 shadow-sm bg-gray-100">
               <img
-                src={user?.avatarUrl || "https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332"}
+                src={
+                  user?.avatarUrl ||
+                  'https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332'
+                }
                 alt="Profile"
                 className="w-full h-full object-cover"
               />
@@ -46,10 +42,9 @@ export function BlockModal({
           </h3>
 
           <p className="text-[14px] text-gray-500 font-medium leading-relaxed mb-10 px-2">
-            {type === 'block' 
-              ? "This user will not be able to see or contact you on Jobblo. Remember that users that are not logged in will still be able to find your profile through our web page. (The user will not be notified)"
-              : "This user will be able to see and contact you on Jobblo. (The user will not be notified)"
-            }
+            {type === 'block'
+              ? 'This user will not be able to see or contact you on Jobblo. Remember that users that are not logged in will still be able to find your profile through our web page. (The user will not be notified)'
+              : 'This user will be able to see and contact you on Jobblo. (The user will not be notified)'}
           </p>
 
           <div className="grid grid-cols-2 w-full border-t border-gray-100 mt-2">
@@ -64,7 +59,7 @@ export function BlockModal({
               onClick={onConfirm}
               className={`py-5 text-[17px] font-bold ${type === 'block' ? 'text-[#FF6B6B]' : 'text-[#FF6B6B]'} hover:bg-gray-50 transition-all disabled:opacity-50`}
             >
-              {isPending ? '...' : (type === 'block' ? 'Block' : 'Unblock')}
+              {isPending ? '...' : type === 'block' ? 'Block' : 'Unblock'}
             </button>
           </div>
         </div>

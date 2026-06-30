@@ -1,6 +1,6 @@
-import { Paperclip, Image, Send } from "lucide-react";
-import React, { useRef, useEffect } from "react";
-import { toast } from "react-hot-toast";
+import { Paperclip, Image, Send } from 'lucide-react';
+import React, { useRef, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 
 interface MessageInputProps {
   newMessage: string;
@@ -26,11 +26,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
   }, [sending]);
 
   const handleAttachClick = () => {
-    toast("Attachment feature coming soon!");
+    toast('Attachment feature coming soon!');
   };
 
   const handleImageClick = () => {
-    toast("Image upload feature coming soon!");
+    toast('Image upload feature coming soon!');
   };
 
   return (
@@ -53,7 +53,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         value={newMessage}
         autoFocus
         onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
+          if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
           }

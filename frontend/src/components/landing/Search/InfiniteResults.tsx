@@ -1,5 +1,5 @@
-import { SearchItem } from "./SearchItem";
-import type { CategoryResult, UserResult, ListResult } from "./types";
+import { SearchItem } from './SearchItem';
+import type { CategoryResult, UserResult, ListResult } from './types';
 
 interface InfiniteResultsProps {
   activeTab: string;
@@ -38,9 +38,9 @@ export const InfiniteResults = ({
         onClick={() => {
           onSaveToHistory({
             id: `query-${searchQuery}`,
-            type: "query",
+            type: 'query',
             title: searchQuery,
-            subtitle: "Brand search",
+            subtitle: 'Brand search',
           });
           onNavigate(`/search/job/all?search=${searchQuery}`);
           onCloseDropdown();
@@ -48,9 +48,7 @@ export const InfiniteResults = ({
       />
 
       <div className="flex items-center justify-between px-2">
-        <h4 className="text-[18px] font-bold text-[#1A1A1A]">
-          {activeTab} Search Results
-        </h4>
+        <h4 className="text-[18px] font-bold text-[#1A1A1A]">{activeTab} Search Results</h4>
         <button
           onClick={onBackToTop}
           className="text-[14px] font-bold px-4 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
@@ -60,13 +58,11 @@ export const InfiniteResults = ({
       </div>
 
       {isInfiniteLoading ? (
-        <div className="text-center py-10 text-gray-500">
-          Searching {activeTab}...
-        </div>
+        <div className="text-center py-10 text-gray-500">Searching {activeTab}...</div>
       ) : infiniteResults.length > 0 ? (
         <div className="space-y-4">
           {infiniteResults.map((item: any) => {
-            if (activeTab === "Categories") {
+            if (activeTab === 'Categories') {
               return (
                 <SearchItem
                   key={item._id}
@@ -77,9 +73,9 @@ export const InfiniteResults = ({
                   onClick={() => {
                     onSaveToHistory({
                       id: item._id,
-                      type: "category",
+                      type: 'category',
                       title: item.name,
-                      subtitle: "Category search",
+                      subtitle: 'Category search',
                       iconName: item.icon,
                     });
                     onNavigate(`/search/job/${item.name}`);
@@ -87,19 +83,19 @@ export const InfiniteResults = ({
                   }}
                 />
               );
-            } else if (activeTab === "People") {
+            } else if (activeTab === 'People') {
               return (
                 <SearchItem
                   key={item._id}
                   type="user"
-                  title={`${item.name} ${item.lastName || ""}`.trim()}
+                  title={`${item.name} ${item.lastName || ''}`.trim()}
                   subtitle={`@${item.name?.toLowerCase()}${item.lastName?.toLowerCase()}`}
                   avatarUrl={item.avatarUrl}
                   onClick={() => {
                     onSaveToHistory({
                       id: item._id,
-                      type: "user",
-                      title: `${item.name} ${item.lastName || ""}`.trim(),
+                      type: 'user',
+                      title: `${item.name} ${item.lastName || ''}`.trim(),
                       subtitle: item.name?.toLowerCase(),
                       avatarUrl: item.avatarUrl,
                     });
@@ -108,7 +104,7 @@ export const InfiniteResults = ({
                   }}
                 />
               );
-            } else if (activeTab === "Lists") {
+            } else if (activeTab === 'Lists') {
               return (
                 <SearchItem
                   key={item._id}
@@ -134,7 +130,7 @@ export const InfiniteResults = ({
                 disabled={isFetchingNextPage}
                 className="px-8 py-3 bg-white border border-gray-200 text-gray-700 font-bold rounded-2xl hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50"
               >
-                {isFetchingNextPage ? "Laster mer..." : "Se flere"}
+                {isFetchingNextPage ? 'Laster mer...' : 'Se flere'}
               </button>
             </div>
           )}

@@ -1,7 +1,7 @@
-import LoginImgL from "../../assets/images/Login/left.png";
-import LoginImgR from "../../assets/images/Login/right.png";
-import LogoBG from "../../assets/images/Login/loginpage-bg.png";
-import LogoHande from "../../assets/images/Login/login-hande.png";
+import LoginImgL from '../../assets/images/Login/left.png';
+import LoginImgR from '../../assets/images/Login/right.png';
+import LogoBG from '../../assets/images/Login/loginpage-bg.png';
+import LogoHande from '../../assets/images/Login/login-hande.png';
 
 export default function Auth() {
   return (

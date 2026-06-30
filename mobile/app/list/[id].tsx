@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,20 +11,16 @@ import {
   Alert,
   Pressable,
   TextInput,
-} from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { StatusBar } from "expo-status-bar";
-import {
-  useList,
-  useUpdateList,
-  useDeleteList,
-} from "../../features/list/hooks/useLists";
-import JobCard from "../../components/explore/job-card/index";
-import { Job } from "../../features/job/types";
+} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import { useList, useUpdateList, useDeleteList } from '../../features/list/hooks/useLists';
+import JobCard from '../../components/explore/job-card/index';
+import { Job } from '../../features/job/types';
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function ListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -32,12 +28,12 @@ export default function ListDetailScreen() {
   const { data: list, isLoading, isError } = useList(id!);
   const updateListMutation = useUpdateList();
   const deleteListMutation = useDeleteList();
-  const [viewType, setViewType] = useState<"grid" | "list">("grid");
+  const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [isEditNameVisible, setIsEditNameVisible] = useState(false);
   const [isEditDescVisible, setIsEditDescVisible] = useState(false);
-  const [tempName, setTempName] = useState("");
-  const [tempDesc, setTempDesc] = useState("");
+  const [tempName, setTempName] = useState('');
+  const [tempDesc, setTempDesc] = useState('');
 
   const handleTogglePublic = () => {
     if (!list) return;
@@ -59,7 +55,7 @@ export default function ListDetailScreen() {
         onSuccess: () => {
           setIsEditNameVisible(false);
         },
-      },
+      }
     );
   };
 
@@ -74,21 +70,21 @@ export default function ListDetailScreen() {
         onSuccess: () => {
           setIsEditDescVisible(false);
         },
-      },
+      }
     );
   };
 
   const handleDelete = () => {
     if (!list) return;
-    Alert.alert("Delete List", "Are you sure you want to delete this list?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert('Delete List', 'Are you sure you want to delete this list?', [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: "Delete",
-        style: "destructive",
+        text: 'Delete',
+        style: 'destructive',
         onPress: () => {
           deleteListMutation.mutate(list._id, {
             onSuccess: () => {
-              router.replace("/(tabs)/profile");
+              router.replace('/(tabs)/profile');
             },
           });
         },
@@ -121,12 +117,10 @@ export default function ListDetailScreen() {
 
   const services = (list.services as Job[]) || [];
   const imageUrl =
-    services.length > 0
-      ? services[0].images?.[0]
-      : "https://via.placeholder.com/300";
+    services.length > 0 ? services[0].images?.[0] : 'https://via.placeholder.com/300';
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top", "left", "right"]}>
+    <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
 
       {/* Header */}
@@ -147,10 +141,7 @@ export default function ListDetailScreen() {
         animationType="fade"
         onRequestClose={() => setIsMenuVisible(false)}
       >
-        <Pressable
-          className="flex-1 bg-black/20"
-          onPress={() => setIsMenuVisible(false)}
-        >
+        <Pressable className="flex-1 bg-black/20" onPress={() => setIsMenuVisible(false)}>
           <View
             className="absolute top-16 right-4 bg-white rounded-xl shadow-xl border border-gray-100 py-2 min-w-[200px]"
             style={{ elevation: 5 }}
@@ -175,15 +166,13 @@ export default function ListDetailScreen() {
 
             <TouchableOpacity
               onPress={() => {
-                setTempDesc(list.description || "");
+                setTempDesc(list.description || '');
                 setIsEditDescVisible(true);
                 setIsMenuVisible(false);
               }}
               className="px-6 py-4 border-b border-gray-50"
             >
-              <Text className="text-gray-800 text-base">
-                Change list description
-              </Text>
+              <Text className="text-gray-800 text-base">Change list description</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -191,7 +180,7 @@ export default function ListDetailScreen() {
               className="px-6 py-4 border-b border-gray-50"
             >
               <Text className="text-gray-800 text-base">
-                {list.public ? "Make private" : "Make public"}
+                {list.public ? 'Make private' : 'Make public'}
               </Text>
             </TouchableOpacity>
 
@@ -205,10 +194,7 @@ export default function ListDetailScreen() {
               <Text className="text-gray-800 text-base">Contributors</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => setIsMenuVisible(false)}
-              className="px-6 py-4"
-            >
+            <TouchableOpacity onPress={() => setIsMenuVisible(false)} className="px-6 py-4">
               <Text className="text-gray-800 text-base">Share</Text>
             </TouchableOpacity>
           </View>
@@ -230,9 +216,7 @@ export default function ListDetailScreen() {
             className="bg-white rounded-[30px] p-8 w-[85%] shadow-2xl"
             onPress={(e) => e.stopPropagation()}
           >
-            <Text className="text-3xl font-medium text-gray-900 mb-6">
-              New name
-            </Text>
+            <Text className="text-3xl font-medium text-gray-900 mb-6">New name</Text>
             <TextInput
               className="text-lg text-gray-800 border-b border-gray-200 pb-2 mb-8"
               value={tempName}
@@ -242,20 +226,13 @@ export default function ListDetailScreen() {
             />
             <View className="flex-row justify-end space-x-8">
               <TouchableOpacity onPress={() => setIsEditNameVisible(false)}>
-                <Text className="text-[#800080] text-lg font-medium">
-                  Cancel
-                </Text>
+                <Text className="text-[#800080] text-lg font-medium">Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleSaveName}
-                disabled={updateListMutation.isPending}
-              >
+              <TouchableOpacity onPress={handleSaveName} disabled={updateListMutation.isPending}>
                 {updateListMutation.isPending ? (
                   <ActivityIndicator color="#800080" />
                 ) : (
-                  <Text className="text-[#800080] text-lg font-medium">
-                    Save
-                  </Text>
+                  <Text className="text-[#800080] text-lg font-medium">Save</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -278,9 +255,7 @@ export default function ListDetailScreen() {
             className="bg-white rounded-[30px] p-8 w-[85%] shadow-2xl"
             onPress={(e) => e.stopPropagation()}
           >
-            <Text className="text-3xl font-medium text-gray-900 mb-6">
-              New description
-            </Text>
+            <Text className="text-3xl font-medium text-gray-900 mb-6">New description</Text>
             <TextInput
               className="text-lg text-gray-800 border-b border-gray-200 pb-2 mb-8"
               value={tempDesc}
@@ -291,20 +266,13 @@ export default function ListDetailScreen() {
             />
             <View className="flex-row justify-end space-x-8">
               <TouchableOpacity onPress={() => setIsEditDescVisible(false)}>
-                <Text className="text-[#800080] text-lg font-medium">
-                  Cancel
-                </Text>
+                <Text className="text-[#800080] text-lg font-medium">Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleSaveDesc}
-                disabled={updateListMutation.isPending}
-              >
+              <TouchableOpacity onPress={handleSaveDesc} disabled={updateListMutation.isPending}>
                 {updateListMutation.isPending ? (
                   <ActivityIndicator color="#800080" />
                 ) : (
-                  <Text className="text-[#800080] text-lg font-medium">
-                    Save
-                  </Text>
+                  <Text className="text-[#800080] text-lg font-medium">Save</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -318,7 +286,7 @@ export default function ListDetailScreen() {
           {/* List Cover */}
           <View className="w-32 h-32 bg-gray-100 rounded-[20px] overflow-hidden border border-gray-100">
             <Image
-              source={{ uri: imageUrl || "https://via.placeholder.com/300" }}
+              source={{ uri: imageUrl || 'https://via.placeholder.com/300' }}
               className="w-full h-full"
               resizeMode="cover"
             />
@@ -335,32 +303,26 @@ export default function ListDetailScreen() {
                 onPress={() => router.push(`/list/contributors/${id}`)}
                 className="items-center"
               >
-                <Text className="text-lg font-bold">
-                  {list.contributors?.length || 0}
-                </Text>
+                <Text className="text-lg font-bold">{list.contributors?.length || 0}</Text>
                 <Text className="text-xs text-gray-500">Contributors</Text>
               </TouchableOpacity>
               <View className="items-center">
-                <Text className="text-lg font-bold">
-                  {list.followers?.length || 0}
-                </Text>
+                <Text className="text-lg font-bold">{list.followers?.length || 0}</Text>
                 <Text className="text-xs text-gray-500">Followers</Text>
               </View>
             </View>
 
             <TouchableOpacity
-              className={`${list.public ? "bg-gray-100" : "bg-[#E68A2E]"} py-3 rounded-xl items-center shadow-sm`}
+              className={`${list.public ? 'bg-gray-100' : 'bg-[#E68A2E]'} py-3 rounded-xl items-center shadow-sm`}
               activeOpacity={0.8}
               onPress={handleTogglePublic}
               disabled={updateListMutation.isPending}
             >
               {updateListMutation.isPending ? (
-                <ActivityIndicator color={list.public ? "#333" : "white"} />
+                <ActivityIndicator color={list.public ? '#333' : 'white'} />
               ) : (
-                <Text
-                  className={`${list.public ? "text-gray-800" : "text-white"} font-bold`}
-                >
-                  {list.public ? "Make private" : "Make public"}
+                <Text className={`${list.public ? 'text-gray-800' : 'text-white'} font-bold`}>
+                  {list.public ? 'Make private' : 'Make public'}
                 </Text>
               )}
             </TouchableOpacity>
@@ -370,23 +332,23 @@ export default function ListDetailScreen() {
         {/* View Tabs */}
         <View className="flex-row border-b border-gray-100 mb-6">
           <TouchableOpacity
-            onPress={() => setViewType("grid")}
-            className={`flex-1 py-4 items-center border-b-2 ${viewType === "grid" ? "border-black" : "border-transparent"}`}
+            onPress={() => setViewType('grid')}
+            className={`flex-1 py-4 items-center border-b-2 ${viewType === 'grid' ? 'border-black' : 'border-transparent'}`}
           >
             <Ionicons
               name="grid-outline"
               size={24}
-              color={viewType === "grid" ? "black" : "#ccc"}
+              color={viewType === 'grid' ? 'black' : '#ccc'}
             />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => setViewType("list")}
-            className={`flex-1 py-4 items-center border-b-2 ${viewType === "list" ? "border-black" : "border-transparent"}`}
+            onPress={() => setViewType('list')}
+            className={`flex-1 py-4 items-center border-b-2 ${viewType === 'list' ? 'border-black' : 'border-transparent'}`}
           >
             <Ionicons
               name="menu-outline"
               size={24}
-              color={viewType === "list" ? "black" : "#ccc"}
+              color={viewType === 'list' ? 'black' : '#ccc'}
             />
           </TouchableOpacity>
         </View>
@@ -395,9 +357,7 @@ export default function ListDetailScreen() {
         {services.length === 0 ? (
           <View className="py-20 items-center">
             <Ionicons name="briefcase-outline" size={60} color="#ddd" />
-            <Text className="text-gray-400 mt-4 text-lg">
-              No items in this list
-            </Text>
+            <Text className="text-gray-400 mt-4 text-lg">No items in this list</Text>
           </View>
         ) : (
           <View className="flex-row flex-wrap justify-between px-4 pb-20">
@@ -407,7 +367,7 @@ export default function ListDetailScreen() {
                 item={job}
                 onPress={() =>
                   router.push({
-                    pathname: "/job-search",
+                    pathname: '/job-search',
                     params: { id: job._id },
                   })
                 }

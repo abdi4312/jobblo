@@ -1,8 +1,8 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const serviceController = require("../controllers/serviceController");
-const { authenticate } = require("../middleware/auth");
-const upload = require("../middleware/upload");
+const serviceController = require('../controllers/serviceController');
+const { authenticate } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 
 /**
  * -------------------------------------------------------
@@ -128,7 +128,7 @@ const upload = require("../middleware/upload");
  *               items:
  *                 $ref: '#/components/schemas/Service'
  */
-router.get("/", serviceController.getAllServices);
+router.get('/', serviceController.getAllServices);
 
 /**
  * -------------------------------------------------------
@@ -148,7 +148,7 @@ router.get("/", serviceController.getAllServices);
  *       200:
  *         description: List of user's posted services
  */
-router.get("/my-posted", authenticate, serviceController.getMyPostedServices);
+router.get('/my-posted', authenticate, serviceController.getMyPostedServices);
 
 /**
  * -------------------------------------------------------
@@ -163,7 +163,7 @@ router.get("/my-posted", authenticate, serviceController.getMyPostedServices);
  *     summary: Get services nearby using coordinates
  *     tags: [Tjenester]
  */
-router.get("/nearby", serviceController.getNearbyServices);
+router.get('/nearby', serviceController.getNearbyServices);
 
 /**
  * @swagger
@@ -172,7 +172,7 @@ router.get("/nearby", serviceController.getNearbyServices);
  *     summary: Update service location
  *     tags: [Tjenester]
  */
-router.put("/:id/location", authenticate, serviceController.updateLocation);
+router.put('/:id/location', authenticate, serviceController.updateLocation);
 
 /**
  * -------------------------------------------------------
@@ -265,12 +265,7 @@ router.put("/:id/location", authenticate, serviceController.updateLocation);
  *       401:
  *         description: Ikke autorisert
  */
-router.post(
-  "/",
-  authenticate,
-  upload.array("images", 5),
-  serviceController.createService,
-);
+router.post('/', authenticate, upload.array('images', 5), serviceController.createService);
 
 /**
  * -------------------------------------------------------
@@ -285,7 +280,7 @@ router.post(
  *     summary: Get service by ID
  *     tags: [Tjenester]
  */
-router.get("/:id", serviceController.getServiceById);
+router.get('/:id', serviceController.getServiceById);
 
 /**
  * -------------------------------------------------------
@@ -300,12 +295,7 @@ router.get("/:id", serviceController.getServiceById);
  *     summary: Update a service
  *     tags: [Tjenester]
  */
-router.put(
-  "/:id",
-  authenticate,
-  upload.array("images", 5),
-  serviceController.updateService,
-);
+router.put('/:id', authenticate, upload.array('images', 5), serviceController.updateService);
 
 /**
  * -------------------------------------------------------
@@ -320,7 +310,7 @@ router.put(
  *     summary: Delete a service
  *     tags: [Tjenester]
  */
-router.delete("/:id", authenticate, serviceController.deleteService);
+router.delete('/:id', authenticate, serviceController.deleteService);
 
 /**
  * -------------------------------------------------------
@@ -335,7 +325,7 @@ router.delete("/:id", authenticate, serviceController.deleteService);
  *     summary: Add a time entry to service
  *     tags: [Tjenester]
  */
-router.post("/:id/time-entries", authenticate, serviceController.addTimeEntry);
+router.post('/:id/time-entries', authenticate, serviceController.addTimeEntry);
 
 /**
  * @swagger
@@ -344,7 +334,7 @@ router.post("/:id/time-entries", authenticate, serviceController.addTimeEntry);
  *     summary: Get all time entries for a service
  *     tags: [Tjenester]
  */
-router.get("/:id/time-entries", authenticate, serviceController.getTimeEntries);
+router.get('/:id/time-entries', authenticate, serviceController.getTimeEntries);
 
 /**
  * -------------------------------------------------------
@@ -361,6 +351,6 @@ router.get("/:id/time-entries", authenticate, serviceController.getTimeEntries);
  *     security:
  *       - bearerAuth: []
  */
-router.put("/:id/checklist/:itemId", authenticate, serviceController.updateChecklistItem);
+router.put('/:id/checklist/:itemId', authenticate, serviceController.updateChecklistItem);
 
 module.exports = router;

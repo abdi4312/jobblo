@@ -1,9 +1,4 @@
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getNotifications,
   markAsRead,
@@ -11,15 +6,15 @@ import {
   deleteNotification,
   deleteAllNotifications,
   getUnreadCount,
-} from "./api";
-import { useEffect } from "react";
-import { initSocket } from "../../socket/socket";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
+} from './api';
+import { useEffect } from 'react';
+import { initSocket } from '../../socket/socket';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 export const useNotifications = (userId: string | undefined, type?: string) => {
   return useInfiniteQuery({
-    queryKey: ["notifications", userId, type],
+    queryKey: ['notifications', userId, type],
     queryFn: ({ pageParam = 1 }) => getNotifications(userId!, pageParam, type),
     getNextPageParam: (lastPage) => {
       const nextPage = lastPage.currentPage + 1;
@@ -38,22 +33,22 @@ export const useOrderApprovalSocket = (userId: string | undefined) => {
     if (!userId) return;
 
     const socket = initSocket();
-    socket.emit("join", userId);
+    socket.emit('join', userId);
 
     const handleOrderApproved = (data: { orderId: string; chatId: string }) => {
-      toast.success("Din forespørsel er godkjent!");
-      queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
-      queryClient.invalidateQueries({ queryKey: ["orders", userId] });
+      toast.success('Din forespørsel er godkjent!');
+      queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+      queryClient.invalidateQueries({ queryKey: ['orders', userId] });
       // Auto-navigation removed as per user request
       // setTimeout(() => {
       //   navigate(`/messages/${data.chatId}`);
       // }, 2000);
     };
 
-    socket.on("order_approved", handleOrderApproved);
+    socket.on('order_approved', handleOrderApproved);
 
     return () => {
-      socket.off("order_approved", handleOrderApproved);
+      socket.off('order_approved', handleOrderApproved);
     };
   }, [userId, navigate, queryClient]);
 };
@@ -67,22 +62,22 @@ export const useUnreadCount = (userId: string | undefined) => {
     const socket = initSocket();
 
     // Join user room
-    socket.emit("join", userId);
+    socket.emit('join', userId);
 
     const handleNewNotification = () => {
-      queryClient.invalidateQueries({ queryKey: ["unreadCount", userId] });
-      queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount', userId] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
     };
 
-    socket.on("new_notification", handleNewNotification);
+    socket.on('new_notification', handleNewNotification);
 
     return () => {
-      socket.off("new_notification", handleNewNotification);
+      socket.off('new_notification', handleNewNotification);
     };
   }, [userId, queryClient]);
 
   return useQuery({
-    queryKey: ["unreadCount", userId],
+    queryKey: ['unreadCount', userId],
     queryFn: () => getUnreadCount(userId!),
     enabled: !!userId,
   });
@@ -93,8 +88,8 @@ export const useMarkAsRead = () => {
   return useMutation({
     mutationFn: markAsRead,
     onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
     },
   });
 };
@@ -104,8 +99,8 @@ export const useMarkAllAsRead = () => {
   return useMutation({
     mutationFn: markAllAsRead,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
     },
   });
 };
@@ -115,8 +110,8 @@ export const useDeleteNotification = () => {
   return useMutation({
     mutationFn: deleteNotification,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
     },
   });
 };
@@ -126,8 +121,8 @@ export const useDeleteAllNotifications = () => {
   return useMutation({
     mutationFn: deleteAllNotifications,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
     },
   });
 };

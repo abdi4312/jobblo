@@ -1,13 +1,13 @@
-const Order = require("../models/Order");
-const Service = require("../models/Service");
-const mongoose = require("mongoose");
-const Chat = require("../models/ChatMessage");
-const Notification = require("../models/Notification");
-const Payment = require("../models/Payment");
-const JobRequest = require("../models/JobRequest");
+const Order = require('../models/Order');
+const Service = require('../models/Service');
+const mongoose = require('mongoose');
+const Chat = require('../models/ChatMessage');
+const Notification = require('../models/Notification');
+const Payment = require('../models/Payment');
+const JobRequest = require('../models/JobRequest');
 
-const User = require("../models/User");
-const { calculatePointsFromService } = require("../utils/points");
+const User = require('../models/User');
+const { calculatePointsFromService } = require('../utils/points');
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -16,10 +16,7 @@ const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 function authorizeOrderAction(req, order) {
   if (!order.customerId || !order.providerId) return false;
 
-  return (
-    order.customerId.toString() === req.userId ||
-    order.providerId.toString() === req.userId
-  );
+  return order.customerId.toString() === req.userId || order.providerId.toString() === req.userId;
 }
 
 /**
@@ -31,31 +28,28 @@ exports.createJobRequest = async (req, res) => {
     const { serviceId } = req.body;
     const customerId = req.userId;
 
-    if (!serviceId)
-      return res.status(400).json({ error: "Service ID is required" });
+    if (!serviceId) return res.status(400).json({ error: 'Service ID is required' });
 
-    if (!isValidId(serviceId))
-      return res.status(400).json({ error: "Invalid service ID format" });
+    if (!isValidId(serviceId)) return res.status(400).json({ error: 'Invalid service ID format' });
 
     const service = await Service.findById(serviceId);
-    if (!service) return res.status(404).json({ error: "Service not found" });
+    if (!service) return res.status(404).json({ error: 'Service not found' });
 
     const providerId = service.userId;
 
     if (providerId.toString() === customerId)
-      return res.status(400).json({ error: "Cannot request your own service" });
+      return res.status(400).json({ error: 'Cannot request your own service' });
 
     // --- CHECK APPLICATION LIMIT ---
     if (service.maxApplicants > 0) {
       const applicantCount = await JobRequest.countDocuments({
         serviceId,
-        status: { $in: ["pending", "accepted"] },
+        status: { $in: ['pending', 'accepted'] },
       });
 
       if (applicantCount >= service.maxApplicants) {
         return res.status(400).json({
-          error:
-            "Søknadsfristen er nådd. Dette oppdraget tar ikke imot flere søknader.",
+          error: 'Søknadsfristen er nådd. Dette oppdraget tar ikke imot flere søknader.',
           limitReached: true,
         });
       }
@@ -66,11 +60,11 @@ exports.createJobRequest = async (req, res) => {
     const existingRequest = await JobRequest.findOne({
       serviceId,
       customerId,
-      status: "pending",
+      status: 'pending',
     });
     if (existingRequest) {
       return res.status(400).json({
-        error: "Du har allerede sendt en forespørsel på dette oppdraget",
+        error: 'Du har allerede sendt en forespørsel på dette oppdraget',
       });
     }
 
@@ -88,23 +82,23 @@ exports.createJobRequest = async (req, res) => {
     }
     // -------------------------------
 
-    await jobRequest.populate("serviceId");
-    await jobRequest.populate("customerId", "name");
+    await jobRequest.populate('serviceId');
+    await jobRequest.populate('customerId', 'name');
 
     // Send notification to provider
     const notification = await Notification.create({
       userId: providerId,
       senderId: customerId,
       requestId: jobRequest._id,
-      type: "order",
+      type: 'order',
       content: `Ny forespørsel: ${jobRequest.customerId.name} ønsker å søke på "${jobRequest.serviceId.title}"`,
     });
 
     // Emit socket event
-    const io = req.app.get("io");
+    const io = req.app.get('io');
     if (io) {
-      io.to(`user_${providerId}`).emit("new_notification", notification);
-      io.to(`user_${providerId}`).emit("new_job_request", jobRequest);
+      io.to(`user_${providerId}`).emit('new_notification', notification);
+      io.to(`user_${providerId}`).emit('new_job_request', jobRequest);
     }
 
     res.status(201).json(jobRequest);
@@ -123,30 +117,30 @@ exports.updateJobRequestStatus = async (req, res) => {
     const { status } = req.body;
     const userId = req.userId;
 
-    if (!["accepted", "declined"].includes(status)) {
-      return res.status(400).json({ error: "Invalid status" });
+    if (!['accepted', 'declined'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
     }
 
     const jobRequest = await JobRequest.findById(id);
     if (!jobRequest) {
-      return res.status(404).json({ error: "Request not found" });
+      return res.status(404).json({ error: 'Request not found' });
     }
 
     if (jobRequest.providerId.toString() !== userId) {
-      return res.status(403).json({ error: "Not authorized" });
+      return res.status(403).json({ error: 'Not authorized' });
     }
 
     // 🔒 Prevent multiple status changes
-    if (jobRequest.status !== "pending") {
+    if (jobRequest.status !== 'pending') {
       return res.status(400).json({
-        error: `Forespørselen er allerede ${jobRequest.status === "accepted" ? "godkjent" : "avvist"}`,
+        error: `Forespørselen er allerede ${jobRequest.status === 'accepted' ? 'godkjent' : 'avvist'}`,
       });
     }
 
     jobRequest.status = status;
     await jobRequest.save();
 
-    if (status === "accepted") {
+    if (status === 'accepted') {
       // 1. Create Chat
       let chat = await Chat.findOne({
         clientId: jobRequest.customerId,
@@ -162,7 +156,7 @@ exports.updateJobRequestStatus = async (req, res) => {
           messages: [
             {
               senderId: jobRequest.providerId,
-              text: "Forespørsel godkjent! Vi kan nå starte samtalen.",
+              text: 'Forespørsel godkjent! Vi kan nå starte samtalen.',
             },
           ],
         });
@@ -175,38 +169,32 @@ exports.updateJobRequestStatus = async (req, res) => {
         userId: jobRequest.customerId,
         senderId: jobRequest.providerId,
         requestId: jobRequest._id,
-        type: "order",
+        type: 'order',
         content: `Din forespørsel for "${service.title}" er godkjent!`,
       });
 
-      const io = req.app.get("io");
+      const io = req.app.get('io');
       if (io) {
-        io.to(`user_${jobRequest.customerId}`).emit(
-          "new_notification",
-          notification,
-        );
-        io.to(`user_${jobRequest.customerId}`).emit("order_approved", {
+        io.to(`user_${jobRequest.customerId}`).emit('new_notification', notification);
+        io.to(`user_${jobRequest.customerId}`).emit('order_approved', {
           requestId: jobRequest._id,
           chatId: chat._id,
         });
       }
     } else {
       // Notify Rejection
-      await jobRequest.populate("serviceId");
+      await jobRequest.populate('serviceId');
       const notification = await Notification.create({
         userId: jobRequest.customerId,
         senderId: jobRequest.providerId,
         requestId: jobRequest._id,
-        type: "order",
+        type: 'order',
         content: `Din forespørsel for "${jobRequest.serviceId.title}" ble avvist.`,
       });
 
-      const io = req.app.get("io");
+      const io = req.app.get('io');
       if (io) {
-        io.to(`user_${jobRequest.customerId}`).emit(
-          "new_notification",
-          notification,
-        );
+        io.to(`user_${jobRequest.customerId}`).emit('new_notification', notification);
       }
     }
 
@@ -225,9 +213,9 @@ exports.getMyJobRequests = async (req, res) => {
     const requests = await JobRequest.find({
       $or: [{ customerId: userId }, { providerId: userId }],
     })
-      .populate("serviceId")
-      .populate("customerId", "name")
-      .populate("providerId", "name")
+      .populate('serviceId')
+      .populate('customerId', 'name')
+      .populate('providerId', 'name')
       .sort({ createdAt: -1 });
 
     res.json(requests);
@@ -247,14 +235,14 @@ exports.getAllOrders = async (req, res) => {
     const orders = await Order.find({
       $or: [{ customerId: userId }, { providerId: userId }],
     })
-      .populate("serviceId")
-      .populate("customerId", "name email")
-      .populate("providerId", "name email")
+      .populate('serviceId')
+      .populate('customerId', 'name email')
+      .populate('providerId', 'name email')
       .sort({ createdAt: -1 });
 
     res.json(orders);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -265,24 +253,23 @@ exports.getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!isValidId(id))
-      return res.status(400).json({ error: "Invalid order ID format" });
+    if (!isValidId(id)) return res.status(400).json({ error: 'Invalid order ID format' });
 
     const order = await Order.findById(id)
-      .populate("serviceId")
-      .populate("customerId", "name")
-      .populate("providerId", "name");
+      .populate('serviceId')
+      .populate('customerId', 'name')
+      .populate('providerId', 'name');
 
-    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
 
     // Authorization
     if (!authorizeOrderAction(req, order)) {
-      return res.status(403).json({ error: "Not authorized" });
+      return res.status(403).json({ error: 'Not authorized' });
     }
 
     res.json(order);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -295,25 +282,23 @@ exports.createOrder = async (req, res) => {
     const { serviceId } = req.body;
     const customerId = req.userId;
 
-    if (!serviceId)
-      return res.status(400).json({ error: "Service ID is required" });
+    if (!serviceId) return res.status(400).json({ error: 'Service ID is required' });
 
-    if (!isValidId(serviceId))
-      return res.status(400).json({ error: "Invalid service ID format" });
+    if (!isValidId(serviceId)) return res.status(400).json({ error: 'Invalid service ID format' });
 
     const service = await Service.findById(serviceId);
-    if (!service) return res.status(404).json({ error: "Service not found" });
+    if (!service) return res.status(404).json({ error: 'Service not found' });
 
     const providerId = service.userId;
 
     if (providerId.toString() === customerId)
-      return res.status(400).json({ error: "Cannot order your own service" });
+      return res.status(400).json({ error: 'Cannot order your own service' });
 
     // Check if an order already exists for this service and customer
     const existingOrder = await Order.findOne({ serviceId, customerId });
     if (existingOrder) {
       return res.status(400).json({
-        error: "Du har allerede sendt en forespørsel på dette oppdraget",
+        error: 'Du har allerede sendt en forespørsel på dette oppdraget',
       });
     }
 
@@ -322,27 +307,27 @@ exports.createOrder = async (req, res) => {
       customerId,
       providerId,
       price: service.price,
-      status: "pending",
+      status: 'pending',
     });
 
-    await order.populate("serviceId");
-    await order.populate("customerId", "name");
-    await order.populate("providerId", "name");
+    await order.populate('serviceId');
+    await order.populate('customerId', 'name');
+    await order.populate('providerId', 'name');
 
     // Send notification to provider
     const notification = await Notification.create({
       userId: providerId,
       senderId: customerId,
       orderId: order._id,
-      type: "order",
+      type: 'order',
       content: `Ny forespørsel: ${order.customerId.name} ønsker å søke på "${order.serviceId.title}"`,
     });
 
     // Emit socket event for real-time alert
-    const io = req.app.get("io");
+    const io = req.app.get('io');
     if (io) {
-      io.to(`user_${providerId}`).emit("new_notification", notification);
-      io.to(`user_${providerId}`).emit("new_order_request", order);
+      io.to(`user_${providerId}`).emit('new_notification', notification);
+      io.to(`user_${providerId}`).emit('new_order_request', order);
     }
 
     res.status(201).json(order);
@@ -360,28 +345,28 @@ exports.updateOrder = async (req, res) => {
     const { id } = req.params;
 
     if (!isValidId(id)) {
-      return res.status(400).json({ error: "Invalid order ID format" });
+      return res.status(400).json({ error: 'Invalid order ID format' });
     }
 
     const order = await Order.findById(id);
     if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+      return res.status(404).json({ error: 'Order not found' });
     }
 
     // 🔐 Authorization
     if (!authorizeOrderAction(req, order)) {
-      return res.status(403).json({ error: "Not authorized" });
+      return res.status(403).json({ error: 'Not authorized' });
     }
 
     // 🔒 COMPLETED = FINAL STATE
-    if (order.status === "completed") {
+    if (order.status === 'completed') {
       return res.status(400).json({
-        error: "Completed order cannot be modified",
+        error: 'Completed order cannot be modified',
       });
     }
 
     // Allowed fields
-    const allowedFields = ["status", "price"];
+    const allowedFields = ['status', 'price'];
     const updates = {};
 
     allowedFields.forEach((field) => {
@@ -392,40 +377,40 @@ exports.updateOrder = async (req, res) => {
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({
-        error: "No valid fields provided for update",
+        error: 'No valid fields provided for update',
       });
     }
 
-    if (updates.price !== undefined && typeof updates.price !== "number") {
+    if (updates.price !== undefined && typeof updates.price !== 'number') {
       return res.status(400).json({
-        error: "Price must be a number",
+        error: 'Price must be a number',
       });
     }
 
     // ✅ Valid status values
     const validStatus = [
-      "pending",
-      "accepted",
-      "declined",
-      "in_progress",
-      "completed",
-      "cancelled",
-      "awaiting_payment",
-      "paid",
+      'pending',
+      'accepted',
+      'declined',
+      'in_progress',
+      'completed',
+      'cancelled',
+      'awaiting_payment',
+      'paid',
     ];
     if (updates.status && !validStatus.includes(updates.status)) {
-      return res.status(400).json({ error: "Invalid status value" });
+      return res.status(400).json({ error: 'Invalid status value' });
     }
 
     // 🔁 STRICT STATUS FLOW
     const statusFlow = {
-      pending: ["accepted", "declined", "completed", "cancelled"],
-      accepted: ["in_progress", "completed", "cancelled"],
-      in_progress: ["completed", "cancelled"],
+      pending: ['accepted', 'declined', 'completed', 'cancelled'],
+      accepted: ['in_progress', 'completed', 'cancelled'],
+      in_progress: ['completed', 'cancelled'],
       cancelled: [],
       declined: [],
-      awaiting_payment: ["paid", "cancelled"],
-      paid: ["completed"],
+      awaiting_payment: ['paid', 'cancelled'],
+      paid: ['completed'],
     };
 
     if (updates.status) {
@@ -437,7 +422,7 @@ exports.updateOrder = async (req, res) => {
       }
 
       // 🚀 Handle APPROVAL logic
-      if (updates.status === "accepted" && order.status === "pending") {
+      if (updates.status === 'accepted' && order.status === 'pending') {
         // 1. Create Chat if it doesn't exist
         let chat = await Chat.findOne({
           clientId: order.customerId,
@@ -453,15 +438,15 @@ exports.updateOrder = async (req, res) => {
             messages: [
               {
                 senderId: order.providerId,
-                text: "Forespørsel godkjent! Vi kan nå starte samtalen.",
+                text: 'Forespørsel godkjent! Vi kan nå starte samtalen.',
               },
             ],
           });
         }
 
-        await order.populate("serviceId");
-        await order.populate("customerId", "name");
-        await order.populate("providerId", "name");
+        await order.populate('serviceId');
+        await order.populate('customerId', 'name');
+        await order.populate('providerId', 'name');
 
         const orderPrice = order.price || order.serviceId.price || 0;
 
@@ -469,7 +454,7 @@ exports.updateOrder = async (req, res) => {
         await Payment.create({
           orderId: order._id,
           amount: orderPrice,
-          status: "pending", // Escrow status
+          status: 'pending', // Escrow status
         });
 
         // 4. Notify Customer
@@ -477,17 +462,14 @@ exports.updateOrder = async (req, res) => {
           userId: order.customerId._id,
           senderId: order.providerId._id,
           orderId: order._id,
-          type: "order",
+          type: 'order',
           content: `Din forespørsel for "${order.serviceId.title}" er godkjent! Chat er nå åpen.`,
         });
 
-        const io = req.app.get("io");
+        const io = req.app.get('io');
         if (io) {
-          io.to(`user_${order.customerId._id}`).emit(
-            "new_notification",
-            notification,
-          );
-          io.to(`user_${order.customerId._id}`).emit("order_approved", {
+          io.to(`user_${order.customerId._id}`).emit('new_notification', notification);
+          io.to(`user_${order.customerId._id}`).emit('order_approved', {
             orderId: order._id,
             chatId: chat._id,
           });
@@ -495,31 +477,28 @@ exports.updateOrder = async (req, res) => {
       }
 
       // ❌ Handle REJECTION logic
-      if (updates.status === "declined" && order.status === "pending") {
-        await order.populate("serviceId");
-        await order.populate("providerId", "name");
+      if (updates.status === 'declined' && order.status === 'pending') {
+        await order.populate('serviceId');
+        await order.populate('providerId', 'name');
 
         const notification = await Notification.create({
           userId: order.customerId,
           senderId: order.providerId._id,
           orderId: order._id,
-          type: "order",
+          type: 'order',
           content: `Din forespørsel for "${order.serviceId.title}" ble dessverre avvist.`,
         });
 
-        const io = req.app.get("io");
+        const io = req.app.get('io');
         if (io) {
-          io.to(`user_${order.customerId}`).emit(
-            "new_notification",
-            notification,
-          );
+          io.to(`user_${order.customerId}`).emit('new_notification', notification);
         }
       }
     }
 
     // 🪙 POINTS & PORTFOLIO – SIRF EK DAFA
-    if (updates.status === "completed" && order.status !== "completed") {
-      await order.populate("serviceId");
+    if (updates.status === 'completed' && order.status !== 'completed') {
+      await order.populate('serviceId');
 
       const service = order.serviceId;
       const points = calculatePointsFromService(service);
@@ -530,7 +509,7 @@ exports.updateOrder = async (req, res) => {
         $push: {
           pointsHistory: {
             points,
-            reason: "Job completed",
+            reason: 'Job completed',
             orderId: order._id,
             serviceId: service._id,
           },
@@ -548,9 +527,9 @@ exports.updateOrder = async (req, res) => {
     const updatedOrder = await Order.findByIdAndUpdate(id, updates, {
       new: true,
     })
-      .populate("serviceId")
-      .populate("customerId", "name")
-      .populate("providerId", "name");
+      .populate('serviceId')
+      .populate('customerId', 'name')
+      .populate('providerId', 'name');
 
     res.json(updatedOrder);
   } catch (err) {
@@ -566,26 +545,25 @@ exports.getCompletedJobDetails = async (req, res) => {
   try {
     const { id } = req.params; // id is orderId
 
-    if (!isValidId(id))
-      return res.status(400).json({ error: "Invalid order ID format" });
+    if (!isValidId(id)) return res.status(400).json({ error: 'Invalid order ID format' });
 
     const order = await Order.findById(id)
-      .populate("serviceId")
-      .populate("customerId", "name email avatarUrl")
-      .populate("providerId", "name email avatarUrl");
+      .populate('serviceId')
+      .populate('customerId', 'name email avatarUrl')
+      .populate('providerId', 'name email avatarUrl');
 
-    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
 
     // Authorization
     if (!authorizeOrderAction(req, order)) {
-      return res.status(403).json({ error: "Not authorized" });
+      return res.status(403).json({ error: 'Not authorized' });
     }
 
     // Get payment
     const payment = await Payment.findOne({ orderId: id });
 
     // Get chat messages
-    const ChatMessage = require("../models/ChatMessage");
+    const ChatMessage = require('../models/ChatMessage');
     const chat = await ChatMessage.findOne({
       clientId: order.customerId._id,
       providerId: order.providerId._id,
@@ -595,7 +573,7 @@ exports.getCompletedJobDetails = async (req, res) => {
     // Get all transactions (optional, from Transaction model if exists)
     let transactions = [];
     try {
-      const Transaction = require("../models/Transaction");
+      const Transaction = require('../models/Transaction');
       transactions = await Transaction.find({ orderId: id }).sort({
         createdAt: -1,
       });
@@ -615,7 +593,7 @@ exports.getCompletedJobDetails = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -627,23 +605,22 @@ exports.deleteOrder = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!isValidId(id))
-      return res.status(400).json({ error: "Invalid order ID format" });
+    if (!isValidId(id)) return res.status(400).json({ error: 'Invalid order ID format' });
 
     const order = await Order.findById(id);
-    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
 
     // Authorization
     if (!authorizeOrderAction(req, order)) {
-      return res.status(403).json({ error: "Not authorized" });
+      return res.status(403).json({ error: 'Not authorized' });
     }
 
     // Instead of hard delete → set status cancelled
-    order.status = "cancelled";
+    order.status = 'cancelled';
     await order.save();
 
-    res.status(200).json({ message: "Order cancelled successfully", order });
+    res.status(200).json({ message: 'Order cancelled successfully', order });
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };

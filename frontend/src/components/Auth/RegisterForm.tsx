@@ -1,16 +1,16 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
-import { Eye, EyeOff } from "lucide-react";
-import SocialAuthButtons from "../SocialAuthButtons/AuthButton.tsx";
-import { Input } from "../Ui/Input.tsx";
-import { Button } from "../Ui/button/Button";
-import { useAuth } from "../../features/auth/hook/useAuth.ts";
-import { useForm } from "../../hooks/useForm.ts";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { Eye, EyeOff } from 'lucide-react';
+import SocialAuthButtons from '../SocialAuthButtons/AuthButton.tsx';
+import { Input } from '../Ui/Input.tsx';
+import { Button } from '../Ui/button/Button';
+import { useAuth } from '../../features/auth/hook/useAuth.ts';
+import { useForm } from '../../hooks/useForm.ts';
 import {
   registerValidationSchema,
   type RegisterFormValues,
-} from "../../validations/authValidations";
+} from '../../validations/authValidations';
 
 export const RegisterForm = () => {
   const navigate = useNavigate();
@@ -18,26 +18,25 @@ export const RegisterForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const { values, errors, handleChange, validate } =
-    useForm<RegisterFormValues>(
-      {
-        name: "",
-        lastName: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        role: "user",
-        companyName: "",
-        orgNumber: "",
-      },
-      registerValidationSchema,
-    );
+  const { values, errors, handleChange, validate } = useForm<RegisterFormValues>(
+    {
+      name: '',
+      lastName: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      role: 'user',
+      companyName: '',
+      orgNumber: '',
+    },
+    registerValidationSchema
+  );
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validate()) {
-      toast.error("Vennligst rett opp feilene i skjemaet");
+      toast.error('Vennligst rett opp feilene i skjemaet');
       return;
     }
 
@@ -47,7 +46,7 @@ export const RegisterForm = () => {
       email: values.email,
       password: values.password,
       role: values.role,
-      ...(values.role === "company" && {
+      ...(values.role === 'company' && {
         companyName: values.companyName,
         orgNumber: values.orgNumber,
       }),
@@ -77,24 +76,22 @@ export const RegisterForm = () => {
                 type="button"
                 label="Privatperson"
                 className={`flex-1 rounded-[8px] h-11 font-semibold border border-zinc-700
-                ${values.role === "user" ? "bg-custom-green" : "bg-transparent text-custom-black hover:bg-custom-green-light"}`}
-                onClick={() => handleChange("role", "user")}
+                ${values.role === 'user' ? 'bg-custom-green' : 'bg-transparent text-custom-black hover:bg-custom-green-light'}`}
+                onClick={() => handleChange('role', 'user')}
               />
               <Button
                 type="button"
                 label="Firma"
                 className={`flex-1 rounded-[8px] h-11 font-semibold border border-zinc-700
-                ${values.role === "company" ? "bg-custom-green" : "bg-transparent text-custom-black hover:bg-custom-green-light"}`}
-                onClick={() => handleChange("role", "company")}
+                ${values.role === 'company' ? 'bg-custom-green' : 'bg-transparent text-custom-black hover:bg-custom-green-light'}`}
+                onClick={() => handleChange('role', 'company')}
               />
             </div>
-            {errors.role && (
-              <p className="text-xs text-red-500 mt-1">{errors.role}</p>
-            )}
+            {errors.role && <p className="text-xs text-red-500 mt-1">{errors.role}</p>}
           </div>
 
           {/* Conditional Name Fields */}
-          {values.role === "user" ? (
+          {values.role === 'user' ? (
             <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
               {/* First Name */}
               <div className="flex flex-col gap-1.5">
@@ -105,7 +102,7 @@ export const RegisterForm = () => {
                   type="text"
                   value={values.name}
                   placeholder="Ola"
-                  onChange={(e) => handleChange("name", e.target.value)}
+                  onChange={(e) => handleChange('name', e.target.value)}
                   error={errors.name}
                   className="rounded-lg border-black focus:border-black placeholder:text-gray-400 h-11"
                 />
@@ -120,7 +117,7 @@ export const RegisterForm = () => {
                   type="text"
                   value={values.lastName}
                   placeholder="Nordmann"
-                  onChange={(e) => handleChange("lastName", e.target.value)}
+                  onChange={(e) => handleChange('lastName', e.target.value)}
                   error={errors.lastName}
                   className="rounded-lg border-black focus:border-black placeholder:text-gray-400 h-11"
                 />
@@ -136,7 +133,7 @@ export const RegisterForm = () => {
                   type="text"
                   value={values.companyName}
                   placeholder="f.eks. Acme Corp"
-                  onChange={(e) => handleChange("companyName", e.target.value)}
+                  onChange={(e) => handleChange('companyName', e.target.value)}
                   error={errors.companyName}
                   className="rounded-lg border-black focus:border-black placeholder:text-gray-400 h-11"
                 />
@@ -150,7 +147,7 @@ export const RegisterForm = () => {
                   type="text"
                   value={values.orgNumber}
                   placeholder="9 siffer (f.eks. 123456789)"
-                  onChange={(e) => handleChange("orgNumber", e.target.value)}
+                  onChange={(e) => handleChange('orgNumber', e.target.value)}
                   error={errors.orgNumber}
                   className="rounded-lg border-black focus:border-black placeholder:text-gray-400 h-11"
                 />
@@ -167,7 +164,7 @@ export const RegisterForm = () => {
               type="email"
               value={values.email}
               placeholder="deg@eksempel.no"
-              onChange={(e) => handleChange("email", e.target.value)}
+              onChange={(e) => handleChange('email', e.target.value)}
               error={errors.email}
               className="rounded-lg border-black focus:border-black placeholder:text-gray-400 h-11"
             />
@@ -179,10 +176,10 @@ export const RegisterForm = () => {
               Passord
             </label>
             <Input
-              type={showPassword ? "text" : "password"}
+              type={showPassword ? 'text' : 'password'}
               value={values.password}
               placeholder="••••••••"
-              onChange={(e) => handleChange("password", e.target.value)}
+              onChange={(e) => handleChange('password', e.target.value)}
               error={errors.password}
               className="rounded-lg border-black focus:border-black placeholder:text-gray-400 h-11"
               rightIcon={
@@ -203,10 +200,10 @@ export const RegisterForm = () => {
               Bekreft passord
             </label>
             <Input
-              type={showConfirmPassword ? "text" : "password"}
+              type={showConfirmPassword ? 'text' : 'password'}
               value={values.confirmPassword}
               placeholder="••••••••"
-              onChange={(e) => handleChange("confirmPassword", e.target.value)}
+              onChange={(e) => handleChange('confirmPassword', e.target.value)}
               error={errors.confirmPassword}
               className="rounded-lg border-black focus:border-black placeholder:text-gray-400 h-11"
               rightIcon={
@@ -215,11 +212,7 @@ export const RegisterForm = () => {
                   className="text-custom-text hover:text-black transition-colors"
                   onClick={() => setShowConfirmPassword((prev) => !prev)}
                 >
-                  {showConfirmPassword ? (
-                    <EyeOff size={18} />
-                  ) : (
-                    <Eye size={18} />
-                  )}
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               }
             />
@@ -235,9 +228,7 @@ export const RegisterForm = () => {
 
           <div className="relative flex py-1 items-center">
             <div className="grow border-t border-gray-200"></div>
-            <span className="shrink mx-4 text-gray-400 text-sm font-normal">
-              eller
-            </span>
+            <span className="shrink mx-4 text-gray-400 text-sm font-normal">eller</span>
             <div className="grow border-t border-gray-200"></div>
           </div>
 
@@ -248,9 +239,9 @@ export const RegisterForm = () => {
 
         <div className="mt-6 text-center">
           <p className="text-sm text-custom-text">
-            Har du allerede en konto?{" "}
+            Har du allerede en konto?{' '}
             <button
-              onClick={() => navigate("/login")}
+              onClick={() => navigate('/login')}
               className="font-bold text-black hover:underline"
             >
               Logg inn

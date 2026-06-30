@@ -1,4 +1,4 @@
-import mainLink from "./mainURLs";
+import mainLink from './mainURLs';
 
 export interface AIJobListingResponse {
   success: boolean;
@@ -9,9 +9,9 @@ export interface AIJobListingResponse {
     skills: string[];
     duration: {
       value: number;
-      unit: "minutes" | "hours" | "days";
+      unit: 'minutes' | 'hours' | 'days';
     };
-    locationRelevance: "on-site" | "remote";
+    locationRelevance: 'on-site' | 'remote';
     priceRange: {
       min: number;
       max: number;
@@ -22,10 +22,8 @@ export interface AIJobListingResponse {
   };
 }
 
-export const generateFullJobListing = async (
-  prompt: string,
-): Promise<AIJobListingResponse> => {
-  const response = await mainLink.post("/api/ai/generate-full-listing", {
+export const generateFullJobListing = async (prompt: string): Promise<AIJobListingResponse> => {
+  const response = await mainLink.post('/api/ai/generate-full-listing', {
     prompt,
   });
   return response.data;

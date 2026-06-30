@@ -1,11 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  getJobDetail,
-  createChat,
-  createStripeSession,
-  getNearbyJobs,
-} from "./jobApi";
-import { fetchJobs } from "../jobsList/jobListingAPI";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getJobDetail, createChat, createStripeSession, getNearbyJobs } from './jobApi';
+import { fetchJobs } from '../jobsList/jobListingAPI';
 import {
   createOrder,
   updateOrderStatus,
@@ -13,12 +8,12 @@ import {
   createJobRequest,
   getMyJobRequests,
   updateJobRequestStatus,
-} from "../../api/orderAPI";
-import type { Jobs } from "../../types/Jobs";
+} from '../../api/orderAPI';
+import type { Jobs } from '../../types/Jobs';
 
 export const useJobDetailQuery = (id: string) => {
   return useQuery({
-    queryKey: ["jobDetail", id],
+    queryKey: ['jobDetail', id],
     queryFn: () => getJobDetail(id),
     enabled: !!id,
   });
@@ -26,7 +21,7 @@ export const useJobDetailQuery = (id: string) => {
 
 export const useAllOrdersQuery = (isAuthenticated: boolean) => {
   return useQuery({
-    queryKey: ["orders"],
+    queryKey: ['orders'],
     queryFn: getAllOrders,
     enabled: isAuthenticated,
   });
@@ -34,7 +29,7 @@ export const useAllOrdersQuery = (isAuthenticated: boolean) => {
 
 export const useMyJobRequestsQuery = (isAuthenticated: boolean) => {
   return useQuery({
-    queryKey: ["jobRequests"],
+    queryKey: ['jobRequests'],
     queryFn: getMyJobRequests,
     enabled: isAuthenticated,
   });
@@ -45,7 +40,7 @@ export const useCreateJobRequestMutation = () => {
   return useMutation({
     mutationFn: createJobRequest,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["jobRequests"] });
+      queryClient.invalidateQueries({ queryKey: ['jobRequests'] });
     },
   });
 };
@@ -53,16 +48,11 @@ export const useCreateJobRequestMutation = () => {
 export const useUpdateJobRequestStatusMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      requestId,
-      status,
-    }: {
-      requestId: string;
-      status: string;
-    }) => updateJobRequestStatus(requestId, status),
+    mutationFn: ({ requestId, status }: { requestId: string; status: string }) =>
+      updateJobRequestStatus(requestId, status),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["jobRequests"] });
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ['jobRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 };
@@ -72,7 +62,7 @@ export const useCreateOrderMutation = () => {
   return useMutation({
     mutationFn: createOrder,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
   });
 };
@@ -83,8 +73,8 @@ export const useUpdateOrderStatusMutation = () => {
     mutationFn: ({ orderId, status }: { orderId: string; status: string }) =>
       updateOrderStatus(orderId, status),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 };
@@ -92,10 +82,10 @@ export const useUpdateOrderStatusMutation = () => {
 export const useRecommendedJobsQuery = (
   coordinates: [number, number] | undefined,
   categories: string[] | undefined,
-  currentJobId: string,
+  currentJobId: string
 ) => {
   return useQuery({
-    queryKey: ["recommendedJobs", coordinates, categories, currentJobId],
+    queryKey: ['recommendedJobs', coordinates, categories, currentJobId],
     queryFn: async () => {
       let jobs: Jobs[] = [];
 
@@ -108,7 +98,7 @@ export const useRecommendedJobsQuery = (
             jobs = nearbyData;
           }
         } catch (error) {
-          console.error("Error fetching nearby jobs:", error);
+          console.error('Error fetching nearby jobs:', error);
         }
       }
 
@@ -122,12 +112,12 @@ export const useRecommendedJobsQuery = (
           if (categoryData && Array.isArray(categoryData.data)) {
             // Merge and avoid duplicates
             const categoryJobs = categoryData.data.filter(
-              (cj) => !jobs.some((nj) => nj._id === cj._id),
+              (cj) => !jobs.some((nj) => nj._id === cj._id)
             );
             jobs = [...jobs, ...categoryJobs];
           }
         } catch (error) {
-          console.error("Error fetching category jobs:", error);
+          console.error('Error fetching category jobs:', error);
         }
       }
 
@@ -136,13 +126,11 @@ export const useRecommendedJobsQuery = (
         try {
           const latestData = await fetchJobs({ limit: 12 });
           if (latestData && Array.isArray(latestData.data)) {
-            const latestJobs = latestData.data.filter(
-              (lj) => !jobs.some((j) => j._id === lj._id),
-            );
+            const latestJobs = latestData.data.filter((lj) => !jobs.some((j) => j._id === lj._id));
             jobs = [...jobs, ...latestJobs];
           }
         } catch (error) {
-          console.error("Error fetching latest jobs:", error);
+          console.error('Error fetching latest jobs:', error);
         }
       }
 
@@ -156,10 +144,10 @@ export const useRecommendedJobsQuery = (
 
 export const useNearbyJobsQuery = (
   coordinates: [number, number] | undefined,
-  currentJobId: string,
+  currentJobId: string
 ) => {
   return useQuery({
-    queryKey: ["nearbyJobs", coordinates, currentJobId],
+    queryKey: ['nearbyJobs', coordinates, currentJobId],
     queryFn: async () => {
       if (!coordinates || coordinates.length !== 2) return [];
 

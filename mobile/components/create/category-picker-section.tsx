@@ -1,6 +1,6 @@
-import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
-import { useCategories } from "../../features/category/hooks/useCategories";
+import React from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { useCategories } from '../../features/category/hooks/useCategories';
 
 interface CategoryPickerSectionProps {
   selectedCategory: string;
@@ -15,7 +15,7 @@ export const CategoryPickerSection: React.FC<CategoryPickerSectionProps> = ({
 
   const toggleCategory = (catName: string) => {
     if (selectedCategory === catName) {
-      setSelectedCategory("");
+      setSelectedCategory('');
     } else {
       setSelectedCategory(catName);
     }
@@ -35,15 +35,13 @@ export const CategoryPickerSection: React.FC<CategoryPickerSectionProps> = ({
             onPress={() => toggleCategory(cat.name)}
             className={`px-4 py-2 rounded-lg border mr-2 mb-2 ${
               selectedCategory === cat.name
-                ? "bg-orange-50 border-orange-500"
-                : "bg-white border-gray-200"
+                ? 'bg-orange-50 border-orange-500'
+                : 'bg-white border-gray-200'
             }`}
           >
             <Text
               className={`text-sm ${
-                selectedCategory === cat.name
-                  ? "text-orange-600"
-                  : "text-gray-600"
+                selectedCategory === cat.name ? 'text-orange-600' : 'text-gray-600'
               }`}
             >
               {cat.name}

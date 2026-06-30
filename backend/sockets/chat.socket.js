@@ -1,5 +1,5 @@
-const jwt = require("jsonwebtoken");
-const cookie = require("cookie");
+const jwt = require('jsonwebtoken');
+const cookie = require('cookie');
 
 const onlineUsers = new Map(); // userId -> Set of socketIds
 
@@ -8,7 +8,7 @@ module.exports = (io) => {
     try {
       const rawCookie = socket.handshake.headers.cookie;
       if (!rawCookie) {
-        return next(new Error("No cookies found"));
+        return next(new Error('No cookies found'));
       }
 
       // 🍪 parse cookies
@@ -16,17 +16,17 @@ module.exports = (io) => {
       const token = cookies.accessToken || cookies.token;
 
       if (!token) {
-        return next(new Error("No token found"));
+        return next(new Error('No token found'));
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
       // Verify session exists in DB
-      const Session = require("../models/Session");
+      const Session = require('../models/Session');
       const sessionExists = await Session.findById(decoded.sid);
 
       if (!sessionExists || sessionExists.userId.toString() !== decoded.id) {
-        return next(new Error("Session expired or revoked"));
+        return next(new Error('Session expired or revoked'));
       }
 
       socket.userId = String(decoded.id);
@@ -34,12 +34,12 @@ module.exports = (io) => {
 
       next();
     } catch (err) {
-      console.error("Socket Auth Error:", err.message);
-      next(new Error("Socket auth failed"));
+      console.error('Socket Auth Error:', err.message);
+      next(new Error('Socket auth failed'));
     }
   });
 
-  io.on("connection", (socket) => {
+  io.on('connection', (socket) => {
     console.log(`🔌 Socket connected: ${socket.id}`);
     console.log(`✅ Auth user: ${socket.userId}`);
 
@@ -49,7 +49,7 @@ module.exports = (io) => {
         onlineUsers.set(socket.userId, new Set());
       }
       onlineUsers.get(socket.userId).add(socket.id);
-      io.emit("get-online-users", Array.from(onlineUsers.keys()));
+      io.emit('get-online-users', Array.from(onlineUsers.keys()));
     }
 
     // join personal room
@@ -58,15 +58,15 @@ module.exports = (io) => {
     // =========================
     // 💬 SETUP USER
     // =========================
-    socket.on("setup", (userData) => {
-      const userId = typeof userData === "string" ? userData : userData?._id;
+    socket.on('setup', (userData) => {
+      const userId = typeof userData === 'string' ? userData : userData?._id;
       if (userId) {
         socket.join(userId);
         if (!onlineUsers.has(userId)) {
           onlineUsers.set(userId, new Set());
         }
         onlineUsers.get(userId).add(socket.id);
-        io.emit("get-online-users", Array.from(onlineUsers.keys()));
+        io.emit('get-online-users', Array.from(onlineUsers.keys()));
         console.log(`👤 User ${userId} setup completed`);
       }
     });
@@ -74,7 +74,7 @@ module.exports = (io) => {
     // =========================
     // 💬 JOIN CHAT ROOM
     // =========================
-    socket.on("join-chat", (chatId) => {
+    socket.on('join-chat', (chatId) => {
       socket.join(`chat-${chatId}`);
       console.log(`👥 ${socket.userId} joined chat-${chatId}`);
     });
@@ -82,9 +82,9 @@ module.exports = (io) => {
     // =========================
     // 👁️ MARK AS READ (Real-time read status)
     // =========================
-    socket.on("mark-as-read", async ({ chatId, userId }) => {
+    socket.on('mark-as-read', async ({ chatId, userId }) => {
       try {
-        const Chat = require("../models/ChatMessage");
+        const Chat = require('../models/ChatMessage');
         const chat = await Chat.findById(chatId);
         if (!chat) return;
 
@@ -93,9 +93,7 @@ module.exports = (io) => {
           if (!m.seenBy) m.seenBy = [];
           // More robust ID comparison
           const currentUserIdStr = String(userId);
-          const alreadySeen = m.seenBy.some(
-            (id) => String(id) === currentUserIdStr,
-          );
+          const alreadySeen = m.seenBy.some((id) => String(id) === currentUserIdStr);
           if (!alreadySeen) {
             m.seenBy.push(userId);
             modified = true;
@@ -103,23 +101,23 @@ module.exports = (io) => {
         });
 
         if (modified) {
-          chat.markModified("messages");
+          chat.markModified('messages');
           await chat.save();
         }
 
         // Notify ALL users in the chat room (including sender)
-        io.to(`chat-${chatId}`).emit("messages-read", { chatId, userId });
+        io.to(`chat-${chatId}`).emit('messages-read', { chatId, userId });
       } catch (err) {
-        console.error("Mark as read error:", err.message);
+        console.error('Mark as read error:', err.message);
       }
     });
 
     // =========================
     // ✉️ SEND MESSAGE
     // =========================
-    socket.on("send-message", async ({ chatId, text }) => {
+    socket.on('send-message', async ({ chatId, text }) => {
       try {
-        const Chat = require("../models/ChatMessage");
+        const Chat = require('../models/ChatMessage');
 
         const chat = await Chat.findById(chatId);
         if (!chat) return;
@@ -136,30 +134,28 @@ module.exports = (io) => {
         await chat.save();
 
         // Emit socket event to notify users in the chat room
-        io.to(`chat-${chatId}`).emit("receive-message", {
+        io.to(`chat-${chatId}`).emit('receive-message', {
           chatId,
           message: newMessage,
         });
       } catch (err) {
-        console.error("Send message error:", err.message);
+        console.error('Send message error:', err.message);
       }
     });
 
     // =========================
     // ❌ DISCONNECT
     // =========================
-    socket.on("disconnect", (reason) => {
+    socket.on('disconnect', (reason) => {
       if (socket.userId && onlineUsers.has(socket.userId)) {
         const sockets = onlineUsers.get(socket.userId);
         sockets.delete(socket.id);
         if (sockets.size === 0) {
           onlineUsers.delete(socket.userId);
         }
-        io.emit("get-online-users", Array.from(onlineUsers.keys()));
+        io.emit('get-online-users', Array.from(onlineUsers.keys()));
       }
-      console.log(
-        `❌ Socket disconnected: ${socket.id} | user=${socket.userId} | ${reason}`,
-      );
+      console.log(`❌ Socket disconnected: ${socket.id} | user=${socket.userId} | ${reason}`);
     });
   });
 };

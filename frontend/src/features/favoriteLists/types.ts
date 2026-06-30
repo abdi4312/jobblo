@@ -1,4 +1,4 @@
-import type { Jobs } from "../../types/Jobs";
+import type { Jobs } from '../../types/Jobs';
 
 export interface FavoriteList {
   _id: string;

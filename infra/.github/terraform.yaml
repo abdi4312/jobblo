@@ -5,16 +5,16 @@ on:
 
 jobs:
   pre-commit:
-    name: "🔍 Pre-commit"
+    name: '🔍 Pre-commit'
     runs-on: ubuntu-latest
     steps:
-      - name: "🛎️ Checkout code"
+      - name: '🛎️ Checkout code'
         uses: actions/checkout@v4
-      - name: "🐍 Setup Python"
+      - name: '🐍 Setup Python'
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: "🔍 Validate pre-commit"
+      - name: '🔍 Validate pre-commit'
         uses: pre-commit/action@v3.0.1
         with:
           extra_args: terraform_fmt

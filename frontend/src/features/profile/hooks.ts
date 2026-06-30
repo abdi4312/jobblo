@@ -1,9 +1,4 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  useInfiniteQuery,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import {
   blockUser,
   getBlockedUsers,
@@ -22,9 +17,9 @@ import {
   searchUsers,
   updateUser,
   getSafePayHistory,
-} from "./api";
-import { useUserStore } from "../../stores/userStore";
-import { toast } from "react-hot-toast";
+} from './api';
+import { useUserStore } from '../../stores/userStore';
+import { toast } from 'react-hot-toast';
 
 interface UpdateUserData {
   name?: string;
@@ -39,16 +34,14 @@ export const useUpdateUser = () => {
   const { fetchProfile } = useUserStore((state) => state);
 
   return useMutation({
-    mutationFn: ({ userId, data }: { userId: string; data: any }) =>
-      updateUser(userId, data),
+    mutationFn: ({ userId, data }: { userId: string; data: any }) => updateUser(userId, data),
     onSuccess: (_, { userId }) => {
-      queryClient.invalidateQueries({ queryKey: ["userProfile", userId] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile', userId] });
       fetchProfile();
-      toast.success("Oppdatert!");
+      toast.success('Oppdatert!');
     },
     onError: (error: any) => {
-      const message =
-        error.response?.data?.error || error.message || "Kunne ikke oppdatere";
+      const message = error.response?.data?.error || error.message || 'Kunne ikke oppdatere';
       toast.error(message);
     },
   });
@@ -56,7 +49,7 @@ export const useUpdateUser = () => {
 
 export const useUserProfile = (userId: string | undefined) => {
   return useQuery({
-    queryKey: ["userProfile", userId],
+    queryKey: ['userProfile', userId],
     queryFn: () => getUserProfile(userId!),
     enabled: !!userId,
   });
@@ -69,12 +62,12 @@ export const useBlockUser = () => {
   return useMutation({
     mutationFn: (userId: string) => blockUser(userId),
     onSuccess: (_, userId) => {
-      queryClient.invalidateQueries({ queryKey: ["userProfile", userId] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile', userId] });
       fetchProfile();
     },
     onError: (error: unknown) => {
       const err = error as { response?: { data?: { error?: string } } };
-      toast.error(err.response?.data?.error || "Kunne ikke blokkere bruker");
+      toast.error(err.response?.data?.error || 'Kunne ikke blokkere bruker');
     },
   });
 };
@@ -82,7 +75,7 @@ export const useBlockUser = () => {
 export const useBlockedUsers = (page = 1, limit = 10) => {
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   return useQuery({
-    queryKey: ["blockedUsers", page, limit],
+    queryKey: ['blockedUsers', page, limit],
     queryFn: () => getBlockedUsers(page, limit),
     enabled: isAuthenticated,
   });
@@ -91,7 +84,7 @@ export const useBlockedUsers = (page = 1, limit = 10) => {
 export const useSearchUsers = (query?: string) => {
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   return useQuery({
-    queryKey: ["searchUsers", query],
+    queryKey: ['searchUsers', query],
     queryFn: () => searchUsers(query),
     enabled: isAuthenticated && !!query && query.length >= 2,
   });
@@ -100,7 +93,7 @@ export const useSearchUsers = (query?: string) => {
 export const useTopUsers = () => {
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   return useQuery({
-    queryKey: ["topUsers"],
+    queryKey: ['topUsers'],
     queryFn: () => getTopUsers(),
     enabled: isAuthenticated,
   });
@@ -109,20 +102,16 @@ export const useTopUsers = () => {
 export const useUnifiedSearch = (query: string) => {
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   return useQuery({
-    queryKey: ["unifiedSearch", query],
+    queryKey: ['unifiedSearch', query],
     queryFn: () => searchAll(query),
     enabled: isAuthenticated && query.length >= 2,
   });
 };
 
-export const useInfiniteSearch = (
-  query: string,
-  type: string,
-  limit: number = 10,
-) => {
+export const useInfiniteSearch = (query: string, type: string, limit: number = 10) => {
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   return useInfiniteQuery({
-    queryKey: ["infiniteSearch", query, type, limit],
+    queryKey: ['infiniteSearch', query, type, limit],
     queryFn: ({ pageParam = 1 }) => searchAll(query, type, pageParam, limit),
     getNextPageParam: (lastPage) => {
       if (lastPage.page < lastPage.totalPages) {
@@ -137,7 +126,7 @@ export const useInfiniteSearch = (
 
 export const useUserReviews = (userId: string | undefined, role?: string) => {
   return useQuery({
-    queryKey: ["userReviews", userId, role],
+    queryKey: ['userReviews', userId, role],
     queryFn: () => getUserReviews(userId!, role),
     enabled: !!userId,
   });
@@ -145,7 +134,7 @@ export const useUserReviews = (userId: string | undefined, role?: string) => {
 
 export const useSafePayHistory = (userId: string | undefined) => {
   return useQuery({
-    queryKey: ["safePayHistory", userId],
+    queryKey: ['safePayHistory', userId],
     queryFn: () => getSafePayHistory(userId!),
     enabled: !!userId,
   });
@@ -158,14 +147,12 @@ export const useAddPortfolioItem = () => {
   return useMutation({
     mutationFn: (data: FormData) => addPortfolioItem(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile', user?._id] });
       fetchProfile();
-      toast.success("Portfolio-element lagt til!");
+      toast.success('Portfolio-element lagt til!');
     },
     onError: (error: any) => {
-      toast.error(
-        error.response?.data?.error || "Kunne ikke legge til portfolio",
-      );
+      toast.error(error.response?.data?.error || 'Kunne ikke legge til portfolio');
     },
   });
 };
@@ -177,12 +164,12 @@ export const useDeletePortfolioItem = () => {
   return useMutation({
     mutationFn: (itemId: string) => deletePortfolioItem(itemId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile', user?._id] });
       fetchProfile();
-      toast.success("Portfolio-element slettet");
+      toast.success('Portfolio-element slettet');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Kunne ikke slette element");
+      toast.error(error.response?.data?.error || 'Kunne ikke slette element');
     },
   });
 };
@@ -194,14 +181,12 @@ export const useAddPreviousProject = () => {
   return useMutation({
     mutationFn: (data: FormData) => addPreviousProject(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile', user?._id] });
       fetchProfile();
-      toast.success("Prosjekt lagt til!");
+      toast.success('Prosjekt lagt til!');
     },
     onError: (error: any) => {
-      toast.error(
-        error.response?.data?.error || "Kunne ikke legge til prosjekt",
-      );
+      toast.error(error.response?.data?.error || 'Kunne ikke legge til prosjekt');
     },
   });
 };
@@ -213,12 +198,12 @@ export const useDeletePreviousProject = () => {
   return useMutation({
     mutationFn: (projectId: string) => deletePreviousProject(projectId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile', user?._id] });
       fetchProfile();
-      toast.success("Prosjekt slettet");
+      toast.success('Prosjekt slettet');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Kunne ikke slette prosjekt");
+      toast.error(error.response?.data?.error || 'Kunne ikke slette prosjekt');
     },
   });
 };
@@ -230,14 +215,12 @@ export const useAddCertification = () => {
   return useMutation({
     mutationFn: (data: FormData) => addCertification(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile', user?._id] });
       fetchProfile();
-      toast.success("Sertifisering lagt til!");
+      toast.success('Sertifisering lagt til!');
     },
     onError: (error: any) => {
-      toast.error(
-        error.response?.data?.error || "Kunne ikke legge til sertifisering",
-      );
+      toast.error(error.response?.data?.error || 'Kunne ikke legge til sertifisering');
     },
   });
 };
@@ -249,12 +232,12 @@ export const useDeleteCertification = () => {
   return useMutation({
     mutationFn: (certId: string) => deleteCertification(certId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile', user?._id] });
       fetchProfile();
-      toast.success("Sertifisering slettet");
+      toast.success('Sertifisering slettet');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Kunne ikke slette");
+      toast.error(error.response?.data?.error || 'Kunne ikke slette');
     },
   });
 };
@@ -266,14 +249,12 @@ export const useAddExperience = () => {
   return useMutation({
     mutationFn: (data: any) => addExperience(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile', user?._id] });
       fetchProfile();
-      toast.success("Erfaring lagt til!");
+      toast.success('Erfaring lagt til!');
     },
     onError: (error: any) => {
-      toast.error(
-        error.response?.data?.error || "Kunne ikke legge til erfaring",
-      );
+      toast.error(error.response?.data?.error || 'Kunne ikke legge til erfaring');
     },
   });
 };
@@ -285,12 +266,12 @@ export const useDeleteExperience = () => {
   return useMutation({
     mutationFn: (expId: string) => deleteExperience(expId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userProfile", user?._id] });
+      queryClient.invalidateQueries({ queryKey: ['userProfile', user?._id] });
       fetchProfile();
-      toast.success("Erfaring slettet");
+      toast.success('Erfaring slettet');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Kunne ikke slette erfaring");
+      toast.error(error.response?.data?.error || 'Kunne ikke slette erfaring');
     },
   });
 };

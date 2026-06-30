@@ -1,5 +1,5 @@
-import { Mail, Phone, MessageCircle, Clock } from "lucide-react";
-import ContactForm from "./ContactForm";
+import { Mail, Phone, MessageCircle, Clock } from 'lucide-react';
+import ContactForm from './ContactForm';
 
 interface ContactDetail {
   icon: React.ElementType;
@@ -13,35 +13,35 @@ interface ContactDetail {
 const contactDetails: ContactDetail[] = [
   {
     icon: Mail,
-    title: "E-post",
-    value: "support@jobblo.no",
-    subText: "Svar innen 24 timer",
-    bgColor: "bg-[#2F7E4720]",
-    iconColor: "text-custom-green",
+    title: 'E-post',
+    value: 'support@jobblo.no',
+    subText: 'Svar innen 24 timer',
+    bgColor: 'bg-[#2F7E4720]',
+    iconColor: 'text-custom-green',
   },
   {
     icon: Phone,
-    title: "Telefon",
-    value: "+47 123 45 678",
-    subText: "Man-Fre 08:00-17:00",
-    bgColor: "bg-[#E0883520]",
-    iconColor: "text-[#E08835]",
+    title: 'Telefon',
+    value: '+47 123 45 678',
+    subText: 'Man-Fre 08:00-17:00',
+    bgColor: 'bg-[#E0883520]',
+    iconColor: 'text-[#E08835]',
   },
   {
     icon: MessageCircle,
-    title: "Live Chat",
-    value: "Start chat",
-    subText: "Rask respons",
-    bgColor: "bg-[#238CEB20]",
-    iconColor: "text-[#238CEB]",
+    title: 'Live Chat',
+    value: 'Start chat',
+    subText: 'Rask respons',
+    bgColor: 'bg-[#238CEB20]',
+    iconColor: 'text-[#238CEB]',
   },
   {
     icon: Clock,
-    title: "Åpningstider",
-    value: "Mandag - Fredag",
-    subText: "08:00 - 17:00",
-    bgColor: "bg-[#673AB720]",
-    iconColor: "text-[#673AB7]",
+    title: 'Åpningstider',
+    value: 'Mandag - Fredag',
+    subText: '08:00 - 17:00',
+    bgColor: 'bg-[#673AB720]',
+    iconColor: 'text-[#673AB7]',
   },
 ];
 
@@ -62,28 +62,20 @@ const Contact = () => {
         <div className="flex flex-col lg:flex-row gap-12 lg:gap-24">
           {/* Left Side: Kontakt oss details */}
           <div className="flex-1">
-            <h3 className="text-[24px] font-bold text-custom-black mb-6.5">
-              Kontakt oss
-            </h3>
+            <h3 className="text-[24px] font-bold text-custom-black mb-6.5">Kontakt oss</h3>
 
             <div className="space-y-6">
               {contactDetails.map((item, index) => (
                 <div key={index} className="flex items-start gap-4">
                   {/* Dynamic Icon Container */}
-                  <div
-                    className={`${item.bgColor} ${item.iconColor} p-3 rounded-[14px]`}
-                  >
+                  <div className={`${item.bgColor} ${item.iconColor} p-3 rounded-[14px]`}>
                     <item.icon size={24} />
                   </div>
 
                   {/* Text Details */}
                   <div className="flex flex-col">
-                    <h4 className=" text-[18px] font-bold text-custom-black">
-                      {item.title}
-                    </h4>
-                    <p className="text-custom-green text-[16px] font-semibold">
-                      {item.value}
-                    </p>
+                    <h4 className=" text-[18px] font-bold text-custom-black">{item.title}</h4>
+                    <p className="text-custom-green text-[16px] font-semibold">{item.value}</p>
                     <p className="text-sm text-[#0A0A0A9E]">{item.subText}</p>
                   </div>
                 </div>

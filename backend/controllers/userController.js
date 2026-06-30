@@ -1,11 +1,11 @@
-const User = require("../models/User");
-const Service = require("../models/Service");
-const JobRequest = require("../models/JobRequest");
-const mongoose = require("mongoose");
-const Category = require("../models/Category");
-const List = require("../models/List");
-const Notification = require("../models/Notification");
-const notificationController = require("./notificationController");
+const User = require('../models/User');
+const Service = require('../models/Service');
+const JobRequest = require('../models/JobRequest');
+const mongoose = require('mongoose');
+const Category = require('../models/Category');
+const List = require('../models/List');
+const Notification = require('../models/Notification');
+const notificationController = require('./notificationController');
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -16,7 +16,7 @@ function authorizeUser(req, targetUserId) {
   const currentUserRole = req.user?.role;
 
   // Only superAdmin OR the same user can proceed
-  if (currentUserRole !== "superAdmin" && currentUserId !== targetUserId) {
+  if (currentUserRole !== 'superAdmin' && currentUserId !== targetUserId) {
     return false;
   }
   return true;
@@ -75,7 +75,7 @@ exports.createUser = async (req, res) => {
   } catch (err) {
     if (err.code === 11000) {
       // Duplicate key error
-      return res.status(400).json({ error: "Email or phone already exists" });
+      return res.status(400).json({ error: 'Email or phone already exists' });
     }
     res.status(400).json({ error: err.message });
   }
@@ -85,16 +85,16 @@ exports.createUser = async (req, res) => {
 exports.searchUsers = async (req, res) => {
   try {
     const query = req.query.query || req.query.q;
-    console.log("Search query:", query);
+    console.log('Search query:', query);
     if (!query || query.length < 2) {
       return res.status(200).json([]);
     }
 
     const users = await User.find({
       $or: [
-        { name: { $regex: query, $options: "i" } },
-        { lastName: { $regex: query, $options: "i" } },
-        { email: { $regex: query, $options: "i" } },
+        { name: { $regex: query, $options: 'i' } },
+        { lastName: { $regex: query, $options: 'i' } },
+        { email: { $regex: query, $options: 'i' } },
       ],
       _id: { $ne: req.userId }, // Exclude current user
     }).limit(10);
@@ -109,13 +109,13 @@ exports.searchUsers = async (req, res) => {
 exports.getTopUsers = async (req, res) => {
   try {
     const topUsers = await User.find({ _id: { $ne: req.userId } })
-      .select("name lastName email avatarUrl averageRating reviewCount")
+      .select('name lastName email avatarUrl averageRating reviewCount')
       .sort({ reviewCount: -1, averageRating: -1 })
       .limit(10);
     res.status(200).json(topUsers);
   } catch (error) {
-    console.error("Get top users error:", error);
-    res.status(500).json({ error: "Server error" });
+    console.error('Get top users error:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -132,7 +132,7 @@ exports.searchAll = async (req, res) => {
       });
     }
 
-    const regex = new RegExp(query, "i");
+    const regex = new RegExp(query, 'i');
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const numericLimit = parseInt(limit);
 
@@ -141,25 +141,25 @@ exports.searchAll = async (req, res) => {
       let results = [];
       let total = 0;
 
-      if (type === "categories") {
+      if (type === 'categories') {
         total = await Category.countDocuments({ name: regex, isActive: true });
         results = await Category.find({ name: regex, isActive: true })
           .skip(skip)
           .limit(numericLimit);
-      } else if (type === "people") {
+      } else if (type === 'people') {
         const queryObj = {
           $or: [{ name: regex }, { lastName: regex }, { email: regex }],
           _id: { $ne: req.userId },
         };
         total = await User.countDocuments(queryObj);
         results = await User.find(queryObj)
-          .select("name lastName avatarUrl email averageRating reviewCount")
+          .select('name lastName avatarUrl email averageRating reviewCount')
           .skip(skip)
           .limit(numericLimit);
-      } else if (type === "lists") {
+      } else if (type === 'lists') {
         total = await List.countDocuments({ name: regex, public: true });
         results = await List.find({ name: regex, public: true })
-          .populate("services")
+          .populate('services')
           .skip(skip)
           .limit(numericLimit);
       }
@@ -193,7 +193,7 @@ exports.searchAll = async (req, res) => {
       $or: [{ name: regex }, { lastName: regex }, { email: regex }],
       _id: { $ne: req.userId },
     })
-      .select("name lastName avatarUrl email averageRating reviewCount")
+      .select('name lastName avatarUrl email averageRating reviewCount')
       .limit(3);
 
     // 3. Search Public Lists
@@ -205,7 +205,7 @@ exports.searchAll = async (req, res) => {
       name: regex,
       public: true,
     })
-      .populate("services")
+      .populate('services')
       .limit(3);
 
     res.status(200).json({
@@ -214,8 +214,8 @@ exports.searchAll = async (req, res) => {
       lists: { results: lists, total: listsCount },
     });
   } catch (error) {
-    console.error("Unified search error:", error);
-    res.status(500).json({ error: "Server error" });
+    console.error('Unified search error:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -224,12 +224,12 @@ exports.getUserById = async (req, res) => {
     const { id } = req.params;
 
     if (!isValidId(id)) {
-      return res.status(400).json({ error: "Invalid user ID format" });
+      return res.status(400).json({ error: 'Invalid user ID format' });
     }
 
-    const user = await User.findById(id).select("-password");
+    const user = await User.findById(id).select('-password');
 
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
     // Calculate posted jobs count (as poster)
     const postedJobsCount = await Service.countDocuments({ userId: id });
@@ -237,7 +237,7 @@ exports.getUserById = async (req, res) => {
     // Calculate completed jobs (as provider: jobs user completed for others)
     const completedOrdersAsProvider = await Order.countDocuments({
       providerId: id,
-      status: "completed",
+      status: 'completed',
     });
     // Use either the incremented count from model OR recalculate to be safe
     const completedJobs = user.completedJobs || completedOrdersAsProvider;
@@ -248,17 +248,15 @@ exports.getUserById = async (req, res) => {
     });
     const respondedJobRequests = await JobRequest.countDocuments({
       providerId: id,
-      status: { $in: ["accepted", "declined"] },
+      status: { $in: ['accepted', 'declined'] },
     });
     const responseRate =
-      totalJobRequests > 0
-        ? Math.round((respondedJobRequests / totalJobRequests) * 100)
-        : 100;
+      totalJobRequests > 0 ? Math.round((respondedJobRequests / totalJobRequests) * 100) : 100;
 
     // Calculate average response time
     const jobRequestsWithResponse = await JobRequest.find({
       providerId: id,
-      status: { $in: ["accepted", "declined"] },
+      status: { $in: ['accepted', 'declined'] },
     });
     let totalResponseTimeMs = 0;
     jobRequestsWithResponse.forEach((jr) => {
@@ -268,46 +266,34 @@ exports.getUserById = async (req, res) => {
     });
     const averageResponseTimeMinutes =
       jobRequestsWithResponse.length > 0
-        ? Math.round(
-            totalResponseTimeMs / (1000 * 60 * jobRequestsWithResponse.length),
-          )
+        ? Math.round(totalResponseTimeMs / (1000 * 60 * jobRequestsWithResponse.length))
         : 0;
 
     // Calculate repeat customers (customers who ordered more than once)
     const orders = await Order.find({
       providerId: id,
-      status: { $in: ["completed", "paid"] },
+      status: { $in: ['completed', 'paid'] },
     });
     const customerCounts = {};
     orders.forEach((order) => {
       const customerId = order.customerId.toString();
       customerCounts[customerId] = (customerCounts[customerId] || 0) + 1;
     });
-    const repeatCustomersCount = Object.values(customerCounts).filter(
-      (count) => count > 1,
-    ).length;
+    const repeatCustomersCount = Object.values(customerCounts).filter((count) => count > 1).length;
 
     // Calculate hire rate (accepted job requests / total job requests)
     const acceptedJobRequests = await JobRequest.countDocuments({
       providerId: id,
-      status: "accepted",
+      status: 'accepted',
     });
     const hireRate =
-      totalJobRequests > 0
-        ? Math.round((acceptedJobRequests / totalJobRequests) * 100)
-        : 0;
+      totalJobRequests > 0 ? Math.round((acceptedJobRequests / totalJobRequests) * 100) : 0;
 
     // Calculate completion rate (completed orders / total accepted orders as provider)
     const totalAcceptedOrdersAsProvider = await Order.countDocuments({
       providerId: id,
       status: {
-        $in: [
-          "accepted",
-          "in_progress",
-          "completed",
-          "awaiting_payment",
-          "paid",
-        ],
+        $in: ['accepted', 'in_progress', 'completed', 'awaiting_payment', 'paid'],
       },
     });
     const completionRate =
@@ -326,7 +312,7 @@ exports.getUserById = async (req, res) => {
 
     // Calculate total applications received (as a provider or as a poster?)
     // Let's calculate both: as a provider (received job requests) and as a poster (received on their services)
-    const servicesByUser = await Service.find({ userId: id }, "_id");
+    const servicesByUser = await Service.find({ userId: id }, '_id');
     const serviceIds = servicesByUser.map((s) => s._id);
     const totalApplicationsReceived = await JobRequest.countDocuments({
       serviceId: { $in: serviceIds },
@@ -347,7 +333,7 @@ exports.getUserById = async (req, res) => {
     res.json(userObj);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -356,43 +342,43 @@ exports.updateUser = async (req, res) => {
     const { id } = req.params;
 
     if (!isValidId(id)) {
-      return res.status(400).json({ error: "Invalid user ID format" });
+      return res.status(400).json({ error: 'Invalid user ID format' });
     }
 
     // Authorization check
     if (!authorizeUser(req, id)) {
-      return res.status(403).json({ error: "Not authorized" });
+      return res.status(403).json({ error: 'Not authorized' });
     }
 
     // Allowed fields for normal user
     const allowedUpdates = [
-      "name",
-      "email",
-      "phone",
-      "lastName",
-      "bio",
-      "experience",
-      "birthDate",
-      "gender",
-      "address",
-      "postNumber",
-      "postSted",
-      "country",
-      "availabilityText",
-      "skills",
-      "portfolio",
-      "previousProjects",
-      "companyName",
-      "orgNumber",
-      "orgType",
-      "locations",
-      "website",
+      'name',
+      'email',
+      'phone',
+      'lastName',
+      'bio',
+      'experience',
+      'birthDate',
+      'gender',
+      'address',
+      'postNumber',
+      'postSted',
+      'country',
+      'availabilityText',
+      'skills',
+      'portfolio',
+      'previousProjects',
+      'companyName',
+      'orgNumber',
+      'orgType',
+      'locations',
+      'website',
     ];
 
-    if (req.user.role === "superAdmin") {
-      allowedUpdates.push("role");
-      allowedUpdates.push("verified");
-      allowedUpdates.push("isTrusted");
+    if (req.user.role === 'superAdmin') {
+      allowedUpdates.push('role');
+      allowedUpdates.push('verified');
+      allowedUpdates.push('isTrusted');
     }
 
     const updates = {};
@@ -415,21 +401,19 @@ exports.updateUser = async (req, res) => {
     }
 
     if (Object.keys(updates).length === 0) {
-      return res
-        .status(400)
-        .json({ error: "No valid fields provided for update" });
+      return res.status(400).json({ error: 'No valid fields provided for update' });
     }
 
     const user = await User.findById(id);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
     // Delete old avatar if a new one is uploaded
-    const cloudinary = require("../config/cloudinary");
+    const cloudinary = require('../config/cloudinary');
     if (req.files && req.files.avatar && user.avatarPublicId) {
       try {
         await cloudinary.uploader.destroy(user.avatarPublicId);
       } catch (err) {
-        console.error("Old avatar deletion error:", err);
+        console.error('Old avatar deletion error:', err);
       }
     }
 
@@ -438,7 +422,7 @@ exports.updateUser = async (req, res) => {
       try {
         await cloudinary.uploader.destroy(user.bannerPublicId);
       } catch (err) {
-        console.error("Old banner deletion error:", err);
+        console.error('Old banner deletion error:', err);
       }
     }
 
@@ -447,7 +431,7 @@ exports.updateUser = async (req, res) => {
     });
     res.json(updatedUser);
   } catch (err) {
-    console.error("updateUser Error:", err);
+    console.error('updateUser Error:', err);
     res.status(400).json({ error: err.message });
   }
 };
@@ -456,20 +440,20 @@ exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
     if (!isValidId(id)) {
-      return res.status(400).json({ error: "Invalid user ID format" });
+      return res.status(400).json({ error: 'Invalid user ID format' });
     }
 
     // Authorization check
     if (!authorizeUser(req, id)) {
-      return res.status(403).json({ error: "Not authorized" });
+      return res.status(403).json({ error: 'Not authorized' });
     }
 
     const user = await User.findByIdAndDelete(id);
 
-    if (!user) return res.status(404).json({ error: "User not found" });
-    res.json({ message: "User deleted" });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ message: 'User deleted' });
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -477,13 +461,13 @@ exports.getUserServices = async (req, res) => {
   try {
     const { id } = req.params;
     if (!isValidId(id)) {
-      return res.status(400).json({ error: "Invalid user ID format" });
+      return res.status(400).json({ error: 'Invalid user ID format' });
     }
 
     const services = await Service.find({ userId: id });
     res.json(services);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -503,12 +487,12 @@ exports.addPortfolioItem = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       userId,
       { $push: { portfolio: updates } },
-      { new: true },
+      { new: true }
     );
 
     res.status(201).json(user.portfolio[user.portfolio.length - 1]);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -520,12 +504,12 @@ exports.deletePortfolioItem = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       userId,
       { $pull: { portfolio: { _id: itemId } } },
-      { new: true },
+      { new: true }
     );
 
-    res.json({ message: "Portfolio item deleted" });
+    res.json({ message: 'Portfolio item deleted' });
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -545,14 +529,12 @@ exports.addPreviousProject = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       userId,
       { $push: { previousProjects: projectData } },
-      { new: true },
+      { new: true }
     );
 
-    res
-      .status(201)
-      .json(user.previousProjects[user.previousProjects.length - 1]);
+    res.status(201).json(user.previousProjects[user.previousProjects.length - 1]);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -565,9 +547,9 @@ exports.deletePreviousProject = async (req, res) => {
       $pull: { previousProjects: { _id: projectId } },
     });
 
-    res.json({ message: "Previous project deleted" });
+    res.json({ message: 'Previous project deleted' });
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -588,12 +570,12 @@ exports.addCertification = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       userId,
       { $push: { certifications: certData } },
-      { new: true },
+      { new: true }
     );
 
     res.status(201).json(user.certifications[user.certifications.length - 1]);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -606,7 +588,7 @@ exports.deleteCertification = async (req, res) => {
     const cert = user.certifications.id(certId);
 
     if (cert && cert.publicId) {
-      const cloudinary = require("../config/cloudinary");
+      const cloudinary = require('../config/cloudinary');
       await cloudinary.uploader.destroy(cert.publicId);
     }
 
@@ -614,9 +596,9 @@ exports.deleteCertification = async (req, res) => {
       $pull: { certifications: { _id: certId } },
     });
 
-    res.json({ message: "Certification deleted" });
+    res.json({ message: 'Certification deleted' });
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -632,12 +614,12 @@ exports.addExperience = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       userId,
       { $push: { experience: expData } },
-      { new: true },
+      { new: true }
     );
 
     res.status(201).json(user.experience[user.experience.length - 1]);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -650,19 +632,19 @@ exports.deleteExperience = async (req, res) => {
       $pull: { experience: { _id: expId } },
     });
 
-    res.json({ message: "Experience deleted" });
+    res.json({ message: 'Experience deleted' });
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
 // List all users
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password");
+    const users = await User.find().select('-password');
     res.json(users);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -674,11 +656,11 @@ exports.getBlockedUsers = async (req, res) => {
 
     // Fetch the user and populate blockedUsers
     const user = await User.findById(req.userId).populate(
-      "blockedUsers",
-      "name lastName avatarUrl",
+      'blockedUsers',
+      'name lastName avatarUrl'
     );
 
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
     // Filter out any null entries (in case some IDs in the array don't exist in the database)
     const allBlocked = (user.blockedUsers || []).filter((u) => u !== null);
@@ -708,16 +690,16 @@ exports.blockUser = async (req, res) => {
     const targetUserId = req.params.id;
 
     if (!isValidId(currentUserId) || !isValidId(targetUserId)) {
-      return res.status(400).json({ error: "Invalid user ID format" });
+      return res.status(400).json({ error: 'Invalid user ID format' });
     }
 
     if (currentUserId === targetUserId) {
-      return res.status(400).json({ error: "You cannot block yourself" });
+      return res.status(400).json({ error: 'You cannot block yourself' });
     }
 
     const currentUser = await User.findById(currentUserId);
     if (!currentUser) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ error: 'User not found' });
     }
 
     const isBlocked = currentUser.blockedUsers?.includes(targetUserId);
@@ -727,14 +709,14 @@ exports.blockUser = async (req, res) => {
       await User.findByIdAndUpdate(currentUserId, {
         $pull: { blockedUsers: targetUserId },
       });
-      return res.json({ message: "User unblocked", isBlocked: false });
+      return res.json({ message: 'User unblocked', isBlocked: false });
     } else {
       // Block
       await User.findByIdAndUpdate(currentUserId, {
         $addToSet: { blockedUsers: targetUserId },
       });
 
-      return res.json({ message: "User blocked", isBlocked: true });
+      return res.json({ message: 'User blocked', isBlocked: true });
     }
   } catch (error) {
     res.status(500).json({ error: error.message });

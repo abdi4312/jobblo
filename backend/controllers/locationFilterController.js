@@ -1,7 +1,7 @@
-const NorwayCounty = require("../models/NorwayCounty");
-const NorwayMunicipality = require("../models/NorwayMunicipality");
-const NorwayArea = require("../models/NorwayArea");
-const Service = require("../models/Service");
+const NorwayCounty = require('../models/NorwayCounty');
+const NorwayMunicipality = require('../models/NorwayMunicipality');
+const NorwayArea = require('../models/NorwayArea');
+const Service = require('../models/Service');
 
 /**
  * GET /api/location-filter/tree
@@ -15,21 +15,17 @@ exports.getLocationTree = async (req, res) => {
 
     // Build tree structure
     const tree = counties.map((county) => {
-      const countyMunicipalities = municipalities.filter(
-        (m) => m.countyCode === county.code
-      );
+      const countyMunicipalities = municipalities.filter((m) => m.countyCode === county.code);
 
       const municipalityChildren = countyMunicipalities.map((municipality) => {
-        const municipalityAreas = areas.filter(
-          (a) => a.municipalityCode === municipality.code
-        );
+        const municipalityAreas = areas.filter((a) => a.municipalityCode === municipality.code);
 
         return {
-          type: "municipality",
+          type: 'municipality',
           code: municipality.code,
           name: municipality.name,
           children: municipalityAreas.map((area) => ({
-            type: "area",
+            type: 'area',
             code: area.code,
             name: area.name,
           })),
@@ -37,7 +33,7 @@ exports.getLocationTree = async (req, res) => {
       });
 
       return {
-        type: "county",
+        type: 'county',
         code: county.code,
         name: county.name,
         children: municipalityChildren,
@@ -46,8 +42,8 @@ exports.getLocationTree = async (req, res) => {
 
     res.json(tree);
   } catch (err) {
-    console.error("Location Tree Error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error('Location Tree Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -59,20 +55,20 @@ exports.getLocationStats = async (req, res) => {
   try {
     // Get count per county
     const countyStats = await Service.aggregate([
-      { $match: { status: { $in: ["open", "active"] }, countyCode: { $ne: null } } },
-      { $group: { _id: "$countyCode", count: { $sum: 1 } } },
+      { $match: { status: { $in: ['open', 'active'] }, countyCode: { $ne: null } } },
+      { $group: { _id: '$countyCode', count: { $sum: 1 } } },
     ]);
 
     // Get count per municipality
     const municipalityStats = await Service.aggregate([
-      { $match: { status: { $in: ["open", "active"] }, municipalityCode: { $ne: null } } },
-      { $group: { _id: "$municipalityCode", count: { $sum: 1 } } },
+      { $match: { status: { $in: ['open', 'active'] }, municipalityCode: { $ne: null } } },
+      { $group: { _id: '$municipalityCode', count: { $sum: 1 } } },
     ]);
 
     // Get count per area
     const areaStats = await Service.aggregate([
-      { $match: { status: { $in: ["open", "active"] }, areaCode: { $ne: null } } },
-      { $group: { _id: "$areaCode", count: { $sum: 1 } } },
+      { $match: { status: { $in: ['open', 'active'] }, areaCode: { $ne: null } } },
+      { $group: { _id: '$areaCode', count: { $sum: 1 } } },
     ]);
 
     // Format the stats into a single object for easier lookup
@@ -96,7 +92,7 @@ exports.getLocationStats = async (req, res) => {
 
     res.json(stats);
   } catch (err) {
-    console.error("Location Stats Error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error('Location Stats Error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };

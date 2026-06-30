@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   MapPin,
@@ -13,15 +13,15 @@ import {
   Info,
   Star,
   Zap,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   useApplicantsQuery,
   useCreateSafePayContractMutation,
-} from "../../features/applicants/hooks";
-import { toast } from "react-hot-toast";
-import { Button } from "../../components/Ui/button/Button";
-import SafePaySteps from "../../components/SafePay/SafePaySteps";
-import { createOrGetChat } from "../../api/chatAPI";
+} from '../../features/applicants/hooks';
+import { toast } from 'react-hot-toast';
+import { Button } from '../../components/Ui/button/Button';
+import SafePaySteps from '../../components/SafePay/SafePaySteps';
+import { createOrGetChat } from '../../api/chatAPI';
 
 const ApplicantsPage: React.FC = () => {
   const { serviceId } = useParams<{ serviceId: string }>();
@@ -34,11 +34,11 @@ const ApplicantsPage: React.FC = () => {
   // Auto-redirect if we are beyond Step 1
   useEffect(() => {
     if (activeOrder) {
-      if (activeOrder.status === "awaiting_payment") {
+      if (activeOrder.status === 'awaiting_payment') {
         navigate(`/safepay/checkout/${activeOrder._id}`);
-      } else if (["paid", "in_progress"].includes(activeOrder.status)) {
+      } else if (['paid', 'in_progress'].includes(activeOrder.status)) {
         navigate(`/safepay/success?orderId=${activeOrder._id}`);
-      } else if (activeOrder.status === "completed") {
+      } else if (activeOrder.status === 'completed') {
         navigate(`/safepay/approval/${activeOrder._id}`);
       }
     }
@@ -55,9 +55,7 @@ const ApplicantsPage: React.FC = () => {
   if (error || !data) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">
-          Kunne ikke laste søkere
-        </h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Kunne ikke laste søkere</h2>
         <button
           onClick={() => navigate(-1)}
           className="text-custom-green font-medium flex items-center gap-2"
@@ -73,40 +71,38 @@ const ApplicantsPage: React.FC = () => {
   // Dynamic step based on active order status
   const currentStep = !activeOrder
     ? 1
-    : activeOrder.status === "awaiting_payment"
+    : activeOrder.status === 'awaiting_payment'
       ? 2
-      : activeOrder.status === "paid"
+      : activeOrder.status === 'paid'
         ? 3
-        : activeOrder.status === "in_progress"
+        : activeOrder.status === 'in_progress'
           ? 3
-          : activeOrder.status === "completed"
+          : activeOrder.status === 'completed'
             ? 4
             : 1;
 
   const isJobAlreadyPaid =
-    activeOrder &&
-    ["paid", "in_progress", "completed"].includes(activeOrder.status);
-  const hasAwaitingPayment =
-    activeOrder && activeOrder.status === "awaiting_payment";
+    activeOrder && ['paid', 'in_progress', 'completed'].includes(activeOrder.status);
+  const hasAwaitingPayment = activeOrder && activeOrder.status === 'awaiting_payment';
 
   const handleStartChat = async (applicantId: string) => {
     try {
       const chat = await createOrGetChat(applicantId, serviceId!);
       navigate(`/messages/${chat._id}`);
     } catch (error) {
-      console.error("Error starting chat:", error);
-      toast.error("Kunne ikke starte chat");
+      console.error('Error starting chat:', error);
+      toast.error('Kunne ikke starte chat');
     }
   };
 
   const handleSelectApplicant = (applicantId: string, requestId: string) => {
     if (activeOrder) {
-      toast.error("Dette oppdraget har allerede en aktiv kontrakt.");
-      if (activeOrder.status === "awaiting_payment") {
+      toast.error('Dette oppdraget har allerede en aktiv kontrakt.');
+      if (activeOrder.status === 'awaiting_payment') {
         navigate(`/safepay/checkout/${activeOrder._id}`);
-      } else if (["paid", "in_progress"].includes(activeOrder.status)) {
+      } else if (['paid', 'in_progress'].includes(activeOrder.status)) {
         navigate(`/safepay/success?orderId=${activeOrder._id}`);
-      } else if (activeOrder.status === "completed") {
+      } else if (activeOrder.status === 'completed') {
         navigate(`/safepay/approval/${activeOrder._id}`);
       }
       return;
@@ -116,14 +112,14 @@ const ApplicantsPage: React.FC = () => {
       { serviceId: serviceId!, applicantId, requestId },
       {
         onSuccess: (res) => {
-          toast.success("Kontrakt opprettet! Sender deg til SafePay Checkout.");
+          toast.success('Kontrakt opprettet! Sender deg til SafePay Checkout.');
           // Redirect to SafePay Checkout page (to be implemented/verified)
           navigate(`/safepay/checkout/${res.orderId}`);
         },
         onError: (err: any) => {
-          toast.error(err.response?.data?.error || "Kunne ikke velge søker");
+          toast.error(err.response?.data?.error || 'Kunne ikke velge søker');
         },
-      },
+      }
     );
   };
 
@@ -139,11 +135,7 @@ const ApplicantsPage: React.FC = () => {
         </button>
 
         {/* Steps Bar */}
-        <SafePaySteps 
-          currentStep={currentStep} 
-          serviceId={serviceId}
-          orderId={activeOrder?._id}
-        />
+        <SafePaySteps currentStep={currentStep} serviceId={serviceId} orderId={activeOrder?._id} />
 
         {/* Oppdrag Summary */}
         <div className="bg-[#1a3a1a] rounded-2xl p-5 md:p-6 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -151,14 +143,14 @@ const ApplicantsPage: React.FC = () => {
             <h2 className="text-lg font-medium mb-1">{service.title}</h2>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/60">
               <span className="flex items-center gap-1">
-                <MapPin size={12} /> {service.location?.city || "Ikke angitt"}
+                <MapPin size={12} /> {service.location?.city || 'Ikke angitt'}
               </span>
               <span className="flex items-center gap-1">
-                <Calendar size={12} />{" "}
-                {new Date(service.date).toLocaleDateString("no-NO", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
+                <Calendar size={12} />{' '}
+                {new Date(service.date).toLocaleDateString('no-NO', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
                 })}
               </span>
               <span className="flex items-center gap-1">
@@ -167,12 +159,8 @@ const ApplicantsPage: React.FC = () => {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-medium text-[#4ade80]">
-              {service.price} kr
-            </div>
-            <div className="text-[11px] text-white/50 uppercase tracking-wider">
-              Oppdragsbeløp
-            </div>
+            <div className="text-2xl font-medium text-[#4ade80]">{service.price} kr</div>
+            <div className="text-[11px] text-white/50 uppercase tracking-wider">Oppdragsbeløp</div>
             <div className="bg-[#4ade80] text-[#1a3a1a] rounded-full px-3 py-1 text-[11px] font-medium inline-block mt-2">
               Aktiv
             </div>
@@ -183,9 +171,7 @@ const ApplicantsPage: React.FC = () => {
           {/* Left Column - Applicants List */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[15px] font-medium text-gray-900">
-                {applicants.length} søkere
-              </h3>
+              <h3 className="text-[15px] font-medium text-gray-900">{applicants.length} søkere</h3>
               <select className="text-[12px] text-gray-600 border border-black/15 rounded-full px-3 py-1 bg-white outline-none cursor-pointer">
                 <option>Sorter: Beste match</option>
                 <option>Høyest rating</option>
@@ -197,7 +183,7 @@ const ApplicantsPage: React.FC = () => {
               {applicants.map((app: any, index: number) => (
                 <div
                   key={app._id}
-                  className={`relative bg-white border rounded-2xl p-4 md:p-5 transition-all ${index === 0 ? "border-2 border-custom-green" : "border-black/5"}`}
+                  className={`relative bg-white border rounded-2xl p-4 md:p-5 transition-all ${index === 0 ? 'border-2 border-custom-green' : 'border-black/5'}`}
                 >
                   {/* Top Right X Button */}
                   <button
@@ -219,9 +205,9 @@ const ApplicantsPage: React.FC = () => {
                             />
                           ) : (
                             app.applicant.name
-                              .split(" ")
+                              .split(' ')
                               .map((n: any) => n[0])
-                              .join("")
+                              .join('')
                           )}
                         </div>
                         {index === 0 && (
@@ -243,8 +229,7 @@ const ApplicantsPage: React.FC = () => {
                           )}
                         </div>
                         <div className="text-[12px] text-gray-400 mb-1">
-                          {app.applicant.skills?.join(" · ") ||
-                            "Generell hjelp"}
+                          {app.applicant.skills?.join(' · ') || 'Generell hjelp'}
                         </div>
                         <div className="flex items-center gap-1.5">
                           <div className="flex text-[#ca8a04]">
@@ -253,16 +238,13 @@ const ApplicantsPage: React.FC = () => {
                                 key={i}
                                 size={11}
                                 fill={
-                                  i < Math.floor(app.applicant.rating)
-                                    ? "currentColor"
-                                    : "none"
+                                  i < Math.floor(app.applicant.rating) ? 'currentColor' : 'none'
                                 }
                               />
                             ))}
                           </div>
                           <span className="text-[11px] text-gray-400">
-                            {app.applicant.rating} ·{" "}
-                            {app.applicant.completedJobs} oppdrag
+                            {app.applicant.rating} · {app.applicant.completedJobs} oppdrag
                           </span>
                         </div>
                       </div>
@@ -273,33 +255,25 @@ const ApplicantsPage: React.FC = () => {
                         <div className="text-[15px] font-medium text-gray-900">
                           {app.applicant.completedJobs}
                         </div>
-                        <div className="text-[10px] text-gray-400 uppercase">
-                          Fullførte
-                        </div>
+                        <div className="text-[10px] text-gray-400 uppercase">Fullførte</div>
                       </div>
                       <div className="text-center">
                         <div className="text-[15px] font-medium text-gray-900">
                           {app.applicant.rating}★
                         </div>
-                        <div className="text-[10px] text-gray-400 uppercase">
-                          Rating
-                        </div>
+                        <div className="text-[10px] text-gray-400 uppercase">Rating</div>
                       </div>
                       <div className="text-center">
                         <div className="text-[15px] font-medium text-gray-900">
                           {app.applicant.responseRate}
                         </div>
-                        <div className="text-[10px] text-gray-400 uppercase">
-                          Svar%
-                        </div>
+                        <div className="text-[10px] text-gray-400 uppercase">Svar%</div>
                       </div>
                       <div className="text-center">
                         <div className="text-[15px] font-medium text-gray-900">
                           {app.applicant.responseTime}
                         </div>
-                        <div className="text-[10px] text-gray-400 uppercase">
-                          Svartid
-                        </div>
+                        <div className="text-[10px] text-gray-400 uppercase">Svartid</div>
                       </div>
                     </div>
                   </div>
@@ -308,27 +282,23 @@ const ApplicantsPage: React.FC = () => {
                     <div className="flex items-center gap-1 text-[11px] text-gray-400 mb-1">
                       <MessageCircle size={12} /> Melding fra søker
                     </div>
-                    <p className="text-[13px] text-gray-600 leading-relaxed">
-                      {app.message}
-                    </p>
+                    <p className="text-[13px] text-gray-600 leading-relaxed">{app.message}</p>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
                     <Button
-                      onClick={() =>
-                        handleSelectApplicant(app.applicant._id, app._id)
-                      }
+                      onClick={() => handleSelectApplicant(app.applicant._id, app._id)}
                       loading={createContractMutation.isPending}
                       disabled={!!activeOrder}
                       label={
                         isJobAlreadyPaid
-                          ? "Betalt"
+                          ? 'Betalt'
                           : hasAwaitingPayment
-                            ? "Gå til betaling"
-                            : "Velg og start SafePay"
+                            ? 'Gå til betaling'
+                            : 'Velg og start SafePay'
                       }
                       icon={<Check size={16} />}
-                      className={`bg-custom-green text-white rounded-full py-2.5 text-[13px] font-medium h-auto shadow-sm hover:bg-[#266b3c] ${activeOrder ? "opacity-70" : ""}`}
+                      className={`bg-custom-green text-white rounded-full py-2.5 text-[13px] font-medium h-auto shadow-sm hover:bg-[#266b3c] ${activeOrder ? 'opacity-70' : ''}`}
                     />
                     <Button
                       variant="outline"
@@ -336,7 +306,7 @@ const ApplicantsPage: React.FC = () => {
                       disabled={!!activeOrder}
                       className="px-4 border-black/20 rounded-full py-2.5 text-[13px] font-medium h-auto hover:bg-gray-50"
                       onClick={() => {
-                        toast.success("Bruker valgt uten SafePay");
+                        toast.success('Bruker valgt uten SafePay');
                       }}
                     />
                     <Button
@@ -370,9 +340,7 @@ const ApplicantsPage: React.FC = () => {
                     <div className="text-[13px] font-bold text-gray-900 leading-tight">
                       Velg en søker
                     </div>
-                    <div className="text-[11px] text-gray-400 mt-0.5">
-                      Du er her nå
-                    </div>
+                    <div className="text-[11px] text-gray-400 mt-0.5">Du er her nå</div>
                   </div>
                 </div>
                 {/* Step 2 */}
@@ -401,9 +369,9 @@ const ApplicantsPage: React.FC = () => {
                       Jobben utføres
                     </div>
                     <div className="text-[11px] text-gray-400 mt-0.5">
-                      {new Date(service.date).toLocaleDateString("no-NO", {
-                        day: "numeric",
-                        month: "long",
+                      {new Date(service.date).toLocaleDateString('no-NO', {
+                        day: 'numeric',
+                        month: 'long',
                       })}
                     </div>
                   </div>
@@ -428,16 +396,12 @@ const ApplicantsPage: React.FC = () => {
             {/* SafePay Info */}
             <div className="bg-white border border-black/5 rounded-2xl p-5">
               <div className="flex items-center gap-2 text-[13px] font-medium text-gray-900 mb-4">
-                <ShieldCheck size={16} className="text-custom-green" /> SafePay
-                beskytter deg
+                <ShieldCheck size={16} className="text-custom-green" /> SafePay beskytter deg
               </div>
               <div className="bg-[#f0faf0] rounded-xl p-3 mb-3">
                 <p className="text-[12px] text-[#166534] leading-relaxed">
-                  <strong className="block mb-1 text-[13px]">
-                    Slik fungerer det
-                  </strong>
-                  Pengene holdes trygt til du godkjenner jobben. Ingen betaling
-                  før du er fornøyd.
+                  <strong className="block mb-1 text-[13px]">Slik fungerer det</strong>
+                  Pengene holdes trygt til du godkjenner jobben. Ingen betaling før du er fornøyd.
                 </p>
               </div>
               <div className="space-y-1 text-[11px] text-gray-400 leading-relaxed">
@@ -447,9 +411,7 @@ const ApplicantsPage: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span>SafePay-gebyr (3%):</span>
-                  <strong className="text-gray-900">
-                    {Math.round(service.price * 0.03)} kr
-                  </strong>
+                  <strong className="text-gray-900">{Math.round(service.price * 0.03)} kr</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Utbetalt til søker:</span>
@@ -463,21 +425,17 @@ const ApplicantsPage: React.FC = () => {
             {/* Checklist */}
             <div className="bg-white border border-black/5 rounded-2xl p-5">
               <div className="flex items-center gap-2 text-[13px] font-medium text-gray-900 mb-4">
-                <Info size={16} className="text-custom-green" /> Hva bør du se
-                etter?
+                <Info size={16} className="text-custom-green" /> Hva bør du se etter?
               </div>
               <div className="space-y-2">
                 {[
-                  "Høy rating (over 4.5)",
-                  "Mange fullførte oppdrag",
-                  "BankID eller ID verifisert",
-                  "God og detaljert melding",
-                  "Rask svartid",
+                  'Høy rating (over 4.5)',
+                  'Mange fullførte oppdrag',
+                  'BankID eller ID verifisert',
+                  'God og detaljert melding',
+                  'Rask svartid',
                 ].map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2 text-[12px] text-gray-600"
-                  >
+                  <div key={i} className="flex items-center gap-2 text-[12px] text-gray-600">
                     <Check size={14} className="text-custom-green" /> {item}
                   </div>
                 ))}

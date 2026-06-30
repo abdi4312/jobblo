@@ -1,9 +1,9 @@
-const Hero = require("../models/Hero");
-const bcrypt = require("bcryptjs");
-const Service = require("../models/Service");
-const User = require("../models/User");
-const Order = require("../models/Order");
-const Notification = require("../models/Notification");
+const Hero = require('../models/Hero');
+const bcrypt = require('bcryptjs');
+const Service = require('../models/Service');
+const User = require('../models/User');
+const Order = require('../models/Order');
+const Notification = require('../models/Notification');
 
 // Authentication handled by middleware - req.user and req.userId available
 exports.getAllUsers = async (req, res) => {
@@ -16,8 +16,8 @@ exports.getAllUsers = async (req, res) => {
     let query = {};
     if (req.query.search) {
       query.$or = [
-        { name: { $regex: req.query.search, $options: "i" } },
-        { email: { $regex: req.query.search, $options: "i" } },
+        { name: { $regex: req.query.search, $options: 'i' } },
+        { email: { $regex: req.query.search, $options: 'i' } },
       ];
     }
     if (req.query.role) {
@@ -33,11 +33,7 @@ exports.getAllUsers = async (req, res) => {
     const [totalUsers, activeThisMonth, users] = await Promise.all([
       User.countDocuments(query), // Filtered total users
       User.countDocuments({ createdAt: { $gte: startOfMonth } }), // Is mahine ke new users
-      User.find(query)
-        .select("-password")
-        .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 })
+      User.find(query).select('-password').skip(skip).limit(limit).sort({ createdAt: -1 }),
     ]);
 
     res.json({
@@ -49,7 +45,7 @@ exports.getAllUsers = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -60,7 +56,7 @@ exports.createUser = async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: "Email already registered" });
+      return res.status(400).json({ message: 'Email already registered' });
     }
 
     const newUser = new User({
@@ -68,27 +64,25 @@ exports.createUser = async (req, res) => {
       email,
       phone,
       password: hashed,
-      role: role || "user",
+      role: role || 'user',
     });
 
     await newUser.save();
-    res
-      .status(201)
-      .json({ message: "User created successfully", user: newUser });
+    res.status(201).json({ message: 'User created successfully', user: newUser });
   } catch (error) {
-    res.status(500).json({ message: "Failed to create user", error });
+    res.status(500).json({ message: 'Failed to create user', error });
   }
 };
 
 exports.getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
-      .populate("customerId", "name email")
-      .populate("providerId", "name email")
-      .populate("serviceId", "title");
+      .populate('customerId', 'name email')
+      .populate('providerId', 'name email')
+      .populate('serviceId', 'title');
     res.json(orders);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -99,10 +93,7 @@ exports.getAllServices = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const totalServices = await Service.countDocuments();
-    const services = await Service.find()
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
+    const services = await Service.find().skip(skip).limit(limit).sort({ createdAt: -1 });
 
     res.json({
       services,
@@ -111,37 +102,36 @@ exports.getAllServices = async (req, res) => {
       totalResults: totalServices,
     });
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
 // Admin control for viewing broadcast history
 exports.getSystemNotificationsHistory = async (req, res) => {
-    try {
-        const { page = 1, limit = 10 } = req.query;
-        
-        const skip = (parseInt(page) - 1) * parseInt(limit);
+  try {
+    const { page = 1, limit = 10 } = req.query;
 
-        // Filter: Sirf system-wide alerts (global broadcasts)
-        const query = { userId: null, isSystem: true };
+    const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        const total = await Notification.countDocuments(query);
-        const notifications = await Notification.find(query)
-            .sort({ createdAt: -1 }) // Latest first
-            .skip(skip)
-            .limit(parseInt(limit));
-        
-        res.json({
-            success: true,
-            total,
-            currentPage: parseInt(page),
-            totalPages: Math.ceil(total / limit),
-            data: notifications
-        });
+    // Filter: Sirf system-wide alerts (global broadcasts)
+    const query = { userId: null, isSystem: true };
 
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+    const total = await Notification.countDocuments(query);
+    const notifications = await Notification.find(query)
+      .sort({ createdAt: -1 }) // Latest first
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    res.json({
+      success: true,
+      total,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(total / limit),
+      data: notifications,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
 exports.getAllHeroItems = async (req, res) => {
@@ -151,10 +141,7 @@ exports.getAllHeroItems = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const total = await Hero.countDocuments();
-    const heroItems = await Hero.find()
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    const heroItems = await Hero.find().sort({ createdAt: -1 }).skip(skip).limit(limit);
 
     res.json({
       heroes: heroItems,
@@ -163,8 +150,8 @@ exports.getAllHeroItems = async (req, res) => {
     });
   } catch (err) {
     // Yeh line aapko terminal mein batayegi ke error kya hai
-    console.error("GET HERO ERROR:", err.message);
-    res.status(500).json({ error: "Server error: " + err.message });
+    console.error('GET HERO ERROR:', err.message);
+    res.status(500).json({ error: 'Server error: ' + err.message });
   }
 };
 
@@ -172,7 +159,7 @@ exports.UpdateHero = async (req, res) => {
   try {
     const hero = await Hero.findById(req.params.id);
     if (!hero) {
-      return res.status(404).json({ error: "Hero ikke funnet" });
+      return res.status(404).json({ error: 'Hero ikke funnet' });
     }
 
     // Update text fields
@@ -190,8 +177,8 @@ exports.UpdateHero = async (req, res) => {
     await hero.save();
     res.status(200).json(hero);
   } catch (err) {
-    console.error("Update hero error:", err);
-    res.status(500).json({ error: "Kunne ikke oppdatere hero" });
+    console.error('Update hero error:', err);
+    res.status(500).json({ error: 'Kunne ikke oppdatere hero' });
   }
 };
 
@@ -202,40 +189,38 @@ exports.DeleteHero = async (req, res) => {
   try {
     const hero = await Hero.findById(req.params.id);
     if (!hero) {
-      return res.status(404).json({ error: "Hero ikke funnet" });
+      return res.status(404).json({ error: 'Hero ikke funnet' });
     }
 
     // Sirf database se delete karein kyunki image external URL hai
     await hero.deleteOne();
-    res.status(200).json({ message: "Hero slettet" });
+    res.status(200).json({ message: 'Hero slettet' });
   } catch (err) {
-    console.error("Delete hero error:", err);
-    res.status(500).json({ error: "Kunne ikke slette hero" });
+    console.error('Delete hero error:', err);
+    res.status(500).json({ error: 'Kunne ikke slette hero' });
   }
 };
 
 exports.changeUserRole = async (req, res) => {
   try {
     const { role } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { role },
-      { new: true },
-    ).select("-password");
+    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select(
+      '-password'
+    );
 
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
 exports.deleteUser = async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) return res.status(404).json({ error: "User not found" });
-    res.json({ message: "User deleted successfully" });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ message: 'User deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };

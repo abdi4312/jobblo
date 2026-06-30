@@ -1,15 +1,15 @@
-import React from "react";
-import { Image, Sparkles, Loader2, AlertCircle } from "lucide-react";
-import { ImageUpload } from "./ImageUpload";
-import { BasicInformation } from "./BasicInformation";
-import { TimeAndPlace } from "./TimeAndPlace";
-import { PaymentInformation } from "./PaymentInformation";
-import { StepIndicator } from "./StepIndicator";
-import { ContactInformation } from "./ContactInformation";
-import { FormActions } from "./FormActions";
-import { JobPreviewModal } from "./JobPreviewModal";
-import { ChecklistStep } from "./ChecklistStep";
-import { useCreateJobForm } from "../../hooks/useCreateJobForm";
+import React from 'react';
+import { Image, Sparkles, Loader2, AlertCircle } from 'lucide-react';
+import { ImageUpload } from './ImageUpload';
+import { BasicInformation } from './BasicInformation';
+import { TimeAndPlace } from './TimeAndPlace';
+import { PaymentInformation } from './PaymentInformation';
+import { StepIndicator } from './StepIndicator';
+import { ContactInformation } from './ContactInformation';
+import { FormActions } from './FormActions';
+import { JobPreviewModal } from './JobPreviewModal';
+import { ChecklistStep } from './ChecklistStep';
+import { useCreateJobForm } from '../../hooks/useCreateJobForm';
 
 interface InitialData {
   title?: string;
@@ -112,10 +112,7 @@ export default function CreateJobForm({
 
   return (
     <div className="max-w-300 mx-auto py-8">
-      <StepIndicator
-        currentStep={currentStep}
-        setCurrentStep={setCurrentStep}
-      />
+      <StepIndicator currentStep={currentStep} setCurrentStep={setCurrentStep} />
 
       <form onSubmit={(e) => e.preventDefault()} className="overflow-hidden">
         <div className="p-1">
@@ -126,8 +123,8 @@ export default function CreateJobForm({
                 <div
                   className={`relative overflow-hidden transition-all duration-500 rounded-3xl shadow-lg ${
                     showSmartFillInput
-                      ? "bg-linear-to-br from-[#1b4b2f] to-[#143924]"
-                      : "bg-[#1b4b2f]"
+                      ? 'bg-linear-to-br from-[#1b4b2f] to-[#143924]'
+                      : 'bg-[#1b4b2f]'
                   }`}
                 >
                   <div className="relative p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -140,13 +137,10 @@ export default function CreateJobForm({
                       </div>
                       <div className="space-y-2">
                         <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-                          {showSmartFillInput
-                            ? "Beskriv oppdraget"
-                            : "Fyll ut automatisk med AI"}
+                          {showSmartFillInput ? 'Beskriv oppdraget' : 'Fyll ut automatisk med AI'}
                         </h2>
                         <p className="text-white/60 text-xs md:text-sm font-medium max-w-md">
-                          Spar tid! Fortell oss hva du trenger hjelp med, så
-                          ordner vi resten.
+                          Spar tid! Fortell oss hva du trenger hjelp med, så ordner vi resten.
                         </p>
                       </div>
                     </div>
@@ -191,7 +185,7 @@ export default function CreateJobForm({
                               {isGeneratingFullListing ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
-                                "FYLL UT NÅ"
+                                'FYLL UT NÅ'
                               )}
                             </button>
                           </div>
@@ -203,7 +197,7 @@ export default function CreateJobForm({
               </div>
 
               <div
-                className={`box-card-custom rounded-[14px] p-4 md:p-6 border transition-colors ${errors?.images ? "border-red-500" : "border-transparent"}`}
+                className={`box-card-custom rounded-[14px] p-4 md:p-6 border transition-colors ${errors?.images ? 'border-red-500' : 'border-transparent'}`}
               >
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 bg-[#2D7A4D]/10 rounded-full flex items-center justify-center text-[#2D7A4D]">
@@ -284,7 +278,7 @@ export default function CreateJobForm({
                 setHourlyRate={setHourlyRate}
                 urgent={urgent}
                 setUrgent={setUrgent}
-                subscription={currentUser?.subscription || "Standard"}
+                subscription={currentUser?.subscription || 'Standard'}
                 errors={errors}
               />
             </div>
@@ -294,9 +288,7 @@ export default function CreateJobForm({
             <ChecklistStep
               checklistItems={checklistItems}
               setChecklistItems={setChecklistItems}
-              currentCategory={
-                Array.isArray(categories) ? categories[0] : categories
-              }
+              currentCategory={Array.isArray(categories) ? categories[0] : categories}
             />
           )}
 

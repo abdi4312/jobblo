@@ -1,39 +1,38 @@
-const Subscription = require("../models/Subscription");
-const User = require("../models/User");
-const Session = require("../models/Session");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const { generateTokens, createSession } = require("../utils/tokenUtils");
+const Subscription = require('../models/Subscription');
+const User = require('../models/User');
+const Session = require('../models/Session');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { generateTokens, createSession } = require('../utils/tokenUtils');
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = process.env.NODE_ENV === 'production';
 
 const accessCookieOptions = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? "none" : "lax",
+  sameSite: isProduction ? 'none' : 'lax',
   maxAge: 60 * 60 * 1000, // 1 hour
 };
 
 const refreshCookieOptions = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? "none" : "lax",
+  sameSite: isProduction ? 'none' : 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 
 const clearCookieOptions = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? "none" : "lax",
+  sameSite: isProduction ? 'none' : 'lax',
 };
 
-const allowedRoles = ["user", "company"];
+const allowedRoles = ['user', 'company'];
 
 const sanitizeUser = (user) => {
   if (!user) return null;
 
-  const userObject =
-    typeof user.toObject === "function" ? user.toObject() : user;
+  const userObject = typeof user.toObject === 'function' ? user.toObject() : user;
 
   delete userObject.password;
   delete userObject.__v;
@@ -42,8 +41,7 @@ const sanitizeUser = (user) => {
 };
 
 const sanitizeSession = (session, currentSessionId) => {
-  const sessionObject =
-    typeof session.toObject === "function" ? session.toObject() : session;
+  const sessionObject = typeof session.toObject === 'function' ? session.toObject() : session;
 
   delete sessionObject.refreshToken;
   delete sessionObject.oldRefreshToken;
@@ -55,48 +53,41 @@ const sanitizeSession = (session, currentSessionId) => {
   };
 };
 
-const sendServerError = (res, error, context = "Server error") => {
+const sendServerError = (res, error, context = 'Server error') => {
   console.error(context, error);
 
   return res.status(500).json({
-    error: isProduction ? "Something went wrong" : error.message,
+    error: isProduction ? 'Something went wrong' : error.message,
   });
 };
 
-const validateRegisterInput = ({
-  name,
-  email,
-  password,
-  role,
-  companyName,
-  orgNumber,
-}) => {
+const validateRegisterInput = ({ name, email, password, role, companyName, orgNumber }) => {
   // If role is company, we use companyName as the primary name
-  const effectiveName = role === "company" ? companyName : name;
+  const effectiveName = role === 'company' ? companyName : name;
 
   if (!effectiveName || !email || !password) {
-    return "Name, email and password are required";
+    return 'Name, email and password are required';
   }
 
-  if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return "Valid email is required";
+  if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return 'Valid email is required';
   }
 
-  if (typeof password !== "string" || password.length < 8) {
-    return "Password must be at least 8 characters";
+  if (typeof password !== 'string' || password.length < 8) {
+    return 'Password must be at least 8 characters';
   }
 
   if (role && !allowedRoles.includes(role)) {
-    return "Invalid role";
+    return 'Invalid role';
   }
 
-  if (role === "company") {
+  if (role === 'company') {
     if (!companyName) {
-      return "Company name is required";
+      return 'Company name is required';
     }
 
     if (!orgNumber || !/^\d{9}$/.test(String(orgNumber))) {
-      return "Organization number must be exactly 9 digits";
+      return 'Organization number must be exactly 9 digits';
     }
   }
 
@@ -104,30 +95,22 @@ const validateRegisterInput = ({
 };
 
 const setAuthCookies = (res, accessToken, refreshToken) => {
-  res.cookie("accessToken", accessToken, accessCookieOptions);
-  res.cookie("refreshToken", refreshToken, refreshCookieOptions);
+  res.cookie('accessToken', accessToken, accessCookieOptions);
+  res.cookie('refreshToken', refreshToken, refreshCookieOptions);
 };
 
 const clearAuthCookies = (res) => {
-  res.clearCookie("accessToken", clearCookieOptions);
-  res.clearCookie("refreshToken", clearCookieOptions);
+  res.clearCookie('accessToken', clearCookieOptions);
+  res.clearCookie('refreshToken', clearCookieOptions);
 };
 
 exports.register = async (req, res) => {
   let createdUserId = null;
 
   try {
-    const {
-      name,
-      lastName,
-      email,
-      password,
-      role = "user",
-      companyName,
-      orgNumber,
-    } = req.body;
+    const { name, lastName, email, password, role = 'user', companyName, orgNumber } = req.body;
 
-    const normalizedEmail = String(email || "")
+    const normalizedEmail = String(email || '')
       .trim()
       .toLowerCase();
 
@@ -144,28 +127,23 @@ exports.register = async (req, res) => {
       return res.status(400).json({ error: validationError });
     }
 
-    const existingUser = await User.findOne({ email: normalizedEmail }).select(
-      "_id",
-    );
+    const existingUser = await User.findOne({ email: normalizedEmail }).select('_id');
 
     if (existingUser) {
-      return res.status(400).json({ error: "Email already exists" });
+      return res.status(400).json({ error: 'Email already exists' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const user = await User.create({
-      name:
-        role === "company"
-          ? String(companyName).trim()
-          : String(name || "").trim(),
-      lastName: role === "user" ? String(lastName || "").trim() : undefined,
+      name: role === 'company' ? String(companyName).trim() : String(name || '').trim(),
+      lastName: role === 'user' ? String(lastName || '').trim() : undefined,
       email: normalizedEmail,
       password: hashedPassword,
       role,
-      companyName: role === "company" ? String(companyName).trim() : undefined,
-      orgNumber: role === "company" ? String(orgNumber).trim() : undefined,
-      planType: role === "company" ? "business" : "private",
+      companyName: role === 'company' ? String(companyName).trim() : undefined,
+      orgNumber: role === 'company' ? String(orgNumber).trim() : undefined,
+      planType: role === 'company' ? 'business' : 'private',
     });
 
     createdUserId = user._id;
@@ -175,10 +153,10 @@ exports.register = async (req, res) => {
     await Subscription.create({
       userId: user._id,
       currentPlan: {
-        plan: "Standard",
-        planType: role === "company" ? "business" : "private",
+        plan: 'Standard',
+        planType: role === 'company' ? 'business' : 'private',
         startDate: new Date(),
-        status: "active",
+        status: 'active',
         autoRenew: false,
       },
     });
@@ -198,41 +176,39 @@ exports.register = async (req, res) => {
       ]);
     }
 
-    if (error.name === "ValidationError") {
+    if (error.name === 'ValidationError') {
       return res.status(400).json({ error: error.message });
     }
 
     if (error.code === 11000) {
-      return res.status(400).json({ error: "Email already exists" });
+      return res.status(400).json({ error: 'Email already exists' });
     }
 
-    return sendServerError(res, error, "Register failed");
+    return sendServerError(res, error, 'Register failed');
   }
 };
 
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const normalizedEmail = String(email || "")
+    const normalizedEmail = String(email || '')
       .trim()
       .toLowerCase();
 
     if (!normalizedEmail || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
+      return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const user = await User.findOne({ email: normalizedEmail }).select(
-      "+password",
-    );
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
 
     if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const { accessToken, refreshToken } = await createSession(req, user._id);
@@ -244,7 +220,7 @@ exports.login = async (req, res) => {
       accessToken,
     });
   } catch (error) {
-    return sendServerError(res, error, "Login failed");
+    return sendServerError(res, error, 'Login failed');
   }
 };
 
@@ -260,9 +236,9 @@ exports.logout = async (req, res) => {
 
     clearAuthCookies(res);
 
-    return res.json({ message: "Logged out successfully" });
+    return res.json({ message: 'Logged out successfully' });
   } catch (error) {
-    return sendServerError(res, error, "Logout failed");
+    return sendServerError(res, error, 'Logout failed');
   }
 };
 
@@ -271,7 +247,7 @@ exports.refreshToken = async (req, res) => {
     const refreshToken = req.cookies?.refreshToken;
 
     if (!refreshToken) {
-      return res.status(401).json({ error: "Refresh token missing" });
+      return res.status(401).json({ error: 'Refresh token missing' });
     }
 
     let session = await Session.findOne({ refreshToken });
@@ -280,15 +256,14 @@ exports.refreshToken = async (req, res) => {
       session = await Session.findOne({ oldRefreshToken: refreshToken });
 
       const isWithinGracePeriod =
-        session?.updatedAt &&
-        Date.now() - new Date(session.updatedAt).getTime() < 60 * 1000;
+        session?.updatedAt && Date.now() - new Date(session.updatedAt).getTime() < 60 * 1000;
 
       if (!isWithinGracePeriod) {
         clearAuthCookies(res);
 
         return res.status(401).json({
-          error: "Invalid session or expired grace period",
-          code: "SESSION_REVOKED",
+          error: 'Invalid session or expired grace period',
+          code: 'SESSION_REVOKED',
         });
       }
     }
@@ -296,10 +271,7 @@ exports.refreshToken = async (req, res) => {
     let decoded;
 
     try {
-      decoded = jwt.verify(
-        refreshToken,
-        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-      );
+      decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
     } catch (error) {
       await Session.deleteOne({
         $or: [{ refreshToken }, { oldRefreshToken: refreshToken }],
@@ -307,20 +279,17 @@ exports.refreshToken = async (req, res) => {
 
       clearAuthCookies(res);
 
-      return res.status(401).json({ error: "Invalid refresh token" });
+      return res.status(401).json({ error: 'Invalid refresh token' });
     }
 
-    const user = await User.findById(decoded.id).select("_id");
+    const user = await User.findById(decoded.id).select('_id');
 
     if (!user) {
       clearAuthCookies(res);
-      return res.status(401).json({ error: "User not found" });
+      return res.status(401).json({ error: 'User not found' });
     }
 
-    const { accessToken, refreshToken: newRefreshToken } = generateTokens(
-      user._id,
-      session._id,
-    );
+    const { accessToken, refreshToken: newRefreshToken } = generateTokens(user._id, session._id);
 
     const updatedSession = await Session.findOneAndUpdate(
       {
@@ -332,23 +301,23 @@ exports.refreshToken = async (req, res) => {
         refreshToken: newRefreshToken,
         lastUsed: new Date(),
       },
-      { new: true },
+      { new: true }
     );
 
     if (!updatedSession) {
       clearAuthCookies(res);
 
       return res.status(401).json({
-        error: "Session could not be refreshed",
-        code: "SESSION_REVOKED",
+        error: 'Session could not be refreshed',
+        code: 'SESSION_REVOKED',
       });
     }
 
     setAuthCookies(res, accessToken, newRefreshToken);
 
-    return res.json({ message: "Token refreshed", accessToken });
+    return res.json({ message: 'Token refreshed', accessToken });
   } catch (error) {
-    return sendServerError(res, error, "Refresh token failed");
+    return sendServerError(res, error, 'Refresh token failed');
   }
 };
 
@@ -358,18 +327,16 @@ exports.getSessions = async (req, res) => {
     const userId = req.user?._id || req.userId;
 
     if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const sessions = await Session.find({ userId })
-      .select("-refreshToken -oldRefreshToken -__v")
+      .select('-refreshToken -oldRefreshToken -__v')
       .sort({ lastUsed: -1 });
 
-    return res.json(
-      sessions.map((session) => sanitizeSession(session, currentSessionId)),
-    );
+    return res.json(sessions.map((session) => sanitizeSession(session, currentSessionId)));
   } catch (error) {
-    return sendServerError(res, error, "Get sessions failed");
+    return sendServerError(res, error, 'Get sessions failed');
   }
 };
 
@@ -379,7 +346,7 @@ exports.revokeSession = async (req, res) => {
     const userId = req.user?._id || req.userId;
 
     if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const result = await Session.deleteOne({
@@ -389,13 +356,13 @@ exports.revokeSession = async (req, res) => {
 
     if (result.deletedCount === 0) {
       return res.status(404).json({
-        error: "Session not found or unauthorized",
+        error: 'Session not found or unauthorized',
       });
     }
 
-    return res.json({ message: "Session revoked" });
+    return res.json({ message: 'Session revoked' });
   } catch (error) {
-    return sendServerError(res, error, "Revoke session failed");
+    return sendServerError(res, error, 'Revoke session failed');
   }
 };
 
@@ -405,7 +372,7 @@ exports.revokeAllOtherSessions = async (req, res) => {
     const userId = req.user?._id || req.userId;
 
     if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const result = await Session.deleteMany({
@@ -418,7 +385,7 @@ exports.revokeAllOtherSessions = async (req, res) => {
       count: result.deletedCount,
     });
   } catch (error) {
-    return sendServerError(res, error, "Revoke all other sessions failed");
+    return sendServerError(res, error, 'Revoke all other sessions failed');
   }
 };
 
@@ -427,17 +394,17 @@ exports.getProfile = async (req, res) => {
     const userId = req.user?._id || req.userId;
 
     if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const user = await User.findById(userId).select("-password -__v");
+    const user = await User.findById(userId).select('-password -__v');
 
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ error: 'User not found' });
     }
 
     return res.json(user);
   } catch (error) {
-    return sendServerError(res, error, "Get profile failed");
+    return sendServerError(res, error, 'Get profile failed');
   }
 };

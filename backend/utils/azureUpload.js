@@ -1,11 +1,11 @@
-const { BlobServiceClient } = require("@azure/storage-blob");
-const { v4: uuidv4 } = require("uuid");
-const dotenv = require("dotenv"); 
+const { BlobServiceClient } = require('@azure/storage-blob');
+const { v4: uuidv4 } = require('uuid');
+const dotenv = require('dotenv');
 dotenv.config();
-const containerName = process.env.AZURE_CONTAINER_NAME || "bilder-newsub";
+const containerName = process.env.AZURE_CONTAINER_NAME || 'bilder-newsub';
 
 if (!process.env.AZURE_STORAGE_CONNECTION_STRING) {
-  console.warn("⚠ AZURE_STORAGE_CONNECTION_STRING mangler i .env");
+  console.warn('⚠ AZURE_STORAGE_CONNECTION_STRING mangler i .env');
 }
 
 const blobServiceClient = BlobServiceClient.fromConnectionString(
@@ -15,10 +15,10 @@ const blobServiceClient = BlobServiceClient.fromConnectionString(
 /**
  * Upload file buffer to Azure
  */
-async function uploadBufferToAzure(file, folder = "misc") {
+async function uploadBufferToAzure(file, folder = 'misc') {
   const containerClient = blobServiceClient.getContainerClient(containerName);
 
-  const ext = file.originalname.split(".").pop();
+  const ext = file.originalname.split('.').pop();
   const blobName = `${folder}/${uuidv4()}.${ext}`;
 
   const blockBlobClient = containerClient.getBlockBlobClient(blobName);
@@ -39,9 +39,7 @@ async function deleteFromAzureByUrl(fileUrl) {
   const containerClient = blobServiceClient.getContainerClient(containerName);
 
   // extract blob path from URL
-  const blobPath = decodeURIComponent(
-    fileUrl.split(`/${containerName}/`)[1]
-  );
+  const blobPath = decodeURIComponent(fileUrl.split(`/${containerName}/`)[1]);
 
   if (!blobPath) return;
 

@@ -52,7 +52,12 @@
 
 .title {
   color: var(--color-text);
-  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    'Nunito',
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 20px;
   font-weight: 700;
   line-height: 120%;
@@ -71,7 +76,12 @@
   border-radius: 8px;
   background-color: var(--color-accent);
   color: var(--color-white);
-  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    'Nunito',
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 11px;
   font-weight: 400;
   line-height: 120%;
@@ -80,9 +90,14 @@
 .equipmentTag {
   padding: 4px 10px;
   border-radius: 8px;
-  background-color: #31D2FF;
+  background-color: #31d2ff;
   color: var(--color-white);
-  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    'Nunito',
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 11px;
   font-weight: 400;
   line-height: 120%;
@@ -107,7 +122,12 @@
 
 .detailText {
   color: #212121;
-  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    'Nunito',
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: 120%;
@@ -128,7 +148,12 @@
 
 .priceText {
   color: var(--color-price);
-  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    'Nunito',
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 700;
   line-height: 120%;
@@ -140,29 +165,29 @@
     width: 160px;
     height: 290px;
   }
-  
+
   .imageContainer {
     width: 160px;
     height: 100px;
   }
-  
+
   .content {
     width: 160px;
     height: 190px;
   }
-  
+
   .title {
     font-size: 18px;
     width: 135px;
   }
-  
+
   .priceTag {
     width: 115px;
     height: 22px;
     left: 20px;
     bottom: 20px;
   }
-  
+
   .priceText {
     font-size: 14px;
   }
@@ -173,28 +198,28 @@
     width: 180px;
     height: 330px;
   }
-  
+
   .imageContainer {
     width: 180px;
     height: 120px;
   }
-  
+
   .content {
     width: 180px;
     height: 230px;
   }
-  
+
   .title {
     width: 155px;
   }
-  
+
   .priceTag {
     width: 130px;
     height: 26px;
     left: 25px;
     bottom: 25px;
   }
-  
+
   .priceText {
     font-size: 17px;
   }

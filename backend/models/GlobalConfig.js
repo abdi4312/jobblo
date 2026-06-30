@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const globalConfigSchema = new mongoose.Schema(
   {
@@ -18,4 +18,4 @@ const globalConfigSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("GlobalConfig", globalConfigSchema);
+module.exports = mongoose.model('GlobalConfig', globalConfigSchema);

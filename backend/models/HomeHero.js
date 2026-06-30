@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const homeHeroSchema = new mongoose.Schema(
   {
@@ -6,12 +6,12 @@ const homeHeroSchema = new mongoose.Schema(
     mediaPublicId: { type: String, required: true },
     mediaType: {
       type: String,
-      enum: ["image", "video"],
+      enum: ['image', 'video'],
       required: true,
     },
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-module.exports = mongoose.model("HomeHero", homeHeroSchema);
+module.exports = mongoose.model('HomeHero', homeHeroSchema);

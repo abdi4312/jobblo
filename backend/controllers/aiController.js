@@ -1,5 +1,5 @@
-const { OpenAI } = require("openai");
-const Category = require("../models/Category");
+const { OpenAI } = require('openai');
+const Category = require('../models/Category');
 
 // OpenAI Client Initialization
 const openai = new OpenAI({
@@ -15,21 +15,19 @@ exports.generateJobInfo = async (req, res) => {
     const { title, category } = req.body;
 
     if (!title) {
-      return res.status(400).json({ error: "Title is required" });
+      return res.status(400).json({ error: 'Title is required' });
     }
 
     if (!process.env.OPENAI_API_KEY) {
-      return res
-        .status(500)
-        .json({ error: "AI Service not configured (Missing API Key)" });
+      return res.status(500).json({ error: 'AI Service not configured (Missing API Key)' });
     }
 
     // Fetch available categories from database
-    const dbCategories = await Category.find({ isActive: true }).select("name");
-    const categoryNames = dbCategories.map((c) => c.name).join(", ");
+    const dbCategories = await Category.find({ isActive: true }).select('name');
+    const categoryNames = dbCategories.map((c) => c.name).join(', ');
 
     const prompt = `
-      Based on the job title "${title}" ${category ? `in the category "${category}"` : ""}, please provide the following information.
+      Based on the job title "${title}" ${category ? `in the category "${category}"` : ''}, please provide the following information.
       
       STRICT LANGUAGE RULE:
       - Detect the language of the input: "${title}".
@@ -61,16 +59,16 @@ exports.generateJobInfo = async (req, res) => {
     `;
 
     const response = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4o",
+      model: process.env.OPENAI_MODEL || 'gpt-4o',
       messages: [
         {
-          role: "system",
+          role: 'system',
           content:
             "You are a helpful assistant. You MUST detect the language of the user's input and respond in that EXACT SAME language for all text fields. This is mandatory.",
         },
-        { role: "user", content: prompt },
+        { role: 'user', content: prompt },
       ],
-      response_format: { type: "json_object" },
+      response_format: { type: 'json_object' },
     });
 
     const result = JSON.parse(response.choices[0].message.content);
@@ -80,18 +78,18 @@ exports.generateJobInfo = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    console.error("AI GENERATION ERROR:", error);
+    console.error('AI GENERATION ERROR:', error);
 
     // Check for OpenAI specific errors
-    if (error.status === 429 || error.code === "insufficient_quota") {
+    if (error.status === 429 || error.code === 'insufficient_quota') {
       return res.status(429).json({
-        error: "AI Quota Exceeded",
+        error: 'AI Quota Exceeded',
         message:
-          "You have exceeded your OpenAI API quota. Please check your billing details or plan.",
+          'You have exceeded your OpenAI API quota. Please check your billing details or plan.',
       });
     }
 
-    return res.status(500).json({ error: "Failed to generate AI content" });
+    return res.status(500).json({ error: 'Failed to generate AI content' });
   }
 };
 
@@ -104,13 +102,11 @@ exports.generateTitle = async (req, res) => {
     const { description } = req.body;
 
     if (!description) {
-      return res.status(400).json({ error: "Description is required" });
+      return res.status(400).json({ error: 'Description is required' });
     }
 
     if (!process.env.OPENAI_API_KEY) {
-      return res
-        .status(500)
-        .json({ error: "AI Service not configured (Missing API Key)" });
+      return res.status(500).json({ error: 'AI Service not configured (Missing API Key)' });
     }
 
     const prompt = `
@@ -146,21 +142,21 @@ exports.generateTitle = async (req, res) => {
 
     // Hum explicitly gpt-4o use karte hain kyunke ye JSON mode ke liye behtar hai
     const response = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4o",
+      model: process.env.OPENAI_MODEL || 'gpt-4o',
       messages: [
         {
-          role: "system",
+          role: 'system',
           content:
             "You are a helpful assistant. You MUST detect the language of the user's input and respond in that EXACT SAME language for all text fields. This is mandatory.",
         },
-        { role: "user", content: prompt },
+        { role: 'user', content: prompt },
       ],
-      response_format: { type: "json_object" },
+      response_format: { type: 'json_object' },
     });
 
     const content = response.choices[0].message.content;
     if (!content) {
-      throw new Error("OpenAI returned empty content");
+      throw new Error('OpenAI returned empty content');
     }
 
     const result = JSON.parse(content);
@@ -170,11 +166,11 @@ exports.generateTitle = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    console.error("AI TITLE GENERATION ERROR:", error);
+    console.error('AI TITLE GENERATION ERROR:', error);
 
     return res.status(error.status || 500).json({
       success: false,
-      error: error.message || "Failed to generate AI title",
+      error: error.message || 'Failed to generate AI title',
       details: error.code || null,
     });
   }
@@ -189,18 +185,16 @@ exports.generateFullJobListing = async (req, res) => {
     const { prompt } = req.body;
 
     if (!prompt) {
-      return res.status(400).json({ error: "Prompt is required" });
+      return res.status(400).json({ error: 'Prompt is required' });
     }
 
     if (!process.env.OPENAI_API_KEY) {
-      return res
-        .status(500)
-        .json({ error: "AI Service not configured (Missing API Key)" });
+      return res.status(500).json({ error: 'AI Service not configured (Missing API Key)' });
     }
 
     // Fetch available categories from database
-    const dbCategories = await Category.find({ isActive: true }).select("name");
-    const categoryNames = dbCategories.map((c) => c.name).join(", ");
+    const dbCategories = await Category.find({ isActive: true }).select('name');
+    const categoryNames = dbCategories.map((c) => c.name).join(', ');
 
     const aiPrompt = `
       Based on the prompt: "${prompt}", please generate a complete job listing.
@@ -241,21 +235,21 @@ exports.generateFullJobListing = async (req, res) => {
     `;
 
     const response = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4o",
+      model: process.env.OPENAI_MODEL || 'gpt-4o',
       messages: [
         {
-          role: "system",
+          role: 'system',
           content:
             "You are a helpful assistant. You MUST detect the language of the user's input and respond in that EXACT SAME language for all text fields. This is mandatory.",
         },
-        { role: "user", content: aiPrompt },
+        { role: 'user', content: aiPrompt },
       ],
-      response_format: { type: "json_object" },
+      response_format: { type: 'json_object' },
     });
 
     const content = response.choices[0].message.content;
     if (!content) {
-      throw new Error("OpenAI returned empty content");
+      throw new Error('OpenAI returned empty content');
     }
 
     const result = JSON.parse(content);
@@ -265,20 +259,20 @@ exports.generateFullJobListing = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    console.error("AI FULL LISTING GENERATION ERROR:", error);
+    console.error('AI FULL LISTING GENERATION ERROR:', error);
 
     // Handle OpenAI specific errors
-    if (error.status === 429 || error.code === "insufficient_quota") {
+    if (error.status === 429 || error.code === 'insufficient_quota') {
       return res.status(429).json({
         success: false,
-        error: "AI Quota Exceeded",
-        message: "You have exceeded your OpenAI API quota.",
+        error: 'AI Quota Exceeded',
+        message: 'You have exceeded your OpenAI API quota.',
       });
     }
 
     return res.status(error.status || 500).json({
       success: false,
-      error: error.message || "Failed to generate AI listing",
+      error: error.message || 'Failed to generate AI listing',
       details: error.code || null,
     });
   }

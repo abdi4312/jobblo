@@ -1,16 +1,15 @@
-import React from "react";
-import { Button as ShadcnButton, buttonVariants } from "../Button";
-import { cn } from "@/lib/utils";
-import { type VariantProps } from "class-variance-authority";
-import { Loader2 } from "lucide-react";
+import React from 'react';
+import { Button as ShadcnButton, buttonVariants } from '../Button';
+import { cn } from '@/lib/utils';
+import { type VariantProps } from 'class-variance-authority';
+import { Loader2 } from 'lucide-react';
 
 interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   label?: string;
   loading?: boolean;
   icon?: React.ReactNode;
-  iconPosition?: "left" | "right";
+  iconPosition?: 'left' | 'right';
   asChild?: boolean;
 }
 
@@ -23,13 +22,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       label,
       loading = false,
       icon,
-      iconPosition = "left",
+      iconPosition = 'left',
       children,
       disabled,
       asChild,
       ...props
     },
-    ref,
+    ref
   ) => {
     return (
       <ShadcnButton
@@ -43,20 +42,16 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 
-        {!loading && icon && iconPosition === "left" && (
-          <span className="mr-1">{icon}</span>
-        )}
+        {!loading && icon && iconPosition === 'left' && <span className="mr-1">{icon}</span>}
 
         {label ?? children}
 
-        {!loading && icon && iconPosition === "right" && (
-          <span className="ml-1">{icon}</span>
-        )}
+        {!loading && icon && iconPosition === 'right' && <span className="ml-1">{icon}</span>}
       </ShadcnButton>
     );
-  },
+  }
 );
 
-Button.displayName = "Button";
+Button.displayName = 'Button';
 
 export { Button };

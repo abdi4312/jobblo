@@ -1,7 +1,7 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const reviewController = require("../controllers/reviewController");
-const { authenticate } = require("../middleware/auth");
+const reviewController = require('../controllers/reviewController');
+const { authenticate } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -103,11 +103,7 @@ const { authenticate } = require("../middleware/auth");
  *       404:
  *         description: Service or reviewer not found
  */
-router.post(
-  "/services/:id/reviews",
-  authenticate,
-  reviewController.createReview,
-);
+router.post('/services/:id/reviews', authenticate, reviewController.createReview);
 
 /**
  * @swagger
@@ -125,18 +121,11 @@ router.post(
  *               items:
  *                 $ref: '#/components/schemas/Review'
  */
-router.post("/reviews", authenticate, reviewController.createReview);
-router.get(
-  "/users/:userId/reviews",
-  authenticate,
-  reviewController.getUserReviews,
-);
-router.get(
-  "/orders/:orderId/review",
-  authenticate,
-  reviewController.getReviewByOrder,
-);
-router.get("/reviews", reviewController.getAllReviews);
+router.post('/reviews', authenticate, reviewController.createReview);
+router.put('/reviews/:id', authenticate, reviewController.updateReview);
+router.get('/users/:userId/reviews', authenticate, reviewController.getUserReviews);
+router.get('/orders/:orderId/review', reviewController.getReviewByOrderId);
+router.get('/reviews', reviewController.getAllReviews);
 
 /**
  * @swagger
@@ -159,7 +148,7 @@ router.get("/reviews", reviewController.getAllReviews);
  *       404:
  *         description: Review not found
  */
-router.delete("/reviews/:id", authenticate, reviewController.deleteReview);
+router.delete('/reviews/:id', authenticate, reviewController.deleteReview);
 
 /**
  * @swagger
@@ -190,6 +179,6 @@ router.delete("/reviews/:id", authenticate, reviewController.deleteReview);
  *                   type: integer
  *                   description: Number of reviews returned
  */
-router.get("/reviews/latest", reviewController.getLatestReviews);
+router.get('/reviews/latest', reviewController.getLatestReviews);
 
 module.exports = router;

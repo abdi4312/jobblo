@@ -33,7 +33,7 @@
   gap: 10px;
   border-radius: 4px;
   border: 1px solid rgba(0, 0, 0, 0.11);
-  background: rgba(255, 255, 255, 0.30);
+  background: rgba(255, 255, 255, 0.3);
   box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.25);
   cursor: pointer;
   transition: opacity 0.2s ease;
@@ -49,7 +49,12 @@
 
 .changeImageText {
   color: var(--color-icon);
-  font-family: 'Nunito Sans', -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    'Nunito Sans',
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: 120%;
@@ -61,11 +66,11 @@
     width: 65px;
     height: 65px;
   }
-  
+
   .changeImageText {
     font-size: 15px;
   }
-  
+
   .changeImageButton {
     padding: 3px;
   }
@@ -76,11 +81,11 @@
     width: 80px;
     height: 80px;
   }
-  
+
   .changeImageText {
     font-size: 17px;
   }
-  
+
   .changeImageButton {
     padding: 6px;
   }

@@ -1,32 +1,32 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const orderSchema = new mongoose.Schema(
   {
     serviceId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Service",
+      ref: 'Service',
       required: true,
     },
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
-    providerId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    providerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 
     // Status for hele oppdraget
     status: {
       type: String,
       enum: [
-        "pending",
-        "accepted",
-        "declined",
-        "in_progress",
-        "completed",
-        "cancelled",
-        "awaiting_payment",
-        "paid",
+        'pending',
+        'accepted',
+        'declined',
+        'in_progress',
+        'completed',
+        'cancelled',
+        'awaiting_payment',
+        'paid',
       ],
-      default: "pending",
+      default: 'pending',
     },
 
     // Pris og forhandling
@@ -34,7 +34,7 @@ const orderSchema = new mongoose.Schema(
     agreedPrice: Number,
     priceNegotiation: [
       {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         proposedPrice: Number,
         timestamp: Date,
       },
@@ -59,8 +59,8 @@ const orderSchema = new mongoose.Schema(
     // Betaling
     paymentStatus: {
       type: String,
-      enum: ["unpaid", "pending", "paid", "refunded"],
-      default: "unpaid",
+      enum: ['unpaid', 'pending', 'paid', 'refunded'],
+      default: 'unpaid',
     },
     paymentId: String,
 
@@ -70,7 +70,7 @@ const orderSchema = new mongoose.Schema(
         id: { type: String, required: true },
         text: { type: String, required: true },
         checked: { type: Boolean, default: false },
-        checkedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        checkedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         checkedAt: Date,
       },
     ],
@@ -82,14 +82,14 @@ const orderSchema = new mongoose.Schema(
       quality: { type: Number, min: 0, max: 5, default: 0 },
       communication: { type: Number, min: 0, max: 5, default: 0 },
       tidiness: { type: Number, min: 0, max: 5, default: 0 },
-      comment: { type: String, default: "" },
+      comment: { type: String, default: '' },
     },
 
     // Hendelser (history)
     history: [
       {
         action: String,
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         timestamp: Date,
         data: mongoose.Schema.Types.Mixed,
       },
@@ -101,6 +101,6 @@ const orderSchema = new mongoose.Schema(
     // Attachments
     attachments: [{ type: String }],
   },
-  { timestamps: true },
+  { timestamps: true }
 );
-module.exports = mongoose.model("Order", orderSchema);
+module.exports = mongoose.model('Order', orderSchema);

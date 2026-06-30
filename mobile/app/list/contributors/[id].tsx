@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,19 +9,19 @@ import {
   Modal,
   Pressable,
   TextInput,
-} from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { StatusBar } from "expo-status-bar";
+} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import {
   useList,
   useAddContributors,
   useRemoveContributor,
-} from "../../../features/list/hooks/useLists";
-import { ListUser } from "../../../features/list/types";
-import { useSearchUsers } from "../../../features/user/hooks/useUsers";
-import { useAuth } from "../../../context/AuthContext";
+} from '../../../features/list/hooks/useLists';
+import { ListUser } from '../../../features/list/types';
+import { useSearchUsers } from '../../../features/user/hooks/useUsers';
+import { useAuth } from '../../../context/AuthContext';
 
 export default function ContributorsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,18 +33,15 @@ export default function ContributorsScreen() {
 
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
-  const { data: searchResults, isLoading: isSearching } =
-    useSearchUsers(searchQuery);
+  const { data: searchResults, isLoading: isSearching } = useSearchUsers(searchQuery);
 
   const handleAddContributors = () => {
     // Only proceed if there are changes to make
     const usersToAdd = selectedUsers.filter(
-      (id) =>
-        !contributors.some((c) => c._id === id) &&
-        !owners.some((o) => o._id === id),
+      (id) => !contributors.some((c) => c._id === id) && !owners.some((o) => o._id === id)
     );
     const usersToRemove = contributors
       .filter((c) => !selectedUsers.includes(c._id))
@@ -69,9 +66,9 @@ export default function ContributorsScreen() {
       {
         onSuccess: () => {
           setIsAddModalVisible(false);
-          setSearchQuery("");
+          setSearchQuery('');
         },
-      },
+      }
     );
   };
 
@@ -85,9 +82,7 @@ export default function ContributorsScreen() {
 
   const toggleUserSelection = (userId: string) => {
     setSelectedUsers((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId],
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     );
   };
 
@@ -129,33 +124,23 @@ export default function ContributorsScreen() {
     <View key={user._id} className="flex-row items-center px-4 py-3">
       <View className="w-12 h-12 bg-gray-100 rounded-full overflow-hidden mr-4">
         {user.avatarUrl ? (
-          <Image
-            source={{ uri: user.avatarUrl }}
-            className="w-full h-full"
-            resizeMode="cover"
-          />
+          <Image source={{ uri: user.avatarUrl }} className="w-full h-full" resizeMode="cover" />
         ) : (
           <View className="flex-1 items-center justify-center">
-            <Text className="text-gray-400 font-bold">
-              {user.name?.charAt(0).toUpperCase()}
-            </Text>
+            <Text className="text-gray-400 font-bold">{user.name?.charAt(0).toUpperCase()}</Text>
           </View>
         )}
       </View>
       <View className="flex-1">
         <Text className="text-lg font-medium text-black">
-          {user.name?.toLowerCase().replace(/\s/g, "")}{" "}
-          {isOwner ? "(Owner)" : ""}
+          {user.name?.toLowerCase().replace(/\s/g, '')} {isOwner ? '(Owner)' : ''}
         </Text>
         <Text className="text-gray-400 text-sm">
-          {user.name} {user.lastName || ""}
+          {user.name} {user.lastName || ''}
         </Text>
       </View>
       {isEditing && !isOwner && (
-        <TouchableOpacity
-          onPress={() => handleRemoveContributor(user._id)}
-          className="ml-2"
-        >
+        <TouchableOpacity onPress={() => handleRemoveContributor(user._id)} className="ml-2">
           <Ionicons name="remove-circle" size={28} color="#FF3B30" />
         </TouchableOpacity>
       )}
@@ -163,7 +148,7 @@ export default function ContributorsScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top", "left", "right"]}>
+    <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
 
       {/* Header */}
@@ -172,14 +157,12 @@ export default function ContributorsScreen() {
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
 
-        <Text className="text-xl font-medium text-black flex-1 text-center">
-          Contributors
-        </Text>
+        <Text className="text-xl font-medium text-black flex-1 text-center">Contributors</Text>
 
         <View className="w-10 items-end">
           <TouchableOpacity onPress={() => setIsEditing(!isEditing)}>
             <Text className="text-[#800080] text-lg font-medium">
-              {isEditing ? "Done" : "Edit"}
+              {isEditing ? 'Done' : 'Edit'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -204,9 +187,7 @@ export default function ContributorsScreen() {
                 onPress={() => setIsAddModalVisible(false)}
                 className="flex-1 items-end"
               >
-                <Text className="text-[#800080] text-lg font-medium">
-                  Cancel
-                </Text>
+                <Text className="text-[#800080] text-lg font-medium">Cancel</Text>
               </TouchableOpacity>
             </View>
 
@@ -243,7 +224,7 @@ export default function ContributorsScreen() {
                       disabled={isOwner}
                     >
                       <View
-                        className={`w-14 h-14 bg-gray-100 rounded-full overflow-hidden mr-4 ${isOwner ? "opacity-50" : ""}`}
+                        className={`w-14 h-14 bg-gray-100 rounded-full overflow-hidden mr-4 ${isOwner ? 'opacity-50' : ''}`}
                       >
                         {user.avatarUrl ? (
                           <Image
@@ -261,25 +242,21 @@ export default function ContributorsScreen() {
                       </View>
                       <View className="flex-1">
                         <Text
-                          className={`text-lg font-medium ${isOwner ? "text-gray-400" : "text-black"}`}
+                          className={`text-lg font-medium ${isOwner ? 'text-gray-400' : 'text-black'}`}
                         >
-                          {user.name?.toLowerCase().replace(/\s/g, "")}
-                          {isOwner ? " (Owner)" : ""}
+                          {user.name?.toLowerCase().replace(/\s/g, '')}
+                          {isOwner ? ' (Owner)' : ''}
                         </Text>
                         <Text className="text-gray-400">
-                          {user.name} {user.lastName || ""}
+                          {user.name} {user.lastName || ''}
                         </Text>
                       </View>
                       <View
                         className={`w-8 h-8 rounded-full border-2 items-center justify-center ${
-                          isSelected
-                            ? "bg-purple-600 border-purple-600"
-                            : "border-gray-200"
+                          isSelected ? 'bg-purple-600 border-purple-600' : 'border-gray-200'
                         }`}
                       >
-                        {isSelected && (
-                          <Ionicons name="checkmark" size={20} color="white" />
-                        )}
+                        {isSelected && <Ionicons name="checkmark" size={20} color="white" />}
                       </View>
                     </TouchableOpacity>
                   );
@@ -291,12 +268,9 @@ export default function ContributorsScreen() {
             <View className="px-4 py-6 border-t border-gray-100">
               <TouchableOpacity
                 onPress={handleAddContributors}
-                disabled={
-                  selectedUsers.length === 0 ||
-                  addContributorsMutation.isPending
-                }
+                disabled={selectedUsers.length === 0 || addContributorsMutation.isPending}
                 className={`w-full py-4 rounded-3xl items-center ${
-                  selectedUsers.length > 0 ? "bg-orange-200" : "bg-gray-100"
+                  selectedUsers.length > 0 ? 'bg-orange-200' : 'bg-gray-100'
                 }`}
               >
                 {addContributorsMutation.isPending ? (
@@ -304,9 +278,7 @@ export default function ContributorsScreen() {
                 ) : (
                   <Text
                     className={`text-lg font-bold ${
-                      selectedUsers.length > 0
-                        ? "text-[#E68A2E]"
-                        : "text-gray-400"
+                      selectedUsers.length > 0 ? 'text-[#E68A2E]' : 'text-gray-400'
                     }`}
                   >
                     Add collaborator
@@ -327,9 +299,7 @@ export default function ContributorsScreen() {
           <View className="w-12 h-12 bg-orange-50 rounded-full items-center justify-center mr-4">
             <Ionicons name="add" size={32} color="#E68A2E" />
           </View>
-          <Text className="text-lg font-medium text-black">
-            Add contributors
-          </Text>
+          <Text className="text-lg font-medium text-black">Add contributors</Text>
         </TouchableOpacity>
 
         {/* Owner Section */}

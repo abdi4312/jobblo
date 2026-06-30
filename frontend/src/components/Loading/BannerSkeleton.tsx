@@ -8,10 +8,9 @@ export const BannerSkeleton = () => {
         {/* Banner Card Placeholder */}
         <div className="flex-1 min-w-0 bg-white p-2 md:p-4 rounded-[30px] md:rounded-[48px] shadow-sm border border-gray-100 overflow-hidden relative h-95 md:h-125">
           <div className="w-full h-full rounded-[22px] md:rounded-[36px] bg-gray-100 relative overflow-hidden flex items-center">
-            
             {/* Right Side Image Placeholder */}
             <div className="absolute top-0 bottom-0 right-[-2px] w-[80%] md:w-[70%] bg-gray-200">
-               <div className="absolute inset-0 bg-gradient-to-r from-gray-100 via-gray-100/50 to-transparent"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-gray-100 via-gray-100/50 to-transparent"></div>
             </div>
 
             {/* Left Side Content Placeholder */}
@@ -21,7 +20,7 @@ export const BannerSkeleton = () => {
                 <div className="h-10 md:h-14 lg:h-20 bg-gray-200 rounded-xl w-3/4"></div>
                 {/* Subtitle */}
                 <div className="h-6 md:h-8 lg:h-10 bg-gray-200 rounded-lg w-1/2"></div>
-                
+
                 {/* Button */}
                 <div className="h-12 md:h-16 bg-gray-200 rounded-xl md:rounded-[20px] w-40 mt-2"></div>
               </div>

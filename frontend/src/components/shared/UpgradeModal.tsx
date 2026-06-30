@@ -1,5 +1,5 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -10,7 +10,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
   AlertDialogOverlay,
-} from "../Ui/alert-dialog";
+} from '../Ui/alert-dialog';
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -41,7 +41,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
             Oppgrader for mer tilgang
           </AlertDialogTitle>
           <AlertDialogDescription className="text-zinc-400">
-            {message || "Du har nådd din månedlige grense for kontakter."}
+            {message || 'Du har nådd din månedlige grense for kontakter.'}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -49,9 +49,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
           {limit !== undefined && (
             <div className="p-4 bg-zinc-900/50 rounded-xl border border-zinc-800/50">
               <div className="flex justify-between text-xs mb-1.5">
-                <span className="text-zinc-500 uppercase tracking-wider">
-                  Din bruk
-                </span>
+                <span className="text-zinc-500 uppercase tracking-wider">Din bruk</span>
                 <span className="text-zinc-300 font-medium">
                   {usage} / {limit} kontakter
                 </span>
@@ -59,7 +57,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
               <div className="w-full bg-zinc-800 rounded-full h-1.5">
                 <div
                   className="bg-custom-green h-1.5 rounded-full transition-all duration-500"
-                  style={{ width: "100%" }}
+                  style={{ width: '100%' }}
                 ></div>
               </div>
             </div>
@@ -85,7 +83,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
-              navigate("/pricing");
+              navigate('/pricing');
               onClose();
             }}
             className="w-full bg-zinc-100 text-zinc-900 hover:bg-zinc-200 font-bold h-11 rounded-xl"

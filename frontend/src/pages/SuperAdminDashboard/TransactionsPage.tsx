@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search,
   CheckCircle2,
@@ -9,10 +9,10 @@ import {
   ChevronDown,
   RotateCcw,
   XCircle,
-} from "lucide-react";
-import mainLink from "../../api/mainURLs";
-import TransactionTable from "../../components/SuperAdminDashboard/Transcaction/TransactionTable";
-import Swal from "sweetalert2";
+} from 'lucide-react';
+import mainLink from '../../api/mainURLs';
+import TransactionTable from '../../components/SuperAdminDashboard/Transcaction/TransactionTable';
+import Swal from 'sweetalert2';
 
 interface Transaction {
   _id: string;
@@ -30,19 +30,19 @@ const TransactionPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedType, setSelectedType] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedType, setSelectedType] = useState('');
 
   const fetchTransactions = useCallback(async () => {
     try {
       setLoading(true);
       const response = await mainLink.get(
-        `/api/admin/transactions?page=${currentPage}&limit=10&search=${searchQuery}&type=${selectedType}`,
+        `/api/admin/transactions?page=${currentPage}&limit=10&search=${searchQuery}&type=${selectedType}`
       );
       setTransactions(response.data?.transactions || []);
       setTotalPages(response.data?.totalPages || 1);
     } catch (error) {
-      console.error("Fetch error:", error);
+      console.error('Fetch error:', error);
       setTransactions([]);
     } finally {
       setLoading(false);
@@ -52,19 +52,19 @@ const TransactionPage: React.FC = () => {
   // Status update karne wala function
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     const confirmMessage =
-      newStatus === "refunded"
-        ? "Are you sure? This will also mark the transaction as refunded in the system."
+      newStatus === 'refunded'
+        ? 'Are you sure? This will also mark the transaction as refunded in the system.'
         : `Change status to ${newStatus}?`;
 
     const result = await Swal.fire({
-      title: "Confirm Status Update",
+      title: 'Confirm Status Update',
       text: confirmMessage,
-      icon: "warning",
+      icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: "#2d4a3e",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Yes, update it!",
-      cancelButtonText: "Cancel",
+      confirmButtonColor: '#2d4a3e',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, update it!',
+      cancelButtonText: 'Cancel',
     });
 
     if (result.isConfirmed) {
@@ -77,19 +77,19 @@ const TransactionPage: React.FC = () => {
         fetchTransactions();
 
         Swal.fire({
-          title: "Updated!",
+          title: 'Updated!',
           text: `Transaction status changed to ${newStatus}`,
-          icon: "success",
+          icon: 'success',
           timer: 1500,
           showConfirmButton: false,
         });
       } catch (error: unknown) {
         const err = error as { response?: { data?: { message?: string } } };
-        console.error("Update failed:", error);
+        console.error('Update failed:', error);
         Swal.fire({
-          title: "Error!",
-          text: err.response?.data?.message || "Failed to update status.",
-          icon: "error",
+          title: 'Error!',
+          text: err.response?.data?.message || 'Failed to update status.',
+          icon: 'error',
         });
       }
     }
@@ -103,34 +103,36 @@ const TransactionPage: React.FC = () => {
     return () => clearTimeout(handler);
   }, [fetchTransactions]);
 
-  const getStatusConfig = (status: string): { label: string; color: string; bgColor: string; icon: React.ReactNode } => {
+  const getStatusConfig = (
+    status: string
+  ): { label: string; color: string; bgColor: string; icon: React.ReactNode } => {
     switch (status) {
-      case "succeeded":
+      case 'succeeded':
         return {
-          label: "Succeeded",
-          color: "text-emerald-600",
-          bgColor: "bg-emerald-100",
+          label: 'Succeeded',
+          color: 'text-emerald-600',
+          bgColor: 'bg-emerald-100',
           icon: <CheckCircle2 size={14} />,
         };
-      case "failed":
+      case 'failed':
         return {
-          label: "Failed",
-          color: "text-rose-600",
-          bgColor: "bg-rose-100",
+          label: 'Failed',
+          color: 'text-rose-600',
+          bgColor: 'bg-rose-100',
           icon: <XCircle size={14} />,
         };
-      case "refunded":
+      case 'refunded':
         return {
-          label: "Refunded",
-          color: "text-gray-600",
-          bgColor: "bg-gray-100",
+          label: 'Refunded',
+          color: 'text-gray-600',
+          bgColor: 'bg-gray-100',
           icon: <RotateCcw size={14} />,
         };
       default:
         return {
-          label: "Pending",
-          color: "text-amber-600",
-          bgColor: "bg-amber-100",
+          label: 'Pending',
+          color: 'text-amber-600',
+          bgColor: 'bg-amber-100',
           icon: <Clock size={14} />,
         };
     }
@@ -140,9 +142,7 @@ const TransactionPage: React.FC = () => {
     <div className="animate-in fade-in duration-500 p-6 font-sans max-w-[1600px] mx-auto bg-[#f8fafc] min-h-screen">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
         <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight">
-            Transactions
-          </h1>
+          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Transactions</h1>
           <p className="text-slate-400 text-sm font-medium mt-1">
             Manage and track all customer payments
           </p>
@@ -150,10 +150,7 @@ const TransactionPage: React.FC = () => {
 
         <div className="flex items-center gap-4 w-full lg:w-auto">
           <div className="relative flex-1 sm:w-80 group">
-            <Search
-              className="absolute left-5 top-1/2 -translate-y-1/2 text-[#2d4a3e]"
-              size={20}
-            />
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[#2d4a3e]" size={20} />
             <input
               type="text"
               placeholder="Search ID or Email..."

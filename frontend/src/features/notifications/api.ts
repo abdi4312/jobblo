@@ -1,4 +1,4 @@
-import mainLink from "../../api/mainURLs";
+import mainLink from '../../api/mainURLs';
 
 export async function getNotifications(userId: string, page: number = 1, type?: string) {
   // Backend query params ke mutabiq URL update kiya
@@ -33,8 +33,6 @@ export async function deleteAllNotifications(userId: string) {
 }
 
 export async function getUnreadCount(userId: string) {
-  const res = await mainLink.get(
-    `/api/notifications/unread-count?userId=${userId}`,
-  );
+  const res = await mainLink.get(`/api/notifications/unread-count?userId=${userId}`);
   return res.data;
 }

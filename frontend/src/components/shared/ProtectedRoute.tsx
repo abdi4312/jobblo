@@ -1,12 +1,12 @@
-import { useUserStore } from "../../stores/userStore.ts";
-import { type ReactNode, useEffect, useState } from "react";
-import { Modal } from "antd";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useUserStore } from '../../stores/userStore.ts';
+import { type ReactNode, useEffect, useState } from 'react';
+import { Modal } from 'antd';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const [modalText, setModalText] = useState("Du må logge inn først.");
+  const [modalText, setModalText] = useState('Du må logge inn først.');
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const navigate = useNavigate();
   const location = useLocation();
@@ -18,12 +18,12 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }, [isAuth]);
 
   function handleOk() {
-    setModalText("Beep boop later som jeg logger inn om 2 sek");
+    setModalText('Beep boop later som jeg logger inn om 2 sek');
     setConfirmLoading(true);
 
     setOpen(false);
     setConfirmLoading(false);
-    navigate("/login", { state: { from: location } });
+    navigate('/login', { state: { from: location } });
   }
 
   function handleCancel() {
@@ -35,13 +35,13 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     return (
       <>
         <Modal
-          title={"Oops"}
+          title={'Oops'}
           open={open}
           onOk={handleOk}
           confirmLoading={confirmLoading}
           onCancel={handleCancel}
-          okText={"Logg inn"}
-          cancelText={"Avbryt"}
+          okText={'Logg inn'}
+          cancelText={'Avbryt'}
         >
           <p>{modalText}</p>
         </Modal>

@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Star } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { Star } from 'lucide-react';
 interface DisplayReview {
   id: string;
   reviewerName: string;
@@ -11,7 +11,7 @@ interface DisplayReview {
 }
 
 export default function AnmeldelserPage() {
-  const [activeTab, setActiveTab] = useState<"received" | "given">("received");
+  const [activeTab, setActiveTab] = useState<'received' | 'given'>('received');
   const [receivedReviews, setReceivedReviews] = useState<DisplayReview[]>([]);
   const [givenReviews, setGivenReviews] = useState<DisplayReview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,43 +23,43 @@ export default function AnmeldelserPage() {
     // Fake data logic remains exactly the same
     const fakeReceivedReviews: DisplayReview[] = [
       {
-        id: "1",
-        reviewerName: "Illyas",
-        reviewerAvatar: "https://via.placeholder.com/40",
+        id: '1',
+        reviewerName: 'Illyas',
+        reviewerAvatar: 'https://via.placeholder.com/40',
         rating: 5,
-        date: "04.01.2002",
-        comment: "Veldig stort og fin vegg, jeg er sjalu",
-        jobTitle: "Stor og lang vegg trengs maling",
+        date: '04.01.2002',
+        comment: 'Veldig stort og fin vegg, jeg er sjalu',
+        jobTitle: 'Stor og lang vegg trengs maling',
       },
       {
-        id: "2",
-        reviewerName: "Dulahi",
-        reviewerAvatar: "https://via.placeholder.com/40",
+        id: '2',
+        reviewerName: 'Dulahi',
+        reviewerAvatar: 'https://via.placeholder.com/40',
         rating: 4,
-        date: "04.01.2002",
-        comment: "Knuste den benken og fikk pengene",
-        jobTitle: "Benk trengs knuses",
+        date: '04.01.2002',
+        comment: 'Knuste den benken og fikk pengene',
+        jobTitle: 'Benk trengs knuses',
       },
     ];
 
     const fakeGivenReviews: DisplayReview[] = [
       {
-        id: "3",
-        reviewerName: "Anne Berg",
-        reviewerAvatar: "https://via.placeholder.com/40",
+        id: '3',
+        reviewerName: 'Anne Berg',
+        reviewerAvatar: 'https://via.placeholder.com/40',
         rating: 5,
-        date: "12.11.2025",
-        comment: "Fantastisk service! Veldig fornøyd med resultatet.",
-        jobTitle: "Hagearbeid",
+        date: '12.11.2025',
+        comment: 'Fantastisk service! Veldig fornøyd med resultatet.',
+        jobTitle: 'Hagearbeid',
       },
       {
-        id: "4",
-        reviewerName: "Lars Hansen",
-        reviewerAvatar: "https://via.placeholder.com/40",
+        id: '4',
+        reviewerName: 'Lars Hansen',
+        reviewerAvatar: 'https://via.placeholder.com/40',
         rating: 5,
-        date: "08.11.2025",
-        comment: "Rask og effektiv, anbefales!",
-        jobTitle: "Flyttehjelp",
+        date: '08.11.2025',
+        comment: 'Rask og effektiv, anbefales!',
+        jobTitle: 'Flyttehjelp',
       },
     ];
 
@@ -70,16 +70,13 @@ export default function AnmeldelserPage() {
     setLoading(false);
   }, []);
 
-  const currentReviews =
-    activeTab === "received" ? receivedReviews : givenReviews;
+  const currentReviews = activeTab === 'received' ? receivedReviews : givenReviews;
 
   return (
     <div className="min-h-[70vh] max-w-300 mx-auto p-2 ms:p-5 overflow-hidden">
       {/* Rating Summary */}
       <div className="bg-[#FFFFFF1A] flex flex-col gap-6 shadow-sm py-6">
-        <h1 className="text-[30px] font-bold text-[#101828] text-center">
-          Amneldenser
-        </h1>
+        <h1 className="text-[30px] font-bold text-[#101828] text-center">Amneldenser</h1>
         {!loading && totalReviews > 0 && (
           <div className="text-center py-4 px-5 mx-5 mb-5 bg-[#FFFFFFB2] rounded-lg">
             <div className="text-[28px] font-semibold text-[#4A5565]">
@@ -94,16 +91,16 @@ export default function AnmeldelserPage() {
         {/* Tabs */}
         <div className="flex justify-center flex-wrap gap-2 px-5 ">
           <button
-            onClick={() => setActiveTab("received")}
+            onClick={() => setActiveTab('received')}
             className={`flex-1 max-w-50 py-3 px-5 rounded-[14px] shadow-sm text-[#364153] text-[16px] font-medium transition-all duration-200 border-none text-nowrap cursor-pointer
-            ${activeTab === "received" ? "bg-[#2F7E4740]" : "bg-[#FFFFFF1A]"}`}
+            ${activeTab === 'received' ? 'bg-[#2F7E4740]' : 'bg-[#FFFFFF1A]'}`}
           >
             Anmelder fått
           </button>
           <button
-            onClick={() => setActiveTab("given")}
+            onClick={() => setActiveTab('given')}
             className={`flex-1 max-w-50 py-3 px-5 rounded-[14px] shadow-sm text-[16px] text-[#364153] font-medium transition-all duration-200 border-none text-nowrap cursor-pointer
-            ${activeTab === "given" ? "bg-[#2F7E4740]" : "bg-[#FFFFFF1A]"}`}
+            ${activeTab === 'given' ? 'bg-[#2F7E4740]' : 'bg-[#FFFFFF1A]'}`}
           >
             Anmeldelser gitt
           </button>
@@ -113,15 +110,11 @@ export default function AnmeldelserPage() {
       {/* Reviews List */}
       <div className="py-10 flex gap-6 flex-col">
         {loading ? (
-          <p className="text-center text-gray-500 py-10">
-            Laster anmeldelser...
-          </p>
+          <p className="text-center text-gray-500 py-10">Laster anmeldelser...</p>
         ) : error ? (
           <p className="text-center text-red-600 py-10">{error}</p>
         ) : currentReviews.length === 0 ? (
-          <p className="text-center text-gray-500 italic py-10">
-            Ingen anmeldelser ennå
-          </p>
+          <p className="text-center text-gray-500 italic py-10">Ingen anmeldelser ennå</p>
         ) : (
           currentReviews.map((review) => (
             <div
@@ -131,7 +124,7 @@ export default function AnmeldelserPage() {
               {/* Section Header */}
               <div>
                 <div className="text-[12px] font-semibold text-[#000000 ] mb-2">
-                  Du {activeTab === "received" ? "la ut" : "la ut"}
+                  Du {activeTab === 'received' ? 'la ut' : 'la ut'}
                 </div>
                 <div className="text-[16px] md:text-[20px] font-semibold mb-3 text-custom-black">
                   {review.jobTitle}
@@ -144,9 +137,7 @@ export default function AnmeldelserPage() {
                   {/* Star Icon with Rating Number */}
                   <div className="relative flex text-custom-green p-3 bg-[#FFFFFF1A] shadow-sm rounded-[14px] items-center justify-center shrink-0">
                     <Star size={45} />
-                    <span className="absolute text-[18px] font-bold pt-0.5">
-                      {review.rating}
-                    </span>
+                    <span className="absolute text-[18px] font-bold pt-0.5">{review.rating}</span>
                   </div>
 
                   {/* Name and Role */}
@@ -154,21 +145,15 @@ export default function AnmeldelserPage() {
                     <div className="font-semibold text-[16px] md:text-[20px] md:font-bold mb-0.5 text-custom-black">
                       {review.reviewerName}
                     </div>
-                    <div className="text-[12px] font-light text-[#000000]">
-                      Oppdragstaker
-                    </div>
+                    <div className="text-[12px] font-light text-[#000000]">Oppdragstaker</div>
                   </div>
 
                   {/* Date */}
-                  <div className="text-[12px] font-light text-[#000000]">
-                    {review.date}
-                  </div>
+                  <div className="text-[12px] font-light text-[#000000]">{review.date}</div>
                 </div>
 
                 {/* Comment */}
-                <div className="text-[14px] font-medium text-[#6A7282] mb-3">
-                  {review.comment}
-                </div>
+                <div className="text-[14px] font-medium text-[#6A7282] mb-3">{review.comment}</div>
 
                 {/* Report Button */}
                 <div className="flex gap-6 justify-end">

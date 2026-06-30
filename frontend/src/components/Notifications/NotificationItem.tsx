@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
   Check,
   CheckCheck,
@@ -13,12 +13,12 @@ import {
   Bell,
   Shield,
   ShieldOff,
-} from "lucide-react";
-import type { AlertType } from "../../features/notifications/types";
-import { dateFormatter } from "../../utils/dateFormatter";
-import { timeFormatter } from "../../utils/timeFormatter";
-import { Button } from "../../components/Ui/button/Button";
-import { useUpdateJobRequestStatusMutation } from "../../features/jobDetail/hook";
+} from 'lucide-react';
+import type { AlertType } from '../../features/notifications/types';
+import { dateFormatter } from '../../utils/dateFormatter';
+import { timeFormatter } from '../../utils/timeFormatter';
+import { Button } from '../../components/Ui/button/Button';
+import { useUpdateJobRequestStatusMutation } from '../../features/jobDetail/hook';
 
 interface NotificationItemProps {
   alert: AlertType;
@@ -33,12 +33,12 @@ interface NotificationItemProps {
 const formatNotificationTime = (dateString: string) => {
   try {
     const timeAgo = dateFormatter.toRelative(dateString);
-    const datePart = dateFormatter.format(dateString, "d. MMM");
+    const datePart = dateFormatter.format(dateString, 'd. MMM');
     const exactTime = timeFormatter.toShortTime(dateString);
     return `${timeAgo} • ${datePart} kl. ${exactTime}`;
   } catch (error) {
-    console.error("Date formatting error:", error);
-    return "Akkurat nå";
+    console.error('Date formatting error:', error);
+    return 'Akkurat nå';
   }
 };
 
@@ -47,58 +47,58 @@ const formatNotificationTime = (dateString: string) => {
  */
 const notificationConfig = {
   message: {
-    title: "Ny melding",
+    title: 'Ny melding',
     icon: <MessageSquare size={20} />,
-    color: "text-blue-600",
-    bg: "bg-blue-50",
+    color: 'text-blue-600',
+    bg: 'bg-blue-50',
   },
   order: {
-    title: "Bestilling oppdatert",
+    title: 'Bestilling oppdatert',
     icon: <ShoppingBag size={20} />,
-    color: "text-green-600",
-    bg: "bg-green-50",
+    color: 'text-green-600',
+    bg: 'bg-green-50',
   },
   system_update: {
-    title: "Systemvarsel",
+    title: 'Systemvarsel',
     icon: <Info size={20} />,
-    color: "text-blue-600",
-    bg: "bg-blue-100",
+    color: 'text-blue-600',
+    bg: 'bg-blue-100',
   },
   promotion: {
-    title: "Spesialtilbud til deg",
+    title: 'Spesialtilbud til deg',
     icon: <Tag size={20} />,
-    color: "text-orange-600",
-    bg: "bg-orange-100",
+    color: 'text-orange-600',
+    bg: 'bg-orange-100',
   },
   alert: {
-    title: "Viktig varsel",
+    title: 'Viktig varsel',
     icon: <AlertTriangle size={20} />,
-    color: "text-red-600",
-    bg: "bg-red-100",
+    color: 'text-red-600',
+    bg: 'bg-red-100',
   },
   system: {
-    title: "App-oppdatering",
+    title: 'App-oppdatering',
     icon: <RefreshCcw size={20} />,
-    color: "text-orange-600",
-    bg: "bg-orange-50",
+    color: 'text-orange-600',
+    bg: 'bg-orange-50',
   },
   general: {
-    title: "Informasjon",
+    title: 'Informasjon',
     icon: <Bell size={20} />,
-    color: "text-cyan-600",
-    bg: "bg-cyan-50",
+    color: 'text-cyan-600',
+    bg: 'bg-cyan-50',
   },
   follow: {
-    title: "Ny følger",
+    title: 'Ny følger',
     icon: <Bell size={20} />,
-    color: "text-purple-600",
-    bg: "bg-purple-50",
+    color: 'text-purple-600',
+    bg: 'bg-purple-50',
   },
   favorite: {
-    title: "Lagt til i liste",
+    title: 'Lagt til i liste',
     icon: <Tag size={20} />,
-    color: "text-pink-600",
-    bg: "bg-pink-50",
+    color: 'text-pink-600',
+    bg: 'bg-pink-50',
   },
 };
 
@@ -111,42 +111,35 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
   const updateStatusMutation = useUpdateJobRequestStatusMutation();
 
   const config =
-    notificationConfig[alert.type as keyof typeof notificationConfig] ||
-    notificationConfig.general;
+    notificationConfig[alert.type as keyof typeof notificationConfig] || notificationConfig.general;
 
   const handleCardClick = () => {
-    if (
-      (alert.type === "follow" || alert.type === "favorite") &&
-      alert.senderId?._id
-    ) {
+    if ((alert.type === 'follow' || alert.type === 'favorite') && alert.senderId?._id) {
       onNavigate(`/profile/${alert.senderId._id}`);
     }
   };
 
-  const isClickable = alert.type === "follow" || alert.type === "favorite";
-  const isRequestNotification = alert.type === "order" && alert.requestId;
+  const isClickable = alert.type === 'follow' || alert.type === 'favorite';
+  const isRequestNotification = alert.type === 'order' && alert.requestId;
 
   // Check if request is already handled
   const requestStatus =
-    typeof alert.requestId === "object" && alert.requestId !== null
+    typeof alert.requestId === 'object' && alert.requestId !== null
       ? (alert.requestId as any).status
-      : "pending";
+      : 'pending';
 
-  const isHandled = requestStatus !== "pending";
+  const isHandled = requestStatus !== 'pending';
 
   const handleStatusUpdate = async (status: string) => {
     if (!alert.requestId) return;
-    const requestId =
-      typeof alert.requestId === "string"
-        ? alert.requestId
-        : alert.requestId._id;
+    const requestId = typeof alert.requestId === 'string' ? alert.requestId : alert.requestId._id;
 
     try {
       await updateStatusMutation.mutateAsync({
         requestId,
         status,
       });
-      toast.success(status === "accepted" ? "Godkjent!" : "Avvist");
+      toast.success(status === 'accepted' ? 'Godkjent!' : 'Avvist');
       onMarkAsRead(alert._id);
 
       // Auto-navigation removed as per user request
@@ -154,7 +147,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
       //   onNavigate(`/messages/${res.conversationId}`);
       // }
     } catch (error) {
-      toast.error("Kunne ikke oppdatere status");
+      toast.error('Kunne ikke oppdatere status');
     }
   };
 
@@ -162,7 +155,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
     <div
       onClick={handleCardClick}
       className={`bg-white/60 shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white rounded-2xl p-4 mx-auto my-2 transition-all ${
-        isClickable ? "cursor-pointer hover:bg-gray-50" : ""
+        isClickable ? 'cursor-pointer hover:bg-gray-50' : ''
       }`}
     >
       <div className="flex items-start gap-4">
@@ -187,9 +180,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         <div className="flex-1 flex flex-col sm:flex-row justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex items-center justify-between sm:justify-start">
-              <h2 className="text-[18px] font-bold text-custom-black">
-                {config.title}
-              </h2>
+              <h2 className="text-[18px] font-bold text-custom-black">{config.title}</h2>
 
               {/* Mobile Actions */}
               <div className="flex gap-3 sm:hidden text-gray-400">
@@ -216,9 +207,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
               </div>
             </div>
 
-            <p className="text-[16px] font-medium text-custom-black leading-6">
-              {alert.content}
-            </p>
+            <p className="text-[16px] font-medium text-custom-black leading-6">{alert.content}</p>
 
             <div className="inline-block">
               <span className="bg-[#2F7E471A] text-custom-green text-[14px] font-medium px-4 py-1 rounded-full">
@@ -262,12 +251,12 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                 {isHandled ? (
                   <span
                     className={`text-[14px] font-bold px-4 py-1.5 rounded-full ${
-                      requestStatus === "accepted"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
+                      requestStatus === 'accepted'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-red-100 text-red-700'
                     }`}
                   >
-                    {requestStatus === "accepted" ? "Godkjent" : "Avvist"}
+                    {requestStatus === 'accepted' ? 'Godkjent' : 'Avvist'}
                   </span>
                 ) : (
                   <div className="flex gap-2">
@@ -277,7 +266,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                       className="border-red-500 text-red-500 hover:bg-red-50"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleStatusUpdate("declined");
+                        handleStatusUpdate('declined');
                       }}
                       disabled={updateStatusMutation.isPending}
                     >
@@ -289,7 +278,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                       className="bg-custom-green hover:bg-custom-green/90 text-white"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleStatusUpdate("accepted");
+                        handleStatusUpdate('accepted');
                       }}
                       disabled={updateStatusMutation.isPending}
                     >
@@ -306,7 +295,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                   if (alert.requestId) {
                     const reqId = alert.requestId as any;
                     if (reqId.serviceId) {
-                      const serviceId = typeof reqId.serviceId === 'object' ? reqId.serviceId._id : reqId.serviceId;
+                      const serviceId =
+                        typeof reqId.serviceId === 'object' ? reqId.serviceId._id : reqId.serviceId;
                       onNavigate(`/job-applicants/${serviceId}`);
                     }
                   } else if (isClickable && alert.senderId?._id) {
@@ -314,7 +304,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                   }
                 }}
               >
-                {isClickable ? "Se profil" : alert.requestId ? "Se søknad" : "Se varsel"}
+                {isClickable ? 'Se profil' : alert.requestId ? 'Se søknad' : 'Se varsel'}
               </Button>
             )}
           </div>

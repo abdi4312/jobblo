@@ -1,7 +1,7 @@
 // routes/locationFilter.js
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const locationFilterController = require("../controllers/locationFilterController");
+const locationFilterController = require('../controllers/locationFilterController');
 
 /**
  * @swagger
@@ -23,7 +23,7 @@ const locationFilterController = require("../controllers/locationFilterControlle
  *       500:
  *         description: Serverfeil ved henting av lokasjonstre
  */
-router.get("/tree", locationFilterController.getLocationTree);
+router.get('/tree', locationFilterController.getLocationTree);
 
 /**
  * @swagger
@@ -38,6 +38,6 @@ router.get("/tree", locationFilterController.getLocationTree);
  *       500:
  *         description: Serverfeil ved henting av statistikk
  */
-router.get("/stats", locationFilterController.getLocationStats);
+router.get('/stats', locationFilterController.getLocationStats);
 
 module.exports = router;

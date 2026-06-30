@@ -1,8 +1,8 @@
-import { useEffect } from "react";
-import Header from "../../components/Support/Header"
-import CategoryCard from "../../components/Support/CategoryCard";
-import FAQItem from "../../components/Support/FAQItem";
-import Contact from "../../components/Support/Contact";
+import { useEffect } from 'react';
+import Header from '../../components/Support/Header';
+import CategoryCard from '../../components/Support/CategoryCard';
+import FAQItem from '../../components/Support/FAQItem';
+import Contact from '../../components/Support/Contact';
 
 export default function SupportPage() {
   useEffect(() => {

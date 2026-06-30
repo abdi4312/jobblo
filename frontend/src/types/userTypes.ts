@@ -14,7 +14,7 @@ export type User = {
   bio?: string;
   role?: string;
   subscription?: string;
-  planType?: "business" | "private";
+  planType?: 'business' | 'private';
   monthlyContactUsage?: number;
   verified?: boolean;
   birthDate?: string;
@@ -34,9 +34,9 @@ export type User = {
   pointsBalance?: number;
   oauthProviders?: [
     {
-      provider: "google";
-      providerId: "100416200428901255467";
-      _id: "68d98d54a60a9dfeeaec8dc7";
+      provider: 'google';
+      providerId: '100416200428901255467';
+      _id: '68d98d54a60a9dfeeaec8dc7';
     },
   ];
   createdAt?: string;

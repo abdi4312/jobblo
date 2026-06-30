@@ -7,8 +7,8 @@ const { authenticate } = require('../middleware/auth');
 
 // vi bruker memoryStorage fordi vi sender filen direkte videre til Azure
 const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB per fil, juster ved behov
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB per fil, juster ved behov
 });
 
 /**
@@ -54,12 +54,7 @@ const upload = multer({
  *       401:
  *         description: Mangler eller ugyldig autentisering
  */
-router.post(
-    '/profile',
-    authenticate,
-    upload.single('image'),
-    uploadController.uploadProfileImage
-);
+router.post('/profile', authenticate, upload.single('image'), uploadController.uploadProfileImage);
 
 /**
  * @swagger
@@ -102,10 +97,10 @@ router.post(
  *         description: Mangler eller ugyldig autentisering
  */
 router.post(
-    '/service',
-    authenticate,
-    upload.array('images', 5), // maks 5 bilder, juster hvis dere vil
-    uploadController.uploadServiceImages
+  '/service',
+  authenticate,
+  upload.array('images', 5), // maks 5 bilder, juster hvis dere vil
+  uploadController.uploadServiceImages
 );
 
 module.exports = router;

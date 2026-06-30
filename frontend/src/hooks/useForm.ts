@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback } from 'react';
 
 interface ValidationRule<T> {
   test: (values: T) => boolean;
@@ -14,34 +14,31 @@ type ValidationSchema<T> = {
  */
 export function useForm<T extends Record<string, unknown>>(
   initialValues: T,
-  validationSchema: ValidationSchema<T> = {},
+  validationSchema: ValidationSchema<T> = {}
 ) {
   const [values, setValues] = useState<T>(initialValues);
 
   const setValuesWithLog = useCallback((newValues: T | ((prev: T) => T)) => {
-    console.log("[useForm] setValues called with:", newValues);
+    console.log('[useForm] setValues called with:', newValues);
     setValues(newValues);
   }, []);
   const [errors, setErrors] = useState<{ [K in keyof T]?: string }>({});
 
-  const handleChange = useCallback(
-    <K extends keyof T>(field: K, value: T[K]) => {
-      setValues((prev) => ({
+  const handleChange = useCallback(<K extends keyof T>(field: K, value: T[K]) => {
+    setValues((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+
+      return {
         ...prev,
-        [field]: value,
-      }));
-
-      setErrors((prev) => {
-        if (!prev[field]) return prev;
-
-        return {
-          ...prev,
-          [field]: "",
-        };
-      });
-    },
-    [],
-  );
+        [field]: '',
+      };
+    });
+  }, []);
 
   const validate = useCallback(() => {
     const newErrors: { [K in keyof T]?: string } = {};

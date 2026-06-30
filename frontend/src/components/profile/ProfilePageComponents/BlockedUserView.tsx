@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 export const BlockedUserView: React.FC = () => {
   return (
@@ -11,16 +11,12 @@ export const BlockedUserView: React.FC = () => {
             className="w-full h-full object-contain opacity-80"
           />
         </div>
-        <h3 className="text-[22px] font-bold text-gray-900 mb-3">
-          Du har blokkert denne brukeren
-        </h3>
+        <h3 className="text-[22px] font-bold text-gray-900 mb-3">Du har blokkert denne brukeren</h3>
         <p className="text-[16px] text-gray-500 font-medium leading-relaxed">
-          For å se denne brukerens annonser må du{" "}
-          <button
-            className="text-black font-bold underline hover:text-gray-700 transition-colors"
-          >
+          For å se denne brukerens annonser må du{' '}
+          <button className="text-black font-bold underline hover:text-gray-700 transition-colors">
             oppheve blokkeringen
-          </button>{" "}
+          </button>{' '}
           først.
         </p>
       </div>

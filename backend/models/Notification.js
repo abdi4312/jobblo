@@ -1,10 +1,10 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       default: null, // 👈 system notification ke liye null
     },
 
@@ -18,19 +18,19 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       required: true,
       enum: [
-        "message",
-        "order",
-        "system",
-        "promotion",
-        "alert",
-        "system_update",
-        "general",
-        "follow",
-        "favorite",
-        "application",
-        "payment",
-        "review",
-        "job_update",
+        'message',
+        'order',
+        'system',
+        'promotion',
+        'alert',
+        'system_update',
+        'general',
+        'follow',
+        'favorite',
+        'application',
+        'payment',
+        'review',
+        'job_update',
       ],
     },
 
@@ -46,30 +46,30 @@ const notificationSchema = new mongoose.Schema(
 
     senderId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       default: null,
     },
 
     orderId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Order",
+      ref: 'Order',
       default: null,
     },
 
     requestId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "JobRequest",
+      ref: 'JobRequest',
       default: null,
     },
 
     readBy: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
+        ref: 'User',
       },
     ], // 👈 kis kis ne read ki
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-module.exports = mongoose.model("Notification", notificationSchema);
+module.exports = mongoose.model('Notification', notificationSchema);

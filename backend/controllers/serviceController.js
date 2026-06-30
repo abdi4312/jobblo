@@ -1,6 +1,6 @@
-const Service = require("../models/Service");
-const JobRequest = require("../models/JobRequest");
-const mongoose = require("mongoose");
+const Service = require('../models/Service');
+const JobRequest = require('../models/JobRequest');
+const mongoose = require('mongoose');
 
 // ------------------- Get All Services -------------------
 
@@ -27,19 +27,19 @@ exports.getAllServices = async (req, res) => {
       query.userId = userId;
     }
 
-    if (urgent === "true") {
+    if (urgent === 'true') {
       query.urgent = true;
     }
 
     if (category) {
-      const categoriesArray = category.split(",").map((c) => c.trim());
+      const categoriesArray = category.split(',').map((c) => c.trim());
       query.categories = { $in: categoriesArray };
     }
 
     if (search) {
       query.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
       ];
     }
 
@@ -52,15 +52,15 @@ exports.getAllServices = async (req, res) => {
     // Location code filters
     const locationQueries = [];
     if (countyCodes) {
-      const codes = countyCodes.split(",").map((c) => c.trim());
+      const codes = countyCodes.split(',').map((c) => c.trim());
       locationQueries.push({ countyCode: { $in: codes } });
     }
     if (municipalityCodes) {
-      const codes = municipalityCodes.split(",").map((c) => c.trim());
+      const codes = municipalityCodes.split(',').map((c) => c.trim());
       locationQueries.push({ municipalityCode: { $in: codes } });
     }
     if (areaCodes) {
-      const codes = areaCodes.split(",").map((c) => c.trim());
+      const codes = areaCodes.split(',').map((c) => c.trim());
       locationQueries.push({ areaCode: { $in: codes } });
     }
 
@@ -71,7 +71,7 @@ exports.getAllServices = async (req, res) => {
     // Construct sort object
     let sortOption = { createdAt: -1 };
     if (sort) {
-      if (sort.startsWith("-")) {
+      if (sort.startsWith('-')) {
         sortOption = { [sort.substring(1)]: -1 };
       } else {
         sortOption = { [sort]: 1 };
@@ -79,7 +79,7 @@ exports.getAllServices = async (req, res) => {
     }
 
     const services = await Service.find(query)
-      .populate("userId", "name avatarUrl verified role orgNumber companyName")
+      .populate('userId', 'name avatarUrl verified role orgNumber companyName')
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
       .sort(sortOption);
@@ -97,7 +97,7 @@ exports.getAllServices = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -108,20 +108,17 @@ exports.getServiceById = async (req, res) => {
     const service = await Service.findByIdAndUpdate(
       req.params.id,
       { $inc: { views: 1 } },
-      { new: true },
-    ).populate(
-      "userId",
-      "name avatarUrl averageRating verified role orgNumber companyName",
-    );
+      { new: true }
+    ).populate('userId', 'name avatarUrl averageRating verified role orgNumber companyName');
 
-    if (!service) return res.status(404).json({ error: "Service not found" });
+    if (!service) return res.status(404).json({ error: 'Service not found' });
 
     // Fetch applicant count if maxApplicants is set
     let applicantCount = 0;
     if (service.maxApplicants > 0) {
       applicantCount = await JobRequest.countDocuments({
         serviceId: service._id,
-        status: { $in: ["pending", "accepted"] },
+        status: { $in: ['pending', 'accepted'] },
       });
     }
 
@@ -133,7 +130,7 @@ exports.getServiceById = async (req, res) => {
     res.json(serviceData);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -144,16 +141,16 @@ exports.getServiceDetails = async (req, res) => {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id))
-      return res.status(400).json({ error: "Invalid service ID format" });
+      return res.status(400).json({ error: 'Invalid service ID format' });
 
     const service = await Service.findById(id)
-      .populate("userId", "name email avatarUrl role subscription verified")
-      .populate("categories", "name description");
+      .populate('userId', 'name email avatarUrl role subscription verified')
+      .populate('categories', 'name description');
 
-    if (!service) return res.status(404).json({ error: "Service not found" });
+    if (!service) return res.status(404).json({ error: 'Service not found' });
 
     // Stats
-    const Order = require("../models/Order");
+    const Order = require('../models/Order');
     const orderStats = await Order.aggregate([
       { $match: { serviceId: new mongoose.Types.ObjectId(id) } },
       {
@@ -161,7 +158,7 @@ exports.getServiceDetails = async (req, res) => {
           _id: null,
           totalOrders: { $sum: 1 },
           completedOrders: {
-            $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+            $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] },
           },
         },
       },
@@ -180,7 +177,7 @@ exports.getServiceDetails = async (req, res) => {
     if (service.maxApplicants > 0) {
       applicantCount = await JobRequest.countDocuments({
         serviceId: service._id,
-        status: { $in: ["pending", "accepted"] },
+        status: { $in: ['pending', 'accepted'] },
       });
     }
 
@@ -197,7 +194,7 @@ exports.getServiceDetails = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -206,7 +203,7 @@ async function findSimilarServices(service) {
   try {
     const query = {
       _id: { $ne: service._id },
-      status: "open",
+      status: 'open',
     };
 
     if (service.categories?.length > 0) {
@@ -221,8 +218,8 @@ async function findSimilarServices(service) {
 
     let similar = await Service.find(query)
       .limit(6)
-      .populate("userId", "name avatarUrl verified role orgNumber companyName")
-      .populate("categories", "name")
+      .populate('userId', 'name avatarUrl verified role orgNumber companyName')
+      .populate('categories', 'name')
       .sort({ createdAt: -1 });
 
     if (service.location?.coordinates?.length === 2) {
@@ -231,7 +228,7 @@ async function findSimilarServices(service) {
         location: {
           $nearSphere: {
             $geometry: {
-              type: "Point",
+              type: 'Point',
               coordinates: service.location.coordinates,
             },
             $maxDistance: 50000,
@@ -239,18 +236,15 @@ async function findSimilarServices(service) {
         },
       })
         .limit(6)
-        .populate(
-          "userId",
-          "name avatarUrl verified role orgNumber companyName",
-        )
-        .populate("categories", "name");
+        .populate('userId', 'name avatarUrl verified role orgNumber companyName')
+        .populate('categories', 'name');
 
       if (nearby.length > 0) similar = nearby;
     }
 
     return similar;
   } catch (err) {
-    console.error("Similar services error:", err);
+    console.error('Similar services error:', err);
     return [];
   }
 }
@@ -271,27 +265,25 @@ exports.createService = async (req, res) => {
     } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(userId))
-      return res.status(400).json({ error: "Invalid user ID format" });
+      return res.status(400).json({ error: 'Invalid user ID format' });
 
-    const User = require("../models/User");
+    const User = require('../models/User');
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
     // Normalize address
     if (serviceData.location?.address && !serviceData.location.city) {
-      const [addr, city] = serviceData.location.address
-        .split(",")
-        .map((s) => s.trim());
-      serviceData.location.address = addr || "";
-      serviceData.location.city = city || "";
+      const [addr, city] = serviceData.location.address.split(',').map((s) => s.trim());
+      serviceData.location.address = addr || '';
+      serviceData.location.city = city || '';
     }
 
     // defaults
-    serviceData.status = serviceData.status || "open";
-    serviceData.equipment = serviceData.equipment || "utstyrfri";
+    serviceData.status = serviceData.status || 'open';
+    serviceData.equipment = serviceData.equipment || 'utstyrfri';
 
     // Restriction for urgent (haste) - only for paid subscribers
-    if (serviceData.urgent && user.subscription === "Standard") {
+    if (serviceData.urgent && user.subscription === 'Standard') {
       serviceData.urgent = false;
     }
 
@@ -313,8 +305,7 @@ exports.createService = async (req, res) => {
     let parsedChecklist = [];
     if (checklist) {
       try {
-        parsedChecklist =
-          typeof checklist === "string" ? JSON.parse(checklist) : checklist;
+        parsedChecklist = typeof checklist === 'string' ? JSON.parse(checklist) : checklist;
         // Format checklist items with default values
         parsedChecklist = parsedChecklist.map((item) => ({
           id: item.id,
@@ -324,7 +315,7 @@ exports.createService = async (req, res) => {
           checkedAt: null,
         }));
       } catch (err) {
-        console.error("Failed to parse checklist:", err);
+        console.error('Failed to parse checklist:', err);
       }
     }
 
@@ -351,27 +342,25 @@ exports.updateService = async (req, res) => {
     const id = req.params.id;
 
     if (!mongoose.Types.ObjectId.isValid(id))
-      return res.status(400).json({ error: "Invalid service ID format" });
+      return res.status(400).json({ error: 'Invalid service ID format' });
 
     const service = await Service.findById(id);
-    if (!service) return res.status(404).json({ error: "Service not found" });
+    if (!service) return res.status(404).json({ error: 'Service not found' });
 
     if (service.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: "Unauthorized" });
+      return res.status(403).json({ error: 'Unauthorized' });
     }
 
     // Split "address, city"
     if (req.body.location?.address && !req.body.location.city) {
-      const [addr, city] = req.body.location.address
-        .split(",")
-        .map((s) => s.trim());
-      req.body.location.address = addr || "";
-      req.body.location.city = city || "";
+      const [addr, city] = req.body.location.address.split(',').map((s) => s.trim());
+      req.body.location.address = addr || '';
+      req.body.location.city = city || '';
     }
 
     // ⭐ HANDLE IMAGE DELETION
     if (req.body.imagesToDelete) {
-      const cloudinary = require("../config/cloudinary");
+      const cloudinary = require('../config/cloudinary');
       const toDelete = Array.isArray(req.body.imagesToDelete)
         ? req.body.imagesToDelete
         : [req.body.imagesToDelete];
@@ -383,14 +372,12 @@ exports.updateService = async (req, res) => {
           try {
             await cloudinary.uploader.destroy(meta.blobName);
           } catch (err) {
-            console.error("Cloudinary deletion error:", err);
+            console.error('Cloudinary deletion error:', err);
           }
         }
         // Remove from arrays
         service.images = service.images.filter((url) => url !== imageUrl);
-        service.imageMetadata = service.imageMetadata.filter(
-          (m) => m.url !== imageUrl,
-        );
+        service.imageMetadata = service.imageMetadata.filter((m) => m.url !== imageUrl);
       }
     }
 
@@ -409,10 +396,7 @@ exports.updateService = async (req, res) => {
       // Fallback for body images
       service.images = [...service.images, ...req.body.images];
       if (req.body.imageMetadata) {
-        service.imageMetadata = [
-          ...service.imageMetadata,
-          ...req.body.imageMetadata,
-        ];
+        service.imageMetadata = [...service.imageMetadata, ...req.body.imageMetadata];
       }
     }
 
@@ -420,15 +404,13 @@ exports.updateService = async (req, res) => {
     if (req.body.checklist) {
       try {
         let parsedChecklist =
-          typeof req.body.checklist === "string"
+          typeof req.body.checklist === 'string'
             ? JSON.parse(req.body.checklist)
             : req.body.checklist;
 
         // Update checklist, preserving existing checked state if available
         service.checklist = parsedChecklist.map((newItem) => {
-          const existingItem = service.checklist.find(
-            (item) => item.id === newItem.id,
-          );
+          const existingItem = service.checklist.find((item) => item.id === newItem.id);
           return {
             id: newItem.id,
             text: newItem.text,
@@ -438,22 +420,15 @@ exports.updateService = async (req, res) => {
           };
         });
       } catch (err) {
-        console.error("Failed to parse checklist:", err);
+        console.error('Failed to parse checklist:', err);
       }
     }
 
     // Update other fields (including location codes)
-    const {
-      countyCode,
-      municipalityCode,
-      areaCode,
-      checklist,
-      ...otherFields
-    } = req.body;
+    const { countyCode, municipalityCode, areaCode, checklist, ...otherFields } = req.body;
     Object.assign(service, otherFields);
     if (countyCode !== undefined) service.countyCode = countyCode;
-    if (municipalityCode !== undefined)
-      service.municipalityCode = municipalityCode;
+    if (municipalityCode !== undefined) service.municipalityCode = municipalityCode;
     if (areaCode !== undefined) service.areaCode = areaCode;
 
     await service.save();
@@ -461,9 +436,8 @@ exports.updateService = async (req, res) => {
     res.json(service);
   } catch (err) {
     console.error(err);
-    if (err.name === "ValidationError")
-      return res.status(400).json({ error: err.message });
-    res.status(500).json({ error: "Server error" });
+    if (err.name === 'ValidationError') return res.status(400).json({ error: err.message });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -474,24 +448,24 @@ exports.deleteService = async (req, res) => {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id))
-      return res.status(400).json({ error: "Invalid service ID format" });
+      return res.status(400).json({ error: 'Invalid service ID format' });
 
     const service = await Service.findById(id);
-    if (!service) return res.status(404).json({ error: "Service not found" });
+    if (!service) return res.status(404).json({ error: 'Service not found' });
 
     if (service.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: "Unauthorized" });
+      return res.status(403).json({ error: 'Unauthorized' });
     }
 
     // ⭐ DELETE ALL IMAGES FROM CLOUDINARY
     if (service.imageMetadata && service.imageMetadata.length > 0) {
-      const cloudinary = require("../config/cloudinary");
+      const cloudinary = require('../config/cloudinary');
       for (const meta of service.imageMetadata) {
         if (meta.blobName) {
           try {
             await cloudinary.uploader.destroy(meta.blobName);
           } catch (err) {
-            console.error("Cloudinary bulk deletion error:", err);
+            console.error('Cloudinary bulk deletion error:', err);
           }
         }
       }
@@ -499,10 +473,10 @@ exports.deleteService = async (req, res) => {
 
     await service.deleteOne();
 
-    res.json({ message: "Service deleted" });
+    res.json({ message: 'Service deleted' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -517,23 +491,23 @@ exports.updateLocation = async (req, res) => {
       id,
       {
         location: {
-          type: "Point",
+          type: 'Point',
           coordinates: [longitude, latitude],
           address,
           city,
         },
       },
-      { new: true },
+      { new: true }
     );
 
-    if (!service) return res.status(404).json({ error: "Service not found" });
+    if (!service) return res.status(404).json({ error: 'Service not found' });
 
     // Fetch applicant count if maxApplicants is set
     let applicantCount = 0;
     if (service.maxApplicants > 0) {
       applicantCount = await JobRequest.countDocuments({
         serviceId: service._id,
-        status: { $in: ["pending", "accepted"] },
+        status: { $in: ['pending', 'accepted'] },
       });
     }
 
@@ -545,7 +519,7 @@ exports.updateLocation = async (req, res) => {
     res.json(serviceData);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -554,13 +528,13 @@ exports.getNearbyServices = async (req, res) => {
     const { lat, lng, radius } = req.query;
 
     if (!lat || !lng || !radius)
-      return res.status(400).json({ error: "Missing lat, lng or radius" });
+      return res.status(400).json({ error: 'Missing lat, lng or radius' });
 
     const services = await Service.find({
       location: {
         $nearSphere: {
           $geometry: {
-            type: "Point",
+            type: 'Point',
             coordinates: [parseFloat(lng), parseFloat(lat)],
           },
           $maxDistance: parseInt(radius),
@@ -571,7 +545,7 @@ exports.getNearbyServices = async (req, res) => {
     res.json(services);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -580,7 +554,7 @@ exports.getServicesInBox = async (req, res) => {
     const { neLat, neLng, swLat, swLng } = req.query;
 
     const polygon = {
-      type: "Polygon",
+      type: 'Polygon',
       coordinates: [
         [
           [parseFloat(swLng), parseFloat(swLat)],
@@ -599,7 +573,7 @@ exports.getServicesInBox = async (req, res) => {
     res.json(services);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -611,10 +585,10 @@ exports.addTimeEntry = async (req, res) => {
     const { userId, hours, date, note } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(userId))
-      return res.status(400).json({ error: "Invalid user ID" });
+      return res.status(400).json({ error: 'Invalid user ID' });
 
     const service = await Service.findById(id);
-    if (!service) return res.status(404).json({ error: "Service not found" });
+    if (!service) return res.status(404).json({ error: 'Service not found' });
 
     service.timeEntries.push({ userId, hours, date, note });
     await service.save();
@@ -622,7 +596,7 @@ exports.addTimeEntry = async (req, res) => {
     res.status(201).json(service.timeEntries.at(-1));
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -631,12 +605,12 @@ exports.getTimeEntries = async (req, res) => {
     const { id } = req.params;
 
     const service = await Service.findById(id);
-    if (!service) return res.status(404).json({ error: "Service not found" });
+    if (!service) return res.status(404).json({ error: 'Service not found' });
 
     res.json(service.timeEntries);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -649,18 +623,18 @@ exports.updateChecklistItem = async (req, res) => {
     const userId = req.userId;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: "Invalid service ID" });
+      return res.status(400).json({ error: 'Invalid service ID' });
     }
 
     const service = await Service.findById(id);
     if (!service) {
-      return res.status(404).json({ error: "Service not found" });
+      return res.status(404).json({ error: 'Service not found' });
     }
 
     // Find the checklist item
     const checklistItem = service.checklist.find((item) => item.id === itemId);
     if (!checklistItem) {
-      return res.status(404).json({ error: "Checklist item not found" });
+      return res.status(404).json({ error: 'Checklist item not found' });
     }
 
     // Update the item
@@ -673,7 +647,7 @@ exports.updateChecklistItem = async (req, res) => {
     res.json(service.checklist);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -682,16 +656,13 @@ exports.updateChecklistItem = async (req, res) => {
 exports.getMyPostedServices = async (req, res) => {
   try {
     const services = await Service.find({ userId: req.userId })
-      .populate("categories")
-      .populate(
-        "userId",
-        "name email avatarUrl verified role orgNumber companyName",
-      )
+      .populate('categories')
+      .populate('userId', 'name email avatarUrl verified role orgNumber companyName')
       .sort({ _id: -1 });
 
     res.json(services);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: 'Server error' });
   }
 };

@@ -1,9 +1,9 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const JobbloShopController = require("../controllers/JobbloShopController");
-const { authenticate } = require("../middleware/auth");
+const JobbloShopController = require('../controllers/JobbloShopController');
+const { authenticate } = require('../middleware/auth');
 
-router.get("/all", JobbloShopController.getjobbloShop);
-router.post("/buy", authenticate, JobbloShopController.buyItem);
+router.get('/all', JobbloShopController.getjobbloShop);
+router.post('/buy', authenticate, JobbloShopController.buyItem);
 
 module.exports = router;

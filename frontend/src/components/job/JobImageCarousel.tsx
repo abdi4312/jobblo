@@ -1,5 +1,5 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import React, { useState } from "react";
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface JobImageCarouselProps {
   images?: string[];
@@ -13,7 +13,7 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
   const jobImages =
     images && images.length > 0
       ? images
-      : ["https://api.dicebear.com/7.x/avataaars/svg?seed=default"];
+      : ['https://api.dicebear.com/7.x/avataaars/svg?seed=default'];
 
   const handlePrevious = () =>
     setCurrentIndex((prev) => (prev === 0 ? jobImages.length - 1 : prev - 1));
@@ -95,8 +95,8 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
               aria-label={`Gå til bilde ${idx + 1}`}
               className={`rounded-full transition-all duration-300 cursor-pointer ${
                 idx === currentIndex
-                  ? "w-5 h-1.5 sm:w-6 sm:h-2 bg-custom-green"
-                  : "w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/60 hover:bg-white"
+                  ? 'w-5 h-1.5 sm:w-6 sm:h-2 bg-custom-green'
+                  : 'w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/60 hover:bg-white'
               }`}
             />
           ))}

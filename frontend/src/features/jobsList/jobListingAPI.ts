@@ -1,6 +1,6 @@
-import mainLink from "../../api/mainURLs";
-import type { Jobs } from "./types";
-import type { Tab } from "../../types/tabs";
+import mainLink from '../../api/mainURLs';
+import type { Jobs } from './types';
+import type { Tab } from '../../types/tabs';
 
 interface FetchJobsParams {
   page?: number;
@@ -37,26 +37,26 @@ export const fetchJobs = async ({
   countyCodes = [],
   municipalityCodes = [],
   areaCodes = [],
-  search = "",
-  sort = "",
-  userId = "",
+  search = '',
+  sort = '',
+  userId = '',
   urgent = false,
   minPrice,
   maxPrice,
-  tab = "Discover",
+  tab = 'Discover',
 }: FetchJobsParams): Promise<JobsResponse> => {
   // Use the main services endpoint
-  const url = "/api/services";
+  const url = '/api/services';
 
   const res = await mainLink.get(url, {
     params: {
       page,
       limit,
-      category: categories.length ? categories.join(",") : undefined,
-      location: locations.length ? locations.join(",") : undefined,
-      countyCodes: countyCodes.length ? countyCodes.join(",") : undefined,
-      municipalityCodes: municipalityCodes.length ? municipalityCodes.join(",") : undefined,
-      areaCodes: areaCodes.length ? areaCodes.join(",") : undefined,
+      category: categories.length ? categories.join(',') : undefined,
+      location: locations.length ? locations.join(',') : undefined,
+      countyCodes: countyCodes.length ? countyCodes.join(',') : undefined,
+      municipalityCodes: municipalityCodes.length ? municipalityCodes.join(',') : undefined,
+      areaCodes: areaCodes.length ? areaCodes.join(',') : undefined,
       search: search || undefined,
       sort: sort || undefined,
       userId: userId || undefined,

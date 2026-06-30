@@ -1,8 +1,8 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const userController = require("../controllers/userController");
-const { authenticate, requireAdmin } = require("../middleware/auth");
-const upload = require("../middleware/upload");
+const userController = require('../controllers/userController');
+const { authenticate, requireAdmin } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 
 /**
  * @swagger
@@ -97,7 +97,7 @@ const upload = require("../middleware/upload");
  *       400:
  *         description: Ugyldig forespørsel eller e-post/telefon finnes allerede
  */
-router.post("/", authenticate, requireAdmin, userController.createUser);
+router.post('/', authenticate, requireAdmin, userController.createUser);
 
 /**
  * @swagger
@@ -122,66 +122,45 @@ router.post("/", authenticate, requireAdmin, userController.createUser);
  *       404:
  *         description: Brukeren ble ikke funnet
  */
-router.get("/search", authenticate, userController.searchUsers);
-router.get("/search-all", authenticate, userController.searchAll);
-router.get("/top", authenticate, userController.getTopUsers);
-router.get("/blocked", authenticate, userController.getBlockedUsers);
-router.get("/:id", authenticate, userController.getUserById);
+router.get('/search', authenticate, userController.searchUsers);
+router.get('/search-all', authenticate, userController.searchAll);
+router.get('/top', authenticate, userController.getTopUsers);
+router.get('/blocked', authenticate, userController.getBlockedUsers);
+router.get('/:id', authenticate, userController.getUserById);
 router.put(
-  "/:id",
+  '/:id',
   authenticate,
   upload.fields([
-    { name: "avatar", maxCount: 1 },
-    { name: "banner", maxCount: 1 },
+    { name: 'avatar', maxCount: 1 },
+    { name: 'banner', maxCount: 1 },
   ]),
-  userController.updateUser,
+  userController.updateUser
 );
-router.delete("/:id", authenticate, userController.deleteUser);
-router.get("/:id/services", authenticate, userController.getUserServices);
-router.post(
-  "/portfolio",
-  authenticate,
-  upload.single("image"),
-  userController.addPortfolioItem,
-);
-router.delete(
-  "/portfolio/:itemId",
-  authenticate,
-  userController.deletePortfolioItem,
-);
+router.delete('/:id', authenticate, userController.deleteUser);
+router.get('/:id/services', authenticate, userController.getUserServices);
+router.post('/portfolio', authenticate, upload.single('image'), userController.addPortfolioItem);
+router.delete('/portfolio/:itemId', authenticate, userController.deletePortfolioItem);
 
 router.post(
-  "/previous-projects",
+  '/previous-projects',
   authenticate,
-  upload.single("image"),
-  userController.addPreviousProject,
+  upload.single('image'),
+  userController.addPreviousProject
 );
-router.delete(
-  "/previous-projects/:projectId",
-  authenticate,
-  userController.deletePreviousProject,
-);
+router.delete('/previous-projects/:projectId', authenticate, userController.deletePreviousProject);
 
 router.post(
-  "/certifications",
+  '/certifications',
   authenticate,
-  upload.single("file"),
-  userController.addCertification,
+  upload.single('file'),
+  userController.addCertification
 );
-router.delete(
-  "/certifications/:certId",
-  authenticate,
-  userController.deleteCertification,
-);
+router.delete('/certifications/:certId', authenticate, userController.deleteCertification);
 
-router.post("/experience", authenticate, userController.addExperience);
-router.delete(
-  "/experience/:expId",
-  authenticate,
-  userController.deleteExperience,
-);
+router.post('/experience', authenticate, userController.addExperience);
+router.delete('/experience/:expId', authenticate, userController.deleteExperience);
 
-router.get("/", authenticate, requireAdmin, userController.getAllUsers);
-router.post("/:id/block", authenticate, userController.blockUser);
+router.get('/', authenticate, requireAdmin, userController.getAllUsers);
+router.post('/:id/block', authenticate, userController.blockUser);
 
 module.exports = router;

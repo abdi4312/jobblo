@@ -1,7 +1,7 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const applicantController = require("../controllers/applicantController");
-const { authenticate } = require("../middleware/auth");
+const applicantController = require('../controllers/applicantController');
+const { authenticate } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -32,7 +32,7 @@ const { authenticate } = require("../middleware/auth");
  *       404:
  *         description: Oppdrag ikke funnet
  */
-router.get("/my/overview", authenticate, applicantController.getMyServicesWithApplicants);
-router.get("/:serviceId", authenticate, applicantController.getApplicantsForService);
+router.get('/my/overview', authenticate, applicantController.getMyServicesWithApplicants);
+router.get('/:serviceId', authenticate, applicantController.getApplicantsForService);
 
 module.exports = router;

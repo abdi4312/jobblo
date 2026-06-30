@@ -1,12 +1,12 @@
-import React, { useState } from "react";
-import { Button } from "../Ui/button/Button";
-import { Bookmark, MessageCircle, AlertCircle } from "lucide-react";
-import { TailSpin } from "react-loader-spinner";
-import { useUserStore } from "../../stores/userStore";
-import AddToListModal from "../Explore/jobs/AddToListModal";
-import { useNavigate } from "react-router-dom";
-import { useFavoriteLists } from "../../features/favoriteLists/hooks";
-import type { Jobs } from "../../types/Jobs";
+import React, { useState } from 'react';
+import { Button } from '../Ui/button/Button';
+import { Bookmark, MessageCircle, AlertCircle } from 'lucide-react';
+import { TailSpin } from 'react-loader-spinner';
+import { useUserStore } from '../../stores/userStore';
+import AddToListModal from '../Explore/jobs/AddToListModal';
+import { useNavigate } from 'react-router-dom';
+import { useFavoriteLists } from '../../features/favoriteLists/hooks';
+import type { Jobs } from '../../types/Jobs';
 
 interface JobButtonProps {
   handleSendMessage: () => void;
@@ -36,15 +36,13 @@ const JobButton: React.FC<JobButtonProps> = ({
 
   // Check if job is in ANY of the user's lists
   const isInAnyList = lists.some((list) =>
-    list.services?.some((s) =>
-      typeof s === "string" ? s === id : s._id === id,
-    ),
+    list.services?.some((s) => (typeof s === 'string' ? s === id : s._id === id))
   );
 
   const handleHeartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isAuth) {
-      navigate("/login");
+      navigate('/login');
       return;
     }
     setIsModalOpen(true);
@@ -57,31 +55,26 @@ const JobButton: React.FC<JobButtonProps> = ({
       {isLimitReached && !isOwnJob && !hasRequested && (
         <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-center gap-2 text-red-600 text-xs font-bold">
           <AlertCircle size={14} />
-          <span>
-            Søknadsfristen er nådd. Dette oppdraget tar ikke imot flere
-            søknader.
-          </span>
+          <span>Søknadsfristen er nådd. Dette oppdraget tar ikke imot flere søknader.</span>
         </div>
       )}
       <div className="flex gap-3">
         {/* Søk / Apply Button */}
         <Button
           onClick={handleSendMessage}
-          disabled={
-            (!isOwnJob && (isMsgLoading || hasRequested || isLimitReached || isTimerActive))
-          }
+          disabled={!isOwnJob && (isMsgLoading || hasRequested || isLimitReached || isTimerActive)}
           label={
             isMsgLoading
-              ? ""
+              ? ''
               : isOwnJob
-                ? "Se søkere"
+                ? 'Se søkere'
                 : hasRequested
-                  ? "Forespørsel sendt"
+                  ? 'Forespørsel sendt'
                   : isLimitReached
-                    ? "Fulltegnet"
+                    ? 'Fulltegnet'
                     : isTimerActive
-                      ? "Cooldown"
-                      : "Order Now"
+                      ? 'Cooldown'
+                      : 'Order Now'
           }
           icon={
             isMsgLoading ? (
@@ -93,8 +86,8 @@ const JobButton: React.FC<JobButtonProps> = ({
           className={`flex-1 h-12 text-[14px]! rounded-xl font-semibold! transition-all! whitespace-nowrap
                         ${
                           !isOwnJob && (hasRequested || isLimitReached || isTimerActive)
-                            ? "bg-gray-100! text-gray-400! cursor-not-allowed!"
-                            : "bg-custom-green! text-white! hover:bg-[#266b3c]!"
+                            ? 'bg-gray-100! text-gray-400! cursor-not-allowed!'
+                            : 'bg-custom-green! text-white! hover:bg-[#266b3c]!'
                         } 
                     `}
         />
@@ -114,11 +107,7 @@ const JobButton: React.FC<JobButtonProps> = ({
       </div>
 
       {job && (
-        <AddToListModal
-          job={job}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-        />
+        <AddToListModal job={job} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       )}
     </div>
   );

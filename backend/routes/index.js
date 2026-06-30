@@ -18,7 +18,7 @@ const router = express.Router();
  *                   type: string
  *                   example: Velkommen til Jobblo!
  */
-router.get('/', function(req, res, next) {
+router.get('/', function (req, res, next) {
   res.json({ message: 'Velkommen til Jobblo!' });
 });
 

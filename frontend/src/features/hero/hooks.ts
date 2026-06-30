@@ -1,11 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { heroApi } from "./api";
-import type { Hero } from "./types";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { heroApi } from './api';
+import type { Hero } from './types';
 
 export const heroKeys = {
-  all: ["heroes"] as const,
-  public: ["heroes", "public"] as const,
-  admin: ["heroes", "admin"] as const,
+  all: ['heroes'] as const,
+  public: ['heroes', 'public'] as const,
+  admin: ['heroes', 'admin'] as const,
 };
 
 // Public Hook (for banners.tsx)

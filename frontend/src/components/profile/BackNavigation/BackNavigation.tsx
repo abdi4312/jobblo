@@ -6,7 +6,7 @@ interface BackNavigationProps {
   text?: string;
 }
 
-export function BackNavigation({ onBack, text = "Tilbake til Min Side" }: BackNavigationProps) {
+export function BackNavigation({ onBack, text = 'Tilbake til Min Side' }: BackNavigationProps) {
   const handleBack = () => {
     if (onBack) {
       onBack();

@@ -1,17 +1,16 @@
-import { useOutletContext } from "react-router-dom";
-import type { SettingsContextType } from "../../../pages/SettingsPage";
-import toast from "react-hot-toast";
+import { useOutletContext } from 'react-router-dom';
+import type { SettingsContextType } from '../../../pages/SettingsPage';
+import toast from 'react-hot-toast';
 
 export const DeleteAccountView = () => {
   // const { form, handleChange, handleUpdate, updateUser } = useOutletContext<SettingsContextType>();
-  const { form, handleChange, updateUser } =
-    useOutletContext<SettingsContextType>();
+  const { form, handleChange, updateUser } = useOutletContext<SettingsContextType>();
 
   // Logikk: Hvis tilbakemeldingen er tom, forblir knappen deaktivert
   const isDisabled = !form.feedback?.trim() || updateUser?.isPending;
 
   const handleUpdate = () => {
-    toast.success("Kommer snart");
+    toast.success('Kommer snart');
   };
 
   return (
@@ -19,13 +18,12 @@ export const DeleteAccountView = () => {
       {/* Øvre tekst */}
       <div className="flex flex-col gap-4 text-gray-700">
         <p className="text-[15px] leading-relaxed">
-          Det er trist å se deg dra! Vi ønsker alltid å forbedre oss, og vil
-          sette pris på alle nyttige tilbakemeldinger i skjemaet nedenfor.
+          Det er trist å se deg dra! Vi ønsker alltid å forbedre oss, og vil sette pris på alle
+          nyttige tilbakemeldinger i skjemaet nedenfor.
         </p>
         <p className="text-[15px] leading-relaxed">
-          Sletting av profilen din er irreversibel, og alt tilknyttet innhold
-          vil bli slettet fra Jobblo. Du må opprette en ny profil hvis du vil
-          bli med senere.
+          Sletting av profilen din er irreversibel, og alt tilknyttet innhold vil bli slettet fra
+          Jobblo. Du må opprette en ny profil hvis du vil bli med senere.
         </p>
       </div>
 
@@ -36,8 +34,8 @@ export const DeleteAccountView = () => {
           rows={5}
           placeholder="Tilbakemelding"
           className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-gray-100 outline-none rounded-2xl px-5 py-4 text-gray-900 font-medium transition-colors resize-none"
-          value={form.feedback || ""}
-          onChange={(event) => handleChange("feedback", event.target.value)}
+          value={form.feedback || ''}
+          onChange={(event) => handleChange('feedback', event.target.value)}
         />
       </div>
 
@@ -49,11 +47,11 @@ export const DeleteAccountView = () => {
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
           ${
             isDisabled
-              ? "bg-custom-green cursor-not-allowed opacity-80"
-              : "bg-custom-green hover:bg-custom-green active:scale-[0.98]"
+              ? 'bg-custom-green cursor-not-allowed opacity-80'
+              : 'bg-custom-green hover:bg-custom-green active:scale-[0.98]'
           }`}
       >
-        {updateUser?.isPending ? "Behandler..." : "Slett profil"}
+        {updateUser?.isPending ? 'Behandler...' : 'Slett profil'}
       </button>
     </section>
   );

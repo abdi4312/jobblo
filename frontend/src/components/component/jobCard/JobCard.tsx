@@ -1,11 +1,11 @@
-import { useNavigate } from "react-router-dom";
-import type { Jobs } from "../../../types/Jobs.ts";
-import { useUserStore } from "../../../stores/userStore.ts";
-import { Bookmark, Zap, Pencil, Trash2, Truck } from "lucide-react";
-import React, { useState } from "react";
-import AddToListModal from "../../Explore/jobs/AddToListModal";
-import { useFavoriteLists } from "../../../features/favoriteLists/hooks";
-import { useServiceActions } from "../../../features/services/hooks";
+import { useNavigate } from 'react-router-dom';
+import type { Jobs } from '../../../types/Jobs.ts';
+import { useUserStore } from '../../../stores/userStore.ts';
+import { Bookmark, Zap, Pencil, Trash2, Truck } from 'lucide-react';
+import React, { useState } from 'react';
+import AddToListModal from '../../Explore/jobs/AddToListModal';
+import { useFavoriteLists } from '../../../features/favoriteLists/hooks';
+import { useServiceActions } from '../../../features/services/hooks';
 
 interface JobCardProps {
   job: Jobs;
@@ -13,11 +13,11 @@ interface JobCardProps {
 }
 
 const categoryColorMap: Record<string, string> = {
-  Rørlegger: "bg-custom-green",
-  Renhold: "bg-custom-blue",
-  Maling: "bg-[#238CEB]",
-  Hagearbeid: "bg-custom-green",
-  Flytting: "bg-custom-blue",
+  Rørlegger: 'bg-custom-green',
+  Renhold: 'bg-custom-blue',
+  Maling: 'bg-[#238CEB]',
+  Hagearbeid: 'bg-custom-green',
+  Flytting: 'bg-custom-blue',
 };
 
 export const JobCard = ({ job, isOwner }: JobCardProps) => {
@@ -33,22 +33,19 @@ export const JobCard = ({ job, isOwner }: JobCardProps) => {
   };
 
   const isOwnJob =
-    isOwner ||
-    (user?._id &&
-      (job.userId === user._id || (job.userId as any)?._id === user._id));
+    isOwner || (user?._id && (job.userId === user._id || (job.userId as any)?._id === user._id));
 
   // Sjekk om jobben er i NOEN av brukerens lister
-  const isInAnyList = lists.some(
-    (list: { services?: Array<{ _id?: string } | string> }) =>
-      list.services?.some((s: { _id?: string } | string) =>
-        typeof s === "string" ? s === job._id : s._id === job._id,
-      ),
+  const isInAnyList = lists.some((list: { services?: Array<{ _id?: string } | string> }) =>
+    list.services?.some((s: { _id?: string } | string) =>
+      typeof s === 'string' ? s === job._id : s._id === job._id
+    )
   );
 
   const handleFavClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isAuth) {
-      navigate("/login");
+      navigate('/login');
       return;
     }
     setIsModalOpen(true);
@@ -61,21 +58,16 @@ export const JobCard = ({ job, isOwner }: JobCardProps) => {
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm("Er du sikker på at du vil slette denne annonsen?")) {
+    if (window.confirm('Er du sikker på at du vil slette denne annonsen?')) {
       deleteMutation.mutate(job._id);
     }
   };
 
-  const catName = Array.isArray(job.categories)
-    ? job.categories[0]
-    : job.categories;
-  const badgeColor = categoryColorMap[catName] || "bg-custom-green";
+  const catName = Array.isArray(job.categories) ? job.categories[0] : job.categories;
+  const badgeColor = categoryColorMap[catName] || 'bg-custom-green';
 
   return (
-    <div
-      className="flex flex-col gap-1 w-full cursor-pointer group"
-      onClick={handleCardClick}
-    >
+    <div className="flex flex-col gap-1 w-full cursor-pointer group" onClick={handleCardClick}>
       {/* Bildeseksjon */}
       <div className="relative aspect-2/2 w-full bg-[#f6f6f6] rounded-xl overflow-hidden">
         {job.images && job.images[0] ? (
@@ -145,11 +137,7 @@ export const JobCard = ({ job, isOwner }: JobCardProps) => {
             ) : (
               <Bookmark
                 size={16}
-                className={
-                  isInAnyList
-                    ? "fill-custom-black"
-                    : "text-custom-black"
-                }
+                className={isInAnyList ? 'fill-custom-black' : 'text-custom-black'}
               />
             )}
           </button>
@@ -157,11 +145,7 @@ export const JobCard = ({ job, isOwner }: JobCardProps) => {
       </div>
 
       {/* Add To List Modal */}
-      <AddToListModal
-        job={job}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
+      <AddToListModal job={job} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
 
       {/* Info Section */}
       <div className="flex flex-col gap-0.5 mt-1 px-0.5">
@@ -182,11 +166,11 @@ export const JobCard = ({ job, isOwner }: JobCardProps) => {
 
         {/* Lokasjon */}
         <div className="text-[#6A6A6A] text-[13px] font-medium">
-          {job.location?.city || "Norge"}
+          {job.location?.city || 'Norge'}
         </div>
 
         {/* Status Badge (som "Fix finished") */}
-        {job.status === "closed" ? (
+        {job.status === 'closed' ? (
           <div className="mt-2 flex items-center gap-1.5 bg-[#FFF9E5] text-[#856404] px-2.5 py-1 rounded-md text-[11px] font-bold w-fit">
             <Truck size={14} /> Solgt / Fullført
           </div>

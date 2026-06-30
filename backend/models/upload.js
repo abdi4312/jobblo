@@ -1,43 +1,41 @@
 // models/Upload.js
 const mongoose = require('mongoose');
 
-const uploadSchema = new mongoose.Schema({
+const uploadSchema = new mongoose.Schema(
+  {
     userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-        index: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
     },
 
     // URL til Azure Blob Storage
     url: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
 
     // Hva er filen brukt til?
     purpose: {
-        type: String,
-        enum: [
-            'profile_image',
-            'job_image',
-            'message_image',
-            'document'
-        ],
-        required: true
+      type: String,
+      enum: ['profile_image', 'job_image', 'message_image', 'document'],
+      required: true,
     },
 
     // Ekstra referanser, avhengig av hva bildet tilhører
-    jobId: {               // hvis bildet brukes i en jobb/service
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Service',
-        default: null
+    jobId: {
+      // hvis bildet brukes i en jobb/service
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Service',
+      default: null,
     },
 
-    messageId: {           // hvis bildet brukes i en melding
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Message',
-        default: null
+    messageId: {
+      // hvis bildet brukes i en melding
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Message',
+      default: null,
     },
 
     // Metadata
@@ -47,10 +45,11 @@ const uploadSchema = new mongoose.Schema({
 
     // Azure blob name (for sletting)
     blobName: {
-        type: String,
-        required: true
-    }
-
-}, { timestamps: true });
+      type: String,
+      required: true,
+    },
+  },
+  { timestamps: true }
+);
 
 module.exports = mongoose.model('Upload', uploadSchema);

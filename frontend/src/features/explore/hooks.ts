@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
-import { getFeaturedFavourites, getDashboardStats } from "../../api/exploreAPI";
+import { useQuery } from '@tanstack/react-query';
+import { getFeaturedFavourites, getDashboardStats } from '../../api/exploreAPI';
 
 export const useFeaturedFavourites = () => {
   return useQuery({
-    queryKey: ["featuredFavourites"],
+    queryKey: ['featuredFavourites'],
     queryFn: getFeaturedFavourites,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -11,7 +11,7 @@ export const useFeaturedFavourites = () => {
 
 export const useDashboardStats = () => {
   return useQuery({
-    queryKey: ["dashboardStats"],
+    queryKey: ['dashboardStats'],
     queryFn: getDashboardStats,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });

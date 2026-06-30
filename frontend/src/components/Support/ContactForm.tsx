@@ -1,18 +1,14 @@
-import { Send } from "lucide-react";
+import { Send } from 'lucide-react';
 
 function ContactForm() {
   return (
     <>
       <div className="flex-1 bg-[linear-gradient(180deg,#F5F5F5_0%,#FFFFFF_100%)] p-8 rounded-[24px] shadow-sm">
-        <h3 className="text-[24px] font-bold text-custom-black mb-6">
-          Send oss en melding
-        </h3>
+        <h3 className="text-[24px] font-bold text-custom-black mb-6">Send oss en melding</h3>
 
         <form className="space-y-4 p-0!">
           <div>
-            <label className="block text-[14px] font-semibold text-custom-black mb-2">
-              Navn
-            </label>
+            <label className="block text-[14px] font-semibold text-custom-black mb-2">Navn</label>
             <input
               type="text"
               placeholder="Ditt fulle navn"
@@ -21,9 +17,7 @@ function ContactForm() {
           </div>
 
           <div>
-            <label className="block text-[14px] font-semibold text-custom-black mb-2">
-              E-post
-            </label>
+            <label className="block text-[14px] font-semibold text-custom-black mb-2">E-post</label>
             <input
               type="email"
               placeholder="din.epost@eksempel.no"
@@ -32,9 +26,7 @@ function ContactForm() {
           </div>
 
           <div>
-            <label className="block text-[14px] font-semibold text-custom-black mb-2">
-              Emne
-            </label>
+            <label className="block text-[14px] font-semibold text-custom-black mb-2">Emne</label>
             <input
               type="text"
               placeholder="Hva gjelder det?"

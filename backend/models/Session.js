@@ -1,10 +1,10 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const sessionSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     refreshToken: {
@@ -22,7 +22,7 @@ const sessionSchema = new mongoose.Schema(
     },
     location: {
       type: String, // e.g. 'Oslo, Norway'
-      default: "Unknown",
+      default: 'Unknown',
     },
     userAgent: {
       type: String,
@@ -50,7 +50,7 @@ const sessionSchema = new mongoose.Schema(
       index: { expires: 0 }, // TTL index for automatic cleanup
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-module.exports = mongoose.model("Session", sessionSchema);
+module.exports = mongoose.model('Session', sessionSchema);

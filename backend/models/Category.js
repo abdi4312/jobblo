@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
-const categorySchema = new mongoose.Schema({
+const categorySchema = new mongoose.Schema(
+  {
     name: { type: String, required: true, unique: true, trim: true },
     slug: { type: String, unique: true, trim: true },
     description: { type: String },
@@ -18,8 +19,9 @@ const categorySchema = new mongoose.Schema({
 
     metaTitle: String,
     metaDescription: String,
-
-}, { timestamps: true });
+  },
+  { timestamps: true }
+);
 
 // ⚠️ Dette er den viktige linjen du mangler
 module.exports = mongoose.model('Category', categorySchema);

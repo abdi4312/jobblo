@@ -27,7 +27,12 @@
 
 .backText {
   color: var(--color-text);
-  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    'Nunito',
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: 120%;
@@ -39,7 +44,7 @@
   .container {
     margin-bottom: 32px;
   }
-  
+
   .backText {
     font-size: 18px;
   }

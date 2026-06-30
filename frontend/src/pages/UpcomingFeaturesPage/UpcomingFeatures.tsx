@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Rocket,
   Clock,
@@ -8,24 +8,22 @@ import {
   LayoutGrid,
   ShieldCheck,
   Zap,
-} from "lucide-react";
-import { useRoadmapFeatures } from "../../features/roadMap/hooks/useRoadmap";
-import type { RoadmapFeature } from "../../features/roadMap/types/roadmap";
+} from 'lucide-react';
+import { useRoadmapFeatures } from '../../features/roadMap/hooks/useRoadmap';
+import type { RoadmapFeature } from '../../features/roadMap/types/roadmap';
 
 const UpcomingFeatures: React.FC = () => {
   const { data: features = [], isLoading: loading } = useRoadmapFeatures();
-  const [filter, setFilter] = useState<
-    "all" | "planned" | "in-progress" | "completed"
-  >("all");
+  const [filter, setFilter] = useState<'all' | 'planned' | 'in-progress' | 'completed'>('all');
 
   const filteredFeatures =
-    filter === "all" ? features : features.filter((f) => f.status === filter);
+    filter === 'all' ? features : features.filter((f) => f.status === filter);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "completed":
+      case 'completed':
         return <CheckCircle2 className="text-[#4CAF50]" size={20} />;
-      case "in-progress":
+      case 'in-progress':
         return <Clock className="text-[#FF9800] animate-pulse" size={20} />;
       default:
         return <AlertCircle className="text-[#2196F3]" size={20} />;
@@ -34,24 +32,24 @@ const UpcomingFeatures: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed":
-        return "bg-[#4CAF501A] text-[#4CAF50]";
-      case "in-progress":
-        return "bg-[#FF98001A] text-[#FF9800]";
+      case 'completed':
+        return 'bg-[#4CAF501A] text-[#4CAF50]';
+      case 'in-progress':
+        return 'bg-[#FF98001A] text-[#FF9800]';
       default:
-        return "bg-[#2196F31A] text-[#2196F3]";
+        return 'bg-[#2196F31A] text-[#2196F3]';
     }
   };
 
   const getTagIcon = (tag: string) => {
     switch (tag) {
-      case "feature":
+      case 'feature':
         return <Rocket size={12} />;
-      case "bugfix":
+      case 'bugfix':
         return <AlertCircle size={12} />;
-      case "improvement":
+      case 'improvement':
         return <LayoutGrid size={12} />;
-      case "security":
+      case 'security':
         return <ShieldCheck size={12} />;
       default:
         return <Zap size={12} />;
@@ -68,40 +66,38 @@ const UpcomingFeatures: React.FC = () => {
             Platform Roadmap
           </div>
           <h1 className="text-5xl md:text-7xl font-black text-[#0F172A] tracking-tighter leading-none">
-            Our Road{" "}
+            Our Road{' '}
             <span className="text-custom-green relative inline-block">
               Ahead.
               <span className="absolute bottom-2 left-0 w-full h-3 bg-[#2F7E471A] -z-10 rotate-1"></span>
             </span>
           </h1>
           <p className="text-xl text-[#64748B] max-w-2xl mx-auto font-semibold leading-relaxed">
-            Stay updated on the new features, improvements, and security updates
-            we are currently working on.
+            Stay updated on the new features, improvements, and security updates we are currently
+            working on.
           </p>
         </div>
 
         {/* Filters */}
         <div className="flex flex-wrap justify-center gap-4 mb-16">
-          {["all", "planned", "in-progress", "completed"].map((f) => (
+          {['all', 'planned', 'in-progress', 'completed'].map((f) => (
             <button
               key={f}
-              onClick={() =>
-                setFilter(f as "all" | "planned" | "in-progress" | "completed")
-              }
+              onClick={() => setFilter(f as 'all' | 'planned' | 'in-progress' | 'completed')}
               className={`px-8 py-3.5 rounded-[20px] text-[13px] font-black tracking-wide transition-all duration-500 capitalize shadow-sm
                                 ${
                                   filter === f
-                                    ? "bg-custom-green text-white shadow-[#2F7E4740] shadow-2xl translate-y-[-2px]"
-                                    : "bg-white text-[#64748B] hover:text-custom-green border border-[#E2E8F0] hover:border-[#2F7E4740]"
+                                    ? 'bg-custom-green text-white shadow-[#2F7E4740] shadow-2xl translate-y-[-2px]'
+                                    : 'bg-white text-[#64748B] hover:text-custom-green border border-[#E2E8F0] hover:border-[#2F7E4740]'
                                 }`}
             >
-              {f === "all"
-                ? "All Updates"
-                : f === "in-progress"
-                  ? "In Progress"
-                  : f === "planned"
-                    ? "Planned"
-                    : "Completed"}
+              {f === 'all'
+                ? 'All Updates'
+                : f === 'in-progress'
+                  ? 'In Progress'
+                  : f === 'planned'
+                    ? 'Planned'
+                    : 'Completed'}
             </button>
           ))}
         </div>
@@ -125,14 +121,12 @@ const UpcomingFeatures: React.FC = () => {
 
                   <div className="flex justify-between items-center w-full relative z-10">
                     <div
-                      className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${getStatusColor(feature.status).replace("bg-", "bg-opacity-10 bg-")}`}
+                      className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${getStatusColor(feature.status).replace('bg-', 'bg-opacity-10 bg-')}`}
                     >
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${feature.status === "in-progress" ? "animate-pulse" : ""} bg-current`}
+                        className={`w-1.5 h-1.5 rounded-full ${feature.status === 'in-progress' ? 'animate-pulse' : ''} bg-current`}
                       ></span>
-                      {feature.status === "in-progress"
-                        ? "In Progress"
-                        : feature.status}
+                      {feature.status === 'in-progress' ? 'In Progress' : feature.status}
                     </div>
                     <div className="flex items-center gap-1.5 text-[#94A3B8] text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-[#F8FAFC] rounded-lg border border-[#F1F5F9]">
                       {getTagIcon(feature.tag)}
@@ -155,17 +149,13 @@ const UpcomingFeatures: React.FC = () => {
                         <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
                           Progress
                         </p>
-                        <p className="text-xs font-black text-[#0F172A]">
-                          Upcoming update
-                        </p>
+                        <p className="text-xs font-black text-[#0F172A]">Upcoming update</p>
                       </div>
                       <div className="flex items-baseline gap-0.5">
                         <span className="text-2xl font-black text-custom-green tabular-nums">
                           {feature.progress}
                         </span>
-                        <span className="text-xs font-black text-custom-green opacity-60">
-                          %
-                        </span>
+                        <span className="text-xs font-black text-custom-green opacity-60">%</span>
                       </div>
                     </div>
                     <div className="w-full h-3 bg-[#F1F5F9] rounded-full overflow-hidden p-0.5 ring-1 ring-[#F1F5F9]">
@@ -185,9 +175,7 @@ const UpcomingFeatures: React.FC = () => {
                         <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
                           Estimate
                         </p>
-                        <p className="text-[11px] font-bold text-[#0F172A]">
-                          Q2 2024
-                        </p>
+                        <p className="text-[11px] font-bold text-[#0F172A]">Q2 2024</p>
                       </div>
                     </div>
                     <div className="p-2 rounded-full border border-[#F1F5F9] group-hover:border-[#2F7E4720] transition-all duration-500 group-hover:translate-x-1">

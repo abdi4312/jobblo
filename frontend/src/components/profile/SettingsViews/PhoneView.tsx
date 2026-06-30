@@ -1,5 +1,5 @@
-import { useOutletContext } from "react-router-dom";
-import type { SettingsContextType } from "../../../pages/SettingsPage";
+import { useOutletContext } from 'react-router-dom';
+import type { SettingsContextType } from '../../../pages/SettingsPage';
 
 export const PhoneView = () => {
   const { form, handleChange, handleUpdate, updateUser, user } =
@@ -12,14 +12,14 @@ export const PhoneView = () => {
   // Funksjon for å bare tillate tall
   const handlePhoneChange = (value: string) => {
     // 1. Logikk for å bare tillate tall og '+' i begynnelsen
-    const cleaned = value.replace(/[^\d+]/g, ""); // Fjerner alt unntatt siffer og '+'
+    const cleaned = value.replace(/[^\d+]/g, ''); // Fjerner alt unntatt siffer og '+'
 
     // 2. Sørger for at '+' bare kan være i begynnelsen
-    const finalValue = cleaned.startsWith("+")
-      ? "+" + cleaned.replace(/\+/g, "")
-      : cleaned.replace(/\+/g, "");
+    const finalValue = cleaned.startsWith('+')
+      ? '+' + cleaned.replace(/\+/g, '')
+      : cleaned.replace(/\+/g, '');
 
-    handleChange("phone", finalValue);
+    handleChange('phone', finalValue);
   };
 
   return (
@@ -30,7 +30,7 @@ export const PhoneView = () => {
           className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight"
         >
           Telefonnummer
-        </label>{" "}
+        </label>{' '}
         {/* Labelen slutter her */}
         <input
           id="phone"
@@ -50,11 +50,11 @@ export const PhoneView = () => {
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
           ${
             isDisabled
-              ? "bg-custom-green cursor-not-allowed opacity-80"
-              : "bg-custom-green hover:bg-custom-green active:scale-[0.98]"
+              ? 'bg-custom-green cursor-not-allowed opacity-80'
+              : 'bg-custom-green hover:bg-custom-green active:scale-[0.98]'
           }`}
       >
-        {updateUser?.isPending ? "Oppdaterer..." : "Oppdater telefon"}
+        {updateUser?.isPending ? 'Oppdaterer...' : 'Oppdater telefon'}
       </button>
     </section>
   );

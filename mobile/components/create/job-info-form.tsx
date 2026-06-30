@@ -94,9 +94,7 @@ export const JobInfoForm: React.FC<JobInfoFormProps> = ({
               onPress={() => setShowFromPicker(true)}
               className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100"
             >
-              <Text className="text-base text-gray-500">
-                {fromDate.toLocaleDateString()}
-              </Text>
+              <Text className="text-base text-gray-500">{fromDate.toLocaleDateString()}</Text>
             </TouchableOpacity>
             {showFromPicker && (
               <DateTimePicker
@@ -115,9 +113,7 @@ export const JobInfoForm: React.FC<JobInfoFormProps> = ({
               onPress={() => setShowToPicker(true)}
               className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100"
             >
-              <Text className="text-base text-gray-500">
-                {toDate.toLocaleDateString()}
-              </Text>
+              <Text className="text-base text-gray-500">{toDate.toLocaleDateString()}</Text>
             </TouchableOpacity>
             {showToPicker && (
               <DateTimePicker

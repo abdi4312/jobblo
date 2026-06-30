@@ -1,14 +1,14 @@
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
-import { useFavoriteStatusQuery } from "./useFavorites"; // Path check karlein
-import { useFavoriteActions } from "./useFavorites";
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { useFavoriteStatusQuery } from './useFavorites'; // Path check karlein
+import { useFavoriteActions } from './useFavorites';
 
 export function useFavoriteToggle(id: string, isAuth: boolean) {
   const navigate = useNavigate();
-  
+
   // 1. Get Status
   const { data: isFavorited, isLoading: isStatusLoading } = useFavoriteStatusQuery(id, isAuth);
-  
+
   // 2. Get Actions (Refetching logic pehle hi hook ke onSuccess mein honi chahiye)
   const { addFavorite, removeFavorite, isAdding, isRemoving } = useFavoriteActions();
 
@@ -17,8 +17,8 @@ export function useFavoriteToggle(id: string, isAuth: boolean) {
     e?.stopPropagation();
 
     if (!isAuth) {
-      toast.error("Du må logge inn for å legge til favoritter");
-      navigate("/login");
+      toast.error('Du må logge inn for å legge til favoritter');
+      navigate('/login');
       return;
     }
 
@@ -34,6 +34,6 @@ export function useFavoriteToggle(id: string, isAuth: boolean) {
   return {
     isFavorited,
     handleFavoriteClick,
-    isLoading: isStatusLoading || isAdding || isRemoving
+    isLoading: isStatusLoading || isAdding || isRemoving,
   };
 }

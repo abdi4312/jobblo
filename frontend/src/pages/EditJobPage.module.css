@@ -2,9 +2,14 @@
   width: 100%;
   max-width: 390px;
   min-height: 100vh;
-  background: #FCF9EB;
+  background: #fcf9eb;
   margin: 0 auto;
-  font-family: 'Nunito', -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    'Nunito',
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   position: relative;
   padding: 71px 0 18px 0;
   box-sizing: border-box;
@@ -20,7 +25,7 @@
 .headerDivider {
   width: 100%;
   height: 1px;
-  background: #83A790;
+  background: #83a790;
   position: absolute;
   bottom: 53px;
   left: 0;
@@ -72,7 +77,12 @@
 .equipmentLabel {
   flex: 1;
   color: #424940;
-  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    Roboto,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 500;
   line-height: 24px;
@@ -98,21 +108,21 @@
   .page {
     padding: 60px 0 15px 0;
   }
-  
+
   .content {
     padding: 0 8px;
   }
-  
+
   .formSection {
     padding: 20px 12px 8px 12px;
     gap: 24px;
   }
-  
+
   .equipmentSection,
   .userEquipmentSection {
     padding: 6px 12px;
   }
-  
+
   .equipmentLabel {
     font-size: 15px;
   }
@@ -122,16 +132,16 @@
   .page {
     padding: 55px 0 12px 0;
   }
-  
+
   .content {
     padding: 0 6px;
   }
-  
+
   .formSection {
     padding: 18px 10px 6px 10px;
     gap: 20px;
   }
-  
+
   .equipmentLabel {
     font-size: 14px;
   }
@@ -142,11 +152,11 @@
   .page {
     max-width: 420px;
   }
-  
+
   .content {
     padding: 0 16px;
   }
-  
+
   .formSection {
     padding: 30px 20px 12px 20px;
     gap: 32px;
@@ -158,16 +168,16 @@
     max-width: 600px;
     padding: 80px 0 24px 0;
   }
-  
+
   .content {
     padding: 0 24px;
   }
-  
+
   .formSection {
     padding: 36px 24px 16px 24px;
     gap: 36px;
   }
-  
+
   .equipmentLabel {
     font-size: 18px;
   }

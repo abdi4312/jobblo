@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const planSchema = new mongoose.Schema(
   {
@@ -8,7 +8,7 @@ const planSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ["business", "private"],
+      enum: ['business', 'private'],
       required: true,
     },
 
@@ -22,7 +22,7 @@ const planSchema = new mongoose.Schema(
       ContactUnlock: { type: Number, default: 0 },
       maxContact: { type: Number, default: 0 },
       visibilityLevel: { type: Number, default: 0 }, // Weighted sorting
-      locationPrecision: { type: String, enum: ["exact", "approximate"], default: "approximate" },
+      locationPrecision: { type: String, enum: ['exact', 'approximate'], default: 'approximate' },
       hasBadge: { type: Boolean, default: false },
       hasAnalytics: { type: Boolean, default: false },
     },
@@ -35,7 +35,7 @@ const planSchema = new mongoose.Schema(
 
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-module.exports = mongoose.model("SubscriptionPlan", planSchema);
+module.exports = mongoose.model('SubscriptionPlan', planSchema);

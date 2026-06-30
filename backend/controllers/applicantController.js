@@ -1,6 +1,6 @@
-const JobRequest = require("../models/JobRequest");
-const Service = require("../models/Service");
-const Order = require("../models/Order");
+const JobRequest = require('../models/JobRequest');
+const Service = require('../models/Service');
+const Order = require('../models/Order');
 
 /**
  * GET /api/applicants/:serviceId
@@ -13,22 +13,20 @@ exports.getApplicantsForService = async (req, res) => {
 
     const service = await Service.findById(serviceId);
     if (!service) {
-      return res.status(404).json({ error: "Oppdraget ble ikke funnet" });
+      return res.status(404).json({ error: 'Oppdraget ble ikke funnet' });
     }
 
     // Verify ownership
     if (service.userId.toString() !== userId) {
-      return res
-        .status(403)
-        .json({ error: "Ikke autorisert. Du eier ikke dette oppdraget." });
+      return res.status(403).json({ error: 'Ikke autorisert. Du eier ikke dette oppdraget.' });
     }
 
     // Get all pending and accepted requests (applicants)
     const requests = await JobRequest.find({ serviceId })
       .populate({
-        path: "customerId",
+        path: 'customerId',
         select:
-          "name lastName avatarUrl verified isTrusted averageRating reviewCount skills locations createdAt",
+          'name lastName avatarUrl verified isTrusted averageRating reviewCount skills locations createdAt',
       })
       .sort({ createdAt: -1 });
 
@@ -41,7 +39,7 @@ exports.getApplicantsForService = async (req, res) => {
         // Count completed orders where this applicant was the provider
         const completedJobsCount = await Order.countDocuments({
           providerId: applicant._id,
-          status: "completed",
+          status: 'completed',
         });
 
         // Calculate real response rate
@@ -50,23 +48,21 @@ exports.getApplicantsForService = async (req, res) => {
         });
         const respondedRequests = await JobRequest.countDocuments({
           providerId: applicant._id,
-          status: { $in: ["accepted", "declined"] },
+          status: { $in: ['accepted', 'declined'] },
         });
         const responseRatePercent =
-          totalRequests > 0
-            ? Math.round((respondedRequests / totalRequests) * 100)
-            : 100;
+          totalRequests > 0 ? Math.round((respondedRequests / totalRequests) * 100) : 100;
         const responseRate = `${responseRatePercent}%`;
-        const responseTime = "< 1t";
+        const responseTime = '< 1t';
 
         return {
           _id: reqDoc._id,
           status: reqDoc.status,
-          message: reqDoc.message || "Ingen melding",
+          message: reqDoc.message || 'Ingen melding',
           appliedAt: reqDoc.createdAt,
           applicant: {
             _id: applicant._id,
-            name: `${applicant.name} ${applicant.lastName || ""}`.trim(),
+            name: `${applicant.name} ${applicant.lastName || ''}`.trim(),
             avatarUrl: applicant.avatarUrl,
             verified: applicant.verified || applicant.isTrusted,
             skills: applicant.skills || [],
@@ -80,7 +76,7 @@ exports.getApplicantsForService = async (req, res) => {
             isFastResponder: true, // Mocked badge
           },
         };
-      }),
+      })
     );
 
     res.json({
@@ -96,13 +92,13 @@ exports.getApplicantsForService = async (req, res) => {
       activeOrder: await Order.findOne({
         serviceId: service._id,
         status: {
-          $in: ["awaiting_payment", "paid", "in_progress", "completed"],
+          $in: ['awaiting_payment', 'paid', 'in_progress', 'completed'],
         },
-      }).select("_id status"),
+      }).select('_id status'),
     });
   } catch (err) {
-    console.error("Error fetching applicants:", err);
-    res.status(500).json({ error: "Serverfeil ved henting av søkere" });
+    console.error('Error fetching applicants:', err);
+    res.status(500).json({ error: 'Serverfeil ved henting av søkere' });
   }
 };
 
@@ -115,7 +111,7 @@ exports.getMyServicesWithApplicants = async (req, res) => {
     const userId = req.userId;
 
     // 1. Find all unique serviceIds that have at least one job request where the user is the provider
-    const uniqueServiceIds = await JobRequest.distinct("serviceId", {
+    const uniqueServiceIds = await JobRequest.distinct('serviceId', {
       providerId: userId,
     });
 
@@ -132,16 +128,16 @@ exports.getMyServicesWithApplicants = async (req, res) => {
       services.map(async (service) => {
         // Count job requests for this service
         const requests = await JobRequest.find({ serviceId: service._id })
-          .populate("customerId", "avatarUrl name lastName")
+          .populate('customerId', 'avatarUrl name lastName')
           .sort({ createdAt: -1 });
 
         // Find active order to get selected worker
         const activeOrder = await Order.findOne({
           serviceId: service._id,
           status: {
-            $in: ["awaiting_payment", "paid", "in_progress", "completed"],
+            $in: ['awaiting_payment', 'paid', 'in_progress', 'completed'],
           },
-        }).populate("customerId", "name lastName avatarUrl");
+        }).populate('customerId', 'name lastName avatarUrl');
 
         // Last activity: use latest between service updatedAt, last request createdAt, last order updatedAt
         let lastActivity = service.updatedAt;
@@ -172,17 +168,17 @@ exports.getMyServicesWithApplicants = async (req, res) => {
           selectedWorker: activeOrder?.customerId
             ? {
                 _id: activeOrder.customerId._id,
-                name: `${activeOrder.customerId.name} ${activeOrder.customerId.lastName || ""}`.trim(),
+                name: `${activeOrder.customerId.name} ${activeOrder.customerId.lastName || ''}`.trim(),
                 avatarUrl: activeOrder.customerId.avatarUrl,
               }
             : null,
         };
-      }),
+      })
     );
 
     res.json(servicesWithApplicants);
   } catch (err) {
-    console.error("Error fetching services with applicants:", err);
-    res.status(500).json({ error: "Serverfeil ved henting av oppdrag" });
+    console.error('Error fetching services with applicants:', err);
+    res.status(500).json({ error: 'Serverfeil ved henting av oppdrag' });
   }
 };

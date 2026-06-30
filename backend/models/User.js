@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema(
   {
@@ -21,8 +21,8 @@ const userSchema = new mongoose.Schema(
     bio: { type: String },
     role: {
       type: String,
-      enum: ["user", "superAdmin", "provider", "company"],
-      default: "user",
+      enum: ['user', 'superAdmin', 'provider', 'company'],
+      default: 'user',
     },
     companyName: { type: String, trim: true },
     orgNumber: { type: String, trim: true },
@@ -41,21 +41,13 @@ const userSchema = new mongoose.Schema(
     country: { type: String },
     subscription: {
       type: String,
-      enum: [
-        "Standard",
-        "Plus",
-        "Pro",
-        "Start",
-        "Premium",
-        "Fleksibel",
-        "Jobblo Pluss",
-      ],
-      default: "Standard",
+      enum: ['Standard', 'Plus', 'Pro', 'Start', 'Premium', 'Fleksibel', 'Jobblo Pluss'],
+      default: 'Standard',
     },
     planType: {
       type: String,
-      enum: ["business", "private"],
-      default: "private",
+      enum: ['business', 'private'],
+      default: 'private',
       required: true,
     },
     experience: [
@@ -111,8 +103,8 @@ const userSchema = new mongoose.Schema(
     ],
     accountStatus: {
       type: String,
-      enum: ["active", "inactive", "verified"],
-      default: "active",
+      enum: ['active', 'inactive', 'verified'],
+      default: 'active',
     },
 
     averageRating: {
@@ -132,13 +124,13 @@ const userSchema = new mongoose.Schema(
     favorites: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Service",
+        ref: 'Service',
       },
     ],
     blockedUsers: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
+        ref: 'User',
       },
     ],
     pointsBalance: {
@@ -149,9 +141,9 @@ const userSchema = new mongoose.Schema(
       {
         points: Number,
         reason: String,
-        orderId: { type: mongoose.Schema.Types.ObjectId, ref: "Order" },
-        serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "Service" },
-        shopItemId: { type: mongoose.Schema.Types.ObjectId, ref: "JobbloShop" },
+        orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
+        serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service' },
+        shopItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'JobbloShop' },
         createdAt: { type: Date, default: Date.now },
       },
     ],
@@ -168,22 +160,22 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 // Add index to prevent duplicate OAuth providers
 // Virtual field for totalEarned (maps to earnings)
-userSchema.virtual("totalEarned").get(function () {
+userSchema.virtual('totalEarned').get(function () {
   return this.earnings || 0;
 });
 
 // Ensure virtuals are included when converting to JSON
-userSchema.set("toJSON", { virtuals: true });
-userSchema.set("toObject", { virtuals: true });
+userSchema.set('toJSON', { virtuals: true });
+userSchema.set('toObject', { virtuals: true });
 
 userSchema.index({
-  "oauthProviders.provider": 1,
-  "oauthProviders.providerId": 1,
+  'oauthProviders.provider': 1,
+  'oauthProviders.providerId': 1,
 });
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model('User', userSchema);

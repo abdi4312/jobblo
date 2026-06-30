@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const jobbloShop = new mongoose.Schema({
   title: { type: String, required: true },
@@ -8,4 +8,4 @@ const jobbloShop = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
 });
 
-module.exports = mongoose.model("JobbloShop", jobbloShop);
+module.exports = mongoose.model('JobbloShop', jobbloShop);

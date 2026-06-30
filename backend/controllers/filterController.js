@@ -1,5 +1,5 @@
-const Service = require("../models/Service");
-const Category = require("../models/Category");
+const Service = require('../models/Service');
+const Category = require('../models/Category');
 
 /**
  * @desc Hent tilgjengelige filtervalg
@@ -10,11 +10,11 @@ exports.getFilterOptions = async (req, res) => {
   try {
     // 1. Get Job counts per category (only for 'open' services)
     const categoryCounts = await Service.aggregate([
-      { $match: { status: "open" } },
-      { $unwind: "$categories" },
+      { $match: { status: 'open' } },
+      { $unwind: '$categories' },
       {
         $group: {
-          _id: { $trim: { input: "$categories" } },
+          _id: { $trim: { input: '$categories' } },
           count: { $sum: 1 },
         },
       },
@@ -30,10 +30,10 @@ exports.getFilterOptions = async (req, res) => {
 
     // 2. Get Job counts per location (city)
     const locationCounts = await Service.aggregate([
-      { $match: { status: "open", "location.city": { $ne: null } } },
+      { $match: { status: 'open', 'location.city': { $ne: null } } },
       {
         $group: {
-          _id: { $trim: { input: "$location.city" } },
+          _id: { $trim: { input: '$location.city' } },
           count: { $sum: 1 },
         },
       },
@@ -45,7 +45,7 @@ exports.getFilterOptions = async (req, res) => {
 
     // 3. Get Job counts for Urgent (Fiks ferdig)
     const urgentCount = await Service.countDocuments({
-      status: "open",
+      status: 'open',
       urgent: true,
     });
 
@@ -61,11 +61,7 @@ exports.getFilterOptions = async (req, res) => {
           ...parent,
           count: catCountMap[parent.name.trim().toLowerCase()] || 0,
           subcategories: allCategories
-            .filter(
-              (sub) =>
-                sub.parentId &&
-                sub.parentId.toString() === parent._id.toString(),
-            )
+            .filter((sub) => sub.parentId && sub.parentId.toString() === parent._id.toString())
             .map((sub) => ({
               ...sub,
               count: catCountMap[sub.name.trim().toLowerCase()] || 0,
@@ -73,7 +69,7 @@ exports.getFilterOptions = async (req, res) => {
         }));
     } else {
       // Fallback: Get distinct categories from Services if Category collection is empty
-      const distinctCats = await Service.distinct("categories");
+      const distinctCats = await Service.distinct('categories');
       categoryTree = distinctCats.map((name) => {
         const trimmedName = name.trim();
         return {
@@ -93,23 +89,23 @@ exports.getFilterOptions = async (req, res) => {
         urgentCount,
         priceRange: { min: 0, max: 100000 },
         sortOptions: [
-          { label: "Newest first", value: "newest" },
-          { label: "Price: low to high", value: "price_low" },
-          { label: "Price: high to low", value: "price_high" },
-          { label: "Most relevant", value: "relevant" },
+          { label: 'Newest first', value: 'newest' },
+          { label: 'Price: low to high', value: 'price_low' },
+          { label: 'Price: high to low', value: 'price_high' },
+          { label: 'Most relevant', value: 'relevant' },
         ],
         types: [
-          { label: "Buy", value: "sale", count: 0 },
-          { label: "Free", value: "free", count: 0 },
-          { label: "Wanted", value: "wanted", count: 0 },
+          { label: 'Buy', value: 'sale', count: 0 },
+          { label: 'Free', value: 'free', count: 0 },
+          { label: 'Wanted', value: 'wanted', count: 0 },
         ],
       },
     });
   } catch (error) {
-    console.error("GET FILTER OPTIONS ERROR:", error);
+    console.error('GET FILTER OPTIONS ERROR:', error);
     return res.status(500).json({
       success: false,
-      message: "Could not fetch filter options",
+      message: 'Could not fetch filter options',
       error: error.message,
     });
   }
@@ -147,20 +143,20 @@ exports.applyFilters = async (req, res) => {
 
     // LOCATIONS (Cities - backward compatibility)
     if (Array.isArray(locations) && locations.length > 0) {
-      query["location.city"] = { $in: locations };
+      query['location.city'] = { $in: locations };
     }
 
     // LOCATIONS BY CODES
     const locationQueries = [];
-    
+
     if (Array.isArray(areaCodes) && areaCodes.length > 0) {
       locationQueries.push({ areaCode: { $in: areaCodes } });
     }
-    
+
     if (Array.isArray(municipalityCodes) && municipalityCodes.length > 0) {
       locationQueries.push({ municipalityCode: { $in: municipalityCodes } });
     }
-    
+
     if (Array.isArray(countyCodes) && countyCodes.length > 0) {
       locationQueries.push({ countyCode: { $in: countyCodes } });
     }
@@ -182,8 +178,8 @@ exports.applyFilters = async (req, res) => {
     }
 
     // SØKEORD (Search within category or globally)
-    if (searchKeyword && typeof searchKeyword === "string") {
-      const regex = new RegExp(searchKeyword, "i");
+    if (searchKeyword && typeof searchKeyword === 'string') {
+      const regex = new RegExp(searchKeyword, 'i');
       query.$or = [
         { title: regex },
         { description: regex },
@@ -200,15 +196,15 @@ exports.applyFilters = async (req, res) => {
     // SORT LOGIC
     let sortQuery = { createdAt: -1 };
 
-    if (sortBy === "price_low") sortQuery = { price: 1 };
-    if (sortBy === "price_high") sortQuery = { price: -1 };
-    if (sortBy === "newest") sortQuery = { createdAt: -1 };
+    if (sortBy === 'price_low') sortQuery = { price: 1 };
+    if (sortBy === 'price_high') sortQuery = { price: -1 };
+    if (sortBy === 'newest') sortQuery = { createdAt: -1 };
     // "relevant" uses default sort or text search score if searchKeyword is present
 
     const skip = (page - 1) * limit;
 
     const services = await Service.find(query)
-      .populate("userId", "name avatarUrl verified")
+      .populate('userId', 'name avatarUrl verified')
       .sort(sortQuery)
       .skip(skip)
       .limit(limit);
@@ -224,10 +220,10 @@ exports.applyFilters = async (req, res) => {
       results: services,
     });
   } catch (error) {
-    console.error("APPLY FILTER ERROR:", error);
+    console.error('APPLY FILTER ERROR:', error);
     return res.status(500).json({
       success: false,
-      message: "Kunne ikke hente filtrerte resultater",
+      message: 'Kunne ikke hente filtrerte resultater',
       error: error.message,
     });
   }

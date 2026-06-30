@@ -1,18 +1,15 @@
-import React from "react";
-import { Button } from "../../components/Ui/button/Button";
+import React from 'react';
+import { Button } from '../../components/Ui/button/Button';
 
 interface PricingSwitcherProps {
-  userType: "business" | "private";
-  setUserType: (type: "business" | "private") => void;
+  userType: 'business' | 'private';
+  setUserType: (type: 'business' | 'private') => void;
 }
 
-export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({
-  userType,
-  setUserType,
-}) => {
+export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ userType, setUserType }) => {
   const tabs = [
-    { id: "business", label: "Business" },
-    { id: "private", label: "Individual" },
+    { id: 'business', label: 'Business' },
+    { id: 'private', label: 'Individual' },
   ] as const;
   return (
     <div className="flex justify-center mb-12">
@@ -21,7 +18,7 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({
           <Button
             key={tab.id}
             label={tab.label}
-            variant={userType === tab.id ? "true" : "false"}
+            variant={userType === tab.id ? 'true' : 'false'}
             size="lg"
             onClick={() => setUserType(tab.id)}
           />

@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Plus, ChevronLeft, ChevronRight, Trash2, Edit3 } from "lucide-react";
-import CreateCouponForm from "../../components/SuperAdminDashboard/Voucher/CreateCouponForm";
-import mainLink from "../../api/mainURLs";
-import Swal from "sweetalert2";
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, ChevronLeft, ChevronRight, Trash2, Edit3 } from 'lucide-react';
+import CreateCouponForm from '../../components/SuperAdminDashboard/Voucher/CreateCouponForm';
+import mainLink from '../../api/mainURLs';
+import Swal from 'sweetalert2';
 
 interface Voucher {
   _id: string;
   name: string;
   code: string;
   amount: number;
-  type: "percentage" | "fixed";
+  type: 'percentage' | 'fixed';
   usageLimit: number;
-  targetPlanType: "all" | "private" | "business";
+  targetPlanType: 'all' | 'private' | 'business';
   active: boolean;
   activeDate: string;
   expiresDate: string;
@@ -29,15 +29,13 @@ const VoucherPage: React.FC = () => {
   const fetchCoupons = useCallback(async () => {
     setIsLoading(true);
     try {
-      const resp = await mainLink.get(
-        `/api/coupons?page=${currentPage}&limit=8`,
-      );
+      const resp = await mainLink.get(`/api/coupons?page=${currentPage}&limit=8`);
       if (resp.data) {
         setVouchers(resp.data.coupons);
         setTotalPages(resp.data.totalPages);
       }
     } catch {
-      Swal.fire("Error", "Failed to fetch coupons", "error");
+      Swal.fire('Error', 'Failed to fetch coupons', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -49,29 +47,29 @@ const VoucherPage: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     const result = await Swal.fire({
-      title: "Are you sure?",
+      title: 'Are you sure?',
       text: "You won't be able to revert this!",
-      icon: "warning",
+      icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: "#2d4a3e",
-      cancelButtonColor: "#f87171",
-      confirmButtonText: "Yes, delete it!",
-      borderRadius: "20px",
+      confirmButtonColor: '#2d4a3e',
+      cancelButtonColor: '#f87171',
+      confirmButtonText: 'Yes, delete it!',
+      borderRadius: '20px',
     });
 
     if (result.isConfirmed) {
       try {
         await mainLink.delete(`/api/coupons/${id}`);
         Swal.fire({
-          title: "Deleted!",
-          text: "Coupon has been deleted.",
-          icon: "success",
+          title: 'Deleted!',
+          text: 'Coupon has been deleted.',
+          icon: 'success',
           timer: 1500,
           showConfirmButton: false,
         });
         fetchCoupons();
       } catch {
-        Swal.fire("Error", "Delete failed", "error");
+        Swal.fire('Error', 'Delete failed', 'error');
       }
     }
   };
@@ -80,9 +78,9 @@ const VoucherPage: React.FC = () => {
     name: string;
     code: string;
     amount: number;
-    type: "percentage" | "fixed";
+    type: 'percentage' | 'fixed';
     usageLimit: number;
-    targetPlanType: "all" | "private" | "business";
+    targetPlanType: 'all' | 'private' | 'business';
     activeDate?: string;
     expiresDate?: string;
   }) => {
@@ -101,18 +99,18 @@ const VoucherPage: React.FC = () => {
       if (editingCoupon) {
         await mainLink.put(`/api/coupons/${editingCoupon._id}`, payload);
         Swal.fire({
-          icon: "success",
-          title: "Updated!",
-          text: "Coupon updated! ✨",
+          icon: 'success',
+          title: 'Updated!',
+          text: 'Coupon updated! ✨',
           timer: 2000,
           showConfirmButton: false,
         });
       } else {
-        await mainLink.post("/api/coupons", payload);
+        await mainLink.post('/api/coupons', payload);
         Swal.fire({
-          icon: "success",
-          title: "Created!",
-          text: "Coupon created! 🎉",
+          icon: 'success',
+          title: 'Created!',
+          text: 'Coupon created! 🎉',
           timer: 2000,
           showConfirmButton: false,
         });
@@ -123,20 +121,14 @@ const VoucherPage: React.FC = () => {
       fetchCoupons();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
-      Swal.fire(
-        "Error",
-        err.response?.data?.error || "Operation failed",
-        "error",
-      );
+      Swal.fire('Error', err.response?.data?.error || 'Operation failed', 'error');
     }
   };
 
   return (
     <div className="animate-in fade-in duration-500 relative">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">
-          Coupon Management
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Coupon Management</h1>
         <button
           onClick={() => {
             setEditingCoupon(null);
@@ -167,19 +159,13 @@ const VoucherPage: React.FC = () => {
             <tbody className="divide-y divide-gray-50/50">
               {isLoading ? (
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="py-20 text-center text-gray-400 font-medium"
-                  >
+                  <td colSpan={6} className="py-20 text-center text-gray-400 font-medium">
                     Loading...
                   </td>
                 </tr>
               ) : vouchers.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="py-20 text-center text-gray-400 font-medium"
-                  >
+                  <td colSpan={6} className="py-20 text-center text-gray-400 font-medium">
                     No coupons found.
                   </td>
                 </tr>
@@ -187,26 +173,20 @@ const VoucherPage: React.FC = () => {
                 vouchers.map((voucher: Voucher) => {
                   // status check logic: agar active false ho ya date guzar chuki ho toh Expired
                   const isExpired = new Date(voucher.expiresDate) < new Date();
-                  const currentStatus =
-                    !voucher.active || isExpired ? "Expired" : "Active";
+                  const currentStatus = !voucher.active || isExpired ? 'Expired' : 'Active';
 
                   return (
-                    <tr
-                      key={voucher._id}
-                      className="group hover:bg-gray-50/30 transition-all"
-                    >
-                      <td className="py-5 px-4 text-gray-600 font-medium">
-                        {voucher.name}
-                      </td>
+                    <tr key={voucher._id} className="group hover:bg-gray-50/30 transition-all">
+                      <td className="py-5 px-4 text-gray-600 font-medium">{voucher.name}</td>
                       <td className="py-5 px-4 text-gray-400 font-medium tracking-wider">
                         {voucher.code}
                       </td>
                       <td className="py-5 px-4 text-gray-800 font-bold">
-                        {voucher.usedBy.length} / {voucher.usageLimit || "∞"}
+                        {voucher.usedBy.length} / {voucher.usageLimit || '∞'}
                       </td>
                       <td className="py-5 px-4 text-gray-800 font-bold">
                         {voucher.amount}
-                        {voucher.type === "percentage" ? "%" : " NOK"}
+                        {voucher.type === 'percentage' ? '%' : ' NOK'}
                       </td>
                       <td className="py-5 px-4 text-gray-500 font-medium capitalize">
                         {voucher.targetPlanType}
@@ -215,9 +195,7 @@ const VoucherPage: React.FC = () => {
                         <StatusBadge status={currentStatus} />
                       </td>
                       <td className="py-5 px-4 text-gray-500 font-medium">
-                        {new Date(
-                          voucher.activeDate || voucher.expiresDate,
-                        ).toLocaleDateString()}
+                        {new Date(voucher.activeDate || voucher.expiresDate).toLocaleDateString()}
                       </td>
                       <td className="py-5 px-4 text-gray-500 font-medium">
                         {new Date(voucher.expiresDate).toLocaleDateString()}
@@ -264,7 +242,7 @@ const VoucherPage: React.FC = () => {
               <button
                 key={i}
                 onClick={() => setCurrentPage(i + 1)}
-                className={`w-10 h-10 rounded-full font-bold transition-all border ${currentPage === i + 1 ? "bg-white border-gray-200 shadow-sm scale-110" : "text-gray-400 border-transparent"}`}
+                className={`w-10 h-10 rounded-full font-bold transition-all border ${currentPage === i + 1 ? 'bg-white border-gray-200 shadow-sm scale-110' : 'text-gray-400 border-transparent'}`}
               >
                 {i + 1}
               </button>
@@ -295,19 +273,15 @@ const VoucherPage: React.FC = () => {
   );
 };
 
-const StatusBadge = ({
-  status,
-}: {
-  status: "Active" | "Expired" | "InActive";
-}) => {
+const StatusBadge = ({ status }: { status: 'Active' | 'Expired' | 'InActive' }) => {
   const styles = {
-    Active: "bg-emerald-500 text-white shadow-emerald-100",
-    Expired: "bg-rose-400 text-white shadow-rose-100",
-    InActive: "bg-amber-400 text-white shadow-amber-100",
+    Active: 'bg-emerald-500 text-white shadow-emerald-100',
+    Expired: 'bg-rose-400 text-white shadow-rose-100',
+    InActive: 'bg-amber-400 text-white shadow-amber-100',
   };
   return (
     <span
-      className={`${styles[status] || "bg-gray-400"} px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider inline-block min-w-[90px] text-center shadow-md`}
+      className={`${styles[status] || 'bg-gray-400'} px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider inline-block min-w-[90px] text-center shadow-md`}
     >
       {status}
     </span>

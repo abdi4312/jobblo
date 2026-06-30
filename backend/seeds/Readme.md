@@ -59,3 +59,4 @@ Running a seeder will overwrite data in its collection
 Seed data is in Norwegian (demo content)
 Images use placeholder/CDN URLs
 Designed to support frontend UI development
+```

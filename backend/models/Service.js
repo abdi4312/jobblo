@@ -1,25 +1,25 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 // Subschema for time entries
 const timeEntrySchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     hours: { type: Number, required: true, min: 0 },
     date: { type: Date, required: true },
     note: { type: String },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 const serviceSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
       index: true,
     },
@@ -30,8 +30,8 @@ const serviceSchema = new mongoose.Schema(
 
     // Lokasjon
     location: {
-      type: { type: String, enum: ["Point"], default: "Point" },
-      coordinates: { type: [Number], index: "2dsphere" },
+      type: { type: String, enum: ['Point'], default: 'Point' },
+      coordinates: { type: [Number], index: '2dsphere' },
       address: { type: String },
       city: { type: String },
     },
@@ -61,17 +61,17 @@ const serviceSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [
-        "open",
-        "closed",
-        "in_progress",
-        "completed",
-        "pending",
-        "waiting_for_approval",
-        "cancelled",
-        "expired",
-        "draft",
+        'open',
+        'closed',
+        'in_progress',
+        'completed',
+        'pending',
+        'waiting_for_approval',
+        'cancelled',
+        'expired',
+        'draft',
       ],
-      default: "open",
+      default: 'open',
     },
 
     tags: [{ type: String }],
@@ -80,8 +80,8 @@ const serviceSchema = new mongoose.Schema(
       value: { type: Number, min: 0 },
       unit: {
         type: String,
-        enum: ["minutes", "hours", "days"],
-        default: "hours",
+        enum: ['minutes', 'hours', 'days'],
+        default: 'hours',
       },
     },
 
@@ -90,8 +90,8 @@ const serviceSchema = new mongoose.Schema(
 
     equipment: {
       type: String,
-      enum: ["utstyrfri", "delvis utstyr", "trengs utstyr"],
-      default: "utstyrfri",
+      enum: ['utstyrfri', 'delvis utstyr', 'trengs utstyr'],
+      default: 'utstyrfri',
     },
 
     views: { type: Number, default: 0 },
@@ -104,15 +104,15 @@ const serviceSchema = new mongoose.Schema(
         id: { type: String, required: true },
         text: { type: String, required: true },
         checked: { type: Boolean, default: false },
-        checkedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        checkedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         checkedAt: { type: Date },
       },
     ],
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-serviceSchema.index({ location: "2dsphere" });
+serviceSchema.index({ location: '2dsphere' });
 serviceSchema.index({ createdAt: -1 });
 
-module.exports = mongoose.model("Service", serviceSchema);
+module.exports = mongoose.model('Service', serviceSchema);

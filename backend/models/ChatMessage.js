@@ -1,9 +1,9 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
   senderId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: 'User',
     required: true,
   },
   text: {
@@ -13,12 +13,12 @@ const messageSchema = new mongoose.Schema({
   attachments: [{ type: String }],
   serviceId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Service",
+    ref: 'Service',
   },
   seenBy: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
     },
   ],
   createdAt: {
@@ -31,17 +31,17 @@ const chatSchema = new mongoose.Schema(
   {
     clientId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     providerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     serviceId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Service",
+      ref: 'Service',
       required: true,
     },
 
@@ -53,11 +53,11 @@ const chatSchema = new mongoose.Schema(
     deletedFor: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
+        ref: 'User',
       },
     ],
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Chat", chatSchema);
+module.exports = mongoose.model('Chat', chatSchema);
