@@ -27,6 +27,7 @@ import { toast } from 'react-hot-toast';
 import { Button } from '../../components/Ui/button/Button';
 import SafePaySteps from '../../components/SafePay/SafePaySteps';
 import { createOrGetChat } from '../../api/chatAPI';
+import EmptyState from '../../components/Ui/EmptyState';
 
 const ApplicantsPage: React.FC = () => {
   const { serviceId } = useParams<{ serviceId: string }>();
@@ -296,189 +297,195 @@ const ApplicantsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-4">
-              {applicants.map((app: any, index: number) => (
-                <div
-                  key={app._id}
-                  className={`relative bg-white border rounded-2xl p-4 md:p-5 transition-all ${
-                    app.favorite
-                      ? 'border-2 border-yellow-300'
-                      : app.archived
-                        ? 'opacity-60'
-                        : 'border-black/5'
-                  }`}
-                >
-                  {/* Top Right Buttons */}
-                  <div className="absolute top-4 right-4 flex gap-1">
-                    <button
-                      onClick={() => handleToggleFavorite(app._id)}
-                      className={`p-1 rounded-full transition-all ${
-                        app.favorite
-                          ? 'text-yellow-500 bg-yellow-100'
-                          : 'text-gray-400 hover:text-yellow-500 hover:bg-gray-100'
-                      }`}
-                      title="Favoritt"
-                    >
-                      <Heart size={18} fill={app.favorite ? 'currentColor' : 'none'} />
-                    </button>
-                    <button
-                      onClick={() => toggleCompare(app.applicant._id)}
-                      className={`p-1 rounded-full transition-all ${
-                        comparedApplicants.includes(app.applicant._id)
-                          ? 'text-custom-green bg-green-100'
-                          : 'text-gray-400 hover:text-custom-green hover:bg-gray-100'
-                      }`}
-                      title="Sammenlign"
-                    >
-                      <Users size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleToggleArchive(app._id)}
-                      className={`p-1 rounded-full transition-all ${
-                        app.archived
-                          ? 'text-custom-green bg-green-100'
-                          : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                      }`}
-                      title={app.archived ? 'Gjenopprett fra arkiv' : 'Arkiver'}
-                    >
-                      <Archive size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDecline(app._id)}
-                      className="p-1 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-full transition-all"
-                      title="Avslå søker"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
+            {applicants.length > 0 ? (
+              <div className="space-y-4">
+                {applicants.map((app: any, index: number) => (
+                  <div
+                    key={app._id}
+                    className={`relative bg-white border rounded-2xl p-4 md:p-5 transition-all ${
+                      app.favorite
+                        ? 'border-2 border-yellow-300'
+                        : app.archived
+                          ? 'opacity-60'
+                          : 'border-black/5'
+                    }`}
+                  >
+                    {/* Top Right Buttons */}
+                    <div className="absolute top-4 right-4 flex gap-1">
+                      <button
+                        onClick={() => handleToggleFavorite(app._id)}
+                        className={`p-1 rounded-full transition-all ${
+                          app.favorite
+                            ? 'text-yellow-500 bg-yellow-100'
+                            : 'text-gray-400 hover:text-yellow-500 hover:bg-gray-100'
+                        }`}
+                        title="Favoritt"
+                      >
+                        <Heart size={18} fill={app.favorite ? 'currentColor' : 'none'} />
+                      </button>
+                      <button
+                        onClick={() => toggleCompare(app.applicant._id)}
+                        className={`p-1 rounded-full transition-all ${
+                          comparedApplicants.includes(app.applicant._id)
+                            ? 'text-custom-green bg-green-100'
+                            : 'text-gray-400 hover:text-custom-green hover:bg-gray-100'
+                        }`}
+                        title="Sammenlign"
+                      >
+                        <Users size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleToggleArchive(app._id)}
+                        className={`p-1 rounded-full transition-all ${
+                          app.archived
+                            ? 'text-custom-green bg-green-100'
+                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                        }`}
+                        title={app.archived ? 'Gjenopprett fra arkiv' : 'Arkiver'}
+                      >
+                        <Archive size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDecline(app._id)}
+                        className="p-1 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-full transition-all"
+                        title="Avslå søker"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
 
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className="relative flex-shrink-0">
-                        <div className="w-12 h-12 rounded-full bg-[#c8d8c8] text-[#1a3a1a] font-medium flex items-center justify-center text-lg overflow-hidden">
-                          {app.applicant.avatarUrl ? (
-                            <img
-                              src={app.applicant.avatarUrl}
-                              alt={app.applicant.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            app.applicant.name
-                              .split(' ')
-                              .map((n: any) => n[0])
-                              .join('')
-                          )}
-                        </div>
-                        {index === 0 && (
-                          <span className="absolute -top-1 -right-1 bg-custom-green text-white text-[9px] font-medium rounded-full px-1.5 py-0.5 border-[1.5px] border-[#f5f0e8]">
-                            Topp
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[15px] font-medium text-gray-900">
-                            {app.applicant.name}
-                          </span>
-                          {app.applicant.verified && (
-                            <span className="flex items-center gap-0.5 text-[11px] text-custom-green font-medium">
-                              <ShieldCheck size={12} /> Verifisert
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        <div className="relative flex-shrink-0">
+                          <div className="w-12 h-12 rounded-full bg-[#c8d8c8] text-[#1a3a1a] font-medium flex items-center justify-center text-lg overflow-hidden">
+                            {app.applicant.avatarUrl ? (
+                              <img
+                                src={app.applicant.avatarUrl}
+                                alt={app.applicant.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              app.applicant.name
+                                .split(' ')
+                                .map((n: any) => n[0])
+                                .join('')
+                            )}
+                          </div>
+                          {index === 0 && (
+                            <span className="absolute -top-1 -right-1 bg-custom-green text-white text-[9px] font-medium rounded-full px-1.5 py-0.5 border-[1.5px] border-[#f5f0e8]">
+                              Topp
                             </span>
                           )}
                         </div>
-                        <div className="text-[12px] text-gray-400 mb-1">
-                          {app.applicant.skills?.join(' · ') || 'Generell hjelp'}
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <div className="flex text-[#ca8a04]">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                size={11}
-                                fill={
-                                  i < Math.floor(app.applicant.rating) ? 'currentColor' : 'none'
-                                }
-                              />
-                            ))}
+
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-[15px] font-medium text-gray-900">
+                              {app.applicant.name}
+                            </span>
+                            {app.applicant.verified && (
+                              <span className="flex items-center gap-0.5 text-[11px] text-custom-green font-medium">
+                                <ShieldCheck size={12} /> Verifisert
+                              </span>
+                            )}
                           </div>
-                          <span className="text-[11px] text-gray-400">
-                            {app.applicant.rating} · {app.applicant.completedJobs} oppdrag
-                          </span>
+                          <div className="text-[12px] text-gray-400 mb-1">
+                            {app.applicant.skills?.join(' · ') || 'Generell hjelp'}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex text-[#ca8a04]">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  size={11}
+                                  fill={
+                                    i < Math.floor(app.applicant.rating) ? 'currentColor' : 'none'
+                                  }
+                                />
+                              ))}
+                            </div>
+                            <span className="text-[11px] text-gray-400">
+                              {app.applicant.rating} · {app.applicant.completedJobs} oppdrag
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-6 overflow-x-auto pb-1">
+                        <div className="text-center">
+                          <div className="text-[15px] font-medium text-gray-900">
+                            {app.applicant.completedJobs}
+                          </div>
+                          <div className="text-[10px] text-gray-400 uppercase">Fullførte</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-[15px] font-medium text-gray-900">
+                            {app.applicant.rating}★
+                          </div>
+                          <div className="text-[10px] text-gray-400 uppercase">Rating</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-[15px] font-medium text-gray-900">
+                            {app.applicant.responseRate}
+                          </div>
+                          <div className="text-[10px] text-gray-400 uppercase">Svar%</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-[15px] font-medium text-gray-900">
+                            {app.applicant.responseTime}
+                          </div>
+                          <div className="text-[10px] text-gray-400 uppercase">Svartid</div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex gap-6 overflow-x-auto pb-1">
-                      <div className="text-center">
-                        <div className="text-[15px] font-medium text-gray-900">
-                          {app.applicant.completedJobs}
-                        </div>
-                        <div className="text-[10px] text-gray-400 uppercase">Fullførte</div>
+                    <div className="bg-[#f9f9f7] rounded-xl p-3 my-4 border-l-[3px] border-custom-green">
+                      <div className="flex items-center gap-1 text-[11px] text-gray-400 mb-1">
+                        <MessageCircle size={12} /> Melding fra søker
                       </div>
-                      <div className="text-center">
-                        <div className="text-[15px] font-medium text-gray-900">
-                          {app.applicant.rating}★
-                        </div>
-                        <div className="text-[10px] text-gray-400 uppercase">Rating</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-[15px] font-medium text-gray-900">
-                          {app.applicant.responseRate}
-                        </div>
-                        <div className="text-[10px] text-gray-400 uppercase">Svar%</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-[15px] font-medium text-gray-900">
-                          {app.applicant.responseTime}
-                        </div>
-                        <div className="text-[10px] text-gray-400 uppercase">Svartid</div>
-                      </div>
+                      <p className="text-[13px] text-gray-600 leading-relaxed">{app.message}</p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        onClick={() => handleSelectApplicant(app.applicant._id, app._id)}
+                        loading={createContractMutation.isPending}
+                        disabled={!!activeOrder}
+                        label={
+                          isJobAlreadyPaid
+                            ? 'Betalt'
+                            : hasAwaitingPayment
+                              ? 'Gå til betaling'
+                              : 'Velg og start SafePay'
+                        }
+                        icon={<Check size={16} />}
+                        className={`bg-custom-green text-white rounded-full py-2.5 text-[13px] font-medium h-auto shadow-sm hover:bg-[#266b3c] ${activeOrder ? 'opacity-70' : ''}`}
+                      />
+                      <Button
+                        variant="outline"
+                        label="Velg uten SafePay"
+                        disabled={!!activeOrder}
+                        className="px-4 border-black/20 rounded-full py-2.5 text-[13px] font-medium h-auto hover:bg-gray-50"
+                        onClick={() => {
+                          toast.success('Bruker valgt uten SafePay');
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        label="Send melding"
+                        icon={<MessageCircle size={16} />}
+                        className="px-4 border-black/20 rounded-full py-2.5 text-[13px] font-medium h-auto hover:bg-gray-50"
+                        onClick={() => handleStartChat(app.applicant._id)}
+                      />
                     </div>
                   </div>
-
-                  <div className="bg-[#f9f9f7] rounded-xl p-3 my-4 border-l-[3px] border-custom-green">
-                    <div className="flex items-center gap-1 text-[11px] text-gray-400 mb-1">
-                      <MessageCircle size={12} /> Melding fra søker
-                    </div>
-                    <p className="text-[13px] text-gray-600 leading-relaxed">{app.message}</p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      onClick={() => handleSelectApplicant(app.applicant._id, app._id)}
-                      loading={createContractMutation.isPending}
-                      disabled={!!activeOrder}
-                      label={
-                        isJobAlreadyPaid
-                          ? 'Betalt'
-                          : hasAwaitingPayment
-                            ? 'Gå til betaling'
-                            : 'Velg og start SafePay'
-                      }
-                      icon={<Check size={16} />}
-                      className={`bg-custom-green text-white rounded-full py-2.5 text-[13px] font-medium h-auto shadow-sm hover:bg-[#266b3c] ${activeOrder ? 'opacity-70' : ''}`}
-                    />
-                    <Button
-                      variant="outline"
-                      label="Velg uten SafePay"
-                      disabled={!!activeOrder}
-                      className="px-4 border-black/20 rounded-full py-2.5 text-[13px] font-medium h-auto hover:bg-gray-50"
-                      onClick={() => {
-                        toast.success('Bruker valgt uten SafePay');
-                      }}
-                    />
-                    <Button
-                      variant="outline"
-                      label="Send melding"
-                      icon={<MessageCircle size={16} />}
-                      className="px-4 border-black/20 rounded-full py-2.5 text-[13px] font-medium h-auto hover:bg-gray-50"
-                      onClick={() => handleStartChat(app.applicant._id)}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-black/5">
+                <EmptyState type="applicants" />
+              </div>
+            )}
           </div>
 
           {/* Right Column - Sidebar */}

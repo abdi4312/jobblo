@@ -9,6 +9,7 @@ import type { Service } from '../../features/services/types';
 import { JobDetailCardSkeleton } from '../../components/Loading/JobDetailCardSkeleton';
 import mainLink from '../../api/mainURLs';
 import { useQuery } from '@tanstack/react-query';
+import EmptyState from '../../components/Ui/EmptyState';
 
 // Define the tabs configuration
 type TabConfig = {
@@ -141,22 +142,13 @@ export default function MineAnnonser() {
         </div>
       </div>
       {filteredServices.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-          <div className="bg-gray-100 p-6 rounded-full mb-4">
-            <Pencil size={40} className="text-gray-400" />
-          </div>
-          <h3 className="text-xl font-bold text-gray-800 mb-2">Ingen jobs i denne kategorien</h3>
-          <p className="text-gray-500 mb-6">
-            Det ser ut som du ikke har noen jobs i {currentTab.label} ennå.
-          </p>
-          {activeTab === 'active' && (
-            <Button
-              label="Lag din første annonse"
-              onClick={() => navigate('/publish-job')}
-              className="bg-custom-green text-white px-6 py-2 rounded-xl"
-            />
-          )}
-        </div>
+        <EmptyState
+          type="jobs"
+          title="Ingen jobs i denne kategorien"
+          description={`Det ser ut som du ikke har noen jobs i ${currentTab.label} ennå.`}
+          actionLabel={activeTab === 'active' ? 'Lag din første annonse' : undefined}
+          onActionClick={activeTab === 'active' ? () => navigate('/publish-job') : undefined}
+        />
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 m-2 gap-2.5">
           {filteredServices.map((job: Service) => {

@@ -23,6 +23,7 @@ import {
 } from '../../features/notifications/hooks';
 import type { AlertType } from '../../features/notifications/types';
 import { NotificationSkeleton } from '../../components/Loading/NotificationSkeleton';
+import EmptyState from '../../components/Ui/EmptyState';
 
 // Define category config
 const categories = [
@@ -264,11 +265,13 @@ export default function Alert() {
         ) : (
           <div className="flex flex-col gap-[2px] bg-white border border-black/[0.08] rounded-[16px] overflow-hidden">
             {filteredNotifications.length === 0 ? (
-              <div className="p-10 text-center">
-                <p className="text-[#888] text-[13px]">
-                  {showUnreadOnly ? 'Ingen uleste varsler' : 'Ingen varsler'}
-                </p>
-              </div>
+              <EmptyState
+                type="notifications"
+                title={showUnreadOnly ? 'Ingen uleste varsler' : 'Ingen varsler'}
+                description={
+                  showUnreadOnly ? 'Du har ingen uleste varsler.' : 'Du har ingen varsler enda.'
+                }
+              />
             ) : (
               filteredNotifications.map((notification) => (
                 <div

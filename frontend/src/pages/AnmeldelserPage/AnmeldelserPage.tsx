@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Star } from 'lucide-react';
+import EmptyState from '../../components/Ui/EmptyState';
 interface DisplayReview {
   id: string;
   reviewerName: string;
@@ -114,7 +115,7 @@ export default function AnmeldelserPage() {
         ) : error ? (
           <p className="text-center text-red-600 py-10">{error}</p>
         ) : currentReviews.length === 0 ? (
-          <p className="text-center text-gray-500 italic py-10">Ingen anmeldelser ennå</p>
+          <EmptyState type="reviews" />
         ) : (
           currentReviews.map((review) => (
             <div

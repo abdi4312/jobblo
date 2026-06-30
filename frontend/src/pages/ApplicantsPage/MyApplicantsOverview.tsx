@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Users, Calendar, User, Clock, Filter, Search } from 'lucide-react';
 import { useMyApplicantsOverviewQuery } from '../../features/applicants/hooks';
+import EmptyState from '../../components/Ui/EmptyState';
 
 const formatDate = (date: Date | string) => {
   return new Date(date).toLocaleDateString('no-NO', {
@@ -301,9 +302,12 @@ const MyApplicantsOverview: React.FC = () => {
           ))}
 
           {filteredAndSortedServices.length === 0 && (
-            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
-              <Users size={48} className="mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-500 font-medium">Ingen oppdrag som matcher filterene.</p>
+            <div className="bg-white rounded-2xl border border-black/5">
+              <EmptyState
+                type="jobs"
+                title="Ingen oppdrag som matcher"
+                description="Prøv å endre filterene eller søk etter noe annet."
+              />
             </div>
           )}
         </div>
