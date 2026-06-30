@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const HeroSchema = new mongoose.Schema(
   {
@@ -15,11 +15,11 @@ const HeroSchema = new mongoose.Schema(
 
     isActive: { type: Boolean, default: false },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 // 🔁 Auto active / expire logic (Fixed Version)
-HeroSchema.pre("save", async function () {
+HeroSchema.pre('save', async function () {
   const now = new Date();
 
   // "this" keyword current document ko refer karta hai
@@ -30,4 +30,4 @@ HeroSchema.pre("save", async function () {
   // Async hook mein next() ki zaroorat nahi hoti, Mongoose khud handle kar leta hai
 });
 
-module.exports = mongoose.model("Hero", HeroSchema);
+module.exports = mongoose.model('Hero', HeroSchema);

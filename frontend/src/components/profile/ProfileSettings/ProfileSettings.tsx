@@ -19,7 +19,7 @@ export function ProfileSettings() {
       <div className={styles.navigation}>
         <BackNavigation />
       </div>
-      
+
       <div className={styles.header}>
         <div className={styles.headerContent}>
           <h1 className={styles.title}>Min profil</h1>
@@ -29,69 +29,45 @@ export function ProfileSettings() {
 
       <div className={styles.content}>
         <ProfilePictureSection onChangeImage={handleChangeImage} />
-        
+
         <div className={styles.fieldsSection}>
-          <ProfileField 
-            label="Epost" 
-            value="olanormannen@theman.com" 
+          <ProfileField
+            label="Epost"
+            value="olanormannen@theman.com"
             onEdit={() => handleFieldEdit('email')}
           />
-          <ProfileField 
-            label="Passord" 
-            value="************" 
+          <ProfileField
+            label="Passord"
+            value="************"
             onEdit={() => handleFieldEdit('password')}
           />
-          <ProfileField 
-            label="Mobil" 
-            value="645 23 452" 
-            onEdit={() => handleFieldEdit('mobile')}
-          />
+          <ProfileField label="Mobil" value="645 23 452" onEdit={() => handleFieldEdit('mobile')} />
         </div>
 
         <div className={styles.fieldsSection}>
-          <ProfileField 
-            label="Fornavn" 
-            value="Ola" 
-            onEdit={() => handleFieldEdit('firstName')}
-          />
-          <ProfileField 
-            label="Etternavn" 
-            value="Normann" 
+          <ProfileField label="Fornavn" value="Ola" onEdit={() => handleFieldEdit('firstName')} />
+          <ProfileField
+            label="Etternavn"
+            value="Normann"
             onEdit={() => handleFieldEdit('lastName')}
           />
-          <ProfileField 
-            label="Født" 
-            value="1832" 
-            onEdit={() => handleFieldEdit('birthYear')}
-          />
-          <ProfileField 
-            label="Kjønn" 
-            value="Mann" 
-            onEdit={() => handleFieldEdit('gender')}
-          />
+          <ProfileField label="Født" value="1832" onEdit={() => handleFieldEdit('birthYear')} />
+          <ProfileField label="Kjønn" value="Mann" onEdit={() => handleFieldEdit('gender')} />
         </div>
 
         <div className={styles.fieldsSection}>
-          <ProfileField 
-            label="Adresse" 
-            value="Ola gate 23" 
+          <ProfileField
+            label="Adresse"
+            value="Ola gate 23"
             onEdit={() => handleFieldEdit('address')}
           />
-          <ProfileField 
-            label="Postnummer" 
-            value="1337" 
+          <ProfileField
+            label="Postnummer"
+            value="1337"
             onEdit={() => handleFieldEdit('postalCode')}
           />
-          <ProfileField 
-            label="Poststed" 
-            value="Sandvika" 
-            onEdit={() => handleFieldEdit('city')}
-          />
-          <ProfileField 
-            label="Land" 
-            value="Norge" 
-            onEdit={() => handleFieldEdit('country')}
-          />
+          <ProfileField label="Poststed" value="Sandvika" onEdit={() => handleFieldEdit('city')} />
+          <ProfileField label="Land" value="Norge" onEdit={() => handleFieldEdit('country')} />
         </div>
       </div>
     </div>

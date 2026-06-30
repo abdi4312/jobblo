@@ -1,5 +1,5 @@
-import { useOutletContext } from "react-router-dom";
-import type { SettingsContextType } from "../../../pages/SettingsPage";
+import { useOutletContext } from 'react-router-dom';
+import type { SettingsContextType } from '../../../pages/SettingsPage';
 
 export const NameView = () => {
   // 'user' objekt-kontekst for sammenligning
@@ -7,8 +7,7 @@ export const NameView = () => {
     useOutletContext<SettingsContextType>();
 
   // Logikk: Hvis fornavn og etternavn er de samme som før
-  const isUnchanged =
-    form.name === user?.name && form.lastName === user?.lastName;
+  const isUnchanged = form.name === user?.name && form.lastName === user?.lastName;
   const isDisabled = isUnchanged || updateUser?.isPending;
 
   return (
@@ -26,7 +25,7 @@ export const NameView = () => {
             id="firstName"
             className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-gray-100 outline-none rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors"
             value={form.name}
-            onChange={(event) => handleChange("name", event.target.value)}
+            onChange={(event) => handleChange('name', event.target.value)}
           />
         </div>
 
@@ -42,7 +41,7 @@ export const NameView = () => {
             id="lastName"
             className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-gray-100 outline-none rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors"
             value={form.lastName}
-            onChange={(event) => handleChange("lastName", event.target.value)}
+            onChange={(event) => handleChange('lastName', event.target.value)}
           />
         </div>
       </div>
@@ -55,11 +54,11 @@ export const NameView = () => {
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
           ${
             isDisabled
-              ? "bg-custom-green cursor-not-allowed opacity-80"
-              : "bg-custom-green hover:bg-custom-green active:scale-[0.98]"
+              ? 'bg-custom-green cursor-not-allowed opacity-80'
+              : 'bg-custom-green hover:bg-custom-green active:scale-[0.98]'
           }`}
       >
-        {updateUser?.isPending ? "Lagrer..." : "Lagre endringer"}
+        {updateUser?.isPending ? 'Lagrer...' : 'Lagre endringer'}
       </button>
     </section>
   );

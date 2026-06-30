@@ -28,9 +28,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
 
   return (
     <View className="mb-12">
-      <Text className="text-sm font-bold text-gray-500 mb-4 uppercase tracking-wider">
-        Payment
-      </Text>
+      <Text className="text-sm font-bold text-gray-500 mb-4 uppercase tracking-wider">Payment</Text>
 
       <Text className="text-sm font-bold mb-2">Payment Type</Text>
       <View className="flex-row bg-gray-100 p-1 rounded-2xl mb-6">
@@ -55,9 +53,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
           }`}
         >
           <Text
-            className={`font-bold ${
-              paymentType === 'Hourly' ? 'text-white' : 'text-gray-500'
-            }`}
+            className={`font-bold ${paymentType === 'Hourly' ? 'text-white' : 'text-gray-500'}`}
           >
             Hourly
           </Text>

@@ -1,9 +1,9 @@
-import { useNavigate } from "react-router-dom";
-import { MapPin } from "lucide-react";
-import { useRecommendedJobsQuery } from "../../features/jobDetail/hook.ts";
-import { JobCard } from "../component/jobCard/JobCard";
-import { JobCardSkeleton } from "../Loading/JobCardSkeleton";
-import type { Jobs } from "../../types/Jobs";
+import { useNavigate } from 'react-router-dom';
+import { MapPin } from 'lucide-react';
+import { useRecommendedJobsQuery } from '../../features/jobDetail/hook.ts';
+import { JobCard } from '../component/jobCard/JobCard';
+import { JobCardSkeleton } from '../Loading/JobCardSkeleton';
+import type { Jobs } from '../../types/Jobs';
 
 interface RelatedJobsProps {
   coordinates?: [number, number];
@@ -11,15 +11,14 @@ interface RelatedJobsProps {
   currentJobId?: string;
 }
 
-const RelatedJobs: React.FC<RelatedJobsProps> = ({
-  coordinates,
-  categories,
-  currentJobId,
-}) => {
+const RelatedJobs: React.FC<RelatedJobsProps> = ({ coordinates, categories, currentJobId }) => {
   const navigate = useNavigate();
 
-  const { data: recommendedJobs = [], isLoading: isRecommendedLoading } =
-    useRecommendedJobsQuery(coordinates, categories, currentJobId || "");
+  const { data: recommendedJobs = [], isLoading: isRecommendedLoading } = useRecommendedJobsQuery(
+    coordinates,
+    categories,
+    currentJobId || ''
+  );
 
   if (isRecommendedLoading) {
     return (
@@ -38,14 +37,12 @@ const RelatedJobs: React.FC<RelatedJobsProps> = ({
           <div className="bg-white p-4 rounded-full shadow-sm mb-4">
             <MapPin size={28} className="text-gray-400" />
           </div>
-          <h4 className="text-base font-semibold text-gray-800 mb-1">
-            Ingen jobber funnet
-          </h4>
+          <h4 className="text-base font-semibold text-gray-800 mb-1">Ingen jobber funnet</h4>
           <p className="text-gray-500 text-center text-sm leading-relaxed">
             Vi fant ingen anbefalte jobber akkurat nå.
           </p>
           <button
-            onClick={() => navigate("/job-listing")}
+            onClick={() => navigate('/job-listing')}
             className="mt-5 text-sm font-semibold text-custom-green hover:underline"
           >
             Se alle tilgjengelige jobber →

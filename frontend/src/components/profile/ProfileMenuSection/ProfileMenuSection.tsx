@@ -1,6 +1,6 @@
-import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { PricingModal } from "../../shared/PricingModal/PricingModal";
+import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { PricingModal } from '../../shared/PricingModal/PricingModal';
 import {
   ChevronRight,
   Headset,
@@ -12,7 +12,7 @@ import {
   Tag,
   User,
   Wallet,
-} from "lucide-react";
+} from 'lucide-react';
 
 export function ProfileMenuSection() {
   const navigate = useNavigate();
@@ -21,38 +21,38 @@ export function ProfileMenuSection() {
   const menuItems = [
     {
       icon: Megaphone,
-      text: "Mine annonser",
-      des: "Se og endre dine annonser",
-      path: "/Mine-annonser",
+      text: 'Mine annonser',
+      des: 'Se og endre dine annonser',
+      path: '/Mine-annonser',
     },
     {
       icon: Heart,
-      text: "Favoritter",
-      des: "Se og endre dine favoritt-jobber",
-      path: "/favorites",
+      text: 'Favoritter',
+      des: 'Se og endre dine favoritt-jobber',
+      path: '/favorites',
     },
     {
       icon: Star,
-      text: "Anmeldelser",
-      des: "Se og endre dine anmeldelser",
-      path: "/Anmeldelser",
+      text: 'Anmeldelser',
+      des: 'Se og endre dine anmeldelser',
+      path: '/Anmeldelser',
     },
     {
       icon: Headset,
-      text: "Kundeservice",
-      des: "Kontakt oss for hjelp",
-      path: "/Support",
+      text: 'Kundeservice',
+      des: 'Kontakt oss for hjelp',
+      path: '/Support',
     },
     {
       icon: Rocket,
-      text: "Upcoming",
-      des: "Se hva vi jobber med",
-      path: "/Upcoming",
+      text: 'Upcoming',
+      des: 'Se hva vi jobber med',
+      path: '/Upcoming',
     },
     {
       icon: Tag,
-      text: "Se våre priser",
-      des: "Se våre priser for ulike tjenester",
+      text: 'Se våre priser',
+      des: 'Se våre priser for ulike tjenester',
       isModal: true,
     },
   ];
@@ -78,9 +78,7 @@ export function ProfileMenuSection() {
                   <item.icon size={20} />
                 </div>
                 <div>
-                  <h2 className="text-[20px] font-bold text-custom-black">
-                    {item.text}
-                  </h2>
+                  <h2 className="text-[20px] font-bold text-custom-black">{item.text}</h2>
                   <span className="text-[14px] font-medium">{item.des}</span>
                 </div>
               </div>
@@ -91,10 +89,7 @@ export function ProfileMenuSection() {
           );
         })}
       </div>
-      <PricingModal
-        isOpen={isPricingModalOpen}
-        onClose={() => setIsPricingModalOpen(false)}
-      />
+      <PricingModal isOpen={isPricingModalOpen} onClose={() => setIsPricingModalOpen(false)} />
     </>
   );
 }

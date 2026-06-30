@@ -1,14 +1,8 @@
-import React from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-} from "react-native";
-import * as LucideIcons from "lucide-react-native";
-import { useCategories } from "../../features/category/hooks/useCategories";
-import { useRouter } from "expo-router";
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import * as LucideIcons from 'lucide-react-native';
+import { useCategories } from '../../features/category/hooks/useCategories';
+import { useRouter } from 'expo-router';
 
 export default function CategoryGrid() {
   const { data: categories, isLoading: categoriesLoading } = useCategories();
@@ -18,7 +12,7 @@ export default function CategoryGrid() {
   const CategoryIcon = ({
     name,
     size = 32,
-    color = "#333",
+    color = '#333',
   }: {
     name: string;
     size?: number;
@@ -30,9 +24,7 @@ export default function CategoryGrid() {
 
   return (
     <View className="mb-10">
-      <Text className="text-2xl font-normal text-[#000000] mb-6 px-4">
-        Shop by Category
-      </Text>
+      <Text className="text-2xl font-normal text-[#000000] mb-6 px-4">Shop by Category</Text>
 
       {categoriesLoading ? (
         <ActivityIndicator size="large" color="#E68A2E" />
@@ -40,14 +32,14 @@ export default function CategoryGrid() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingLeft: 14, alignItems: "center" }}
+          contentContainerStyle={{ paddingLeft: 14, alignItems: 'center' }}
         >
           {categories?.map((category) => (
             <TouchableOpacity
               key={category._id}
               onPress={() =>
                 router.push({
-                  pathname: "/(tabs)/job-search",
+                  pathname: '/(tabs)/job-search',
                   params: { initialCategory: category.name },
                 })
               }
@@ -55,7 +47,7 @@ export default function CategoryGrid() {
               style={{ elevation: 0 }}
             >
               <View className="mb-3">
-                <CategoryIcon name={category.icon || "HelpCircle"} size={40} />
+                <CategoryIcon name={category.icon || 'HelpCircle'} size={40} />
               </View>
               <Text
                 className="text-[#000000] font-normal text-center px-2 text-[12px]"

@@ -1,17 +1,17 @@
-import { useState, useEffect } from "react";
-import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
-import { useJobs } from "../../features/jobsList/hooks";
-import { useCategories } from "../../features/categories/hooks";
-import { useDashboardStats } from "../../features/explore/hooks";
-import { useTopUsers } from "../../features/profile/hooks";
-import { useUserStore } from "../../stores/userStore";
-import * as Icons from "lucide-react";
-import { MapPin, ShieldCheck, FileText, Star, Sprout } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
+import { useJobs } from '../../features/jobsList/hooks';
+import { useCategories } from '../../features/categories/hooks';
+import { useDashboardStats } from '../../features/explore/hooks';
+import { useTopUsers } from '../../features/profile/hooks';
+import { useUserStore } from '../../stores/userStore';
+import * as Icons from 'lucide-react';
+import { MapPin, ShieldCheck, FileText, Star, Sprout } from 'lucide-react';
 
 // Helper function to map category icon names to actual icons
 const getCategoryIcon = (cat: any) => {
   if (cat.icon) {
-    const iconName = typeof cat.icon === "string" ? cat.icon : String(cat.icon);
+    const iconName = typeof cat.icon === 'string' ? cat.icon : String(cat.icon);
     const Icon = (Icons as any)[iconName];
     if (Icon) return Icon;
 
@@ -27,55 +27,48 @@ const getCategoryIcon = (cat: any) => {
 
   const lowerName = cat.name.toLowerCase();
   if (
-    lowerName.includes("håndverk") ||
-    lowerName.includes("håndverker") ||
-    lowerName.includes("oppussing")
+    lowerName.includes('håndverk') ||
+    lowerName.includes('håndverker') ||
+    lowerName.includes('oppussing')
   )
     return Icons.Wrench;
-  if (lowerName.includes("maling")) return Icons.Paintbrush;
-  if (lowerName.includes("rengjøring") || lowerName.includes("rense"))
-    return Icons.Home;
-  if (lowerName.includes("flytting") || lowerName.includes("flytt"))
-    return Icons.Truck;
-  if (lowerName.includes("hage") || lowerName.includes("hagearbeid"))
-    return Icons.Sprout;
-  if (
-    lowerName.includes("it") ||
-    lowerName.includes("nettverk") ||
-    lowerName.includes("pc")
-  )
+  if (lowerName.includes('maling')) return Icons.Paintbrush;
+  if (lowerName.includes('rengjøring') || lowerName.includes('rense')) return Icons.Home;
+  if (lowerName.includes('flytting') || lowerName.includes('flytt')) return Icons.Truck;
+  if (lowerName.includes('hage') || lowerName.includes('hagearbeid')) return Icons.Sprout;
+  if (lowerName.includes('it') || lowerName.includes('nettverk') || lowerName.includes('pc'))
     return Icons.Laptop;
-  if (lowerName.includes("transport")) return Icons.Package;
-  if (lowerName.includes("rørlegger")) return Icons.Wrench;
-  if (lowerName.includes("småjobber")) return Icons.Handshake;
+  if (lowerName.includes('transport')) return Icons.Package;
+  if (lowerName.includes('rørlegger')) return Icons.Wrench;
+  if (lowerName.includes('småjobber')) return Icons.Handshake;
   return Icons.MoreHorizontal;
 };
 
 export default function JobListingPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const categoryFromUrl = searchParams.get("category");
+  const categoryFromUrl = searchParams.get('category');
   const navigate = useNavigate();
   const { user } = useUserStore();
 
   const checkTrackingConsent = () => {
-    const consent = localStorage.getItem("cookie-consent");
-    return consent === "accepted" || consent === "customised";
+    const consent = localStorage.getItem('cookie-consent');
+    return consent === 'accepted' || consent === 'customised';
   };
 
   const handleNearbyJobsClick = () => {
     if (!checkTrackingConsent()) {
       // If no consent, just navigate to all jobs
-      navigate("/search/job/all");
+      navigate('/search/job/all');
       return;
     }
 
     // Try to get user's location
-    if ("geolocation" in navigator) {
+    if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           // We have location, could pass to search page
-          navigate("/search/job/all", {
+          navigate('/search/job/all', {
             state: {
               lat: position.coords.latitude,
               lng: position.coords.longitude,
@@ -84,12 +77,12 @@ export default function JobListingPage() {
         },
         () => {
           // If geolocation fails, just go to all jobs
-          navigate("/search/job/all");
-        },
+          navigate('/search/job/all');
+        }
       );
     } else {
       // If geolocation not available, just go to all jobs
-      navigate("/search/job/all");
+      navigate('/search/job/all');
     }
   };
 
@@ -99,11 +92,9 @@ export default function JobListingPage() {
   } | null;
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    initialState?.selectedCategory ? [initialState.selectedCategory] : [],
+    initialState?.selectedCategory ? [initialState.selectedCategory] : []
   );
-  const [searchQuery, setSearchQuery] = useState<string>(
-    initialState?.searchQuery || "",
-  );
+  const [searchQuery, setSearchQuery] = useState<string>(initialState?.searchQuery || '');
   const [isUrgentOnly, setIsUrgentOnly] = useState<boolean>(false);
 
   useEffect(() => {
@@ -124,7 +115,7 @@ export default function JobListingPage() {
     categories: selectedCategories,
     search: searchQuery,
     urgent: isUrgentOnly,
-    tab: "Discover",
+    tab: 'Discover',
   });
   const { data: categoriesData } = useCategories();
   const { data: statsData } = useDashboardStats();
@@ -134,18 +125,18 @@ export default function JobListingPage() {
   const categories = categoriesData?.slice(0, 8) || [];
 
   const getInitials = (name: string, lastName?: string) => {
-    return `${name.charAt(0)}${lastName ? lastName.charAt(0) : ""}`.toUpperCase();
+    return `${name.charAt(0)}${lastName ? lastName.charAt(0) : ''}`.toUpperCase();
   };
 
   const renderStars = (rating: number) => {
-    let stars = "";
+    let stars = '';
     for (let i = 0; i < 5; i++) {
       if (i < Math.floor(rating)) {
-        stars += "★";
+        stars += '★';
       } else if (i === Math.floor(rating) && rating % 1 >= 0.5) {
-        stars += "★";
+        stars += '★';
       } else {
-        stars += "☆";
+        stars += '☆';
       }
     }
     return stars;
@@ -155,24 +146,24 @@ export default function JobListingPage() {
     topUsersData?.slice(0, 4).map((user, index) => ({
       _id: (user as any)._id,
       initials: getInitials(user.name, user.lastName),
-      name: `${user.name} ${user.lastName || ""}`,
-      role: user.skills?.slice(0, 3).join(" · ") || "Oppdragstaker",
+      name: `${user.name} ${user.lastName || ''}`,
+      role: user.skills?.slice(0, 3).join(' · ') || 'Oppdragstaker',
       rating: user.averageRating,
       count: user.reviewCount,
-      rate: user.hourlyRate ? `${user.hourlyRate} kr/t` : "Tilgjengelig",
-      location: user.locations?.[0] || "Norge",
+      rate: user.hourlyRate ? `${user.hourlyRate} kr/t` : 'Tilgjengelig',
+      location: user.locations?.[0] || 'Norge',
       sponsored: index === 0,
       avatarUrl: user.avatarUrl,
     })) || [];
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return "God morgen";
-    if (hour >= 12 && hour < 18) return "God ettermiddag";
-    return "God kveld";
+    if (hour >= 5 && hour < 12) return 'God morgen';
+    if (hour >= 12 && hour < 18) return 'God ettermiddag';
+    return 'God kveld';
   };
 
-  const userName = user?.name || "Gust";
+  const userName = user?.name || 'Gust';
   const greeting = getGreeting();
 
   return (
@@ -207,24 +198,22 @@ export default function JobListingPage() {
             <div>
               <strong className="block text-base sm:text-lg font-medium text-white">
                 {statsData?.activeJobs
-                  ? `${statsData.activeJobs > 1000 ? (statsData.activeJobs / 1000).toFixed(0) + "k+" : statsData.activeJobs + "+"}`
-                  : "5 000+"}
+                  ? `${statsData.activeJobs > 1000 ? (statsData.activeJobs / 1000).toFixed(0) + 'k+' : statsData.activeJobs + '+'}`
+                  : '5 000+'}
               </strong>
               <span className="text-xs text-white/50">Aktive oppdrag</span>
             </div>
             <div>
               <strong className="block text-base sm:text-lg font-medium text-white">
                 {statsData?.totalUsers
-                  ? `${statsData.totalUsers > 1000 ? (statsData.totalUsers / 1000).toFixed(0) + "k+" : statsData.totalUsers + "+"}`
-                  : "15k+"}
+                  ? `${statsData.totalUsers > 1000 ? (statsData.totalUsers / 1000).toFixed(0) + 'k+' : statsData.totalUsers + '+'}`
+                  : '15k+'}
               </strong>
               <span className="text-xs text-white/50">Brukere</span>
             </div>
             <div>
               <strong className="block text-base sm:text-lg font-medium text-white">
-                {statsData?.averageRating
-                  ? statsData.averageRating.toFixed(1)
-                  : "4.8"}
+                {statsData?.averageRating ? statsData.averageRating.toFixed(1) : '4.8'}
               </strong>
               <span className="text-xs text-white/50">Snittrating</span>
             </div>
@@ -235,7 +224,7 @@ export default function JobListingPage() {
         <div className="flex justify-between items-center mb-2 sm:mb-3">
           <h3 className="text-sm font-medium text-[#1a1a1a]">Kategorier</h3>
           <button
-            onClick={() => navigate("/search/job/all")}
+            onClick={() => navigate('/search/job/all')}
             className="text-xs text-[#16a34a] no-underline bg-transparent border-none cursor-pointer"
           >
             Se alle
@@ -245,7 +234,7 @@ export default function JobListingPage() {
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 mb-4 sm:mb-5 overflow-x-auto">
           <div
             key="all"
-            className={`bg-white border rounded-[10px] sm:rounded-[12px] p-2 sm:p-3 flex flex-col items-center gap-1 cursor-pointer hover:border-[#16a34a] transition-colors min-w-max ${selectedCategories.length === 0 ? "border-[#16a34a] bg-[#f0faf0]" : "border-black/8"}`}
+            className={`bg-white border rounded-[10px] sm:rounded-[12px] p-2 sm:p-3 flex flex-col items-center gap-1 cursor-pointer hover:border-[#16a34a] transition-colors min-w-max ${selectedCategories.length === 0 ? 'border-[#16a34a] bg-[#f0faf0]' : 'border-black/8'}`}
             onClick={() => setSelectedCategories([])}
           >
             <Icons.LayoutGrid size={18} className="text-[#16a34a]" />
@@ -260,7 +249,7 @@ export default function JobListingPage() {
             return (
               <div
                 key={cat._id}
-                className={`bg-white border rounded-[10px] sm:rounded-[12px] p-2 sm:p-3 flex flex-col items-center gap-1 cursor-pointer hover:border-[#16a34a] transition-colors min-w-max ${isSelected ? "border-[#16a34a] bg-[#f0faf0]" : "border-black/8"}`}
+                className={`bg-white border rounded-[10px] sm:rounded-[12px] p-2 sm:p-3 flex flex-col items-center gap-1 cursor-pointer hover:border-[#16a34a] transition-colors min-w-max ${isSelected ? 'border-[#16a34a] bg-[#f0faf0]' : 'border-black/8'}`}
                 onClick={() => setSelectedCategories([cat.name])}
               >
                 <Icon size={18} className="text-[#16a34a]" />
@@ -274,11 +263,9 @@ export default function JobListingPage() {
 
         {/* Jobs Section */}
         <div className="flex justify-between items-center mb-2 sm:mb-3">
-          <h3 className="text-sm font-medium text-[#1a1a1a]">
-            Oppdrag nær deg – Oslo
-          </h3>
+          <h3 className="text-sm font-medium text-[#1a1a1a]">Oppdrag nær deg – Oslo</h3>
           <button
-            onClick={() => navigate("/search/job/all")}
+            onClick={() => navigate('/search/job/all')}
             className="text-xs text-[#16a34a] no-underline bg-transparent border-none cursor-pointer"
           >
             Se alle
@@ -307,7 +294,7 @@ export default function JobListingPage() {
               ? jobs.slice(0, 6).map((job: any) => (
                   <div
                     key={job._id}
-                    className={`bg-white border border-black/8 rounded-[12px] sm:rounded-[14px] overflow-hidden cursor-pointer ${job.promoted ? "border-[1.5px] border-[#ca8a04]" : ""}`}
+                    className={`bg-white border border-black/8 rounded-[12px] sm:rounded-[14px] overflow-hidden cursor-pointer ${job.promoted ? 'border-[1.5px] border-[#ca8a04]' : ''}`}
                     onClick={() => navigate(`/job-listing/${job._id}`)}
                   >
                     <div className="h-[70px] sm:h-[90px] bg-[#f0faf0] flex items-center justify-center overflow-hidden">
@@ -319,10 +306,7 @@ export default function JobListingPage() {
                           loading="lazy"
                         />
                       ) : (
-                        <Sprout
-                          size={28}
-                          className="text-[#16a34a] sm:w-9 sm:h-9"
-                        />
+                        <Sprout size={28} className="text-[#16a34a] sm:w-9 sm:h-9" />
                       )}
                     </div>
                     <div className="p-2 sm:p-[10px_12px]">
@@ -338,13 +322,11 @@ export default function JobListingPage() {
                       </div>
                       <div className="text-[10px] sm:text-xs text-[#888] mb-1.5 sm:mb-2 flex items-center gap-0.5 sm:gap-1">
                         <MapPin size={8} sm={10} />
-                        {job.location?.city || job.location?.address || "Norge"}
+                        {job.location?.city || job.location?.address || 'Norge'}
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs sm:text-sm font-medium text-[#1a1a1a]">
-                          {typeof job.price === "number"
-                            ? job.price.toLocaleString()
-                            : job.price}{" "}
+                          {typeof job.price === 'number' ? job.price.toLocaleString() : job.price}{' '}
                           kr
                         </span>
                         <span className="flex items-center gap-0.5 sm:gap-1 bg-[#f0faf0] rounded-full px-1.5 sm:px-[7px] py-0.5 sm:py-[2px] text-[10px] sm:text-xs text-[#166534] font-medium">
@@ -360,11 +342,9 @@ export default function JobListingPage() {
 
         {/* Recommended Workers Section */}
         <div className="flex justify-between items-center mb-2 sm:mb-3">
-          <h3 className="text-sm font-medium text-[#1a1a1a]">
-            Anbefalte oppdragstakere nær deg
-          </h3>
+          <h3 className="text-sm font-medium text-[#1a1a1a]">Anbefalte oppdragstakere nær deg</h3>
           <button
-            onClick={() => navigate("/search/job/all")}
+            onClick={() => navigate('/search/job/all')}
             className="text-xs text-[#16a34a] no-underline bg-transparent border-none cursor-pointer"
           >
             Se alle
@@ -375,7 +355,7 @@ export default function JobListingPage() {
           {recommendedWorkers.map((worker, index) => (
             <div
               key={index}
-              className={`bg-white border border-black/8 rounded-[12px] sm:rounded-[14px] p-3 sm:p-3.5 flex gap-2.5 sm:gap-3 cursor-pointer hover:shadow-md transition-all ${worker.sponsored ? "border-[1.5px] border-[#ca8a04]" : ""}`}
+              className={`bg-white border border-black/8 rounded-[12px] sm:rounded-[14px] p-3 sm:p-3.5 flex gap-2.5 sm:gap-3 cursor-pointer hover:shadow-md transition-all ${worker.sponsored ? 'border-[1.5px] border-[#ca8a04]' : ''}`}
               onClick={() => {
                 if ((worker as any)._id) {
                   navigate(`/profile/${(worker as any)._id}`);
@@ -408,7 +388,7 @@ export default function JobListingPage() {
                   {worker.role}
                 </div>
                 <div className="text-[10px] sm:text-xs text-[#ca8a04]">
-                  {renderStars(worker.rating)}{" "}
+                  {renderStars(worker.rating)}{' '}
                   <span className="text-[#888]">
                     {worker.rating} ({worker.count} oppdrag)
                   </span>
@@ -424,32 +404,25 @@ export default function JobListingPage() {
         {/* Trust Section */}
         <div className="bg-white border border-black/8 rounded-[12px] sm:rounded-[14px] p-3 sm:p-4 md:px-5 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <div className="flex items-start gap-2 sm:gap-2.5">
-            <ShieldCheck
-              className="text-[#16a34a] flex-shrink-0 mt-0.5"
-              size={18}
-            />
+            <ShieldCheck className="text-[#16a34a] flex-shrink-0 mt-0.5" size={18} />
             <div>
               <div className="text-xs sm:text-sm font-medium text-[#1a1a1a] mb-0.5 sm:mb-1">
                 Trygg betaling med SafePay
               </div>
               <div className="text-[10px] sm:text-xs text-[#777] leading-relaxed">
-                Pengene holdes sikkert til jobben er godkjent. Du betaler aldri
-                for noe du ikke er fornøyd med.
+                Pengene holdes sikkert til jobben er godkjent. Du betaler aldri for noe du ikke er
+                fornøyd med.
               </div>
             </div>
           </div>
           <div className="flex items-start gap-2 sm:gap-2.5">
-            <FileText
-              className="text-[#16a34a] flex-shrink-0 mt-0.5"
-              size={18}
-            />
+            <FileText className="text-[#16a34a] flex-shrink-0 mt-0.5" size={18} />
             <div>
               <div className="text-xs sm:text-sm font-medium text-[#1a1a1a] mb-0.5 sm:mb-1">
                 Automatisk kontrakt
               </div>
               <div className="text-[10px] sm:text-xs text-[#777] leading-relaxed">
-                Hver avtale genererer en digital kontrakt som beskytter både deg
-                og oppdragstakeren.
+                Hver avtale genererer en digital kontrakt som beskytter både deg og oppdragstakeren.
               </div>
             </div>
           </div>
@@ -460,8 +433,7 @@ export default function JobListingPage() {
                 Verifiserte ratings
               </div>
               <div className="text-[10px] sm:text-xs text-[#777] leading-relaxed">
-                Alle anmeldelser er fra ekte fullførte oppdrag. Du ser alltid
-                hvem du leier inn.
+                Alle anmeldelser er fra ekte fullførte oppdrag. Du ser alltid hvem du leier inn.
               </div>
             </div>
           </div>

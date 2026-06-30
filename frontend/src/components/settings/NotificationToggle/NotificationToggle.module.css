@@ -9,7 +9,12 @@
 
 .label {
   color: var(--color-icon);
-  font-family: 'Inter', -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    'Inter',
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 14px;
   font-weight: 400;
   line-height: normal;
@@ -27,7 +32,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .toggleButton:hover {
@@ -54,12 +61,12 @@
   .label {
     font-size: 13px;
   }
-  
+
   .toggleButton {
     width: 22px;
     height: 22px;
   }
-  
+
   .toggleButton svg {
     width: 22px;
     height: 22px;
@@ -76,12 +83,12 @@
   .label {
     font-size: 15px;
   }
-  
+
   .toggleButton {
     width: 26px;
     height: 26px;
   }
-  
+
   .toggleButton svg {
     width: 26px;
     height: 26px;
@@ -93,11 +100,11 @@
   .toggleButton {
     transition: none;
   }
-  
+
   .toggleButton:hover {
     transform: none;
   }
-  
+
   .toggleButton:active {
     transform: none;
   }

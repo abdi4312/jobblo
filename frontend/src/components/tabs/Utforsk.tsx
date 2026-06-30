@@ -5,8 +5,8 @@
 // }
 
 // const JobCard = ({ job }: { job: Jobs }) => (
-//   <div style={{ 
-//     borderRadius: "8px", 
+//   <div style={{
+//     borderRadius: "8px",
 //     backgroundColor: "var(--color-surface)",
 //     width: "40vw",
 //     maxWidth: "400px",
@@ -14,9 +14,9 @@
 //     boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
 //   }}>
 //     {/* Image Section */}
-//     <div style={{ 
-//       width: "100%", 
-//       height: "100px", 
+//     <div style={{
+//       width: "100%",
+//       height: "100px",
 //       borderRadius: "4px",
 //       backgroundColor: "#f0f0f0",
 //       display: "flex",
@@ -24,14 +24,14 @@
 //       justifyContent: "center",
 //     }}>
 //       {job.images[0] ? (
-//         <img 
-//           src={job.images[0]} 
+//         <img
+//           src={job.images[0]}
 //           alt={job.title}
-//           style={{ 
-//             width: "100%", 
-//             height: "100%", 
-//             objectFit: "cover", 
-//             borderRadius: "4px" 
+//           style={{
+//             width: "100%",
+//             height: "100%",
+//             objectFit: "cover",
+//             borderRadius: "4px"
 //           }}
 //         />
 //       ) : (
@@ -51,21 +51,21 @@
 
 //     {/* Categories */}
 //     <div style={{display:"flex", fontSize: "16px", gap: "8px", color: "var(--color-white)", padding: "0 12px"}}>
-//       <h4 style={{ 
-//         width: "50px", 
+//       <h4 style={{
+//         width: "50px",
 //         backgroundColor: "var(--color-accent)",
-//         overflow: "hidden", 
-//         margin: "0", 
+//         overflow: "hidden",
+//         margin: "0",
 //         borderRadius: "4px"
 //       }}>
 //         {job.categories}ca
 //       </h4>
 //       <h4 style={{
 //         width: "50px",
-//         backgroundColor: "var(--color-blue)", 
-//         overflow: "hidden", 
-//         marginLeft: "12px", 
-//         margin: "0", 
+//         backgroundColor: "var(--color-blue)",
+//         overflow: "hidden",
+//         marginLeft: "12px",
+//         margin: "0",
 //         borderRadius: "4px"
 
 //       }}>
@@ -98,11 +98,11 @@
 //     </div>
 
 //     {/* Price */}
-//     <div style={{ 
-//       display: "flex", 
-//       justifyContent: "center", 
-//       width: "80%", 
-//       marginTop: "12px", 
+//     <div style={{
+//       display: "flex",
+//       justifyContent: "center",
+//       width: "80%",
+//       marginTop: "12px",
 //       marginLeft: "auto",
 //       marginRight: "auto",
 //       marginBottom: "12px",
@@ -110,8 +110,8 @@
 //       backgroundColor: "var(--color-muted-gray)",
 //       borderRadius: "10px",
 //     }}>
-//       <span style={{ 
-//         fontWeight: 900, 
+//       <span style={{
+//         fontWeight: 900,
 //         color: "var(--color-price)",
 //         fontSize: "17px"
 //       }}>
@@ -128,7 +128,7 @@
 //         <h3>rawr</h3>
 //         <button>filter</button>
 //       </div>
-      
+
 //       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
 //         {jobs.map(job => (
 //           <JobCard key={job._id} job={job} />

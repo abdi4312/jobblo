@@ -1,10 +1,10 @@
-const { createSession } = require("../utils/tokenUtils");
-const axios = require("axios");
-const User = require("../models/User");
+const { createSession } = require('../utils/tokenUtils');
+const axios = require('axios');
+const User = require('../models/User');
 
 exports.iduraCallback = async (req, res) => {
   try {
-    console.log("IDURA CODE:", req.query.code);
+    console.log('IDURA CODE:', req.query.code);
 
     const { code } = req.query;
 
@@ -19,10 +19,10 @@ exports.iduraCallback = async (req, res) => {
           username: process.env.IDURA_CLIENT_ID,
           password: process.env.IDURA_CLIENT_SECRET,
         },
-      },
+      }
     );
 
-    if (tokenRes.data.status !== "success") {
+    if (tokenRes.data.status !== 'success') {
       return res.redirect(`${process.env.FRONTEND_URL}/auth-failed`);
     }
 
@@ -30,8 +30,8 @@ exports.iduraCallback = async (req, res) => {
 
     // 🔍 STEP 1: Provider check
     let user = await User.findOne({
-      "oauthProviders.provider": "idura",
-      "oauthProviders.providerId": profile.id,
+      'oauthProviders.provider': 'idura',
+      'oauthProviders.providerId': profile.id,
     });
 
     if (user) {
@@ -42,19 +42,17 @@ exports.iduraCallback = async (req, res) => {
     user = await User.findOne({ email: profile.email });
 
     if (user) {
-      const alreadyLinked = user.oauthProviders.some(
-        (p) => p.provider === "idura",
-      );
+      const alreadyLinked = user.oauthProviders.some((p) => p.provider === 'idura');
 
       if (!alreadyLinked) {
         user.oauthProviders.push({
-          provider: "idura",
+          provider: 'idura',
           providerId: profile.id,
         });
       }
 
       user.verified = true;
-      user.accountStatus = "verified";
+      user.accountStatus = 'verified';
       user.lastLogin = new Date();
 
       await user.save();
@@ -63,17 +61,17 @@ exports.iduraCallback = async (req, res) => {
 
     // 🆕 STEP 3: Create new user (same pattern)
     user = await User.create({
-      name: profile.firstName || "Verified User",
+      name: profile.firstName || 'Verified User',
       lastName: profile.lastName,
       email: profile.email,
-      password: "oauth-user",
+      password: 'oauth-user',
       verified: true,
-      accountStatus: "verified",
-      role: "user",
-      subscription: "free",
+      accountStatus: 'verified',
+      role: 'user',
+      subscription: 'free',
       oauthProviders: [
         {
-          provider: "idura",
+          provider: 'idura',
           providerId: profile.id,
         },
       ],
@@ -81,7 +79,7 @@ exports.iduraCallback = async (req, res) => {
 
     return redirectWithToken(req, res, user);
   } catch (err) {
-    console.error("Idura auth error:", err);
+    console.error('Idura auth error:', err);
     res.redirect(`${process.env.FRONTEND_URL}/auth-error`);
   }
 };
@@ -91,21 +89,19 @@ async function redirectWithToken(req, res, user) {
   const { accessToken, refreshToken } = await createSession(req, user._id);
 
   // Set cookies
-  res.cookie("accessToken", accessToken, {
+  res.cookie('accessToken', accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 60 * 60 * 1000, // 1 hour (matches token expiry)
   });
 
-  res.cookie("refreshToken", refreshToken, {
+  res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
-  return res.redirect(
-    `${process.env.FRONTEND_URL}/oauth-success?token=${accessToken}`,
-  );
+  return res.redirect(`${process.env.FRONTEND_URL}/oauth-success?token=${accessToken}`);
 }

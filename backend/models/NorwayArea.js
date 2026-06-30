@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const norwayAreaSchema = new mongoose.Schema(
   {
@@ -21,4 +21,4 @@ const norwayAreaSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("NorwayArea", norwayAreaSchema);
+module.exports = mongoose.model('NorwayArea', norwayAreaSchema);

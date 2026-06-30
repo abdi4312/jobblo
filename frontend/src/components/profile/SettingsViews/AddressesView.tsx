@@ -1,5 +1,5 @@
-import { useOutletContext } from "react-router-dom";
-import type { SettingsContextType } from "../../../pages/SettingsPage";
+import { useOutletContext } from 'react-router-dom';
+import type { SettingsContextType } from '../../../pages/SettingsPage';
 
 export const AddressesView = () => {
   const { form, handleChange, handleUpdate, updateUser, user } =
@@ -27,7 +27,7 @@ export const AddressesView = () => {
           id="address"
           className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-gray-100 outline-none rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors"
           value={form.address}
-          onChange={(event) => handleChange("address", event.target.value)}
+          onChange={(event) => handleChange('address', event.target.value)}
         />
       </div>
 
@@ -44,7 +44,7 @@ export const AddressesView = () => {
             id="postNumber"
             className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-gray-100 outline-none rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors"
             value={form.postNumber}
-            onChange={(event) => handleChange("postNumber", event.target.value)}
+            onChange={(event) => handleChange('postNumber', event.target.value)}
           />
         </div>
 
@@ -60,7 +60,7 @@ export const AddressesView = () => {
             id="postSted"
             className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-gray-100 outline-none rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors"
             value={form.postSted}
-            onChange={(event) => handleChange("postSted", event.target.value)}
+            onChange={(event) => handleChange('postSted', event.target.value)}
           />
         </div>
       </div>
@@ -73,11 +73,11 @@ export const AddressesView = () => {
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
           ${
             isDisabled
-              ? "bg-custom-green cursor-not-allowed opacity-80"
-              : "bg-custom-green hover:bg-custom-green active:scale-[0.98]"
+              ? 'bg-custom-green cursor-not-allowed opacity-80'
+              : 'bg-custom-green hover:bg-custom-green active:scale-[0.98]'
           }`}
       >
-        {updateUser?.isPending ? "Lagrer..." : "Lagre adresser"}
+        {updateUser?.isPending ? 'Lagrer...' : 'Lagre adresser'}
       </button>
     </section>
   );

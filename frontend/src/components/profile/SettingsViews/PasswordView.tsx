@@ -1,18 +1,16 @@
-import { useOutletContext } from "react-router-dom";
-import type { SettingsContextType } from "../../../pages/SettingsPage";
-import toast from "react-hot-toast";
+import { useOutletContext } from 'react-router-dom';
+import type { SettingsContextType } from '../../../pages/SettingsPage';
+import toast from 'react-hot-toast';
 
 export const PasswordView = () => {
   // const { form, handleChange, handleUpdate, updateUser } = useOutletContext<SettingsContextType>();
-  const { form, handleChange, updateUser } =
-    useOutletContext<SettingsContextType>();
+  const { form, handleChange, updateUser } = useOutletContext<SettingsContextType>();
 
   // Logikk: Knappen aktiveres bare når begge feltene er fylt ut og forespørselen ikke er ventende
   // I passordvisning sjekker vi 'isEmpty' i stedet for 'isUnchanged'
-  const isDisabled =
-    !form.currentPassword || !form.newPassword || updateUser?.isPending;
+  const isDisabled = !form.currentPassword || !form.newPassword || updateUser?.isPending;
   const handleUpdate = () => {
-    toast.success("Kommer snart");
+    toast.success('Kommer snart');
   };
 
   return (
@@ -30,10 +28,8 @@ export const PasswordView = () => {
           type="password"
           placeholder="••••••••"
           className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-gray-100 outline-none rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors"
-          value={form.currentPassword || ""}
-          onChange={(event) =>
-            handleChange("currentPassword", event.target.value)
-          }
+          value={form.currentPassword || ''}
+          onChange={(event) => handleChange('currentPassword', event.target.value)}
         />
       </div>
 
@@ -50,8 +46,8 @@ export const PasswordView = () => {
           type="password"
           placeholder="••••••••"
           className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-gray-100 outline-none rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors"
-          value={form.newPassword || ""}
-          onChange={(event) => handleChange("newPassword", event.target.value)}
+          value={form.newPassword || ''}
+          onChange={(event) => handleChange('newPassword', event.target.value)}
         />
       </div>
 
@@ -63,11 +59,11 @@ export const PasswordView = () => {
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
           ${
             isDisabled
-              ? "bg-custom-green cursor-not-allowed opacity-80"
-              : "bg-custom-green hover:bg-custom-green active:scale-[0.98]"
+              ? 'bg-custom-green cursor-not-allowed opacity-80'
+              : 'bg-custom-green hover:bg-custom-green active:scale-[0.98]'
           }`}
       >
-        {updateUser?.isPending ? "Oppdaterer..." : "Endre passord"}
+        {updateUser?.isPending ? 'Oppdaterer...' : 'Endre passord'}
       </button>
     </section>
   );

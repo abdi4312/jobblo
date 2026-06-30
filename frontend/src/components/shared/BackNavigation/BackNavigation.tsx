@@ -5,7 +5,7 @@ interface BackNavigationProps {
   onBack?: () => void;
 }
 
-export function BackNavigation({ text = "Oppdrag", onBack }: BackNavigationProps) {
+export function BackNavigation({ text = 'Oppdrag', onBack }: BackNavigationProps) {
   const handleBack = () => {
     if (onBack) {
       onBack();

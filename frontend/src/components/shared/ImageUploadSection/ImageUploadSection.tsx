@@ -1,6 +1,6 @@
-import { useRef } from "react";
-import styles from "./ImageUploadSection.module.css";
-import { Camera } from "lucide-react";
+import { useRef } from 'react';
+import styles from './ImageUploadSection.module.css';
+import { Camera } from 'lucide-react';
 
 interface ImageItem {
   id: string;
@@ -85,9 +85,7 @@ export function ImageUploadSection({
                     className={styles.textareaInput}
                     placeholder="Bildebeskrivelse"
                     value={image.description}
-                    onChange={(e) =>
-                      onImageDescriptionChange(image.id, e.target.value)
-                    }
+                    onChange={(e) => onImageDescriptionChange(image.id, e.target.value)}
                     rows={3}
                   />
                   <svg
@@ -113,7 +111,7 @@ export function ImageUploadSection({
 
       <div className="flex gap-4 w-full">
         <button
-          className={styles.addButton + " flex-1"}
+          className={styles.addButton + ' flex-1'}
           onClick={() => fileInputRef.current?.click()}
         >
           <div className={styles.addButtonContent}>
@@ -123,14 +121,12 @@ export function ImageUploadSection({
           </div>
         </button>
         <button
-          className={styles.addButton + " flex-1"}
+          className={styles.addButton + ' flex-1'}
           onClick={() => cameraInputRef.current?.click()}
         >
           <div className={styles.addButtonContent}>
             <div className={styles.addButtonStateLayer}>
-              <div
-                className={styles.addButtonLabel + " flex items-center gap-2"}
-              >
+              <div className={styles.addButtonLabel + ' flex items-center gap-2'}>
                 <Camera size={18} />
                 Ta bilde
               </div>

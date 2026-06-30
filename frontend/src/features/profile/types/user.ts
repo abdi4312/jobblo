@@ -14,6 +14,8 @@ export interface ProfileData {
   profileImage: string;
 }
 
-export type UserUpdatePayload = FormData | {
-  [key: string]: string | number | boolean | undefined;
-};
+export type UserUpdatePayload =
+  | FormData
+  | {
+      [key: string]: string | number | boolean | undefined;
+    };

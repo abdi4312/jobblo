@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Upload as UploadIcon,
   CheckCircle2 as ActiveIcon,
@@ -6,16 +6,16 @@ import {
   Clock as SoonIcon,
   ChevronLeft as PrevIcon,
   ChevronRight as NextIcon,
-} from "lucide-react";
-import Swal from "sweetalert2";
-import HeroTable from "../../components/SuperAdminDashboard/Carousel/HeroTable";
-import HeroModal from "../../components/SuperAdminDashboard/Carousel/HeroModal";
+} from 'lucide-react';
+import Swal from 'sweetalert2';
+import HeroTable from '../../components/SuperAdminDashboard/Carousel/HeroTable';
+import HeroModal from '../../components/SuperAdminDashboard/Carousel/HeroModal';
 import {
   useAdminHeroes,
   useCreateHero,
   useUpdateHero,
   useDeleteHero,
-} from "../../features/hero/hooks";
+} from '../../features/hero/hooks';
 
 const CarouselPage: React.FC = () => {
   const { data: heroes = [], isLoading: loading } = useAdminHeroes();
@@ -29,22 +29,22 @@ const CarouselPage: React.FC = () => {
   const totalPages = Math.ceil(heroes.length / itemsPerPage);
   const paginatedHeroes = heroes.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    title: "",
-    subtitle: "",
-    buttonText: "",
-    buttonUrl: "",
-    footerText: "",
-    bgColor: "#132A22",
+    title: '',
+    subtitle: '',
+    buttonText: '',
+    buttonUrl: '',
+    footerText: '',
+    bgColor: '#132A22',
     image: null as File | string | null,
-    activeFrom: "",
-    expireAt: "",
+    activeFrom: '',
+    expireAt: '',
   });
 
   const handleEdit = (item: {
@@ -61,19 +61,15 @@ const CarouselPage: React.FC = () => {
   }) => {
     setEditingId(item._id);
     setFormData({
-      title: item.title || "",
-      subtitle: item.subtitle || "",
-      buttonText: item.buttonText || "",
-      buttonUrl: item.buttonUrl || "",
-      footerText: item.footerText || "",
-      bgColor: item.bgColor || "#132A22",
-      image: item.image || "",
-      activeFrom: item.activeFrom
-        ? new Date(item.activeFrom).toISOString().split("T")[0]
-        : "",
-      expireAt: item.expireAt
-        ? new Date(item.expireAt).toISOString().split("T")[0]
-        : "",
+      title: item.title || '',
+      subtitle: item.subtitle || '',
+      buttonText: item.buttonText || '',
+      buttonUrl: item.buttonUrl || '',
+      footerText: item.footerText || '',
+      bgColor: item.bgColor || '#132A22',
+      image: item.image || '',
+      activeFrom: item.activeFrom ? new Date(item.activeFrom).toISOString().split('T')[0] : '',
+      expireAt: item.expireAt ? new Date(item.expireAt).toISOString().split('T')[0] : '',
     });
     setPreviewUrl(item.image || null);
     setShowModal(true);
@@ -84,15 +80,15 @@ const CarouselPage: React.FC = () => {
     setEditingId(null);
     setPreviewUrl(null);
     setFormData({
-      title: "",
-      subtitle: "",
-      buttonText: "",
-      buttonUrl: "",
-      footerText: "",
-      bgColor: "#132A22",
+      title: '',
+      subtitle: '',
+      buttonText: '',
+      buttonUrl: '',
+      footerText: '',
+      bgColor: '#132A22',
       image: null,
-      activeFrom: "",
-      expireAt: "",
+      activeFrom: '',
+      expireAt: '',
     });
   };
 
@@ -107,11 +103,11 @@ const CarouselPage: React.FC = () => {
   const getStatus = (start: string, end: string) => {
     if (!start || !end)
       return {
-        label: "N/A",
-        color: "bg-gray-400",
+        label: 'N/A',
+        color: 'bg-gray-400',
         icon: <ExpiredIcon size={12} />,
-        dateInfo: "No Date",
-        dateTextColor: "text-gray-400",
+        dateInfo: 'No Date',
+        dateTextColor: 'text-gray-400',
       };
     const now = new Date();
     const startDate = new Date(start);
@@ -119,27 +115,27 @@ const CarouselPage: React.FC = () => {
 
     if (now < startDate) {
       return {
-        label: "Coming Soon",
-        color: "bg-orange-400",
+        label: 'Coming Soon',
+        color: 'bg-orange-400',
         icon: <SoonIcon size={12} />,
         dateInfo: `Starts: ${startDate.toLocaleDateString()}`,
-        dateTextColor: "text-orange-500",
+        dateTextColor: 'text-orange-500',
       };
     } else if (now > endDate) {
       return {
-        label: "Expired",
-        color: "bg-red-500",
+        label: 'Expired',
+        color: 'bg-red-500',
         icon: <ExpiredIcon size={12} />,
         dateInfo: `Expired on: ${endDate.toLocaleDateString()}`,
-        dateTextColor: "text-red-500",
+        dateTextColor: 'text-red-500',
       };
     } else {
       return {
-        label: "Active",
-        color: "bg-green-500",
+        label: 'Active',
+        color: 'bg-green-500',
         icon: <ActiveIcon size={12} />,
         dateInfo: `Ends: ${endDate.toLocaleDateString()}`,
-        dateTextColor: "text-green-600",
+        dateTextColor: 'text-green-600',
       };
     }
   };
@@ -148,55 +144,55 @@ const CarouselPage: React.FC = () => {
     e.preventDefault();
     try {
       const data = new FormData();
-      data.append("title", formData.title);
-      data.append("subtitle", formData.subtitle);
-      data.append("buttonText", formData.buttonText);
-      data.append("buttonUrl", formData.buttonUrl);
-      data.append("footerText", formData.footerText);
-      data.append("bgColor", formData.bgColor);
-      data.append("activeFrom", formData.activeFrom);
-      data.append("expireAt", formData.expireAt);
+      data.append('title', formData.title);
+      data.append('subtitle', formData.subtitle);
+      data.append('buttonText', formData.buttonText);
+      data.append('buttonUrl', formData.buttonUrl);
+      data.append('footerText', formData.footerText);
+      data.append('bgColor', formData.bgColor);
+      data.append('activeFrom', formData.activeFrom);
+      data.append('expireAt', formData.expireAt);
 
       if (formData.image instanceof File) {
-        data.append("image", formData.image);
-      } else if (typeof formData.image === "string") {
-        data.append("image", formData.image);
+        data.append('image', formData.image);
+      } else if (typeof formData.image === 'string') {
+        data.append('image', formData.image);
       }
 
       if (editingId) {
         await updateHeroMutation.mutateAsync({ id: editingId, formData: data });
-        Swal.fire("Suksess!", "Hero banner er oppdatert", "success");
+        Swal.fire('Suksess!', 'Hero banner er oppdatert', 'success');
       } else {
         await createHeroMutation.mutateAsync(data);
-        Swal.fire("Suksess!", "Hero banner er opprettet", "success");
+        Swal.fire('Suksess!', 'Hero banner er opprettet', 'success');
       }
       closeModal();
     } catch {
       Swal.fire(
-        "Feil",
-        editingId ? "Kunne ikke oppdatere hero" : "Kunne ikke opprette hero",
-        "error",
+        'Feil',
+        editingId ? 'Kunne ikke oppdatere hero' : 'Kunne ikke opprette hero',
+        'error'
       );
     }
   };
 
   const handleDelete = async (id: string) => {
     const result = await Swal.fire({
-      title: "Er du sikker?",
-      text: "Du vil ikke kunne angre dette!",
-      icon: "warning",
+      title: 'Er du sikker?',
+      text: 'Du vil ikke kunne angre dette!',
+      icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#2d4a3e",
-      confirmButtonText: "Ja, slett den!",
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#2d4a3e',
+      confirmButtonText: 'Ja, slett den!',
     });
 
     if (result.isConfirmed) {
       try {
         await deleteHeroMutation.mutateAsync(id);
-        Swal.fire("Slettet!", "Banneret har blitt slettet.", "success");
+        Swal.fire('Slettet!', 'Banneret har blitt slettet.', 'success');
       } catch {
-        Swal.fire("Feil", "Kunne ikke slette banneret", "error");
+        Swal.fire('Feil', 'Kunne ikke slette banneret', 'error');
       }
     }
   };
@@ -205,9 +201,7 @@ const CarouselPage: React.FC = () => {
     <div className="animate-in fade-in duration-500 p-4 text-sans">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">
-            Carousel Management
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Carousel Management</h1>
           <p className="text-gray-400 text-sm font-medium mt-1">
             Administrer nettsidens hovedbannere
           </p>
@@ -250,8 +244,8 @@ const CarouselPage: React.FC = () => {
                 onClick={() => setCurrentPage(num)}
                 className={`w-10 h-10 text-center flex items-center justify-center rounded-full font-bold transition-all ${
                   currentPage === num
-                    ? "bg-[#2d4a3e] text-white shadow-md scale-110"
-                    : "text-gray-400 hover:bg-gray-50"
+                    ? 'bg-[#2d4a3e] text-white shadow-md scale-110'
+                    : 'text-gray-400 hover:bg-gray-50'
                 }`}
               >
                 {num}

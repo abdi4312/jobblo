@@ -1,46 +1,33 @@
-const Hero = require("../models/Hero");
-const {
-  uploadToCloudinary,
-  deleteFromCloudinary,
-} = require("../utils/cloudinaryUpload");
+const Hero = require('../models/Hero');
+const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinaryUpload');
 
 /**
  * CREATE HERO
  */
 exports.CreateHero = async (req, res) => {
   try {
-    const {
-      title,
-      subtitle,
-      buttonText,
-      buttonUrl,
-      footerText,
-      bgColor,
-      activeFrom,
-      expireAt,
-    } = req.body;
+    const { title, subtitle, buttonText, buttonUrl, footerText, bgColor, activeFrom, expireAt } =
+      req.body;
 
     // 1. Validation
     if (!title) {
-      return res.status(400).json({ error: "Title er påkrevd" });
+      return res.status(400).json({ error: 'Title er påkrevd' });
     }
 
     if (!activeFrom || !expireAt) {
-      return res
-        .status(400)
-        .json({ error: "activeFrom og expireAt er påkrevd" });
+      return res.status(400).json({ error: 'activeFrom og expireAt er påkrevd' });
     }
 
-    let imageUrl = "";
+    let imageUrl = '';
     if (req.file) {
-      if (!req.file.mimetype.startsWith("image/")) {
-        return res.status(400).json({ error: "Kun bildefiler er tillatt" });
+      if (!req.file.mimetype.startsWith('image/')) {
+        return res.status(400).json({ error: 'Kun bildefiler er tillatt' });
       }
-      imageUrl = await uploadToCloudinary(req.file, "hero");
+      imageUrl = await uploadToCloudinary(req.file, 'hero');
     } else if (req.body.image) {
       imageUrl = req.body.image; // If already a URL
     } else {
-      return res.status(400).json({ error: "Bilde er påkrevd" });
+      return res.status(400).json({ error: 'Bilde er påkrevd' });
     }
 
     // 2. Dates parsing
@@ -48,7 +35,7 @@ exports.CreateHero = async (req, res) => {
     const endDate = new Date(expireAt);
 
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      return res.status(400).json({ error: "Ugyldig datoformat" });
+      return res.status(400).json({ error: 'Ugyldig datoformat' });
     }
 
     // 3. Auto-active logic
@@ -71,8 +58,8 @@ exports.CreateHero = async (req, res) => {
 
     res.status(201).json(hero);
   } catch (err) {
-    console.error("Create hero error:", err);
-    res.status(500).json({ error: "Kunne ikke opprette hero" });
+    console.error('Create hero error:', err);
+    res.status(500).json({ error: 'Kunne ikke opprette hero' });
   }
 };
 
@@ -90,8 +77,8 @@ exports.GetHero = async (req, res) => {
 
     res.status(200).json(heroes);
   } catch (err) {
-    console.error("Get active heroes error:", err);
-    res.status(500).json({ error: "Kunne ikke hente hero data" });
+    console.error('Get active heroes error:', err);
+    res.status(500).json({ error: 'Kunne ikke hente hero data' });
   }
 };
 
@@ -103,8 +90,8 @@ exports.GetAllHeroes = async (req, res) => {
     const heroes = await Hero.find().sort({ createdAt: -1 });
     res.status(200).json(heroes);
   } catch (err) {
-    console.error("Get all heroes error:", err);
-    res.status(500).json({ error: "Kunne ikke hente hero data" });
+    console.error('Get all heroes error:', err);
+    res.status(500).json({ error: 'Kunne ikke hente hero data' });
   }
 };
 
@@ -128,19 +115,19 @@ exports.UpdateHero = async (req, res) => {
 
     const hero = await Hero.findById(id);
     if (!hero) {
-      return res.status(404).json({ error: "Hero ikke funnet" });
+      return res.status(404).json({ error: 'Hero ikke funnet' });
     }
 
     // Update image if new file provided
     if (req.file) {
-      if (!req.file.mimetype.startsWith("image/")) {
-        return res.status(400).json({ error: "Kun bildefiler er tillatt" });
+      if (!req.file.mimetype.startsWith('image/')) {
+        return res.status(400).json({ error: 'Kun bildefiler er tillatt' });
       }
       // Delete old image from cloudinary
-      if (hero.image && hero.image.includes("cloudinary.com")) {
+      if (hero.image && hero.image.includes('cloudinary.com')) {
         await deleteFromCloudinary(hero.image);
       }
-      hero.image = await uploadToCloudinary(req.file, "hero");
+      hero.image = await uploadToCloudinary(req.file, 'hero');
     } else if (req.body.image) {
       hero.image = req.body.image;
     }
@@ -158,8 +145,8 @@ exports.UpdateHero = async (req, res) => {
     await hero.save();
     res.status(200).json(hero);
   } catch (err) {
-    console.error("Update hero error:", err);
-    res.status(500).json({ error: "Kunne ikke oppdatere hero" });
+    console.error('Update hero error:', err);
+    res.status(500).json({ error: 'Kunne ikke oppdatere hero' });
   }
 };
 
@@ -171,18 +158,18 @@ exports.DeleteHero = async (req, res) => {
     const { id } = req.params;
     const hero = await Hero.findById(id);
     if (!hero) {
-      return res.status(404).json({ error: "Hero ikke funnet" });
+      return res.status(404).json({ error: 'Hero ikke funnet' });
     }
 
     // Delete image from cloudinary
-    if (hero.image && hero.image.includes("cloudinary.com")) {
+    if (hero.image && hero.image.includes('cloudinary.com')) {
       await deleteFromCloudinary(hero.image);
     }
 
     await Hero.findByIdAndDelete(id);
-    res.status(200).json({ message: "Hero slettet" });
+    res.status(200).json({ message: 'Hero slettet' });
   } catch (err) {
-    console.error("Delete hero error:", err);
-    res.status(500).json({ error: "Kunne ikke slette hero" });
+    console.error('Delete hero error:', err);
+    res.status(500).json({ error: 'Kunne ikke slette hero' });
   }
 };

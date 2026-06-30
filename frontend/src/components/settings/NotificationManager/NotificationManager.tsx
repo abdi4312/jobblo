@@ -1,7 +1,7 @@
-import React from "react";
-import { useUserStore } from "../../../stores/userStore";
-import { NotificationToggle } from "../NotificationToggle/NotificationToggle";
-import { Bell, Mail, Smartphone, Volume2 } from "lucide-react";
+import React from 'react';
+import { useUserStore } from '../../../stores/userStore';
+import { NotificationToggle } from '../NotificationToggle/NotificationToggle';
+import { Bell, Mail, Smartphone, Volume2 } from 'lucide-react';
 
 export function NotificationManager() {
   const {
@@ -18,12 +18,10 @@ export function NotificationManager() {
   const handleBrowserToggle = async (enabled: boolean) => {
     if (enabled) {
       const permission = await Notification.requestPermission();
-      if (permission === "granted") {
+      if (permission === 'granted') {
         setBrowserNotificationsEnabled(true);
       } else {
-        alert(
-          "Du må tillate varsler i nettleseren for å aktivere denne funksjonen.",
-        );
+        alert('Du må tillate varsler i nettleseren for å aktivere denne funksjonen.');
         setBrowserNotificationsEnabled(false);
       }
     } else {
@@ -33,41 +31,39 @@ export function NotificationManager() {
 
   const sendTestNotification = () => {
     if (!browserNotificationsEnabled) {
-      alert("Aktiver nettleservarsler først!");
+      alert('Aktiver nettleservarsler først!');
       return;
     }
 
-    if (Notification.permission !== "granted") {
-      alert("Du har ikke gitt tillatelse til varsler i nettleseren.");
+    if (Notification.permission !== 'granted') {
+      alert('Du har ikke gitt tillatelse til varsler i nettleseren.');
       return;
     }
 
-    alert(
-      "Test-varsel sendes om 5 sekunder. Bytt fane eller minimer nettleseren nå!",
-    );
+    alert('Test-varsel sendes om 5 sekunder. Bytt fane eller minimer nettleseren nå!');
 
     setTimeout(() => {
       try {
-        console.log("Attempting to send notification...");
-        const notification = new Notification("Test fra Jobblo", {
-          body: "Dette er et testvarsel for å se om bakgrunnsvarsler fungerer!",
+        console.log('Attempting to send notification...');
+        const notification = new Notification('Test fra Jobblo', {
+          body: 'Dette er et testvarsel for å se om bakgrunnsvarsler fungerer!',
           // icon: "/logo192.png",
           requireInteraction: true, // Desktop par notification rukega jab tak click na ho
           silent: false,
         });
 
         notification.onclick = () => {
-          console.log("Notification clicked!");
+          console.log('Notification clicked!');
           window.focus();
         };
 
         notification.onerror = (err) => {
-          console.error("Notification error:", err);
-          alert("Notification error: " + JSON.stringify(err));
+          console.error('Notification error:', err);
+          alert('Notification error: ' + JSON.stringify(err));
         };
       } catch (err) {
-        console.error("Catch error sending notification:", err);
-        alert("Catch error: " + err);
+        console.error('Catch error sending notification:', err);
+        alert('Catch error: ' + err);
       }
     }, 5000);
   };
@@ -79,12 +75,8 @@ export function NotificationManager() {
           <Bell className="text-custom-green" size={24} />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-gray-900">
-            Varslingsinnstillinger
-          </h2>
-          <p className="text-sm text-gray-500">
-            Velg hvordan du vil motta oppdateringer
-          </p>
+          <h2 className="text-xl font-bold text-gray-900">Varslingsinnstillinger</h2>
+          <p className="text-sm text-gray-500">Velg hvordan du vil motta oppdateringer</p>
         </div>
       </div>
 
@@ -97,15 +89,10 @@ export function NotificationManager() {
             </div>
             <div>
               <p className="font-semibold text-gray-900">Varsellyd</p>
-              <p className="text-xs text-gray-500">
-                Spill av lyd ved nye meldinger
-              </p>
+              <p className="text-xs text-gray-500">Spill av lyd ved nye meldinger</p>
             </div>
           </div>
-          <NotificationToggle
-            enabled={notificationsEnabled}
-            onChange={setNotificationsEnabled}
-          />
+          <NotificationToggle enabled={notificationsEnabled} onChange={setNotificationsEnabled} />
         </div>
 
         {/* Browser Push Notifications */}
@@ -116,9 +103,7 @@ export function NotificationManager() {
             </div>
             <div>
               <p className="font-semibold text-gray-900">Nettleservarsler</p>
-              <p className="text-xs text-gray-500">
-                Vis varsler selv når fanen er i bakgrunnen
-              </p>
+              <p className="text-xs text-gray-500">Vis varsler selv når fanen er i bakgrunnen</p>
             </div>
           </div>
           <NotificationToggle
@@ -135,9 +120,7 @@ export function NotificationManager() {
             </div>
             <div>
               <p className="font-semibold text-gray-900">E-post varsler</p>
-              <p className="text-xs text-gray-500">
-                Motta viktige oppdateringer på e-post
-              </p>
+              <p className="text-xs text-gray-500">Motta viktige oppdateringer på e-post</p>
             </div>
           </div>
           <NotificationToggle
@@ -154,9 +137,7 @@ export function NotificationManager() {
             </div>
             <div>
               <p className="font-semibold text-gray-900">SMS varsler</p>
-              <p className="text-xs text-gray-500">
-                Motta varsler direkte på din mobil
-              </p>
+              <p className="text-xs text-gray-500">Motta varsler direkte på din mobil</p>
             </div>
           </div>
           <NotificationToggle
@@ -168,8 +149,8 @@ export function NotificationManager() {
 
       <div className="mt-10 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
         <p className="text-xs text-blue-700 leading-relaxed mb-4">
-          <strong>Tips:</strong> For å motta varsler når nettleseren er lukket,
-          må du aktivere "Nettleservarsler" og gi tillatelse når du blir spurt.
+          <strong>Tips:</strong> For å motta varsler når nettleseren er lukket, må du aktivere
+          "Nettleservarsler" og gi tillatelse når du blir spurt.
         </p>
         <button
           onClick={sendTestNotification}

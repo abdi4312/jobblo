@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 interface JobDetailsProps {
   job?: {
@@ -12,7 +12,7 @@ const JobDetails: React.FC<JobDetailsProps> = ({ job }) => {
 
   return (
     <>
-      <h1 className="text-[24px] font-bold">{job?.title || "Ingen tittel"}</h1>
+      <h1 className="text-[24px] font-bold">{job?.title || 'Ingen tittel'}</h1>
 
       <div className="flex gap-2 pt-3">
         {/* {

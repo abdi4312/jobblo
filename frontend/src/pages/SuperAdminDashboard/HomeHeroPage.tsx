@@ -1,21 +1,12 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef } from 'react';
 import {
   useAllHeroes,
   useCreateHeroMutation,
   useUpdateHeroMutation,
   useDeleteHeroMutation,
-} from "../../features/homeHero/hooks";
-import {
-  Plus,
-  Trash2,
-  Edit2,
-  Check,
-  X,
-  Upload,
-  Film,
-  Image as ImageIcon,
-} from "lucide-react";
-import { toast } from "react-hot-toast";
+} from '../../features/homeHero/hooks';
+import { Plus, Trash2, Edit2, Check, X, Upload, Film, Image as ImageIcon } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const HomeHeroPage: React.FC = () => {
   const { data: heroes, isLoading } = useAllHeroes();
@@ -53,9 +44,9 @@ const HomeHeroPage: React.FC = () => {
     e.preventDefault();
 
     const data = new FormData();
-    data.append("isActive", String(formData.isActive));
+    data.append('isActive', String(formData.isActive));
     if (selectedFile) {
-      data.append("media", selectedFile);
+      data.append('media', selectedFile);
     }
 
     if (editingId) {
@@ -63,23 +54,23 @@ const HomeHeroPage: React.FC = () => {
         { id: editingId, formData: data },
         {
           onSuccess: () => {
-            toast.success("Hero oppdatert!");
+            toast.success('Hero oppdatert!');
             resetForm();
           },
-          onError: () => toast.error("Kunne ikke oppdatere hero"),
-        },
+          onError: () => toast.error('Kunne ikke oppdatere hero'),
+        }
       );
     } else {
       if (!selectedFile) {
-        toast.error("Vennligst velg et bilde aur video");
+        toast.error('Vennligst velg et bilde aur video');
         return;
       }
       createMutation.mutate(data, {
         onSuccess: () => {
-          toast.success("Hero opprettet!");
+          toast.success('Hero opprettet!');
           resetForm();
         },
-        onError: () => toast.error("Kunne ikke opprette hero"),
+        onError: () => toast.error('Kunne ikke opprette hero'),
       });
     }
   };
@@ -94,10 +85,10 @@ const HomeHeroPage: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm("Er du sikker på at du vil slette denne heroen?")) {
+    if (window.confirm('Er du sikker på at du vil slette denne heroen?')) {
       deleteMutation.mutate(id, {
-        onSuccess: () => toast.success("Hero slettet"),
-        onError: () => toast.error("Kunne ikke slette hero"),
+        onSuccess: () => toast.success('Hero slettet'),
+        onError: () => toast.error('Kunne ikke slette hero'),
       });
     }
   };
@@ -121,43 +112,29 @@ const HomeHeroPage: React.FC = () => {
       {isAdding && (
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 mb-8 animate-in fade-in slide-in-from-top-4">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">
-              {editingId ? "Edit Hero" : "New Hero"}
-            </h2>
-            <button
-              title="Close"
-              onClick={resetForm}
-              className="text-gray-400 hover:text-gray-600"
-            >
+            <h2 className="text-xl font-bold">{editingId ? 'Edit Hero' : 'New Hero'}</h2>
+            <button title="Close" onClick={resetForm} className="text-gray-400 hover:text-gray-600">
               <X size={24} />
             </button>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="grid grid-cols-1 md:grid-cols-2 gap-8"
-          >
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   id="isActive"
                   checked={formData.isActive}
-                  onChange={(e) =>
-                    setFormData({ ...formData, isActive: e.target.checked })
-                  }
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                   className="w-5 h-5 accent-green-800"
                 />
-                <label
-                  htmlFor="isActive"
-                  className="text-sm font-bold text-gray-700 uppercase"
-                >
+                <label htmlFor="isActive" className="text-sm font-bold text-gray-700 uppercase">
                   Set as Active
                 </label>
               </div>
               <p className="text-sm text-gray-500 italic">
-                Note: Titles and subtitles are static in the frontend. Only the
-                media (image/video) is managed here.
+                Note: Titles and subtitles are static in the frontend. Only the media (image/video)
+                is managed here.
               </p>
             </div>
 
@@ -171,8 +148,7 @@ const HomeHeroPage: React.FC = () => {
               >
                 {previewUrl ? (
                   <>
-                    {previewUrl.includes("video") ||
-                    selectedFile?.type.startsWith("video/") ? (
+                    {previewUrl.includes('video') || selectedFile?.type.startsWith('video/') ? (
                       <video
                         src={previewUrl}
                         className="w-full h-full object-cover"
@@ -181,11 +157,7 @@ const HomeHeroPage: React.FC = () => {
                         muted
                       />
                     ) : (
-                      <img
-                        src={previewUrl}
-                        className="w-full h-full object-cover"
-                        alt="Preview"
-                      />
+                      <img src={previewUrl} className="w-full h-full object-cover" alt="Preview" />
                     )}
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <div className="bg-white p-4 rounded-full shadow-lg">
@@ -201,9 +173,7 @@ const HomeHeroPage: React.FC = () => {
                     <p className="text-sm text-gray-500 font-medium">
                       Click to upload image or video
                     </p>
-                    <p className="text-xs text-gray-400 mt-2">
-                      MP4, JPG, PNG, WEBP
-                    </p>
+                    <p className="text-xs text-gray-400 mt-2">MP4, JPG, PNG, WEBP</p>
                   </div>
                 )}
               </div>
@@ -223,10 +193,10 @@ const HomeHeroPage: React.FC = () => {
                 className="w-full bg-green-800 text-white py-4 rounded-xl font-bold text-lg hover:bg-green-900 transition-all disabled:opacity-50 mt-4 shadow-lg shadow-green-800/20"
               >
                 {createMutation.isPending || updateMutation.isPending
-                  ? "Saving..."
+                  ? 'Saving...'
                   : editingId
-                    ? "Update Hero"
-                    : "Save Hero"}
+                    ? 'Update Hero'
+                    : 'Save Hero'}
               </button>
             </div>
           </form>
@@ -237,10 +207,10 @@ const HomeHeroPage: React.FC = () => {
         {heroes?.map((hero: any) => (
           <div
             key={hero._id}
-            className={`bg-white p-6 rounded-3xl border ${hero.isActive ? "border-green-200 bg-green-50/30" : "border-gray-100"} flex flex-col md:flex-row gap-8 items-start shadow-sm`}
+            className={`bg-white p-6 rounded-3xl border ${hero.isActive ? 'border-green-200 bg-green-50/30' : 'border-gray-100'} flex flex-col md:flex-row gap-8 items-start shadow-sm`}
           >
             <div className="w-full md:w-64 aspect-video md:aspect-square rounded-2xl overflow-hidden bg-gray-100 shrink-0">
-              {hero.mediaType === "video" ? (
+              {hero.mediaType === 'video' ? (
                 <video
                   src={hero.mediaUrl}
                   className="w-full h-full object-cover"
@@ -249,11 +219,7 @@ const HomeHeroPage: React.FC = () => {
                   loop
                 />
               ) : (
-                <img
-                  src={hero.mediaUrl}
-                  className="w-full h-full object-cover"
-                  alt=""
-                />
+                <img src={hero.mediaUrl} className="w-full h-full object-cover" alt="" />
               )}
             </div>
 
@@ -272,15 +238,9 @@ const HomeHeroPage: React.FC = () => {
                   Created {new Date(hero.createdAt).toLocaleDateString()}
                 </span>
               </div>
-              <h3 className="text-xl font-bold text-gray-900">
-                Hero Media #{hero._id.slice(-4)}
-              </h3>
+              <h3 className="text-xl font-bold text-gray-900">Hero Media #{hero._id.slice(-4)}</h3>
               <div className="flex items-center gap-2 text-xs text-gray-400">
-                {hero.mediaType === "video" ? (
-                  <Film size={14} />
-                ) : (
-                  <ImageIcon size={14} />
-                )}
+                {hero.mediaType === 'video' ? <Film size={14} /> : <ImageIcon size={14} />}
                 {hero.mediaType.toUpperCase()}
               </div>
             </div>
@@ -305,9 +265,7 @@ const HomeHeroPage: React.FC = () => {
         ))}
         {heroes?.length === 0 && !isAdding && (
           <div className="text-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
-            <p className="text-gray-400 font-medium">
-              No heroes found. Add your first one!
-            </p>
+            <p className="text-gray-400 font-medium">No heroes found. Add your first one!</p>
           </div>
         )}
       </div>

@@ -1,23 +1,15 @@
-import * as Icons from "../../../assets/icons";
-import { Button } from "../../Ui/button/Button";
-import { useNavigate, useLocation } from "react-router-dom";
-import { useUserStore } from "../../../stores/userStore";
-import { toast } from "react-hot-toast";
-import { useState, useEffect } from "react";
-import { getMyChats } from "../../../api/chatAPI";
-import { initSocket } from "../../../socket/socket";
-import { NavLink } from "react-router-dom";
-import {
-  Bell,
-  FileText,
-  Home,
-  MessageCircle,
-  Plus,
-  User,
-  Users,
-} from "lucide-react";
-import { useUnreadCount } from "../../../features/notifications/hooks";
-import { useNotificationSound } from "../../../hooks/useNotificationSound";
+import * as Icons from '../../../assets/icons';
+import { Button } from '../../Ui/button/Button';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useUserStore } from '../../../stores/userStore';
+import { toast } from 'react-hot-toast';
+import { useState, useEffect } from 'react';
+import { getMyChats } from '../../../api/chatAPI';
+import { initSocket } from '../../../socket/socket';
+import { NavLink } from 'react-router-dom';
+import { Bell, FileText, Home, MessageCircle, Plus, User, Users } from 'lucide-react';
+import { useUnreadCount } from '../../../features/notifications/hooks';
+import { useNotificationSound } from '../../../hooks/useNotificationSound';
 
 export default function Header() {
   const navigate = useNavigate();
@@ -50,15 +42,15 @@ export default function Header() {
           if (!chat.messages || chat.messages.length === 0) return false;
           const lastMessage = chat.messages[chat.messages.length - 1];
 
-          const currentUserId = String(user?._id || user?.id || "");
+          const currentUserId = String(user?._id || user?.id || '');
           if (!currentUserId) return false;
 
           const getMsgSenderId = (msg: any) => {
-            if (!msg.senderId) return "";
+            if (!msg.senderId) return '';
             // If senderId is an object (populated), get _id. If it's a string, use it.
-            if (typeof msg.senderId === "string") return msg.senderId;
-            if (typeof msg.senderId === "object") {
-              return String(msg.senderId._id || msg.senderId.id || "");
+            if (typeof msg.senderId === 'string') return msg.senderId;
+            if (typeof msg.senderId === 'object') {
+              return String(msg.senderId._id || msg.senderId.id || '');
             }
             return String(msg.senderId);
           };
@@ -70,11 +62,9 @@ export default function Header() {
           if (senderId === currentUserId) return false;
 
           // Check if you are in the seenBy array
-          const seenBy = Array.isArray(lastMessage.seenBy)
-            ? lastMessage.seenBy
-            : [];
+          const seenBy = Array.isArray(lastMessage.seenBy) ? lastMessage.seenBy : [];
           const isSeenByMe = seenBy.some((id: any) => {
-            const idStr = String(id?._id || id?.id || id || "");
+            const idStr = String(id?._id || id?.id || id || '');
             return idStr === currentUserId;
           });
 
@@ -85,15 +75,15 @@ export default function Header() {
 
         // 2. Join socket rooms
         if (socket) {
-          socket.emit("join", user?._id);
+          socket.emit('join', user?._id);
           chats.forEach((chat) => {
             if (chat._id) {
-              socket.emit("join-chat", chat._id);
+              socket.emit('join-chat', chat._id);
             }
           });
         }
       } catch (error) {
-        console.error("Error initializing chat state in Header:", error);
+        console.error('Error initializing chat state in Header:', error);
       }
     };
 
@@ -105,14 +95,14 @@ export default function Header() {
       initializeChatState();
 
       // Play sound if message is from someone else
-      const currentUserId = String(user?._id || user?.id || "");
+      const currentUserId = String(user?._id || user?.id || '');
 
       const getMsgSenderId = (msg: any) => {
-        if (!msg) return "";
+        if (!msg) return '';
         const sId = msg.senderId || msg.sender;
-        if (!sId) return "";
-        if (typeof sId === "string") return sId;
-        if (typeof sId === "object") return String(sId._id || sId.id || "");
+        if (!sId) return '';
+        if (typeof sId === 'string') return sId;
+        if (typeof sId === 'object') return String(sId._id || sId.id || '');
         return String(sId);
       };
 
@@ -128,12 +118,12 @@ export default function Header() {
         if (
           useUserStore.getState().browserNotificationsEnabled &&
           document.hidden &&
-          "Notification" in window &&
-          Notification.permission === "granted"
+          'Notification' in window &&
+          Notification.permission === 'granted'
         ) {
           const notification = new Notification(`Ny melding fra Jobblo`, {
-            body: data?.message?.text || "Du har fått en ny melding",
-            icon: "/logo192.png",
+            body: data?.message?.text || 'Du har fått en ny melding',
+            icon: '/logo192.png',
           });
 
           notification.onclick = () => {
@@ -157,12 +147,12 @@ export default function Header() {
       if (
         useUserStore.getState().browserNotificationsEnabled &&
         document.hidden &&
-        "Notification" in window &&
-        Notification.permission === "granted"
+        'Notification' in window &&
+        Notification.permission === 'granted'
       ) {
-        const notification = new Notification("Ny varsel fra Jobblo", {
-          body: data?.content || "Du har fått et nytt varsel",
-          icon: "/logo192.png",
+        const notification = new Notification('Ny varsel fra Jobblo', {
+          body: data?.content || 'Du har fått et nytt varsel',
+          icon: '/logo192.png',
         });
 
         // Auto-close after 5 seconds
@@ -184,30 +174,30 @@ export default function Header() {
       if (socket.connected) {
         initializeChatState();
       } else {
-        socket.on("connect", initializeChatState);
+        socket.on('connect', initializeChatState);
       }
-      socket.on("receive-message", handleReceiveMessage);
-      socket.on("messages-read", handleMessagesRead);
-      socket.on("new_notification", handleNewNotification);
+      socket.on('receive-message', handleReceiveMessage);
+      socket.on('messages-read', handleMessagesRead);
+      socket.on('new_notification', handleNewNotification);
     }
 
-    window.addEventListener("chat-read", handleChatRead);
+    window.addEventListener('chat-read', handleChatRead);
 
     return () => {
       if (socket) {
-        socket.off("receive-message", handleReceiveMessage);
-        socket.off("messages-read", handleMessagesRead);
-        socket.off("new_notification", handleNewNotification);
-        socket.off("connect");
+        socket.off('receive-message', handleReceiveMessage);
+        socket.off('messages-read', handleMessagesRead);
+        socket.off('new_notification', handleNewNotification);
+        socket.off('connect');
       }
-      window.removeEventListener("chat-read", handleChatRead);
+      window.removeEventListener('chat-read', handleChatRead);
     };
   }, [user?._id, playMessageSound, playAlertSound]);
 
   const handleProtectedNavigation = (path: string) => {
     if (!user) {
-      toast("Du må være logget inn for å få tilgang");
-      navigate("/login");
+      toast('Du må være logget inn for å få tilgang');
+      navigate('/login');
     } else {
       navigate(path);
     }
@@ -221,52 +211,47 @@ export default function Header() {
   }
 
   const navLinks: NavLinkItem[] = [
-    { name: "Slik fungerer det", path: "/slik-fungerer-det" },
-    { name: "Tjenester", path: "/job-listing" },
-    { name: "Priser", path: "/priser" },
+    { name: 'Slik fungerer det', path: '/slik-fungerer-det' },
+    { name: 'Tjenester', path: '/job-listing' },
+    { name: 'Priser', path: '/priser' },
   ];
 
   const navLinkUse: NavLinkItem[] = [
-    { name: "Legg ut oppdrag", icon: <Plus size={20} />, path: "/publish-job" },
-    { name: "Hjem", icon: <Home size={25} />, path: "/home" },
+    { name: 'Legg ut oppdrag', icon: <Plus size={20} />, path: '/publish-job' },
+    { name: 'Hjem', icon: <Home size={25} />, path: '/home' },
     {
-      name: "Mine Annonser",
+      name: 'Mine Annonser',
       icon: <FileText size={18} />,
-      path: "/mine-annonser",
+      path: '/mine-annonser',
     },
     {
-      name: "Søkere",
+      name: 'Søkere',
       icon: <Users size={18} />,
-      path: "/my-applicants",
+      path: '/my-applicants',
     },
     {
-      name: "Meldinger",
+      name: 'Meldinger',
       icon: <MessageCircle size={18} />,
-      path: "/messages",
+      path: '/messages',
       badgeCount: unreadMessagesCount,
     },
     {
-      name: "Varsler",
+      name: 'Varsler',
       icon: <Bell size={18} />,
-      path: "/alerts",
+      path: '/alerts',
       badgeCount: unreadNotificationsCount,
     },
-    { name: "Profil", icon: <User size={18} />, path: "/profile" },
+    { name: 'Profil', icon: <User size={18} />, path: '/profile' },
   ];
 
-  const isMessagesPage = location.pathname.startsWith("/messages");
+  const isMessagesPage = location.pathname.startsWith('/messages');
 
   return (
     <>
-      <header
-        className={`bg-[#F6F1E8] relative ${isMessagesPage ? "mb-0" : "mb-6"}`}
-      >
+      <header className={`bg-[#F6F1E8] relative ${isMessagesPage ? 'mb-0' : 'mb-6'}`}>
         <div className="h-14 md:h-22.75 max-w-300 mx-auto flex justify-between items-center px-4 lg:px-0">
           {/* LOGO */}
-          <div
-            className="h-10.75 w-40 sm:w-40.5 cursor-pointer"
-            onClick={() => navigate("/")}
-          >
+          <div className="h-10.75 w-40 sm:w-40.5 cursor-pointer" onClick={() => navigate('/')}>
             <Icons.JobbloIcon />
           </div>
 
@@ -276,30 +261,28 @@ export default function Header() {
           {Auth && (
             <div className="hidden md:flex items-center gap-6 px-4 py-3">
               {navLinkUse.map((link, index) => {
-                const homeButton = link.path === "/home";
-                const isHomeButtonActive =
-                  homeButton && location.pathname === link.path;
+                const homeButton = link.path === '/home';
+                const isHomeButtonActive = homeButton && location.pathname === link.path;
 
                 if (homeButton) {
                   return (
                     <button
                       key={index}
                       onClick={() => handleProtectedNavigation(link.path)}
-                      className={`flex items-center mx-auto ${isHomeButtonActive ? "text-custom-green" : "hover:text-custom-green"}`}
+                      className={`flex items-center mx-auto ${isHomeButtonActive ? 'text-custom-green' : 'hover:text-custom-green'}`}
                     >
                       {link.icon}
                     </button>
                   );
                 }
-                const jobButton = link.path === "/publish-job";
-                const isJobButtonActive =
-                  jobButton && location.pathname === link.path;
+                const jobButton = link.path === '/publish-job';
+                const isJobButtonActive = jobButton && location.pathname === link.path;
                 if (jobButton) {
                   return (
                     <button
                       key={index}
                       onClick={() => handleProtectedNavigation(link.path)}
-                      className={`flex items-center mx-auto ${isJobButtonActive ? "bg-custom-green" : "bg-custom-green"} text-white px-4 py-2 rounded-full font-medium transition-hover hover:bg-custom-green`}
+                      className={`flex items-center mx-auto ${isJobButtonActive ? 'bg-custom-green' : 'bg-custom-green'} text-white px-4 py-2 rounded-full font-medium transition-hover hover:bg-custom-green`}
                     >
                       {link.icon}
                     </button>
@@ -312,7 +295,7 @@ export default function Header() {
                     to={link.path}
                     className={({ isActive }) =>
                       `relative flex items-center gap-2 cursor-pointer group py-2 ${
-                        isActive ? "border-b-2 border-[#2F7E47]" : ""
+                        isActive ? 'border-b-2 border-[#2F7E47]' : ''
                       }`
                     }
                   >
@@ -345,7 +328,7 @@ export default function Header() {
                 to="/home"
                 className={({ isActive }) =>
                   `transition-all cursor-pointer ${
-                    isActive ? "text-custom-green!" : "text-custom-green!"
+                    isActive ? 'text-custom-green!' : 'text-custom-green!'
                   }`
                 }
               >
@@ -353,7 +336,7 @@ export default function Header() {
               </NavLink>
 
               <button
-                onClick={() => navigate("/login")}
+                onClick={() => navigate('/login')}
                 className="bg-custom-green text-white px-8 py-3 rounded-[20px] font-semibold transition-all hover:bg-[#25633a] active:scale-95 shadow-sm"
               >
                 Register/Log in
@@ -371,7 +354,7 @@ export default function Header() {
         )}
         <div
           className={`fixed top-0 left-0 h-full w-64 bg-white z-50 transform transition-transform duration-300 md:hidden ${
-            menuOpen ? "translate-x-0" : "-translate-x-full"
+            menuOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
           <div className="flex justify-between items-center p-4 border-b">
@@ -388,9 +371,7 @@ export default function Header() {
                     onClick={() => setMenuOpen(false)}
                     className={({ isActive }) =>
                       `flex items-center gap-3 p-3 rounded-lg ${
-                        isActive
-                          ? "bg-green-50 text-custom-green! font-bold"
-                          : "text-gray-700!"
+                        isActive ? 'bg-green-50 text-custom-green! font-bold' : 'text-gray-700!'
                       }`
                     }
                   >
@@ -417,21 +398,18 @@ export default function Header() {
                     onClick={() => setMenuOpen(false)}
                     className={({ isActive }) =>
                       `flex items-center gap-3 p-3 rounded-lg ${
-                        isActive
-                          ? "bg-green-50 text-custom-green! font-bold"
-                          : "text-gray-700!"
+                        isActive ? 'bg-green-50 text-custom-green! font-bold' : 'text-gray-700!'
                       }`
                     }
                   >
                     {link.icon && (
                       <div className="relative text-[#0A0A0A9E]! group-hover:text-black">
                         {link.icon}
-                        {link.badgeCount !== undefined &&
-                          link.badgeCount > 0 && (
-                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
-                              {link.badgeCount}
-                            </span>
-                          )}
+                        {link.badgeCount !== undefined && link.badgeCount > 0 && (
+                          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
+                            {link.badgeCount}
+                          </span>
+                        )}
                       </div>
                     )}
                     <span className="text-sm font-medium text-[#0A0A0A9E]! group-hover:text-black">
@@ -449,7 +427,7 @@ export default function Header() {
               <Button
                 label="Register/Log in"
                 className="rounded-lg"
-                onClick={() => navigate("/login")}
+                onClick={() => navigate('/login')}
               />
             </div>
           )}

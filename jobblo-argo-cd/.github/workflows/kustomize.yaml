@@ -7,7 +7,7 @@ on:
 
 jobs:
   summarize_changes:
-    name: "📜 Summarize changes for ${{ matrix.env }}"
+    name: '📜 Summarize changes for ${{ matrix.env }}'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -18,16 +18,16 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - name: "🛎️ Checkout current"
+      - name: '🛎️ Checkout current'
         uses: actions/checkout@v4
 
-      - name: "🛎️ Checkout main"
+      - name: '🛎️ Checkout main'
         uses: actions/checkout@v4
         with:
           ref: main
           path: main
 
-      - name: "📜 Render current (new)"
+      - name: '📜 Render current (new)'
         uses: int128/kustomize-action@v1
         id: kustomize-head
         with:
@@ -39,7 +39,7 @@ jobs:
             Manifestene for ${{ matrix.env }} virker ikke!
             Ikke godkjenn før du har fikset dette!
 
-      - name: "📜 Render base (main)"
+      - name: '📜 Render base (main)'
         uses: int128/kustomize-action@v1
         id: kustomize-base
         with:
@@ -48,12 +48,12 @@ jobs:
           write-individual-files: true
           ignore-kustomize-error: true
 
-      - name: "📜 Sammenlign endringer"
+      - name: '📜 Sammenlign endringer'
         uses: int128/diff-action@v1
         with:
           base: ${{ steps.kustomize-base.outputs.directory }}
           head: ${{ steps.kustomize-head.outputs.directory }}
-          label: "env:${{ matrix.env }}"
+          label: 'env:${{ matrix.env }}'
           update-if-exists-key: ${{ github.workflow }}/${{ github.job }}/${{ matrix.env }}
           comment-header: |
             # 📜 Endringsoppsummering for **${{ matrix.env }}**

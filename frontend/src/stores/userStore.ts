@@ -1,11 +1,8 @@
-import type { UserState } from "../types/userTypes.ts";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import {
-  fetchProfile as fetchProfileApi,
-  logoutUser,
-} from "../features/auth/Api";
-import { disconnectSocket } from "../socket/socket";
+import type { UserState } from '../types/userTypes.ts';
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { fetchProfile as fetchProfileApi, logoutUser } from '../features/auth/Api';
+import { disconnectSocket } from '../socket/socket';
 
 export const useUserStore = create<UserState>()(
   persist(
@@ -18,17 +15,13 @@ export const useUserStore = create<UserState>()(
       emailNotificationsEnabled: true,
       smsNotificationsEnabled: false,
 
-      setNotificationsEnabled: (enabled) =>
-        set({ notificationsEnabled: enabled }),
+      setNotificationsEnabled: (enabled) => set({ notificationsEnabled: enabled }),
 
-      setBrowserNotificationsEnabled: (enabled) =>
-        set({ browserNotificationsEnabled: enabled }),
+      setBrowserNotificationsEnabled: (enabled) => set({ browserNotificationsEnabled: enabled }),
 
-      setEmailNotificationsEnabled: (enabled) =>
-        set({ emailNotificationsEnabled: enabled }),
+      setEmailNotificationsEnabled: (enabled) => set({ emailNotificationsEnabled: enabled }),
 
-      setSmsNotificationsEnabled: (enabled) =>
-        set({ smsNotificationsEnabled: enabled }),
+      setSmsNotificationsEnabled: (enabled) => set({ smsNotificationsEnabled: enabled }),
 
       setUser: (user) =>
         set({
@@ -61,7 +54,7 @@ export const useUserStore = create<UserState>()(
           await logoutUser();
           disconnectSocket(); // 🔌 Disconnect socket on logout
         } catch (error) {
-          console.error("Logout error:", error);
+          console.error('Logout error:', error);
         }
       },
 
@@ -73,13 +66,13 @@ export const useUserStore = create<UserState>()(
             isAuthenticated: !!user?._id,
           });
         } catch (error) {
-          console.error("Fetch profile error:", error);
+          console.error('Fetch profile error:', error);
           throw error;
         }
       },
     }),
     {
-      name: "user-storage",
-    },
-  ),
+      name: 'user-storage',
+    }
+  )
 );

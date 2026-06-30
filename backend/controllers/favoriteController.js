@@ -1,6 +1,6 @@
-const Favorite = require("../models/Favorite");
-const Service = require("../models/Service");
-const mongoose = require("mongoose");
+const Favorite = require('../models/Favorite');
+const Service = require('../models/Service');
+const mongoose = require('mongoose');
 
 // Helper function for ObjectId validation
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -13,8 +13,8 @@ exports.getFavorites = async (req, res) => {
     const userId = req.userId; // Always authenticated user
 
     const favorites = await Favorite.find({ user: userId })
-      .populate("service")
-      .populate("user", "name avatarUrl");
+      .populate('service')
+      .populate('user', 'name avatarUrl');
 
     return res.json({
       success: true,
@@ -22,7 +22,7 @@ exports.getFavorites = async (req, res) => {
       data: favorites,
     });
   } catch (error) {
-    console.error("GET FAVORITES ERROR:", error);
+    console.error('GET FAVORITES ERROR:', error);
     return res.status(500).json({ error: error.message });
   }
 };
@@ -36,32 +36,32 @@ exports.addFavorite = async (req, res) => {
     const { serviceId } = req.params;
 
     if (!isValidId(serviceId)) {
-      return res.status(400).json({ error: "Invalid service ID format" });
+      return res.status(400).json({ error: 'Invalid service ID format' });
     }
 
     // Check service exists
     const service = await Service.findById(serviceId);
     if (!service) {
-      return res.status(404).json({ error: "Service not found" });
+      return res.status(404).json({ error: 'Service not found' });
     }
 
     // Prevent duplicates
     const existing = await Favorite.findOne({ user: userId, service: serviceId });
     if (existing) {
-      return res.status(400).json({ error: "Already favorited" });
+      return res.status(400).json({ error: 'Already favorited' });
     }
 
     // Create favorite
     const favorite = await Favorite.create({ user: userId, service: serviceId });
-    const populated = await favorite.populate("service user", "name avatarUrl");
+    const populated = await favorite.populate('service user', 'name avatarUrl');
 
     return res.status(201).json({
       success: true,
-      message: "Favorite added",
+      message: 'Favorite added',
       data: populated,
     });
   } catch (error) {
-    console.error("ADD FAVORITE ERROR:", error);
+    console.error('ADD FAVORITE ERROR:', error);
     return res.status(500).json({ error: error.message });
   }
 };
@@ -75,7 +75,7 @@ exports.removeFavorite = async (req, res) => {
     const { serviceId } = req.params;
 
     if (!isValidId(serviceId)) {
-      return res.status(400).json({ error: "Invalid service ID format" });
+      return res.status(400).json({ error: 'Invalid service ID format' });
     }
 
     const deleted = await Favorite.findOneAndDelete({
@@ -84,15 +84,15 @@ exports.removeFavorite = async (req, res) => {
     });
 
     if (!deleted) {
-      return res.status(404).json({ error: "Favorite not found" });
+      return res.status(404).json({ error: 'Favorite not found' });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Favorite removed",
+      message: 'Favorite removed',
     });
   } catch (error) {
-    console.error("REMOVE FAVORITE ERROR:", error);
+    console.error('REMOVE FAVORITE ERROR:', error);
     return res.status(500).json({ error: error.message });
   }
 };

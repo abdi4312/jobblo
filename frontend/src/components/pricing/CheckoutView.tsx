@@ -1,13 +1,13 @@
-import React from "react";
-import { Check, X, ArrowLeft, Tag, ShoppingCart } from "lucide-react";
-import { Button } from "../../components/Ui/button/Button";
-import { Input } from "../../components/Ui/Input";
-import type { Plan } from "../../features/plans/types.ts";
+import React from 'react';
+import { Check, X, ArrowLeft, Tag, ShoppingCart } from 'lucide-react';
+import { Button } from '../../components/Ui/button/Button';
+import { Input } from '../../components/Ui/Input';
+import type { Plan } from '../../features/plans/types.ts';
 
 interface CheckoutViewProps {
   selectedPlan: Plan;
-  step: "pricing" | "checkout";
-  setStep: (step: "pricing" | "checkout") => void;
+  step: 'pricing' | 'checkout';
+  setStep: (step: 'pricing' | 'checkout') => void;
   promoCode: string;
   setPromoCode: (code: string) => void;
   isApplyingPromo: boolean;
@@ -16,7 +16,7 @@ interface CheckoutViewProps {
     discountAmount: number;
     finalPrice: number;
     code: string;
-    type: "percentage" | "fixed";
+    type: 'percentage' | 'fixed';
     amount: number;
   } | null;
   setDiscountInfo: (info: any) => void;
@@ -41,7 +41,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
     <div className="min-h-screen bg-[#F8F9FA] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <button
-          onClick={() => setStep("pricing")}
+          onClick={() => setStep('pricing')}
           className="flex items-center gap-2 text-[#6C757D] hover:text-[#212529] mb-8 font-semibold transition-colors"
         >
           <ArrowLeft size={20} />
@@ -55,25 +55,17 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
               <div className="w-10 h-10 rounded-xl bg-[#E0883515] flex items-center justify-center text-orange-custom">
                 <ShoppingCart size={20} />
               </div>
-              <h2 className="text-2xl font-bold text-[#212529]">
-                Order Summary
-              </h2>
+              <h2 className="text-2xl font-bold text-[#212529]">Order Summary</h2>
             </div>
 
             <div className="space-y-6">
               <div className="pb-6 border-b border-[#F8F9FA]">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <h3 className="text-xl font-bold text-[#212529]">
-                      {selectedPlan.name}
-                    </h3>
-                    <p className="text-sm text-[#6C757D]">
-                      Monthly subscription
-                    </p>
+                    <h3 className="text-xl font-bold text-[#212529]">{selectedPlan.name}</h3>
+                    <p className="text-sm text-[#6C757D]">Monthly subscription</p>
                   </div>
-                  <span className="text-xl font-black text-[#212529]">
-                    {selectedPlan.price} kr
-                  </span>
+                  <span className="text-xl font-black text-[#212529]">{selectedPlan.price} kr</span>
                 </div>
               </div>
 
@@ -88,7 +80,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                     <span className="flex items-center gap-1">
                       <Tag size={14} />
                       Discount (
-                      {discountInfo.type === "percentage"
+                      {discountInfo.type === 'percentage'
                         ? `${discountInfo.amount}%`
                         : `${discountInfo.amount} kr`}
                       )
@@ -98,14 +90,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                 )}
 
                 <div className="pt-4 border-t border-[#F8F9FA] flex justify-between items-center">
-                  <span className="text-lg font-bold text-[#212529]">
-                    Total to pay
-                  </span>
+                  <span className="text-lg font-bold text-[#212529]">Total to pay</span>
                   <span className="text-3xl font-black text-custom-green">
-                    {discountInfo
-                      ? discountInfo.finalPrice
-                      : selectedPlan.price}{" "}
-                    kr
+                    {discountInfo ? discountInfo.finalPrice : selectedPlan.price} kr
                   </span>
                 </div>
               </div>
@@ -116,14 +103,8 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                 </p>
                 <ul className="space-y-3">
                   {selectedPlan.featuresText?.slice(0, 4).map((feature, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start gap-3 text-sm text-[#495057]"
-                    >
-                      <Check
-                        size={14}
-                        className="text-custom-green mt-0.5 shrink-0"
-                      />
+                    <li key={i} className="flex items-start gap-3 text-sm text-[#495057]">
+                      <Check size={14} className="text-custom-green mt-0.5 shrink-0" />
                       {feature}
                     </li>
                   ))}
@@ -166,7 +147,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                     title="Remove discount code"
                     onClick={() => {
                       setDiscountInfo(null);
-                      setPromoCode("");
+                      setPromoCode('');
                     }}
                     className="text-[#2F855A] hover:text-[#276749]"
                   >
@@ -181,11 +162,10 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
               <div className="relative z-10">
                 <h3 className="text-xl font-bold mb-2">Complete upgrade</h3>
                 <p className="text-sm text-white/70 mb-8">
-                  You will be redirected to Stripe for a safe and secure
-                  payment.
+                  You will be redirected to Stripe for a safe and secure payment.
                 </p>
                 <Button
-                  label={isRedirecting ? "Redirecting..." : "Go to payment"}
+                  label={isRedirecting ? 'Redirecting...' : 'Go to payment'}
                   onClick={handleCheckout}
                   disabled={isRedirecting}
                   className="w-full py-4 !bg-white !text-[#2d4a3e] rounded-2xl font-black text-lg hover:!bg-orange-50 transition-all shadow-xl"

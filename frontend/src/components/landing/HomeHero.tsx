@@ -1,7 +1,7 @@
-import { useHomeHero } from "../../features/homeHero/hooks";
-import Search from "./search";
-import HeroDefaultImage from "../../assets/images/Hero/hero_img.png";
-import { MapPin, UserCircle } from "lucide-react";
+import { useHomeHero } from '../../features/homeHero/hooks';
+import Search from './search';
+import HeroDefaultImage from '../../assets/images/Hero/hero_img.png';
+import { MapPin, UserCircle } from 'lucide-react';
 
 export function HomeHero() {
   const { data: hero, isLoading } = useHomeHero();
@@ -16,13 +16,14 @@ export function HomeHero() {
 
   // Static content as requested
   const staticContent = {
-    title1: "Små jobber.",
-    title2: "Store muligheter.",
-    subtitle: "Finn eller tilby hjelp til hagearbeid, flytting, maling og mer – raskt og enkelt i ditt nærområde.",
+    title1: 'Små jobber.',
+    title2: 'Store muligheter.',
+    subtitle:
+      'Finn eller tilby hjelp til hagearbeid, flytting, maling og mer – raskt og enkelt i ditt nærområde.',
   };
 
   const mediaUrl = hero?.mediaUrl || HeroDefaultImage;
-  const mediaType = hero?.mediaType || "image";
+  const mediaType = hero?.mediaType || 'image';
 
   return (
     <div className="bg-[#f5f0e8] pt-5 pb-12">
@@ -33,12 +34,13 @@ export function HomeHero() {
             <MapPin size={14} />
             <span>Norges lokale jobbplattform</span>
           </div>
-          
+
           <h1 className="text-[32px] sm:text-[42px] font-normal text-custom-black leading-[1.15] mb-1.5">
-            {staticContent.title1}<br />
+            {staticContent.title1}
+            <br />
             <em className="text-custom-green not-italic font-medium">{staticContent.title2}</em>
           </h1>
-          
+
           <p className="text-[15px] text-custom-black/70 leading-relaxed mb-7 max-w-110">
             {staticContent.subtitle}
           </p>
@@ -66,7 +68,7 @@ export function HomeHero() {
         {/* Right Content - Image */}
         <div className="flex justify-center items-center">
           <div className="w-85 h-95 bg-[#e8e0d0] rounded-[50%_50%_50%_50%/60%_60%_40%_40%] overflow-hidden flex items-end justify-center relative">
-            {mediaType === "video" ? (
+            {mediaType === 'video' ? (
               <video
                 src={mediaUrl}
                 className="w-full h-full object-cover"

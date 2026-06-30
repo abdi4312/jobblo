@@ -1,6 +1,6 @@
-import React from "react";
-import { ChevronLeft, ChevronRight, Eye, CheckCircle2 } from "lucide-react";
-import { Button } from "../Ui/button/Button";
+import React from 'react';
+import { ChevronLeft, ChevronRight, Eye, CheckCircle2 } from 'lucide-react';
+import { Button } from '../Ui/button/Button';
 
 interface FormActionsProps {
   currentStep: number;
@@ -26,7 +26,7 @@ export const FormActions: React.FC<FormActionsProps> = ({
       <Button
         type="button"
         onClick={currentStep === 1 ? handleCancel : handleBack}
-        label={currentStep === 1 ? "Avbryt" : "Tilbake"}
+        label={currentStep === 1 ? 'Avbryt' : 'Tilbake'}
         icon={<ChevronLeft size={20} />}
         className="px-8 py-3 md:w-32"
       />

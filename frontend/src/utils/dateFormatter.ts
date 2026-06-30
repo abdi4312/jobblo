@@ -1,5 +1,5 @@
-import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
-import { nb } from "date-fns/locale";
+import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
+import { nb } from 'date-fns/locale';
 
 export const dateFormatter = {
   /**
@@ -7,7 +7,7 @@ export const dateFormatter = {
    */
   toShortDate: (date: Date | string | number): string => {
     const d = new Date(date);
-    return format(d, "dd.MM.yyyy", { locale: nb });
+    return format(d, 'dd.MM.yyyy', { locale: nb });
   },
 
   /**
@@ -15,7 +15,7 @@ export const dateFormatter = {
    */
   toLongDate: (date: Date | string | number): string => {
     const d = new Date(date);
-    return format(d, "d. MMMM yyyy", { locale: nb });
+    return format(d, 'd. MMMM yyyy', { locale: nb });
   },
 
   /**
@@ -23,8 +23,8 @@ export const dateFormatter = {
    */
   toRelative: (date: Date | string | number): string => {
     const d = new Date(date);
-    if (isToday(d)) return "I dag";
-    if (isYesterday(d)) return "I går";
+    if (isToday(d)) return 'I dag';
+    if (isYesterday(d)) return 'I går';
 
     return formatDistanceToNow(d, { addSuffix: true, locale: nb });
   },

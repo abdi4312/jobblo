@@ -1,13 +1,13 @@
-import React, { useState } from "react";
-import { createPortal } from "react-dom";
-import { X, Plus, ChevronRight, Check } from "lucide-react";
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { X, Plus, ChevronRight, Check } from 'lucide-react';
 import {
   useFavoriteLists,
   useCreateFavoriteList,
   useAddServiceToFavoriteList,
   useRemoveServiceFromFavoriteList,
-} from "../../../features/favoriteLists/hooks";
-import type { Jobs } from "../../../types/Jobs";
+} from '../../../features/favoriteLists/hooks';
+import type { Jobs } from '../../../types/Jobs';
 
 interface AddToListModalProps {
   job: Jobs;
@@ -21,18 +21,14 @@ interface FavoriteList {
   services?: Array<{ _id?: string; images?: string[] } | string>;
 }
 
-const AddToListModal: React.FC<AddToListModalProps> = ({
-  job,
-  isOpen,
-  onClose,
-}) => {
+const AddToListModal: React.FC<AddToListModalProps> = ({ job, isOpen, onClose }) => {
   const { data: lists = [], isLoading } = useFavoriteLists();
   const createListMutation = useCreateFavoriteList();
   const addToListMutation = useAddServiceToFavoriteList();
   const removeFromListMutation = useRemoveServiceFromFavoriteList();
 
   const [showCreateNew, setShowCreateNew] = useState(false);
-  const [newListName, setNewListName] = useState("");
+  const [newListName, setNewListName] = useState('');
 
   const handleCreateNew = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +36,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({
 
     try {
       await createListMutation.mutateAsync({ name: newListName });
-      setNewListName("");
+      setNewListName('');
       setShowCreateNew(false);
     } catch (err) {
       console.error(err);
@@ -49,7 +45,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({
 
   const isJobInList = (list: FavoriteList) => {
     return list.services?.some((s: { _id?: string } | string) =>
-      typeof s === "string" ? s === job._id : s._id === job._id,
+      typeof s === 'string' ? s === job._id : s._id === job._id
     );
   };
 
@@ -102,7 +98,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({
           </div>
           <div className="flex-2 text-center">
             <h2 className="text-custom-black font-bold text-lg">
-              {showCreateNew ? "New list" : "Add to list"}
+              {showCreateNew ? 'New list' : 'Add to list'}
             </h2>
           </div>
           <div className="flex-1 flex justify-end">
@@ -125,9 +121,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({
           ) : showCreateNew ? (
             <form onSubmit={handleCreateNew} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-500 ml-1">
-                  List Name
-                </label>
+                <label className="text-sm font-semibold text-gray-500 ml-1">List Name</label>
                 <input
                   autoFocus
                   type="text"
@@ -150,7 +144,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({
                   disabled={!newListName.trim() || createListMutation.isPending}
                   className="flex-1 py-3 bg-custom-green text-white font-semibold rounded-2xl hover:bg-[#235e35] disabled:opacity-50 transition-all shadow-md active:scale-95"
                 >
-                  {createListMutation.isPending ? "Creating..." : "Create List"}
+                  {createListMutation.isPending ? 'Creating...' : 'Create List'}
                 </button>
               </div>
             </form>
@@ -177,7 +171,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({
                       {(() => {
                         const firstService = list.services?.[0];
                         const imageUrl =
-                          firstService && typeof firstService !== "string"
+                          firstService && typeof firstService !== 'string'
                             ? firstService.images?.[0]
                             : undefined;
                         return imageUrl ? (
@@ -193,9 +187,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({
                     </div>
                     <div className="text-left">
                       <p className="font-bold text-custom-black">{list.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {list.services?.length || 0} items
-                      </p>
+                      <p className="text-sm text-gray-500">{list.services?.length || 0} items</p>
                     </div>
                   </div>
                   {isJobInList(list) ? (
@@ -203,10 +195,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({
                       <Check size={14} strokeWidth={3} />
                     </div>
                   ) : (
-                    <ChevronRight
-                      size={20}
-                      className="text-gray-300 group-hover:text-gray-500"
-                    />
+                    <ChevronRight size={20} className="text-gray-300 group-hover:text-gray-500" />
                   )}
                 </button>
               ))}
@@ -215,7 +204,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({
         </div>
       </div>
     </div>,
-    document.body,
+    document.body
   );
 };
 

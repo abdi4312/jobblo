@@ -1,11 +1,11 @@
-import mainLink from "./mainURLs";
+import mainLink from './mainURLs';
 
 export const createContract = async (data: {
   serviceId: string;
   applicantId: string;
   requestId?: string;
 }) => {
-  const res = await mainLink.post("/api/safepay/create-contract", data);
+  const res = await mainLink.post('/api/safepay/create-contract', data);
   return res.data;
 };
 
@@ -20,9 +20,7 @@ export const startJob = async (orderId: string) => {
 };
 
 export const completeJobAndPayout = async (orderId: string) => {
-  const res = await mainLink.post(
-    `/api/safepay/contract/${orderId}/complete`
-  );
+  const res = await mainLink.post(`/api/safepay/contract/${orderId}/complete`);
   return res.data;
 };
 

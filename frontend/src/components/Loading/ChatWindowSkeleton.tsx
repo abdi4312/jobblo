@@ -38,7 +38,7 @@ export const ChatWindowSkeleton = () => {
             <div className="h-3 bg-gray-50 rounded w-12"></div>
           </div>
         </div>
-        
+
         {/* Right message */}
         <div className="flex justify-end">
           <div className="max-w-[70%] space-y-2 items-end flex flex-col">

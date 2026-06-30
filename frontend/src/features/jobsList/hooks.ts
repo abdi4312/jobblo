@@ -1,6 +1,6 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { fetchJobs } from "./jobListingAPI";
-import type { Tab } from "../../types/tabs";
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { fetchJobs } from './jobListingAPI';
+import type { Tab } from '../../types/tabs';
 
 interface UseJobsParams {
   categories?: string[];
@@ -27,10 +27,10 @@ export const useJobs = ({
   countyCodes = [],
   municipalityCodes = [],
   areaCodes = [],
-  search = "",
-  sort = "",
+  search = '',
+  sort = '',
   limit = 16,
-  userId = "",
+  userId = '',
   urgent = false,
   minPrice,
   maxPrice,
@@ -41,7 +41,7 @@ export const useJobs = ({
 }: UseJobsParams) => {
   return useInfiniteQuery({
     queryKey: [
-      "jobs",
+      'jobs',
       categories,
       locations,
       countyCodes,

@@ -5,7 +5,7 @@ export interface Plan {
   freeViews: number;
   pricePerExtraView: number;
   features: string[];
-  type: "business" | "private";
+  type: 'business' | 'private';
   isActive: boolean;
   featuresText: string[];
   entitlements: {

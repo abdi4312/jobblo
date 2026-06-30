@@ -3,8 +3,8 @@ import { getMyPostedJobs } from '../api/job';
 import { JobsResponse } from '../types';
 
 export const useMyPostedJobs = () => {
-    return useQuery<JobsResponse>({
-        queryKey: ['my-jobs'],
-        queryFn: getMyPostedJobs,
-    });
+  return useQuery<JobsResponse>({
+    queryKey: ['my-jobs'],
+    queryFn: getMyPostedJobs,
+  });
 };

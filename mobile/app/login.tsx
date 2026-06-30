@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,13 @@ import {
   ImageBackground,
   ScrollView,
   ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useForm } from "@tanstack/react-form";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { useLogin } from "../features/auth/hooks/useAuth";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useForm } from '@tanstack/react-form';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useLogin } from '../features/auth/hooks/useAuth';
 
 interface LoginForm {
   email: string;
@@ -27,8 +27,8 @@ export default function LoginScreen() {
 
   const form = useForm<LoginForm>({
     defaultValues: {
-      email: "",
-      password: "",
+      email: '',
+      password: '',
     },
     onSubmit: async ({ value }) => {
       loginMutation.mutate(value);
@@ -40,7 +40,7 @@ export default function LoginScreen() {
   return (
     <ImageBackground
       source={{
-        uri: "https://images.unsplash.com/photo-1581244276891-8309cfbb304c?q=80&w=2070&auto=format&fit=crop",
+        uri: 'https://images.unsplash.com/photo-1581244276891-8309cfbb304c?q=80&w=2070&auto=format&fit=crop',
       }} // Placeholder workshop image
       className="flex-1"
     >
@@ -54,12 +54,8 @@ export default function LoginScreen() {
           >
             {/* Top Navigation */}
             <View className="flex-row justify-end pt-4">
-              <TouchableOpacity
-                onPress={() => router.push("/(tabs)/job-search")}
-              >
-                <Text className="text-white text-sm underline font-medium">
-                  Browse Jobblo
-                </Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/job-search')}>
+                <Text className="text-white text-sm underline font-medium">Browse Jobblo</Text>
               </TouchableOpacity>
             </View>
 
@@ -84,8 +80,7 @@ export default function LoginScreen() {
                 <Field
                   name="email"
                   validators={{
-                    onChange: ({ value }) =>
-                      !value ? "Email is required" : undefined,
+                    onChange: ({ value }) => (!value ? 'Email is required' : undefined),
                   }}
                 >
                   {(field) => (
@@ -103,12 +98,11 @@ export default function LoginScreen() {
                           keyboardType="email-address"
                         />
                       </View>
-                      {field.state.meta.isTouched &&
-                        field.state.meta.errors.length > 0 && (
-                          <Text className="text-red-400 text-xs mt-1 ml-1">
-                            {field.state.meta.errors.join(", ")}
-                          </Text>
-                        )}
+                      {field.state.meta.isTouched && field.state.meta.errors.length > 0 && (
+                        <Text className="text-red-400 text-xs mt-1 ml-1">
+                          {field.state.meta.errors.join(', ')}
+                        </Text>
+                      )}
                     </View>
                   )}
                 </Field>
@@ -120,18 +114,13 @@ export default function LoginScreen() {
                 <Field
                   name="password"
                   validators={{
-                    onChange: ({ value }) =>
-                      !value ? "Password is required" : undefined,
+                    onChange: ({ value }) => (!value ? 'Password is required' : undefined),
                   }}
                 >
                   {(field) => (
                     <View>
                       <View className="flex-row items-center bg-white rounded-xl px-4 py-3">
-                        <Ionicons
-                          name="lock-closed-outline"
-                          size={20}
-                          color="#666"
-                        />
+                        <Ionicons name="lock-closed-outline" size={20} color="#666" />
                         <TextInput
                           className="flex-1 ml-3 text-base text-gray-800"
                           placeholder="........."
@@ -141,24 +130,19 @@ export default function LoginScreen() {
                           onChangeText={(value) => field.handleChange(value)}
                           secureTextEntry={!showPassword}
                         />
-                        <TouchableOpacity
-                          onPress={() => setShowPassword(!showPassword)}
-                        >
+                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                           <Ionicons
-                            name={
-                              showPassword ? "eye-off-outline" : "eye-outline"
-                            }
+                            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                             size={20}
                             color="#666"
                           />
                         </TouchableOpacity>
                       </View>
-                      {field.state.meta.isTouched &&
-                        field.state.meta.errors.length > 0 && (
-                          <Text className="text-red-400 text-xs mt-1 ml-1">
-                            {field.state.meta.errors.join(", ")}
-                          </Text>
-                        )}
+                      {field.state.meta.isTouched && field.state.meta.errors.length > 0 && (
+                        <Text className="text-red-400 text-xs mt-1 ml-1">
+                          {field.state.meta.errors.join(', ')}
+                        </Text>
+                      )}
                       <TouchableOpacity className="mt-2 items-end">
                         <Text className="text-white text-xs font-medium">
                           Glemt passord? Klikk her
@@ -175,7 +159,7 @@ export default function LoginScreen() {
                   form.handleSubmit();
                 }}
                 disabled={loginMutation.isPending}
-                className={`rounded-xl py-4 mt-6 items-center ${loginMutation.isPending ? "bg-[#E68A2E]/70" : "bg-[#E68A2E]"}`}
+                className={`rounded-xl py-4 mt-6 items-center ${loginMutation.isPending ? 'bg-[#E68A2E]/70' : 'bg-[#E68A2E]'}`}
               >
                 {loginMutation.isPending ? (
                   <ActivityIndicator color="white" />
@@ -197,16 +181,12 @@ export default function LoginScreen() {
                   <View className="mr-3 bg-white rounded-full p-1">
                     <Ionicons name="logo-google" size={16} color="black" />
                   </View>
-                  <Text className="text-white font-semibold">
-                    Continue with Google
-                  </Text>
+                  <Text className="text-white font-semibold">Continue with Google</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity className="flex-row items-center bg-black rounded-xl py-4 px-4 border border-gray-700 justify-center mt-3">
                   <Ionicons name="logo-apple" size={20} color="white" />
-                  <Text className="text-white ml-3 font-semibold">
-                    Continue with Apple
-                  </Text>
+                  <Text className="text-white ml-3 font-semibold">Continue with Apple</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -214,10 +194,8 @@ export default function LoginScreen() {
             {/* Bottom Register Link */}
             <View className="flex-row justify-center mt-10 mb-6">
               <Text className="text-white text-sm">Har du ikke konto? </Text>
-              <TouchableOpacity onPress={() => router.push("/register")}>
-                <Text className="text-[#E68A2E] text-sm font-bold">
-                  Registrer deg
-                </Text>
+              <TouchableOpacity onPress={() => router.push('/register')}>
+                <Text className="text-[#E68A2E] text-sm font-bold">Registrer deg</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>

@@ -26,10 +26,13 @@ export const JobDetailCardSkeleton = () => (
     {/* Job Info Summary Card Skeleton */}
     <div className="bg-white rounded-[20px] p-6 shadow-[0px_2px_8px_0px_rgba(0,0,0,0.07)]">
       <div className="h-3 bg-gray-100 rounded w-24 mb-6 animate-pulse"></div>
-      
+
       <div className="grid grid-cols-2 gap-3">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-20 bg-gray-50 rounded-[14px] p-4 flex flex-col justify-between animate-pulse">
+          <div
+            key={i}
+            className="h-20 bg-gray-50 rounded-[14px] p-4 flex flex-col justify-between animate-pulse"
+          >
             <div className="h-3 bg-gray-200 rounded w-1/2"></div>
             <div className="h-4 bg-gray-200 rounded w-3/4 self-end"></div>
           </div>

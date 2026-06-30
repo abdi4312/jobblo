@@ -1,4 +1,3 @@
-
 import { Tabs, useSegments } from 'expo-router';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,12 +31,13 @@ export default function TabLayout() {
           display: user ? 'flex' : 'none', // Hide tab bar if user is not logged in
         },
         tabBarShowLabel: false,
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "home" : "home-outline"} size={28} color={color} />
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={28} color={color} />
           ),
         }}
       />
@@ -47,10 +47,10 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => {
             const isActive = focused || isJobSearch;
             return (
-              <Ionicons 
-                name={isActive ? "search" : "search-outline"} 
-                size={28} 
-                color={isActive ? activeColor : color} 
+              <Ionicons
+                name={isActive ? 'search' : 'search-outline'}
+                size={28}
+                color={isActive ? activeColor : color}
               />
             );
           },
@@ -60,7 +60,11 @@ export default function TabLayout() {
         name="create"
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "add-circle" : "add-circle-outline"} size={32} color={color} />
+            <Ionicons
+              name={focused ? 'add-circle' : 'add-circle-outline'}
+              size={32}
+              color={color}
+            />
           ),
         }}
       />
@@ -68,7 +72,11 @@ export default function TabLayout() {
         name="messages"
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"} size={28} color={color} />
+            <Ionicons
+              name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+              size={28}
+              color={color}
+            />
           ),
         }}
       />
@@ -77,7 +85,7 @@ export default function TabLayout() {
         options={{
           tabBarIcon: ({ color, focused }) => (
             <View style={styles.iconContainer}>
-              <Ionicons name={focused ? "person" : "person-outline"} size={28} color={color} />
+              <Ionicons name={focused ? 'person' : 'person-outline'} size={28} color={color} />
               {/* Notification Dot */}
               <View style={styles.notificationDot} />
             </View>

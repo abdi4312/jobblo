@@ -1,33 +1,44 @@
 const mongoose = require('mongoose');
-const orderSchema = new mongoose.Schema({
-    serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service', required: true },
-    customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+const orderSchema = new mongoose.Schema(
+  {
+    serviceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Service',
+      required: true,
+    },
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     providerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 
     // Status for hele oppdraget
     status: {
-        type: String,
-        enum: [
-            'pending',
-            'accepted',
-            'declined',
-            'in_progress',
-            'completed',
-            'cancelled',
-            'awaiting_payment',
-            'paid'
-        ],
-        default: 'pending'
+      type: String,
+      enum: [
+        'pending',
+        'accepted',
+        'declined',
+        'in_progress',
+        'completed',
+        'cancelled',
+        'awaiting_payment',
+        'paid',
+      ],
+      default: 'pending',
     },
 
     // Pris og forhandling
     initialPrice: Number,
     agreedPrice: Number,
-    priceNegotiation: [{
+    priceNegotiation: [
+      {
         userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         proposedPrice: Number,
-        timestamp: Date
-    }],
+        timestamp: Date,
+      },
+    ],
 
     // Tid & varighet
     scheduledDate: Date,
@@ -37,9 +48,9 @@ const orderSchema = new mongoose.Schema({
 
     // Lokasjon
     location: {
-        address: String,
-        lat: Number,
-        lng: Number
+      address: String,
+      lat: Number,
+      lng: Number,
     },
 
     // Chat / samtaleoversikt
@@ -47,39 +58,49 @@ const orderSchema = new mongoose.Schema({
 
     // Betaling
     paymentStatus: {
-        type: String,
-        enum: ['unpaid', 'pending', 'paid', 'refunded'],
-        default: 'unpaid'
+      type: String,
+      enum: ['unpaid', 'pending', 'paid', 'refunded'],
+      default: 'unpaid',
     },
     paymentId: String,
 
-
     // Checklist completion status (per order)
-    checklist: [{
+    checklist: [
+      {
         id: { type: String, required: true },
         text: { type: String, required: true },
         checked: { type: Boolean, default: false },
         checkedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        checkedAt: Date
-    }],
+        checkedAt: Date,
+      },
+    ],
 
     // Ratings & review
     review: {
-        overall: { type: Number, min: 0, max: 5, default: 0 },
-        punctuality: { type: Number, min: 0, max: 5, default: 0 },
-        quality: { type: Number, min: 0, max: 5, default: 0 },
-        communication: { type: Number, min: 0, max: 5, default: 0 },
-        tidiness: { type: Number, min: 0, max: 5, default: 0 },
-        comment: { type: String, default: "" }
+      overall: { type: Number, min: 0, max: 5, default: 0 },
+      punctuality: { type: Number, min: 0, max: 5, default: 0 },
+      quality: { type: Number, min: 0, max: 5, default: 0 },
+      communication: { type: Number, min: 0, max: 5, default: 0 },
+      tidiness: { type: Number, min: 0, max: 5, default: 0 },
+      comment: { type: String, default: '' },
     },
 
     // Hendelser (history)
-    history: [{
+    history: [
+      {
         action: String,
         userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         timestamp: Date,
-        data: mongoose.Schema.Types.Mixed
-    }]
+        data: mongoose.Schema.Types.Mixed,
+      },
+    ],
 
-}, { timestamps: true });
+    // Before/After images
+    beforeImages: [{ type: String }],
+    afterImages: [{ type: String }],
+    // Attachments
+    attachments: [{ type: String }],
+  },
+  { timestamps: true }
+);
 module.exports = mongoose.model('Order', orderSchema);

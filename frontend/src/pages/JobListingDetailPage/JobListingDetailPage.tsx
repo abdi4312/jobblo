@@ -1,23 +1,23 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
-import { useUserStore } from "../../stores/userStore";
+import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { useUserStore } from '../../stores/userStore';
 import {
   useJobDetailQuery,
   useSendMessageMutation,
   useStripeMutation,
   useCreateJobRequestMutation,
   useMyJobRequestsQuery,
-} from "../../features/jobDetail/hook.ts";
+} from '../../features/jobDetail/hook.ts';
 
-import JobButton from "../../components/job/JobButton.tsx";
-import RelatedJobs from "../../components/job/RelatedJobs.tsx";
-import { JobDetailSkeleton } from "../../components/Loading/JobDetailSkeleton.tsx";
-import { useFavoriteToggle } from "../../features/favorites/hook/useFavoriteToggle.ts";
-import { lazy, Suspense, useState, useEffect } from "react";
+import JobButton from '../../components/job/JobButton.tsx';
+import RelatedJobs from '../../components/job/RelatedJobs.tsx';
+import { JobDetailSkeleton } from '../../components/Loading/JobDetailSkeleton.tsx';
+import { useFavoriteToggle } from '../../features/favorites/hook/useFavoriteToggle.ts';
+import { lazy, Suspense, useState, useEffect } from 'react';
 const MapComponent = lazy(() =>
-  import("../../components/component/map/MapComponent").then((module) => ({
+  import('../../components/component/map/MapComponent').then((module) => ({
     default: module.MapComponent,
-  })),
+  }))
 );
 import {
   Share2,
@@ -28,15 +28,15 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
-} from "lucide-react";
-import { dateFormatter } from "../../utils/dateFormatter";
-import { ShareModal } from "../../components/shared/ShareModal/ShareModal";
-import { UpgradeModal } from "../../components/shared/UpgradeModal";
-import { BuyContactModal } from "../../components/shared/BuyContactModal";
-import mainLink from "../../api/mainURLs";
+} from 'lucide-react';
+import { dateFormatter } from '../../utils/dateFormatter';
+import { ShareModal } from '../../components/shared/ShareModal/ShareModal';
+import { UpgradeModal } from '../../components/shared/UpgradeModal';
+import { BuyContactModal } from '../../components/shared/BuyContactModal';
+import mainLink from '../../api/mainURLs';
 
-import { usePlans } from "../../features/plans/hooks";
-import { getConfigByKey } from "../../features/plans/api";
+import { usePlans } from '../../features/plans/hooks';
+import { getConfigByKey } from '../../features/plans/api';
 
 const JobListingDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -48,7 +48,7 @@ const JobListingDetailPage = () => {
   const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
   const [isTimerActive, setIsTimerActive] = useState(false);
   const [unlockTime, setUnlockTime] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState<string>("");
+  const [timeLeft, setTimeLeft] = useState<string>('');
   const [upgradeInfo, setUpgradeInfo] = useState<{
     message?: string;
     limit?: number;
@@ -78,10 +78,10 @@ const JobListingDetailPage = () => {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const config = await getConfigByKey("FREE_PRIVATE_JOBS_UNDER_10000");
+        const config = await getConfigByKey('FREE_PRIVATE_JOBS_UNDER_10000');
         setFreeJobsToggle(config?.value === true);
       } catch (err) {
-        console.error("Error fetching free jobs config:", err);
+        console.error('Error fetching free jobs config:', err);
       }
     };
     fetchConfig();
@@ -91,9 +91,7 @@ const JobListingDetailPage = () => {
     if (isAuth && currentUser && plans && jobRequests && job) {
       // Bypass cooldown if job is under 10k and toggle is ON (Private users only)
       const isFreeUnder10k =
-        currentUser.planType === "private" &&
-        freeJobsToggle &&
-        job.price < 10000;
+        currentUser.planType === 'private' && freeJobsToggle && job.price < 10000;
 
       if (isFreeUnder10k) {
         setIsTimerActive(false);
@@ -103,8 +101,8 @@ const JobListingDetailPage = () => {
 
       const currentPlan = plans.find(
         (p) =>
-          p.name === (currentUser.subscription || "Standard") &&
-          p.type === (currentUser.planType || "private"),
+          p.name === (currentUser.subscription || 'Standard') &&
+          p.type === (currentUser.planType || 'private')
       );
 
       const usage = currentUser.monthlyContactUsage || 0;
@@ -115,14 +113,12 @@ const JobListingDetailPage = () => {
         if (cooldownMinutes > 0) {
           // Get the most recent request
           const lastRequest = [...jobRequests].sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           )[0];
 
           if (lastRequest) {
             const unlockAt = new Date(
-              new Date(lastRequest.createdAt).getTime() +
-                cooldownMinutes * 60 * 1000,
+              new Date(lastRequest.createdAt).getTime() + cooldownMinutes * 60 * 1000
             );
             const now = new Date();
 
@@ -137,8 +133,7 @@ const JobListingDetailPage = () => {
   }, [isAuth, currentUser, plans, jobRequests, job, freeJobsToggle]);
 
   const hasRequested = jobRequests?.some(
-    (req) =>
-      req.serviceId?._id === id && req.customerId?._id === currentUser?._id,
+    (req) => req.serviceId?._id === id && req.customerId?._id === currentUser?._id
   );
 
   const [lng, lat] = job?.location?.coordinates || [0, 0];
@@ -146,8 +141,8 @@ const JobListingDetailPage = () => {
 
   const handleCreateOrder = async () => {
     if (!isAuth) {
-      toast.error("Vennligst logg inn for å sende forespørsel");
-      navigate("/login");
+      toast.error('Vennligst logg inn for å sende forespørsel');
+      navigate('/login');
       return;
     }
     if (!job?._id) return;
@@ -159,7 +154,7 @@ const JobListingDetailPage = () => {
 
     // Prevent ordering own job even if button is clicked somehow
     if (job.userId?._id === currentUser?._id) {
-      toast.error("Du kan ikke bestille ditt eget oppdrag.");
+      toast.error('Du kan ikke bestille ditt eget oppdrag.');
       return;
     }
 
@@ -167,7 +162,7 @@ const JobListingDetailPage = () => {
       { serviceId: job._id },
       {
         onSuccess: () => {
-          toast.success("Forespørsel sendt! Venter på godkjenning.");
+          toast.success('Forespørsel sendt! Venter på godkjenning.');
           // Redirection removed as per user request
         },
         onError: (err: any) => {
@@ -177,10 +172,7 @@ const JobListingDetailPage = () => {
             toast.error(err.response.data.message);
             return;
           }
-          if (
-            err.response?.status === 402 ||
-            err.response?.data?.upgradeRequired
-          ) {
+          if (err.response?.status === 402 || err.response?.data?.upgradeRequired) {
             setUpgradeInfo({
               message: err.response.data.message,
               limit: err.response.data.limit,
@@ -190,11 +182,9 @@ const JobListingDetailPage = () => {
             setIsBuyModalOpen(true); // Show BuyContactModal instead of UpgradeModal
             return;
           }
-          toast.error(
-            err.response?.data?.error || "Kunne ikke sende forespørsel",
-          );
+          toast.error(err.response?.data?.error || 'Kunne ikke sende forespørsel');
         },
-      },
+      }
     );
   };
 
@@ -203,19 +193,14 @@ const JobListingDetailPage = () => {
 
     setIsPaymentRedirecting(true);
     try {
-      const res = await mainLink.post(
-        "/api/stripe/create-extra-contact-payment",
-        {
-          amount: upgradeInfo.perContactPrice,
-          serviceId: job._id,
-        },
-      );
+      const res = await mainLink.post('/api/stripe/create-extra-contact-payment', {
+        amount: upgradeInfo.perContactPrice,
+        serviceId: job._id,
+      });
       window.location.href = res.data.url;
     } catch (error: any) {
-      console.error("Payment redirect failed:", error);
-      toast.error(
-        error.response?.data?.message || "Kunne ikke starte betaling",
-      );
+      console.error('Payment redirect failed:', error);
+      toast.error(error.response?.data?.message || 'Kunne ikke starte betaling');
       setIsPaymentRedirecting(false);
     }
   };
@@ -234,12 +219,11 @@ const JobListingDetailPage = () => {
     let interval: NodeJS.Timeout;
     if (isTimerActive && unlockTime) {
       const calculateTimeLeft = () => {
-        const difference =
-          new Date(unlockTime).getTime() - new Date().getTime();
+        const difference = new Date(unlockTime).getTime() - new Date().getTime();
         if (difference <= 0) {
           setIsTimerActive(false);
           setUnlockTime(null);
-          setTimeLeft("");
+          setTimeLeft('');
           return;
         }
 
@@ -261,13 +245,11 @@ const JobListingDetailPage = () => {
 
   const handlePrevImage = () => {
     if (!job?.images) return;
-    setSelectedImageIndex(
-      (prev) => (prev - 1 + job.images.length) % job.images.length,
-    );
+    setSelectedImageIndex((prev) => (prev - 1 + job.images.length) % job.images.length);
   };
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return "-";
+    if (!dateString) return '-';
     return dateFormatter.toShortDate(dateString);
   };
 
@@ -287,12 +269,8 @@ const JobListingDetailPage = () => {
     return (
       <div className="min-h-screen bg-gray-50 pt-16 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Oppdrag ikke funnet
-          </h2>
-          <p className="text-gray-600">
-            Oppdraget du leter etter eksisterer ikke.
-          </p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Oppdrag ikke funnet</h2>
+          <p className="text-gray-600">Oppdraget du leter etter eksisterer ikke.</p>
         </div>
       </div>
     );
@@ -371,13 +349,9 @@ const JobListingDetailPage = () => {
                   <div
                     key={idx}
                     onClick={() => setSelectedImageIndex(idx)}
-                    className={`w-16 h-16 rounded-lg overflow-hidden cursor-pointer transition-all ${idx === selectedImageIndex ? "ring-2 ring-[#2F7E47] opacity-100" : "opacity-70 hover:opacity-100"}`}
+                    className={`w-16 h-16 rounded-lg overflow-hidden cursor-pointer transition-all ${idx === selectedImageIndex ? 'ring-2 ring-[#2F7E47] opacity-100' : 'opacity-70 hover:opacity-100'}`}
                   >
-                    <img
-                      src={img}
-                      className="w-full h-full object-cover"
-                      alt=""
-                    />
+                    <img src={img} className="w-full h-full object-cover" alt="" />
                   </div>
                 ))}
               </div>
@@ -391,7 +365,7 @@ const JobListingDetailPage = () => {
               <div className="flex justify-between items-start gap-4">
                 <div className="flex-1">
                   <h1 className="text-2xl font-bold text-gray-900 mb-1">
-                    {job.title || "Uten tittel"}
+                    {job.title || 'Uten tittel'}
                   </h1>
                   <div className="flex flex-wrap items-center gap-3 mb-2">
                     {job.favCount !== undefined && job.favCount > 0 && (
@@ -404,7 +378,7 @@ const JobListingDetailPage = () => {
                 </div>
                 <div className="text-right">
                   <p className="text-3xl font-bold text-custom-green shrink-0">
-                    {job.price ? job.price.toLocaleString() : "0"} kr
+                    {job.price ? job.price.toLocaleString() : '0'} kr
                   </p>
                   {job.hourlyRate && (
                     <p className="text-sm font-medium text-gray-500">
@@ -414,8 +388,7 @@ const JobListingDetailPage = () => {
                 </div>
               </div>
               <p className="text-sm text-gray-500">
-                Varighet: {job.duration?.value || "-"}{" "}
-                {job.duration?.unit || ""}
+                Varighet: {job.duration?.value || '-'} {job.duration?.unit || ''}
               </p>
             </div>
 
@@ -446,7 +419,7 @@ const JobListingDetailPage = () => {
                       </p>
                     </div>
                     <button
-                      onClick={() => navigate("/pricing")}
+                      onClick={() => navigate('/pricing')}
                       className="ml-auto text-xs font-bold text-amber-900 underline hover:text-amber-700"
                     >
                       Oppgrader
@@ -460,7 +433,7 @@ const JobListingDetailPage = () => {
             <div className="bg-white rounded-xl p-5 shadow-sm">
               <h2 className="font-semibold text-gray-900 mb-3">Beskrivelse</h2>
               <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {job.description || "Ingen beskrivelse tilgjengelig"}
+                {job.description || 'Ingen beskrivelse tilgjengelig'}
               </p>
             </div>
 
@@ -474,24 +447,21 @@ const JobListingDetailPage = () => {
                       <div
                         className={`mt-1 w-5 h-5 rounded border flex items-center justify-center shrink-0 ${
                           item.checked
-                            ? "bg-custom-green border-custom-green"
-                            : "bg-gray-100 border-gray-300"
+                            ? 'bg-custom-green border-custom-green'
+                            : 'bg-gray-100 border-gray-300'
                         }`}
                       >
-                        {item.checked && (
-                          <CheckCircle2 size={14} className="text-white" />
-                        )}
+                        {item.checked && <CheckCircle2 size={14} className="text-white" />}
                       </div>
                       <div className="flex-1">
                         <p
-                          className={`text-sm ${item.checked ? "text-gray-500 line-through" : "text-gray-700"}`}
+                          className={`text-sm ${item.checked ? 'text-gray-500 line-through' : 'text-gray-700'}`}
                         >
                           {item.text}
                         </p>
                         {item.checkedBy && (
                           <p className="text-xs text-gray-400 mt-0.5">
-                            Merket av: {item.checkedBy.name} •{" "}
-                            {formatDate(item.checkedAt)}
+                            Merket av: {item.checkedBy.name} • {formatDate(item.checkedAt)}
                           </p>
                         )}
                       </div>
@@ -507,27 +477,23 @@ const JobListingDetailPage = () => {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Kategori</span>
-                  <span className="font-medium">
-                    {job.categories?.[0] || "Generelt"}
-                  </span>
+                  <span className="font-medium">{job.categories?.[0] || 'Generelt'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Sted</span>
                   <span className="font-medium flex items-center gap-1">
-                    <MapPin size={14} /> {job.location?.city || "Ikke angitt"}
+                    <MapPin size={14} /> {job.location?.city || 'Ikke angitt'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Lagt ut</span>
                   <span className="font-medium">
-                    {job.createdAt ? formatDate(job.createdAt) : "-"}
+                    {job.createdAt ? formatDate(job.createdAt) : '-'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Erfaring</span>
-                  <span className="font-medium">
-                    {job.experience || "Ikke angitt"}
-                  </span>
+                  <span className="font-medium">{job.experience || 'Ikke angitt'}</span>
                 </div>
               </div>
             </div>
@@ -535,9 +501,7 @@ const JobListingDetailPage = () => {
             {/* Map */}
             {hasCoordinates && (
               <div className="bg-white rounded-xl p-5 shadow-sm">
-                <h2 className="font-semibold text-gray-900 mb-3">
-                  Kart over lokasjon
-                </h2>
+                <h2 className="font-semibold text-gray-900 mb-3">Kart over lokasjon</h2>
                 <div className="h-48 rounded-lg overflow-hidden bg-gray-100">
                   <Suspense
                     fallback={
@@ -558,9 +522,7 @@ const JobListingDetailPage = () => {
             {/* Seller/Company Info */}
             <div
               className="bg-white rounded-xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() =>
-                job.userId?._id && navigate(`/profile/${job.userId._id}`)
-              }
+              onClick={() => job.userId?._id && navigate(`/profile/${job.userId._id}`)}
             >
               <div className="flex items-center gap-3">
                 {job.userId?.avatarUrl ? (
@@ -571,33 +533,31 @@ const JobListingDetailPage = () => {
                   />
                 ) : (
                   <div className="w-14 h-14 bg-custom-green rounded-full flex items-center justify-center text-white text-xl font-bold">
-                    {job.userId?.name?.charAt(0) || "?"}
+                    {job.userId?.name?.charAt(0) || '?'}
                   </div>
                 )}
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold text-gray-900">
-                      {job.userId?.role === "company" && job.userId?.companyName
+                      {job.userId?.role === 'company' && job.userId?.companyName
                         ? job.userId.companyName
-                        : job.userId?.name || "Ukjent"}
+                        : job.userId?.name || 'Ukjent'}
                     </p>
                     <div className="flex items-center gap-1.5">
-                      {job.userId?.role === "company" && (
+                      {job.userId?.role === 'company' && (
                         <span className="px-2 py-0.5 bg-[#0066A2] text-white text-[10px] font-bold rounded-full uppercase tracking-wider">
                           Bedrift
                         </span>
                       )}
                       <span
-                        className={`px-2 py-0.5 text-white text-[10px] font-bold rounded-full uppercase tracking-wider ${job.userId?.verified ? "bg-custom-green" : "bg-gray-500"}`}
+                        className={`px-2 py-0.5 text-white text-[10px] font-bold rounded-full uppercase tracking-wider ${job.userId?.verified ? 'bg-custom-green' : 'bg-gray-500'}`}
                       >
-                        {job.userId?.verified
-                          ? "Verifisert"
-                          : "Ikke verifisert"}
+                        {job.userId?.verified ? 'Verifisert' : 'Ikke verifisert'}
                       </span>
                     </div>
                   </div>
 
-                  {job.userId?.role === "company" && job.userId?.orgNumber && (
+                  {job.userId?.role === 'company' && job.userId?.orgNumber && (
                     <p className="text-xs font-semibold text-gray-500 mt-0.5">
                       Org.nr: {job.userId.orgNumber}
                     </p>
@@ -606,21 +566,17 @@ const JobListingDetailPage = () => {
                   <div className="flex items-center gap-3 mt-1">
                     <div className="flex items-center gap-1 text-sm text-yellow-500">
                       <Star size={14} fill="currentColor" />
-                      <span>{job.userId?.averageRating || "0"}</span>
+                      <span>{job.userId?.averageRating || '0'}</span>
                     </div>
                     <div className="flex items-center gap-1 text-sm text-custom-green">
-                      <svg
-                        className="w-4 h-4"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path
                           fillRule="evenodd"
                           d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
                           clipRule="evenodd"
                         />
                       </svg>
-                      <span>{job.userId?.completedJobs || "0"} fullførte</span>
+                      <span>{job.userId?.completedJobs || '0'} fullførte</span>
                     </div>
                   </div>
                 </div>
@@ -646,9 +602,7 @@ const JobListingDetailPage = () => {
         <div className="mt-12 pt-12 border-t border-gray-100">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                Anbefalte oppdrag
-              </h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-1">Anbefalte oppdrag</h2>
               <p className="text-gray-500">Basert på lokasjon og kategori</p>
             </div>
           </div>
@@ -664,7 +618,7 @@ const JobListingDetailPage = () => {
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
         url={window.location.href}
-        title={job.title || "Jobblo Oppdrag"}
+        title={job.title || 'Jobblo Oppdrag'}
       />
 
       <UpgradeModal

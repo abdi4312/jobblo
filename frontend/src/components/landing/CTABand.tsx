@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from 'react-router-dom';
 
 export function CTABand() {
   const navigate = useNavigate();
@@ -22,7 +22,7 @@ export function CTABand() {
           Finn oppdrag
         </button>
         <button
-          onClick={() => navigate("/publish-job")}
+          onClick={() => navigate('/publish-job')}
           className="px-6 py-3 bg-transparent text-white border border-white/40 rounded-full text-sm font-medium cursor-pointer hover:bg-white/10 transition-colors"
         >
           Legg ut oppdrag

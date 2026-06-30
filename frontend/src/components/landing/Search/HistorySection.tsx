@@ -1,5 +1,5 @@
-import { SearchItem } from "./SearchItem";
-import type { HistoryItem } from "../../../hooks/useSearchHistory";
+import { SearchItem } from './SearchItem';
+import type { HistoryItem } from '../../../hooks/useSearchHistory';
 
 interface HistorySectionProps {
   history: HistoryItem[];
@@ -7,11 +7,7 @@ interface HistorySectionProps {
   onItemClick: (item: HistoryItem) => void;
 }
 
-export const HistorySection = ({
-  history,
-  onClear,
-  onItemClick,
-}: HistorySectionProps) => {
+export const HistorySection = ({ history, onClear, onItemClick }: HistorySectionProps) => {
   return (
     <div className="pt-4">
       <div className="flex items-center justify-between mb-4">
@@ -45,12 +41,8 @@ export const HistorySection = ({
         </div>
       ) : (
         <div className="py-2">
-          <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight">
-            No search history
-          </h3>
-          <p className="text-[15px] text-gray-500 font-medium mt-1">
-            Try searching for something
-          </p>
+          <h3 className="text-[17px] font-bold text-[#1A1A1A] leading-tight">No search history</h3>
+          <p className="text-[15px] text-gray-500 font-medium mt-1">Try searching for something</p>
         </div>
       )}
     </div>

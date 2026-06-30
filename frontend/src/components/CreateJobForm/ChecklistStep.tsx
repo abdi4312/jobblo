@@ -1,6 +1,5 @@
-
-import { Plus, Trash2, ArrowUp, ArrowDown, ListChecks } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Plus, Trash2, ArrowUp, ArrowDown, ListChecks } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 interface ChecklistItem {
   id: string;
@@ -18,7 +17,7 @@ export const ChecklistStep = ({
   setChecklistItems,
   currentCategory,
 }: ChecklistStepProps) => {
-  const [newItemText, setNewItemText] = useState("");
+  const [newItemText, setNewItemText] = useState('');
 
   // Add new item
   const addItem = () => {
@@ -30,16 +29,14 @@ export const ChecklistStep = ({
           text: newItemText.trim(),
         },
       ]);
-      setNewItemText("");
+      setNewItemText('');
     }
   };
 
   // Update item text
   const updateItem = (id: string, newText: string) => {
     setChecklistItems(
-      checklistItems.map((item) =>
-        item.id === id ? { ...item, text: newText } : item
-      )
+      checklistItems.map((item) => (item.id === id ? { ...item, text: newText } : item))
     );
   };
 
@@ -52,10 +49,7 @@ export const ChecklistStep = ({
   const moveItemUp = (index: number) => {
     if (index > 0) {
       const newItems = [...checklistItems];
-      [newItems[index - 1], newItems[index]] = [
-        newItems[index],
-        newItems[index - 1],
-      ];
+      [newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
       setChecklistItems(newItems);
     }
   };
@@ -64,19 +58,14 @@ export const ChecklistStep = ({
   const moveItemDown = (index: number) => {
     if (index < checklistItems.length - 1) {
       const newItems = [...checklistItems];
-      [newItems[index + 1], newItems[index]] = [
-        newItems[index],
-        newItems[index + 1],
-      ];
+      [newItems[index + 1], newItems[index]] = [newItems[index], newItems[index + 1]];
       setChecklistItems(newItems);
     }
   };
 
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-      <div
-        className={`box-card-custom rounded-[14px] p-4 md:p-6 border transition-colors`}
-      >
+      <div className={`box-card-custom rounded-[14px] p-4 md:p-6 border transition-colors`}>
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 bg-[#2D7A4D]/10 rounded-full flex items-center justify-center text-[#2D7A4D]">
             <ListChecks size={22} />
@@ -98,7 +87,7 @@ export const ChecklistStep = ({
             type="text"
             value={newItemText}
             onChange={(e) => setNewItemText(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && addItem()}
+            onKeyPress={(e) => e.key === 'Enter' && addItem()}
             placeholder="Legg til sjekklisteelement..."
             className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#2D7A4D]"
             disabled={checklistItems.length >= 10}

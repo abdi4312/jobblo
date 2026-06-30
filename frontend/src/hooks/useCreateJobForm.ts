@@ -1,14 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import toast from "react-hot-toast";
-import { generateFullJobListing } from "../api/aiAPI";
-import { useUserStore } from "../stores/userStore";
-import { usePaymentCalculation } from "./usePaymentCalculation";
-import { useForm } from "./useForm";
-import {
-  jobValidationSchema,
-  type JobFormValues,
-} from "../validations/jobValidations";
-import { saveFormData, loadFormData, clearFormData } from "../utils/indexedDB";
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import toast from 'react-hot-toast';
+import { generateFullJobListing } from '../api/aiAPI';
+import { useUserStore } from '../stores/userStore';
+import { usePaymentCalculation } from './usePaymentCalculation';
+import { useForm } from './useForm';
+import { jobValidationSchema, type JobFormValues } from '../validations/jobValidations';
+import { saveFormData, loadFormData, clearFormData } from '../utils/indexedDB';
 
 interface InitialData {
   title?: string;
@@ -36,7 +33,7 @@ export const useCreateJobForm = (
   userId: string,
   initialData?: InitialData,
   isEditMode = false,
-  onSubmit?: (formData: FormData) => void,
+  onSubmit?: (formData: FormData) => void
 ) => {
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -51,51 +48,47 @@ export const useCreateJobForm = (
     setMultipleValues,
   } = useForm<JobFormValues>(
     {
-      title: initialData?.title || "",
-      description: initialData?.description || "",
-      categories: initialData?.categories || "",
-      address: initialData?.address || "",
-      city: initialData?.city || "",
-      phone: initialData?.phone || "",
-      email: initialData?.email || "",
-      price: initialData?.price || "",
-      durationValue: initialData?.durationValue || "",
-      fromDate: initialData?.fromDate || "",
-      toDate: initialData?.toDate || "",
+      title: initialData?.title || '',
+      description: initialData?.description || '',
+      categories: initialData?.categories || '',
+      address: initialData?.address || '',
+      city: initialData?.city || '',
+      phone: initialData?.phone || '',
+      email: initialData?.email || '',
+      price: initialData?.price || '',
+      durationValue: initialData?.durationValue || '',
+      fromDate: initialData?.fromDate || '',
+      toDate: initialData?.toDate || '',
     },
-    jobValidationSchema,
+    jobValidationSchema
   );
 
   // Individual states that are not part of the primary validation schema or need special handling
-  const [equipment, setEquipment] = useState(initialData?.equipment || "");
-  const [countyCode, setCountyCode] = useState(initialData?.countyCode || "");
-  const [municipalityCode, setMunicipalityCode] = useState(
-    initialData?.municipalityCode || "",
-  );
-  const [areaCode, setAreaCode] = useState(initialData?.areaCode || "");
+  const [equipment, setEquipment] = useState(initialData?.equipment || '');
+  const [countyCode, setCountyCode] = useState(initialData?.countyCode || '');
+  const [municipalityCode, setMunicipalityCode] = useState(initialData?.municipalityCode || '');
+  const [areaCode, setAreaCode] = useState(initialData?.areaCode || '');
   const durationValue = values.durationValue;
   const fromDate = values.fromDate;
   const toDate = values.toDate;
 
   const setDurationValue = useCallback(
-    (val: string) => handleFormChange("durationValue", val),
-    [handleFormChange],
+    (val: string) => handleFormChange('durationValue', val),
+    [handleFormChange]
   );
   const setFromDate = useCallback(
-    (val: string) => handleFormChange("fromDate", val),
-    [handleFormChange],
+    (val: string) => handleFormChange('fromDate', val),
+    [handleFormChange]
   );
   const setToDate = useCallback(
-    (val: string) => handleFormChange("toDate", val),
-    [handleFormChange],
+    (val: string) => handleFormChange('toDate', val),
+    [handleFormChange]
   );
 
-  const [durationUnit, setDurationUnit] = useState(
-    initialData?.durationUnit || "minutes",
-  );
+  const [durationUnit, setDurationUnit] = useState(initialData?.durationUnit || 'minutes');
 
   const [maxApplicants, setMaxApplicants] = useState<string | number>(
-    initialData?.maxApplicants || 0,
+    initialData?.maxApplicants || 0
   );
 
   const {
@@ -107,31 +100,23 @@ export const useCreateJobForm = (
     setPaymentType,
     urgent,
     setUrgent,
-  } = usePaymentCalculation(
-    (durationValue ?? "").toString(),
-    durationUnit,
-    initialData,
-  );
+  } = usePaymentCalculation((durationValue ?? '').toString(), durationUnit, initialData);
 
   // Sync price from usePaymentCalculation to useForm
   useEffect(() => {
-    handleFormChange("price", price);
+    handleFormChange('price', price);
   }, [price, handleFormChange]);
 
   const [tags, setTags] = useState<string[]>([]);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [currentImages, setCurrentImages] = useState<string[]>(
-    initialData?.images || [],
-  );
+  const [currentImages, setCurrentImages] = useState<string[]>(initialData?.images || []);
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [isGeneratingFullListing, setIsGeneratingFullListing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [smartFillPrompt, setSmartFillPrompt] = useState("");
+  const [smartFillPrompt, setSmartFillPrompt] = useState('');
   const [showSmartFillInput, setShowSmartFillInput] = useState(false);
-  const [checklistItems, setChecklistItems] = useState<
-    { id: string; text: string }[]
-  >([]);
+  const [checklistItems, setChecklistItems] = useState<{ id: string; text: string }[]>([]);
 
   // Flag to prevent save effect from running before load completes
   const [isLoaded, setIsLoaded] = useState(false);
@@ -141,24 +126,17 @@ export const useCreateJobForm = (
   // Category-based checklist suggestions
   const getCategorySuggestions = (category: string): string[] => {
     const suggestions: Record<string, string[]> = {
-      Rengjøring: ["Støvsuge", "Vaske gulv", "Rengjøre bad", "Tørke støv"],
-      Hagearbeid: ["Klippe plen", "Luke ugress", "Rydde løv", "Trimme hekk"],
-      Flyttehjelp: [
-        "Pakke bokser",
-        "Bære møbler",
-        "Montere møbler",
-        "Rydde gammel bolig",
-      ],
-      Snømåking: ["Måke innkjørsel", "Strø grus/salt", "Rydde trapper"],
+      Rengjøring: ['Støvsuge', 'Vaske gulv', 'Rengjøre bad', 'Tørke støv'],
+      Hagearbeid: ['Klippe plen', 'Luke ugress', 'Rydde løv', 'Trimme hekk'],
+      Flyttehjelp: ['Pakke bokser', 'Bære møbler', 'Montere møbler', 'Rydde gammel bolig'],
+      Snømåking: ['Måke innkjørsel', 'Strø grus/salt', 'Rydde trapper'],
     };
     return suggestions[category] || [];
   };
 
   // Auto-update checklist when category changes (only if checklist is empty)
   useEffect(() => {
-    const category = Array.isArray(values.categories)
-      ? values.categories[0]
-      : values.categories;
+    const category = Array.isArray(values.categories) ? values.categories[0] : values.categories;
     if (category && checklistItems.length === 0) {
       const suggestions = getCategorySuggestions(category);
       if (suggestions.length > 0) {
@@ -166,45 +144,33 @@ export const useCreateJobForm = (
           suggestions.map((text) => ({
             id: Date.now() + Math.random().toString(36).substr(2, 9),
             text,
-          })),
+          }))
         );
       }
     }
   }, [values.categories]);
 
   // Wrappers to maintain compatibility with existing components
-  const setTitle = useCallback(
-    (val: string) => handleFormChange("title", val),
-    [handleFormChange],
-  );
+  const setTitle = useCallback((val: string) => handleFormChange('title', val), [handleFormChange]);
   const setDescription = useCallback(
-    (val: string) => handleFormChange("description", val),
-    [handleFormChange],
+    (val: string) => handleFormChange('description', val),
+    [handleFormChange]
   );
   const setAddress = useCallback(
-    (val: string) => handleFormChange("address", val),
-    [handleFormChange],
+    (val: string) => handleFormChange('address', val),
+    [handleFormChange]
   );
-  const setCity = useCallback(
-    (val: string) => handleFormChange("city", val),
-    [handleFormChange],
-  );
+  const setCity = useCallback((val: string) => handleFormChange('city', val), [handleFormChange]);
   const setCategories = useCallback(
-    (val: string | string[]) => handleFormChange("categories", val),
-    [handleFormChange],
+    (val: string | string[]) => handleFormChange('categories', val),
+    [handleFormChange]
   );
-  const setPhone = useCallback(
-    (val: string) => handleFormChange("phone", val),
-    [handleFormChange],
-  );
-  const setEmail = useCallback(
-    (val: string) => handleFormChange("email", val),
-    [handleFormChange],
-  );
+  const setPhone = useCallback((val: string) => handleFormChange('phone', val), [handleFormChange]);
+  const setEmail = useCallback((val: string) => handleFormChange('email', val), [handleFormChange]);
 
   const handleAiSmartFill = async () => {
     if (!smartFillPrompt || smartFillPrompt.length < 5) {
-      toast.error("Vennligst beskriv hva du trenger hjelp med (min. 5 tegn)");
+      toast.error('Vennligst beskriv hva du trenger hjelp med (min. 5 tegn)');
       return;
     }
 
@@ -247,23 +213,23 @@ export const useCreateJobForm = (
 
         if (aiDuration && aiDuration.value) {
           setDurationValue(aiDuration.value.toString());
-          setDurationUnit(aiDuration.unit || "minutes");
+          setDurationUnit(aiDuration.unit || 'minutes');
         }
 
-        if (locationRelevance === "remote") {
-          setCity("Fjernarbeid / Remote");
+        if (locationRelevance === 'remote') {
+          setCity('Fjernarbeid / Remote');
         }
 
         setShowSmartFillInput(false);
-        setSmartFillPrompt("");
-        toast.success("Skjemaet er fylt ut med AI!");
+        setSmartFillPrompt('');
+        toast.success('Skjemaet er fylt ut med AI!');
       }
     } catch (err: any) {
-      console.error("SMART FILL ERROR:", err);
+      console.error('SMART FILL ERROR:', err);
       const errorMessage =
         err.response?.data?.error ||
         err.response?.data?.message ||
-        "Kunne ikke generere jobbinformasjon.";
+        'Kunne ikke generere jobbinformasjon.';
       toast.error(errorMessage);
     } finally {
       setIsGeneratingFullListing(false);
@@ -283,33 +249,33 @@ export const useCreateJobForm = (
         const { data, images } = await loadFormData();
         if (data) {
           setValues({
-            title: data.title || "",
-            description: data.description || "",
-            categories: data.categories || "",
-            address: data.address || "",
-            city: data.city || "",
-            phone: data.phone || "",
-            email: data.email || "",
-            price: data.price || "",
-            durationValue: data.durationValue || "",
-            fromDate: data.fromDate || "",
-            toDate: data.toDate || "",
+            title: data.title || '',
+            description: data.description || '',
+            categories: data.categories || '',
+            address: data.address || '',
+            city: data.city || '',
+            phone: data.phone || '',
+            email: data.email || '',
+            price: data.price || '',
+            durationValue: data.durationValue || '',
+            fromDate: data.fromDate || '',
+            toDate: data.toDate || '',
           });
           setUrgent(data.urgent || false);
           setMaxApplicants(data.maxApplicants || 0);
-          setEquipment(data.equipment || "");
-          setCountyCode(data.countyCode || "");
-          setMunicipalityCode(data.municipalityCode || "");
-          setAreaCode(data.areaCode || "");
-          setDurationUnit(data.durationUnit || "minutes");
-          setHourlyRate(data.hourlyRate || "");
-          setPaymentType(data.paymentType || "Fastpris");
+          setEquipment(data.equipment || '');
+          setCountyCode(data.countyCode || '');
+          setMunicipalityCode(data.municipalityCode || '');
+          setAreaCode(data.areaCode || '');
+          setDurationUnit(data.durationUnit || 'minutes');
+          setHourlyRate(data.hourlyRate || '');
+          setPaymentType(data.paymentType || 'Fastpris');
           setTags(data.tags || []);
           setCurrentStep(data.currentStep || 1);
           setCurrentImages(data.currentImages || []);
           setImagesToDelete(data.imagesToDelete || []);
           setShowSmartFillInput(data.showSmartFillInput || false);
-          setSmartFillPrompt(data.smartFillPrompt || "");
+          setSmartFillPrompt(data.smartFillPrompt || '');
           setChecklistItems(data.checklistItems || []);
 
           if (images && images.length > 0) {
@@ -317,7 +283,7 @@ export const useCreateJobForm = (
           }
         }
       } catch (err) {
-        console.error("Error loading form data:", err);
+        console.error('Error loading form data:', err);
       } finally {
         // Always mark as loaded so save effect can start
         setIsLoaded(true);
@@ -357,7 +323,7 @@ export const useCreateJobForm = (
         };
         await saveFormData(dataToSave, selectedImages);
       } catch (err) {
-        console.error("Error saving form data:", err);
+        console.error('Error saving form data:', err);
       }
     };
     saveData();
@@ -392,11 +358,7 @@ export const useCreateJobForm = (
 
     if (step === 1) {
       // Validate Step 1 fields
-      const fieldsToValidate: (keyof JobFormValues)[] = [
-        "title",
-        "description",
-        "categories",
-      ];
+      const fieldsToValidate: (keyof JobFormValues)[] = ['title', 'description', 'categories'];
       fieldsToValidate.forEach((field) => {
         const rules = jobValidationSchema[field];
         if (rules) {
@@ -412,18 +374,18 @@ export const useCreateJobForm = (
 
       // Special check for images
       if (selectedImages.length === 0 && currentImages.length === 0) {
-        currentErrors["images" as any] = "Vennligst last opp minst ett bilde.";
+        currentErrors['images' as any] = 'Vennligst last opp minst ett bilde.';
         isValid = false;
       }
     } else if (step === 2) {
       // Validate Step 2 fields
       const fieldsToValidate: (keyof JobFormValues)[] = [
-        "address",
-        "city",
-        "price",
-        "durationValue",
-        "fromDate",
-        "toDate",
+        'address',
+        'city',
+        'price',
+        'durationValue',
+        'fromDate',
+        'toDate',
       ];
       fieldsToValidate.forEach((field) => {
         const rules = jobValidationSchema[field];
@@ -439,7 +401,7 @@ export const useCreateJobForm = (
       });
     } else if (step === 4) {
       // Validate Step 4 fields (Contact Information)
-      const fieldsToValidate: (keyof JobFormValues)[] = ["email", "phone"];
+      const fieldsToValidate: (keyof JobFormValues)[] = ['email', 'phone'];
       fieldsToValidate.forEach((field) => {
         const rules = jobValidationSchema[field];
         if (rules) {
@@ -462,7 +424,7 @@ export const useCreateJobForm = (
     if (validateStep(currentStep)) {
       setCurrentStep((prev) => Math.min(prev + 1, 4));
     } else {
-      toast.error("Vennligst fyll ut alle påkrevde felt riktig.");
+      toast.error('Vennligst fyll ut alle påkrevde felt riktig.');
     }
   };
 
@@ -472,7 +434,7 @@ export const useCreateJobForm = (
 
   const handleFinalSubmit = async () => {
     if (!validateStep(4)) {
-      toast.error("Vennligst fyll ut alle påkrevde felt riktig.");
+      toast.error('Vennligst fyll ut alle påkrevde felt riktig.');
       return;
     }
 
@@ -481,64 +443,61 @@ export const useCreateJobForm = (
     try {
       const formData = new FormData();
 
-      formData.append("title", values.title);
-      formData.append("description", values.description);
-      formData.append("price", values.price.toString());
-      if (hourlyRate) formData.append("hourlyRate", hourlyRate.toString());
-      formData.append("urgent", urgent.toString());
-      formData.append("maxApplicants", maxApplicants.toString());
-      formData.append("equipment", equipment);
-      formData.append("paymentType", paymentType);
-      formData.append("phone", values.phone);
-      formData.append("email", values.email);
+      formData.append('title', values.title);
+      formData.append('description', values.description);
+      formData.append('price', values.price.toString());
+      if (hourlyRate) formData.append('hourlyRate', hourlyRate.toString());
+      formData.append('urgent', urgent.toString());
+      formData.append('maxApplicants', maxApplicants.toString());
+      formData.append('equipment', equipment);
+      formData.append('paymentType', paymentType);
+      formData.append('phone', values.phone);
+      formData.append('email', values.email);
 
-      if (fromDate) formData.append("fromDate", fromDate);
-      if (toDate) formData.append("toDate", toDate);
+      if (fromDate) formData.append('fromDate', fromDate);
+      if (toDate) formData.append('toDate', toDate);
 
-      formData.append("location[address]", values.address);
-      formData.append("location[city]", values.city);
-      formData.append("location[type]", "Point");
-      formData.append("location[coordinates][0]", "10.7461");
-      formData.append("location[coordinates][1]", "59.9127");
-      if (countyCode) formData.append("countyCode", countyCode);
-      if (municipalityCode)
-        formData.append("municipalityCode", municipalityCode);
-      if (areaCode) formData.append("areaCode", areaCode);
+      formData.append('location[address]', values.address);
+      formData.append('location[city]', values.city);
+      formData.append('location[type]', 'Point');
+      formData.append('location[coordinates][0]', '10.7461');
+      formData.append('location[coordinates][1]', '59.9127');
+      if (countyCode) formData.append('countyCode', countyCode);
+      if (municipalityCode) formData.append('municipalityCode', municipalityCode);
+      if (areaCode) formData.append('areaCode', areaCode);
 
       if (values.categories) {
-        const catArray = Array.isArray(values.categories)
-          ? values.categories
-          : [values.categories];
-        catArray.forEach((cat) => formData.append("categories", cat));
+        const catArray = Array.isArray(values.categories) ? values.categories : [values.categories];
+        catArray.forEach((cat) => formData.append('categories', cat));
       }
 
-      tags.forEach((tag) => formData.append("tags", tag));
+      tags.forEach((tag) => formData.append('tags', tag));
 
       if (durationValue) {
-        formData.append("duration[value]", durationValue.toString());
-        formData.append("duration[unit]", durationUnit);
+        formData.append('duration[value]', durationValue.toString());
+        formData.append('duration[unit]', durationUnit);
       }
 
       selectedImages.forEach((file) => {
-        formData.append("images", file);
+        formData.append('images', file);
       });
 
       imagesToDelete.forEach((url) => {
-        formData.append("imagesToDelete", url);
+        formData.append('imagesToDelete', url);
       });
 
       if (checklistItems.length > 0) {
-        formData.append("checklist", JSON.stringify(checklistItems));
+        formData.append('checklist', JSON.stringify(checklistItems));
       }
 
       if (!isEditMode && userId) {
-        formData.append("userId", userId);
+        formData.append('userId', userId);
       }
 
       await clearFormData();
       await onSubmit(formData);
     } catch (error) {
-      console.error("Submission error:", error);
+      console.error('Submission error:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -587,11 +546,10 @@ export const useCreateJobForm = (
       toDate,
       createdAt: new Date().toISOString(),
       userId: {
-        _id: currentUser?._id || "preview",
-        name: currentUser?.name || "Ditt navn",
+        _id: currentUser?._id || 'preview',
+        name: currentUser?.name || 'Ditt navn',
         avatarUrl:
-          currentUser?.avatarUrl ||
-          "https://api.dicebear.com/7.x/avataaars/svg?seed=default",
+          currentUser?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default',
         verified: currentUser?.verified || false,
         averageRating: currentUser?.averageRating || 5.0,
       },

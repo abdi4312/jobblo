@@ -3,13 +3,13 @@ const mongoose = require('mongoose');
 const seedConversations = require('./conversations.seed');
 
 async function run() {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('💬 Seeding conversations only');
+  await mongoose.connect(process.env.MONGO_URI);
+  console.log('💬 Seeding conversations only');
 
-    await seedConversations();
+  await seedConversations();
 
-    console.log('✅ Conversations seeded');
-    process.exit();
+  console.log('✅ Conversations seeded');
+  process.exit();
 }
 
 run();

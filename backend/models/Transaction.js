@@ -1,15 +1,15 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const TransactionSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     serviceId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Service",
+      ref: 'Service',
       required: true,
     },
     planId: {
@@ -34,7 +34,7 @@ const TransactionSchema = new mongoose.Schema(
     },
     coupon: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Coupon",
+      ref: 'Coupon',
       default: null,
     },
     stripeSessionId: {
@@ -48,16 +48,16 @@ const TransactionSchema = new mongoose.Schema(
     },
     currency: {
       type: String,
-      default: "nok",
+      default: 'nok',
     },
     status: {
       type: String,
-      enum: ["pending", "succeeded", "failed", "refunded"],
-      default: "pending",
+      enum: ['pending', 'succeeded', 'failed', 'refunded'],
+      default: 'pending',
     },
     type: {
       type: String,
-      enum: ["extra_contact", "subscription"],
+      enum: ['extra_contact', 'subscription'],
       required: true,
     },
     refunded: {
@@ -65,7 +65,7 @@ const TransactionSchema = new mongoose.Schema(
       default: false,
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-module.exports = mongoose.model("Transaction", TransactionSchema);
+module.exports = mongoose.model('Transaction', TransactionSchema);

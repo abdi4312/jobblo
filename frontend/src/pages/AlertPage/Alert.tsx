@@ -1,9 +1,18 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
-import { Check, Trash2, Clock, ClipboardCheck, MessageSquare, DollarSign, Star, Briefcase } from "lucide-react";
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import {
+  Check,
+  Trash2,
+  Clock,
+  ClipboardCheck,
+  MessageSquare,
+  DollarSign,
+  Star,
+  Briefcase,
+} from 'lucide-react';
 
-import { useUserStore } from "../../stores/userStore";
+import { useUserStore } from '../../stores/userStore';
 import {
   useNotifications,
   useMarkAsRead,
@@ -11,25 +20,26 @@ import {
   useDeleteNotification,
   useDeleteAllNotifications,
   useUnreadCount,
-} from "../../features/notifications/hooks";
-import type { AlertType } from "../../features/notifications/types";
-import { NotificationSkeleton } from "../../components/Loading/NotificationSkeleton";
+} from '../../features/notifications/hooks';
+import type { AlertType } from '../../features/notifications/types';
+import { NotificationSkeleton } from '../../components/Loading/NotificationSkeleton';
+import EmptyState from '../../components/Ui/EmptyState';
 
 // Define category config
 const categories = [
-  { key: "all", label: "Alle" },
-  { key: "application", label: "Søknader", icon: <Briefcase size={14} /> },
-  { key: "payment", label: "Betalinger", icon: <DollarSign size={14} /> },
-  { key: "message", label: "Meldinger", icon: <MessageSquare size={14} /> },
-  { key: "review", label: "Anmeldelser", icon: <Star size={14} /> },
-  { key: "job_update", label: "Jobboppdateringer", icon: <ClipboardCheck size={14} /> },
+  { key: 'all', label: 'Alle' },
+  { key: 'application', label: 'Søknader', icon: <Briefcase size={14} /> },
+  { key: 'payment', label: 'Betalinger', icon: <DollarSign size={14} /> },
+  { key: 'message', label: 'Meldinger', icon: <MessageSquare size={14} /> },
+  { key: 'review', label: 'Anmeldelser', icon: <Star size={14} /> },
+  { key: 'job_update', label: 'Jobboppdateringer', icon: <ClipboardCheck size={14} /> },
 ];
 
 /**
  * Alert page component - Displays user notifications with filtering and actions
  */
 export default function Alert() {
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [activeCategory, setActiveCategory] = useState('all');
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const user = useUserStore((state) => state.user);
   const userId = user?._id;
@@ -42,7 +52,7 @@ export default function Alert() {
     hasNextPage,
     isFetchingNextPage,
     isLoading: isNotificationsLoading,
-  } = useNotifications(userId, activeCategory === "all" ? undefined : activeCategory);
+  } = useNotifications(userId, activeCategory === 'all' ? undefined : activeCategory);
 
   const { data: unreadCountData } = useUnreadCount(userId);
 
@@ -84,16 +94,16 @@ export default function Alert() {
     try {
       await markAsReadMutation.mutateAsync(id);
     } catch (error) {
-      toast.error("Kunne ikke markere som lest");
+      toast.error('Kunne ikke markere som lest');
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await deleteNotificationMutation.mutateAsync(id);
-      toast.success("Varsel slettet");
+      toast.success('Varsel slettet');
     } catch (error) {
-      toast.error("Kunne ikke slette varsel");
+      toast.error('Kunne ikke slette varsel');
     }
   };
 
@@ -101,44 +111,44 @@ export default function Alert() {
     if (!userId) return;
     try {
       await markAllAsReadMutation.mutateAsync(userId);
-      toast.success("Alle markert som lest");
+      toast.success('Alle markert som lest');
     } catch (error) {
-      toast.error("Kunne ikke markere alle som lest");
+      toast.error('Kunne ikke markere alle som lest');
     }
   };
 
   const handleDeleteAll = async () => {
     if (!userId) return;
-    if (!confirm("Er du sikker på at du vil slette alle varsler?")) return;
+    if (!confirm('Er du sikker på at du vil slette alle varsler?')) return;
     try {
       await deleteAllNotificationsMutation.mutateAsync(userId);
-      toast.success("Alle varsler slettet");
+      toast.success('Alle varsler slettet');
     } catch (error) {
-      toast.error("Kunne ikke slette alle varsler");
+      toast.error('Kunne ikke slette alle varsler');
     }
   };
 
   // Helper to get notification icon based on type
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case "ordre":
-      case "order":
-      case "payment":
+      case 'ordre':
+      case 'order':
+      case 'payment':
         return <DollarSign size={18} className="text-[#16a34a]" />;
-      case "application":
+      case 'application':
         return <Briefcase size={18} className="text-[#16a34a]" />;
-      case "message":
+      case 'message':
         return <MessageSquare size={18} className="text-[#16a34a]" />;
-      case "review":
+      case 'review':
         return <Star size={18} className="text-[#16a34a]" />;
-      case "job_update":
+      case 'job_update':
         return <ClipboardCheck size={18} className="text-[#16a34a]" />;
-      case "favoritt":
-      case "favorites":
-      case "favoritter":
+      case 'favoritt':
+      case 'favorites':
+      case 'favoritter':
         return <ClipboardCheck size={18} className="text-[#16a34a]" />;
-      case "følger":
-      case "followers":
+      case 'følger':
+      case 'followers':
       default:
         return <ClipboardCheck size={18} className="text-[#16a34a]" />;
     }
@@ -147,28 +157,28 @@ export default function Alert() {
   // Helper to get notification title based on type
   const getNotificationTitle = (type: string, alert: AlertType) => {
     switch (type) {
-      case "ordre":
-      case "order":
-        return "Bestilling oppdatert";
-      case "payment":
-        return "Betaling mottatt";
-      case "application":
-        return "Ny søknad";
-      case "message":
-        return "Ny melding";
-      case "review":
-        return "Ny anmeldelse";
-      case "job_update":
-        return "Jobboppdatering";
-      case "favoritt":
-      case "favorites":
-      case "favoritter":
-        return "Lagt til i liste";
-      case "følger":
-      case "followers":
-        return "Ny følger";
+      case 'ordre':
+      case 'order':
+        return 'Bestilling oppdatert';
+      case 'payment':
+        return 'Betaling mottatt';
+      case 'application':
+        return 'Ny søknad';
+      case 'message':
+        return 'Ny melding';
+      case 'review':
+        return 'Ny anmeldelse';
+      case 'job_update':
+        return 'Jobboppdatering';
+      case 'favoritt':
+      case 'favorites':
+      case 'favoritter':
+        return 'Lagt til i liste';
+      case 'følger':
+      case 'followers':
+        return 'Ny følger';
       default:
-        return alert.type || "Varsel";
+        return alert.type || 'Varsel';
     }
   };
 
@@ -180,22 +190,20 @@ export default function Alert() {
     const diffHours = Math.floor(diffMinutes / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    const timeString = date.toLocaleTimeString("no-NO", {
-      hour: "2-digit",
-      minute: "2-digit",
+    const timeString = date.toLocaleTimeString('no-NO', {
+      hour: '2-digit',
+      minute: '2-digit',
       hour12: false,
     });
-    const dateStringNor = date.toLocaleDateString("no-NO", {
-      day: "2-digit",
-      month: "short",
+    const dateStringNor = date.toLocaleDateString('no-NO', {
+      day: '2-digit',
+      month: 'short',
     });
 
-    if (diffMinutes < 1) return "Nå nettopp";
-    if (diffMinutes < 60)
-      return `${diffMinutes} minutter siden · ${timeString}`;
+    if (diffMinutes < 1) return 'Nå nettopp';
+    if (diffMinutes < 60) return `${diffMinutes} minutter siden · ${timeString}`;
     if (diffHours < 24) return `${diffHours} timer siden · ${timeString}`;
-    if (diffDays < 7)
-      return `${diffDays} dager siden · ${dateStringNor} kl. ${timeString}`;
+    if (diffDays < 7) return `${diffDays} dager siden · ${dateStringNor} kl. ${timeString}`;
     return `Omtrent ${Math.floor(diffDays / 30)} måned(er) siden · ${dateStringNor} kl. ${timeString}`;
   };
 
@@ -208,25 +216,25 @@ export default function Alert() {
         </div>
 
         {/* Action buttons */}
-        <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
           <button
             onClick={handleMarkAllAsRead}
-            className="px-4 py-2 bg-[#16a34a] text-white rounded-full text-sm font-medium hover:bg-[#14532d] transition-colors"
+            className="flex-1 min-w-[120px] px-4 py-2 bg-[#16a34a] text-white rounded-full text-sm font-medium hover:bg-[#14532d] transition-colors"
           >
             Marker alle som lest
           </button>
           <button
             onClick={handleDeleteAll}
-            className="px-4 py-2 bg-white text-[#dc2626] border border-[#dc2626] rounded-full text-sm font-medium hover:bg-[#fee2e2] transition-colors"
+            className="flex-1 min-w-[120px] px-4 py-2 bg-white text-[#dc2626] border border-[#dc2626] rounded-full text-sm font-medium hover:bg-[#fee2e2] transition-colors"
           >
             Slett alle
           </button>
           <button
             onClick={() => setShowUnreadOnly(!showUnreadOnly)}
-            className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+            className={`flex-1 min-w-[120px] px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
               showUnreadOnly
-                ? "bg-[#16a34a] text-white border-[#16a34a]"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                ? 'bg-[#16a34a] text-white border-[#16a34a]'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
             }`}
           >
             Vis kun uleste
@@ -234,15 +242,15 @@ export default function Alert() {
         </div>
 
         {/* Category Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
           {categories.map((category) => (
             <button
               key={category.key}
               onClick={() => setActiveCategory(category.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
                 activeCategory === category.key
-                  ? "bg-[#16a34a] text-white"
-                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                  ? 'bg-[#16a34a] text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
               }`}
             >
               {category.icon}
@@ -257,19 +265,19 @@ export default function Alert() {
         ) : (
           <div className="flex flex-col gap-[2px] bg-white border border-black/[0.08] rounded-[16px] overflow-hidden">
             {filteredNotifications.length === 0 ? (
-              <div className="p-10 text-center">
-                <p className="text-[#888] text-[13px]">
-                  {showUnreadOnly
-                    ? "Ingen uleste varsler"
-                    : "Ingen varsler"}
-                </p>
-              </div>
+              <EmptyState
+                type="notifications"
+                title={showUnreadOnly ? 'Ingen uleste varsler' : 'Ingen varsler'}
+                description={
+                  showUnreadOnly ? 'Du har ingen uleste varsler.' : 'Du har ingen varsler enda.'
+                }
+              />
             ) : (
               filteredNotifications.map((notification) => (
                 <div
                   key={notification._id}
                   className={`flex flex-col sm:flex-row items-start sm:items-center gap-3.5 px-[14px] sm:px-[18px] py-4 border-b border-black/[0.05] last:border-b-0 ${
-                    !notification.read ? "bg-[#f7fdf7]" : ""
+                    !notification.read ? 'bg-[#f7fdf7]' : ''
                   }`}
                 >
                   {/* Icon */}
@@ -325,7 +333,7 @@ export default function Alert() {
                           if (reqId.serviceId) {
                             // If reqId.serviceId is an object, use its _id, otherwise use directly
                             const serviceId =
-                              typeof reqId.serviceId === "object"
+                              typeof reqId.serviceId === 'object'
                                 ? reqId.serviceId._id
                                 : reqId.serviceId;
                             navigate(`/job-applicants/${serviceId}`);
@@ -337,10 +345,9 @@ export default function Alert() {
                         }
                       }}
                     >
-                      {notification.type === "følger" ||
-                      notification.type === "favoritt"
-                        ? "Se profil"
-                        : "Se"}
+                      {notification.type === 'følger' || notification.type === 'favoritt'
+                        ? 'Se profil'
+                        : 'Se'}
                     </button>
                     {!notification.read && (
                       <button
@@ -379,7 +386,7 @@ export default function Alert() {
               disabled={isFetchingNextPage}
               className="px-10 py-3.5 border-2 border-[#16a34a] text-[#16a34a] rounded-[16px] font-bold hover:bg-[#16a34a] hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isFetchingNextPage ? "Laster..." : "Se mer"}
+              {isFetchingNextPage ? 'Laster...' : 'Se mer'}
             </button>
           </div>
         )}

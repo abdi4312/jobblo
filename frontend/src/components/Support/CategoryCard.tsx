@@ -1,43 +1,36 @@
-import {
-  CreditCard,
-  FileText,
-  HelpCircle,
-  Settings,
-  Shield,
-  User,
-} from "lucide-react";
+import { CreditCard, FileText, HelpCircle, Settings, Shield, User } from 'lucide-react';
 
 function CategoryCard() {
   const categories = [
     {
       icon: User,
-      title: "Konto & Profil",
-      color: "bg-[#2F7E471A] text-custom-green",
+      title: 'Konto & Profil',
+      color: 'bg-[#2F7E471A] text-custom-green',
     },
     {
       icon: CreditCard,
-      title: "Betaling",
-      color: "bg-[#E088351A] text-[#E08835]",
+      title: 'Betaling',
+      color: 'bg-[#E088351A] text-[#E08835]',
     },
     {
       icon: FileText,
-      title: "Oppdrag & Søknader",
-      color: "bg-[#238CEB1A] text-[#238CEB]",
+      title: 'Oppdrag & Søknader',
+      color: 'bg-[#238CEB1A] text-[#238CEB]',
     },
     {
       icon: Shield,
-      title: "Sikkerhet",
-      color: "bg-[#2F7E471A] text-custom-green",
+      title: 'Sikkerhet',
+      color: 'bg-[#2F7E471A] text-custom-green',
     },
     {
       icon: Settings,
-      title: "Innstillinger",
-      color: "bg-[#673AB71A] text-[#673AB7]",
+      title: 'Innstillinger',
+      color: 'bg-[#673AB71A] text-[#673AB7]',
     },
     {
       icon: HelpCircle,
-      title: "Annet",
-      color: "bg-[#9E9E9E1A] text-[#9E9E9E]",
+      title: 'Annet',
+      color: 'bg-[#9E9E9E1A] text-[#9E9E9E]',
     },
   ];
   return (

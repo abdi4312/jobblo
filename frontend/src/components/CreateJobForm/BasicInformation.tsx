@@ -1,18 +1,9 @@
-import React, { useState, useMemo } from "react";
-import { useCategories } from "../../features/categories/hooks";
-import {
-  Search,
-  Info,
-  Check,
-  Sparkles,
-  Loader2,
-  X,
-  Plus,
-  AlertCircle,
-} from "lucide-react";
-import type { CategoryType } from "../../features/categories/types";
-import mainLink from "../../api/mainURLs";
-import toast from "react-hot-toast";
+import React, { useState, useMemo } from 'react';
+import { useCategories } from '../../features/categories/hooks';
+import { Search, Info, Check, Sparkles, Loader2, X, Plus, AlertCircle } from 'lucide-react';
+import type { CategoryType } from '../../features/categories/types';
+import mainLink from '../../api/mainURLs';
+import toast from 'react-hot-toast';
 
 interface BasicInformationProps {
   title: string;
@@ -52,18 +43,18 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
   errors,
 }) => {
   const { data: categoryData = [], isLoading, error } = useCategories();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
   const [showTitleAiInput, setShowTitleAiInput] = useState(false);
-  const [titleAiPrompt, setTitleAiPrompt] = useState("");
-  const [newTag, setNewTag] = useState("");
+  const [titleAiPrompt, setTitleAiPrompt] = useState('');
+  const [newTag, setNewTag] = useState('');
   const maxDescriptionLength = 2000;
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
       setTags([...tags, newTag.trim()]);
-      setNewTag("");
+      setNewTag('');
     }
   };
 
@@ -73,13 +64,13 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
 
   const handleAiGenerate = async () => {
     if (!title || title.length < 5) {
-      toast.error("Vennligst skriv en tittel først (min. 5 tegn)");
+      toast.error('Vennligst skriv en tittel først (min. 5 tegn)');
       return;
     }
 
     setIsGenerating(true);
     try {
-      const res = await mainLink.post("/api/ai/generate-job-info", {
+      const res = await mainLink.post('/api/ai/generate-job-info', {
         title,
         category: categories,
       });
@@ -111,16 +102,16 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
         }
         if (aiDuration && aiDuration.value) {
           setDurationValue(aiDuration.value.toString());
-          setDurationUnit(aiDuration.unit || "minutes");
+          setDurationUnit(aiDuration.unit || 'minutes');
         }
-        toast.success("Beskrivelse generert med AI!");
+        toast.success('Beskrivelse generert med AI!');
       }
     } catch (err: any) {
       console.error(err);
       const errorMessage =
         err.response?.data?.message ||
         err.response?.data?.error ||
-        "Kunne ikke generere AI-innhold. Sjekk API-nøkkel.";
+        'Kunne ikke generere AI-innhold. Sjekk API-nøkkel.';
       toast.error(errorMessage);
     } finally {
       setIsGenerating(false);
@@ -129,13 +120,13 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
 
   const handleGenerateTitle = async () => {
     if (!titleAiPrompt || titleAiPrompt.length < 5) {
-      toast.error("Vennligst beskriv hva jobben går ut på (min. 5 tegn)");
+      toast.error('Vennligst beskriv hva jobben går ut på (min. 5 tegn)');
       return;
     }
 
     setIsGeneratingTitle(true);
     try {
-      const res = await mainLink.post("/api/ai/generate-title", {
+      const res = await mainLink.post('/api/ai/generate-title', {
         description: titleAiPrompt,
       });
 
@@ -159,22 +150,20 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
 
         if (aiDuration && aiDuration.value) {
           setDurationValue(aiDuration.value.toString());
-          setDurationUnit(aiDuration.unit || "minutes");
+          setDurationUnit(aiDuration.unit || 'minutes');
         }
 
         if (estimatedPrice) {
           setPrice(estimatedPrice.toString());
         }
         setShowTitleAiInput(false);
-        setTitleAiPrompt("");
-        toast.success("Tittel og pris generert!");
+        setTitleAiPrompt('');
+        toast.success('Tittel og pris generert!');
       }
     } catch (err: any) {
-      console.error("TITLE GEN ERROR:", err);
+      console.error('TITLE GEN ERROR:', err);
       const errorMessage =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        "Kunne ikke generere tittel.";
+        err.response?.data?.error || err.response?.data?.message || 'Kunne ikke generere tittel.';
       toast.error(errorMessage);
     } finally {
       setIsGeneratingTitle(false);
@@ -183,7 +172,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
 
   const filteredCategories = useMemo(() => {
     return categoryData.filter((cat: CategoryType | string) => {
-      const catName = typeof cat === "string" ? cat : cat.name;
+      const catName = typeof cat === 'string' ? cat : cat.name;
       return catName.toLowerCase().includes(searchTerm.toLowerCase());
     });
   }, [categoryData, searchTerm]);
@@ -208,7 +197,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
             </button>
             <span
               className={`text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded-full 
-              ${title.length > 50 ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"}`}
+              ${title.length > 50 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}
             >
               {title.length}/70
             </span>
@@ -227,7 +216,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
                 onChange={(e) => setTitleAiPrompt(e.target.value)}
                 placeholder="Beskriv jobben kort (f.eks. male en liten bod utvendig)"
                 className="flex-1 px-3 py-2 text-xs md:text-sm rounded-lg border border-purple-200 focus:border-purple-400 outline-none"
-                onKeyDown={(e) => e.key === "Enter" && handleGenerateTitle()}
+                onKeyDown={(e) => e.key === 'Enter' && handleGenerateTitle()}
               />
               <button
                 type="button"
@@ -236,11 +225,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
                 className="px-4 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold
               hover:bg-purple-700 disabled:opacity-50 transition-all flex items-center gap-2"
               >
-                {isGeneratingTitle ? (
-                  <Loader2 size={12} className="animate-spin" />
-                ) : (
-                  "Generer"
-                )}
+                {isGeneratingTitle ? <Loader2 size={12} className="animate-spin" /> : 'Generer'}
               </button>
             </div>
           </div>
@@ -254,7 +239,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
           placeholder="F.eks. Malearbeid i stue"
           className={`w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border
         bg-white text-base md:text-lg font-medium outline-none focus:ring-4 transition-all
-         ${errors?.title ? "border-red-500 focus:border-red-500 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-[#2D7A4D]/5"}`}
+         ${errors?.title ? 'border-red-500 focus:border-red-500 focus:ring-red-500/5' : 'border-gray-200 focus:border-[#2D7A4D] focus:ring-[#2D7A4D]/5'}`}
         />
         {errors?.title && (
           <p className="mt-2 text-red-500 text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
@@ -265,17 +250,14 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
 
       {/* 2. Category Section */}
       <div
-        className={`box-card-custom rounded-[14px] p-4 md:p-6 border transition-colors ${errors?.categories ? "border-red-500" : "border-transparent"}`}
+        className={`box-card-custom rounded-[14px] p-4 md:p-6 border transition-colors ${errors?.categories ? 'border-red-500' : 'border-transparent'}`}
       >
         <label className="text-[11px] md:text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 mb-4">
           Velg kategori <span className="text-red-500">*</span>
         </label>
 
         <div className="relative mb-4 md:mb-6">
-          <Search
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-            size={16}
-          />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input
             type="text"
             placeholder="Søk i kategorier..."
@@ -296,12 +278,10 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
               Kunne ikke laste kategorier
             </p>
           ) : filteredCategories.length === 0 ? (
-            <p className="col-span-full text-center py-6 text-gray-400 text-sm">
-              Ingen treff
-            </p>
+            <p className="col-span-full text-center py-6 text-gray-400 text-sm">Ingen treff</p>
           ) : (
             filteredCategories.map((cat: CategoryType | string) => {
-              const catName = typeof cat === "string" ? cat : cat.name;
+              const catName = typeof cat === 'string' ? cat : cat.name;
               const isSelected = categories === catName;
 
               return (
@@ -314,15 +294,13 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
                                         border flex items-center justify-between
                                         ${
                                           isSelected
-                                            ? "bg-[#2D7A4D] text-white border-[#2D7A4D] shadow-md scale-[1.02]"
-                                            : "bg-white text-gray-600 border-gray-100 hover:border-[#2D7A4D] hover:bg-gray-50"
+                                            ? 'bg-[#2D7A4D] text-white border-[#2D7A4D] shadow-md scale-[1.02]'
+                                            : 'bg-white text-gray-600 border-gray-100 hover:border-[#2D7A4D] hover:bg-gray-50'
                                         }
                                     `}
                 >
                   <span className="truncate">{catName}</span>
-                  {isSelected && (
-                    <Check size={14} className="shrink-0 ml-1 md:ml-2" />
-                  )}
+                  {isSelected && <Check size={14} className="shrink-0 ml-1 md:ml-2" />}
                 </button>
               );
             })
@@ -356,29 +334,23 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-600
             rounded-lg text-[10px] md:text-xs font-bold hover:bg-purple-100 transition-all border border-purple-200"
           >
-            {isGenerating ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Sparkles size={14} />
-            )}
-            {isGenerating ? "Genererer..." : "Generer med AI"}
+            {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            {isGenerating ? 'Genererer...' : 'Generer med AI'}
           </button>
         </div>
         <div className="relative">
           <textarea
             value={description}
-            onChange={(e) =>
-              setDescription(e.target.value.slice(0, maxDescriptionLength))
-            }
+            onChange={(e) => setDescription(e.target.value.slice(0, maxDescriptionLength))}
             required
             placeholder="Gi en detaljert beskrivelse..."
             className={`min-h-[150px] md:min-h-[200px] w-full bg-white p-4 md:p-6 resize-none border
             rounded-2xl outline-none focus:ring-4 transition-all text-sm md:text-base text-gray-700 leading-relaxed
-            ${errors?.description ? "border-red-500 focus:border-red-500 focus:ring-red-500/5" : "border-gray-200 focus:border-[#2D7A4D] focus:ring-[#2D7A4D]/5"}`}
+            ${errors?.description ? 'border-red-500 focus:border-red-500 focus:ring-red-500/5' : 'border-gray-200 focus:border-[#2D7A4D] focus:ring-[#2D7A4D]/5'}`}
           />
           <div className="absolute bottom-3 md:bottom-4 right-3 md:right-4 flex items-center gap-2">
             <span
-              className={`text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded-full ${description.length > maxDescriptionLength * 0.9 ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"}`}
+              className={`text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded-full ${description.length > maxDescriptionLength * 0.9 ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500'}`}
             >
               {description.length}/{maxDescriptionLength}
             </span>
@@ -416,8 +388,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
             ))}
             {tags.length === 0 && (
               <p className="text-gray-400 text-xs italic py-2">
-                Ingen ferdigheter lagt til ennå. Bruk AI for å generere eller
-                legg til manuelt.
+                Ingen ferdigheter lagt til ennå. Bruk AI for å generere eller legg til manuelt.
               </p>
             )}
           </div>
@@ -428,9 +399,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
                 type="text"
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && (e.preventDefault(), handleAddTag())
-                }
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
                 placeholder="Legg til en ferdighet (f.eks. Maling, Vasking...)"
                 className="w-full px-4 py-2 text-xs md:text-sm rounded-xl border border-gray-200 outline-none focus:border-[#2D7A4D] bg-white/50"
               />
@@ -454,12 +423,9 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
             <Plus size={22} />
           </div>
           <div>
-            <h2 className="font-bold text-lg md:text-xl text-custom-black">
-              Maks antall søkere
-            </h2>
+            <h2 className="font-bold text-lg md:text-xl text-custom-black">Maks antall søkere</h2>
             <p className="text-gray-500 text-xs md:text-sm">
-              Hvor mange søknader ønsker du å motta før oppdraget skjules? (0
-              for ubegrenset)
+              Hvor mange søknader ønsker du å motta før oppdraget skjules? (0 for ubegrenset)
             </p>
           </div>
         </div>
@@ -476,8 +442,8 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
           <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex gap-3">
             <Info size={18} className="text-blue-500 shrink-0" />
             <p className="text-[11px] md:text-xs text-blue-700 leading-relaxed">
-              Når grensen er nådd, vil "Søk nå"-knappen bli deaktivert for andre
-              brukere. Dette hjelper deg med å unngå for mange henvendelser.
+              Når grensen er nådd, vil "Søk nå"-knappen bli deaktivert for andre brukere. Dette
+              hjelper deg med å unngå for mange henvendelser.
             </p>
           </div>
         </div>

@@ -1,7 +1,7 @@
-import { useNavigate } from "react-router-dom";
-import { useFavoriteLists } from "../../features/favoriteLists/hooks";
-import { JobDetailCardSkeleton } from "../../components/Loading/JobDetailCardSkeleton.tsx";
-import type { FavoriteList } from "../../features/favoriteLists/types";
+import { useNavigate } from 'react-router-dom';
+import { useFavoriteLists } from '../../features/favoriteLists/hooks';
+import { JobDetailCardSkeleton } from '../../components/Loading/JobDetailCardSkeleton.tsx';
+import type { FavoriteList } from '../../features/favoriteLists/types';
 
 export function FavoritesPage() {
   const { data: lists = [], isLoading, isError } = useFavoriteLists();
@@ -16,7 +16,8 @@ export function FavoritesPage() {
         {lists.map((list: FavoriteList) => {
           // Get the latest service's image or fallback
           const latestService = list.services?.[list.services.length - 1];
-          const backgroundImage = typeof latestService === 'object' ? latestService?.images?.[0] : "";
+          const backgroundImage =
+            typeof latestService === 'object' ? latestService?.images?.[0] : '';
 
           return (
             <div
@@ -26,11 +27,7 @@ export function FavoritesPage() {
             >
               {/* Background Image */}
               {backgroundImage ? (
-                <img
-                  src={backgroundImage}
-                  alt={list.name}
-                  className="w-full h-full object-cover"
-                />
+                <img src={backgroundImage} alt={list.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-300">
                   <span className="text-sm">Ingen bilder</span>

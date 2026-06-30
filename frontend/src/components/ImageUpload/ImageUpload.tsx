@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Camera } from "lucide-react";
+import { useState, useRef } from 'react';
+import { Camera } from 'lucide-react';
 
 interface ImageUploadProps {
   onImagesChange?: (images: File[]) => void;
@@ -15,15 +15,15 @@ export default function ImageUpload({ onImagesChange }: ImageUploadProps) {
     if (e.target.files) {
       const files = Array.from(e.target.files);
       if (files.length === 0) return;
-      
+
       const newImages = [...selectedImages, ...files];
       setSelectedImages(newImages);
 
       // Create preview URLs for the new images
-      files.forEach(file => {
+      files.forEach((file) => {
         const reader = new FileReader();
         reader.onloadend = () => {
-          setImagePreviews(prev => [...prev, reader.result as string]);
+          setImagePreviews((prev) => [...prev, reader.result as string]);
         };
         reader.readAsDataURL(file);
       });
@@ -38,7 +38,7 @@ export default function ImageUpload({ onImagesChange }: ImageUploadProps) {
   const handleRemoveImage = (index: number) => {
     const newImages = selectedImages.filter((_, i) => i !== index);
     setSelectedImages(newImages);
-    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
 
     // Notify parent component
     if (onImagesChange) {
@@ -72,53 +72,55 @@ export default function ImageUpload({ onImagesChange }: ImageUploadProps) {
         onChange={handleImageChange}
         style={{ display: 'none' }}
       />
-      
+
       <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
         <button
           type="button"
           onClick={handleButtonClick}
           style={{
-            padding: "12px 16px",
-            borderRadius: "8px",
-            border: "1px dashed var(--color-icon)",
-            backgroundColor: "white",
-            cursor: "pointer",
-            fontSize: "14px",
-            color: "var(--color-text)",
-            flex: 1
+            padding: '12px 16px',
+            borderRadius: '8px',
+            border: '1px dashed var(--color-icon)',
+            backgroundColor: 'white',
+            cursor: 'pointer',
+            fontSize: '14px',
+            color: 'var(--color-text)',
+            flex: 1,
           }}
         >
-            + Legg til bilder  
+          + Legg til bilder
         </button>
         <button
           type="button"
           onClick={handleCameraClick}
           style={{
-            padding: "12px 16px",
-            borderRadius: "8px",
-            border: "1px dashed var(--color-icon)",
-            backgroundColor: "white",
-            cursor: "pointer",
-            fontSize: "14px",
-            color: "var(--color-text)",
+            padding: '12px 16px',
+            borderRadius: '8px',
+            border: '1px dashed var(--color-icon)',
+            backgroundColor: 'white',
+            cursor: 'pointer',
+            fontSize: '14px',
+            color: 'var(--color-text)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '8px'
+            gap: '8px',
           }}
           title="Ta bilde"
         >
-            <Camera size={18} />
-            <span>Ta bilde</span>
+          <Camera size={18} />
+          <span>Ta bilde</span>
         </button>
       </div>
 
       {/* Image previews */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-        gap: '16px',
-      }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+          gap: '16px',
+        }}
+      >
         {imagePreviews.map((preview, index) => (
           <div key={index} style={{ position: 'relative' }}>
             <img
@@ -129,7 +131,7 @@ export default function ImageUpload({ onImagesChange }: ImageUploadProps) {
                 height: '150px',
                 objectFit: 'cover',
                 borderRadius: '8px',
-                border: "1px solid var(--color-icon)",
+                border: '1px solid var(--color-icon)',
               }}
             />
             <button
@@ -146,7 +148,7 @@ export default function ImageUpload({ onImagesChange }: ImageUploadProps) {
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
               }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>

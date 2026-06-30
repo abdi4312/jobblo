@@ -1,5 +1,5 @@
-import { Upload, Camera } from "lucide-react";
-import React, { useState, useRef, useEffect } from "react";
+import { Upload, Camera } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface ImageUploadProps {
   onImagesChange: (files: File[]) => void;

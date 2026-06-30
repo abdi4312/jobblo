@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useRef, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Check,
@@ -16,12 +16,12 @@ import {
   MessageCircle,
   Bell,
   Wallet,
-} from "lucide-react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import mainLink from "../../api/mainURLs";
-import { toast } from "react-hot-toast";
-import { Button } from "../../components/Ui/button/Button";
-import SafePaySteps from "../../components/SafePay/SafePaySteps";
+} from 'lucide-react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import mainLink from '../../api/mainURLs';
+import { toast } from 'react-hot-toast';
+import { Button } from '../../components/Ui/button/Button';
+import SafePaySteps from '../../components/SafePay/SafePaySteps';
 
 // Reusable Star Rating Component
 interface StarRatingProps {
@@ -45,11 +45,11 @@ const StarRating: React.FC<StarRatingProps> = ({
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
 
   const labels = {
-    1: "Svært misfornøyd",
-    2: "Misfornøyd",
-    3: "Greit",
-    4: "Fornøyd",
-    5: "Svært fornøyd",
+    1: 'Svært misfornøyd',
+    2: 'Misfornøyd',
+    3: 'Greit',
+    4: 'Fornøyd',
+    5: 'Svært fornøyd',
   };
 
   const displayValue = hoverValue !== null ? hoverValue : value;
@@ -69,16 +69,16 @@ const StarRating: React.FC<StarRatingProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent, starValue: number) => {
     if (disabled) return;
     switch (e.key) {
-      case "ArrowLeft":
+      case 'ArrowLeft':
         e.preventDefault();
         onChange(Math.max(1, value - 1));
         break;
-      case "ArrowRight":
+      case 'ArrowRight':
         e.preventDefault();
         onChange(Math.min(5, value + 1));
         break;
-      case "Enter":
-      case " ":
+      case 'Enter':
+      case ' ':
         e.preventDefault();
         handleStarClick(starValue);
         break;
@@ -89,21 +89,13 @@ const StarRating: React.FC<StarRatingProps> = ({
     <div className="flex flex-col items-start gap-2">
       {/* Aria-live region for screen readers */}
       <div aria-live="polite" className="sr-only">
-        {displayValue > 0
-          ? labels[displayValue as keyof typeof labels]
-          : "Ingen vurdering valgt"}
+        {displayValue > 0 ? labels[displayValue as keyof typeof labels] : 'Ingen vurdering valgt'}
       </div>
 
-      <div
-        ref={starContainerRef}
-        className="flex gap-1.5"
-        role="radiogroup"
-        aria-label="Vurdering"
-      >
+      <div ref={starContainerRef} className="flex gap-1.5" role="radiogroup" aria-label="Vurdering">
         {[1, 2, 3, 4, 5].map((star) => {
           const isFilled = star <= displayValue;
-          const isHovered =
-            hoverValue !== null && star <= hoverValue && !disabled;
+          const isHovered = hoverValue !== null && star <= hoverValue && !disabled;
           const isEmpty = !isFilled && !isHovered;
 
           return (
@@ -112,9 +104,7 @@ const StarRating: React.FC<StarRatingProps> = ({
               type="button"
               role="radio"
               aria-checked={star === value}
-              aria-label={`Gi ${star} av 5 stjerner - ${
-                labels[star as keyof typeof labels]
-              }`}
+              aria-label={`Gi ${star} av 5 stjerner - ${labels[star as keyof typeof labels]}`}
               tabIndex={disabled ? -1 : 0}
               onMouseEnter={() => !disabled && setHoverValue(star)}
               onMouseLeave={() => !disabled && setHoverValue(null)}
@@ -124,26 +114,18 @@ const StarRating: React.FC<StarRatingProps> = ({
               onBlur={() => setFocusedIndex(null)}
               className={`
                 transition-all duration-200
-                ${!disabled ? "cursor-pointer" : "cursor-default"}
-                ${!disabled ? "hover:scale-115" : ""}
-                ${
-                  focusedIndex === star
-                    ? "outline-none ring-2 ring-[#F59E0B] rounded-full"
-                    : ""
-                }
+                ${!disabled ? 'cursor-pointer' : 'cursor-default'}
+                ${!disabled ? 'hover:scale-115' : ''}
+                ${focusedIndex === star ? 'outline-none ring-2 ring-[#F59E0B] rounded-full' : ''}
               `}
             >
               <Star
                 size={size}
                 className={`
                   transition-all duration-200
-                  ${isFilled ? "text-[#F59E0B] fill-[#F59E0B]" : ""}
-                  ${
-                    isHovered && !disabled
-                      ? "text-[#F59E0B] fill-[#F59E0B]/50"
-                      : ""
-                  }
-                  ${isEmpty ? "text-[#d1d5db] stroke-[#d1d5db] fill-none" : ""}
+                  ${isFilled ? 'text-[#F59E0B] fill-[#F59E0B]' : ''}
+                  ${isHovered && !disabled ? 'text-[#F59E0B] fill-[#F59E0B]/50' : ''}
+                  ${isEmpty ? 'text-[#d1d5db] stroke-[#d1d5db] fill-none' : ''}
                 `}
               />
             </button>
@@ -177,7 +159,9 @@ const SafePayApproval: React.FC = () => {
     tidiness: 0,
   });
 
-  const [comment, setComment] = useState("");
+  const [comment, setComment] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [recommendWorker, setRecommendWorker] = useState(false);
 
   // Fetch Order Details
   const {
@@ -186,20 +170,16 @@ const SafePayApproval: React.FC = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["safepay-checkout", orderId],
+    queryKey: ['safepay-checkout', orderId],
     queryFn: async () => {
-      const res = await mainLink.get(
-        `/api/safepay-checkout/details/${orderId}`,
-      );
+      const res = await mainLink.get(`/api/safepay-checkout/details/${orderId}`);
       return res.data;
     },
     enabled: !!orderId,
   });
 
   // Initialize checklist from order data
-  const [checklist, setChecklist] = useState<
-    { id: string; text: string; checked: boolean }[]
-  >([]);
+  const [checklist, setChecklist] = useState<{ id: string; text: string; checked: boolean }[]>([]);
 
   useEffect(() => {
     if (checkoutData?.order?.checklist) {
@@ -213,41 +193,39 @@ const SafePayApproval: React.FC = () => {
         communication: checkoutData.order.review.communication || 0,
         tidiness: checkoutData.order.review.tidiness || 0,
       });
-      setComment(checkoutData.order.review.comment || "");
+      setComment(checkoutData.order.review.comment || '');
+      setPhotos(checkoutData.order.review.photos || []);
+      setRecommendWorker(checkoutData.order.review.recommendWorker || false);
     }
   }, [checkoutData]);
 
   // Approval Mutation
   const approveMutation = useMutation({
     mutationFn: async () => {
-      const res = await mainLink.post("/api/safepay-checkout/approve", {
+      const res = await mainLink.post('/api/safepay-checkout/approve', {
         orderId,
         ratings,
         comment,
+        photos,
+        recommendWorker,
       });
       return res.data;
     },
     onSuccess: () => {
       setIsSuccess(true);
-      toast.success("Jobb godkjent!");
+      toast.success('Jobb godkjent!');
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.error || "Kunne ikke godkjenne jobben");
+      toast.error(err.response?.data?.error || 'Kunne ikke godkjenne jobben');
     },
   });
 
   // Mutation to update checklist items
   const updateChecklistItemMutation = useMutation({
-    mutationFn: async ({
-      itemId,
-      checked,
-    }: {
-      itemId: string;
-      checked: boolean;
-    }) => {
+    mutationFn: async ({ itemId, checked }: { itemId: string; checked: boolean }) => {
       const res = await mainLink.put(
         `/api/safepay-checkout/contract/${orderId}/checklist/${itemId}`,
-        { checked },
+        { checked }
       );
       return res.data;
     },
@@ -275,9 +253,7 @@ const SafePayApproval: React.FC = () => {
     if (!item) return;
 
     const newChecked = !item.checked;
-    setChecklist((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, checked: newChecked } : i)),
-    );
+    setChecklist((prev) => prev.map((i) => (i.id === id ? { ...i, checked: newChecked } : i)));
     updateChecklistItemMutation.mutate({ itemId: id, checked: newChecked });
   };
 
@@ -292,16 +268,14 @@ const SafePayApproval: React.FC = () => {
   if (error || !checkoutData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#f5f0e8] p-4">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">
-          Kunne ikke laste oppdraget
-        </h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Kunne ikke laste oppdraget</h2>
         <Button onClick={() => navigate(-1)} label="Gå tilbake" />
       </div>
     );
   }
 
   const { order: orderData, calculation } = checkoutData;
-  const isOrderCompleted = orderData.status === "completed";
+  const isOrderCompleted = orderData.status === 'completed';
 
   if (isSuccess) {
     return (
@@ -312,8 +286,8 @@ const SafePayApproval: React.FC = () => {
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Jobb godkjent!</h1>
           <p className="text-white/60 mb-8">
-            Pengene er lagt til {orderData.providerId.name}{" "}
-            {orderData.providerId.lastName} sin saldo.
+            Pengene er lagt til {orderData.providerId.name} {orderData.providerId.lastName} sin
+            saldo.
           </p>
 
           <div className="text-[42px] font-bold text-[#4ade80] mb-1">
@@ -325,13 +299,13 @@ const SafePayApproval: React.FC = () => {
 
           <div className="flex flex-col gap-3">
             <Button
-              onClick={() => navigate("/profile")}
+              onClick={() => navigate('/profile')}
               label="Se kontrakt"
               className="w-full bg-[#4ade80] text-[#1a3a1a] rounded-full py-3.5 font-bold"
             />
             <Button
               variant="outline"
-              onClick={() => navigate("/home")}
+              onClick={() => navigate('/home')}
               label="Tilbake til hjem"
               className="w-full border-white/20 text-white rounded-full py-3.5 font-bold"
             />
@@ -351,11 +325,7 @@ const SafePayApproval: React.FC = () => {
           <ArrowLeft size={16} /> Tilbake
         </button>
 
-        <SafePaySteps
-          currentStep={4}
-          orderId={orderId}
-          serviceId={orderData.serviceId._id}
-        />
+        <SafePaySteps currentStep={4} orderId={orderId} serviceId={orderData.serviceId._id} />
 
         {/* Job Status Banner */}
         <div className="bg-white border border-black/5 rounded-2xl p-6 mb-4 shadow-sm">
@@ -371,9 +341,8 @@ const SafePayApproval: React.FC = () => {
                 {orderData.providerId.name} melder jobben som ferdig
               </h3>
               <p className="text-[12px] text-custom-green/80">
-                {new Date(orderData.updatedAt).toLocaleDateString("no-NO")} •{" "}
-                {orderData.serviceId.title} •{" "}
-                {orderData.serviceId.location?.city || "Oslo"}
+                {new Date(orderData.updatedAt).toLocaleDateString('no-NO')} •{' '}
+                {orderData.serviceId.title} • {orderData.serviceId.location?.city || 'Oslo'}
               </p>
             </div>
           </div>
@@ -403,7 +372,7 @@ const SafePayApproval: React.FC = () => {
               <div className="text-[12px] text-gray-500">
                 {orderData.providerId.averageRating
                   ? `${orderData.providerId.averageRating.toFixed(1)} av 5 stjerner`
-                  : "Ingen vurderinger enda"}
+                  : 'Ingen vurderinger enda'}
               </div>
             </div>
           </div>
@@ -413,42 +382,34 @@ const SafePayApproval: React.FC = () => {
         {checklist.length > 0 && (
           <div className="bg-white border border-black/5 rounded-2xl p-6 mb-4 shadow-sm">
             <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
-              <ListChecks size={18} className="text-custom-green" /> Sjekkliste
-              — ble jobben gjort riktig?
+              <ListChecks size={18} className="text-custom-green" /> Sjekkliste — ble jobben gjort
+              riktig?
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {checklist.map((item) => (
                 <div
                   key={item.id}
-                  onClick={
-                    !isOrderCompleted && !isSuccess
-                      ? () => toggleCheck(item.id)
-                      : undefined
-                  }
+                  onClick={!isOrderCompleted && !isSuccess ? () => toggleCheck(item.id) : undefined}
                   className={`flex items-center gap-3 p-3.5 rounded-xl ${
-                    isOrderCompleted || isSuccess
-                      ? "cursor-not-allowed"
-                      : "cursor-pointer"
+                    isOrderCompleted || isSuccess ? 'cursor-not-allowed' : 'cursor-pointer'
                   } border transition-all ${
                     item.checked
-                      ? "bg-[#f0faf0] border-[#c6f0d8]"
-                      : "bg-[#f9f9f7] border-transparent hover:border-black/10"
+                      ? 'bg-[#f0faf0] border-[#c6f0d8]'
+                      : 'bg-[#f9f9f7] border-transparent hover:border-black/10'
                   }`}
                 >
                   <div
                     className={`w-5.5 h-5.5 rounded-md border-2 flex items-center justify-center transition-all ${
                       item.checked
-                        ? "bg-custom-green border-custom-green"
-                        : "bg-white border-[#c8d8c8]"
+                        ? 'bg-custom-green border-custom-green'
+                        : 'bg-white border-[#c8d8c8]'
                     }`}
                   >
-                    {item.checked && (
-                      <Check size={14} className="text-white" strokeWidth={3} />
-                    )}
+                    {item.checked && <Check size={14} className="text-white" strokeWidth={3} />}
                   </div>
                   <span
                     className={`text-[13px] font-medium ${
-                      item.checked ? "text-[#166534]" : "text-gray-600"
+                      item.checked ? 'text-[#166534]' : 'text-gray-600'
                     }`}
                   >
                     {item.text}
@@ -458,18 +419,16 @@ const SafePayApproval: React.FC = () => {
             </div>
 
             {/* Skip option */}
-            {!isSuccess &&
-              !isOrderCompleted &&
-              checklist.some((item) => !item.checked) && (
-                <div className="mt-4 text-center">
-                  <button
-                    onClick={() => setShowSkipDialog(true)}
-                    className="text-sm text-gray-500 hover:text-gray-700 underline"
-                  >
-                    Hopp over sjekklisten og godkjenn uansett
-                  </button>
-                </div>
-              )}
+            {!isSuccess && !isOrderCompleted && checklist.some((item) => !item.checked) && (
+              <div className="mt-4 text-center">
+                <button
+                  onClick={() => setShowSkipDialog(true)}
+                  className="text-sm text-gray-500 hover:text-gray-700 underline"
+                >
+                  Hopp over sjekklisten og godkjenn uansett
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -478,29 +437,25 @@ const SafePayApproval: React.FC = () => {
           {!isOrderCompleted && !isSuccess ? (
             <>
               <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
-                <Star size={18} className="text-custom-green" /> Gi{" "}
-                {orderData.providerId.name} en vurdering
+                <Star size={18} className="text-custom-green" /> Gi {orderData.providerId.name} en
+                vurdering
               </div>
 
               <div className="mb-6">
-                <p className="text-[13px] text-gray-500 mb-2">
-                  Helhetlig opplevelse
-                </p>
+                <p className="text-[13px] text-gray-500 mb-2">Helhetlig opplevelse</p>
                 <StarRating
                   value={ratings.overall}
-                  onChange={(val) =>
-                    setRatings((prev) => ({ ...prev, overall: val }))
-                  }
+                  onChange={(val) => setRatings((prev) => ({ ...prev, overall: val }))}
                   disabled={isOrderCompleted}
                 />
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 {[
-                  { id: "punctuality", label: "Punktlighet" },
-                  { id: "quality", label: "Kvalitet" },
-                  { id: "communication", label: "Kommunikasjon" },
-                  { id: "tidiness", label: "Ryddighet" },
+                  { id: 'punctuality', label: 'Punktlighet' },
+                  { id: 'quality', label: 'Kvalitet' },
+                  { id: 'communication', label: 'Kommunikasjon' },
+                  { id: 'tidiness', label: 'Ryddighet' },
                 ].map((cat) => (
                   <div key={cat.id} className="bg-[#f9f9f7] rounded-xl p-3">
                     <div className="text-[11px] text-gray-400 uppercase font-bold mb-2 tracking-wider">
@@ -508,9 +463,7 @@ const SafePayApproval: React.FC = () => {
                     </div>
                     <StarRating
                       value={(ratings as any)[cat.id]}
-                      onChange={(val) =>
-                        setRatings((prev) => ({ ...prev, [cat.id]: val }))
-                      }
+                      onChange={(val) => setRatings((prev) => ({ ...prev, [cat.id]: val }))}
                       disabled={isOrderCompleted}
                       size={14}
                       showLabel={false}
@@ -524,15 +477,105 @@ const SafePayApproval: React.FC = () => {
                 onChange={(e) => setComment(e.target.value)}
                 disabled={isOrderCompleted}
                 className={`w-full bg-white border border-black/10 rounded-xl p-4 text-[13px] text-gray-800 outline-none focus:border-custom-green min-h-[100px] ${
-                  isOrderCompleted ? "cursor-not-allowed bg-gray-50" : ""
+                  isOrderCompleted ? 'cursor-not-allowed bg-gray-50' : ''
                 }`}
                 placeholder="Skriv en anmeldelse..."
               />
+
+              {/* Photos Upload */}
+              <div className="mt-6">
+                <p className="text-[13px] text-gray-500 mb-2">Legg til bilder (frivillig)</p>
+                {photos.length > 0 && (
+                  <div className="grid grid-cols-3 gap-3 mb-3">
+                    {photos.map((photo, index) => (
+                      <div
+                        key={index}
+                        className="relative aspect-square rounded-xl overflow-hidden"
+                      >
+                        <img
+                          src={photo}
+                          alt={`Bilde ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        {!isOrderCompleted && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPhotos(photos.filter((_, i) => i !== index));
+                            }}
+                            className="absolute top-2 right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!isOrderCompleted && (
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      files.forEach((file) => {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          setPhotos((prev) => [...prev, event.target?.result as string]);
+                        };
+                        reader.readAsDataURL(file);
+                      });
+                    }}
+                    className="hidden"
+                    id="photo-upload"
+                  />
+                )}
+                {!isOrderCompleted && (
+                  <label
+                    htmlFor="photo-upload"
+                    className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-custom-green transition-colors"
+                  >
+                    <FileText size={18} className="text-gray-400" />
+                    <span className="text-[13px] text-gray-500">Last opp bilder</span>
+                  </label>
+                )}
+              </div>
+
+              {/* Recommend Worker Checkbox */}
+              <div className="mt-6">
+                <div
+                  className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${
+                    recommendWorker
+                      ? 'bg-[#f0faf0] border-[#c6f0d8]'
+                      : 'bg-[#f9f9f7] border-transparent hover:border-black/10'
+                  } ${isOrderCompleted ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                  onClick={() => !isOrderCompleted && setRecommendWorker(!recommendWorker)}
+                >
+                  <div
+                    className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
+                      recommendWorker
+                        ? 'bg-custom-green border-custom-green'
+                        : 'bg-white border-[#c8d8c8]'
+                    }`}
+                  >
+                    {recommendWorker && <Check size={16} className="text-white" strokeWidth={3} />}
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-medium text-gray-900">
+                      Anbefal denne arbeideren
+                    </p>
+                    <p className="text-[12px] text-gray-500">
+                      Andre brukere vil se at du anbefaler denne personen
+                    </p>
+                  </div>
+                </div>
+              </div>
             </>
           ) : (
             <>
               <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
-                <Star size={18} className="text-[#F59E0B]" /> Vurderinger for{" "}
+                <Star size={18} className="text-[#F59E0B]" /> Vurderinger for{' '}
                 {orderData.providerId.name}
               </div>
 
@@ -542,7 +585,7 @@ const SafePayApproval: React.FC = () => {
                   <div className="text-4xl font-bold text-[#F59E0B]">
                     {orderData.providerId.averageRating
                       ? orderData.providerId.averageRating.toFixed(1)
-                      : "4.7"}
+                      : '4.7'}
                   </div>
                   <div className="text-sm text-gray-500">av 5</div>
                 </div>
@@ -557,8 +600,8 @@ const SafePayApproval: React.FC = () => {
                           (orderData.providerId.averageRating
                             ? Math.round(orderData.providerId.averageRating)
                             : 5)
-                            ? "text-[#F59E0B] fill-[#F59E0B]"
-                            : "text-[#d1d5db]"
+                            ? 'text-[#F59E0B] fill-[#F59E0B]'
+                            : 'text-[#d1d5db]'
                         }
                       />
                     ))}
@@ -568,7 +611,7 @@ const SafePayApproval: React.FC = () => {
                       ? `${orderData.providerId.averageRating.toFixed(1)} av 5 • ${
                           orderData.providerId.completedJobs || 0
                         } fullførte jobber`
-                      : "4.7 av 5 · 12 vurderinger"}
+                      : '4.7 av 5 · 12 vurderinger'}
                   </div>
                 </div>
               </div>
@@ -579,8 +622,7 @@ const SafePayApproval: React.FC = () => {
         {/* Transaction Details Panel */}
         <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
-            <Wallet size={18} className="text-custom-green" />{" "}
-            Transaksjonsdetaljer
+            <Wallet size={18} className="text-custom-green" /> Transaksjonsdetaljer
           </div>
 
           <div className="space-y-4">
@@ -599,7 +641,7 @@ const SafePayApproval: React.FC = () => {
                   Dato
                 </span>
                 <span className="text-sm font-medium text-gray-700">
-                  {new Date(orderData.createdAt).toLocaleDateString("no-NO")}
+                  {new Date(orderData.createdAt).toLocaleDateString('no-NO')}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -608,18 +650,18 @@ const SafePayApproval: React.FC = () => {
                 </span>
                 <span
                   className={`text-sm font-bold px-3 py-1 rounded-full ${
-                    orderData.status === "completed"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : orderData.status === "paid"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-amber-100 text-amber-700"
+                    orderData.status === 'completed'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : orderData.status === 'paid'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-amber-100 text-amber-700'
                   }`}
                 >
-                  {orderData.status === "completed"
-                    ? "Fullført"
-                    : orderData.status === "paid"
-                      ? "Betalt"
-                      : "Venter"}
+                  {orderData.status === 'completed'
+                    ? 'Fullført'
+                    : orderData.status === 'paid'
+                      ? 'Betalt'
+                      : 'Venter'}
                 </span>
               </div>
             </div>
@@ -629,15 +671,11 @@ const SafePayApproval: React.FC = () => {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
                   <span className="text-gray-500">Oppdragsbeløp</span>
-                  <span className="text-gray-900 font-bold">
-                    {calculation.basePrice} kr
-                  </span>
+                  <span className="text-gray-900 font-bold">{calculation.basePrice} kr</span>
                 </div>
                 <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
                   <span className="text-gray-500">SafePay-gebyr (3%)</span>
-                  <span className="text-gray-900 font-bold">
-                    - {calculation.fee} kr
-                  </span>
+                  <span className="text-gray-900 font-bold">- {calculation.fee} kr</span>
                 </div>
                 <div className="flex justify-between items-center pt-1">
                   <span className="text-gray-900 font-bold">
@@ -652,8 +690,8 @@ const SafePayApproval: React.FC = () => {
               <div className="flex gap-2 text-[11px] text-[#166534] leading-relaxed">
                 <Clock size={14} className="shrink-0 mt-0.5" />
                 <p>
-                  Pengene utbetales til {orderData.providerId.name} innen 1–2
-                  virkedager etter godkjenning.
+                  Pengene utbetales til {orderData.providerId.name} innen 1–2 virkedager etter
+                  godkjenning.
                 </p>
               </div>
             </div>
@@ -663,21 +701,19 @@ const SafePayApproval: React.FC = () => {
             onClick={handleApprove}
             loading={approveMutation.isPending}
             disabled={
-              isOrderCompleted ||
-              (!checklist.every((item) => item.checked) && !showSkipDialog)
+              isOrderCompleted || (!checklist.every((item) => item.checked) && !showSkipDialog)
             }
             className={
               isOrderCompleted
-                ? "w-full bg-gray-300 text-gray-500 rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 shadow-lg mt-6 cursor-not-allowed"
-                : "w-full bg-custom-green text-white rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#14532d] transition-all shadow-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                ? 'w-full bg-gray-300 text-gray-500 rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 shadow-lg mt-6 cursor-not-allowed'
+                : 'w-full bg-custom-green text-white rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#14532d] transition-all shadow-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed'
             }
           >
             {isOrderCompleted ? (
-              "Jobb allerede godkjent!"
+              'Jobb allerede godkjent!'
             ) : (
               <>
-                <CircleCheck size={20} /> Godkjenn jobb og utbetal{" "}
-                {calculation.providerNet} kr
+                <CircleCheck size={20} /> Godkjenn jobb og utbetal {calculation.providerNet} kr
               </>
             )}
           </Button>
@@ -686,12 +722,9 @@ const SafePayApproval: React.FC = () => {
           {showSkipDialog && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">
-                  Er du sikker?
-                </h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Er du sikker?</h3>
                 <p className="text-gray-600 mb-6">
-                  Du har ikke merket av alle sjekklisteelementer. Vil du
-                  fortsatt godkjenne jobben?
+                  Du har ikke merket av alle sjekklisteelementer. Vil du fortsatt godkjenne jobben?
                 </p>
                 <div className="flex gap-3">
                   <button

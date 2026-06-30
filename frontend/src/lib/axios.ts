@@ -1,10 +1,6 @@
-import axios from "axios";
-import type {
-  AxiosError,
-  AxiosInstance,
-  InternalAxiosRequestConfig,
-} from "axios";
-import { useUserStore } from "../stores/userStore";
+import axios from 'axios';
+import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import { useUserStore } from '../stores/userStore';
 
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
@@ -32,14 +28,14 @@ export const setupInterceptors = (instance: AxiosInstance) => {
       }
 
       if (config.data instanceof FormData) {
-        delete config.headers["Content-Type"];
+        delete config.headers['Content-Type'];
       }
 
       return config;
     },
     (error: AxiosError) => {
       return Promise.reject(error);
-    },
+    }
   );
 
   instance.interceptors.response.use(
@@ -49,16 +45,9 @@ export const setupInterceptors = (instance: AxiosInstance) => {
         _retry?: boolean;
       };
 
-      const skipUrls = [
-        "/auth/login",
-        "/auth/register",
-        "/auth/logout",
-        "/auth/refresh-token",
-      ];
+      const skipUrls = ['/auth/login', '/auth/register', '/auth/logout', '/auth/refresh-token'];
 
-      const shouldSkip = skipUrls.some((url) =>
-        originalRequest.url?.includes(url),
-      );
+      const shouldSkip = skipUrls.some((url) => originalRequest.url?.includes(url));
       if (shouldSkip) {
         return Promise.reject(error);
       }
@@ -66,8 +55,8 @@ export const setupInterceptors = (instance: AxiosInstance) => {
       if (error.response?.status === 401 && !originalRequest._retry) {
         const errorData = error.response?.data as { code?: string };
 
-        if (errorData?.code === "SESSION_REVOKED") {
-          console.warn("[API] Session revoked. Logging out...");
+        if (errorData?.code === 'SESSION_REVOKED') {
+          console.warn('[API] Session revoked. Logging out...');
           useUserStore.getState().logout();
           return Promise.reject(error);
         }
@@ -95,17 +84,17 @@ export const setupInterceptors = (instance: AxiosInstance) => {
         isRefreshing = true;
 
         try {
-          console.log("[API] Attempting token refresh...");
-          const baseURL = instance.defaults.baseURL || "";
+          console.log('[API] Attempting token refresh...');
+          const baseURL = instance.defaults.baseURL || '';
 
           const refreshResponse = await axios.post(
             `${baseURL}/api/auth/refresh-token`,
             {},
-            { withCredentials: true },
+            { withCredentials: true }
           );
 
           const { accessToken } = refreshResponse.data;
-          if (!accessToken) throw new Error("No access token returned");
+          if (!accessToken) throw new Error('No access token returned');
 
           const { user, login } = useUserStore.getState();
           if (user) {
@@ -118,7 +107,7 @@ export const setupInterceptors = (instance: AxiosInstance) => {
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           return instance(originalRequest);
         } catch (refreshError) {
-          console.error("[API] Token refresh failed. Resetting auth state...");
+          console.error('[API] Token refresh failed. Resetting auth state...');
           isRefreshing = false;
           onTokenRefreshed(null);
 
@@ -127,14 +116,14 @@ export const setupInterceptors = (instance: AxiosInstance) => {
         }
       }
 
-      if (process.env.NODE_ENV === "development") {
+      if (process.env.NODE_ENV === 'development') {
         const status = error.response?.status;
         const message = (error.response?.data as any)?.message || error.message;
-        console.error(`[API Error] ${status || "Network"}: ${message}`);
+        console.error(`[API Error] ${status || 'Network'}: ${message}`);
       }
 
       return Promise.reject(error);
-    },
+    }
   );
 
   return instance;

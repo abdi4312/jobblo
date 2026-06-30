@@ -1,8 +1,8 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const exploreController = require("../controllers/exploreController");
+const exploreController = require('../controllers/exploreController');
 
-router.get("/favorites", exploreController.getFeaturedFavourites);
-router.get("/stats", exploreController.getDashboardStats);
+router.get('/favorites', exploreController.getFeaturedFavourites);
+router.get('/stats', exploreController.getDashboardStats);
 
 module.exports = router;

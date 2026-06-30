@@ -1,4 +1,4 @@
-import mainLink from "../../api/mainURLs";
+import mainLink from '../../api/mainURLs';
 
 export const getJobDetail = async (id: string) => {
   const response = await mainLink.get(`/api/services/${id}`);
@@ -13,12 +13,16 @@ export const getNearbyJobs = async (lat: number, lng: number, radius: number = 5
 };
 
 export const createChat = async (payload: { providerId: string; serviceId: string }) => {
-  const { data } = await mainLink.post("/api/chats/create", payload);
+  const { data } = await mainLink.post('/api/chats/create', payload);
   return data;
 };
 
 // 4. Stripe Payment API (402 error handling ke liye)
-export const createStripeSession = async (payload: { amount: number; providerId: string; serviceId: string }) => {
-  const { data } = await mainLink.post("/api/stripe/create-extra-contact-payment", payload);
+export const createStripeSession = async (payload: {
+  amount: number;
+  providerId: string;
+  serviceId: string;
+}) => {
+  const { data } = await mainLink.post('/api/stripe/create-extra-contact-payment', payload);
   return data;
 };

@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 export const PricingHeader: React.FC = () => {
   return (
@@ -7,8 +7,7 @@ export const PricingHeader: React.FC = () => {
         Choose your <span className="text-custom-green">plan</span>
       </h2>
       <p className="text-lg font-light text-[#0A0A0A9E] max-w-2xl mx-auto">
-        Transparent pricing with no hidden costs. Start for free and upgrade
-        when you're ready.
+        Transparent pricing with no hidden costs. Start for free and upgrade when you're ready.
       </p>
     </div>
   );

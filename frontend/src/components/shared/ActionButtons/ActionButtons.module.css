@@ -37,7 +37,7 @@
   justify-content: center;
   align-items: center;
   border-radius: 16px;
-  border: 1px solid #C1C9BE;
+  border: 1px solid #c1c9be;
 }
 
 .previewButtonStateLayer {
@@ -50,7 +50,12 @@
 
 .previewButtonLabel {
   color: #424940;
-  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    Roboto,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 500;
   line-height: 24px;
@@ -73,7 +78,7 @@
   justify-content: center;
   align-items: center;
   border-radius: 16px;
-  background: #376A3E;
+  background: #376a3e;
 }
 
 .publishButtonStateLayer {
@@ -85,8 +90,13 @@
 }
 
 .publishButtonLabel {
-  color: #FFF;
-  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  color: #fff;
+  font-family:
+    Roboto,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 500;
   line-height: 24px;
@@ -110,7 +120,7 @@
   justify-content: center;
   align-items: center;
   border-radius: 16px;
-  background: #AC0000;
+  background: #ac0000;
   width: 100%;
 }
 
@@ -123,8 +133,13 @@
 }
 
 .deleteButtonLabel {
-  color: #FFF;
-  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  color: #fff;
+  font-family:
+    Roboto,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 500;
   line-height: 24px;
@@ -134,26 +149,26 @@
 /* Hover Effects */
 .previewButton:hover .previewButtonContent {
   background-color: rgba(193, 201, 190, 0.08);
-  border-color: #A8BBA5;
+  border-color: #a8bba5;
 }
 
 .publishButton:hover .publishButtonContent {
-  background: #2E5633;
+  background: #2e5633;
 }
 
 .deleteButton:hover .deleteButtonContent {
-  background: #8B0000;
+  background: #8b0000;
 }
 
 .previewButton:focus .previewButtonContent,
 .publishButton:focus .publishButtonContent,
 .deleteButton:focus .deleteButtonContent {
-  outline: 2px solid #376A3E;
+  outline: 2px solid #376a3e;
   outline-offset: 2px;
 }
 
 .deleteButton:focus .deleteButtonContent {
-  outline-color: #AC0000;
+  outline-color: #ac0000;
 }
 
 /* Mobile responsive */
@@ -161,25 +176,25 @@
   .container {
     gap: 12px;
   }
-  
+
   .topButtonsRow,
   .bottomButtonRow {
     padding: 0 4px;
   }
-  
+
   .previewButtonStateLayer,
   .publishButtonStateLayer,
   .deleteButtonStateLayer {
     padding: 12px 18px;
   }
-  
+
   .previewButtonLabel,
   .publishButtonLabel,
   .deleteButtonLabel {
     font-size: 14px;
     line-height: 20px;
   }
-  
+
   .deleteButtonContent {
     padding: 0 60px;
   }
@@ -189,25 +204,25 @@
   .container {
     gap: 10px;
   }
-  
+
   .topButtonsRow,
   .bottomButtonRow {
     padding: 0 2px;
   }
-  
+
   .previewButtonStateLayer,
   .publishButtonStateLayer,
   .deleteButtonStateLayer {
     padding: 10px 16px;
   }
-  
+
   .previewButtonLabel,
   .publishButtonLabel,
   .deleteButtonLabel {
     font-size: 13px;
     line-height: 18px;
   }
-  
+
   .deleteButtonContent {
     padding: 0 40px;
   }
@@ -217,25 +232,25 @@
   .container {
     gap: 20px;
   }
-  
+
   .topButtonsRow,
   .bottomButtonRow {
     padding: 0 12px;
   }
-  
+
   .previewButtonStateLayer,
   .publishButtonStateLayer,
   .deleteButtonStateLayer {
     padding: 20px 28px;
   }
-  
+
   .previewButtonLabel,
   .publishButtonLabel,
   .deleteButtonLabel {
     font-size: 18px;
     line-height: 26px;
   }
-  
+
   .deleteButtonContent {
     padding: 0 100px;
   }

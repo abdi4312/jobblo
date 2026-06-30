@@ -27,7 +27,7 @@
   flex-direction: column;
   align-items: center;
   border-radius: 28px;
-  background: #E5E9E1;
+  background: #e5e9e1;
   max-width: 90vw;
 }
 
@@ -38,7 +38,7 @@
   align-items: flex-start;
   gap: 36px;
   align-self: stretch;
-  border-bottom: 1px solid #C1C9BE;
+  border-bottom: 1px solid #c1c9be;
 }
 
 .datePickerDate {
@@ -54,8 +54,13 @@
   justify-content: center;
   flex: 1 0 0;
   align-self: stretch;
-  color: #181D18;
-  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  color: #181d18;
+  font-family:
+    Roboto,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 32px;
   font-weight: 400;
   line-height: 40px;
@@ -95,7 +100,7 @@
   flex: 1 0 0;
   align-self: stretch;
   border-radius: 4px;
-  border: 3px solid #376A3E;
+  border: 3px solid #376a3e;
 }
 
 .dateInputStateLayer {
@@ -125,8 +130,13 @@
 }
 
 .dateInputText {
-  color: #181D18;
-  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  color: #181d18;
+  font-family:
+    Roboto,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: 24px;
@@ -140,12 +150,17 @@
   position: absolute;
   left: -4px;
   top: -12px;
-  background: #E5E9E1;
+  background: #e5e9e1;
 }
 
 .dateInputLabel {
-  color: #376A3E;
-  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  color: #376a3e;
+  font-family:
+    Roboto,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 12px;
   font-weight: 400;
   line-height: 16px;
@@ -201,7 +216,12 @@
 .endDateInputLabel {
   flex: 1 0 0;
   color: #424940;
-  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    Roboto,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: 24px;
@@ -251,8 +271,13 @@
 }
 
 .datePickerButtonLabel {
-  color: #376A3E;
-  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  color: #376a3e;
+  font-family:
+    Roboto,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
@@ -324,8 +349,13 @@
 
 .timeInputText {
   flex: 1 0 0;
-  color: #181D18;
-  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  color: #181d18;
+  font-family:
+    Roboto,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: 24px;
@@ -336,7 +366,7 @@
 }
 
 .timeInputText::placeholder {
-  color: #B3B3B3;
+  color: #b3b3b3;
 }
 
 .timeInputLabelContainer {
@@ -346,12 +376,17 @@
   position: absolute;
   left: -4px;
   top: -12px;
-  background: #F7FBF2;
+  background: #f7fbf2;
 }
 
 .timeInputLabel {
   color: #424940;
-  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    Roboto,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 12px;
   font-weight: 400;
   line-height: 16px;
@@ -385,7 +420,7 @@
 }
 
 .clearButton:focus {
-  outline: 2px solid #376A3E;
+  outline: 2px solid #376a3e;
   outline-offset: 2px;
 }
 
@@ -394,21 +429,21 @@
   .datePicker {
     width: 300px;
   }
-  
+
   .datePickerTitle {
     font-size: 28px;
     line-height: 36px;
   }
-  
+
   .timeInput {
     width: 110px;
     height: 52px;
   }
-  
+
   .timeInputText {
     font-size: 15px;
   }
-  
+
   .timeInputLabel {
     font-size: 11px;
   }
@@ -418,25 +453,25 @@
   .datePicker {
     width: 280px;
   }
-  
+
   .datePickerTitle {
     font-size: 24px;
     line-height: 32px;
   }
-  
+
   .timeInput {
     width: 100px;
     height: 48px;
   }
-  
+
   .timeInputText {
     font-size: 14px;
   }
-  
+
   .timeInputLabel {
     font-size: 10px;
   }
-  
+
   .timeSectionContainer {
     padding: 0 8px;
   }
@@ -446,25 +481,25 @@
   .datePicker {
     width: 360px;
   }
-  
+
   .datePickerTitle {
     font-size: 36px;
     line-height: 44px;
   }
-  
+
   .timeInput {
     width: 150px;
     height: 64px;
   }
-  
+
   .timeInputText {
     font-size: 18px;
   }
-  
+
   .timeInputLabel {
     font-size: 14px;
   }
-  
+
   .timeSectionContainer {
     padding: 0 16px;
   }

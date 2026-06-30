@@ -1,19 +1,15 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Image } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
-import * as Haptics from "expo-haptics";
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   runOnJS,
-} from "react-native-reanimated";
-import {
-  GestureHandlerRootView,
-  Gesture,
-  GestureDetector,
-} from "react-native-gesture-handler";
+} from 'react-native-reanimated';
+import { GestureHandlerRootView, Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 interface ImagePickerSectionProps {
   images: string[];
@@ -61,10 +57,7 @@ const DraggableItem = ({
     });
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: offset.value },
-      { scale: isDragging.value ? 1.1 : 1 },
-    ],
+    transform: [{ translateX: offset.value }, { scale: isDragging.value ? 1.1 : 1 }],
     zIndex: isDragging.value ? 100 : 1,
     opacity: isDragging.value ? 0.9 : 1,
   }));
@@ -75,7 +68,7 @@ const DraggableItem = ({
         <TouchableOpacity
           onLongPress={() => {}} // Needed for activateAfterLongPress
           onPress={() => onSetMain(index)}
-          className={`relative rounded-xl overflow-hidden border-2 ${index === 0 ? "border-[#E68A2E]" : "border-transparent"}`}
+          className={`relative rounded-xl overflow-hidden border-2 ${index === 0 ? 'border-[#E68A2E]' : 'border-transparent'}`}
           activeOpacity={0.7}
         >
           <Image source={{ uri }} className="w-24 h-24" />
@@ -92,27 +85,20 @@ const DraggableItem = ({
           </TouchableOpacity>
           {index !== 0 && (
             <View className="absolute bottom-0 left-0 right-0 bg-black/40 py-0.5">
-              <Text className="text-[8px] text-white text-center font-bold">
-                Set Main
-              </Text>
+              <Text className="text-[8px] text-white text-center font-bold">Set Main</Text>
             </View>
           )}
         </TouchableOpacity>
 
         <View className="mt-2 px-1 items-center">
-          <Text className="text-[10px] font-bold text-gray-500">
-            {index + 1}
-          </Text>
+          <Text className="text-[10px] font-bold text-gray-500">{index + 1}</Text>
         </View>
       </Animated.View>
     </GestureDetector>
   );
 };
 
-export const ImagePickerSection: React.FC<ImagePickerSectionProps> = ({
-  images,
-  setImages,
-}) => {
+export const ImagePickerSection: React.FC<ImagePickerSectionProps> = ({ images, setImages }) => {
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaType.Images,
@@ -139,9 +125,9 @@ export const ImagePickerSection: React.FC<ImagePickerSectionProps> = ({
     setImages(newImages);
   };
 
-  const moveImage = (index: number, direction: "left" | "right") => {
+  const moveImage = (index: number, direction: 'left' | 'right') => {
     const newImages = [...images];
-    const newIndex = direction === "left" ? index - 1 : index + 1;
+    const newIndex = direction === 'left' ? index - 1 : index + 1;
 
     if (newIndex < 0 || newIndex >= images.length) return;
 
@@ -165,25 +151,16 @@ export const ImagePickerSection: React.FC<ImagePickerSectionProps> = ({
     <GestureHandlerRootView>
       <View className="mb-8">
         <Text className="text-lg font-bold mb-4">
-          Images{" "}
-          <Text className="text-gray-400 font-normal text-sm">
-            (Optional, max 6)
-          </Text>
+          Images <Text className="text-gray-400 font-normal text-sm">(Optional, max 6)</Text>
         </Text>
 
         {/* Main Image Box */}
         <View className="mb-4">
           {images.length > 0 ? (
             <View className="relative w-full h-48 rounded-2xl overflow-hidden bg-gray-100">
-              <Image
-                source={{ uri: images[0] }}
-                className="w-full h-full"
-                resizeMode="cover"
-              />
+              <Image source={{ uri: images[0] }} className="w-full h-full" resizeMode="cover" />
               <View className="absolute top-3 left-3 bg-[#E68A2E] px-3 py-1 rounded-full shadow-sm">
-                <Text className="text-white text-[10px] font-bold uppercase">
-                  Main Image
-                </Text>
+                <Text className="text-white text-[10px] font-bold uppercase">Main Image</Text>
               </View>
               <TouchableOpacity
                 onPress={() => removeImage(0)}
@@ -198,9 +175,7 @@ export const ImagePickerSection: React.FC<ImagePickerSectionProps> = ({
               className="w-full h-48 border-2 border-dashed border-gray-200 rounded-2xl items-center justify-center bg-gray-50"
             >
               <Ionicons name="cloud-upload-outline" size={48} color="#999" />
-              <Text className="text-gray-400 mt-2 text-sm font-medium">
-                Upload Main Image
-              </Text>
+              <Text className="text-gray-400 mt-2 text-sm font-medium">Upload Main Image</Text>
               <Text className="text-gray-300 text-[10px] mt-1">
                 This will be shown as the cover
               </Text>
@@ -216,18 +191,9 @@ export const ImagePickerSection: React.FC<ImagePickerSectionProps> = ({
                 All Images ({images.length}/6)
               </Text>
               {images.length < 6 && (
-                <TouchableOpacity
-                  onPress={pickImage}
-                  className="flex-row items-center"
-                >
-                  <Ionicons
-                    name="add-circle-outline"
-                    size={16}
-                    color="#E68A2E"
-                  />
-                  <Text className="text-[#E68A2E] text-xs font-bold ml-1">
-                    Add More
-                  </Text>
+                <TouchableOpacity onPress={pickImage} className="flex-row items-center">
+                  <Ionicons name="add-circle-outline" size={16} color="#E68A2E" />
+                  <Text className="text-[#E68A2E] text-xs font-bold ml-1">Add More</Text>
                 </TouchableOpacity>
               )}
             </View>

@@ -21,7 +21,7 @@
   align-items: center;
   gap: 10px;
   align-self: stretch;
-  background: rgba(255, 255, 255, 0.00);
+  background: rgba(255, 255, 255, 0);
 }
 
 .imageWrapper {
@@ -75,7 +75,12 @@
 
 .deleteText {
   color: rgba(0, 0, 0, 0.64);
-  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    Inter,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: 140%;
@@ -105,7 +110,12 @@
 .textareaInput {
   flex: 1 0 0;
   color: rgba(179, 179, 179, 1);
-  font-family: Inter, -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    Inter,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: 140%;
@@ -120,7 +130,7 @@
 }
 
 .textareaInput:focus {
-  color: #181D18;
+  color: #181d18;
 }
 
 .dragIcon {
@@ -149,7 +159,7 @@
   justify-content: center;
   align-items: center;
   border-radius: 16px;
-  border: 1px solid #C1C9BE;
+  border: 1px solid #c1c9be;
   width: 100%;
 }
 
@@ -163,7 +173,12 @@
 
 .addButtonLabel {
   color: #424940;
-  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    Roboto,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 500;
   line-height: 24px;
@@ -189,7 +204,7 @@
 }
 
 .addButton:focus .addButtonContent {
-  outline: 2px solid #376A3E;
+  outline: 2px solid #376a3e;
   outline-offset: 2px;
 }
 
@@ -198,37 +213,37 @@
   .container {
     gap: 20px;
   }
-  
+
   .imagesList {
     gap: 20px;
   }
-  
+
   .imageItem {
     gap: 8px;
   }
-  
+
   .imageWrapper {
     width: 100px;
     height: 100px;
   }
-  
+
   .image {
     width: 100px;
     height: 100px;
   }
-  
+
   .deleteText {
     font-size: 14px;
   }
-  
+
   .textareaInput {
     font-size: 14px;
   }
-  
+
   .addButtonLabel {
     font-size: 14px;
   }
-  
+
   .addButtonStateLayer {
     padding: 12px 20px;
   }
@@ -238,41 +253,41 @@
   .container {
     gap: 16px;
   }
-  
+
   .imagesList {
     gap: 16px;
   }
-  
+
   .imageItem {
     gap: 6px;
   }
-  
+
   .imageWrapper {
     width: 90px;
     height: 90px;
   }
-  
+
   .image {
     width: 90px;
     height: 90px;
   }
-  
+
   .deleteText {
     font-size: 13px;
   }
-  
+
   .textareaInput {
     font-size: 13px;
   }
-  
+
   .addButtonLabel {
     font-size: 13px;
   }
-  
+
   .addButtonStateLayer {
     padding: 10px 16px;
   }
-  
+
   .textareaField {
     height: 65px;
   }
@@ -282,41 +297,41 @@
   .container {
     gap: 30px;
   }
-  
+
   .imagesList {
     gap: 30px;
   }
-  
+
   .imageItem {
     gap: 12px;
   }
-  
+
   .imageWrapper {
     width: 144px;
     height: 144px;
   }
-  
+
   .image {
     width: 144px;
     height: 144px;
   }
-  
+
   .deleteText {
     font-size: 18px;
   }
-  
+
   .textareaInput {
     font-size: 18px;
   }
-  
+
   .addButtonLabel {
     font-size: 18px;
   }
-  
+
   .addButtonStateLayer {
     padding: 20px 28px;
   }
-  
+
   .textareaField {
     height: 85px;
   }

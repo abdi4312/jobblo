@@ -1,7 +1,7 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const applicantController = require("../controllers/applicantController");
-const { authenticate } = require("../middleware/auth");
+const applicantController = require('../controllers/applicantController');
+const { authenticate } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -24,6 +24,16 @@ const { authenticate } = require("../middleware/auth");
  *         required: true
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [rating, completedJobs, favorites, createdAt]
+ *       - in: query
+ *         name: filter
+ *         schema:
+ *           type: string
+ *           enum: [favorites, archived, notArchived]
  *     responses:
  *       200:
  *         description: Liste over søkere
@@ -32,7 +42,10 @@ const { authenticate } = require("../middleware/auth");
  *       404:
  *         description: Oppdrag ikke funnet
  */
-router.get("/my/overview", authenticate, applicantController.getMyServicesWithApplicants);
-router.get("/:serviceId", authenticate, applicantController.getApplicantsForService);
+router.get('/my/overview', authenticate, applicantController.getMyServicesWithApplicants);
+router.get('/:serviceId', authenticate, applicantController.getApplicantsForService);
+router.patch('/:requestId/favorite', authenticate, applicantController.toggleFavorite);
+router.patch('/:requestId/archive', authenticate, applicantController.toggleArchive);
+router.patch('/:requestId/decline', authenticate, applicantController.declineApplicant);
 
 module.exports = router;

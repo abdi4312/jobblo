@@ -1,10 +1,10 @@
-import mainLink from "../../api/mainURLs";
-import type { FavoriteList, CreateListDTO, AddServiceToListDTO } from "./types";
+import mainLink from '../../api/mainURLs';
+import type { FavoriteList, CreateListDTO, AddServiceToListDTO } from './types';
 
 export const favoriteListsApi = {
   getUserLists: async (userId?: string): Promise<FavoriteList[]> => {
-    const response = await mainLink.get("/api/lists", {
-      params: { userId }
+    const response = await mainLink.get('/api/lists', {
+      params: { userId },
     });
     return response.data;
   },
@@ -15,17 +15,20 @@ export const favoriteListsApi = {
   },
 
   createList: async (data: CreateListDTO): Promise<FavoriteList> => {
-    const response = await mainLink.post("/api/lists", data);
+    const response = await mainLink.post('/api/lists', data);
     return response.data;
   },
 
-  updateList: async (listId: string, data: Partial<CreateListDTO> & { public?: boolean, description?: string }): Promise<FavoriteList> => {
+  updateList: async (
+    listId: string,
+    data: Partial<CreateListDTO> & { public?: boolean; description?: string }
+  ): Promise<FavoriteList> => {
     const response = await mainLink.put(`/api/lists/${listId}`, data);
     return response.data;
   },
 
   addServiceToList: async (data: AddServiceToListDTO): Promise<FavoriteList> => {
-    const response = await mainLink.post("/api/lists/add-service", data);
+    const response = await mainLink.post('/api/lists/add-service', data);
     return response.data;
   },
 

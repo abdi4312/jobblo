@@ -18,8 +18,8 @@
   justify-content: center;
   align-items: center;
   border-radius: 8px;
-  border: 1px solid #C1C9BE;
-  background: #D1E5CE;
+  border: 1px solid #c1c9be;
+  background: #d1e5ce;
 }
 
 .stateLayer {
@@ -31,9 +31,14 @@
 }
 
 .labelText {
-  color: #3A4B3A;
+  color: #3a4b3a;
   text-align: center;
-  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    Roboto,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
@@ -59,8 +64,8 @@
 
 /* Hover effects */
 .chip:hover {
-  background: #C5D9C2;
-  border-color: #A8BBA5;
+  background: #c5d9c2;
+  border-color: #a8bba5;
 }
 
 .closeButton:hover {
@@ -69,7 +74,7 @@
 }
 
 .closeButton:focus {
-  outline: 2px solid #376A3E;
+  outline: 2px solid #376a3e;
   outline-offset: 1px;
   border-radius: 50%;
 }
@@ -79,26 +84,26 @@
   .container {
     gap: 3px;
   }
-  
+
   .chip {
     height: 28px;
   }
-  
+
   .stateLayer {
     padding: 4px 6px 4px 8px;
     gap: 6px;
   }
-  
+
   .labelText {
     font-size: 12px;
     line-height: 16px;
   }
-  
+
   .closeButton {
     width: 16px;
     height: 16px;
   }
-  
+
   .closeIcon {
     width: 16px;
     height: 16px;
@@ -109,26 +114,26 @@
   .container {
     gap: 2px;
   }
-  
+
   .chip {
     height: 26px;
   }
-  
+
   .stateLayer {
     padding: 3px 5px 3px 7px;
     gap: 5px;
   }
-  
+
   .labelText {
     font-size: 11px;
     line-height: 14px;
   }
-  
+
   .closeButton {
     width: 14px;
     height: 14px;
   }
-  
+
   .closeIcon {
     width: 14px;
     height: 14px;
@@ -139,26 +144,26 @@
   .container {
     gap: 6px;
   }
-  
+
   .chip {
     height: 36px;
   }
-  
+
   .stateLayer {
     padding: 8px 10px 8px 14px;
     gap: 10px;
   }
-  
+
   .labelText {
     font-size: 16px;
     line-height: 22px;
   }
-  
+
   .closeButton {
     width: 20px;
     height: 20px;
   }
-  
+
   .closeIcon {
     width: 20px;
     height: 20px;

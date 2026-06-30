@@ -1,12 +1,12 @@
-import React from "react";
-import ChatHeader from "../../components/chat/ChatHeader";
-import MessageList from "../../components/chat/MessageList";
-import MessageInput from "../../components/chat/MessageInput";
-import { EmptyChatState } from "../../components/chat/ChatUiComponents";
-import { ChatWindowSkeleton } from "../Loading/ChatWindowSkeleton";
-import { Briefcase } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
+import React from 'react';
+import ChatHeader from '../../components/chat/ChatHeader';
+import MessageList from '../../components/chat/MessageList';
+import MessageInput from '../../components/chat/MessageInput';
+import { EmptyChatState } from '../../components/chat/ChatUiComponents';
+import { ChatWindowSkeleton } from '../Loading/ChatWindowSkeleton';
+import { Briefcase } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 interface ChatWindowProps {
   conversationId?: string;
@@ -50,12 +50,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   const handleStartSafePay = () => {
-    toast("SafePay flow coming soon!");
+    toast('SafePay flow coming soon!');
   };
 
   return (
     <div
-      className={`flex-1 flex flex-col min-w-0 ${!conversationId && isMobile ? "hidden" : "flex"}`}
+      className={`flex-1 flex flex-col min-w-0 ${!conversationId && isMobile ? 'hidden' : 'flex'}`}
     >
       {!conversationId ? (
         <EmptyChatState />
@@ -78,21 +78,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 </div>
                 <div className="flex flex-col">
                   <div className="text-[12px] font-medium text-custom-black">
-                    {activeChat.serviceId.title || "Oppdrag"}
+                    {activeChat.serviceId.title || 'Oppdrag'}
                   </div>
                   <div className="text-[11px] text-[#888]">
-                    {activeChat.serviceId.price ? `${activeChat.serviceId.price} kr` : ""}
+                    {activeChat.serviceId.price ? `${activeChat.serviceId.price} kr` : ''}
                   </div>
                 </div>
               </div>
               <div className="flex gap-[7px]">
-                <button 
+                <button
                   onClick={handleSeOppdrag}
                   className="px-[12px] py-[5px] rounded-full text-[11px] font-medium cursor-pointer border border-black/[0.15] bg-transparent text-custom-black hover:bg-[#f9f9f7] transition-colors"
                 >
                   Se oppdrag
                 </button>
-                <button 
+                <button
                   onClick={handleStartSafePay}
                   className="px-[12px] py-[5px] rounded-full text-[11px] font-medium cursor-pointer border-none bg-[#16a34a] text-white hover:bg-[#138e3f] transition-colors"
                 >

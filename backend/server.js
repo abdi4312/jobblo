@@ -1,22 +1,22 @@
-const express = require("express");
-const http = require("http");
-const swaggerUi = require("swagger-ui-express");
-const swaggerSpec = require("./swagger");
-const { Server } = require("socket.io");
-const jwt = require("jsonwebtoken");
-const chatSocket = require("./sockets/chat.socket");
+const express = require('express');
+const http = require('http');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swagger');
+const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
+const chatSocket = require('./sockets/chat.socket');
 
-require("dotenv").config({ path: __dirname + "/.env" });
+require('dotenv').config({ path: __dirname + '/.env' });
 
-const connectDB = require("./db");
+const connectDB = require('./db');
 connectDB()
-  .then(() => console.log("✅  MongoDB connected"))
+  .then(() => console.log('✅  MongoDB connected'))
   .catch((err) => {
-    console.error("❌  MongoDB connection error:", err.message);
+    console.error('❌  MongoDB connection error:', err.message);
     process.exit(1);
   });
 
-const app = require("./app");
+const app = require('./app');
 const port = process.env.PORT || 5001;
 
 // Create HTTP server for WebSocket support
@@ -25,36 +25,32 @@ const server = http.createServer(app);
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin:
-      process.env.FRONTEND_URL ||
-      "http://localhost:5173" ||
-      "http://localhost:5174",
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173' || 'http://localhost:5174',
     credentials: true,
   },
 });
 
 // Make io accessible to routes
-app.set("io", io);
+app.set('io', io);
 chatSocket(io);
-io.on("connection", (socket) => {
+io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}`);
 
   // Join service room
-  socket.on("join_service", (serviceId) => {
+  socket.on('join_service', (serviceId) => {
     socket.join(`service_${serviceId}`);
     console.log(`Socket ${socket.id} joined room service_${serviceId}`);
   });
 
   // Join user room for private notifications
-  socket.on("join", (userId) => {
+  socket.on('join', (userId) => {
     if (userId) {
       socket.join(`user_${userId}`);
       console.log(`Socket ${socket.id} joined room user_${userId}`);
     }
   });
 
-
-  socket.on("disconnect", () => {
+  socket.on('disconnect', () => {
     console.log(`Socket disconnected: ${socket.id}`);
   });
 });
@@ -136,11 +132,11 @@ app.use(express.json());
  *                   type: string
  *                   example: Jobblo test-API kjører! 🚀
  */
-app.get("/api/test", (req, res) => {
-  res.json({ message: "Jobblo test-API kjører! 🚀" });
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Jobblo test-API kjører! 🚀' });
 });
 
-app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 server.listen(port, () => {
   console.log(`🚀  Jobblo API listening on http://localhost:${port}`);

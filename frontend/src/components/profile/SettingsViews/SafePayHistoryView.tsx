@@ -7,19 +7,17 @@ import {
   Receipt,
   TrendingUp,
   TrendingDown,
-} from "lucide-react";
-import { useState } from "react";
-import { useSafePayHistory } from "../../../features/profile/hooks";
-import { Spinner } from "../../Ui/Spinner";
-import { useNavigate } from "react-router-dom";
-import { useUserStore } from "../../../stores/userStore";
+} from 'lucide-react';
+import { useState } from 'react';
+import { useSafePayHistory } from '../../../features/profile/hooks';
+import { Spinner } from '../../Ui/Spinner';
+import { useNavigate } from 'react-router-dom';
+import { useUserStore } from '../../../stores/userStore';
 
 export const SafePayHistoryView = () => {
   const user = useUserStore((state) => state.user);
   const { data, isLoading } = useSafePayHistory(user?._id);
-  const [expandedTransaction, setExpandedTransaction] = useState<string | null>(
-    null,
-  );
+  const [expandedTransaction, setExpandedTransaction] = useState<string | null>(null);
   const navigate = useNavigate();
 
   if (isLoading) {
@@ -40,13 +38,13 @@ export const SafePayHistoryView = () => {
   };
 
   const formatDate = (date: any) => {
-    if (!date) return "";
-    return new Date(date).toLocaleDateString("no-NO", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('no-NO', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
@@ -61,9 +59,7 @@ export const SafePayHistoryView = () => {
   return (
     <section className="flex flex-col gap-8 max-w-2xl w-full">
       <div className="flex flex-col gap-2">
-        <h2 className="text-[20px] font-bold text-gray-900">
-          SafePay historikk
-        </h2>
+        <h2 className="text-[20px] font-bold text-gray-900">SafePay historikk</h2>
         <p className="text-[15px] text-[#555] leading-[1.4] font-normal">
           Oversikt over alle utbetalinger og betalinger gjennom SafePay.
         </p>
@@ -74,49 +70,33 @@ export const SafePayHistoryView = () => {
         <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp size={18} className="text-[#16a34a]" />
-            <span className="text-[13px] font-medium text-gray-500">
-              Totalt tjent
-            </span>
+            <span className="text-[13px] font-medium text-gray-500">Totalt tjent</span>
           </div>
-          <p className="text-[24px] font-bold text-gray-900">
-            {Math.abs(summary.totalEarned)} kr
-          </p>
+          <p className="text-[24px] font-bold text-gray-900">{Math.abs(summary.totalEarned)} kr</p>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <TrendingDown size={18} className="text-[#dc2626]" />
-            <span className="text-[13px] font-medium text-gray-500">
-              Totalt brukt
-            </span>
+            <span className="text-[13px] font-medium text-gray-500">Totalt brukt</span>
           </div>
-          <p className="text-[24px] font-bold text-gray-900">
-            {Math.abs(summary.totalSpent)} kr
-          </p>
+          <p className="text-[24px] font-bold text-gray-900">{Math.abs(summary.totalSpent)} kr</p>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <Receipt size={18} className="text-[#6b7280]" />
-            <span className="text-[13px] font-medium text-gray-500">
-              Avgifter
-            </span>
+            <span className="text-[13px] font-medium text-gray-500">Avgifter</span>
           </div>
-          <p className="text-[24px] font-bold text-gray-900">
-            {Math.abs(summary.totalFees)} kr
-          </p>
+          <p className="text-[24px] font-bold text-gray-900">{Math.abs(summary.totalFees)} kr</p>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <Wallet size={18} className="text-custom-green" />
-            <span className="text-[13px] font-medium text-gray-500">
-              Transaksjoner
-            </span>
+            <span className="text-[13px] font-medium text-gray-500">Transaksjoner</span>
           </div>
-          <p className="text-[24px] font-bold text-gray-900">
-            {summary.transactionCount}
-          </p>
+          <p className="text-[24px] font-bold text-gray-900">{summary.transactionCount}</p>
         </div>
       </div>
 
@@ -155,12 +135,12 @@ export const SafePayHistoryView = () => {
                   <div className="flex items-center gap-2 text-right">
                     <div>
                       <p
-                        className={`text-[18px] font-bold ${transaction.isProvider ? "text-[#16a34a]" : "text-[#dc2626]"}`}
+                        className={`text-[18px] font-bold ${transaction.isProvider ? 'text-[#16a34a]' : 'text-[#dc2626]'}`}
                       >
-                        {transaction.isProvider ? "+" : "-"}
+                        {transaction.isProvider ? '+' : '-'}
                         {transaction.isProvider
                           ? transaction.amounts.netProvider
-                          : transaction.amounts.totalCustomer}{" "}
+                          : transaction.amounts.totalCustomer}{' '}
                         kr
                       </p>
                       <div className="flex items-center justify-end gap-1 text-[12px] text-green-600">
@@ -170,7 +150,7 @@ export const SafePayHistoryView = () => {
                     </div>
                     <ArrowRight
                       size={18}
-                      className={`text-gray-400 transition-transform ${expandedTransaction === transaction.id ? "rotate-90" : ""}`}
+                      className={`text-gray-400 transition-transform ${expandedTransaction === transaction.id ? 'rotate-90' : ''}`}
                     />
                   </div>
                 </div>
@@ -201,15 +181,15 @@ export const SafePayHistoryView = () => {
                     <div className="border-t border-gray-200 pt-3">
                       <div className="flex justify-between text-[14px]">
                         <span className="text-gray-700 font-semibold">
-                          {transaction.isProvider ? "Du mottar" : "Du betalte"}
+                          {transaction.isProvider ? 'Du mottar' : 'Du betalte'}
                         </span>
                         <span
-                          className={`text-gray-900 font-bold ${transaction.isProvider ? "text-[#16a34a]" : "text-[#dc2626]"}`}
+                          className={`text-gray-900 font-bold ${transaction.isProvider ? 'text-[#16a34a]' : 'text-[#dc2626]'}`}
                         >
-                          {transaction.isProvider ? "+" : "-"}
+                          {transaction.isProvider ? '+' : '-'}
                           {transaction.isProvider
                             ? transaction.amounts.netProvider
-                            : transaction.amounts.totalCustomer}{" "}
+                            : transaction.amounts.totalCustomer}{' '}
                           kr
                         </span>
                       </div>
@@ -222,18 +202,11 @@ export const SafePayHistoryView = () => {
         ) : (
           <div className="flex flex-col items-center justify-center py-24 bg-white rounded-[2.5rem] border-2 border-dashed border-gray-100">
             <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-6">
-              <ShieldCheck
-                size={32}
-                className="text-gray-200"
-                strokeWidth={1.5}
-              />
+              <ShieldCheck size={32} className="text-gray-200" strokeWidth={1.5} />
             </div>
-            <p className="text-gray-400 font-bold text-lg mb-2">
-              Ingen SafePay-historikk ennå
-            </p>
+            <p className="text-gray-400 font-bold text-lg mb-2">Ingen SafePay-historikk ennå</p>
             <p className="text-gray-400 text-[14px] text-center max-w-sm">
-              Når du fullfører jobber eller betaler for tjenester via SafePay,
-              vil de vises her.
+              Når du fullfører jobber eller betaler for tjenester via SafePay, vil de vises her.
             </p>
           </div>
         )}

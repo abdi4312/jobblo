@@ -1,4 +1,4 @@
-import styles from "./VerticalDivider.module.css";
+import styles from './VerticalDivider.module.css';
 
 export function VerticalDivider() {
   return (

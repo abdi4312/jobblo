@@ -5,7 +5,6 @@ interface JobDescriptionProps {
 }
 
 const JobDescription: React.FC<JobDescriptionProps> = ({ description }) => {
-
   return (
     <p className="text-base font-light pt-4 text-[#0A0A0A9E]!">
       {description || 'Ingen beskrivelse tilgjengelig'}

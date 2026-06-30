@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,21 +7,19 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
-} from "react-native";
-import { useAuth } from "../../context/AuthContext";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useMyPostedJobs } from "../../features/job/hooks/useMyPostedJobs";
-import JobCard from "../../components/explore/job-card/index";
-import { ListGrid } from "../../components/explore/list-grid";
+} from 'react-native';
+import { useAuth } from '../../context/AuthContext';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useMyPostedJobs } from '../../features/job/hooks/useMyPostedJobs';
+import JobCard from '../../components/explore/job-card/index';
+import { ListGrid } from '../../components/explore/list-grid';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"jobs" | "likes" | "saved">(
-    "jobs",
-  );
+  const [activeTab, setActiveTab] = useState<'jobs' | 'likes' | 'saved'>('jobs');
 
   const { data: myJobs, isLoading, error, refetch } = useMyPostedJobs();
   const [refreshing, setRefreshing] = useState(false);
@@ -34,7 +32,7 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     await logout();
-    router.replace("/login");
+    router.replace('/login');
   };
 
   const renderJobGrid = () => {
@@ -70,15 +68,12 @@ export default function ProfileScreen() {
     return (
       <View className="flex-row flex-wrap px-4">
         {jobs.map((job) => (
-          <View 
-            key={job._id} 
-            style={{ width: '48%', marginBottom: 16 }}
-          >
+          <View key={job._id} style={{ width: '48%', marginBottom: 16 }}>
             <JobCard
               item={job}
               onPress={() =>
                 router.push({
-                  pathname: "/job-search",
+                  pathname: '/job-search',
                   params: { id: job._id },
                 })
               }
@@ -90,14 +85,14 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       {/* Header Bar */}
       <View className="flex-row justify-between items-center px-4 py-3">
         <TouchableOpacity>
           <Ionicons name="notifications-outline" size={24} color="black" />
         </TouchableOpacity>
         <Text className="text-lg font-bold">
-          @{user?.name?.toLowerCase().replace(/\s/g, "") || "user"}
+          @{user?.name?.toLowerCase().replace(/\s/g, '') || 'user'}
         </Text>
         <TouchableOpacity onPress={handleLogout}>
           <Ionicons name="settings-outline" size={24} color="black" />
@@ -111,7 +106,7 @@ export default function ProfileScreen() {
             refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor="#E68A2E" // For iOS
-            colors={["#E68A2E"]} // For Android
+            colors={['#E68A2E']} // For Android
           />
         }
       >
@@ -121,13 +116,10 @@ export default function ProfileScreen() {
           <View className="relative">
             <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center border-2 border-gray-50 overflow-hidden">
               {user?.avatarUrl ? (
-                <Image
-                  source={{ uri: user.avatarUrl }}
-                  className="w-full h-full"
-                />
+                <Image source={{ uri: user.avatarUrl }} className="w-full h-full" />
               ) : (
                 <Text className="text-3xl font-bold text-gray-400">
-                  {user?.name?.charAt(0).toUpperCase() || "U"}
+                  {user?.name?.charAt(0).toUpperCase() || 'U'}
                 </Text>
               )}
             </View>
@@ -162,9 +154,7 @@ export default function ProfileScreen() {
 
         {/* Name & Bio */}
         <View className="px-4 mb-8">
-          <Text className="text-xl font-bold text-gray-900">
-            {user?.name || "User Name"}
-          </Text>
+          <Text className="text-xl font-bold text-gray-900">{user?.name || 'User Name'}</Text>
           <TouchableOpacity>
             <Text className="text-gray-400 mt-1">Press here to enter bio</Text>
           </TouchableOpacity>
@@ -173,47 +163,47 @@ export default function ProfileScreen() {
         {/* Tabs */}
         <View className="flex-row border-b border-gray-100 mb-6">
           <TouchableOpacity
-            onPress={() => setActiveTab("jobs")}
+            onPress={() => setActiveTab('jobs')}
             className={`flex-1 py-3 items-center border-b-2 ${
-              activeTab === "jobs" ? "border-black" : "border-transparent"
+              activeTab === 'jobs' ? 'border-black' : 'border-transparent'
             }`}
           >
             <Ionicons
-              name={activeTab === "jobs" ? "grid" : "grid-outline"}
+              name={activeTab === 'jobs' ? 'grid' : 'grid-outline'}
               size={24}
-              color={activeTab === "jobs" ? "black" : "#ccc"}
+              color={activeTab === 'jobs' ? 'black' : '#ccc'}
             />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => setActiveTab("likes")}
+            onPress={() => setActiveTab('likes')}
             className={`flex-1 py-3 items-center border-b-2 ${
-              activeTab === "likes" ? "border-black" : "border-transparent"
+              activeTab === 'likes' ? 'border-black' : 'border-transparent'
             }`}
           >
             <Ionicons
-              name={activeTab === "likes" ? "heart" : "heart-outline"}
+              name={activeTab === 'likes' ? 'heart' : 'heart-outline'}
               size={24}
-              color={activeTab === "likes" ? "black" : "#ccc"}
+              color={activeTab === 'likes' ? 'black' : '#ccc'}
             />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => setActiveTab("saved")}
+            onPress={() => setActiveTab('saved')}
             className={`flex-1 py-3 items-center border-b-2 ${
-              activeTab === "saved" ? "border-black" : "border-transparent"
+              activeTab === 'saved' ? 'border-black' : 'border-transparent'
             }`}
           >
             <Ionicons
-              name={activeTab === "saved" ? "bookmark" : "bookmark-outline"}
+              name={activeTab === 'saved' ? 'bookmark' : 'bookmark-outline'}
               size={24}
-              color={activeTab === "saved" ? "black" : "#ccc"}
+              color={activeTab === 'saved' ? 'black' : '#ccc'}
             />
           </TouchableOpacity>
         </View>
 
         {/* Tab Content */}
-        {activeTab === "jobs" ? (
+        {activeTab === 'jobs' ? (
           renderJobGrid()
-        ) : activeTab === "saved" ? (
+        ) : activeTab === 'saved' ? (
           <ListGrid hideTitle={true} />
         ) : (
           <View className="py-20 items-center">

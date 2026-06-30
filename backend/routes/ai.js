@@ -1,7 +1,7 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const aiController = require("../controllers/aiController");
-const { authenticate } = require("../middleware/auth");
+const aiController = require('../controllers/aiController');
+const { authenticate } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -30,7 +30,7 @@ const { authenticate } = require("../middleware/auth");
  *       400:
  *         description: Title is required
  */
-router.post("/generate-job-info", authenticate, aiController.generateJobInfo);
+router.post('/generate-job-info', authenticate, aiController.generateJobInfo);
 
 /**
  * @swagger
@@ -57,7 +57,7 @@ router.post("/generate-job-info", authenticate, aiController.generateJobInfo);
  *       400:
  *         description: Description is required
  */
-router.post("/generate-title", authenticate, aiController.generateTitle);
+router.post('/generate-title', authenticate, aiController.generateTitle);
 
 /**
  * @swagger
@@ -84,10 +84,6 @@ router.post("/generate-title", authenticate, aiController.generateTitle);
  *       400:
  *         description: Prompt is required
  */
-router.post(
-  "/generate-full-listing",
-  authenticate,
-  aiController.generateFullJobListing,
-);
+router.post('/generate-full-listing', authenticate, aiController.generateFullJobListing);
 
 module.exports = router;

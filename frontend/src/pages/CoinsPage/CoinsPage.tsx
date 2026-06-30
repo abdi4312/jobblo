@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import styles from "./CoinsPage.module.css";
-import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
-import { useUserStore } from "../../stores/userStore";
-import { buyItem, getJobbloShop } from "../../api/jobbloShop";
+import { useEffect, useState } from 'react';
+import styles from './CoinsPage.module.css';
+import { ProfileTitleWrapper } from '../../components/layout/body/profile/ProfileTitleWrapper';
+import { useUserStore } from '../../stores/userStore';
+import { buyItem, getJobbloShop } from '../../api/jobbloShop';
 
 interface Level {
   name: string;
@@ -23,54 +23,52 @@ interface Reward {
 
 const levels: Level[] = [
   {
-    name: "Ny på Jobblo",
+    name: 'Ny på Jobblo',
     minPoints: 0,
     maxPoints: 9,
-    color: "#808080",
-    gradient: "linear-gradient(135deg, #A0A0A0 0%, #606060 100%)",
+    color: '#808080',
+    gradient: 'linear-gradient(135deg, #A0A0A0 0%, #606060 100%)',
   },
   {
-    name: "Aktiv",
+    name: 'Aktiv',
     minPoints: 10,
     maxPoints: 24,
-    color: "#10B981",
-    gradient: "linear-gradient(135deg, #34D399 0%, #059669 100%)",
+    color: '#10B981',
+    gradient: 'linear-gradient(135deg, #34D399 0%, #059669 100%)',
   },
   {
-    name: "Pålitelig",
+    name: 'Pålitelig',
     minPoints: 25,
     maxPoints: 49,
-    color: "#3B82F6",
-    gradient: "linear-gradient(135deg, #60A5FA 0%, #2563EB 100%)",
+    color: '#3B82F6',
+    gradient: 'linear-gradient(135deg, #60A5FA 0%, #2563EB 100%)',
   },
   {
-    name: "Profesjonell",
+    name: 'Profesjonell',
     minPoints: 50,
     maxPoints: 99,
-    color: "#A855F7",
-    gradient: "linear-gradient(135deg, #C084FC 0%, #9333EA 100%)",
+    color: '#A855F7',
+    gradient: 'linear-gradient(135deg, #C084FC 0%, #9333EA 100%)',
   },
   {
-    name: "Ekspert",
+    name: 'Ekspert',
     minPoints: 100,
     maxPoints: 199,
-    color: "#F97316",
-    gradient: "linear-gradient(135deg, #FB923C 0%, #EA580C 100%)",
+    color: '#F97316',
+    gradient: 'linear-gradient(135deg, #FB923C 0%, #EA580C 100%)',
   },
   {
-    name: "Mester",
+    name: 'Mester',
     minPoints: 200,
     maxPoints: Infinity,
-    color: "#FFD700",
-    gradient: "linear-gradient(135deg, #FDE047 0%, #FACC15 100%)",
+    color: '#FFD700',
+    gradient: 'linear-gradient(135deg, #FDE047 0%, #FACC15 100%)',
   },
 ];
 
 function getLevelInfo(points: number): Level {
   return (
-    levels.find(
-      (level) => points >= level.minPoints && points <= level.maxPoints,
-    ) || levels[0]
+    levels.find((level) => points >= level.minPoints && points <= level.maxPoints) || levels[0]
   );
 }
 
@@ -99,7 +97,7 @@ export default function CoinsPage() {
       // Update user pointsBalance
       fetchProfile();
     } else {
-      alert("Du har ikke nok coins for denne belønningen");
+      alert('Du har ikke nok coins for denne belønningen');
     }
   };
 
@@ -107,10 +105,7 @@ export default function CoinsPage() {
     <div className={styles.container}>
       <ProfileTitleWrapper title="Jobblo Coins" buttonText="Tilbake" />
 
-      <div
-        className={styles.coinsBalance}
-        style={{ background: levelInfo.gradient }}
-      >
+      <div className={styles.coinsBalance} style={{ background: levelInfo.gradient }}>
         <div className={styles.coinIcon}>
           <svg
             width="80"
@@ -136,7 +131,7 @@ export default function CoinsPage() {
             <text
               fill="white"
               xmlSpace="preserve"
-              style={{ whiteSpace: "pre" }}
+              style={{ whiteSpace: 'pre' }}
               fontFamily="Nunito"
               fontSize="32"
               fontStyle="italic"
@@ -158,16 +153,8 @@ export default function CoinsPage() {
                 colorInterpolationFilters="sRGB"
               >
                 <feFlood floodOpacity="0" result="BackgroundImageFix" />
-                <feBlend
-                  mode="normal"
-                  in="SourceGraphic"
-                  in2="BackgroundImageFix"
-                  result="shape"
-                />
-                <feGaussianBlur
-                  stdDeviation="1"
-                  result="effect1_foregroundBlur_866_7805"
-                />
+                <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" />
+                <feGaussianBlur stdDeviation="1" result="effect1_foregroundBlur_866_7805" />
               </filter>
             </defs>
           </svg>
@@ -175,22 +162,16 @@ export default function CoinsPage() {
         <div className={styles.balanceInfo}>
           <p className={styles.levelBadge}>{levelInfo.name}</p>
           <p className={styles.balanceLabel}>Dine tilgjengelige coins</p>
-          <p className={styles.balanceAmount}>
-            {userCoins.toLocaleString("nb-NO")}
-          </p>
+          <p className={styles.balanceAmount}>{userCoins.toLocaleString('nb-NO')}</p>
         </div>
       </div>
 
       <div className={styles.infoBox}>
-        <span
-          className="material-symbols-outlined"
-          style={{ color: "var(--color-primary)" }}
-        >
+        <span className="material-symbols-outlined" style={{ color: 'var(--color-primary)' }}>
           info
         </span>
         <p>
-          Tjen poeng ved å fullføre oppdrag:{" "}
-          <strong>1 poeng for små jobber</strong> og{" "}
+          Tjen poeng ved å fullføre oppdrag: <strong>1 poeng for små jobber</strong> og{' '}
           <strong>5 poeng for store jobber</strong>!
         </p>
       </div>
@@ -214,7 +195,7 @@ export default function CoinsPage() {
               disabled={userCoins < reward.coins}
               className={styles.redeemButton}
             >
-              {userCoins >= reward.coins ? "Løs inn" : "Ikke nok coins"}
+              {userCoins >= reward.coins ? 'Løs inn' : 'Ikke nok coins'}
             </button>
           </div>
         ))}
@@ -226,7 +207,7 @@ export default function CoinsPage() {
           <div className={styles.earnMethod}>
             <span
               className="material-symbols-outlined"
-              style={{ fontSize: "40px", color: "var(--color-primary)" }}
+              style={{ fontSize: '40px', color: 'var(--color-primary)' }}
             >
               handyman
             </span>
@@ -236,7 +217,7 @@ export default function CoinsPage() {
           <div className={styles.earnMethod}>
             <span
               className="material-symbols-outlined"
-              style={{ fontSize: "40px", color: "var(--color-primary)" }}
+              style={{ fontSize: '40px', color: 'var(--color-primary)' }}
             >
               construction
             </span>
@@ -246,7 +227,7 @@ export default function CoinsPage() {
           <div className={styles.earnMethod}>
             <span
               className="material-symbols-outlined"
-              style={{ fontSize: "40px", color: "var(--color-primary)" }}
+              style={{ fontSize: '40px', color: 'var(--color-primary)' }}
             >
               rate_review
             </span>
@@ -256,7 +237,7 @@ export default function CoinsPage() {
           <div className={styles.earnMethod}>
             <span
               className="material-symbols-outlined"
-              style={{ fontSize: "40px", color: "var(--color-primary)" }}
+              style={{ fontSize: '40px', color: 'var(--color-primary)' }}
             >
               group_add
             </span>

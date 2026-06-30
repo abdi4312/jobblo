@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { useLocation, Outlet, useNavigate } from "react-router-dom";
-import { useUserStore } from "../stores/userStore";
-import { useUpdateUser } from "../features/profile/hooks";
-import { toast } from "react-hot-toast";
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, Outlet, useNavigate } from 'react-router-dom';
+import { useUserStore } from '../stores/userStore';
+import { useUpdateUser } from '../features/profile/hooks';
+import { toast } from 'react-hot-toast';
 
 interface UserData {
   _id?: string;
@@ -39,22 +39,22 @@ export default function SettingsPage() {
   const user = useUserStore((state) => state.user);
   const updateUser = useUpdateUser();
   const [form, setForm] = useState({
-    name: "",
-    lastName: "",
-    bio: "",
-    phone: "",
-    address: "",
-    postNumber: "",
-    postSted: "",
-    country: "",
-    email: "",
-    availabilityText: "",
+    name: '',
+    lastName: '',
+    bio: '',
+    phone: '',
+    address: '',
+    postNumber: '',
+    postSted: '',
+    country: '',
+    email: '',
+    availabilityText: '',
     skills: [],
-    companyName: "",
-    orgNumber: "",
-    orgType: "",
+    companyName: '',
+    orgNumber: '',
+    orgType: '',
     locations: [],
-    website: "",
+    website: '',
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -62,22 +62,22 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!user) return;
     setForm({
-      name: user.name || "",
-      lastName: user.lastName || "",
-      bio: user.bio || "",
-      phone: user.phone || "",
-      address: user.address || "",
-      postNumber: user.postNumber || "",
-      postSted: user.postSted || "",
-      country: user.country || "",
-      email: user.email || "",
-      availabilityText: (user as any).availabilityText || "",
+      name: user.name || '',
+      lastName: user.lastName || '',
+      bio: user.bio || '',
+      phone: user.phone || '',
+      address: user.address || '',
+      postNumber: user.postNumber || '',
+      postSted: user.postSted || '',
+      country: user.country || '',
+      email: user.email || '',
+      availabilityText: (user as any).availabilityText || '',
       skills: (user as any).skills || [],
-      companyName: user.companyName || "",
-      orgNumber: user.orgNumber || "",
-      orgType: user.orgType || "",
+      companyName: user.companyName || '',
+      orgNumber: user.orgNumber || '',
+      orgType: user.orgType || '',
       locations: user.locations || [],
-      website: user.website || "",
+      website: user.website || '',
     });
   }, [user]);
 
@@ -121,18 +121,18 @@ export default function SettingsPage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      console.log("File selected:", file.name);
+      console.log('File selected:', file.name);
       if (!user?._id) {
-        toast.error("User not found");
+        toast.error('User not found');
         return;
       }
 
       const formData = new FormData();
       // Check path directly from location for reliability
-      const isBanner = window.location.pathname.includes("banner");
-      console.log("Is banner upload:", isBanner);
+      const isBanner = window.location.pathname.includes('banner');
+      console.log('Is banner upload:', isBanner);
 
-      formData.append(isBanner ? "banner" : "avatar", file);
+      formData.append(isBanner ? 'banner' : 'avatar', file);
 
       updateUser.mutate({
         userId: user._id,
@@ -141,7 +141,7 @@ export default function SettingsPage() {
 
       // Reset input value so same file can be selected again if needed
       if (event.target) {
-        event.target.value = "";
+        event.target.value = '';
       }
     }
   };

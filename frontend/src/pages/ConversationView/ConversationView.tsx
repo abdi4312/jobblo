@@ -1,16 +1,16 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useUserStore } from "../../stores/userStore";
-import { getChatById, sendMessage, type Chat, type ChatMessage } from "../../api/chatAPI";
-import { initSocket } from "../../socket/socket";
-import { toast } from "react-hot-toast";
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useUserStore } from '../../stores/userStore';
+import { getChatById, sendMessage, type Chat, type ChatMessage } from '../../api/chatAPI';
+import { initSocket } from '../../socket/socket';
+import { toast } from 'react-hot-toast';
 
 export function ConversationView() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
   const { user } = useUserStore();
   const [chat, setChat] = useState<Chat | null>(null);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,9 +22,9 @@ export function ConversationView() {
         const data = await getChatById(conversationId);
         setChat(data);
       } catch (error) {
-        console.error("Error fetching chat:", error);
-        toast.error("Kunne ikke laste chat");
-        navigate("/messages");
+        console.error('Error fetching chat:', error);
+        toast.error('Kunne ikke laste chat');
+        navigate('/messages');
       } finally {
         setLoading(false);
       }
@@ -33,7 +33,7 @@ export function ConversationView() {
     fetchChat();
 
     const socket = initSocket();
-    socket.emit("join-chat", conversationId);
+    socket.emit('join-chat', conversationId);
 
     const handleReceiveMessage = (data: { chatId: string; message: ChatMessage }) => {
       if (data.chatId === conversationId) {
@@ -49,11 +49,11 @@ export function ConversationView() {
       }
     };
 
-    socket.on("receive-message", handleReceiveMessage);
+    socket.on('receive-message', handleReceiveMessage);
 
     return () => {
-      socket.emit("leave-chat", conversationId);
-      socket.off("receive-message", handleReceiveMessage);
+      socket.emit('leave-chat', conversationId);
+      socket.off('receive-message', handleReceiveMessage);
     };
   }, [conversationId, navigate]);
 
@@ -65,16 +65,16 @@ export function ConversationView() {
       const sentMessage = await sendMessage(conversationId, message.trim());
       setChat((prev) => {
         if (!prev) return prev;
-        if (prev.messages.some(m => m._id === sentMessage._id)) return prev;
+        if (prev.messages.some((m) => m._id === sentMessage._id)) return prev;
         return {
           ...prev,
           messages: [...prev.messages, sentMessage],
         };
       });
-      setMessage("");
+      setMessage('');
     } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error("Kunne ikke sende melding");
+      console.error('Error sending message:', error);
+      toast.error('Kunne ikke sende melding');
     }
   };
 
@@ -85,7 +85,10 @@ export function ConversationView() {
     <div className="conversation-view">
       <div className="messages">
         {chat.messages.map((m, idx) => (
-          <div key={m._id || idx} className={`message ${m.senderId === user?._id ? "own" : "other"}`}>
+          <div
+            key={m._id || idx}
+            className={`message ${m.senderId === user?._id ? 'own' : 'other'}`}
+          >
             {m.text}
           </div>
         ))}

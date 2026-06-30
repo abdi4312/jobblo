@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 
 /**
  * Custom hook to handle payment-related state and automatic price calculations
@@ -7,15 +7,11 @@ import { useState, useEffect } from "react";
 export const usePaymentCalculation = (
   durationValue: string,
   durationUnit: string,
-  initialData: any = {},
+  initialData: any = {}
 ) => {
-  const [price, setPrice] = useState(initialData?.price?.toString() || "");
-  const [hourlyRate, setHourlyRate] = useState(
-    initialData?.hourlyRate?.toString() || "",
-  );
-  const [paymentType, setPaymentType] = useState(
-    initialData?.paymentType || "Fastpris",
-  );
+  const [price, setPrice] = useState(initialData?.price?.toString() || '');
+  const [hourlyRate, setHourlyRate] = useState(initialData?.hourlyRate?.toString() || '');
+  const [paymentType, setPaymentType] = useState(initialData?.paymentType || 'Fastpris');
   const [urgent, setUrgent] = useState(initialData?.urgent || false);
 
   // Auto-calculate price based on duration and hourly rate
@@ -26,18 +22,18 @@ export const usePaymentCalculation = (
     if (!isNaN(hRate) && !isNaN(dValue)) {
       let calculatedPrice = 0;
 
-      if (durationUnit === "hours") {
+      if (durationUnit === 'hours') {
         calculatedPrice = hRate * dValue;
-      } else if (durationUnit === "days") {
+      } else if (durationUnit === 'days') {
         calculatedPrice = hRate * 8 * dValue; // Assuming 8 hours per day
-      } else if (durationUnit === "minutes") {
+      } else if (durationUnit === 'minutes') {
         calculatedPrice = (hRate / 60) * dValue;
       }
 
       if (calculatedPrice > 0) {
         setPrice(Math.round(calculatedPrice).toString());
       } else if (calculatedPrice === 0 && (hRate === 0 || dValue === 0)) {
-        setPrice("0");
+        setPrice('0');
       }
     }
   }, [hourlyRate, durationValue, durationUnit, setPrice]);

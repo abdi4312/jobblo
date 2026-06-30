@@ -1,8 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { userLogin, registerUser, logoutUser, getUserSessions, revokeSession, revokeAllOtherSessions, fetchProfile, refreshToken } from "../Api";
-import { useUserStore } from "../../../stores/userStore";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  userLogin,
+  registerUser,
+  logoutUser,
+  getUserSessions,
+  revokeSession,
+  revokeAllOtherSessions,
+  fetchProfile,
+  refreshToken,
+} from '../Api';
+import { useUserStore } from '../../../stores/userStore';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
@@ -15,17 +24,23 @@ export const useAuth = () => {
     mutationFn: userLogin,
     onSuccess: (data) => {
       setStoreLogin(data.user, { accessToken: data.accessToken });
-      queryClient.setQueryData(["profile"], data.user);
-      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      queryClient.setQueryData(['profile'], data.user);
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
       toast.success(`Velkommen tilbake, ${data.user.name}!`);
-      navigate("/home");
+      navigate('/home');
     },
     onError: (error: unknown) => {
-      const err = error as { response?: { data?: { error?: string; message?: string } }; message?: string };
-      console.error("Login Error Details:", err.response?.data || err.message);
-      const errorMessage = err.response?.data?.error || err.response?.data?.message || "Innlogging mislyktes. Vennligst sjekk legitimasjonen din.";
-      console.log("errorMessage",errorMessage);
-      
+      const err = error as {
+        response?: { data?: { error?: string; message?: string } };
+        message?: string;
+      };
+      console.error('Login Error Details:', err.response?.data || err.message);
+      const errorMessage =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        'Innlogging mislyktes. Vennligst sjekk legitimasjonen din.';
+      console.log('errorMessage', errorMessage);
+
       toast.error(errorMessage);
     },
   });
@@ -34,15 +49,19 @@ export const useAuth = () => {
     mutationFn: registerUser,
     onSuccess: (data) => {
       setStoreLogin(data.user, { accessToken: data.accessToken });
-      queryClient.setQueryData(["profile"], data.user);
-      queryClient.invalidateQueries({ queryKey: ["sessions"] });
-      toast.success("Registration Successful!");
-      navigate("/home");
+      queryClient.setQueryData(['profile'], data.user);
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      toast.success('Registration Successful!');
+      navigate('/home');
     },
     onError: (error: unknown) => {
-      const err = error as { response?: { data?: { error?: string; message?: string } }; message?: string };
-      console.error("Registration Error Details:", err.response?.data || err.message);
-      const errorMessage = err.response?.data?.error || err.response?.data?.message || "Registrering mislyktes.";
+      const err = error as {
+        response?: { data?: { error?: string; message?: string } };
+        message?: string;
+      };
+      console.error('Registration Error Details:', err.response?.data || err.message);
+      const errorMessage =
+        err.response?.data?.error || err.response?.data?.message || 'Registrering mislyktes.';
       toast.error(errorMessage);
     },
   });
@@ -53,18 +72,18 @@ export const useAuth = () => {
     },
     onSuccess: () => {
       queryClient.clear();
-      toast.success("Logged out successfully");
-      navigate("/login");
+      toast.success('Logged out successfully');
+      navigate('/login');
     },
     onError: () => {
       // Still logout locally if server logout fails
       queryClient.clear();
-      navigate("/login");
+      navigate('/login');
     },
   });
 
   const profileQuery = useQuery({
-    queryKey: ["profile"],
+    queryKey: ['profile'],
     queryFn: async () => {
       const userData = await fetchProfile();
       useUserStore.getState().setUser(userData);
@@ -75,7 +94,7 @@ export const useAuth = () => {
   });
 
   const sessionsQuery = useQuery({
-    queryKey: ["sessions"],
+    queryKey: ['sessions'],
     queryFn: getUserSessions,
     enabled: isAuthenticated,
     retry: false,
@@ -84,37 +103,37 @@ export const useAuth = () => {
   const revokeSessionMutation = useMutation({
     mutationFn: revokeSession,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sessions"] });
-      toast.success("Session revoked");
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      toast.success('Session revoked');
     },
     onError: (error: unknown) => {
       const err = error as { response?: { data?: { error?: string } } };
-      toast.error(err.response?.data?.error || "Failed to revoke session");
+      toast.error(err.response?.data?.error || 'Failed to revoke session');
     },
   });
 
   const revokeOthersMutation = useMutation({
     mutationFn: revokeAllOtherSessions,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sessions"] });
-      toast.success("All other sessions revoked");
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      toast.success('All other sessions revoked');
     },
     onError: (error: unknown) => {
       const err = error as { response?: { data?: { error?: string } } };
-      toast.error(err.response?.data?.error || "Failed to revoke other sessions");
+      toast.error(err.response?.data?.error || 'Failed to revoke other sessions');
     },
   });
 
   // Proactive Token Refresh (Keep session alive)
   useQuery({
-    queryKey: ["auth-refresh"],
+    queryKey: ['auth-refresh'],
     queryFn: async () => {
       try {
         const data = await refreshToken();
         useUserStore.getState().setTokens({ accessToken: data.accessToken });
         return data;
       } catch (error) {
-        console.error("Proactive token refresh failed:", error);
+        console.error('Proactive token refresh failed:', error);
         // Don't logout here - let the interceptor handle it on next API call
         throw error;
       }

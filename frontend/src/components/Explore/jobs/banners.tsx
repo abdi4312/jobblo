@@ -1,12 +1,12 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { BANNERS_DATA } from "../../../data/banners";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Autoplay } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/navigation";
-import { useNavigate } from "react-router-dom";
-import { usePublicHeroes } from "../../../features/hero/hooks";
-import { BannerSkeleton } from "../../Loading/BannerSkeleton";
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { BANNERS_DATA } from '../../../data/banners';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Autoplay } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import { useNavigate } from 'react-router-dom';
+import { usePublicHeroes } from '../../../features/hero/hooks';
+import { BannerSkeleton } from '../../Loading/BannerSkeleton';
 
 export function Banner() {
   const navigate = useNavigate();
@@ -17,8 +17,8 @@ export function Banner() {
 
   const handleButtonClick = (url: string) => {
     if (!url) return;
-    if (url.startsWith("http")) {
-      window.open(url, "_blank");
+    if (url.startsWith('http')) {
+      window.open(url, '_blank');
     } else {
       navigate(url);
     }
@@ -45,8 +45,8 @@ export function Banner() {
             // 2. Modules mein Autoplay add karein
             modules={[Navigation, Autoplay]}
             navigation={{
-              prevEl: "#banner-prev",
-              nextEl: "#banner-next",
+              prevEl: '#banner-prev',
+              nextEl: '#banner-next',
             }}
             // 3. Autoplay config add karein (5000ms = 5 sec)
             autoplay={{
@@ -68,7 +68,7 @@ export function Banner() {
                   {/* Right Side Image with Gradient Overlay */}
                   <div
                     className="absolute top-0 bottom-0 w-[80%] md:w-[70%]"
-                    style={{ right: "-2px" }}
+                    style={{ right: '-2px' }}
                   >
                     {/* Gradient overlay to blend green into image */}
                     <div

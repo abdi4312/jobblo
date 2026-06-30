@@ -1,5 +1,5 @@
-import React from "react";
-import { Trash2 } from "lucide-react";
+import React from 'react';
+import { Trash2 } from 'lucide-react';
 
 interface UserData {
   _id: string;
@@ -17,7 +17,12 @@ interface UserTableProps {
   handleDelete: (id: string) => void;
 }
 
-const UserTable: React.FC<UserTableProps> = ({ users, loading, handleRoleChange, handleDelete }) => {
+const UserTable: React.FC<UserTableProps> = ({
+  users,
+  loading,
+  handleRoleChange,
+  handleDelete,
+}) => {
   return (
     <div className="overflow-x-auto no-scrollbar">
       <table className="w-full text-left min-w-[800px]">
@@ -45,14 +50,14 @@ const UserTable: React.FC<UserTableProps> = ({ users, loading, handleRoleChange,
                   <div className="text-[10px] text-gray-400">{user.email}</div>
                 </td>
                 <td className="py-5 px-4 text-center text-gray-600 font-medium text-sm">
-                  {user.phone || "N/A"}
+                  {user.phone || 'N/A'}
                 </td>
                 <td className="py-5 px-4 text-center">
                   <select
                     value={user.role}
                     onChange={(e) => handleRoleChange(user._id, e.target.value)}
                     className={`text-[10px] font-black uppercase px-3 py-1 rounded-lg border-none shadow-sm
-                      ${user.role === "superAdmin" ? "bg-purple-100 text-purple-700" : user.role === "provider" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"}`}
+                      ${user.role === 'superAdmin' ? 'bg-purple-100 text-purple-700' : user.role === 'provider' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}
                   >
                     <option value="user">User</option>
                     <option value="provider">Provider</option>
@@ -60,7 +65,7 @@ const UserTable: React.FC<UserTableProps> = ({ users, loading, handleRoleChange,
                   </select>
                 </td>
                 <td className="py-5 px-4 text-center text-gray-400 text-xs">
-                  {user.createdAt ? new Date(user.createdAt as string).toLocaleDateString() : "N/A"}
+                  {user.createdAt ? new Date(user.createdAt as string).toLocaleDateString() : 'N/A'}
                 </td>
                 <td className="py-5 px-4 text-right">
                   <button

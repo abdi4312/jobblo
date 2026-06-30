@@ -1,8 +1,8 @@
-import { useNavigate } from "react-router-dom";
-import { useCategories } from "../../../features/categories/hooks";
-import * as Icons from "lucide-react";
-import { useState } from "react";
-import { CategorySkeleton } from "../../Loading/CategorySkeleton";
+import { useNavigate } from 'react-router-dom';
+import { useCategories } from '../../../features/categories/hooks';
+import * as Icons from 'lucide-react';
+import { useState } from 'react';
+import { CategorySkeleton } from '../../Loading/CategorySkeleton';
 
 export function Category() {
   const { data: category = [], isLoading } = useCategories();
@@ -11,9 +11,7 @@ export function Category() {
 
   const handleCategoryClick = (categoryName: string) => {
     setSelectedCategories((prev) =>
-      prev.includes(categoryName)
-        ? prev.filter((c) => c !== categoryName)
-        : [...prev, categoryName],
+      prev.includes(categoryName) ? prev.filter((c) => c !== categoryName) : [...prev, categoryName]
     );
     navigate(`/search/job/${categoryName}`);
   };
@@ -27,7 +25,7 @@ export function Category() {
             <div className="flex gap-2 max-w-282.5 mx-auto">
               <div
                 className="box-card-custom min-w-30.75 p-6.5 flex items-center hover:bg-white transition-all duration-300"
-                onClick={() => navigate("/search/job/all")}
+                onClick={() => navigate('/search/job/all')}
               >
                 <div className="flex flex-col gap-2 w-full py-2 items-center">
                   <div>

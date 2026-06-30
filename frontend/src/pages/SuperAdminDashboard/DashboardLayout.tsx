@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import React, { useState } from 'react';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   Users,
   LayoutDashboard,
@@ -13,20 +13,20 @@ import {
   Bell,
   Rocket,
   ShieldCheck,
-} from "lucide-react";
-import { useUserStore } from "../../stores/userStore";
-import { toast } from "react-hot-toast";
+} from 'lucide-react';
+import { useUserStore } from '../../stores/userStore';
+import { toast } from 'react-hot-toast';
 const DashboardLayout: React.FC = () => {
   const user = useUserStore((state) => state.user);
   const logout = useUserStore((state) => state.logout);
   const navigate = useNavigate();
-  const isSuperAdmin = user?.role === "superAdmin"; // Check for superAdmin
+  const isSuperAdmin = user?.role === 'superAdmin'; // Check for superAdmin
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const handleLogout = () => {
     logout();
-    toast.success("Du har blitt logget ut");
-    navigate("/");
+    toast.success('Du har blitt logget ut');
+    navigate('/');
   };
   return (
     <div className="flex">
@@ -42,7 +42,7 @@ const DashboardLayout: React.FC = () => {
       <aside
         className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-white border-r flex flex-col p-6 transition-transform duration-300 ease-in-out
-        md:relative md:translate-x-0 ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
+        md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}
       >
         {/* Logo Section */}
@@ -51,12 +51,14 @@ const DashboardLayout: React.FC = () => {
             <div className="w-8 h-8 bg-green-800 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
               J
             </div>
-            <span className="text-2xl font-bold text-green-900 tracking-tight">
-              Jobblo.
-            </span>
+            <span className="text-2xl font-bold text-green-900 tracking-tight">Jobblo.</span>
           </div>
           <div className="md:hidden">
-            <button title="Close Sidebar" className="p-1" onClick={() => setIsMobileMenuOpen(false)}>
+            <button
+              title="Close Sidebar"
+              className="p-1"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
               <X size={20} />
             </button>
           </div>
@@ -64,52 +66,27 @@ const DashboardLayout: React.FC = () => {
 
         {/* Navigation Links */}
         <nav className="space-y-2 flex-1">
-          <SidebarItem
-            icon={<LayoutDashboard size={20} />}
-            label="Dashboard"
-            to="/dashboard"
-            end
-          />
+          <SidebarItem icon={<LayoutDashboard size={20} />} label="Dashboard" to="/dashboard" end />
 
           {/* PROTECTED LINK: Only for superAdmin */}
           {isSuperAdmin && (
-            <SidebarItem
-              icon={<Users size={20} />}
-              label="Users"
-              to="/dashboard/users"
-            />
+            <SidebarItem icon={<Users size={20} />} label="Users" to="/dashboard/users" />
           )}
 
-          <SidebarItem
-            icon={<Briefcase size={20} />}
-            label="Services"
-            to="/dashboard/services"
-          />
+          <SidebarItem icon={<Briefcase size={20} />} label="Services" to="/dashboard/services" />
           <SidebarItem
             icon={<Briefcase size={20} />}
             label="Transactions"
             to="/dashboard/transactions"
           />
 
-          <SidebarItem
-            icon={<ImageIcon size={20} />}
-            label="Carousel"
-            to="/dashboard/carousel"
-          />
+          <SidebarItem icon={<ImageIcon size={20} />} label="Carousel" to="/dashboard/carousel" />
 
-          <SidebarItem
-            icon={<ImageIcon size={20} />}
-            label="Home Hero"
-            to="/dashboard/home-hero"
-          />
+          <SidebarItem icon={<ImageIcon size={20} />} label="Home Hero" to="/dashboard/home-hero" />
 
           {/* PROTECTED LINK: Only for superAdmin */}
           {isSuperAdmin && (
-            <SidebarItem
-              icon={<Ticket size={20} />}
-              label="Voucher"
-              to="/dashboard/voucher"
-            />
+            <SidebarItem icon={<Ticket size={20} />} label="Voucher" to="/dashboard/voucher" />
           )}
           <SidebarItem
             icon={<Bell size={20} />}
@@ -124,11 +101,7 @@ const DashboardLayout: React.FC = () => {
             />
           )}
           {isSuperAdmin && (
-            <SidebarItem
-              icon={<Rocket size={20} />}
-              label="Roadmap"
-              to="/dashboard/roadmap"
-            />
+            <SidebarItem icon={<Rocket size={20} />} label="Roadmap" to="/dashboard/roadmap" />
           )}
         </nav>
 
@@ -171,16 +144,14 @@ const DashboardLayout: React.FC = () => {
           {/* User Profile Info */}
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-gray-800">
-                {user?.name || "Admin"}
-              </p>
+              <p className="text-sm font-bold text-gray-800">{user?.name || 'Admin'}</p>
               <p className="text-[10px] text-gray-400 font-medium capitalize">
-                {user?.role || "Administrator"}
+                {user?.role || 'Administrator'}
               </p>
             </div>
             <div className="w-10 h-10 rounded-full border-2 border-green-800/20 p-0.5">
               <img
-                src={`https://ui-avatars.com/api/?name=${user?.name || "Admin"}&background=2d4a3e&color=fff`}
+                src={`https://ui-avatars.com/api/?name=${user?.name || 'Admin'}&background=2d4a3e&color=fff`}
                 className="rounded-full"
                 alt="profile"
               />
@@ -214,8 +185,8 @@ const SidebarItem = ({ icon, label, to, end = false }: SidebarItemProps) => (
       flex items-center gap-3 p-3.5 rounded-xl transition-all duration-200 group
       ${
         isActive
-          ? "bg-[#2d4a3e] text-white shadow-md shadow-green-900/20"
-          : "!text-black hover:bg-gray-50 hover:text-green-900"
+          ? 'bg-[#2d4a3e] text-white shadow-md shadow-green-900/20'
+          : '!text-black hover:bg-gray-50 hover:text-green-900'
       }
     `}
   >

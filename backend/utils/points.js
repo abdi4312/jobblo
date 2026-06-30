@@ -3,10 +3,7 @@ exports.calculatePointsFromService = (service) => {
 
   // 1️⃣ Actual worked time (best)
   if (service.timeEntries && service.timeEntries.length > 0) {
-    totalHours = service.timeEntries.reduce(
-      (sum, entry) => sum + (entry.hours || 0),
-      0
-    );
+    totalHours = service.timeEntries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
   }
   // 2️⃣ Fallback: duration
   else if (service.duration?.value) {
