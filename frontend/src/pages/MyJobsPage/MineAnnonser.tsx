@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CreateJobForm from '../../components/CreateJobForm/CreateJobForm';
-import { Clock4, MapPin, Pencil } from 'lucide-react';
+import { Clock4, MapPin, Pencil, Search, Filter } from 'lucide-react';
 import { Button } from '../../components/Ui/Button';
 import { useMyServices } from '../../features/services/hooks';
 import { useServiceActions } from '../../features/services/hooks';
@@ -37,8 +37,12 @@ export default function MineAnnonser() {
   const navigate = useNavigate();
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [activeTab, setActiveTab] = useState<string>('active');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'price_high' | 'price_low'>(
+    'newest'
+  );
 
-  // Tanstack Hooks
+  // Tanstack Hooks (called first, no conditionals before!)
   const { data: services = [], isLoading, error } = useMyServices();
   const { deleteMutation, updateMutation } = useServiceActions();
 
@@ -49,6 +53,49 @@ export default function MineAnnonser() {
       return response.data;
     },
   });
+
+  // Find current tab's statuses and filter/sort BEFORE any conditionals!
+  const currentTab = tabs.find((tab) => tab.id === activeTab)!;
+
+  // Filter and sort services (must be called unconditionally!)
+  const filteredAndSortedServices = useMemo(() => {
+    let filtered = services.filter((service) => currentTab.statuses.includes(service.status));
+
+    // Apply search filter
+    if (searchQuery) {
+      const lowercasedQuery = searchQuery.toLowerCase();
+      filtered = filtered.filter((service) => {
+        // Search by job title
+        const matchesTitle = service.title.toLowerCase().includes(lowercasedQuery);
+        // Search by category
+        const matchesCategory =
+          service.categories &&
+          service.categories.some((cat: string) => cat.toLowerCase().includes(lowercasedQuery));
+        // Search by job ID
+        const matchesId = service._id.toLowerCase().includes(lowercasedQuery);
+
+        return matchesTitle || matchesCategory || matchesId;
+      });
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (sortOption) {
+        case 'newest':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'oldest':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'price_high':
+          return b.price - a.price;
+        case 'price_low':
+          return a.price - b.price;
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [services, activeTab, searchQuery, sortOption]);
 
   const categoryColorMap: Record<string, string> = {
     Rørlegger: '#2F7E47',
@@ -114,18 +161,11 @@ export default function MineAnnonser() {
     );
   }
 
-  // Find current tab's statuses
-  const currentTab = tabs.find((tab) => tab.id === activeTab)!;
-  // Filter services by current tab
-  const filteredServices = services.filter((service) =>
-    currentTab.statuses.includes(service.status)
-  );
-
   return (
     <div className="p-0 max-w-300 mx-auto min-h-screen">
       {/* Tabs */}
       <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200 px-4 py-4">
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -140,8 +180,39 @@ export default function MineAnnonser() {
             </button>
           ))}
         </div>
+
+        {/* Search and Sort */}
+        <div className="flex flex-col md:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="Søk etter jobbnavn, kategori eller jobb-ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-custom-green bg-white text-sm"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter size={18} className="text-gray-500" />
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value as any)}
+              className="px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-custom-green"
+            >
+              <option value="newest">Nyeste først</option>
+              <option value="oldest">Eldste først</option>
+              <option value="price_high">Høyeste pris</option>
+              <option value="price_low">Laveste pris</option>
+            </select>
+          </div>
+        </div>
       </div>
-      {filteredServices.length === 0 ? (
+
+      {filteredAndSortedServices.length === 0 ? (
         <EmptyState
           type="jobs"
           title="Ingen jobs i denne kategorien"
@@ -151,7 +222,7 @@ export default function MineAnnonser() {
         />
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 m-2 gap-2.5">
-          {filteredServices.map((job: Service) => {
+          {filteredAndSortedServices.map((job: Service) => {
             const catName = Array.isArray(job.categories) ? job.categories[0] : job.categories;
             const badgeColor = categoryColorMap[catName as string] || '#2F7E47';
             const handleCardClick = () => {
@@ -230,19 +301,25 @@ export default function MineAnnonser() {
                     {job.title}
                   </h2>
 
-                  <p className="text-custom-black text-base font-light">{job.description}</p>
+                  <p className="text-custom-black text-base font-light line-clamp-2">
+                    {job.description}
+                  </p>
                 </div>
 
                 {/* Jobbdetaljer */}
-                <div className="flex justify-between p-4">
-                  <div className="flex items-center gap-1">
-                    {/* <span className="material-symbols-outlined text-[12.5px] text-[#4A5565]">Schedule</span> */}
-                    <Clock4 size={13} />
-                    <h3 className="m-0 whitespace-nowrap overflow-hidden text-ellipsis text-[12px] font-normal">
-                      {job.duration.value
-                        ? `${job.duration.value} ${job.duration.unit}`
-                        : 'Ikke angitt'}
-                    </h3>
+                <div className="flex justify-between p-4 pt-0">
+                  <div className="flex flex-col gap-1 flex-1">
+                    <div className="flex items-center gap-1">
+                      <Clock4 size={13} />
+                      <h3 className="m-0 whitespace-nowrap overflow-hidden text-ellipsis text-[12px] font-normal">
+                        {job.duration.value
+                          ? `${job.duration.value} ${job.duration.unit}`
+                          : 'Ikke angitt'}
+                      </h3>
+                    </div>
+                    <div className="text-[11px] text-gray-500">
+                      Opprettet: {new Date(job.createdAt).toLocaleDateString('no-NO')}
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2">
