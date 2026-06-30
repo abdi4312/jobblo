@@ -134,6 +134,7 @@ const PricingPage = lazy(() => import("../pages/PricingPage/PricingPage.tsx"));
 const NotFoundPage = lazy(
   () => import("../pages/NotFoundPage/NotFoundPage.tsx"),
 );
+const CompletedJobPage = lazy(() => import("../pages/CompletedJobPage.tsx"));
 
 // =======================
 // Admin Pages
@@ -202,6 +203,12 @@ export const routes: RouteObject[] = [
       {
         path: "job-listing/:id",
         element: withSuspense(JobListingDetailPage),
+      },
+      {
+        path: "completed-job/:orderId?",
+        element: (
+          <ProtectedRoute>{withSuspense(CompletedJobPage)}</ProtectedRoute>
+        ),
       },
 
       {

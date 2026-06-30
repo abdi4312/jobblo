@@ -7,6 +7,8 @@ import { useMyServices } from "../../features/services/hooks";
 import { useServiceActions } from "../../features/services/hooks";
 import type { Service } from "../../features/services/types";
 import { JobDetailCardSkeleton } from "../../components/Loading/JobDetailCardSkeleton";
+import mainLink from "../../api/mainURLs";
+import { useQuery } from "@tanstack/react-query";
 
 // Define the tabs configuration
 type TabConfig = {
@@ -35,9 +37,17 @@ export default function MineAnnonser() {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [activeTab, setActiveTab] = useState<string>("active");
 
-  // TanStack Hooks
+  // Tanstack Hooks
   const { data: services = [], isLoading, error } = useMyServices();
   const { deleteMutation, updateMutation } = useServiceActions();
+
+  const { data: orders = [] } = useQuery({
+    queryKey: ["my-orders"],
+    queryFn: async () => {
+      const response = await mainLink.get("/api/orders");
+      return response.data;
+    },
+  });
 
   const categoryColorMap: Record<string, string> = {
     Rørlegger: "#2F7E47",
@@ -157,6 +167,27 @@ export default function MineAnnonser() {
               : job.categories;
             const badgeColor = categoryColorMap[catName as string] || "#2F7E47";
             const handleCardClick = () => {
+              if (job.status === "completed") {
+                const matchingOrder = orders.find((o: any) => {
+                  let orderServiceId;
+                  if (typeof o.serviceId === "object" && o.serviceId !== null) {
+                    orderServiceId = o.serviceId._id
+                      ? o.serviceId._id.toString()
+                      : o.serviceId.toString();
+                  } else {
+                    orderServiceId = o.serviceId ? o.serviceId.toString() : "";
+                  }
+                  return orderServiceId === job._id.toString();
+                });
+                if (matchingOrder) {
+                  navigate(`/completed-job/${matchingOrder._id}`);
+                  return;
+                } else {
+                  // If no order, navigate with serviceId as query param
+                  navigate(`/completed-job?serviceId=${job._id}`);
+                  return;
+                }
+              }
               navigate(`/job-listing/${job._id}`);
             };
 

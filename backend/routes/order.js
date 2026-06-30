@@ -106,6 +106,7 @@ router.patch(
  *         description: Ordre ikke funnet
  */
 router.get("/:id", authenticate, orderController.getOrderById);
+router.get("/:id/completed-details", authenticate, orderController.getCompletedJobDetails);
 
 /**
  * @swagger

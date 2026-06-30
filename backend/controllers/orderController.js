@@ -559,6 +559,67 @@ exports.updateOrder = async (req, res) => {
 };
 
 /**
+ * GET /api/orders/:id/completed-details
+ * Get detailed information for a completed job (order, service, payment, chat, etc.)
+ */
+exports.getCompletedJobDetails = async (req, res) => {
+  try {
+    const { id } = req.params; // id is orderId
+
+    if (!isValidId(id))
+      return res.status(400).json({ error: "Invalid order ID format" });
+
+    const order = await Order.findById(id)
+      .populate("serviceId")
+      .populate("customerId", "name email avatarUrl")
+      .populate("providerId", "name email avatarUrl");
+
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    // Authorization
+    if (!authorizeOrderAction(req, order)) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    // Get payment
+    const payment = await Payment.findOne({ orderId: id });
+
+    // Get chat messages
+    const ChatMessage = require("../models/ChatMessage");
+    const chat = await ChatMessage.findOne({
+      clientId: order.customerId._id,
+      providerId: order.providerId._id,
+      serviceId: order.serviceId._id,
+    });
+
+    // Get all transactions (optional, from Transaction model if exists)
+    let transactions = [];
+    try {
+      const Transaction = require("../models/Transaction");
+      transactions = await Transaction.find({ orderId: id }).sort({
+        createdAt: -1,
+      });
+    } catch (e) {
+      // Transaction model might not exist, ignore
+    }
+
+    res.json({
+      order,
+      service: order.serviceId,
+      customer: order.customerId,
+      provider: order.providerId,
+      payment,
+      chat,
+      transactions,
+      timeline: order.history,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+/**
  * DELETE /api/orders/:id
  * Kunde eller tilbyder kan slette (avlyse) ordre
  */

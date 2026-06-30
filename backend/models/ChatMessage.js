@@ -10,6 +10,7 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  attachments: [{ type: String }],
   serviceId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Service",
