@@ -1,27 +1,20 @@
-import React from "react";
-import { View, Text, TextInput, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { StatusBar } from "expo-status-bar";
-import ServicePicks from "../../components/explore/service-picks";
-import ExploreJobs from "../../components/explore/explore-jobs";
-import CategoryGrid from "../../components/explore/category-grid";
-import HeroSlider from "../../components/explore/hero-slider";
+import React from 'react';
+import { View, Text, TextInput, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import ServicePicks from '../../components/explore/service-picks';
+import ExploreJobs from '../../components/explore/explore-jobs';
+import CategoryGrid from '../../components/explore/category-grid';
+import HeroSlider from '../../components/explore/hero-slider';
 
 export default function ExploreScreen() {
   // Reference for the ExploreJobs scroll listener
   const exploreJobsRef = React.useRef<any>(null);
 
-  const isCloseToBottom = ({
-    layoutMeasurement,
-    contentOffset,
-    contentSize,
-  }: any) => {
+  const isCloseToBottom = ({ layoutMeasurement, contentOffset, contentSize }: any) => {
     const paddingToBottom = 20;
-    return (
-      layoutMeasurement.height + contentOffset.y >=
-      contentSize.height - paddingToBottom
-    );
+    return layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
   };
 
   const handleScroll = (event: any) => {
@@ -32,7 +25,7 @@ export default function ExploreScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top", "left", "right"]}>
+    <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
       <ScrollView
         className="flex-1"

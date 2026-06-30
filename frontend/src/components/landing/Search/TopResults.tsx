@@ -1,10 +1,5 @@
-import { SearchItem } from "./SearchItem";
-import type {
-  UnifiedSearchResults,
-  CategoryResult,
-  UserResult,
-  ListResult,
-} from "./types";
+import { SearchItem } from './SearchItem';
+import type { UnifiedSearchResults, CategoryResult, UserResult, ListResult } from './types';
 
 interface TopResultsProps {
   searchQuery: string;
@@ -37,9 +32,7 @@ export const TopResults = ({
 
   if (!hasResults) {
     return (
-      <div className="text-center py-10 text-gray-500">
-        No results found for "{searchQuery}"
-      </div>
+      <div className="text-center py-10 text-gray-500">No results found for "{searchQuery}"</div>
     );
   }
 
@@ -53,9 +46,9 @@ export const TopResults = ({
         onClick={() => {
           onSaveToHistory({
             id: `query-${searchQuery}`,
-            type: "query",
+            type: 'query',
             title: searchQuery,
-            subtitle: "Brand search",
+            subtitle: 'Brand search',
           });
           onNavigate(`/search/job/all?search=${searchQuery}`);
           onCloseDropdown();
@@ -98,12 +91,10 @@ export const TopResults = ({
       {searchResults?.categories?.results?.length > 0 && (
         <div className="space-y-5">
           <div className="flex items-center justify-between px-2">
-            <h4 className="text-[18px] font-bold text-[#1A1A1A]">
-              Populære kategorier
-            </h4>
+            <h4 className="text-[18px] font-bold text-[#1A1A1A]">Populære kategorier</h4>
             {searchResults.categories.total > 3 && (
               <button
-                onClick={() => onSeeAll("Categories")}
+                onClick={() => onSeeAll('Categories')}
                 className="text-[14px] font-bold text-custom-green hover:underline transition-all"
               >
                 Se alle
@@ -120,9 +111,9 @@ export const TopResults = ({
               onClick={() => {
                 onSaveToHistory({
                   id: cat._id,
-                  type: "category",
+                  type: 'category',
                   title: cat.name,
-                  subtitle: "Kategorisøk",
+                  subtitle: 'Kategorisøk',
                   iconName: cat.icon,
                 });
                 onNavigate(`/search/job/${cat.name}`);
@@ -137,12 +128,10 @@ export const TopResults = ({
       {searchResults?.people?.results?.length > 0 && (
         <div className="space-y-5">
           <div className="flex items-center justify-between px-2">
-            <h4 className="text-[18px] font-bold text-[#1A1A1A]">
-              Topp tjenesteytere
-            </h4>
+            <h4 className="text-[18px] font-bold text-[#1A1A1A]">Topp tjenesteytere</h4>
             {searchResults.people.total > 3 && (
               <button
-                onClick={() => onSeeAll("People")}
+                onClick={() => onSeeAll('People')}
                 className="text-[14px] font-bold text-custom-green hover:underline transition-all"
               >
                 Se alle
@@ -153,14 +142,14 @@ export const TopResults = ({
             <SearchItem
               key={p._id}
               type="user"
-              title={`${p.name} ${p.lastName || ""}`.trim()}
+              title={`${p.name} ${p.lastName || ''}`.trim()}
               subtitle={`@${p.name?.toLowerCase()}${p.lastName?.toLowerCase()}`}
               avatarUrl={p.avatarUrl}
               onClick={() => {
                 onSaveToHistory({
                   id: p._id,
-                  type: "user",
-                  title: `${p.name} ${p.lastName || ""}`.trim(),
+                  type: 'user',
+                  title: `${p.name} ${p.lastName || ''}`.trim(),
                   subtitle: p.name?.toLowerCase(),
                   avatarUrl: p.avatarUrl,
                 });

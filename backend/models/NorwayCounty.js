@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const norwayCountySchema = new mongoose.Schema(
   {
@@ -13,7 +13,7 @@ const norwayCountySchema = new mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-module.exports = mongoose.model("NorwayCounty", norwayCountySchema);
+module.exports = mongoose.model('NorwayCounty', norwayCountySchema);

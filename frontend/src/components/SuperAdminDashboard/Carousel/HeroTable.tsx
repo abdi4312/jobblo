@@ -1,8 +1,5 @@
-import React from "react";
-import {
-  Trash2 as TrashIcon,
-  Pencil as EditIcon,
-} from "lucide-react";
+import React from 'react';
+import { Trash2 as TrashIcon, Pencil as EditIcon } from 'lucide-react';
 
 interface HeroItem {
   _id: string;
@@ -29,7 +26,13 @@ interface HeroTableProps {
   loading: boolean;
 }
 
-const HeroTable: React.FC<HeroTableProps> = ({ heroes, getStatus, handleEdit, handleDelete, loading }) => {
+const HeroTable: React.FC<HeroTableProps> = ({
+  heroes,
+  getStatus,
+  handleEdit,
+  handleDelete,
+  loading,
+}) => {
   return (
     <div className="overflow-x-auto no-scrollbar">
       <table className="w-full text-left min-w-[800px]">
@@ -45,10 +48,7 @@ const HeroTable: React.FC<HeroTableProps> = ({ heroes, getStatus, handleEdit, ha
           {heroes.map((item: HeroItem) => {
             const status = getStatus(item.activeFrom, item.expireAt);
             return (
-              <tr
-                key={item._id}
-                className="group hover:bg-gray-50/30 transition-all"
-              >
+              <tr key={item._id} className="group hover:bg-gray-50/30 transition-all">
                 <td className="py-5 px-4">
                   <div className="w-32 h-20 rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
                     <img

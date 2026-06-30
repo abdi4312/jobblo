@@ -1,5 +1,5 @@
-import { useNavigate } from "react-router-dom";
-import { Rocket, Info } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
+import { Rocket, Info } from 'lucide-react';
 
 export const UpcomingPreviewView = () => {
   const navigate = useNavigate();
@@ -13,10 +13,11 @@ export const UpcomingPreviewView = () => {
         <div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">Kommende funksjoner</h3>
           <p className="text-[15px] text-gray-600 leading-relaxed mb-6">
-            Vi jobber kontinuerlig med nye funksjoner for å gjøre Jobblo enda bedre for deg. Se hva som kommer snart!
+            Vi jobber kontinuerlig med nye funksjoner for å gjøre Jobblo enda bedre for deg. Se hva
+            som kommer snart!
           </p>
-          <button 
-            onClick={() => navigate("/upcoming")}
+          <button
+            onClick={() => navigate('/upcoming')}
             className="flex items-center gap-2 bg-custom-green hover:bg-custom-green/60 text-white font-bold px-6 py-3 rounded-xl shadow-md transition-all"
           >
             <Info size={18} />

@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { X, Tag, Calendar, DollarSign, Hash } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { X, Tag, Calendar, DollarSign, Hash } from 'lucide-react';
 
 interface CouponFormData {
   name: string;
   code: string;
   amount: number;
-  type: "percentage" | "fixed";
+  type: 'percentage' | 'fixed';
   usageLimit: number;
-  targetPlanType: "all" | "private" | "business";
+  targetPlanType: 'all' | 'private' | 'business';
   activeDate?: string;
   expiresDate?: string;
 }
@@ -16,9 +16,9 @@ interface InitialCouponData {
   name?: string;
   code?: string;
   amount?: number;
-  type?: "percentage" | "fixed";
+  type?: 'percentage' | 'fixed';
   usageLimit?: number;
-  targetPlanType?: "all" | "private" | "business";
+  targetPlanType?: 'all' | 'private' | 'business';
   activeDate?: string;
   expiresDate?: string;
   active?: boolean;
@@ -31,44 +31,39 @@ interface CreateCouponFormProps {
   initialData?: any; // Using any temporarily to avoid strict type issues with createdAt
 }
 
-const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
-  onClose,
-  onSubmit,
-  initialData,
-}) => {
+const CreateCouponForm: React.FC<CreateCouponFormProps> = ({ onClose, onSubmit, initialData }) => {
   const [formData, setFormData] = useState({
-    name: "",
-    code: "",
-    price: "",
-    type: "percentage",
-    usageLimit: "0",
-    targetPlanType: "all",
-    activeAt: "",
-    expiresAt: "",
-    status: "Active",
+    name: '',
+    code: '',
+    price: '',
+    type: 'percentage',
+    usageLimit: '0',
+    targetPlanType: 'all',
+    activeAt: '',
+    expiresAt: '',
+    status: 'Active',
   });
 
   // Jab Edit button dabaen, to purana data fields mein bhar jaye
   useEffect(() => {
     if (initialData) {
       // Use activeDate, fallback to createdAt for older coupons
-      const effectiveActiveDate =
-        initialData.activeDate || initialData.createdAt;
+      const effectiveActiveDate = initialData.activeDate || initialData.createdAt;
 
       setFormData({
-        name: initialData.name || "",
-        code: initialData.code || "",
-        price: String(initialData.amount ?? ""),
-        type: initialData.type || "percentage",
-        usageLimit: String(initialData.usageLimit ?? "0"),
-        targetPlanType: initialData.targetPlanType || "all",
+        name: initialData.name || '',
+        code: initialData.code || '',
+        price: String(initialData.amount ?? ''),
+        type: initialData.type || 'percentage',
+        usageLimit: String(initialData.usageLimit ?? '0'),
+        targetPlanType: initialData.targetPlanType || 'all',
         activeAt: effectiveActiveDate
-          ? new Date(effectiveActiveDate).toISOString().split("T")[0]
-          : "",
+          ? new Date(effectiveActiveDate).toISOString().split('T')[0]
+          : '',
         expiresAt: initialData.expiresDate
-          ? new Date(initialData.expiresDate).toISOString().split("T")[0]
-          : "",
-        status: initialData.active ? "Active" : "InActive",
+          ? new Date(initialData.expiresDate).toISOString().split('T')[0]
+          : '',
+        status: initialData.active ? 'Active' : 'InActive',
       });
     }
   }, [initialData]);
@@ -79,17 +74,17 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
       name: formData.name,
       code: formData.code,
       amount: Number(formData.price),
-      type: formData.type as "percentage" | "fixed",
+      type: formData.type as 'percentage' | 'fixed',
       usageLimit: Number(formData.usageLimit),
-      targetPlanType: formData.targetPlanType as "all" | "private" | "business",
+      targetPlanType: formData.targetPlanType as 'all' | 'private' | 'business',
       activeDate: formData.activeAt,
       expiresDate: formData.expiresAt,
     });
   };
 
   const inputClass =
-    "w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:border-[#2d4a3e] focus:ring-4 focus:ring-[#2d4a3e]/5 outline-none transition-all text-gray-700 placeholder:text-gray-400";
-  const labelClass = "block text-sm font-bold text-gray-700 mb-2 ml-1";
+    'w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:border-[#2d4a3e] focus:ring-4 focus:ring-[#2d4a3e]/5 outline-none transition-all text-gray-700 placeholder:text-gray-400';
+  const labelClass = 'block text-sm font-bold text-gray-700 mb-2 ml-1';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-in fade-in duration-300">
@@ -98,12 +93,12 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
         <div className="px-8 py-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 shrink-0">
           <div>
             <h2 className="text-xl font-black text-gray-800 tracking-tight">
-              {initialData ? "Edit Coupon" : "Create New Coupon"}
+              {initialData ? 'Edit Coupon' : 'Create New Coupon'}
             </h2>
             <p className="text-xs text-gray-400 font-medium uppercase tracking-widest mt-1">
               {initialData
-                ? "Update existing discount details"
-                : "Add a discount for your customers"}
+                ? 'Update existing discount details'
+                : 'Add a discount for your customers'}
             </p>
           </div>
           <button
@@ -121,18 +116,13 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
             <div>
               <label className={labelClass}>Coupon Name</label>
               <div className="relative">
-                <Tag
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={18}
-                />
+                <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input
                   type="text"
                   placeholder="e.g. Summer Sale"
                   className={inputClass}
                   value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                 />
               </div>
@@ -145,9 +135,7 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
                 <select
                   className={inputClass}
                   value={formData.type}
-                  onChange={(e) =>
-                    setFormData({ ...formData, type: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                 >
                   <option value="percentage">Percentage (%)</option>
                   <option value="fixed">Fixed Amount</option>
@@ -162,9 +150,7 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
                   placeholder="0"
                   className={inputClass}
                   value={formData.usageLimit}
-                  onChange={(e) =>
-                    setFormData({ ...formData, usageLimit: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
                 />
               </div>
             </div>
@@ -174,9 +160,7 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
               <select
                 className={inputClass}
                 value={formData.targetPlanType}
-                onChange={(e) =>
-                  setFormData({ ...formData, targetPlanType: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, targetPlanType: e.target.value })}
               >
                 <option value="all">All Plans</option>
                 <option value="private">Private Plans Only</option>
@@ -222,9 +206,7 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
                     placeholder="5.00"
                     className={inputClass}
                     value={formData.price}
-                    onChange={(e) =>
-                      setFormData({ ...formData, price: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     required
                   />
                 </div>
@@ -244,9 +226,7 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
                     type="date"
                     className={inputClass}
                     value={formData.activeAt}
-                    onChange={(e) =>
-                      setFormData({ ...formData, activeAt: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, activeAt: e.target.value })}
                   />
                 </div>
               </div>
@@ -263,9 +243,7 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
                     type="date"
                     className={inputClass}
                     value={formData.expiresAt}
-                    onChange={(e) =>
-                      setFormData({ ...formData, expiresAt: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
                     required
                   />
                 </div>
@@ -285,7 +263,7 @@ const CreateCouponForm: React.FC<CreateCouponFormProps> = ({
                 type="submit"
                 className="flex-2 px-10 py-3.5 rounded-2xl bg-[#2d4a3e] text-white font-bold hover:bg-[#233b31] transition-all text-sm shadow-lg shadow-[#2d4a3e]/20 active:scale-95"
               >
-                {initialData ? "Update Coupon" : "Create Coupon"}
+                {initialData ? 'Update Coupon' : 'Create Coupon'}
               </button>
             </div>
           </form>

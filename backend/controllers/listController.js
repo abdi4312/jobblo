@@ -1,8 +1,8 @@
-const List = require("../models/List");
-const Service = require("../models/Service");
-const Notification = require("../models/Notification");
-const User = require("../models/User");
-const notificationController = require("./notificationController");
+const List = require('../models/List');
+const Service = require('../models/Service');
+const Notification = require('../models/Notification');
+const User = require('../models/User');
+const notificationController = require('./notificationController');
 
 // Get all lists for a user (where they are owner or contributor)
 exports.getUserLists = async (req, res) => {
@@ -25,12 +25,10 @@ exports.getUserLists = async (req, res) => {
       };
     }
 
-    const lists = await List.find(query).populate("services");
+    const lists = await List.find(query).populate('services');
     res.status(200).json(lists);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error fetching lists", error: error.message });
+    res.status(500).json({ message: 'Error fetching lists', error: error.message });
   }
 };
 
@@ -43,9 +41,7 @@ exports.createList = async (req, res) => {
     await newList.save();
     res.status(201).json(newList);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error creating list", error: error.message });
+    res.status(500).json({ message: 'Error creating list', error: error.message });
   }
 };
 
@@ -60,13 +56,11 @@ exports.addServiceToList = async (req, res) => {
     });
 
     if (!list) {
-      return res
-        .status(404)
-        .json({ message: "List not found or permission denied" });
+      return res.status(404).json({ message: 'List not found or permission denied' });
     }
 
     if (list.services.includes(serviceId)) {
-      return res.status(400).json({ message: "Service already in list" });
+      return res.status(400).json({ message: 'Service already in list' });
     }
 
     list.services.push(serviceId);
@@ -78,22 +72,17 @@ exports.addServiceToList = async (req, res) => {
     const currentUser = await User.findById(req.userId);
 
     if (service && service.userId && service.userId.toString() !== req.userId) {
-      await notificationController.createAndEmitNotification(
-        req.app.get("io"),
-        {
-          userId: service.userId,
-          senderId: req.userId,
-          type: "favorite",
-          content: `${currentUser.name} added your item "${service.title}" to their list`,
-        },
-      );
+      await notificationController.createAndEmitNotification(req.app.get('io'), {
+        userId: service.userId,
+        senderId: req.userId,
+        type: 'favorite',
+        content: `${currentUser.name} added your item "${service.title}" to their list`,
+      });
     }
 
     res.status(200).json(list);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error adding service to list", error: error.message });
+    res.status(500).json({ message: 'Error adding service to list', error: error.message });
   }
 };
 
@@ -108,9 +97,7 @@ exports.removeServiceFromList = async (req, res) => {
     });
 
     if (!list) {
-      return res
-        .status(404)
-        .json({ message: "List not found or permission denied" });
+      return res.status(404).json({ message: 'List not found or permission denied' });
     }
 
     list.services = list.services.filter((id) => id.toString() !== serviceId);
@@ -118,16 +105,14 @@ exports.removeServiceFromList = async (req, res) => {
     // Update latestservice if it was the one removed
     if (list.latestservice && list.latestservice.toString() === serviceId) {
       list.latestservice =
-        list.services.length > 0
-          ? list.services[list.services.length - 1]
-          : null;
+        list.services.length > 0 ? list.services[list.services.length - 1] : null;
     }
 
     await list.save();
     res.status(200).json(list);
   } catch (error) {
     res.status(500).json({
-      message: "Error removing service from list",
+      message: 'Error removing service from list',
       error: error.message,
     });
   }
@@ -145,7 +130,7 @@ exports.updateList = async (req, res) => {
     });
 
     if (!list) {
-      return res.status(404).json({ message: "List not found" });
+      return res.status(404).json({ message: 'List not found' });
     }
 
     if (name) list.name = name;
@@ -155,9 +140,7 @@ exports.updateList = async (req, res) => {
     await list.save();
     res.status(200).json(list);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error updating list", error: error.message });
+    res.status(500).json({ message: 'Error updating list', error: error.message });
   }
 };
 
@@ -169,7 +152,7 @@ exports.addContributors = async (req, res) => {
     const list = await List.findOne({ _id: listId, user: req.userId });
 
     if (!list) {
-      return res.status(404).json({ message: "List not found" });
+      return res.status(404).json({ message: 'List not found' });
     }
 
     if (Array.isArray(userIds)) {
@@ -183,9 +166,7 @@ exports.addContributors = async (req, res) => {
 
     res.status(200).json(list);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error adding contributors", error: error.message });
+    res.status(500).json({ message: 'Error adding contributors', error: error.message });
   }
 };
 
@@ -200,18 +181,14 @@ exports.removeContributor = async (req, res) => {
     });
 
     if (!list) {
-      return res.status(404).json({ message: "List not found" });
+      return res.status(404).json({ message: 'List not found' });
     }
 
-    list.contributors = list.contributors.filter(
-      (id) => id.toString() !== userId,
-    );
+    list.contributors = list.contributors.filter((id) => id.toString() !== userId);
     await list.save();
     res.status(200).json(list);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error removing contributor", error: error.message });
+    res.status(500).json({ message: 'Error removing contributor', error: error.message });
   }
 };
 
@@ -222,25 +199,19 @@ exports.getListById = async (req, res) => {
     // Check if user is owner, contributor, OR if the list is public
     const list = await List.findOne({
       _id: listId,
-      $or: [
-        { user: req.userId },
-        { contributors: req.userId },
-        { public: true },
-      ],
+      $or: [{ user: req.userId }, { contributors: req.userId }, { public: true }],
     })
-      .populate("services")
-      .populate("user", "name lastName avatarUrl email")
-      .populate("contributors", "name lastName avatarUrl email");
+      .populate('services')
+      .populate('user', 'name lastName avatarUrl email')
+      .populate('contributors', 'name lastName avatarUrl email');
 
     if (!list) {
-      return res.status(404).json({ message: "List not found" });
+      return res.status(404).json({ message: 'List not found' });
     }
 
     res.status(200).json(list);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error fetching list", error: error.message });
+    res.status(500).json({ message: 'Error fetching list', error: error.message });
   }
 };
 
@@ -251,13 +222,11 @@ exports.deleteList = async (req, res) => {
     const list = await List.findOneAndDelete({ _id: listId, user: req.userId });
 
     if (!list) {
-      return res.status(404).json({ message: "List not found" });
+      return res.status(404).json({ message: 'List not found' });
     }
 
-    res.status(200).json({ message: "List deleted successfully" });
+    res.status(200).json({ message: 'List deleted successfully' });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error deleting list", error: error.message });
+    res.status(500).json({ message: 'Error deleting list', error: error.message });
   }
 };

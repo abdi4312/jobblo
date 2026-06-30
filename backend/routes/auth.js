@@ -1,17 +1,17 @@
-const { iduraCallback } = require("../controllers/iduraAuthcontroller");
-const vippsController = require("../controllers/vippsController");
-const User = require("../models/User");
-const { setCookie } = require("../utils/setCookie.js");
+const { iduraCallback } = require('../controllers/iduraAuthcontroller');
+const vippsController = require('../controllers/vippsController');
+const User = require('../models/User');
+const { setCookie } = require('../utils/setCookie.js');
 
-const { authenticate } = require("../middleware/auth");
-const { authLimiter } = require("../middleware/rateLimiter");
-const { generateTokens, createSession } = require("../utils/tokenUtils");
+const { authenticate } = require('../middleware/auth');
+const { authLimiter } = require('../middleware/rateLimiter');
+const { generateTokens, createSession } = require('../utils/tokenUtils');
 
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const authController = require("../controllers/authController");
-const passport = require("passport");
-const jwt = require("jsonwebtoken");
+const authController = require('../controllers/authController');
+const passport = require('passport');
+const jwt = require('jsonwebtoken');
 
 /**
  * @swagger
@@ -77,7 +77,7 @@ const jwt = require("jsonwebtoken");
  *       400:
  *         description: Ugyldig input
  */
-router.post("/register", authLimiter, authController.register);
+router.post('/register', authLimiter, authController.register);
 
 /**
  * @swagger
@@ -101,66 +101,54 @@ router.post("/register", authLimiter, authController.register);
  *       401:
  *         description: Ugyldige påloggingsdetaljer
  */
-router.post("/login", authLimiter, authController.login);
+router.post('/login', authLimiter, authController.login);
 
-router.post("/logout", authController.logout);
-router.post("/refresh-token", authController.refreshToken);
-router.get("/profile", authenticate, authController.getProfile);
-router.get("/sessions", authenticate, authController.getSessions);
-router.delete(
-  "/sessions/:sessionId",
-  authenticate,
-  authController.revokeSession,
-);
-router.delete(
-  "/sessions/revoke-others",
-  authenticate,
-  authController.revokeAllOtherSessions,
-);
+router.post('/logout', authController.logout);
+router.post('/refresh-token', authController.refreshToken);
+router.get('/profile', authenticate, authController.getProfile);
+router.get('/sessions', authenticate, authController.getSessions);
+router.delete('/sessions/:sessionId', authenticate, authController.revokeSession);
+router.delete('/sessions/revoke-others', authenticate, authController.revokeAllOtherSessions);
 
 // Google OAuth Routes
-router.get(
-  "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] }),
-);
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 router.get(
-  "/google/callback",
-  passport.authenticate("google", {
-    failureRedirect: "/login",
+  '/google/callback',
+  passport.authenticate('google', {
+    failureRedirect: '/login',
     session: false,
   }),
   async (req, res) => {
     // This now returns { session, accessToken, refreshToken }
-    const { session, accessToken, refreshToken } = await createSession(
-      req,
-      req.user._id,
-    );
+    const { session, accessToken, refreshToken } = await createSession(req, req.user._id);
 
     // Set cookies
-    res.cookie("accessToken", accessToken, {
+    res.cookie('accessToken', accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 60 * 60 * 1000, // 1 hour (matches token expiry)
     });
 
-    res.cookie("refreshToken", refreshToken, {
+    res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    const frontendBase = process.env.FRONTEND_URL || "http://localhost:5173";
-    const redirectUrl = frontendBase.endsWith("/") ? `${frontendBase}oauth-success` : `${frontendBase}/oauth-success`;
+    const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const redirectUrl = frontendBase.endsWith('/')
+      ? `${frontendBase}oauth-success`
+      : `${frontendBase}/oauth-success`;
 
     res.redirect(`${redirectUrl}?token=${accessToken}`);
-  },
+  }
 );
 
-router.get("/idura/callback", iduraCallback);
-router.get("/vipps", vippsController.redirectToVipps);
-router.get("/vipps/callback", vippsController.vippsCallback);
+router.get('/idura/callback', iduraCallback);
+router.get('/vipps', vippsController.redirectToVipps);
+router.get('/vipps/callback', vippsController.vippsCallback);
 
 module.exports = router;

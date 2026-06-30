@@ -16,7 +16,12 @@
 
 .title {
   color: var(--color-text);
-  font-family: 'Nunito Sans', -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    'Nunito Sans',
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 20px;
   font-weight: 700;
   line-height: 120%;
@@ -38,7 +43,7 @@
   .container {
     margin-bottom: 60px;
   }
-  
+
   .title {
     font-size: 24px;
   }

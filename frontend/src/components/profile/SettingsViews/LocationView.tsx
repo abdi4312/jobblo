@@ -1,5 +1,5 @@
-import { useOutletContext } from "react-router-dom";
-import type { SettingsContextType } from "../../../pages/SettingsPage";
+import { useOutletContext } from 'react-router-dom';
+import type { SettingsContextType } from '../../../pages/SettingsPage';
 
 export const LocationView = () => {
   const { form, handleChange, handleUpdate, updateUser, user } =
@@ -22,7 +22,7 @@ export const LocationView = () => {
           id="country"
           className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-gray-100 outline-none rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors"
           value={form.country}
-          onChange={(event) => handleChange("country", event.target.value)}
+          onChange={(event) => handleChange('country', event.target.value)}
         />
       </div>
 
@@ -34,11 +34,11 @@ export const LocationView = () => {
         className={`w-full font-bold text-lg py-3.5 rounded-2xl text-white shadow-sm transition-all duration-200
           ${
             isDisabled
-              ? "bg-custom-green cursor-not-allowed opacity-80"
-              : "bg-custom-green hover:bg-custom-green active:scale-[0.98]"
+              ? 'bg-custom-green cursor-not-allowed opacity-80'
+              : 'bg-custom-green hover:bg-custom-green active:scale-[0.98]'
           }`}
       >
-        {updateUser?.isPending ? "Oppdaterer..." : "Oppdater lokasjon"}
+        {updateUser?.isPending ? 'Oppdaterer...' : 'Oppdater lokasjon'}
       </button>
     </section>
   );

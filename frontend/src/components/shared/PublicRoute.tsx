@@ -1,5 +1,5 @@
-import { Navigate } from "react-router-dom";
-import { useUserStore } from "../../stores/userStore";
+import { Navigate } from 'react-router-dom';
+import { useUserStore } from '../../stores/userStore';
 
 export const PublicRoute = ({ children }: { children: JSX.Element }) => {
   // yaha hum state ko UserState type assign kar rahe hain

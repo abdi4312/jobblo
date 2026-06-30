@@ -1,5 +1,5 @@
-import { X, Plus, User } from "lucide-react";
-import { useRemoveContributor } from "../../../features/favoriteLists/hooks";
+import { X, Plus, User } from 'lucide-react';
+import { useRemoveContributor } from '../../../features/favoriteLists/hooks';
 
 interface Contributor {
   _id: string;
@@ -87,11 +87,7 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden shrink-0 border border-gray-100 shadow-sm">
                     {owner.avatarUrl ? (
-                      <img
-                        src={owner.avatarUrl}
-                        className="w-full h-full object-cover"
-                        alt=""
-                      />
+                      <img src={owner.avatarUrl} className="w-full h-full object-cover" alt="" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-custom-green bg-[#2F7E4711]">
                         <User size={20} />
@@ -102,9 +98,7 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({
                     <p className="font-bold text-custom-black text-base leading-tight">
                       {owner.name} {owner.lastName}
                     </p>
-                    <p className="text-sm text-gray-400 font-medium">
-                      {owner.email || "Eier"}
-                    </p>
+                    <p className="text-sm text-gray-400 font-medium">{owner.email || 'Eier'}</p>
                   </div>
                 </div>
                 <span className="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold rounded-full uppercase tracking-wider">
@@ -123,11 +117,7 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden shrink-0 border border-gray-100 shadow-sm">
                       {user.avatarUrl ? (
-                        <img
-                          src={user.avatarUrl}
-                          className="w-full h-full object-cover"
-                          alt=""
-                        />
+                        <img src={user.avatarUrl} className="w-full h-full object-cover" alt="" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-custom-green bg-[#2F7E4711]">
                           <User size={20} />
@@ -154,9 +144,7 @@ const ContributorsModal: React.FC<ContributorsModalProps> = ({
                 </div>
               ))
             ) : (
-              <p className="text-center py-10 text-gray-400">
-                Ingen bidragsytere ennå
-              </p>
+              <p className="text-center py-10 text-gray-400">Ingen bidragsytere ennå</p>
             )}
           </div>
         </div>

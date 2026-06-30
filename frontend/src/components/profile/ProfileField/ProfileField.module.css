@@ -25,7 +25,12 @@
 
 .label {
   color: var(--color-text);
-  font-family: 'Nunito Sans', -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    'Nunito Sans',
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 700;
   line-height: 120%;
@@ -33,7 +38,12 @@
 
 .value {
   color: var(--color-text);
-  font-family: 'Nunito Sans', -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    'Nunito Sans',
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: 120%;
@@ -73,12 +83,12 @@
   .value {
     font-size: 15px;
   }
-  
+
   .editButton {
     width: 22px;
     height: 22px;
   }
-  
+
   .editIcon {
     width: 22px;
     height: 22px;
@@ -90,7 +100,7 @@
   .value {
     font-size: 17px;
   }
-  
+
   .container {
     padding: 4px 6px;
   }

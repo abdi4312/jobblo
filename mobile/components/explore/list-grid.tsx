@@ -1,17 +1,10 @@
-import React from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  Dimensions,
-  ActivityIndicator,
-} from "react-native";
-import { useRouter } from "expo-router";
-import { useLists } from "../../features/list/hooks/useLists";
-import { List } from "../../features/list/types";
+import React from 'react';
+import { View, Text, TouchableOpacity, Image, Dimensions, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useLists } from '../../features/list/hooks/useLists';
+import { List } from '../../features/list/types';
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRID_GAP = 12;
 const SIDE_PADDING = 32; // px-4 * 2
 const CALCULATED_CARD_WIDTH = (SCREEN_WIDTH - SIDE_PADDING - GRID_GAP) / 2;
@@ -23,13 +16,11 @@ const ListCard: React.FC<{ item: List }> = ({ item }) => {
 
   // Use the image from the latest service or a placeholder
   const latestJob =
-    item.services &&
-    item.services.length > 0 &&
-    typeof item.services[0] === "object"
+    item.services && item.services.length > 0 && typeof item.services[0] === 'object'
       ? (item.services[0] as any)
       : item.latestservice;
 
-  const imageUrl = latestJob?.images?.[0] || "https://via.placeholder.com/300";
+  const imageUrl = latestJob?.images?.[0] || 'https://via.placeholder.com/300';
 
   return (
     <TouchableOpacity
@@ -52,7 +43,7 @@ const ListCard: React.FC<{ item: List }> = ({ item }) => {
         <Text
           className="text-white text-xl font-medium"
           style={{
-            textShadowColor: "rgba(0, 0, 0, 0.4)",
+            textShadowColor: 'rgba(0, 0, 0, 0.4)',
             textShadowOffset: { width: 0, height: 1 },
             textShadowRadius: 3,
           }}

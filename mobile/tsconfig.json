@@ -11,15 +11,13 @@
       "@/*": ["./*"],
       "nativewind/jsx-runtime": ["node_modules/nativewind/jsx-runtime/index.js"],
       "nativewind/jsx-dev-runtime": ["node_modules/nativewind/jsx-dev-runtime/index.js"],
-      "react-native-css-interop/jsx-runtime": ["node_modules/react-native-css-interop/dist/runtime/jsx-runtime.js"],
-      "react-native-css-interop/jsx-dev-runtime": ["node_modules/react-native-css-interop/dist/runtime/jsx-dev-runtime.js"]
+      "react-native-css-interop/jsx-runtime": [
+        "node_modules/react-native-css-interop/dist/runtime/jsx-runtime.js"
+      ],
+      "react-native-css-interop/jsx-dev-runtime": [
+        "node_modules/react-native-css-interop/dist/runtime/jsx-dev-runtime.js"
+      ]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts",
-    "nativewind-env.d.ts"
-  ]
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts"]
 }

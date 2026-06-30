@@ -1,6 +1,6 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { ConversationSkeleton } from "../Loading/ConversationSkeleton";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ConversationSkeleton } from '../Loading/ConversationSkeleton';
 
 interface ConversationUser {
   _id: string;
@@ -58,23 +58,19 @@ const ConversationList: React.FC<ConversationListProps> = ({
       ) : (
         <div className="flex flex-col">
           {filteredChats.map((chat) => {
-            const otherPerson =
-              chat.clientId?._id === user?._id
-                ? chat.providerId
-                : chat.clientId;
+            const otherPerson = chat.clientId?._id === user?._id ? chat.providerId : chat.clientId;
 
             const hasUnread = isUnread(chat);
             const isActive = conversationId === chat._id;
             const hasSafePay = chat.serviceId;
-            const isOnline =
-              otherPerson?._id && onlineUsers.includes(otherPerson._id);
+            const isOnline = otherPerson?._id && onlineUsers.includes(otherPerson._id);
 
             return (
               <div
                 key={chat._id}
                 onClick={() => navigate(`/messages/${chat._id}`)}
                 className={`relative flex items-center gap-[10px] px-[14px] py-[11px] cursor-pointer border-b border-black/[0.04] transition-all ${
-                  isActive ? "bg-[#f0faf0]" : "hover:bg-[#f9f9f7]"
+                  isActive ? 'bg-[#f0faf0]' : 'hover:bg-[#f9f9f7]'
                 }`}
               >
                 {/* Avatar-seksjon */}
@@ -87,7 +83,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span>{otherPerson?.name?.charAt(0) || "U"}</span>
+                      <span>{otherPerson?.name?.charAt(0) || 'U'}</span>
                     )}
                   </div>
                   {isOnline && (
@@ -100,24 +96,22 @@ const ConversationList: React.FC<ConversationListProps> = ({
                   <div className="flex items-baseline justify-between mb-0.5">
                     <span
                       className={`text-[13px] truncate ${
-                        hasUnread
-                          ? "font-bold text-custom-black"
-                          : "text-custom-black"
+                        hasUnread ? 'font-bold text-custom-black' : 'text-custom-black'
                       }`}
                     >
-                      {otherPerson?.name || "Ukjent"}
+                      {otherPerson?.name || 'Ukjent'}
                     </span>
                     <span className="text-[11px] text-[#aaa]">
-                      {formatTime(chat.updatedAt || "")}
+                      {formatTime(chat.updatedAt || '')}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <p
                       className={`text-[12px] truncate flex-1 ${
-                        hasUnread ? "text-[#333] font-medium" : "text-[#888]"
+                        hasUnread ? 'text-[#333] font-medium' : 'text-[#888]'
                       }`}
                     >
-                      {chat.lastMessage || "Start samtale..."}
+                      {chat.lastMessage || 'Start samtale...'}
                     </p>
                     {hasUnread && (
                       <div className="w-[8px] h-[8px] bg-[#16a34a] rounded-full shrink-0"></div>

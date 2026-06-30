@@ -1,4 +1,3 @@
-
 export const LandingCategoriesSkeleton = () => {
   return (
     <section className="bg-white">
@@ -14,7 +13,7 @@ export const LandingCategoriesSkeleton = () => {
             <div
               key={index}
               className={`bg-gray-200 rounded-2xl animate-pulse h-60 ${
-                index === 2 ? "md:row-span-2 md:h-full" : ""
+                index === 2 ? 'md:row-span-2 md:h-full' : ''
               } flex flex-col justify-end p-6`}
             >
               {/* Text Placeholder inside skeleton */}

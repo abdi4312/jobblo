@@ -1,13 +1,13 @@
-import React, { lazy, Suspense } from "react";
-import type { RouteObject } from "react-router-dom";
-import App from "../App.tsx";
-import MainLoading from "../assets/loading/main-loading.gif";
-import { ProtectedRoute } from "../components/shared/ProtectedRoute.tsx";
-import { PublicRoute } from "../components/shared/PublicRoute.tsx";
-import { AdminProtectedRoute } from "../components/shared/AdminProtectedRoute.tsx";
-import { SettingsLayout } from "../components/layout/SettingsLayout/SettingsLayout.tsx";
-import Lottie from "lottie-react";
-import Loging from "../assets/animations/loading.json";
+import React, { lazy, Suspense } from 'react';
+import type { RouteObject } from 'react-router-dom';
+import App from '../App.tsx';
+import MainLoading from '../assets/loading/main-loading.gif';
+import { ProtectedRoute } from '../components/shared/ProtectedRoute.tsx';
+import { PublicRoute } from '../components/shared/PublicRoute.tsx';
+import { AdminProtectedRoute } from '../components/shared/AdminProtectedRoute.tsx';
+import { SettingsLayout } from '../components/layout/SettingsLayout/SettingsLayout.tsx';
+import Lottie from 'lottie-react';
+import Loging from '../assets/animations/loading.json';
 
 import {
   UsernameView,
@@ -31,10 +31,10 @@ import {
   NotificationsView,
   SeekerSettingsView,
   SafePayHistoryView,
-} from "../components/profile/SettingsViews";
+} from '../components/profile/SettingsViews';
 
-import OAuthSuccess from "../pages/OAuthSuccess.tsx";
-import SettingsPage from "../pages/SettingsPage.tsx";
+import OAuthSuccess from '../pages/OAuthSuccess.tsx';
+import SettingsPage from '../pages/SettingsPage.tsx';
 
 // =======================
 // Loading
@@ -61,114 +61,66 @@ const withSuspense = (Component: React.ComponentType) => (
 // Pages
 // =======================
 
-const LandingPage = lazy(() => import("../pages/LandingPage/LandingPage.tsx"));
-const JobListingPage = lazy(
-  () => import("../pages/ExplorePage/JobListingPage.tsx"),
-);
-const ProfilePage = lazy(() => import("../pages/ProfilePage/ProfilePage.tsx"));
+const LandingPage = lazy(() => import('../pages/LandingPage/LandingPage.tsx'));
+const JobListingPage = lazy(() => import('../pages/ExplorePage/JobListingPage.tsx'));
+const ProfilePage = lazy(() => import('../pages/ProfilePage/ProfilePage.tsx'));
 
-const LeggUtOppdrag = lazy(
-  () => import("../pages/LeggUtOppdragPage/LeggUtOppdrag.tsx"),
-);
-const Alert = lazy(() => import("../pages/AlertPage/Alert.tsx"));
-const LoginPage = lazy(() => import("../pages/LoginPage/LoginPage.tsx"));
-const RegisterPage = lazy(
-  () => import("../pages/RegisterPage/RegisterPage.tsx"),
-);
-const AnmeldelserPage = lazy(
-  () => import("../pages/AnmeldelserPage/AnmeldelserPage.tsx"),
-);
+const LeggUtOppdrag = lazy(() => import('../pages/LeggUtOppdragPage/LeggUtOppdrag.tsx'));
+const Alert = lazy(() => import('../pages/AlertPage/Alert.tsx'));
+const LoginPage = lazy(() => import('../pages/LoginPage/LoginPage.tsx'));
+const RegisterPage = lazy(() => import('../pages/RegisterPage/RegisterPage.tsx'));
+const AnmeldelserPage = lazy(() => import('../pages/AnmeldelserPage/AnmeldelserPage.tsx'));
 
 const ListDetailPage = lazy(() =>
-  import("../pages/FavoritesPage/ListDetail/ListDetailPage.tsx").then((m) => ({
+  import('../pages/FavoritesPage/ListDetail/ListDetailPage.tsx').then((m) => ({
     default: m.ListDetailPage,
-  })),
+  }))
 );
 
-const TeamPage = lazy(() => import("../pages/TeamPage/TeamPage.tsx"));
-const SupportPage = lazy(() => import("../pages/SupportPage/SupportPage.tsx"));
-const MineAnnonser = lazy(() => import("../pages/MyJobsPage/MineAnnonser.tsx"));
+const TeamPage = lazy(() => import('../pages/TeamPage/TeamPage.tsx'));
+const SupportPage = lazy(() => import('../pages/SupportPage/SupportPage.tsx'));
+const MineAnnonser = lazy(() => import('../pages/MyJobsPage/MineAnnonser.tsx'));
 const JobListingDetailPage = lazy(
-  () => import("../pages/JobListingDetailPage/JobListingDetailPage.tsx"),
+  () => import('../pages/JobListingDetailPage/JobListingDetailPage.tsx')
 );
-const ApplicantsPage = lazy(
-  () => import("../pages/ApplicantsPage/ApplicantsPage.tsx"),
-);
-const MyApplicantsOverview = lazy(
-  () => import("../pages/ApplicantsPage/MyApplicantsOverview.tsx"),
-);
-const SafePayCheckout = lazy(
-  () => import("../pages/SafePayPage/SafePayCheckout.tsx"),
-);
-const SafePaySuccess = lazy(
-  () => import("../pages/SafePayPage/SafePaySuccess.tsx"),
-);
-const SafePayApproval = lazy(
-  () => import("../pages/SafePayPage/SafePayApproval.tsx"),
-);
-const CoinsPage = lazy(() => import("../pages/CoinsPage/CoinsPage.tsx"));
+const ApplicantsPage = lazy(() => import('../pages/ApplicantsPage/ApplicantsPage.tsx'));
+const MyApplicantsOverview = lazy(() => import('../pages/ApplicantsPage/MyApplicantsOverview.tsx'));
+const SafePayCheckout = lazy(() => import('../pages/SafePayPage/SafePayCheckout.tsx'));
+const SafePaySuccess = lazy(() => import('../pages/SafePayPage/SafePaySuccess.tsx'));
+const SafePayApproval = lazy(() => import('../pages/SafePayPage/SafePayApproval.tsx'));
+const CoinsPage = lazy(() => import('../pages/CoinsPage/CoinsPage.tsx'));
 const MessagesPageSplit = lazy(() =>
-  import("../pages/MessagesPage/MessagesPageSplit.tsx").then((m) => ({
+  import('../pages/MessagesPage/MessagesPageSplit.tsx').then((m) => ({
     default: m.MessagesPageSplit,
-  })),
+  }))
 );
 
 const SaleSubscriptionTermsPage = lazy(
-  () =>
-    import("../pages/SaleSubscriptionTermsPage/SaleSubscriptionTermsPage.tsx"),
+  () => import('../pages/SaleSubscriptionTermsPage/SaleSubscriptionTermsPage.tsx')
 );
-const JobbloUserTerm = lazy(() => import("../pages/UserTerm/UserTerm.tsx"));
-const SuccessPage = lazy(
-  () => import("../components/subscription/success.tsx"),
-);
-const ContactSuccessPage = lazy(
-  () => import("../pages/ContactSuccessPage.tsx"),
-);
-const ServiceListingPage = lazy(
-  () => import("../pages/ServiceListingPage/ServiceListing.tsx"),
-);
-const UpcomingFeatures = lazy(
-  () => import("../pages/UpcomingFeaturesPage/UpcomingFeatures.tsx"),
-);
-const PricingPage = lazy(() => import("../pages/PricingPage/PricingPage.tsx"));
-const NotFoundPage = lazy(
-  () => import("../pages/NotFoundPage/NotFoundPage.tsx"),
-);
+const JobbloUserTerm = lazy(() => import('../pages/UserTerm/UserTerm.tsx'));
+const SuccessPage = lazy(() => import('../components/subscription/success.tsx'));
+const ContactSuccessPage = lazy(() => import('../pages/ContactSuccessPage.tsx'));
+const ServiceListingPage = lazy(() => import('../pages/ServiceListingPage/ServiceListing.tsx'));
+const UpcomingFeatures = lazy(() => import('../pages/UpcomingFeaturesPage/UpcomingFeatures.tsx'));
+const PricingPage = lazy(() => import('../pages/PricingPage/PricingPage.tsx'));
+const NotFoundPage = lazy(() => import('../pages/NotFoundPage/NotFoundPage.tsx'));
+const CompletedJobPage = lazy(() => import('../pages/CompletedJobPage.tsx'));
 
 // =======================
 // Admin Pages
 // =======================
 
-const DashboardLayout = lazy(
-  () => import("../pages/SuperAdminDashboard/DashboardLayout.tsx"),
-);
-const UsersPage = lazy(
-  () => import("../pages/SuperAdminDashboard/UsersPage.tsx"),
-);
-const ServicesPage = lazy(
-  () => import("../pages/SuperAdminDashboard/ServicesPage.tsx"),
-);
-const VoucherPage = lazy(
-  () => import("../pages/SuperAdminDashboard/VoucherPage.tsx"),
-);
-const CarouselPage = lazy(
-  () => import("../pages/SuperAdminDashboard/CarouselPage.tsx"),
-);
-const HomeHeroPage = lazy(
-  () => import("../pages/SuperAdminDashboard/HomeHeroPage.tsx"),
-);
-const NotificationsPage = lazy(
-  () => import("../pages/SuperAdminDashboard/NotificationsPage.tsx"),
-);
-const TransactionsPage = lazy(
-  () => import("../pages/SuperAdminDashboard/TransactionsPage.tsx"),
-);
-const RoadmapAdminPage = lazy(
-  () => import("../pages/SuperAdminDashboard/RoadmapAdminPage.tsx"),
-);
-const PlansAdminPage = lazy(
-  () => import("../pages/SuperAdminDashboard/PlansAdminPage.tsx"),
-);
+const DashboardLayout = lazy(() => import('../pages/SuperAdminDashboard/DashboardLayout.tsx'));
+const UsersPage = lazy(() => import('../pages/SuperAdminDashboard/UsersPage.tsx'));
+const ServicesPage = lazy(() => import('../pages/SuperAdminDashboard/ServicesPage.tsx'));
+const VoucherPage = lazy(() => import('../pages/SuperAdminDashboard/VoucherPage.tsx'));
+const CarouselPage = lazy(() => import('../pages/SuperAdminDashboard/CarouselPage.tsx'));
+const HomeHeroPage = lazy(() => import('../pages/SuperAdminDashboard/HomeHeroPage.tsx'));
+const NotificationsPage = lazy(() => import('../pages/SuperAdminDashboard/NotificationsPage.tsx'));
+const TransactionsPage = lazy(() => import('../pages/SuperAdminDashboard/TransactionsPage.tsx'));
+const RoadmapAdminPage = lazy(() => import('../pages/SuperAdminDashboard/RoadmapAdminPage.tsx'));
+const PlansAdminPage = lazy(() => import('../pages/SuperAdminDashboard/PlansAdminPage.tsx'));
 
 // =======================
 // Routes
@@ -176,7 +128,7 @@ const PlansAdminPage = lazy(
 
 export const routes: RouteObject[] = [
   {
-    path: "/",
+    path: '/',
     element: <App />,
     children: [
       {
@@ -185,92 +137,86 @@ export const routes: RouteObject[] = [
       },
 
       {
-        path: "oauth-success",
+        path: 'oauth-success',
         element: <OAuthSuccess />,
       },
 
       {
-        path: "home",
+        path: 'home',
         element: withSuspense(JobListingPage),
       },
 
       {
-        path: "search/job/:categoryName",
+        path: 'search/job/:categoryName',
         element: withSuspense(ServiceListingPage),
       },
 
       {
-        path: "job-listing/:id",
+        path: 'job-listing/:id',
         element: withSuspense(JobListingDetailPage),
       },
-
       {
-        path: "job-applicants/:serviceId",
-        element: (
-          <ProtectedRoute>{withSuspense(ApplicantsPage)}</ProtectedRoute>
-        ),
+        path: 'completed-job/:orderId?',
+        element: <ProtectedRoute>{withSuspense(CompletedJobPage)}</ProtectedRoute>,
       },
 
       {
-        path: "my-applicants",
-        element: (
-          <ProtectedRoute>{withSuspense(MyApplicantsOverview)}</ProtectedRoute>
-        ),
+        path: 'job-applicants/:serviceId',
+        element: <ProtectedRoute>{withSuspense(ApplicantsPage)}</ProtectedRoute>,
       },
 
       {
-        path: "safepay/checkout/:orderId",
-        element: (
-          <ProtectedRoute>{withSuspense(SafePayCheckout)}</ProtectedRoute>
-        ),
+        path: 'my-applicants',
+        element: <ProtectedRoute>{withSuspense(MyApplicantsOverview)}</ProtectedRoute>,
       },
 
       {
-        path: "safepay/success",
-        element: (
-          <ProtectedRoute>{withSuspense(SafePaySuccess)}</ProtectedRoute>
-        ),
+        path: 'safepay/checkout/:orderId',
+        element: <ProtectedRoute>{withSuspense(SafePayCheckout)}</ProtectedRoute>,
       },
 
       {
-        path: "safepay/approval/:orderId",
-        element: (
-          <ProtectedRoute>{withSuspense(SafePayApproval)}</ProtectedRoute>
-        ),
+        path: 'safepay/success',
+        element: <ProtectedRoute>{withSuspense(SafePaySuccess)}</ProtectedRoute>,
       },
 
       {
-        path: "profile",
+        path: 'safepay/approval/:orderId',
+        element: <ProtectedRoute>{withSuspense(SafePayApproval)}</ProtectedRoute>,
+      },
+
+      {
+        path: 'profile',
         element: <ProtectedRoute>{withSuspense(ProfilePage)}</ProtectedRoute>,
       },
 
       {
-        path: "profile/:userId",
+        path: 'profile/:userId',
         element: withSuspense(ProfilePage),
       },
 
       {
-        path: "mine-annonser",
+        path: 'mine-annonser',
         element: <ProtectedRoute>{withSuspense(MineAnnonser)}</ProtectedRoute>,
       },
 
       {
-        path: "Publish-job",
+        path: 'Publish-job',
         element: <ProtectedRoute>{withSuspense(LeggUtOppdrag)}</ProtectedRoute>,
       },
 
       {
-        path: "Publish-job/:id",
+        path: 'Publish-job/:id',
         element: <ProtectedRoute>{withSuspense(LeggUtOppdrag)}</ProtectedRoute>,
       },
 
       {
-        path: "alerts",
+        path: 'alerts',
         element: <ProtectedRoute>{withSuspense(Alert)}</ProtectedRoute>,
       },
 
       {
-        path: "settings",
+        path: 'settings',
         element: (
           <ProtectedRoute>
             <SettingsLayout />
@@ -279,128 +225,120 @@ export const routes: RouteObject[] = [
 
         children: [
           {
-            path: "",
+            path: '',
             element: <SettingsPage />,
             children: [
               { index: true, element: <UsernameView /> },
-              { path: "name", element: <NameView /> },
-              { path: "bio", element: <BioView /> },
-              { path: "picture", element: <PictureView /> },
-              { path: "banner", element: <BannerView /> },
-              { path: "email", element: <EmailView /> },
-              { path: "phone", element: <PhoneView /> },
-              { path: "addresses", element: <AddressesView /> },
-              { path: "safepay", element: <SafePayHistoryView /> },
-              { path: "password", element: <PasswordView /> },
-              { path: "delete-account", element: <DeleteAccountView /> },
-              { path: "location", element: <LocationView /> },
-              { path: "upcoming", element: <UpcomingPreviewView /> },
-              { path: "visibility", element: <VisibilityView /> },
-              { path: "blocked", element: <BlockedUsersView /> },
-              { path: "cookies", element: <CookiesView /> },
-              { path: "sessions", element: <SessionsView /> },
-              { path: "about", element: <AboutView /> },
-              { path: "notifications", element: <NotificationsView /> },
-              { path: "subscriptions", element: <SubscriptionView /> },
-              { path: "seeker", element: <SeekerSettingsView /> },
+              { path: 'name', element: <NameView /> },
+              { path: 'bio', element: <BioView /> },
+              { path: 'picture', element: <PictureView /> },
+              { path: 'banner', element: <BannerView /> },
+              { path: 'email', element: <EmailView /> },
+              { path: 'phone', element: <PhoneView /> },
+              { path: 'addresses', element: <AddressesView /> },
+              { path: 'safepay', element: <SafePayHistoryView /> },
+              { path: 'password', element: <PasswordView /> },
+              { path: 'delete-account', element: <DeleteAccountView /> },
+              { path: 'location', element: <LocationView /> },
+              { path: 'upcoming', element: <UpcomingPreviewView /> },
+              { path: 'visibility', element: <VisibilityView /> },
+              { path: 'blocked', element: <BlockedUsersView /> },
+              { path: 'cookies', element: <CookiesView /> },
+              { path: 'sessions', element: <SessionsView /> },
+              { path: 'about', element: <AboutView /> },
+              { path: 'notifications', element: <NotificationsView /> },
+              { path: 'subscriptions', element: <SubscriptionView /> },
+              { path: 'seeker', element: <SeekerSettingsView /> },
             ],
           },
         ],
       },
 
       {
-        path: "Anmeldelser",
+        path: 'Anmeldelser',
         element: withSuspense(AnmeldelserPage),
       },
 
       {
-        path: "favorites/list/:listId",
-        element: (
-          <ProtectedRoute>{withSuspense(ListDetailPage)}</ProtectedRoute>
-        ),
+        path: 'favorites/list/:listId',
+        element: <ProtectedRoute>{withSuspense(ListDetailPage)}</ProtectedRoute>,
       },
 
       {
-        path: "subscription/success",
+        path: 'subscription/success',
         element: withSuspense(SuccessPage),
       },
 
       {
-        path: "coins",
+        path: 'coins',
         element: <ProtectedRoute>{withSuspense(CoinsPage)}</ProtectedRoute>,
       },
 
       {
-        path: "team",
+        path: 'team',
         element: withSuspense(TeamPage),
       },
 
       {
-        path: "contact/success",
+        path: 'contact/success',
         element: withSuspense(ContactSuccessPage),
       },
 
       {
-        path: "support",
+        path: 'support',
         element: withSuspense(SupportPage),
       },
 
       {
-        path: "messages",
-        element: (
-          <ProtectedRoute>{withSuspense(MessagesPageSplit)}</ProtectedRoute>
-        ),
+        path: 'messages',
+        element: <ProtectedRoute>{withSuspense(MessagesPageSplit)}</ProtectedRoute>,
       },
 
       {
-        path: "messages/:conversationId",
-        element: (
-          <ProtectedRoute>{withSuspense(MessagesPageSplit)}</ProtectedRoute>
-        ),
+        path: 'messages/:conversationId',
+        element: <ProtectedRoute>{withSuspense(MessagesPageSplit)}</ProtectedRoute>,
       },
 
       {
-        path: "sale-subscription-terms",
+        path: 'sale-subscription-terms',
         element: withSuspense(SaleSubscriptionTermsPage),
       },
 
       {
-        path: "user-term",
+        path: 'user-term',
         element: withSuspense(JobbloUserTerm),
       },
 
       {
-        path: "membership",
+        path: 'membership',
         element: <ProtectedRoute>{withSuspense(PricingPage)}</ProtectedRoute>,
       },
 
       {
-        path: "upcoming",
+        path: 'upcoming',
         element: withSuspense(UpcomingFeatures),
       },
 
       {
-        path: "login",
-        element: <PublicRoute>{withSuspense(LoginPage)}</PublicRoute>,
-      },
-
-      {
-        path: "register",
-        element: <PublicRoute>{withSuspense(RegisterPage)}</PublicRoute>,
-      },
-
-      {
-        path: "*",
+        path: '*',
         element: withSuspense(NotFoundPage),
       },
     ],
   },
 
   {
-    path: "dashboard",
-    element: (
-      <AdminProtectedRoute>{withSuspense(DashboardLayout)}</AdminProtectedRoute>
-    ),
+    path: 'login',
+    element: <PublicRoute>{withSuspense(LoginPage)}</PublicRoute>,
+  },
+
+  {
+    path: 'register',
+    element: <PublicRoute>{withSuspense(RegisterPage)}</PublicRoute>,
+  },
+
+  {
+    path: 'dashboard',
+    element: <AdminProtectedRoute>{withSuspense(DashboardLayout)}</AdminProtectedRoute>,
 
     children: [
       {
@@ -409,51 +347,51 @@ export const routes: RouteObject[] = [
       },
 
       {
-        path: "users",
+        path: 'users',
         element: withSuspense(UsersPage),
       },
 
       {
-        path: "services",
+        path: 'services',
         element: withSuspense(ServicesPage),
       },
 
       {
-        path: "voucher",
+        path: 'voucher',
         element: withSuspense(VoucherPage),
       },
 
       {
-        path: "carousel",
+        path: 'carousel',
         element: withSuspense(CarouselPage),
       },
       {
-        path: "home-hero",
+        path: 'home-hero',
         element: withSuspense(HomeHeroPage),
       },
 
       {
-        path: "transactions",
+        path: 'transactions',
         element: withSuspense(TransactionsPage),
       },
 
       {
-        path: "notifications",
+        path: 'notifications',
         element: withSuspense(NotificationsPage),
       },
 
       {
-        path: "roadmap",
+        path: 'roadmap',
         element: withSuspense(RoadmapAdminPage),
       },
 
       {
-        path: "plans",
+        path: 'plans',
         element: withSuspense(PlansAdminPage),
       },
 
       {
-        path: "*",
+        path: '*',
         element: withSuspense(NotFoundPage),
       },
     ],

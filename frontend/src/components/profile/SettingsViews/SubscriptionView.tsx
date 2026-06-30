@@ -1,15 +1,8 @@
-import { useState } from "react";
-import {
-  CreditCard,
-  History,
-  Package,
-  Loader2,
-  ArrowLeft,
-  ArrowRight,
-} from "lucide-react";
-import { useUserStore } from "../../../stores/userStore";
-import mainLink from "../../../api/mainURLs";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from 'react';
+import { CreditCard, History, Package, Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { useUserStore } from '../../../stores/userStore';
+import mainLink from '../../../api/mainURLs';
+import { useQuery } from '@tanstack/react-query';
 
 interface Transaction {
   _id: string;
@@ -17,7 +10,7 @@ interface Transaction {
   amount: number;
   currency: string;
   status: string;
-  type: "subscription" | "extra_contact";
+  type: 'subscription' | 'extra_contact';
   createdAt: string;
 }
 
@@ -26,11 +19,9 @@ export function SubscriptionView() {
   const [page, setPage] = useState(1);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["userTransactions", page],
+    queryKey: ['userTransactions', page],
     queryFn: async () => {
-      const res = await mainLink.get(
-        `/api/transactions/user?page=${page}&limit=5`,
-      );
+      const res = await mainLink.get(`/api/transactions/user?page=${page}&limit=5`);
       return res.data;
     },
   });
@@ -39,10 +30,10 @@ export function SubscriptionView() {
   const totalPages = data?.totalPages || 1;
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("no-NO", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+    return new Date(dateString).toLocaleDateString('no-NO', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
   };
 
@@ -60,18 +51,16 @@ export function SubscriptionView() {
               <p className="text-white/70 text-sm font-medium uppercase tracking-wider mb-1">
                 Aktiv plan
               </p>
-              <h4 className="text-3xl font-black">
-                {user?.subscription || "Standard"}
-              </h4>
+              <h4 className="text-3xl font-black">{user?.subscription || 'Standard'}</h4>
               <p className="text-white/60 text-xs mt-2">
-                Din kontotype er satt til{" "}
+                Din kontotype er satt til{' '}
                 <span className="text-white font-bold">
-                  {user?.planType === "private" ? "privat" : user?.planType || "privat"}
+                  {user?.planType === 'private' ? 'privat' : user?.planType || 'privat'}
                 </span>
               </p>
             </div>
             <button
-              onClick={() => (window.location.href = "/membership")}
+              onClick={() => (window.location.href = '/membership')}
               className="bg-white text-[#2d4a3e] px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-orange-50 transition-colors shadow-md"
             >
               Administrer plan
@@ -116,10 +105,7 @@ export function SubscriptionView() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {transactions.map((tx: Transaction) => (
-                    <tr
-                      key={tx._id}
-                      className="hover:bg-gray-50/50 transition-colors"
-                    >
+                    <tr key={tx._id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-lg bg-[#E0883515] flex items-center justify-center text-orange-custom">
@@ -134,20 +120,17 @@ export function SubscriptionView() {
                         {formatDate(tx.createdAt)}
                       </td>
                       <td className="px-6 py-4 text-sm font-black text-gray-900">
-                        {tx.amount}{" "}
-                        <span className="text-[10px] uppercase">
-                          {tx.currency}
-                        </span>
+                        {tx.amount} <span className="text-[10px] uppercase">{tx.currency}</span>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <span
                           className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                            tx.status === "succeeded"
-                              ? "bg-green-50 text-green-600 border border-green-100"
-                              : "bg-orange-50 text-orange-600 border border-orange-100"
+                            tx.status === 'succeeded'
+                              ? 'bg-green-50 text-green-600 border border-green-100'
+                              : 'bg-orange-50 text-orange-600 border border-orange-100'
                           }`}
                         >
-                          {tx.status === "succeeded" ? "Fullført" : tx.status}
+                          {tx.status === 'succeeded' ? 'Fullført' : tx.status}
                         </span>
                       </td>
                     </tr>
@@ -160,7 +143,7 @@ export function SubscriptionView() {
             {totalPages > 1 && (
               <div className="flex items-center justify-between pt-4">
                 <p className="text-sm text-gray-500 font-medium">
-                  Side <span className="text-gray-900">{page}</span> av{" "}
+                  Side <span className="text-gray-900">{page}</span> av{' '}
                   <span className="text-gray-900">{totalPages}</span>
                 </p>
                 <div className="flex gap-2">
@@ -186,16 +169,10 @@ export function SubscriptionView() {
           </div>
         ) : (
           <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-            <CreditCard
-              className="mx-auto text-gray-300 mb-3"
-              size={40}
-              strokeWidth={1.5}
-            />
-            <p className="text-gray-500 font-medium">
-              Ingen kjøpshistorikk funnet.
-            </p>
+            <CreditCard className="mx-auto text-gray-300 mb-3" size={40} strokeWidth={1.5} />
+            <p className="text-gray-500 font-medium">Ingen kjøpshistorikk funnet.</p>
             <button
-              onClick={() => (window.location.href = "/membership")}
+              onClick={() => (window.location.href = '/membership')}
               className="mt-4 text-orange-custom font-bold text-sm hover:underline"
             >
               Se planer

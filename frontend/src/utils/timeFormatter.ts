@@ -1,5 +1,5 @@
-import { format } from "date-fns";
-import { nb } from "date-fns/locale";
+import { format } from 'date-fns';
+import { nb } from 'date-fns/locale';
 
 export const timeFormatter = {
   /**
@@ -7,7 +7,7 @@ export const timeFormatter = {
    */
   toShortTime: (date: Date | string | number): string => {
     const d = new Date(date);
-    return format(d, "HH:mm", { locale: nb });
+    return format(d, 'HH:mm', { locale: nb });
   },
 
   /**
@@ -15,7 +15,7 @@ export const timeFormatter = {
    */
   toLongTime: (date: Date | string | number): string => {
     const d = new Date(date);
-    return format(d, "HH:mm:ss", { locale: nb });
+    return format(d, 'HH:mm:ss', { locale: nb });
   },
 
   /**
@@ -34,5 +34,5 @@ export const timeFormatter = {
     if (hours === 0) return `${mins} min`;
     if (mins === 0) return `${hours} t`;
     return `${hours} t ${mins} min`;
-  }
+  },
 };

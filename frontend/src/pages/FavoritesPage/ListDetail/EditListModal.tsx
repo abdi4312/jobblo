@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { X } from "lucide-react";
-import { useUpdateFavoriteList } from "../../../features/favoriteLists/hooks";
-import type { FavoriteList } from "../../../features/favoriteLists/types";
+import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
+import { useUpdateFavoriteList } from '../../../features/favoriteLists/hooks';
+import type { FavoriteList } from '../../../features/favoriteLists/types';
 
 interface EditListModalProps {
   list: FavoriteList;
@@ -9,19 +9,15 @@ interface EditListModalProps {
   onClose: () => void;
 }
 
-const EditListModal: React.FC<EditListModalProps> = ({
-  list,
-  isOpen,
-  onClose,
-}) => {
+const EditListModal: React.FC<EditListModalProps> = ({ list, isOpen, onClose }) => {
   const updateListMutation = useUpdateFavoriteList();
-  const [name, setName] = useState(list?.name || "");
-  const [description, setDescription] = useState(list?.description || "");
+  const [name, setName] = useState(list?.name || '');
+  const [description, setDescription] = useState(list?.description || '');
 
   useEffect(() => {
     if (list) {
       setName(list.name);
-      setDescription(list.description || "");
+      setDescription(list.description || '');
     }
   }, [list]);
 
@@ -53,9 +49,7 @@ const EditListModal: React.FC<EditListModalProps> = ({
       >
         {/* Header */}
         <div className="relative flex items-center justify-center p-6 border-b border-gray-100">
-          <h2 className="text-custom-black font-bold text-lg">
-            Rediger navn og beskrivelse
-          </h2>
+          <h2 className="text-custom-black font-bold text-lg">Rediger navn og beskrivelse</h2>
           <button
             onClick={onClose}
             className="absolute right-6 p-1 hover:bg-gray-100 rounded-full transition-colors"
@@ -79,9 +73,7 @@ const EditListModal: React.FC<EditListModalProps> = ({
                 className="w-full px-4 pt-7 pb-3 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-[#2F7E47] outline-none transition-all font-medium"
               />
             </div>
-            <p className="text-[11px] text-gray-400 ml-1">
-              {name.length}/30 tegn
-            </p>
+            <p className="text-[11px] text-gray-400 ml-1">{name.length}/30 tegn</p>
           </div>
 
           <div className="relative">
@@ -97,9 +89,9 @@ const EditListModal: React.FC<EditListModalProps> = ({
           <button
             type="submit"
             disabled={!name.trim() || updateListMutation.isPending}
-            className={`w-full py-4 bg-custom-green text-white font-bold rounded-2xl hover:bg-custom-green transition-all shadow-md active:scale-[0.98] text-lg ${updateListMutation.isPending || !name.trim() ? "opacity-80" : ""}`}
+            className={`w-full py-4 bg-custom-green text-white font-bold rounded-2xl hover:bg-custom-green transition-all shadow-md active:scale-[0.98] text-lg ${updateListMutation.isPending || !name.trim() ? 'opacity-80' : ''}`}
           >
-            {updateListMutation.isPending ? "Lagrer..." : "Lagre"}
+            {updateListMutation.isPending ? 'Lagrer...' : 'Lagre'}
           </button>
         </form>
       </div>

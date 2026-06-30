@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   Table,
   Button,
@@ -14,7 +14,7 @@ import {
   Typography,
   Tag,
   message,
-} from "antd";
+} from 'antd';
 import {
   Edit,
   ShieldCheck,
@@ -25,15 +25,15 @@ import {
   Info,
   Trash2,
   Plus,
-} from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+} from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   getPlans,
   updatePlan,
   getConfigs,
   updateConfig,
   initializeConfigs,
-} from "../../features/plans/api";
+} from '../../features/plans/api';
 
 const { Title, Text } = Typography;
 
@@ -49,10 +49,7 @@ const PlansAdminPage: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [plansData, configsData] = await Promise.all([
-        getPlans(),
-        getConfigs(),
-      ]);
+      const [plansData, configsData] = await Promise.all([getPlans(), getConfigs()]);
       setPlans(plansData);
       setConfigs(configsData);
 
@@ -63,8 +60,8 @@ const PlansAdminPage: React.FC = () => {
         setConfigs(newConfigs);
       }
     } catch (error) {
-      console.error("Failed to fetch data:", error);
-      message.error("Kunne ikke hente data");
+      console.error('Failed to fetch data:', error);
+      message.error('Kunne ikke hente data');
     } finally {
       setLoading(false);
     }
@@ -111,72 +108,70 @@ const PlansAdminPage: React.FC = () => {
         },
       };
       await updatePlan(editingPlan._id, updatedPlan);
-      message.success("Plan oppdatert");
+      message.success('Plan oppdatert');
 
       // Invalidate queries to refresh Pricing page and other components
-      queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
 
       setIsModalOpen(false);
       fetchData();
     } catch (error) {
-      message.error("Kunne ikke oppdatere plan");
+      message.error('Kunne ikke oppdatere plan');
     }
   };
 
   const handleToggleConfig = async (key: string, value: boolean) => {
     try {
       await updateConfig(key, value);
-      message.success("Innstilling oppdatert");
+      message.success('Innstilling oppdatert');
       fetchData();
     } catch (error) {
-      message.error("Kunne ikke oppdatere innstilling");
+      message.error('Kunne ikke oppdatere innstilling');
     }
   };
 
   const columns = [
     {
-      title: "Plan Name",
-      dataIndex: "name",
-      key: "name",
+      title: 'Plan Name',
+      dataIndex: 'name',
+      key: 'name',
       render: (text: string, record: any) => (
         <Space direction="vertical" size={0}>
           <Text strong>{text}</Text>
-          <Tag color={record.type === "business" ? "blue" : "green"}>
+          <Tag color={record.type === 'business' ? 'blue' : 'green'}>
             {record.type.toUpperCase()}
           </Tag>
         </Space>
       ),
     },
     {
-      title: "Price (NOK)",
-      dataIndex: "price",
-      key: "price",
+      title: 'Price (NOK)',
+      dataIndex: 'price',
+      key: 'price',
       render: (price: number) => `${price} NOK`,
     },
     {
-      title: "Contacts/Month",
-      dataIndex: ["entitlements", "freeContact"],
-      key: "freeContact",
+      title: 'Contacts/Month',
+      dataIndex: ['entitlements', 'freeContact'],
+      key: 'freeContact',
     },
     {
-      title: "Visibility",
-      dataIndex: ["entitlements", "visibilityLevel"],
-      key: "visibilityLevel",
+      title: 'Visibility',
+      dataIndex: ['entitlements', 'visibilityLevel'],
+      key: 'visibilityLevel',
       render: (level: number) => <Tag color="purple">Level {level}</Tag>,
     },
     {
-      title: "Status",
-      dataIndex: "isActive",
-      key: "isActive",
+      title: 'Status',
+      dataIndex: 'isActive',
+      key: 'isActive',
       render: (active: boolean) => (
-        <Tag color={active ? "success" : "error"}>
-          {active ? "Active" : "Inactive"}
-        </Tag>
+        <Tag color={active ? 'success' : 'error'}>{active ? 'Active' : 'Inactive'}</Tag>
       ),
     },
     {
-      title: "Action",
-      key: "action",
+      title: 'Action',
+      key: 'action',
       render: (_: any, record: any) => (
         <Button
           type="primary"
@@ -203,7 +198,7 @@ const PlansAdminPage: React.FC = () => {
             >
               <div>
                 <Text strong className="block">
-                  {config.key.replace(/_/g, " ")}
+                  {config.key.replace(/_/g, ' ')}
                 </Text>
                 <Text type="secondary" size="small">
                   {config.description}
@@ -242,18 +237,10 @@ const PlansAdminPage: React.FC = () => {
           initialValues={{ isActive: true }}
         >
           <div className="grid grid-cols-2 gap-4">
-            <Form.Item
-              name="name"
-              label="Plan Name"
-              rules={[{ required: true }]}
-            >
+            <Form.Item name="name" label="Plan Name" rules={[{ required: true }]}>
               <Input />
             </Form.Item>
-            <Form.Item
-              name="price"
-              label="Price (NOK)"
-              rules={[{ required: true }]}
-            >
+            <Form.Item name="price" label="Price (NOK)" rules={[{ required: true }]}>
               <InputNumber className="w-full" min={0} />
             </Form.Item>
             <Form.Item name="type" label="Type" rules={[{ required: true }]}>
@@ -270,18 +257,10 @@ const PlansAdminPage: React.FC = () => {
           <Divider orientation="left">Entitlements & Features</Divider>
 
           <div className="grid grid-cols-2 gap-4">
-            <Form.Item
-              name="freeContact"
-              label="Free Contacts/Month"
-              rules={[{ required: true }]}
-            >
+            <Form.Item name="freeContact" label="Free Contacts/Month" rules={[{ required: true }]}>
               <InputNumber className="w-full" min={0} />
             </Form.Item>
-            <Form.Item
-              name="radius"
-              label="Search Radius (km)"
-              rules={[{ required: true }]}
-            >
+            <Form.Item name="radius" label="Search Radius (km)" rules={[{ required: true }]}>
               <InputNumber className="w-full" min={0} />
             </Form.Item>
             <Form.Item name="visibilityLevel" label="Visibility Weight (0-5)">
@@ -296,18 +275,10 @@ const PlansAdminPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-4 mt-2">
-            <Form.Item
-              name="hasBadge"
-              label="Verified Badge"
-              valuePropName="checked"
-            >
+            <Form.Item name="hasBadge" label="Verified Badge" valuePropName="checked">
               <Switch />
             </Form.Item>
-            <Form.Item
-              name="hasAnalytics"
-              label="Dashboard Analytics"
-              valuePropName="checked"
-            >
+            <Form.Item name="hasAnalytics" label="Dashboard Analytics" valuePropName="checked">
               <Switch />
             </Form.Item>
           </div>
@@ -316,10 +287,7 @@ const PlansAdminPage: React.FC = () => {
             label={
               <Space>
                 Plan Features (Displayed to users)
-                <Text
-                  type="secondary"
-                  style={{ fontSize: "12px", fontWeight: "normal" }}
-                >
+                <Text type="secondary" style={{ fontSize: '12px', fontWeight: 'normal' }}>
                   <Info size={12} className="inline mr-1" />
                   Edit these lines to change what users see on the pricing page.
                 </Text>
@@ -330,18 +298,12 @@ const PlansAdminPage: React.FC = () => {
               {(fields, { add, remove }) => (
                 <>
                   {fields.map(({ key, name, ...restField }) => (
-                    <Space
-                      key={key}
-                      style={{ display: "flex", marginBottom: 8 }}
-                      align="baseline"
-                    >
+                    <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
                       <Form.Item
                         {...restField}
                         name={[name]}
-                        rules={[
-                          { required: true, message: "Missing feature text" },
-                        ]}
-                        style={{ marginBottom: 0, width: "450px" }}
+                        rules={[{ required: true, message: 'Missing feature text' }]}
+                        style={{ marginBottom: 0, width: '450px' }}
                       >
                         <Input placeholder="e.g. 5 gratis kontakter" />
                       </Form.Item>

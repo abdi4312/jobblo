@@ -1,5 +1,5 @@
-import Auth from "../../components/Auth/Auth.tsx";
-import { LoginForm } from "../../components/Auth/LoginForm.tsx";
+import Auth from '../../components/Auth/Auth.tsx';
+import { LoginForm } from '../../components/Auth/LoginForm.tsx';
 
 export default function LoginPage() {
   return (

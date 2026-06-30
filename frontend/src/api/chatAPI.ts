@@ -1,4 +1,4 @@
-import mainLink from "./mainURLs";
+import mainLink from './mainURLs';
 
 export interface ChatMessage {
   senderId: string | { _id: string; name: string; avatarUrl?: string };
@@ -40,7 +40,7 @@ export interface Chat {
  * Create a new chat or get existing chat with a provider
  */
 export const createOrGetChat = async (providerId: string, serviceId: string): Promise<Chat> => {
-  const response = await mainLink.post("/api/chats/create", { providerId, serviceId });
+  const response = await mainLink.post('/api/chats/create', { providerId, serviceId });
   return response.data;
 };
 
@@ -48,7 +48,7 @@ export const createOrGetChat = async (providerId: string, serviceId: string): Pr
  * Get all chats for the current user
  */
 export const getMyChats = async (): Promise<Chat[]> => {
-  const response = await mainLink.get("/api/chats/get");
+  const response = await mainLink.get('/api/chats/get');
   return response.data;
 };
 
@@ -63,10 +63,7 @@ export const getChatById = async (chatId: string): Promise<Chat> => {
 /**
  * Send a message in a chat
  */
-export const sendMessage = async (
-  chatId: string,
-  text: string,
-): Promise<ChatMessage> => {
+export const sendMessage = async (chatId: string, text: string): Promise<ChatMessage> => {
   const response = await mainLink.post(`/api/chats/${chatId}/message`, {
     text,
   });

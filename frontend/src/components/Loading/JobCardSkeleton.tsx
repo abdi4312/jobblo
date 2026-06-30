@@ -1,4 +1,4 @@
-import { Spinner } from "../Ui/Spinner";
+import { Spinner } from '../Ui/Spinner';
 export const JobCardSkeleton = () => (
   <div className="flex flex-col gap-1 w-full animate-pulse">
     {/* Image Section Placeholder */}

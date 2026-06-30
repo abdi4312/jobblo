@@ -1,8 +1,8 @@
-import { useOutletContext } from "react-router-dom";
-import type { SettingsContextType } from "../../../pages/SettingsPage";
-import { Camera, Image as ImageIcon, Plus, X } from "lucide-react";
-import { Input } from "../../Ui/Input";
-import { useState } from "react";
+import { useOutletContext } from 'react-router-dom';
+import type { SettingsContextType } from '../../../pages/SettingsPage';
+import { Camera, Image as ImageIcon, Plus, X } from 'lucide-react';
+import { Input } from '../../Ui/Input';
+import { useState } from 'react';
 
 export const BannerView = () => {
   const {
@@ -16,36 +16,33 @@ export const BannerView = () => {
     handleFileChange,
   } = useOutletContext<SettingsContextType>();
 
-  const [newSkill, setNewSkill] = useState("");
-  const [newLocation, setNewLocation] = useState("");
+  const [newSkill, setNewSkill] = useState('');
+  const [newLocation, setNewLocation] = useState('');
 
   const addSkill = () => {
     if (newSkill.trim()) {
-      handleChange("skills", [...(form.skills || []), newSkill.trim()]);
-      setNewSkill("");
+      handleChange('skills', [...(form.skills || []), newSkill.trim()]);
+      setNewSkill('');
     }
   };
 
   const removeSkill = (index: number) => {
     const updated = [...form.skills];
     updated.splice(index, 1);
-    handleChange("skills", updated);
+    handleChange('skills', updated);
   };
 
   const addLocation = () => {
     if (newLocation.trim()) {
-      handleChange("locations", [
-        ...(form.locations || []),
-        newLocation.trim(),
-      ]);
-      setNewLocation("");
+      handleChange('locations', [...(form.locations || []), newLocation.trim()]);
+      setNewLocation('');
     }
   };
 
   const removeLocation = (index: number) => {
     const updated = [...form.locations];
     updated.splice(index, 1);
-    handleChange("locations", updated);
+    handleChange('locations', updated);
   };
 
   return (
@@ -63,7 +60,7 @@ export const BannerView = () => {
           <img
             src={
               user?.bannerUrl ||
-              "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200"
+              'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200'
             }
             alt="Banner"
             className="w-full h-full object-cover group-hover:opacity-75 transition-opacity"
@@ -97,12 +94,10 @@ export const BannerView = () => {
 
         {/* About Us */}
         <div className="flex flex-col gap-3">
-          <label className="text-sm font-bold text-gray-700 uppercase">
-            Om oss (Beskrivelse)
-          </label>
+          <label className="text-sm font-bold text-gray-700 uppercase">Om oss (Beskrivelse)</label>
           <textarea
             value={form.bio}
-            onChange={(e) => handleChange("bio", e.target.value)}
+            onChange={(e) => handleChange('bio', e.target.value)}
             className="w-full min-h-32 p-4 rounded-xl border border-gray-200 focus:border-black outline-none transition-all resize-none text-gray-800"
             placeholder="Fortell litt om bedriften din..."
           />
@@ -118,7 +113,7 @@ export const BannerView = () => {
               value={newSkill}
               onChange={(e) => setNewSkill(e.target.value)}
               placeholder="F.eks. Maler, Snekker..."
-              onKeyDown={(e) => e.key === "Enter" && addSkill()}
+              onKeyDown={(e) => e.key === 'Enter' && addSkill()}
             />
             <button
               onClick={addSkill}
@@ -155,7 +150,7 @@ export const BannerView = () => {
               value={newLocation}
               onChange={(e) => setNewLocation(e.target.value)}
               placeholder="F.eks. Oslo, Trondheim..."
-              onKeyDown={(e) => e.key === "Enter" && addLocation()}
+              onKeyDown={(e) => e.key === 'Enter' && addLocation()}
             />
             <button
               onClick={addLocation}
@@ -187,23 +182,23 @@ export const BannerView = () => {
           <Input
             label="Bedriftsnavn"
             value={form.companyName}
-            onChange={(e) => handleChange("companyName", e.target.value)}
+            onChange={(e) => handleChange('companyName', e.target.value)}
           />
           <Input
             label="Nettside"
             value={form.website}
-            onChange={(e) => handleChange("website", e.target.value)}
+            onChange={(e) => handleChange('website', e.target.value)}
             placeholder="https://www.bedrift.no"
           />
           <Input
             label="Telefon"
             value={form.phone}
-            onChange={(e) => handleChange("phone", e.target.value)}
+            onChange={(e) => handleChange('phone', e.target.value)}
           />
           <Input
             label="Organisasjonstype"
             value={form.orgType}
-            onChange={(e) => handleChange("orgType", e.target.value)}
+            onChange={(e) => handleChange('orgType', e.target.value)}
             placeholder="F.eks. Aksjeselskap"
           />
         </div>
@@ -215,7 +210,7 @@ export const BannerView = () => {
             disabled={updateUser.isPending}
             className="w-full bg-custom-green text-white py-4 rounded-xl font-bold text-lg hover:bg-custom-green/90 transition-all shadow-lg disabled:opacity-50"
           >
-            {updateUser.isPending ? "Lagrer..." : "Lagre portfolio"}
+            {updateUser.isPending ? 'Lagrer...' : 'Lagre portfolio'}
           </button>
         </div>
       </div>

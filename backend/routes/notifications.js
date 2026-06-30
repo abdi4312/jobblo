@@ -1,7 +1,7 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const notificationController = require("../controllers/notificationController");
-const { authenticate, requireAdmin } = require("../middleware/auth");
+const notificationController = require('../controllers/notificationController');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -67,7 +67,7 @@ const { authenticate, requireAdmin } = require("../middleware/auth");
  *       500:
  *         description: Server-feil
  */
-router.get("/", authenticate, notificationController.getAllNotifications);
+router.get('/', authenticate, notificationController.getAllNotifications);
 
 /**
  * @swagger
@@ -85,11 +85,7 @@ router.get("/", authenticate, notificationController.getAllNotifications);
  *       200:
  *         description: Antall uleste notifikasjoner
  */
-router.get(
-  "/unread-count",
-  authenticate,
-  notificationController.getUnreadCount,
-);
+router.get('/unread-count', authenticate, notificationController.getUnreadCount);
 
 /**
  * @swagger
@@ -118,7 +114,7 @@ router.get(
  *       500:
  *         description: Server-feil
  */
-router.put("/:id/read", authenticate, notificationController.markAsRead);
+router.put('/:id/read', authenticate, notificationController.markAsRead);
 
 /**
  * @swagger
@@ -141,7 +137,7 @@ router.put("/:id/read", authenticate, notificationController.markAsRead);
  *       200:
  *         description: Alle notifikasjoner markert som lest
  */
-router.put("/read-all", authenticate, notificationController.markAllAsRead);
+router.put('/read-all', authenticate, notificationController.markAllAsRead);
 
 /**
  * @swagger
@@ -159,7 +155,7 @@ router.put("/read-all", authenticate, notificationController.markAllAsRead);
  *       200:
  *         description: Notifikasjon slettet
  */
-router.delete("/:id", authenticate, notificationController.deleteNotification);
+router.delete('/:id', authenticate, notificationController.deleteNotification);
 
 /**
  * @swagger
@@ -182,7 +178,7 @@ router.delete("/:id", authenticate, notificationController.deleteNotification);
  *       200:
  *         description: Alle notifikasjoner slettet
  */
-router.delete("/delete-all", authenticate, notificationController.deleteAllNotifications);
+router.delete('/delete-all', authenticate, notificationController.deleteAllNotifications);
 
 /**
  * @swagger
@@ -222,7 +218,7 @@ router.delete("/delete-all", authenticate, notificationController.deleteAllNotif
  *       500:
  *         description: Server-feil
  */
-router.post("/test", notificationController.createTestNotification);
+router.post('/test', notificationController.createTestNotification);
 
 /**
  * @swagger
@@ -277,11 +273,6 @@ router.post("/test", notificationController.createTestNotification);
  *       500:
  *         description: Server-feil
  */
-router.post(
-  "/system",
-  authenticate,
-  requireAdmin,
-  notificationController.createSystemNotification,
-);
+router.post('/system', authenticate, requireAdmin, notificationController.createSystemNotification);
 
 module.exports = router;

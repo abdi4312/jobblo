@@ -1,27 +1,19 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const planHistorySchema = new mongoose.Schema(
   {
     planId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "SubscriptionPlan",
+      ref: 'SubscriptionPlan',
     },
     plan: {
       type: String,
-      enum: [
-        "Standard",
-        "Plus",
-        "Pro",
-        "Start",
-        "Premium",
-        "Fleksibel",
-        "Jobblo Pluss",
-      ],
+      enum: ['Standard', 'Plus', 'Pro', 'Start', 'Premium', 'Fleksibel', 'Jobblo Pluss'],
       required: true,
     },
     planType: {
       type: String,
-      enum: ["business", "private"],
+      enum: ['business', 'private'],
       required: true,
     },
     startDate: Date,
@@ -29,7 +21,7 @@ const planHistorySchema = new mongoose.Schema(
     stripeSubscriptionId: String,
     status: {
       type: String,
-      enum: ["active", "cancelled", "expired"],
+      enum: ['active', 'cancelled', 'expired'],
     },
     changedAt: {
       type: Date,
@@ -38,17 +30,17 @@ const planHistorySchema = new mongoose.Schema(
     discountAmount: Number,
     coupon: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Coupon",
+      ref: 'Coupon',
     },
   },
-  { _id: false },
+  { _id: false }
 );
 
 const subscriptionSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
       index: true,
     },
@@ -57,24 +49,16 @@ const subscriptionSchema = new mongoose.Schema(
     currentPlan: {
       planId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "SubscriptionPlan",
+        ref: 'SubscriptionPlan',
       },
       plan: {
         type: String,
-        enum: [
-          "Standard",
-          "Plus",
-          "Pro",
-          "Start",
-          "Premium",
-          "Fleksibel",
-          "Jobblo Pluss",
-        ],
+        enum: ['Standard', 'Plus', 'Pro', 'Start', 'Premium', 'Fleksibel', 'Jobblo Pluss'],
         required: true,
       },
       planType: {
         type: String,
-        enum: ["business", "private"],
+        enum: ['business', 'private'],
         required: true,
       },
       stripeSubscriptionId: String,
@@ -84,20 +68,20 @@ const subscriptionSchema = new mongoose.Schema(
       autoRenew: { type: Boolean, default: false },
       status: {
         type: String,
-        enum: ["active", "inactive", "cancelled", "expired"],
-        default: "active",
+        enum: ['active', 'inactive', 'cancelled', 'expired'],
+        default: 'active',
       },
       discountAmount: Number,
       coupon: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Coupon",
+        ref: 'Coupon',
       },
     },
 
     // 🔹 PLAN HISTORY
     planHistory: [planHistorySchema],
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-module.exports = mongoose.model("Subscription", subscriptionSchema);
+module.exports = mongoose.model('Subscription', subscriptionSchema);

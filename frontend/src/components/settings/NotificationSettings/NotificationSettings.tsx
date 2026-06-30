@@ -1,7 +1,7 @@
-import { useState } from "react";
-import styles from "./NotificationSettings.module.css";
-import { NotificationManager } from "../NotificationManager/NotificationManager";
-import BellIcon from "../../../assets/icons/bell.svg?react";
+import { useState } from 'react';
+import styles from './NotificationSettings.module.css';
+import { NotificationManager } from '../NotificationManager/NotificationManager';
+import BellIcon from '../../../assets/icons/bell.svg?react';
 
 export function NotificationSettings() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -26,9 +26,7 @@ export function NotificationSettings() {
             viewBox="0 0 25 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className={
-              isExpanded ? styles.arrowExpanded : styles.arrowCollapsed
-            }
+            className={isExpanded ? styles.arrowExpanded : styles.arrowCollapsed}
           >
             <path
               d="M12.9512 12.6L17.5512 8L18.9512 9.4L12.9512 15.4L6.95117 9.4L8.35117 8L12.9512 12.6Z"

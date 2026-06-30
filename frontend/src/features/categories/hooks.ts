@@ -1,10 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
-import { getCategories } from "./categoryAPI";
-import type { CategoryType } from "./types";
+import { useQuery } from '@tanstack/react-query';
+import { getCategories } from './categoryAPI';
+import type { CategoryType } from './types';
 
 export const useCategories = () => {
   return useQuery<CategoryType[]>({
-    queryKey: ["categories"],
+    queryKey: ['categories'],
     queryFn: getCategories,
 
     staleTime: 1000 * 60 * 60 * 5,

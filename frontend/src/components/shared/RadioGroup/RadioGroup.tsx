@@ -12,7 +12,12 @@ interface RadioGroupProps {
   name?: string;
 }
 
-export function RadioGroup({ options, selectedValue, onChange, name = 'radio-group' }: RadioGroupProps) {
+export function RadioGroup({
+  options,
+  selectedValue,
+  onChange,
+  name = 'radio-group',
+}: RadioGroupProps) {
   return (
     <div className={styles.container}>
       {options.map((option) => (

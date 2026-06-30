@@ -1,10 +1,10 @@
-import { useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useUserStore } from "../../stores/userStore";
-import { useChatQueries } from "../../features/chat/hook";
-import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
-import { Trash2, EyeOff, Mail } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { useState, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useUserStore } from '../../stores/userStore';
+import { useChatQueries } from '../../features/chat/hook';
+import { ProfileTitleWrapper } from '../../components/layout/body/profile/ProfileTitleWrapper';
+import { Trash2, EyeOff, Mail } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 /**
  * Mobile-friendly messages page that displays a list of active conversations
@@ -19,19 +19,15 @@ export function MessagesPage() {
   const chats = chatsQuery.data || [];
 
   const handleDeleteChat = async (chatId: string) => {
-    if (
-      window.confirm(
-        "Er du sikker på at du vil slette denne samtalen for alle?",
-      )
-    ) {
+    if (window.confirm('Er du sikker på at du vil slette denne samtalen for alle?')) {
       // Logic for deleting chat would go here
-      toast.success("Samtale slettet");
+      toast.success('Samtale slettet');
     }
   };
 
   const handleHideChat = async (chatId: string) => {
     // Logic for hiding chat would go here
-    toast.success("Samtale skjult");
+    toast.success('Samtale skjult');
   };
 
   return (
@@ -49,25 +45,19 @@ export function MessagesPage() {
             <div className="bg-gray-50 p-6 rounded-full mb-4">
               <Mail size={48} className="text-gray-300" />
             </div>
-            <p className="text-gray-500 font-medium text-lg">
-              Du har ingen meldinger ennå.
-            </p>
+            <p className="text-gray-500 font-medium text-lg">Du har ingen meldinger ennå.</p>
           </div>
         ) : (
           <div className="grid gap-3">
             {chats.map((chat) => {
-              const otherUser =
-                chat.clientId?._id === userId ? chat.providerId : chat.clientId;
+              const otherUser = chat.clientId?._id === userId ? chat.providerId : chat.clientId;
 
               return (
                 <div
                   key={chat._id}
                   className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between group"
                 >
-                  <Link
-                    to={`/messages/${chat._id}`}
-                    className="flex-1 flex items-center gap-4"
-                  >
+                  <Link to={`/messages/${chat._id}`} className="flex-1 flex items-center gap-4">
                     <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-xl overflow-hidden border border-gray-50">
                       {otherUser?.avatarUrl ? (
                         <img
@@ -76,16 +66,16 @@ export function MessagesPage() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <span>{otherUser?.name?.charAt(0) || "U"}</span>
+                        <span>{otherUser?.name?.charAt(0) || 'U'}</span>
                       )}
                     </div>
 
                     <div className="min-w-0">
                       <h3 className="font-bold text-gray-900 text-lg truncate">
-                        {otherUser?.name || "Bruker"}
+                        {otherUser?.name || 'Bruker'}
                       </h3>
                       <p className="text-gray-500 text-sm truncate max-w-[200px] sm:max-w-md">
-                        {chat.lastMessage || "Ingen meldinger ennå"}
+                        {chat.lastMessage || 'Ingen meldinger ennå'}
                       </p>
                       {chat.serviceId && (
                         <span className="inline-block mt-1 text-[12px] font-bold text-custom-green bg-[#2F7E4710] px-2 py-0.5 rounded-md">

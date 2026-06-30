@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Check,
@@ -11,27 +11,23 @@ import {
   Lock,
   CreditCard,
   Apple,
-} from "lucide-react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import mainLink from "../../api/mainURLs";
-import { toast } from "react-hot-toast";
-import { Button } from "../../components/Ui/button/Button";
-import SafePaySteps from "../../components/SafePay/SafePaySteps";
+} from 'lucide-react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import mainLink from '../../api/mainURLs';
+import { toast } from 'react-hot-toast';
+import { Button } from '../../components/Ui/button/Button';
+import SafePaySteps from '../../components/SafePay/SafePaySteps';
 
 const SafePayCheckout: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
-  const [paymentMethod, setPaymentMethod] = useState<
-    "card" | "vipps" | "apple"
-  >("card");
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'vipps' | 'apple'>('card');
 
   // Fetch Checkout Details from new backend
   const { data, isLoading, error } = useQuery({
-    queryKey: ["safepay-checkout", orderId],
+    queryKey: ['safepay-checkout', orderId],
     queryFn: async () => {
-      const res = await mainLink.get(
-        `/api/safepay-checkout/details/${orderId}`,
-      );
+      const res = await mainLink.get(`/api/safepay-checkout/details/${orderId}`);
       return res.data;
     },
     enabled: !!orderId,
@@ -40,7 +36,7 @@ const SafePayCheckout: React.FC = () => {
   // Stripe Payment Mutation
   const paymentMutation = useMutation({
     mutationFn: async () => {
-      const res = await mainLink.post("/api/safepay-checkout/create-session", {
+      const res = await mainLink.post('/api/safepay-checkout/create-session', {
         orderId,
       });
       return res.data;
@@ -51,7 +47,7 @@ const SafePayCheckout: React.FC = () => {
       }
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.error || "Kunne ikke starte betalingen");
+      toast.error(err.response?.data?.error || 'Kunne ikke starte betalingen');
     },
   });
 
@@ -80,7 +76,7 @@ const SafePayCheckout: React.FC = () => {
   }
 
   const { order, calculation } = data;
-  const isPaid = ["paid", "in_progress", "completed"].includes(order.status);
+  const isPaid = ['paid', 'in_progress', 'completed'].includes(order.status);
 
   return (
     <div className="min-h-screen bg-[#f5f0e8] font-sans pb-12">
@@ -93,8 +89,8 @@ const SafePayCheckout: React.FC = () => {
         </button>
 
         {/* Steps Bar */}
-        <SafePaySteps 
-          currentStep={isPaid ? 3 : 2} 
+        <SafePaySteps
+          currentStep={isPaid ? 3 : 2}
           orderId={orderId}
           serviceId={order.serviceId._id}
         />
@@ -149,7 +145,7 @@ const SafePayCheckout: React.FC = () => {
                 {order.providerId.name} {order.providerId.lastName}
               </div>
               <div className="text-[11px] text-[#ca8a04] mt-0.5">
-                ★★★★★ {order.providerId.averageRating || "4.9"}
+                ★★★★★ {order.providerId.averageRating || '4.9'}
               </div>
             </div>
           </div>
@@ -158,27 +154,23 @@ const SafePayCheckout: React.FC = () => {
         {/* Contract Panel */}
         <div className="bg-white border border-black/5 rounded-2xl p-6 mb-4 shadow-sm">
           <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
-            <FileText size={18} className="text-custom-green" /> Digital
-            kontrakt — generert automatisk
+            <FileText size={18} className="text-custom-green" /> Digital kontrakt — generert
+            automatisk
           </div>
           <div className="bg-[#f9f9f7] border border-black/5 rounded-xl p-4 space-y-3">
             <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
               <span className="text-gray-400">Oppdrag</span>
-              <span className="text-gray-900 font-medium">
-                {order.serviceId.title}
-              </span>
+              <span className="text-gray-900 font-medium">{order.serviceId.title}</span>
             </div>
             <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
               <span className="text-gray-400">Sted</span>
               <span className="text-gray-900 font-medium">
-                {order.serviceId.location?.city || "Frogner, Oslo"}
+                {order.serviceId.location?.city || 'Frogner, Oslo'}
               </span>
             </div>
             <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
               <span className="text-gray-400">Dato</span>
-              <span className="text-gray-900 font-medium">
-                Lørdag 24. mai 2026
-              </span>
+              <span className="text-gray-900 font-medium">Lørdag 24. mai 2026</span>
             </div>
             <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
               <span className="text-gray-400">Estimert tid</span>
@@ -186,15 +178,11 @@ const SafePayCheckout: React.FC = () => {
             </div>
             <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
               <span className="text-gray-400">Oppdragsbeløp</span>
-              <span className="text-gray-900 font-medium">
-                {calculation.basePrice} kr
-              </span>
+              <span className="text-gray-900 font-medium">{calculation.basePrice} kr</span>
             </div>
             <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
               <span className="text-gray-400">Betalingsmetode</span>
-              <span className="text-gray-900 font-medium">
-                SafePay (holdes til godkjenning)
-              </span>
+              <span className="text-gray-900 font-medium">SafePay (holdes til godkjenning)</span>
             </div>
             <div className="flex justify-between text-[13px]">
               <span className="text-gray-400">Kontrakt-ID</span>
@@ -204,14 +192,10 @@ const SafePayCheckout: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-2 mt-4 text-[11px] text-gray-400 leading-relaxed">
-            <Info
-              size={13}
-              className="text-custom-green flex-shrink-0 mt-0.5"
-            />
+            <Info size={13} className="text-custom-green flex-shrink-0 mt-0.5" />
             <p>
-              Kontrakten sendes til begge parter på e-post og lagres under
-              "Kontrakt" i menyen. Den er juridisk bindende og beskytter deg ved
-              eventuell tvist.
+              Kontrakten sendes til begge parter på e-post og lagres under "Kontrakt" i menyen. Den
+              er juridisk bindende og beskytter deg ved eventuell tvist.
             </p>
           </div>
         </div>
@@ -226,7 +210,7 @@ const SafePayCheckout: React.FC = () => {
             <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
               <span className="text-gray-400">Oppdragsbeløp</span>
               <span
-                className={`text-gray-900 font-medium ${isPaid ? "line-through opacity-50" : ""}`}
+                className={`text-gray-900 font-medium ${isPaid ? 'line-through opacity-50' : ''}`}
               >
                 {calculation.basePrice} kr
               </span>
@@ -234,17 +218,15 @@ const SafePayCheckout: React.FC = () => {
             <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
               <span className="text-gray-400">SafePay-gebyr (3%)</span>
               <span
-                className={`text-gray-900 font-medium ${isPaid ? "line-through opacity-50" : ""}`}
+                className={`text-gray-900 font-medium ${isPaid ? 'line-through opacity-50' : ''}`}
               >
                 {calculation.fee} kr
               </span>
             </div>
             <div className="flex justify-between text-[15px] pt-2">
-              <span className="text-gray-900 font-bold">
-                Totalt å betale nå
-              </span>
+              <span className="text-gray-900 font-bold">Totalt å betale nå</span>
               <span className="text-custom-green font-bold">
-                {isPaid ? "Fullført" : `${calculation.total} kr`}
+                {isPaid ? 'Fullført' : `${calculation.total} kr`}
               </span>
             </div>
           </div>
@@ -254,24 +236,20 @@ const SafePayCheckout: React.FC = () => {
               <div className="space-y-2.5 mb-4">
                 {/* Card Method */}
                 <div
-                  onClick={() => setPaymentMethod("card")}
-                  className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all ${paymentMethod === "card" ? "border-2 border-custom-green bg-[#f0faf0]" : "border-black/10 hover:bg-gray-50"}`}
+                  onClick={() => setPaymentMethod('card')}
+                  className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'card' ? 'border-2 border-custom-green bg-[#f0faf0]' : 'border-black/10 hover:bg-gray-50'}`}
                 >
                   <div className="w-9 h-6 bg-[#1a1f71] text-white flex items-center justify-center text-[10px] font-bold rounded">
                     VISA
                   </div>
                   <div className="flex-1">
-                    <div className="text-[13px] font-medium text-gray-900">
-                      Visa •••• 4242
-                    </div>
-                    <div className="text-[11px] text-gray-400">
-                      Utløper 09/28
-                    </div>
+                    <div className="text-[13px] font-medium text-gray-900">Visa •••• 4242</div>
+                    <div className="text-[11px] text-gray-400">Utløper 09/28</div>
                   </div>
                   <div
-                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${paymentMethod === "card" ? "border-custom-green" : "border-gray-200"}`}
+                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'card' ? 'border-custom-green' : 'border-gray-200'}`}
                   >
-                    {paymentMethod === "card" && (
+                    {paymentMethod === 'card' && (
                       <div className="w-2 h-2 rounded-full bg-custom-green"></div>
                     )}
                   </div>
@@ -279,24 +257,20 @@ const SafePayCheckout: React.FC = () => {
 
                 {/* Vipps Method */}
                 <div
-                  onClick={() => setPaymentMethod("vipps")}
-                  className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all ${paymentMethod === "vipps" ? "border-2 border-custom-green bg-[#f0faf0]" : "border-black/10 hover:bg-gray-50"}`}
+                  onClick={() => setPaymentMethod('vipps')}
+                  className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'vipps' ? 'border-2 border-custom-green bg-[#f0faf0]' : 'border-black/10 hover:bg-gray-50'}`}
                 >
                   <div className="w-9 h-6 bg-[#ff5b24] text-white flex items-center justify-center text-[10px] font-bold rounded">
                     V
                   </div>
                   <div className="flex-1">
-                    <div className="text-[13px] font-medium text-gray-900">
-                      Vipps
-                    </div>
-                    <div className="text-[11px] text-gray-400">
-                      Betal med Vipps-appen
-                    </div>
+                    <div className="text-[13px] font-medium text-gray-900">Vipps</div>
+                    <div className="text-[11px] text-gray-400">Betal med Vipps-appen</div>
                   </div>
                   <div
-                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${paymentMethod === "vipps" ? "border-custom-green" : "border-gray-200"}`}
+                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'vipps' ? 'border-custom-green' : 'border-gray-200'}`}
                   >
-                    {paymentMethod === "vipps" && (
+                    {paymentMethod === 'vipps' && (
                       <div className="w-2 h-2 rounded-full bg-custom-green"></div>
                     )}
                   </div>
@@ -304,24 +278,20 @@ const SafePayCheckout: React.FC = () => {
 
                 {/* Apple Pay Method */}
                 <div
-                  onClick={() => setPaymentMethod("apple")}
-                  className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all ${paymentMethod === "apple" ? "border-2 border-custom-green bg-[#f0faf0]" : "border-black/10 hover:bg-gray-50"}`}
+                  onClick={() => setPaymentMethod('apple')}
+                  className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'apple' ? 'border-2 border-custom-green bg-[#f0faf0]' : 'border-black/10 hover:bg-gray-50'}`}
                 >
                   <div className="w-9 h-6 bg-black text-white flex items-center justify-center rounded">
                     <Apple size={14} fill="white" />
                   </div>
                   <div className="flex-1">
-                    <div className="text-[13px] font-medium text-gray-900">
-                      Apple Pay
-                    </div>
-                    <div className="text-[11px] text-gray-400">
-                      Rask og sikker betaling
-                    </div>
+                    <div className="text-[13px] font-medium text-gray-900">Apple Pay</div>
+                    <div className="text-[11px] text-gray-400">Rask og sikker betaling</div>
                   </div>
                   <div
-                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${paymentMethod === "apple" ? "border-custom-green" : "border-gray-200"}`}
+                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'apple' ? 'border-custom-green' : 'border-gray-200'}`}
                   >
-                    {paymentMethod === "apple" && (
+                    {paymentMethod === 'apple' && (
                       <div className="w-2 h-2 rounded-full bg-custom-green"></div>
                     )}
                   </div>
@@ -330,18 +300,14 @@ const SafePayCheckout: React.FC = () => {
 
               {/* SafePay Explanation Banner */}
               <div className="bg-[#f0faf0] border border-[#c6f0d8] rounded-xl p-4 flex gap-3 mb-4.5">
-                <Lock
-                  size={20}
-                  className="text-custom-green flex-shrink-0 mt-0.5"
-                />
+                <Lock size={20} className="text-custom-green flex-shrink-0 mt-0.5" />
                 <div className="text-[12px] text-[#166534] leading-relaxed">
                   <strong className="block mb-0.5 text-[13px]">
                     Pengene holdes trygt av Jobblo
                   </strong>
-                  {calculation.total} kr trekkes fra kortet ditt nå, men{" "}
-                  {order.providerId.name} mottar kun {calculation.providerNet}{" "}
-                  kr etter at du godkjenner jobben. Ikke fornøyd? Du kan
-                  opprette en tvist.
+                  {calculation.total} kr trekkes fra kortet ditt nå, men {order.providerId.name}{' '}
+                  mottar kun {calculation.providerNet} kr etter at du godkjenner jobben. Ikke
+                  fornøyd? Du kan opprette en tvist.
                 </div>
               </div>
 
@@ -350,19 +316,13 @@ const SafePayCheckout: React.FC = () => {
                 loading={paymentMutation.isPending}
                 className="w-full bg-custom-green text-white rounded-full py-3.5 text-[15px] font-medium flex items-center justify-center gap-2 hover:bg-[#14532d] transition-colors shadow-lg"
               >
-                <ShieldCheck size={18} /> Bekreft og betal {calculation.total}{" "}
-                kr
+                <ShieldCheck size={18} /> Bekreft og betal {calculation.total} kr
               </Button>
             </>
           ) : (
             <div className="bg-[#f0faf0] border border-custom-green rounded-xl p-6 text-center">
-              <CheckCircle2
-                size={40}
-                className="text-custom-green mx-auto mb-3"
-              />
-              <h3 className="text-[16px] font-bold text-gray-900 mb-1">
-                Betaling fullført
-              </h3>
+              <CheckCircle2 size={40} className="text-custom-green mx-auto mb-3" />
+              <h3 className="text-[16px] font-bold text-gray-900 mb-1">Betaling fullført</h3>
               <p className="text-[13px] text-gray-500 mb-4">
                 Du har allerede betalt for dette oppdraget via SafePay.
               </p>
@@ -376,11 +336,11 @@ const SafePayCheckout: React.FC = () => {
           )}
 
           <p className="text-center text-[11px] text-gray-400 mt-4.5 leading-relaxed">
-            Ved å bekrefte godtar du{" "}
+            Ved å bekrefte godtar du{' '}
             <a href="#" className="text-custom-green hover:underline">
               Jobblos vilkår
-            </a>{" "}
-            og{" "}
+            </a>{' '}
+            og{' '}
             <a href="#" className="text-custom-green hover:underline">
               SafePay-avtalen
             </a>

@@ -1,5 +1,5 @@
-const cloudinary = require("../config/cloudinary");
-const { v4: uuidv4 } = require("uuid");
+const cloudinary = require('../config/cloudinary');
+const { v4: uuidv4 } = require('uuid');
 
 /**
  * Upload a file buffer to Cloudinary
@@ -7,13 +7,13 @@ const { v4: uuidv4 } = require("uuid");
  * @param {string} folder - The folder name in Cloudinary
  * @returns {Promise<string>} - The URL of the uploaded image
  */
-const uploadToCloudinary = (file, folder = "hero") => {
+const uploadToCloudinary = (file, folder = 'hero') => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: folder,
         public_id: `${uuidv4()}`,
-        resource_type: "auto",
+        resource_type: 'auto',
       },
       (error, result) => {
         if (error) {
@@ -36,14 +36,14 @@ const deleteFromCloudinary = async (url) => {
     if (!url) return;
     // Extract public_id from URL
     // Example: https://res.cloudinary.com/demo/image/upload/v12345678/folder/public_id.jpg
-    const parts = url.split("/");
+    const parts = url.split('/');
     const filenameWithExt = parts.pop();
     const folder = parts.pop();
-    const publicId = `${folder}/${filenameWithExt.split(".")[0]}`;
-    
+    const publicId = `${folder}/${filenameWithExt.split('.')[0]}`;
+
     await cloudinary.uploader.destroy(publicId);
   } catch (error) {
-    console.error("Cloudinary delete error:", error);
+    console.error('Cloudinary delete error:', error);
   }
 };
 

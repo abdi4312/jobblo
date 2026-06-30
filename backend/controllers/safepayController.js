@@ -1,12 +1,12 @@
-const mongoose = require("mongoose");
-const Order = require("../models/Order");
-const Service = require("../models/Service");
-const JobRequest = require("../models/JobRequest");
-const Notification = require("../models/Notification");
-const Payment = require("../models/Payment");
-const User = require("../models/User");
-const SafePayHistory = require("../models/SafePayHistory");
-const Review = require("../models/Review");
+const mongoose = require('mongoose');
+const Order = require('../models/Order');
+const Service = require('../models/Service');
+const JobRequest = require('../models/JobRequest');
+const Notification = require('../models/Notification');
+const Payment = require('../models/Payment');
+const User = require('../models/User');
+const SafePayHistory = require('../models/SafePayHistory');
+const Review = require('../models/Review');
 
 /**
  * POST /api/safepay/create-contract
@@ -17,50 +17,48 @@ exports.createContract = async (req, res) => {
     const { serviceId, applicantId, requestId } = req.body;
     const userId = req.userId;
 
-    console.log("createContract: req.body:", {
+    console.log('createContract: req.body:', {
       serviceId,
       applicantId,
       requestId,
     });
-    console.log("createContract: userId:", userId);
+    console.log('createContract: userId:', userId);
 
     // Validate input IDs (Bug 9)
     if (!mongoose.Types.ObjectId.isValid(serviceId)) {
-      return res.status(400).json({ error: "Ugyldig serviceId" });
+      return res.status(400).json({ error: 'Ugyldig serviceId' });
     }
     if (!mongoose.Types.ObjectId.isValid(applicantId)) {
-      return res.status(400).json({ error: "Ugyldig applicantId" });
+      return res.status(400).json({ error: 'Ugyldig applicantId' });
     }
     if (requestId && !mongoose.Types.ObjectId.isValid(requestId)) {
-      return res.status(400).json({ error: "Ugyldig requestId" });
+      return res.status(400).json({ error: 'Ugyldig requestId' });
     }
 
     // 1. Verify service ownership (userId should be provider/owner of service)
     const service = await Service.findById(serviceId);
-    console.log("createContract: service:", service);
+    console.log('createContract: service:', service);
     if (!service) {
-      return res.status(404).json({ error: "Oppdraget ble ikke funnet" });
+      return res.status(404).json({ error: 'Oppdraget ble ikke funnet' });
     }
 
     if (String(service.userId) !== String(userId)) {
       return res.status(403).json({
-        error: "Ikke autorisert til å velge søker for dette oppdraget",
+        error: 'Ikke autorisert til å velge søker for dette oppdraget',
       });
     }
 
     // Bug 11: Check service/order status
-    console.log("createContract: service.status:", service.status);
-    if (service.status === "completed" || service.status === "closed") {
-      return res
-        .status(400)
-        .json({ error: "Denne tjenesten er ikke lenger tilgjengelig" });
+    console.log('createContract: service.status:', service.status);
+    if (service.status === 'completed' || service.status === 'closed') {
+      return res.status(400).json({ error: 'Denne tjenesten er ikke lenger tilgjengelig' });
     }
 
     // Bug 10: Validate applicant actually applied
     // In JobRequest: customerId is the applicant (person who wants to do the work), providerId is service owner (person who posted the job)
     // First, let's log all JobRequests for this serviceId to debug
     const allJobRequests = await JobRequest.find({ serviceId });
-    console.log("createContract: allJobRequests:", allJobRequests);
+    console.log('createContract: allJobRequests:', allJobRequests);
 
     if (requestId) {
       const jobRequest = await JobRequest.findOne({
@@ -69,12 +67,9 @@ exports.createContract = async (req, res) => {
         customerId: applicantId,
         providerId: userId,
       });
-      console.log(
-        "createContract: found jobRequest with requestId:",
-        jobRequest,
-      );
+      console.log('createContract: found jobRequest with requestId:', jobRequest);
       if (!jobRequest) {
-        return res.status(400).json({ error: "Ugyldig søknad" });
+        return res.status(400).json({ error: 'Ugyldig søknad' });
       }
     } else {
       const jobRequest = await JobRequest.findOne({
@@ -82,23 +77,18 @@ exports.createContract = async (req, res) => {
         customerId: applicantId,
         providerId: userId,
       });
-      console.log(
-        "createContract: found jobRequest without requestId:",
-        jobRequest,
-      );
+      console.log('createContract: found jobRequest without requestId:', jobRequest);
       if (!jobRequest) {
-        return res
-          .status(400)
-          .json({ error: "Søker har ikke søkt på denne tjenesten" });
+        return res.status(400).json({ error: 'Søker har ikke søkt på denne tjenesten' });
       }
     }
 
     // Bug 3: Prevent duplicate contract
     // Check if there's ANY existing order for this service (regardless of provider)
     const existingOrder = await Order.findOne({ serviceId });
-    console.log("createContract: existingOrder:", existingOrder);
+    console.log('createContract: existingOrder:', existingOrder);
     if (existingOrder) {
-      return res.status(400).json({ error: "Kontrakt finnes allerede" });
+      return res.status(400).json({ error: 'Kontrakt finnes allerede' });
     }
 
     // 2. Create the Order (Contract) with checklist initialized from service
@@ -112,16 +102,16 @@ exports.createContract = async (req, res) => {
       serviceId,
       customerId: userId, // Service owner is the customer (person who pays)
       providerId: applicantId, // Applicant is the provider (person who does the work)
-      status: "awaiting_payment",
+      status: 'awaiting_payment',
       initialPrice: service.price,
       agreedPrice: service.price,
       checklist,
       history: [
         {
-          action: "contract_created",
+          action: 'contract_created',
           userId: userId,
           timestamp: new Date(),
-          data: { message: "SafePay kontrakt opprettet" },
+          data: { message: 'SafePay kontrakt opprettet' },
         },
       ],
     });
@@ -129,7 +119,7 @@ exports.createContract = async (req, res) => {
     await order.save();
 
     // Update service status to in_progress
-    await Service.findByIdAndUpdate(serviceId, { status: "in_progress" });
+    await Service.findByIdAndUpdate(serviceId, { status: 'in_progress' });
 
     // 3. Update JobRequest status if provided (Bug 4)
     if (requestId) {
@@ -140,29 +130,29 @@ exports.createContract = async (req, res) => {
           customerId: applicantId,
           providerId: userId,
         },
-        { status: "accepted" },
+        { status: 'accepted' }
       );
       // Mark other requests as declined
       await JobRequest.updateMany(
-        { serviceId, _id: { $ne: requestId }, status: "pending" },
-        { status: "declined" },
+        { serviceId, _id: { $ne: requestId }, status: 'pending' },
+        { status: 'declined' }
       );
     } else {
       await JobRequest.findOneAndUpdate(
         { serviceId, customerId: applicantId, providerId: userId },
-        { status: "accepted" },
+        { status: 'accepted' }
       );
       // Mark other requests as declined
       await JobRequest.updateMany(
-        { serviceId, customerId: { $ne: applicantId }, status: "pending" },
-        { status: "declined" },
+        { serviceId, customerId: { $ne: applicantId }, status: 'pending' },
+        { status: 'declined' }
       );
     }
 
     // 4. Create notification for the applicant
     const notification = new Notification({
       userId: applicantId,
-      type: "order",
+      type: 'order',
       content: `Du har blitt valgt for oppdraget: ${service.title}. Venter på betaling.`,
       orderId: order._id,
       senderId: userId,
@@ -170,12 +160,12 @@ exports.createContract = async (req, res) => {
     await notification.save();
 
     res.status(201).json({
-      message: "Kontrakt opprettet",
+      message: 'Kontrakt opprettet',
       orderId: order._id,
     });
   } catch (err) {
-    console.error("Error creating contract:", err);
-    res.status(500).json({ error: "Serverfeil ved opprettelse av kontrakt" });
+    console.error('Error creating contract:', err);
+    res.status(500).json({ error: 'Serverfeil ved opprettelse av kontrakt' });
   }
 };
 
@@ -189,16 +179,16 @@ exports.getContract = async (req, res) => {
 
     // Validate input ID (Bug 9)
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Ugyldig orderId" });
+      return res.status(400).json({ error: 'Ugyldig orderId' });
     }
 
     const order = await Order.findById(orderId)
-      .populate("serviceId")
-      .populate("customerId", "name lastName avatarUrl")
-      .populate("providerId", "name lastName avatarUrl");
+      .populate('serviceId')
+      .populate('customerId', 'name lastName avatarUrl')
+      .populate('providerId', 'name lastName avatarUrl');
 
     if (!order) {
-      return res.status(404).json({ error: "Kontrakten ble ikke funnet" });
+      return res.status(404).json({ error: 'Kontrakten ble ikke funnet' });
     }
 
     // Bug 1: Authorization check
@@ -206,13 +196,13 @@ exports.getContract = async (req, res) => {
       String(order.customerId._id) !== String(req.userId) &&
       String(order.providerId._id) !== String(req.userId)
     ) {
-      return res.status(403).json({ error: "Ikke autorisert" });
+      return res.status(403).json({ error: 'Ikke autorisert' });
     }
 
     res.json(order);
   } catch (err) {
-    console.error("Error fetching contract:", err);
-    res.status(500).json({ error: "Serverfeil ved henting av kontrakt" });
+    console.error('Error fetching contract:', err);
+    res.status(500).json({ error: 'Serverfeil ved henting av kontrakt' });
   }
 };
 
@@ -227,12 +217,12 @@ exports.startJob = async (req, res) => {
 
     // Validate input ID (Bug 9)
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Ugyldig orderId" });
+      return res.status(400).json({ error: 'Ugyldig orderId' });
     }
 
     const order = await Order.findById(orderId);
     if (!order) {
-      return res.status(404).json({ error: "Kontrakten ble ikke funnet" });
+      return res.status(404).json({ error: 'Kontrakten ble ikke funnet' });
     }
 
     // Check if user is provider or customer
@@ -240,51 +230,45 @@ exports.startJob = async (req, res) => {
       String(order.providerId) !== String(userId) &&
       String(order.customerId) !== String(userId)
     ) {
-      return res.status(403).json({ error: "Ikke autorisert" });
+      return res.status(403).json({ error: 'Ikke autorisert' });
     }
 
     // Bug 5: Validate order status before starting
-    if (order.paymentStatus !== "paid") {
-      return res
-        .status(400)
-        .json({ error: "Betaling må fullføres før jobb kan startes" });
+    if (order.paymentStatus !== 'paid') {
+      return res.status(400).json({ error: 'Betaling må fullføres før jobb kan startes' });
     }
 
     // Bug 11: Status transition check
-    if (order.status !== "awaiting_payment" && order.status !== "paid") {
-      return res
-        .status(400)
-        .json({ error: "Jobben kan ikke startes fra denne statusen" });
+    if (order.status !== 'awaiting_payment' && order.status !== 'paid') {
+      return res.status(400).json({ error: 'Jobben kan ikke startes fra denne statusen' });
     }
 
     // Update order status
-    order.status = "in_progress";
+    order.status = 'in_progress';
     order.history.push({
-      action: "job_started",
+      action: 'job_started',
       userId,
       timestamp: new Date(),
-      data: { message: "Oppdraget er startet" },
+      data: { message: 'Oppdraget er startet' },
     });
     await order.save();
 
     // Create notification for the other party
     const otherUserId =
-      String(order.providerId) === String(userId)
-        ? order.customerId
-        : order.providerId;
+      String(order.providerId) === String(userId) ? order.customerId : order.providerId;
     const notification = new Notification({
       userId: otherUserId,
-      type: "order",
+      type: 'order',
       content: `Oppdraget er startet!`,
       orderId: order._id,
       senderId: userId,
     });
     await notification.save();
 
-    res.json({ message: "Oppdraget startet", order });
+    res.json({ message: 'Oppdraget startet', order });
   } catch (err) {
-    console.error("Error starting job:", err);
-    res.status(500).json({ error: "Serverfeil ved start av oppdrag" });
+    console.error('Error starting job:', err);
+    res.status(500).json({ error: 'Serverfeil ved start av oppdrag' });
   }
 };
 
@@ -295,32 +279,22 @@ exports.startJob = async (req, res) => {
 exports.completeJobAndPayout = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { ratings, comment } = req.body;
+    const { ratings, comment, photos, recommendWorker } = req.body;
     const userId = req.userId;
 
     // Validate input ID (Bug 9)
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Ugyldig orderId" });
+      return res.status(400).json({ error: 'Ugyldig orderId' });
     }
 
     // Validate ratings are present and each at least 1 star
     if (!ratings) {
-      return res.status(400).json({ error: "Vurderinger er påkrevd" });
+      return res.status(400).json({ error: 'Vurderinger er påkrevd' });
     }
 
-    const requiredRatingFields = [
-      "overall",
-      "punctuality",
-      "quality",
-      "communication",
-      "tidiness",
-    ];
+    const requiredRatingFields = ['overall', 'punctuality', 'quality', 'communication', 'tidiness'];
     for (const field of requiredRatingFields) {
-      if (
-        typeof ratings[field] !== "number" ||
-        ratings[field] < 1 ||
-        ratings[field] > 5
-      ) {
+      if (typeof ratings[field] !== 'number' || ratings[field] < 1 || ratings[field] > 5) {
         return res.status(400).json({
           error: `Alle vurderingsfelt (${field}) må være mellom 1 og 5 stjerner`,
         });
@@ -329,57 +303,57 @@ exports.completeJobAndPayout = async (req, res) => {
 
     // Optional comment validation (if present, not too long)
     if (comment && comment.length > 1000) {
-      return res
-        .status(400)
-        .json({ error: "Kommentaren kan ikke være lenger enn 1000 tegn" });
+      return res.status(400).json({ error: 'Kommentaren kan ikke være lenger enn 1000 tegn' });
     }
 
     // First get the order to check
-    let order = await Order.findById(orderId).populate("serviceId");
+    let order = await Order.findById(orderId).populate('serviceId');
     if (!order) {
-      return res.status(404).json({ error: "Kontrakten ble ikke funnet" });
+      return res.status(404).json({ error: 'Kontrakten ble ikke funnet' });
     }
 
     // Only customer can complete and payout
     if (String(order.customerId) !== String(userId)) {
-      return res
-        .status(403)
-        .json({ error: "Kun kunde kan fullføre og utbetale" });
+      return res.status(403).json({ error: 'Kun kunde kan fullføre og utbetale' });
     }
 
     // Bug 11: Status transition check
-    if (order.status === "completed") {
-      return res.status(400).json({ error: "Oppdraget er allerede fullført" });
+    if (order.status === 'completed') {
+      return res.status(400).json({ error: 'Oppdraget er allerede fullført' });
     }
 
     // Then do atomic update
     order = await Order.findOneAndUpdate(
-      { _id: orderId, status: { $ne: "completed" } },
+      { _id: orderId, status: { $ne: 'completed' } },
       {
         $set: {
-          status: "completed",
-          paymentStatus: "paid",
-          "review.overall": ratings.overall,
-          "review.punctuality": ratings.punctuality,
-          "review.quality": ratings.quality,
-          "review.communication": ratings.communication,
-          "review.tidiness": ratings.tidiness,
-          "review.comment": comment || "",
+          status: 'completed',
+          paymentStatus: 'paid',
+          'review.overall': ratings.overall,
+          'review.punctuality': ratings.punctuality,
+          'review.quality': ratings.quality,
+          'review.communication': ratings.communication,
+          'review.tidiness': ratings.tidiness,
+          'review.comment': comment || '',
         },
         $push: {
           history: {
-            action: "job_completed",
+            action: 'job_completed',
             userId,
             timestamp: new Date(),
-            data: { message: "Oppdraget er fullført og beløp utbetalt" },
+            data: {
+              message: 'Oppdraget er fullført og beløp utbetalt',
+              photos,
+              recommendWorker,
+            },
           },
         },
       },
-      { new: true },
-    ).populate("serviceId");
+      { new: true }
+    ).populate('serviceId');
 
     if (!order) {
-      return res.status(400).json({ error: "Oppdraget er allerede fullført" });
+      return res.status(400).json({ error: 'Oppdraget er allerede fullført' });
     }
 
     // Bug 8: Consistent fee calculation
@@ -391,7 +365,7 @@ exports.completeJobAndPayout = async (req, res) => {
     // 2. Create payment record
     const payment = new Payment({
       orderId: order._id,
-      status: "released",
+      status: 'released',
       amount: order.agreedPrice,
     });
     await payment.save();
@@ -403,7 +377,7 @@ exports.completeJobAndPayout = async (req, res) => {
       serviceId: service._id,
       customerId: order.customerId,
       providerId: order.providerId,
-      serviceTitle: service.title || "Uten navn",
+      serviceTitle: service.title || 'Uten navn',
       amounts: {
         agreedPrice: order.agreedPrice,
         fee,
@@ -411,7 +385,7 @@ exports.completeJobAndPayout = async (req, res) => {
         totalCustomer,
         netProvider,
       },
-      status: "completed",
+      status: 'completed',
       paymentDate: new Date(),
       ratings,
       reviewComment: comment,
@@ -419,13 +393,13 @@ exports.completeJobAndPayout = async (req, res) => {
     await safePayHistory.save();
 
     // Update service status to completed
-    await Service.findByIdAndUpdate(service._id, { status: "completed" });
+    await Service.findByIdAndUpdate(service._id, { status: 'completed' });
 
     // Determine who is reviewing who (customer is reviewing provider in this case)
     const reviewerId = userId;
     const revieweeId = order.providerId;
-    const revieweeRole = "poster";
-    console.log("completeJobAndPayout: Review info:", {
+    const revieweeRole = 'poster';
+    console.log('completeJobAndPayout: Review info:', {
       reviewerId,
       revieweeId,
       revieweeRole,
@@ -435,7 +409,7 @@ exports.completeJobAndPayout = async (req, res) => {
     let review = await Review.findOne({ orderId: order._id, reviewerId });
     if (!review) {
       // Create the review document
-      console.log("completeJobAndPayout: Creating new review");
+      console.log('completeJobAndPayout: Creating new review');
       review = await Review.create({
         orderId: order._id,
         serviceId: service._id,
@@ -443,29 +417,32 @@ exports.completeJobAndPayout = async (req, res) => {
         revieweeId,
         revieweeRole,
         rating: ratings.overall,
-        comment: comment || "",
+        comment: comment || '',
+        photos: photos || [],
+        recommendWorker: recommendWorker || false,
       });
-      console.log("completeJobAndPayout: Review created:", review);
+      console.log('completeJobAndPayout: Review created:', review);
     } else {
-      console.log("completeJobAndPayout: Review already exists:", review);
+      console.log('completeJobAndPayout: Review already exists:', review);
+      // Update existing review
+      review.rating = ratings.overall;
+      review.comment = comment || '';
+      review.photos = photos || [];
+      review.recommendWorker = recommendWorker || false;
+      await review.save();
     }
 
     // Update reviewee's stats (provider)
     const reviewee = await User.findById(revieweeId);
-    console.log("completeJobAndPayout: Found reviewee:", reviewee);
+    console.log('completeJobAndPayout: Found reviewee:', reviewee);
     if (reviewee) {
       // Calculate new average rating from all reviews
       const allReviews = await Review.find({ revieweeId, revieweeRole });
-      console.log(
-        "completeJobAndPayout: All reviews for reviewee:",
-        allReviews,
-      );
+      console.log('completeJobAndPayout: All reviews for reviewee:', allReviews);
       const reviewCount = allReviews.length;
       const averageRating =
-        reviewCount > 0
-          ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
-          : 0;
-      console.log("completeJobAndPayout: Calculated stats:", {
+        reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
+      console.log('completeJobAndPayout: Calculated stats:', {
         reviewCount,
         averageRating,
       });
@@ -476,7 +453,7 @@ exports.completeJobAndPayout = async (req, res) => {
       reviewee.reviewCount = reviewCount;
       reviewee.earnings = (reviewee.earnings || 0) + netProvider;
       await reviewee.save();
-      console.log("completeJobAndPayout: Saved reviewee:", reviewee);
+      console.log('completeJobAndPayout: Saved reviewee:', reviewee);
     }
 
     // Bug 6: Add TODO comment about real payout
@@ -486,31 +463,28 @@ exports.completeJobAndPayout = async (req, res) => {
     // 5. Create notifications for both parties
     const providerNotification = new Notification({
       userId: order.providerId,
-      type: "order",
+      type: 'order',
       content: `Oppdraget er fullført! ${netProvider} kr er utbetalt til din konto.`,
       orderId: order._id,
       senderId: userId,
     });
     const customerNotification = new Notification({
       userId: order.customerId,
-      type: "order",
+      type: 'order',
       content: `Oppdraget er fullført og beløpet på ${totalCustomer} kr er utbetalt.`,
       orderId: order._id,
       senderId: userId,
     });
-    await Promise.all([
-      providerNotification.save(),
-      customerNotification.save(),
-    ]);
+    await Promise.all([providerNotification.save(), customerNotification.save()]);
 
     res.json({
-      message: "Oppdraget fullført og beløp utbetalt",
+      message: 'Oppdraget fullført og beløp utbetalt',
       order,
       payment,
     });
   } catch (err) {
-    console.error("Error completing job:", err);
-    res.status(500).json({ error: "Serverfeil ved fullføring av oppdrag" });
+    console.error('Error completing job:', err);
+    res.status(500).json({ error: 'Serverfeil ved fullføring av oppdrag' });
   }
 };
 
@@ -524,15 +498,15 @@ exports.getSafePayHistory = async (req, res) => {
 
     // Validate input ID (Bug 9)
     if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ error: "Ugyldig userId" });
+      return res.status(400).json({ error: 'Ugyldig userId' });
     }
 
     // Bug 2: Authorization check
     if (String(req.userId) !== String(userId)) {
       // Check if user is admin (optional, based on available role)
       const user = await User.findById(req.userId);
-      if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
-        return res.status(403).json({ error: "Ikke autorisert" });
+      if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+        return res.status(403).json({ error: 'Ikke autorisert' });
       }
     }
 
@@ -540,8 +514,8 @@ exports.getSafePayHistory = async (req, res) => {
     const safePayRecords = await SafePayHistory.find({
       $or: [{ providerId: userId }, { customerId: userId }],
     })
-      .populate("customerId", "name lastName avatarUrl")
-      .populate("providerId", "name lastName avatarUrl")
+      .populate('customerId', 'name lastName avatarUrl')
+      .populate('providerId', 'name lastName avatarUrl')
       .sort({ createdAt: -1 });
 
     // If we have SafePayHistory records, use those
@@ -576,9 +550,9 @@ exports.getSafePayHistory = async (req, res) => {
           orderId: record.orderId,
           serviceTitle: record.serviceTitle,
           customerName:
-            `${record.customerId?.name || ""} ${record.customerId?.lastName || ""}`.trim(),
+            `${record.customerId?.name || ''} ${record.customerId?.lastName || ''}`.trim(),
           providerName:
-            `${record.providerId?.name || ""} ${record.providerId?.lastName || ""}`.trim(),
+            `${record.providerId?.name || ''} ${record.providerId?.lastName || ''}`.trim(),
           isProvider,
           isCustomer: !isProvider,
           amounts: record.amounts,
@@ -607,18 +581,18 @@ exports.getSafePayHistory = async (req, res) => {
       // Find all orders where the user is either provider or customer
       const orders = await Order.find({
         $or: [{ providerId: userId }, { customerId: userId }],
-        status: "completed",
+        status: 'completed',
       })
-        .populate("serviceId", "title")
-        .populate("customerId", "name lastName avatarUrl")
-        .populate("providerId", "name lastName avatarUrl")
+        .populate('serviceId', 'title')
+        .populate('customerId', 'name lastName avatarUrl')
+        .populate('providerId', 'name lastName avatarUrl')
         .sort({ createdAt: -1 });
 
       // Get corresponding payments
       const orderIds = orders.map((o) => o._id);
       const payments = await Payment.find({
         orderId: { $in: orderIds },
-        status: "released",
+        status: 'released',
       });
 
       // Calculate totals (Bug 8: Consistent fee calculation)
@@ -629,9 +603,7 @@ exports.getSafePayHistory = async (req, res) => {
 
       // Combine orders and payments with detailed breakdown
       const history = orders.map((order) => {
-        const payment = payments.find(
-          (p) => String(p.orderId) === String(order._id),
-        );
+        const payment = payments.find((p) => String(p.orderId) === String(order._id));
         // Get IDs from populated objects or directly from order
         const orderProviderId = order.providerId?._id
           ? String(order.providerId._id)
@@ -656,11 +628,11 @@ exports.getSafePayHistory = async (req, res) => {
         return {
           id: order._id,
           orderId: order._id,
-          serviceTitle: order.serviceId?.title || "Uten tittel",
+          serviceTitle: order.serviceId?.title || 'Uten tittel',
           customerName:
-            `${order.customerId?.name || ""} ${order.customerId?.lastName || ""}`.trim(),
+            `${order.customerId?.name || ''} ${order.customerId?.lastName || ''}`.trim(),
           providerName:
-            `${order.providerId?.name || ""} ${order.providerId?.lastName || ""}`.trim(),
+            `${order.providerId?.name || ''} ${order.providerId?.lastName || ''}`.trim(),
           isProvider,
           isCustomer: !isProvider,
           amounts: {
@@ -672,7 +644,7 @@ exports.getSafePayHistory = async (req, res) => {
           },
           paymentDate: payment?.createdAt || order.updatedAt,
           orderDate: order.createdAt,
-          status: "completed",
+          status: 'completed',
           customerAvatar: order.customerId?.avatarUrl,
           providerAvatar: order.providerId?.avatarUrl,
         };
@@ -690,10 +662,8 @@ exports.getSafePayHistory = async (req, res) => {
       });
     }
   } catch (err) {
-    console.error("Error fetching SafePay history:", err);
-    res
-      .status(500)
-      .json({ error: "Serverfeil ved henting av SafePay-historikk" });
+    console.error('Error fetching SafePay history:', err);
+    res.status(500).json({ error: 'Serverfeil ved henting av SafePay-historikk' });
   }
 };
 
@@ -708,28 +678,24 @@ exports.updateChecklistItem = async (req, res) => {
     const userId = req.userId;
 
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Ugyldig orderId" });
+      return res.status(400).json({ error: 'Ugyldig orderId' });
     }
 
     let order = await Order.findById(orderId);
     if (!order) {
-      return res.status(404).json({ error: "Kontrakten ble ikke funnet" });
+      return res.status(404).json({ error: 'Kontrakten ble ikke funnet' });
     }
 
     if (
       String(order.customerId) !== String(userId) &&
       String(order.providerId) !== String(userId)
     ) {
-      return res.status(403).json({ error: "Ikke autorisert" });
+      return res.status(403).json({ error: 'Ikke autorisert' });
     }
 
-    const checklistItemIndex = order.checklist.findIndex(
-      (item) => item.id === itemId,
-    );
+    const checklistItemIndex = order.checklist.findIndex((item) => item.id === itemId);
     if (checklistItemIndex === -1) {
-      return res
-        .status(404)
-        .json({ error: "Sjekklisteelement ble ikke funnet" });
+      return res.status(404).json({ error: 'Sjekklisteelement ble ikke funnet' });
     }
 
     const updateData = {
@@ -744,18 +710,15 @@ exports.updateChecklistItem = async (req, res) => {
       updateData[`checklist.${checklistItemIndex}.checkedAt`] = null;
     }
 
-    order = await Order.findByIdAndUpdate(
-      orderId,
-      { $set: updateData },
-      { new: true },
-    ).populate("checklist.checkedBy", "name lastName avatarUrl");
+    order = await Order.findByIdAndUpdate(orderId, { $set: updateData }, { new: true }).populate(
+      'checklist.checkedBy',
+      'name lastName avatarUrl'
+    );
 
-    res.json({ message: "Sjekklisteelement oppdatert", order });
+    res.json({ message: 'Sjekklisteelement oppdatert', order });
   } catch (err) {
-    console.error("Error updating checklist item:", err);
-    res
-      .status(500)
-      .json({ error: "Serverfeil ved oppdatering av sjekklisteelement" });
+    console.error('Error updating checklist item:', err);
+    res.status(500).json({ error: 'Serverfeil ved oppdatering av sjekklisteelement' });
   }
 };
 
@@ -767,24 +730,24 @@ exports.getCheckoutDetails = async (req, res) => {
   try {
     const { orderId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ error: "Ugyldig orderId" });
+      return res.status(400).json({ error: 'Ugyldig orderId' });
     }
 
     const order = await Order.findById(orderId)
-      .populate("serviceId")
-      .populate("customerId", "name lastName avatarUrl")
-      .populate("providerId", "name lastName avatarUrl")
-      .populate("checklist.checkedBy", "name lastName avatarUrl");
+      .populate('serviceId')
+      .populate('customerId', 'name lastName avatarUrl')
+      .populate('providerId', 'name lastName avatarUrl')
+      .populate('checklist.checkedBy', 'name lastName avatarUrl');
 
     if (!order) {
-      return res.status(404).json({ error: "Kontrakten ble ikke funnet" });
+      return res.status(404).json({ error: 'Kontrakten ble ikke funnet' });
     }
 
     if (
       String(order.customerId._id) !== String(req.userId) &&
       String(order.providerId._id) !== String(req.userId)
     ) {
-      return res.status(403).json({ error: "Ikke autorisert" });
+      return res.status(403).json({ error: 'Ikke autorisert' });
     }
 
     // Calculate fee and net amount
@@ -798,9 +761,7 @@ exports.getCheckoutDetails = async (req, res) => {
 
     res.json({ order, calculation });
   } catch (err) {
-    console.error("Error fetching checkout details:", err);
-    res
-      .status(500)
-      .json({ error: "Serverfeil ved henting av utbetalingsdetaljer" });
+    console.error('Error fetching checkout details:', err);
+    res.status(500).json({ error: 'Serverfeil ved henting av utbetalingsdetaljer' });
   }
 };

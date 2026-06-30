@@ -1,8 +1,8 @@
-import React, { useState } from "react";
-import { X, Search, UserPlus } from "lucide-react";
-import mainLink from "../../../api/mainURLs";
-import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-hot-toast";
+import React, { useState } from 'react';
+import { X, Search, UserPlus } from 'lucide-react';
+import mainLink from '../../../api/mainURLs';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 
 interface User {
   _id: string;
@@ -17,12 +17,8 @@ interface AddContributorModalProps {
   onClose: () => void;
 }
 
-const AddContributorModal: React.FC<AddContributorModalProps> = ({
-  listId,
-  isOpen,
-  onClose,
-}) => {
-  const [searchQuery, setSearchQuery] = useState("");
+const AddContributorModal: React.FC<AddContributorModalProps> = ({ listId, isOpen, onClose }) => {
+  const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
@@ -38,11 +34,11 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({
     setIsSearching(true);
     try {
       const response = await mainLink.get(
-        `/api/users/search?query=${encodeURIComponent(searchQuery.trim())}`,
+        `/api/users/search?query=${encodeURIComponent(searchQuery.trim())}`
       );
       setSearchResults(response.data);
     } catch (err) {
-      console.error("Search error:", err);
+      console.error('Search error:', err);
     } finally {
       setIsSearching(false);
     }
@@ -55,7 +51,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({
         return prev.filter((u) => u._id !== user._id);
       } else {
         if (prev.length >= 10) {
-          toast.error("Du kan velge opptil 10 brukere om gangen");
+          toast.error('Du kan velge opptil 10 brukere om gangen');
           return prev;
         }
         return [...prev, user];
@@ -71,17 +67,17 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({
       await mainLink.post(`/api/lists/${listId}/contributors`, { userIds });
 
       queryClient.invalidateQueries({
-        queryKey: ["favoriteLists", "user", listId],
+        queryKey: ['favoriteLists', 'user', listId],
       });
       toast.success(`${selectedUsers.length} bidragsytere lagt til`);
 
       onClose();
       // Reset state
-      setSearchQuery("");
+      setSearchQuery('');
       setSearchResults([]);
       setSelectedUsers([]);
     } catch {
-      toast.error("Kunne ikke legge til bidragsytere");
+      toast.error('Kunne ikke legge til bidragsytere');
     }
   };
 
@@ -96,9 +92,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({
       >
         {/* Header */}
         <div className="relative flex items-center justify-center p-6 border-b border-gray-100">
-          <h2 className="text-custom-black font-bold text-lg">
-            Legg til bidragsyter
-          </h2>
+          <h2 className="text-custom-black font-bold text-lg">Legg til bidragsyter</h2>
           <button
             onClick={onClose}
             className="absolute right-6 p-1 hover:bg-gray-100 rounded-full transition-colors"
@@ -141,9 +135,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({
               </div>
             ) : searchResults.length > 0 ? (
               searchResults.map((user) => {
-                const isSelected = selectedUsers.some(
-                  (u) => u._id === user._id,
-                );
+                const isSelected = selectedUsers.some((u) => u._id === user._id);
                 return (
                   <button
                     key={user._id}
@@ -153,11 +145,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-full bg-gray-100 overflow-hidden shrink-0 border border-gray-100">
                         {user.avatarUrl ? (
-                          <img
-                            src={user.avatarUrl}
-                            className="w-full h-full object-cover"
-                            alt=""
-                          />
+                          <img src={user.avatarUrl} className="w-full h-full object-cover" alt="" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-custom-green bg-[#2F7E4711]">
                             <UserPlus size={24} />
@@ -170,7 +158,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({
                         </p>
                         <p className="text-sm text-gray-400 font-medium">
                           {user.name[0]}
-                          {user.lastName ? user.lastName[0] : ""}
+                          {user.lastName ? user.lastName[0] : ''}
                         </p>
                       </div>
                     </div>
@@ -178,14 +166,10 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({
                     {/* Selection Circle */}
                     <div
                       className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
-                        isSelected
-                          ? "border-[#2F7E47] bg-white"
-                          : "border-gray-300 bg-white"
+                        isSelected ? 'border-[#2F7E47] bg-white' : 'border-gray-300 bg-white'
                       }`}
                     >
-                      {isSelected && (
-                        <div className="w-4 h-4 rounded-full bg-custom-green" />
-                      )}
+                      {isSelected && <div className="w-4 h-4 rounded-full bg-custom-green" />}
                     </div>
                   </button>
                 );
@@ -193,9 +177,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({
             ) : (
               searchQuery.length >= 2 &&
               !isSearching && (
-                <p className="text-center py-10 text-gray-400">
-                  Ingen brukere funnet
-                </p>
+                <p className="text-center py-10 text-gray-400">Ingen brukere funnet</p>
               )
             )}
           </div>
@@ -206,8 +188,7 @@ const AddContributorModal: React.FC<AddContributorModalProps> = ({
             disabled={selectedUsers.length === 0}
             className="w-full py-4.5 bg-custom-green text-white font-bold rounded-[22px] hover:bg-custom-green disabled:bg-custom-green/40 disabled:text-gray-500 transition-all shadow-md active:scale-[0.98] text-lg mt-4"
           >
-            Legg til bidragsyter{" "}
-            {selectedUsers.length > 0 && `(${selectedUsers.length})`}
+            Legg til bidragsyter {selectedUsers.length > 0 && `(${selectedUsers.length})`}
           </button>
         </div>
       </div>

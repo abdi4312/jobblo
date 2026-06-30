@@ -9,13 +9,13 @@ interface TextInputProps {
   disabled?: boolean;
 }
 
-export function TextInput({ 
-  label, 
-  value, 
-  onChange, 
-  placeholder = "", 
-  multiline = false, 
-  disabled = false 
+export function TextInput({
+  label,
+  value,
+  onChange,
+  placeholder = '',
+  multiline = false,
+  disabled = false,
 }: TextInputProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     onChange(e.target.value);
@@ -26,7 +26,7 @@ export function TextInput({
     value,
     onChange: handleChange,
     placeholder,
-    disabled
+    disabled,
   };
 
   return (

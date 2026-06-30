@@ -1,4 +1,4 @@
-import { useUserStore } from "../../../stores/userStore";
+import { useUserStore } from '../../../stores/userStore';
 import {
   ChevronDown,
   Star,
@@ -12,25 +12,25 @@ import {
   MessageCircle,
   Mail,
   User as UserIcon,
-} from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useBlockUser } from "../../../features/profile/hooks";
-import { toast } from "react-hot-toast";
-import { BlockModal } from "./BlockModal";
-import type { User } from "../../../types/userTypes";
-import { Button } from "../../Ui/button/Button";
+} from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useBlockUser } from '../../../features/profile/hooks';
+import { toast } from 'react-hot-toast';
+import { BlockModal } from './BlockModal';
+import type { User } from '../../../types/userTypes';
+import { Button } from '../../Ui/button/Button';
 
 export function ProfileHeader({
   user,
   handlelogout,
   isOwnProfile = true,
-  profileType = "seeker",
+  profileType = 'seeker',
 }: {
   user: User | null;
   handlelogout: () => void;
   isOwnProfile?: boolean;
-  profileType?: "seeker" | "poster";
+  profileType?: 'seeker' | 'poster';
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
@@ -41,7 +41,7 @@ export function ProfileHeader({
   const currentUser = useUserStore((state) => state.user);
 
   const isBlockedByMe = currentUser?.blockedUsers?.some(
-    (id) => (typeof id === "string" ? id : id._id)?.toString() === user?._id,
+    (id) => (typeof id === 'string' ? id : id._id)?.toString() === user?._id
   );
 
   const handleUnblock = () => {
@@ -56,25 +56,21 @@ export function ProfileHeader({
   };
 
   const fullName =
-    user?.role === "company"
-      ? user?.companyName
-      : `${user?.name} ${user?.lastName || ""}`.trim();
+    user?.role === 'company' ? user?.companyName : `${user?.name} ${user?.lastName || ''}`.trim();
 
   // NEW UI FOR COMPANIES
-  if (user?.role === "company") {
+  if (user?.role === 'company') {
     return (
       <div className="box-card-custom rounded-none">
         {isBlockedByMe && (
           <div className="bg-[#FEF2F2] py-3 text-center border-b border-red-100 animate-in slide-in-from-top duration-300">
-            <p className="text-[14px] font-medium text-gray-900">
-              Du har blokkert denne brukeren.
-            </p>
+            <p className="text-[14px] font-medium text-gray-900">Du har blokkert denne brukeren.</p>
             <button
               onClick={() => setIsUnblockModalOpen(true)}
               disabled={blockMutation.isPending}
               className="text-[14px] font-bold text-[#FF6B6B] hover:underline mt-0.5 disabled:opacity-50"
             >
-              {blockMutation.isPending ? "Opphever..." : "Opphev blokkering"}
+              {blockMutation.isPending ? 'Opphever...' : 'Opphev blokkering'}
             </button>
           </div>
         )}
@@ -84,7 +80,7 @@ export function ProfileHeader({
           <img
             src={
               user?.bannerUrl ||
-              "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200"
+              'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200'
             }
             alt="Banner"
             className="w-full h-full object-cover"
@@ -93,12 +89,12 @@ export function ProfileHeader({
             <div className="absolute bottom-4 right-4 sm:right-10 z-10000">
               <Button
                 label="Edit banner"
-                onClick={() => navigate("/settings/banner")}
+                onClick={() => navigate('/settings/banner')}
                 icon={<Pencil size={16} />}
                 className="font-bold px-8 cursor-pointer box-card-custom! rounded-lg! hidden md:flex text-custom-black!"
               />
               <Button
-                onClick={() => navigate("/settings/banner")}
+                onClick={() => navigate('/settings/banner')}
                 icon={<Pencil size={16} />}
                 className="font-bold cursor-pointer box-card-custom! rounded-lg! text-custom-black! md:hidden"
               />
@@ -115,7 +111,7 @@ export function ProfileHeader({
                 <img
                   src={
                     user?.avatarUrl ||
-                    "https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332"
+                    'https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332'
                   }
                   alt="Profile"
                   className="w-full h-full object-cover"
@@ -124,7 +120,7 @@ export function ProfileHeader({
                   <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <button
                       title="Endre avatar"
-                      onClick={() => navigate("/settings/picture")}
+                      onClick={() => navigate('/settings/picture')}
                       className="bg-white/80 p-2 rounded-full shadow-md"
                     >
                       <Pencil size={20} className="text-gray-700" />
@@ -137,9 +133,7 @@ export function ProfileHeader({
             {/* User Info */}
             <div className="flex-1 text-center md:text-left mb-2">
               <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
-                <h1 className="text-[32px] font-bold text-gray-900 leading-tight">
-                  {fullName}
-                </h1>
+                <h1 className="text-[32px] font-bold text-gray-900 leading-tight">{fullName}</h1>
                 <div className="flex gap-2">
                   {(user as any)?.isTrusted && (
                     <div
@@ -150,7 +144,7 @@ export function ProfileHeader({
                       TRUSTED
                     </div>
                   )}
-                  {user?.subscription && user.subscription !== "Standard" && (
+                  {user?.subscription && user.subscription !== 'Standard' && (
                     <div className="flex items-center gap-1 bg-[#FFF8E1] text-[#F57C00] text-[10px] font-bold px-2.5 py-1 rounded-full border border-[#F57C00]/20 shadow-sm">
                       <Crown size={14} />
                       {user.subscription.toUpperCase()}
@@ -171,7 +165,7 @@ export function ProfileHeader({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-gray-900">
-                      {user?.averageRating?.toFixed(1) || "5.0"}
+                      {user?.averageRating?.toFixed(1) || '5.0'}
                     </span>
                     <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                       Rating
@@ -182,15 +176,11 @@ export function ProfileHeader({
                 <div className="flex flex-wrap justify-center md:justify-start items-center gap-3 text-gray-600">
                   <div className="flex items-center gap-1.5">
                     <MapPin size={18} className="text-gray-900" />
-                    <span className="font-semibold">
-                      {user?.postSted || "Oslo"}
-                    </span>
+                    <span className="font-semibold">{user?.postSted || 'Oslo'}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <GraduationCap size={18} className="text-gray-900" />
-                    <span className="font-semibold">
-                      {`Org.nr: ${user?.orgNumber}`}
-                    </span>
+                    <span className="font-semibold">{`Org.nr: ${user?.orgNumber}`}</span>
                   </div>
                 </div>
               </div>
@@ -202,7 +192,7 @@ export function ProfileHeader({
                 <>
                   <Button
                     label="Edit profile"
-                    onClick={() => navigate("/settings")}
+                    onClick={() => navigate('/settings')}
                     icon={<Pencil size={18} />}
                     className="rounded-lg font-bold px-8 cursor-pointer"
                   />
@@ -220,7 +210,7 @@ export function ProfileHeader({
                       <div className="absolute top-[calc(100%+8px)] right-0 bg-white border border-gray-100 rounded-xl shadow-xl py-2 min-w-50 z-50 animate-in fade-in slide-in-from-top-2">
                         <button
                           title="Endre innstillinger"
-                          onClick={() => navigate("/settings/seeker")}
+                          onClick={() => navigate('/settings/seeker')}
                           className="flex items-center w-full px-4 py-2 text-sm font-semibold hover:bg-gray-50 text-gray-700"
                         >
                           <Settings size={16} className="mr-2" /> Innstillinger
@@ -243,7 +233,7 @@ export function ProfileHeader({
                   </button> */}
                   <button className="bg-[#E4E6EB] hover:bg-[#D8DADF] text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-all">
                     <Star size={18} />
-                    {user?.averageRating?.toFixed(1) || "5.0"}
+                    {user?.averageRating?.toFixed(1) || '5.0'}
                   </button>
                   <button
                     title="Vis mer"
@@ -301,15 +291,13 @@ export function ProfileHeader({
     <>
       {isBlockedByMe && (
         <div className="bg-[#FEF2F2] py-3 text-center border-b border-red-100 animate-in slide-in-from-top duration-300">
-          <p className="text-[14px] font-medium text-gray-900">
-            Du har blokkert denne brukeren.
-          </p>
+          <p className="text-[14px] font-medium text-gray-900">Du har blokkert denne brukeren.</p>
           <button
             onClick={() => setIsUnblockModalOpen(true)}
             disabled={blockMutation.isPending}
             className="text-[14px] font-bold text-[#FF6B6B] hover:underline mt-0.5 disabled:opacity-50"
           >
-            {blockMutation.isPending ? "Opphever..." : "Opphev blokkering"}
+            {blockMutation.isPending ? 'Opphever...' : 'Opphev blokkering'}
           </button>
         </div>
       )}
@@ -321,13 +309,9 @@ export function ProfileHeader({
             <div className="relative">
               <div className="w-[100px] h-[100px] rounded-full bg-[#c8d8c8] border-4 border-[#f5f0e8] overflow-hidden flex items-center justify-center text-[36px] font-medium text-[#1a3a1a]">
                 {user?.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={fullName}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={user.avatarUrl} alt={fullName} className="w-full h-full object-cover" />
                 ) : (
-                  user?.name?.[0] || "U"
+                  user?.name?.[0] || 'U'
                 )}
               </div>
               {user?.verified && (
@@ -339,7 +323,7 @@ export function ProfileHeader({
 
             <div className="pb-2.5">
               <div className="text-[12px] text-custom-green mb-0.5 font-medium">
-                @{user?.name.toLowerCase().replace(/\s+/g, "") || "guest"}
+                @{user?.name.toLowerCase().replace(/\s+/g, '') || 'guest'}
               </div>
               <h1 className="text-[22px] font-medium text-custom-black mb-0.5 leading-tight">
                 {fullName}
@@ -347,16 +331,16 @@ export function ProfileHeader({
               <div className="text-[12px] text-black/40 flex items-center gap-1">
                 <MapPin size={13} />
                 <span>
-                  {typeof user?.postSted === "object"
+                  {typeof user?.postSted === 'object'
                     ? user.postSted.city
-                    : user?.postSted || "Oslo"}
-                  , Norge · Medlem siden{" "}
+                    : user?.postSted || 'Oslo'}
+                  , Norge · Medlem siden{' '}
                   {user?.createdAt
-                    ? new Date(user.createdAt).toLocaleDateString("no-NO", {
-                        month: "long",
-                        year: "numeric",
+                    ? new Date(user.createdAt).toLocaleDateString('no-NO', {
+                        month: 'long',
+                        year: 'numeric',
                       })
-                    : "desember 2019"}
+                    : 'desember 2019'}
                 </span>
               </div>
             </div>
@@ -367,14 +351,14 @@ export function ProfileHeader({
             {isOwnProfile ? (
               <>
                 <button
-                  onClick={() => navigate("/settings/seeker")}
+                  onClick={() => navigate('/settings/seeker')}
                   className="px-4.5 py-2.5 bg-transparent border border-black/20 rounded-full text-[13px] text-custom-black flex items-center gap-1.5 hover:bg-black/5 transition-colors"
                 >
                   <Settings size={14} />
                   <span>Innstillinger</span>
                 </button>
                 <button
-                  onClick={() => navigate("/settings/bio")}
+                  onClick={() => navigate('/settings/bio')}
                   className="px-4.5 py-2.5 bg-custom-green text-white rounded-full text-[13px] flex items-center gap-1.5 hover:bg-[#25633a] transition-colors"
                 >
                   <Pencil size={14} />
@@ -399,34 +383,64 @@ export function ProfileHeader({
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-11 gap-3 mb-5">
         {[
-          { label: "Fullførte oppdrag", val: user?.completedJobs || 0 },
+          { label: 'Fullførte', val: user?.completedJobs || 0 },
           {
-            label: "Snittrating",
-            val: user?.averageRating?.toFixed(1) || "0.0",
+            label: 'Rating',
+            val: user?.averageRating?.toFixed(1) || '0.0',
           },
           {
-            label: "Utlagte oppdrag",
-            val: (user as any)?.postedJobsCount || 0,
+            label: 'Utlagte',
+            val: user?.postedJobsCount || 0,
           },
           {
-            label: "Svarprosent",
-            val: `${(user as any)?.responseRate || "0"}%`,
+            label: 'Svar %',
+            val: `${user?.responseRate || '0'}%`,
           },
           {
-            label: "Totalt tjent",
-            val: `${(user as any)?.totalEarned || 0} kr`,
+            label: 'Totalt tjent',
+            val: `${user?.earnings || 0} kr`,
+          },
+          {
+            label: 'Responstid',
+            val: (() => {
+              const minutes = user?.averageResponseTimeMinutes || 0;
+              if (minutes < 60) return `${minutes} min`;
+              const hours = Math.floor(minutes / 60);
+              const remainingMinutes = minutes % 60;
+              return remainingMinutes > 0 ? `${hours}t ${remainingMinutes}m` : `${hours}t`;
+            })(),
+          },
+          {
+            label: 'Gjent. kunder',
+            val: user?.repeatCustomersCount || 0,
+          },
+          {
+            label: 'Ansettelse %',
+            val: `${user?.hireRate || '0'}%`,
+          },
+          {
+            label: 'Fullfør %',
+            val: `${user?.completionRate || '0'}%`,
+          },
+          {
+            label: 'Månedsjobber',
+            val: user?.jobsThisMonth || 0,
+          },
+          {
+            label: 'Søknader',
+            val: user?.totalApplicationsReceived || 0,
           },
         ].map((stat, i) => (
           <div
             key={i}
-            className="bg-white border border-black/5 rounded-[14px] p-3.5 text-center"
+            className="bg-white border border-black/5 rounded-[14px] p-3 text-center flex flex-col justify-center w-full aspect-square max-w-[120px] mx-auto"
           >
-            <strong className="block text-[20px] font-medium text-custom-green mb-0.5">
+            <strong className="block text-lg sm:text-xl font-medium text-custom-green mb-1">
               {stat.val}
             </strong>
-            <span className="text-[10px] text-black/40 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs text-black/40 uppercase tracking-wide leading-tight">
               {stat.label}
             </span>
           </div>
@@ -443,7 +457,7 @@ export function ProfileHeader({
         </span>
         <span className="flex items-center gap-1.5 bg-white border border-black/5 rounded-full px-3 py-1.5 text-[12px] text-black/60">
           <Star size={14} className="text-custom-green" /> Topprating (
-          {user?.averageRating?.toFixed(1) || "5.0"})
+          {user?.averageRating?.toFixed(1) || '5.0'})
         </span>
         {!user?.verified && (
           <span className="flex items-center gap-1.5 bg-white border border-black/5 rounded-full px-3 py-1.5 text-[12px] text-black/20">

@@ -20,7 +20,9 @@
   font-weight: 600;
   padding: 10px 16px;
   border-radius: 8px;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease;
 }
 
 .button:hover {

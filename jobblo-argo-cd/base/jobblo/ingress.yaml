@@ -17,5 +17,4 @@ spec:
                 port:
                   number: 80
 
-
 #Husk å justere host: jobblo.local til et faktisk domene eller lokal DNS-oppse

@@ -1,8 +1,8 @@
-import axios from "axios";
-import { setupInterceptors } from "../lib/axios";
+import axios from 'axios';
+import { setupInterceptors } from '../lib/axios';
 
 // Define your API base URL here
-const BASE_URL = import.meta.env.VITE_MAIN_URL || "http://localhost:5000";
+const BASE_URL = import.meta.env.VITE_MAIN_URL || 'http://localhost:5000';
 
 /**
  * Main Axios instance for the application.
@@ -12,8 +12,8 @@ const mainLink = axios.create({
   baseURL: BASE_URL,
   timeout: 30000,
   headers: {
-    Accept: "application/json",
-    "Content-Type": "application/json",
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
   },
   withCredentials: true,
 });

@@ -1,10 +1,10 @@
-import { NavLink } from "react-router-dom";
-import { Loader2 } from "lucide-react";
-import { usePricingLogic } from "../../features/plans/usePricingLogic";
-import { PricingHeader } from "../../components/pricing/PricingHeader";
-import { PricingSwitcher } from "../../components/pricing/PricingSwitcher";
-import { PricingCard } from "../../components/pricing/PricingCard";
-import { CheckoutView } from "../../components/pricing/CheckoutView";
+import { NavLink } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
+import { usePricingLogic } from '../../features/plans/usePricingLogic';
+import { PricingHeader } from '../../components/pricing/PricingHeader';
+import { PricingSwitcher } from '../../components/pricing/PricingSwitcher';
+import { PricingCard } from '../../components/pricing/PricingCard';
+import { CheckoutView } from '../../components/pricing/CheckoutView';
 
 export default function PricingPage() {
   const {
@@ -27,7 +27,7 @@ export default function PricingPage() {
     getIsPopular,
   } = usePricingLogic();
 
-  if (step === "checkout" && selectedPlan) {
+  if (step === 'checkout' && selectedPlan) {
     return (
       <CheckoutView
         selectedPlan={selectedPlan}

@@ -1,5 +1,5 @@
-import React from "react";
-import { Clock, Bell } from "lucide-react";
+import React from 'react';
+import { Clock, Bell } from 'lucide-react';
 
 interface NotificationHistoryItem {
   _id: string;
@@ -46,10 +46,15 @@ const NotificationHistory: React.FC<NotificationHistoryProps> = ({
       ) : (
         <div className="space-y-4">
           {history.map((item) => (
-            <div key={item._id} className="bg-white p-5 rounded-3xl border border-gray-100 flex justify-between items-center shadow-sm hover:border-gray-200 transition-colors">
+            <div
+              key={item._id}
+              className="bg-white p-5 rounded-3xl border border-gray-100 flex justify-between items-center shadow-sm hover:border-gray-200 transition-colors"
+            >
               <div className="flex gap-4 items-center">
-                <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${notificationTypes.find(x => x.id === item.type)?.color || "bg-gray-100"}`}>
-                  {notificationTypes.find(x => x.id === item.type)?.icon || <Bell size={16}/>}
+                <div
+                  className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${notificationTypes.find((x) => x.id === item.type)?.color || 'bg-gray-100'}`}
+                >
+                  {notificationTypes.find((x) => x.id === item.type)?.icon || <Bell size={16} />}
                 </div>
                 <div>
                   <p className="text-sm font-bold text-gray-800 line-clamp-1">{item.content}</p>
@@ -65,15 +70,17 @@ const NotificationHistory: React.FC<NotificationHistoryProps> = ({
           ))}
 
           <div className="flex justify-center gap-2 mt-8">
-            <button 
+            <button
               disabled={page === 1}
               onClick={() => onPageChange(page - 1)}
               className="px-4 py-2 rounded-xl border border-gray-200 disabled:opacity-30 text-xs font-bold hover:bg-gray-50"
             >
               Previous
             </button>
-            <span className="flex items-center text-xs font-bold px-4 text-gray-500">Page {page} of {totalPages}</span>
-            <button 
+            <span className="flex items-center text-xs font-bold px-4 text-gray-500">
+              Page {page} of {totalPages}
+            </span>
+            <button
               disabled={page === totalPages}
               onClick={() => onPageChange(page + 1)}
               className="px-4 py-2 rounded-xl border border-gray-200 disabled:opacity-30 text-xs font-bold hover:bg-gray-50"

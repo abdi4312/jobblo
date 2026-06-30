@@ -1,4 +1,4 @@
-import { Spinner } from "../Ui/Spinner";
+import { Spinner } from '../Ui/Spinner';
 
 export const CategorySkeleton = () => {
   return (

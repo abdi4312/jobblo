@@ -1,5 +1,5 @@
-import type { User } from "./userTypes.ts";
-import type { Jobs } from "./Jobs.ts";
+import type { User } from './userTypes.ts';
+import type { Jobs } from './Jobs.ts';
 
 export type FavoritesResponse = {
   success: boolean;

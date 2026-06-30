@@ -10,15 +10,9 @@ const BackNavigation: React.FC = () => {
   return (
     <div className={styles.container}>
       <button className={styles.backButton} onClick={handleBackClick}>
-        <svg 
-          className={styles.backIcon} 
-          width="24" 
-          height="24" 
-          viewBox="0 0 25 24" 
-          fill="none"
-        >
-          <path 
-            d="M11.4488 12L16.0488 16.6L14.6488 18L8.64883 12L14.6488 6L16.0488 7.4L11.4488 12Z" 
+        <svg className={styles.backIcon} width="24" height="24" viewBox="0 0 25 24" fill="none">
+          <path
+            d="M11.4488 12L16.0488 16.6L14.6488 18L8.64883 12L14.6488 6L16.0488 7.4L11.4488 12Z"
             fill="#303030"
           />
         </svg>

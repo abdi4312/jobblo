@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { toast } from "react-hot-toast";
-import mainLink from "../api/mainURLs";
-import { RevolvingDot } from "react-loader-spinner";
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import mainLink from '../api/mainURLs';
+import { RevolvingDot } from 'react-loader-spinner';
 
 function ContactSuccessPage() {
   const navigate = useNavigate();
@@ -12,13 +12,13 @@ function ContactSuccessPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const sessionId = params.get("session_id");
-    const serviceId = params.get("serviceId");
+    const sessionId = params.get('session_id');
+    const serviceId = params.get('serviceId');
 
     // Agar required params missing ho to home redirect
     if (!sessionId || !serviceId) {
-      toast.error("Ugyldige parametere. Du blir sendt til forsiden.");
-      navigate("/", { replace: true });
+      toast.error('Ugyldige parametere. Du blir sendt til forsiden.');
+      navigate('/', { replace: true });
       return;
     }
 
@@ -31,15 +31,15 @@ function ContactSuccessPage() {
         .get(`/api/stripe/extra-contact-status/${sessionId}`)
         .then(() => {
           // Then create job request (which will now pass middleware because of transaction)
-          return mainLink.post("/api/orders/request", { serviceId, sessionId });
+          return mainLink.post('/api/orders/request', { serviceId, sessionId });
         })
         .then((res) => {
-          toast.success("Forespørsel sendt! Venter på godkjenning.");
+          toast.success('Forespørsel sendt! Venter på godkjenning.');
           navigate(`/job-listing/${serviceId}`, { replace: true });
         })
         .catch((err) => {
-          console.error("Payment verification or request failed:", err);
-          toast.error(err.response?.data?.message || "Kunne ikke fullføre forespørselen");
+          console.error('Payment verification or request failed:', err);
+          toast.error(err.response?.data?.message || 'Kunne ikke fullføre forespørselen');
           setLoading(false);
         });
     }
@@ -49,15 +49,8 @@ function ContactSuccessPage() {
     <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
       {loading && (
         <>
-          <RevolvingDot
-            height="80"
-            width="80"
-            color="#4fa94d"
-            ariaLabel="loading"
-          />
-          <p className="mt-4 text-gray-700 text-lg">
-            Bekrefter betaling, vennligst vent...
-          </p>
+          <RevolvingDot height="80" width="80" color="#4fa94d" ariaLabel="loading" />
+          <p className="mt-4 text-gray-700 text-lg">Bekrefter betaling, vennligst vent...</p>
         </>
       )}
       {!loading && (

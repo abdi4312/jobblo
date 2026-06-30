@@ -21,11 +21,7 @@ export function ProfileField({ label, value, onEdit }: ProfileFieldProps) {
           <div className={styles.label}>{label}</div>
           <div className={styles.value}>{value}</div>
         </div>
-        <button 
-          className={styles.editButton} 
-          onClick={handleEdit}
-          aria-label={`Edit ${label}`}
-        >
+        <button className={styles.editButton} onClick={handleEdit} aria-label={`Edit ${label}`}>
           <EditIcon className={styles.editIcon} />
         </button>
       </div>

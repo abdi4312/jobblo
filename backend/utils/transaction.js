@@ -1,4 +1,4 @@
-const Transaction = require("../models/Transaction");
+const Transaction = require('../models/Transaction');
 
 exports.upsertTransaction = async ({
   userId,
@@ -10,9 +10,9 @@ exports.upsertTransaction = async ({
 
   stripeSessionId,
   amount,
-  currency = "nok",
+  currency = 'nok',
 
-  status = "pending",
+  status = 'pending',
   type,
 
   discountAmount = 0,
@@ -20,7 +20,7 @@ exports.upsertTransaction = async ({
   coupon = null,
 }) => {
   if (!stripeSessionId) {
-    throw new Error("stripeSessionId is required");
+    throw new Error('stripeSessionId is required');
   }
 
   return await Transaction.findOneAndUpdate(
@@ -47,6 +47,6 @@ exports.upsertTransaction = async ({
       upsert: true,
       new: true,
       setDefaultsOnInsert: true,
-    },
+    }
   );
 };

@@ -1,22 +1,18 @@
-import styles from "./MapComponent.module.css";
-import { Circle, MapContainer, TileLayer } from "react-leaflet";
-import type { LatLngLiteral } from "leaflet";
-import { useMemo } from "react";
+import styles from './MapComponent.module.css';
+import { Circle, MapContainer, TileLayer } from 'react-leaflet';
+import type { LatLngLiteral } from 'leaflet';
+import { useMemo } from 'react';
 
 const EARTH_RADIUS_METERS = 6371000;
 
-function randomPointInCircle(
-  center: LatLngLiteral,
-  radiusMeters: number,
-): LatLngLiteral {
+function randomPointInCircle(center: LatLngLiteral, radiusMeters: number): LatLngLiteral {
   const u = Math.max(Math.random(), 1e-6);
   const v = Math.random();
   const distance = Math.sqrt(u) * radiusMeters;
   const angle = 2 * Math.PI * v;
   const deltaLat = (distance * Math.cos(angle)) / EARTH_RADIUS_METERS;
   const deltaLng =
-    (distance * Math.sin(angle)) /
-    (EARTH_RADIUS_METERS * Math.cos((center.lat * Math.PI) / 180));
+    (distance * Math.sin(angle)) / (EARTH_RADIUS_METERS * Math.cos((center.lat * Math.PI) / 180));
 
   return {
     lat: center.lat + (deltaLat * 180) / Math.PI,
@@ -58,10 +54,10 @@ export function MapComponent({
           center={randomCenter}
           radius={circleRadius}
           pathOptions={{
-            color: "#ff8a7a",
-            fillColor: "#ff8a7a",
+            color: '#ff8a7a',
+            fillColor: '#ff8a7a',
             fillOpacity: 0.2,
-            weight: 2
+            weight: 2,
           }}
         />
       </MapContainer>

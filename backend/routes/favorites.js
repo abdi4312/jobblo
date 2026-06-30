@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const favoriteController = require('../controllers/favoriteController');
-const { authenticate } = require("../middleware/auth");
+const { authenticate } = require('../middleware/auth');
 
 /**
  * SECURITY RULE:
@@ -67,7 +67,7 @@ const { authenticate } = require("../middleware/auth");
  *       404:
  *         description: Bruker ikke funnet
  */
-router.get("/", authenticate, favoriteController.getFavorites);
+router.get('/', authenticate, favoriteController.getFavorites);
 
 /**
  * @swagger
@@ -106,7 +106,7 @@ router.get("/", authenticate, favoriteController.getFavorites);
  *       404:
  *         description: Bruker eller tjeneste ikke funnet
  */
-router.post("/:serviceId", authenticate, favoriteController.addFavorite);
+router.post('/:serviceId', authenticate, favoriteController.addFavorite);
 
 /**
  * @swagger
@@ -141,7 +141,6 @@ router.post("/:serviceId", authenticate, favoriteController.addFavorite);
  *       404:
  *         description: Favoritt ikke funnet
  */
-router.delete("/:serviceId", authenticate, favoriteController.removeFavorite);
+router.delete('/:serviceId', authenticate, favoriteController.removeFavorite);
 
 module.exports = router;
-

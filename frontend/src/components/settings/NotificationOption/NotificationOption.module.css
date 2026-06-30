@@ -5,7 +5,7 @@
   align-items: center;
   align-self: stretch;
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.40);
+  background: rgba(255, 255, 255, 0.4);
   box-shadow: 0 1px 1.3px 0 rgba(0, 0, 0, 0.25);
   margin-bottom: 5px;
 }
@@ -17,7 +17,12 @@
 
 .title {
   color: var(--color-text);
-  font-family: 'Inter', -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    'Inter',
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: normal;
@@ -35,11 +40,11 @@
   .container {
     padding: 5px 10px;
   }
-  
+
   .title {
     font-size: 15px;
   }
-  
+
   .togglesSection {
     width: 120px;
   }
@@ -49,7 +54,7 @@
   .container {
     padding: 6px 15px;
   }
-  
+
   .togglesSection {
     width: 150px;
   }
@@ -59,11 +64,11 @@
   .container {
     padding: 7px 16px;
   }
-  
+
   .title {
     font-size: 17px;
   }
-  
+
   .togglesSection {
     width: 160px;
   }

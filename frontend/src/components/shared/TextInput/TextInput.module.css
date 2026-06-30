@@ -61,8 +61,13 @@
 
 .input {
   flex: 1 0 0;
-  color: #181D18;
-  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  color: #181d18;
+  font-family:
+    Roboto,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 16px;
   font-weight: 400;
   line-height: 24px;
@@ -75,7 +80,7 @@
 }
 
 .input::placeholder {
-  color: #B3B3B3;
+  color: #b3b3b3;
 }
 
 .labelContainer {
@@ -85,13 +90,18 @@
   position: absolute;
   left: -4px;
   top: -12px;
-  background: #FFF;
+  background: #fff;
   z-index: 1;
 }
 
 .labelText span {
   color: #424940;
-  font-family: Roboto, -apple-system, Roboto, Helvetica, sans-serif;
+  font-family:
+    Roboto,
+    -apple-system,
+    Roboto,
+    Helvetica,
+    sans-serif;
   font-size: 12px;
   font-weight: 400;
   line-height: 16px;
@@ -100,16 +110,16 @@
 
 /* Focus state */
 .inputWrapper:focus-within {
-  border: 3px solid #376A3E;
+  border: 3px solid #376a3e;
 }
 
 .inputWrapper:focus-within .labelText span {
-  color: #376A3E;
+  color: #376a3e;
 }
 
 /* Multiline specific styles */
 .multiline .labelContainer {
-  background: #FCF9EB;
+  background: #fcf9eb;
 }
 
 /* Mobile responsive */
@@ -117,7 +127,7 @@
   .input {
     font-size: 15px;
   }
-  
+
   .labelText span {
     font-size: 11px;
   }
@@ -127,7 +137,7 @@
   .input {
     font-size: 14px;
   }
-  
+
   .labelText span {
     font-size: 10px;
   }
@@ -137,23 +147,23 @@
   .container {
     height: 64px;
   }
-  
+
   .multiline {
     min-height: 96px;
   }
-  
+
   .content {
     height: 56px;
   }
-  
+
   .multiline .content {
     min-height: 88px;
   }
-  
+
   .input {
     font-size: 18px;
   }
-  
+
   .labelText span {
     font-size: 14px;
   }

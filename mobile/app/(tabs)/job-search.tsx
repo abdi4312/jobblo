@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,14 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { useInfiniteJobs } from "../../features/job/hooks/useInfiniteJobs";
-import { useAuth } from "../../context/AuthContext";
-import JobCard from "../../components/explore/job-card/index";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useInfiniteJobs } from '../../features/job/hooks/useInfiniteJobs';
+import { useAuth } from '../../context/AuthContext';
+import JobCard from '../../components/explore/job-card/index';
 
 export default function JobSearchScreen() {
   const router = useRouter();
@@ -21,47 +21,30 @@ export default function JobSearchScreen() {
   const { initialCategory } = useLocalSearchParams<{
     initialCategory: string;
   }>();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
 
-  const {
-    data,
-    isLoading,
-    isError,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteJobs({
-    limit: 10,
-    search,
-    category: initialCategory,
-  });
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteJobs({
+      limit: 10,
+      search,
+      category: initialCategory,
+    });
 
   const jobs = data?.pages.flatMap((page) => page.data) || [];
 
-  const isCloseToBottom = ({
-    layoutMeasurement,
-    contentOffset,
-    contentSize,
-  }: any) => {
+  const isCloseToBottom = ({ layoutMeasurement, contentOffset, contentSize }: any) => {
     const paddingToBottom = 20;
-    return (
-      layoutMeasurement.height + contentOffset.y >=
-      contentSize.height - paddingToBottom
-    );
+    return layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
   };
 
   const handleScroll = (event: any) => {
-    if (
-      isCloseToBottom(event.nativeEvent) &&
-      hasNextPage &&
-      !isFetchingNextPage
-    ) {
+    if (isCloseToBottom(event.nativeEvent) && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top", "left", "right"]}>
+    <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
 
       {/* Header with Back & Search */}
@@ -83,17 +66,14 @@ export default function JobSearchScreen() {
             returnKeyType="search"
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch("")} className="ml-2">
+            <TouchableOpacity onPress={() => setSearch('')} className="ml-2">
               <Ionicons name="close-circle" size={18} color="#999" />
             </TouchableOpacity>
           )}
         </View>
 
         {!user && (
-          <TouchableOpacity
-            onPress={() => router.replace("/login")}
-            className="ml-3"
-          >
+          <TouchableOpacity onPress={() => router.replace('/login')} className="ml-3">
             <Text className="text-orange-500 font-bold">Login</Text>
           </TouchableOpacity>
         )}
@@ -103,12 +83,8 @@ export default function JobSearchScreen() {
       {initialCategory && (
         <View className="px-4 py-2 flex-row items-center">
           <View className="bg-orange-100 px-3 py-1 rounded-full flex-row items-center border border-orange-200">
-            <Text className="text-orange-600 text-xs font-medium mr-1">
-              {initialCategory}
-            </Text>
-            <TouchableOpacity
-              onPress={() => router.setParams({ initialCategory: "" })}
-            >
+            <Text className="text-orange-600 text-xs font-medium mr-1">{initialCategory}</Text>
+            <TouchableOpacity onPress={() => router.setParams({ initialCategory: '' })}>
               <Ionicons name="close-circle" size={14} color="#E68A2E" />
             </TouchableOpacity>
           </View>
@@ -144,9 +120,7 @@ export default function JobSearchScreen() {
             {jobs.length === 0 && (
               <View className="py-20 items-center">
                 <Ionicons name="search-outline" size={60} color="#ddd" />
-                <Text className="text-gray-400 mt-4 text-lg">
-                  No results found
-                </Text>
+                <Text className="text-gray-400 mt-4 text-lg">No results found</Text>
               </View>
             )}
 

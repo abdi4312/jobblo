@@ -1,35 +1,27 @@
-import ChooseImage from "../../assets/images/Hero/choose_img.png";
-import {
-  Target,
-  Users,
-  TrendingUp,
-  ShieldCheck,
-  UserCircle,
-} from "lucide-react";
+import ChooseImage from '../../assets/images/Hero/choose_img.png';
+import { Target, Users, TrendingUp, ShieldCheck, UserCircle } from 'lucide-react';
 
 const features = [
   {
-    title: "Presisjon",
+    title: 'Presisjon',
     description:
-      "Vår smarte matching-algoritme sikrer at du finner de mest relevante oppdragene for dine ferdigheter.",
+      'Vår smarte matching-algoritme sikrer at du finner de mest relevante oppdragene for dine ferdigheter.',
     icon: Target,
   },
   {
-    title: "Fellesskap",
-    description:
-      "Bli en del av et voksende nettverk av dyktige fagfolk og innovative bedrifter.",
+    title: 'Fellesskap',
+    description: 'Bli en del av et voksende nettverk av dyktige fagfolk og innovative bedrifter.',
     icon: Users,
   },
   {
-    title: "Vekst",
-    description:
-      "Utvikle karrieren din med varierte prosjekter som utfordrer og inspirerer.",
+    title: 'Vekst',
+    description: 'Utvikle karrieren din med varierte prosjekter som utfordrer og inspirerer.',
     icon: TrendingUp,
   },
   {
-    title: "Trygghet",
+    title: 'Trygghet',
     description:
-      "Alle oppdrag er kvalitetssikret, og vi garanterer trygg betaling for utført arbeid via SafePay.",
+      'Alle oppdrag er kvalitetssikret, og vi garanterer trygg betaling for utført arbeid via SafePay.',
     icon: ShieldCheck,
   },
 ];
@@ -39,8 +31,7 @@ export function Guide() {
     <section className="py-5 px-5 sm:px-12 max-w-275 mx-auto">
       <div className="text-center mb-9">
         <h2 className="text-[28px] font-normal text-custom-black">
-          Hvorfor velge <em className="text-custom-green not-italic">Jobblo</em>
-          ?
+          Hvorfor velge <em className="text-custom-green not-italic">Jobblo</em>?
         </h2>
         <p className="text-[14px] text-custom-black/50 mt-1.5">
           Vi gjør det enkelt, trygt og lønnsomt
@@ -51,11 +42,7 @@ export function Guide() {
         {/* Left: Image Side */}
         <div className="bg-[#e8e0d0] rounded-[50%_50%_50%_50%/55%_55%_45%_45%] h-95 flex items-center justify-center relative overflow-hidden">
           {ChooseImage ? (
-            <img
-              src={ChooseImage}
-              alt="Worker"
-              className="w-full h-full object-cover"
-            />
+            <img src={ChooseImage} alt="Worker" className="w-full h-full object-cover" />
           ) : (
             <UserCircle size={80} className="text-black/20" />
           )}

@@ -1,4 +1,4 @@
-import { EmptyState } from "./EmptyState";
+import { EmptyState } from './EmptyState';
 import {
   Star,
   ChevronDown,
@@ -14,21 +14,18 @@ import {
   ShieldCheck,
   Pencil,
   Bookmark,
-} from "lucide-react";
-import { useParams } from "react-router-dom";
-import {
-  useUserProfile,
-  useUserReviews,
-} from "../../../features/profile/hooks";
-import { useFavoriteLists } from "../../../features/favoriteLists/hooks";
-import { JobDetailCardSkeleton } from "../../Loading/JobDetailCardSkeleton.tsx";
-import { useNavigate } from "react-router-dom";
-import { useJobs } from "../../../features/jobsList/hooks";
-import { JobCard } from "../../component/jobCard/JobCard.tsx";
-import type { Jobs } from "../../../../types/Jobs.ts";
-import { useUserStore } from "../../../stores/userStore.ts";
-import { Button } from "../../Ui/Button.tsx";
-import { useEffect, useRef } from "react";
+} from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import { useUserProfile, useUserReviews } from '../../../features/profile/hooks';
+import { useFavoriteLists } from '../../../features/favoriteLists/hooks';
+import { JobDetailCardSkeleton } from '../../Loading/JobDetailCardSkeleton.tsx';
+import { useNavigate } from 'react-router-dom';
+import { useJobs } from '../../../features/jobsList/hooks';
+import { JobCard } from '../../component/jobCard/JobCard.tsx';
+import type { Jobs } from '../../../../types/Jobs.ts';
+import { useUserStore } from '../../../stores/userStore.ts';
+import { Button } from '../../Ui/Button.tsx';
+import { useEffect, useRef } from 'react';
 
 interface List {
   _id: string;
@@ -45,7 +42,7 @@ export function ItemsGrid({
 }: {
   activeTab: string;
   user: any;
-  profileType?: "seeker" | "poster";
+  profileType?: 'seeker' | 'poster';
 }) {
   const navigate = useNavigate();
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -70,11 +67,7 @@ export function ItemsGrid({
   } = useJobs({ userId: user?._id });
 
   useEffect(() => {
-    if (
-      !hasNextPage ||
-      isFetchingNextPage ||
-      (activeTab !== "Oppdrag" && activeTab !== "Aktive")
-    )
+    if (!hasNextPage || isFetchingNextPage || (activeTab !== 'Oppdrag' && activeTab !== 'Aktive'))
       return;
 
     const observer = new IntersectionObserver(
@@ -83,7 +76,7 @@ export function ItemsGrid({
           fetchNextPage();
         }
       },
-      { threshold: 0.1 },
+      { threshold: 0.1 }
     );
 
     if (loadMoreRef.current) {
@@ -93,11 +86,10 @@ export function ItemsGrid({
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage, activeTab]);
 
-  const jobs = (jobsData?.pages.flatMap((page) => page.data) ||
-    []) as unknown as Jobs[];
+  const jobs = (jobsData?.pages.flatMap((page) => page.data) || []) as unknown as Jobs[];
 
   // Company Portfolio View
-  if (user?.role === "company" && activeTab === "Portfolio") {
+  if (user?.role === 'company' && activeTab === 'Portfolio') {
     const userSkills = user?.skills || [];
     const userLocations = user?.locations || [];
 
@@ -107,9 +99,7 @@ export function ItemsGrid({
         <div className="flex-1 flex flex-col gap-12">
           {/* Services Section */}
           <section>
-            <h3 className="text-[20px] font-bold text-gray-900 mb-4">
-              Dette tilbyr vi
-            </h3>
+            <h3 className="text-[20px] font-bold text-gray-900 mb-4">Dette tilbyr vi</h3>
             {userSkills.length > 0 ? (
               <div className="flex flex-wrap gap-3">
                 {userSkills.slice(0, 12).map((skill: string) => (
@@ -133,9 +123,7 @@ export function ItemsGrid({
 
           {/* Locations Section */}
           <section>
-            <h3 className="text-[20px] font-bold text-gray-900 mb-4">
-              Her kan vi hjelpe deg
-            </h3>
+            <h3 className="text-[20px] font-bold text-gray-900 mb-4">Her kan vi hjelpe deg</h3>
             {userLocations.length > 0 ? (
               <div className="flex flex-wrap gap-3">
                 {userLocations.slice(0, 12).map((loc: string) => (
@@ -209,9 +197,7 @@ export function ItemsGrid({
                   <div className="p-2 rounded-lg group-hover:bg-gray-100 transition-colors">
                     <Award size={22} />
                   </div>
-                  <span className="font-bold text-[15px]">
-                    Org.nummer: {user.orgNumber}
-                  </span>
+                  <span className="font-bold text-[15px]">Org.nummer: {user.orgNumber}</span>
                 </div>
               )}
               {user?.orgType && (
@@ -219,19 +205,20 @@ export function ItemsGrid({
                   <div className="p-2 rounded-lg group-hover:bg-gray-100 transition-colors">
                     <Building size={22} />
                   </div>
-                  <span className="font-bold text-[15px]">
-                    Organisasjonstype: {user.orgType}
-                  </span>
+                  <span className="font-bold text-[15px]">Organisasjonstype: {user.orgType}</span>
                 </div>
               )}
               {user?.website && (
-                <a href={user.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 text-gray-600 hover:text-gray-900 transition-colors group">
+                <a
+                  href={user.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-4 text-gray-600 hover:text-gray-900 transition-colors group"
+                >
                   <div className="p-2 rounded-lg group-hover:bg-gray-100 transition-colors">
                     <Globe size={22} />
                   </div>
-                  <span className="font-bold text-[15px]">
-                    Besøk nettsiden
-                  </span>
+                  <span className="font-bold text-[15px]">Besøk nettsiden</span>
                 </a>
               )}
             </div>
@@ -242,23 +229,23 @@ export function ItemsGrid({
   }
 
   // Seeker Specific Content
-  if (profileType === "seeker") {
-    if (activeTab === "Om meg") {
+  if (profileType === 'seeker') {
+    if (activeTab === 'Om meg') {
       const userSkills = (user as any)?.skills || [
-        "Maling",
-        "Snekkering",
-        "Hagearbeid",
-        "Rengjøring",
-        "Flytting",
+        'Maling',
+        'Snekkering',
+        'Hagearbeid',
+        'Rengjøring',
+        'Flytting',
       ];
       const availability = [
-        { name: "Man", on: true },
-        { name: "Tir", on: false },
-        { name: "Ons", on: true },
-        { name: "Tor", on: false },
-        { name: "Fre", on: true },
-        { name: "Lør", on: true },
-        { name: "Søn", on: false },
+        { name: 'Man', on: true },
+        { name: 'Tir', on: false },
+        { name: 'Ons', on: true },
+        { name: 'Tor', on: false },
+        { name: 'Fre', on: true },
+        { name: 'Lør', on: true },
+        { name: 'Søn', on: false },
       ];
 
       return (
@@ -272,7 +259,7 @@ export function ItemsGrid({
                 </h3>
                 {isOwner && (
                   <button
-                    onClick={() => navigate("/settings/bio")}
+                    onClick={() => navigate('/settings/bio')}
                     className="text-[12px] text-custom-green flex items-center gap-1 hover:underline"
                   >
                     <Pencil size={12} /> Rediger
@@ -280,7 +267,7 @@ export function ItemsGrid({
                 )}
               </div>
               <p className="text-[13px] text-black/60 leading-relaxed">
-                {user?.bio || "Ingen beskrivelse lagt til ennå."}
+                {user?.bio || 'Ingen beskrivelse lagt til ennå.'}
               </p>
             </div>
 
@@ -288,12 +275,11 @@ export function ItemsGrid({
             <div className="bg-white border border-black/5 rounded-[14px] p-5">
               <div className="flex items-center justify-between mb-3.5">
                 <h3 className="text-[14px] font-medium text-custom-black flex items-center gap-1.5">
-                  <Plus size={16} className="text-custom-green" /> Mine
-                  ferdigheter
+                  <Plus size={16} className="text-custom-green" /> Mine ferdigheter
                 </h3>
                 {isOwner && (
                   <button
-                    onClick={() => navigate("/settings/seeker")}
+                    onClick={() => navigate('/settings/seeker')}
                     className="text-[12px] text-custom-green flex items-center gap-1 hover:underline"
                   >
                     <Plus size={12} /> Legg til
@@ -316,12 +302,11 @@ export function ItemsGrid({
             <div className="bg-white border border-black/5 rounded-[14px] p-5">
               <div className="flex items-center justify-between mb-3.5">
                 <h3 className="text-[14px] font-medium text-custom-black flex items-center gap-1.5">
-                  <Plus size={16} className="text-custom-green" />{" "}
-                  Tilgjengelighet denne uken
+                  <Plus size={16} className="text-custom-green" /> Tilgjengelighet denne uken
                 </h3>
                 {isOwner && (
                   <button
-                    onClick={() => navigate("/settings/seeker")}
+                    onClick={() => navigate('/settings/seeker')}
                     className="text-[12px] text-custom-green flex items-center gap-1 hover:underline"
                   >
                     <Pencil size={12} /> Rediger
@@ -332,11 +317,11 @@ export function ItemsGrid({
                 {availability.map((day) => (
                   <div
                     key={day.name}
-                    className={`rounded-lg p-2 text-center text-[11px] border ${day.on ? "bg-[#f0faf0] text-[#166534] border-[#c6f0d8]" : "bg-[#f9f9f7] text-black/20 border-[#f0ede6]"}`}
+                    className={`rounded-lg p-2 text-center text-[11px] border ${day.on ? 'bg-[#f0faf0] text-[#166534] border-[#c6f0d8]' : 'bg-[#f9f9f7] text-black/20 border-[#f0ede6]'}`}
                   >
                     <div className="font-medium mb-0.5">{day.name}</div>
                     <div
-                      className={`w-1.5 h-1.5 rounded-full mx-auto ${day.on ? "bg-custom-green" : "bg-black/10"}`}
+                      className={`w-1.5 h-1.5 rounded-full mx-auto ${day.on ? 'bg-custom-green' : 'bg-black/10'}`}
                     ></div>
                   </div>
                 ))}
@@ -352,7 +337,7 @@ export function ItemsGrid({
               </h3>
               <div className="flex items-center gap-3.5 mb-3">
                 <div className="text-[40px] font-medium text-custom-black leading-none">
-                  {user?.averageRating?.toFixed(1) || "5.0"}
+                  {user?.averageRating?.toFixed(1) || '5.0'}
                 </div>
                 <div>
                   <div className="text-[#ca8a04] text-[16px] mb-0.5">★★★★★</div>
@@ -363,20 +348,15 @@ export function ItemsGrid({
               </div>
               <div className="flex flex-col gap-1">
                 {[5, 4, 3, 2, 1].map((s) => (
-                  <div
-                    key={s}
-                    className="flex items-center gap-2 text-[11px] text-black/30"
-                  >
+                  <div key={s} className="flex items-center gap-2 text-[11px] text-black/30">
                     <span className="w-4">{s}★</span>
                     <div className="flex-1 h-1 bg-[#f0ede6] rounded-full overflow-hidden">
                       <div
                         className="h-full bg-[#ca8a04]"
-                        style={{ width: s === 5 ? "100%" : "0%" }}
+                        style={{ width: s === 5 ? '100%' : '0%' }}
                       ></div>
                     </div>
-                    <span className="w-4 text-right">
-                      {s === 5 ? user?.reviewCount || 0 : 0}
-                    </span>
+                    <span className="w-4 text-right">{s === 5 ? user?.reviewCount || 0 : 0}</span>
                   </div>
                 ))}
               </div>
@@ -386,23 +366,19 @@ export function ItemsGrid({
             {isOwner && (
               <div
                 className="bg-white border border-black/5 rounded-[14px] p-4.5 text-center cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => navigate("/settings/safepay")}
+                onClick={() => navigate('/settings/safepay')}
               >
                 <h3 className="text-[13px] font-medium text-custom-black flex items-center gap-1.5 mb-3.5 text-left">
-                  <ShieldCheck size={15} className="text-custom-green" />{" "}
-                  SafePay-historikk
+                  <ShieldCheck size={15} className="text-custom-green" /> SafePay-historikk
                 </h3>
                 <div className="py-2">
                   <strong className="block text-[28px] font-medium text-custom-green">
                     {(user as any)?.totalEarned || 0} kr
                   </strong>
-                  <span className="text-[11px] text-black/40">
-                    Utbetalt via SafePay
-                  </span>
+                  <span className="text-[11px] text-black/40">Utbetalt via SafePay</span>
                 </div>
                 <p className="text-[11px] text-black/30 mt-2 leading-relaxed">
-                  Alle utbetalinger er gjort trygt gjennom SafePay — ingen
-                  kontantoppgjør.
+                  Alle utbetalinger er gjort trygt gjennom SafePay — ingen kontantoppgjør.
                 </p>
               </div>
             )}
@@ -412,7 +388,7 @@ export function ItemsGrid({
     }
   }
 
-  if (activeTab === "Portfolio" && profileType === "seeker") {
+  if (activeTab === 'Portfolio' && profileType === 'seeker') {
     const portfolioItems = (user as any)?.portfolio || [];
     const previousProjects = (user as any)?.previousProjects || [];
 
@@ -442,9 +418,7 @@ export function ItemsGrid({
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
-                    <h4 className="text-white font-bold text-sm md:text-base">
-                      {project.title}
-                    </h4>
+                    <h4 className="text-white font-bold text-sm md:text-base">{project.title}</h4>
                   </div>
                 </div>
               ))}
@@ -475,14 +449,10 @@ export function ItemsGrid({
                         {project.category}
                       </span>
                       <span className="text-xs text-gray-400">
-                        {project.date
-                          ? new Date(project.date).getFullYear()
-                          : project.year}
+                        {project.date ? new Date(project.date).getFullYear() : project.year}
                       </span>
                     </div>
-                    <p className="text-gray-600 text-sm line-clamp-2">
-                      {project.description}
-                    </p>
+                    <p className="text-gray-600 text-sm line-clamp-2">{project.description}</p>
                     {project.link && (
                       <a
                         href={project.link}
@@ -503,7 +473,7 @@ export function ItemsGrid({
     );
   }
 
-  if (activeTab === "Sertifiseringer") {
+  if (activeTab === 'Sertifiseringer') {
     const certifications = (user as any)?.certifications || [];
 
     if (certifications.length === 0) {
@@ -527,17 +497,13 @@ export function ItemsGrid({
                 <Award size={32} />
               </div>
               <div className="flex-1">
-                <h4 className="font-bold text-lg text-gray-900">
-                  {cert.title}
-                </h4>
-                <p className="text-sm text-gray-500">
-                  Utstedt av: {cert.issuedBy}
-                </p>
+                <h4 className="font-bold text-lg text-gray-900">{cert.title}</h4>
+                <p className="text-sm text-gray-500">Utstedt av: {cert.issuedBy}</p>
                 {cert.date && (
                   <p className="text-xs text-gray-400">
-                    {new Date(cert.date).toLocaleDateString("no-NO", {
-                      year: "numeric",
-                      month: "long",
+                    {new Date(cert.date).toLocaleDateString('no-NO', {
+                      year: 'numeric',
+                      month: 'long',
                     })}
                   </p>
                 )}
@@ -560,44 +526,40 @@ export function ItemsGrid({
   }
 
   // Poster Specific Content
-  if (profileType === "poster") {
+  if (profileType === 'poster') {
     // Basic credibility signals
-    if (activeTab === "Aktive") {
+    if (activeTab === 'Aktive') {
       // Reuse jobs logic but filtered or as is
     }
   }
 
   // Common or fallback content
-  const emptyStateContent: Record<
-    string,
-    { title: string; description: string }
-  > = {
+  const emptyStateContent: Record<string, { title: string; description: string }> = {
     Oppdrag: {
-      title: "Brukeren har ikke lagt ut noen oppdrag ennå",
-      description: "Når brukeren legger ut oppdrag, vil de vises her",
+      title: 'Brukeren har ikke lagt ut noen oppdrag ennå',
+      description: 'Når brukeren legger ut oppdrag, vil de vises her',
     },
     Aktive: {
-      title: "Ingen aktive oppdrag",
-      description: "Brukeren har ingen aktive oppdrag ute akkurat nå",
+      title: 'Ingen aktive oppdrag',
+      description: 'Brukeren har ingen aktive oppdrag ute akkurat nå',
     },
     Fullførte: {
-      title: "Ingen fullførte oppdrag",
-      description: "Fullførte oppdrag vil vises her",
+      title: 'Ingen fullførte oppdrag',
+      description: 'Fullførte oppdrag vil vises her',
     },
     Vurderinger: {
-      title: "Ingen vurderinger ennå",
-      description: "Vurderinger fra tidligere arbeid vil vises her",
+      title: 'Ingen vurderinger ennå',
+      description: 'Vurderinger fra tidligere arbeid vil vises her',
     },
     Lister: {
-      title: "Listene er for øyeblikket tomme",
-      description: "Lagrede elementer og samlinger vil vises her",
+      title: 'Listene er for øyeblikket tomme',
+      description: 'Lagrede elementer og samlinger vil vises her',
     },
   };
 
-  const currentEmptyState =
-    emptyStateContent[activeTab] || emptyStateContent["Oppdrag"];
+  const currentEmptyState = emptyStateContent[activeTab] || emptyStateContent['Oppdrag'];
 
-  if (activeTab === "Vurderinger") {
+  if (activeTab === 'Vurderinger') {
     const displayReviews = realReviews || [];
 
     if (displayReviews.length === 0) {
@@ -626,7 +588,7 @@ export function ItemsGrid({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    (review.reviewerId?.name || review.author)?.[0] || "U"
+                    (review.reviewerId?.name || review.author)?.[0] || 'U'
                   )}
                 </div>
                 <div>
@@ -635,60 +597,46 @@ export function ItemsGrid({
                   </h4>
                   <p className="text-[11px] text-black/30">
                     {review.createdAt
-                      ? new Date(review.createdAt).toLocaleDateString("no-NO")
+                      ? new Date(review.createdAt).toLocaleDateString('no-NO')
                       : review.date}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-1 bg-[#f0faf0] px-2.5 py-1 rounded-full border border-[#c6f0d8]">
                 <Star size={12} fill="#16a34a" className="text-custom-green" />
-                <span className="text-[12px] font-medium text-custom-green">
-                  {review.rating}.0
-                </span>
+                <span className="text-[12px] font-medium text-custom-green">{review.rating}.0</span>
               </div>
             </div>
-            <p className="text-[13px] text-black/60 leading-relaxed italic">
-              "{review.comment}"
-            </p>
+            <p className="text-[13px] text-black/60 leading-relaxed italic">"{review.comment}"</p>
           </div>
         ))}
       </div>
     );
   }
 
-  if (activeTab === "Lister") {
+  if (activeTab === 'Lister') {
     if (isListsLoading) return <JobDetailCardSkeleton />;
     if (isListsError)
-      return (
-        <p className="text-center py-20 text-red-500">
-          Kunne ikke laste lister.
-        </p>
-      );
+      return <p className="text-center py-20 text-red-500">Kunne ikke laste lister.</p>;
   }
 
-  if (["Oppdrag", "Aktive", "Fullførte", "Tidligere"].includes(activeTab)) {
+  if (['Oppdrag', 'Aktive', 'Fullførte', 'Tidligere'].includes(activeTab)) {
     if (isJobsLoading) return <JobDetailCardSkeleton />;
     if (isJobsError)
-      return (
-        <p className="text-center py-20 text-red-500">
-          Kunne ikke laste oppdrag.
-        </p>
-      );
+      return <p className="text-center py-20 text-red-500">Kunne ikke laste oppdrag.</p>;
   }
 
   const showJobs =
-    (activeTab === "Oppdrag" ||
-      activeTab === "Aktive" ||
-      activeTab === "Fullførte" ||
-      activeTab === "Tidligere") &&
+    (activeTab === 'Oppdrag' ||
+      activeTab === 'Aktive' ||
+      activeTab === 'Fullførte' ||
+      activeTab === 'Tidligere') &&
     jobs.length > 0;
 
   if (showJobs) {
     const displayJobs =
-      activeTab === "Fullførte" || activeTab === "Tidligere"
-        ? jobs.filter(
-            (job) => job.status === "completed" || job.status === "closed",
-          )
+      activeTab === 'Fullførte' || activeTab === 'Tidligere'
+        ? jobs.filter((job) => job.status === 'completed' || job.status === 'closed')
         : jobs;
 
     return (
@@ -723,13 +671,11 @@ export function ItemsGrid({
               <h4 className="text-[14px] font-bold text-custom-black mb-0.5 truncate">
                 {job.title}
               </h4>
-              <div className="text-[14px] font-bold text-custom-black mb-1">
-                {job.price} kr
-              </div>
+              <div className="text-[14px] font-bold text-custom-black mb-1">{job.price} kr</div>
               <p className="text-[13px] text-black/40 truncate">
-                {typeof job.location === "object"
+                {typeof job.location === 'object'
                   ? job.location.city || job.location.address
-                  : job.location || "Oslo"}
+                  : job.location || 'Oslo'}
               </p>
             </div>
           </div>
@@ -741,10 +687,7 @@ export function ItemsGrid({
 
   return (
     <div className="flex items-center justify-center min-h-[200px]">
-      <EmptyState
-        title={currentEmptyState.title}
-        description={currentEmptyState.description}
-      />
+      <EmptyState title={currentEmptyState.title} description={currentEmptyState.description} />
     </div>
   );
 }

@@ -21,14 +21,14 @@ export const jobs: Job[] = [
       'https://api.builder.io/api/v1/image/assets/TEMP/0d8e29846c42e592a0100389997853a366e46652?width=346',
     tags: [
       { name: 'Male', type: 'primary' },
-      { name: 'Utstyr fri', type: 'secondary' }
+      { name: 'Utstyr fri', type: 'secondary' },
     ],
     location: 'Gate 12 , Bærum',
     duration: '7 timer',
     date: '07.08.25',
     price: '350kr/ timen',
     rating: 1,
-    isNew: true
+    isNew: true,
   },
   {
     id: 2,
@@ -41,6 +41,6 @@ export const jobs: Job[] = [
     date: '10.08.25',
     price: '500kr/ total',
     rating: 4,
-    isNew: false
-  }
+    isNew: false,
+  },
 ];

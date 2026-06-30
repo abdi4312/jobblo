@@ -1,43 +1,43 @@
-const JobbloShop = require("../models/JobbloShop");
+const JobbloShop = require('../models/JobbloShop');
 
 module.exports = async () => {
   await JobbloShop.deleteMany();
   const rewards = [
     {
-      title: "10% Rabatt på neste bestilling",
-      description: "Få 10% rabatt på din neste tjeneste",
+      title: '10% Rabatt på neste bestilling',
+      description: 'Få 10% rabatt på din neste tjeneste',
       coins: 500,
-      category: "Rabatt",
+      category: 'Rabatt',
     },
     {
-      title: "20% Rabatt på neste bestilling",
-      description: "Få 20% rabatt på din neste tjeneste",
+      title: '20% Rabatt på neste bestilling',
+      description: 'Få 20% rabatt på din neste tjeneste',
       coins: 1000,
-      category: "Rabatt",
+      category: 'Rabatt',
     },
     {
-      title: "Gratis Premium i 1 måned",
-      description: "Få tilgang til premium funksjoner i 30 dager",
+      title: 'Gratis Premium i 1 måned',
+      description: 'Få tilgang til premium funksjoner i 30 dager',
       coins: 2000,
-      category: "Premium",
+      category: 'Premium',
     },
     {
-      title: "50% Rabatt på Premium",
-      description: "Få 50% rabatt på din neste Premium abonnement",
+      title: '50% Rabatt på Premium',
+      description: 'Få 50% rabatt på din neste Premium abonnement',
       coins: 1500,
-      category: "Premium",
+      category: 'Premium',
     },
     {
-      title: "Gratis annonse-fremheving",
-      description: "Fremhev din annonse i 7 dager",
+      title: 'Gratis annonse-fremheving',
+      description: 'Fremhev din annonse i 7 dager',
       coins: 800,
-      category: "Synlighet",
+      category: 'Synlighet',
     },
     {
-      title: "Prioritert kundestøtte",
-      description: "Få prioritert hjelp fra vårt supportteam",
+      title: 'Prioritert kundestøtte',
+      description: 'Få prioritert hjelp fra vårt supportteam',
       coins: 300,
-      category: "Service",
+      category: 'Service',
     },
   ];
   await JobbloShop.insertMany(rewards);

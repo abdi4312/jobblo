@@ -1,41 +1,40 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const reviewSchema = new mongoose.Schema(
   {
     serviceId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Service",
+      ref: 'Service',
       required: false,
       index: true,
     },
     orderId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Order",
+      ref: 'Order',
       required: false,
       index: true,
     },
     reviewerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
       index: true,
     },
     revieweeId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
       index: true,
     },
-    revieweeRole: { type: String, enum: ["seeker", "poster"], required: true },
+    revieweeRole: { type: String, enum: ['seeker', 'poster'], required: true },
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: { type: String, maxlength: 1000 },
+    photos: [{ type: String }], // Add photos array
+    recommendWorker: { type: Boolean, default: false }, // Add recommend checkbox
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-reviewSchema.index(
-  { orderId: 1, reviewerId: 1, revieweeRole: 1 },
-  { unique: true },
-);
+reviewSchema.index({ orderId: 1, reviewerId: 1, revieweeRole: 1 }, { unique: true });
 
-module.exports = mongoose.model("Review", reviewSchema);
+module.exports = mongoose.model('Review', reviewSchema);

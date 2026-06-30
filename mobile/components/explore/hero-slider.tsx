@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ImageBackground, ActivityIndicator, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  ImageBackground,
+  ActivityIndicator,
+  Dimensions,
+} from 'react-native';
 import { useHeroes } from '../../features/hero/hooks/useHeroes';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -60,8 +68,9 @@ export default function HeroSlider() {
               {heroes.map((_, index) => (
                 <View
                   key={index}
-                  className={`w-2.5 h-2.5 rounded-full mx-1 ${index === activeHeroIndex ? 'bg-black' : 'bg-gray-300'
-                    }`}
+                  className={`w-2.5 h-2.5 rounded-full mx-1 ${
+                    index === activeHeroIndex ? 'bg-black' : 'bg-gray-300'
+                  }`}
                 />
               ))}
             </View>

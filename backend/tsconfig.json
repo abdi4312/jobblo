@@ -9,16 +9,16 @@
     "target": "esnext",
     "lib": ["esnext"],
     "types": ["node"],
-    
+
     // Output
     "sourceMap": true,
 
     // MIDLERTIDIG: Fjern etter migrering er ferdig
     "allowJs": true,
-    
+
     // ETTER MIGRERING: Endre til true
     "strict": false,
-    
+
     // Recommended
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
@@ -28,14 +28,6 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
-  "include": [
-    "**/*.ts",
-    "**/*.js"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "public",
-    "views"
-  ]
+  "include": ["**/*.ts", "**/*.js"],
+  "exclude": ["node_modules", "dist", "public", "views"]
 }

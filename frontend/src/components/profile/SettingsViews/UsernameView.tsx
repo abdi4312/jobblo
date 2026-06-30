@@ -1,5 +1,5 @@
-import { useOutletContext } from "react-router-dom";
-import type { SettingsContextType } from "../../../pages/SettingsPage";
+import { useOutletContext } from 'react-router-dom';
+import type { SettingsContextType } from '../../../pages/SettingsPage';
 
 export const UsernameView = () => {
   // Anta at 'user'-data også kommer i konteksten for sammenligning
@@ -16,9 +16,8 @@ export const UsernameView = () => {
   return (
     <section className="flex flex-col gap-8 max-w-2xl">
       <p className="text-gray-600 text-[15px] leading-relaxed">
-        Du kan bare endre brukernavnet en gang hver 30. dag. Dette betyr at du
-        kanskje ikke kan få tilbake ditt nåværende brukernavn hvis du bestemmer
-        deg for å endre det.
+        Du kan bare endre brukernavnet en gang hver 30. dag. Dette betyr at du kanskje ikke kan få
+        tilbake ditt nåværende brukernavn hvis du bestemmer deg for å endre det.
       </p>
 
       <div className="flex flex-col gap-2">
@@ -33,12 +32,12 @@ export const UsernameView = () => {
             id="username"
             className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-gray-100 outline-none rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors"
             value={form.name}
-            onChange={(event) => handleChange("name", event.target.value)}
+            onChange={(event) => handleChange('name', event.target.value)}
           />
         </div>
         <p className="text-[13px] text-gray-500 px-1 leading-tight">
-          {usernameLength}/30 tegn - Brukernavnet må være mellom 4–30 tegn, og
-          kan kun inneholde bokstaver (a-z), tall og understrek (_)
+          {usernameLength}/30 tegn - Brukernavnet må være mellom 4–30 tegn, og kan kun inneholde
+          bokstaver (a-z), tall og understrek (_)
         </p>
       </div>
 
@@ -47,13 +46,13 @@ export const UsernameView = () => {
         onClick={handleUpdate}
         disabled={isDisabled || updateUser.isPending}
         style={{
-          backgroundColor: "#2F7E47",
-          cursor: isDisabled ? "not-allowed" : "pointer",
+          backgroundColor: '#2F7E47',
+          cursor: isDisabled ? 'not-allowed' : 'pointer',
         }}
         className={`w-full text-[#ffffff] font-bold text-lg py-3.5 rounded-2xl shadow-sm transition-all mt-2 
-          ${isDisabled ? "opacity-80" : ""}`}
+          ${isDisabled ? 'opacity-80' : ''}`}
       >
-        {updateUser.isPending ? "Oppdaterer..." : "Oppdater brukernavn"}
+        {updateUser.isPending ? 'Oppdaterer...' : 'Oppdater brukernavn'}
       </button>
     </section>
   );

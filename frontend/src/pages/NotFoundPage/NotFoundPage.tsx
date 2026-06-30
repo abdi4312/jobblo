@@ -1,6 +1,6 @@
-import Lottie from "lottie-react";
-import notFoundAnimation from "../../assets/animations/Page Not Found 404.json";
-import { Link } from "react-router-dom";
+import Lottie from 'lottie-react';
+import notFoundAnimation from '../../assets/animations/Page Not Found 404.json';
+import { Link } from 'react-router-dom';
 
 export default function NotFound() {
   return (

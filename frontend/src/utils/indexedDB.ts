@@ -1,5 +1,5 @@
-const DB_NAME = "jobblo-form-db";
-const STORE_NAME = "job-form-data";
+const DB_NAME = 'jobblo-form-db';
+const STORE_NAME = 'job-form-data';
 const DB_VERSION = 1;
 
 interface StoredFormData {
@@ -11,25 +11,25 @@ interface StoredFormData {
 
 // Initialize IndexedDB
 const openDB = (): Promise<IDBDatabase> => {
-  console.log("[IndexedDB] Opening database...");
+  console.log('[IndexedDB] Opening database...');
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => {
-      console.error("[IndexedDB] Error opening database:", request.error);
+      console.error('[IndexedDB] Error opening database:', request.error);
       reject(request.error);
     };
     request.onsuccess = () => {
-      console.log("[IndexedDB] Database opened successfully!");
+      console.log('[IndexedDB] Database opened successfully!');
       resolve(request.result);
     };
 
     request.onupgradeneeded = (event) => {
-      console.log("[IndexedDB] Upgrading database...");
+      console.log('[IndexedDB] Upgrading database...');
       const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
-        console.log("[IndexedDB] Creating object store...");
-        db.createObjectStore(STORE_NAME, { keyPath: "id" });
+        console.log('[IndexedDB] Creating object store...');
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
       }
     };
   });
@@ -47,9 +47,9 @@ const fileToBase64 = (file: File): Promise<string> => {
 
 // Helper to convert base64 back to File
 const base64ToFile = (base64: string, filename: string): File => {
-  const arr = base64.split(",");
+  const arr = base64.split(',');
   const mimeMatch = arr[0].match(/:(.*?);/);
-  const mime = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+  const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
   const bstr = atob(arr[1]);
   let n = bstr.length;
   const u8arr = new Uint8Array(n);
@@ -60,11 +60,8 @@ const base64ToFile = (base64: string, filename: string): File => {
 };
 
 // Save form data and images
-export const saveFormData = async (
-  data: any,
-  images: File[] = [],
-): Promise<void> => {
-  console.log("[IndexedDB] Saving form data...", data);
+export const saveFormData = async (data: any, images: File[] = []): Promise<void> => {
+  console.log('[IndexedDB] Saving form data...', data);
   const db = await openDB();
 
   // Convert images to base64
@@ -73,25 +70,25 @@ export const saveFormData = async (
       name: img.name,
       type: img.type,
       base64: await fileToBase64(img),
-    })),
+    }))
   );
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], "readwrite");
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
     const request = store.put({
-      id: "current-form",
+      id: 'current-form',
       data,
       images: base64Images,
       createdAt: Date.now(),
     });
 
     request.onsuccess = () => {
-      console.log("[IndexedDB] Form data saved successfully!");
+      console.log('[IndexedDB] Form data saved successfully!');
       resolve();
     };
     request.onerror = () => {
-      console.error("[IndexedDB] Error saving form data:", request.error);
+      console.error('[IndexedDB] Error saving form data:', request.error);
       reject(request.error);
     };
   });
@@ -102,19 +99,19 @@ export const loadFormData = async (): Promise<{
   data?: any;
   images?: File[];
 }> => {
-  console.log("[IndexedDB] Loading form data...");
+  console.log('[IndexedDB] Loading form data...');
   const db = await openDB();
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], "readonly");
+    const transaction = db.transaction([STORE_NAME], 'readonly');
     const store = transaction.objectStore(STORE_NAME);
-    const request = store.get("current-form");
+    const request = store.get('current-form');
 
     request.onsuccess = () => {
       const stored = request.result as StoredFormData | undefined;
-      console.log("[IndexedDB] Got stored data:", stored);
+      console.log('[IndexedDB] Got stored data:', stored);
       if (!stored) {
-        console.log("[IndexedDB] No stored data found");
+        console.log('[IndexedDB] No stored data found');
         resolve({});
         return;
       }
@@ -122,7 +119,7 @@ export const loadFormData = async (): Promise<{
       // Check if data is older than 24 hours
       const isExpired = Date.now() - stored.createdAt > 24 * 60 * 60 * 1000;
       if (isExpired) {
-        console.log("[IndexedDB] Stored data expired, clearing...");
+        console.log('[IndexedDB] Stored data expired, clearing...');
         // Clear expired data
         clearFormData()
           .then(() => resolve({}))
@@ -133,17 +130,15 @@ export const loadFormData = async (): Promise<{
       // Convert base64 back to File objects
       let images: File[] = [];
       if (stored.images) {
-        images = stored.images.map((imgData) =>
-          base64ToFile(imgData.base64, imgData.name),
-        );
+        images = stored.images.map((imgData) => base64ToFile(imgData.base64, imgData.name));
       }
 
-      console.log("[IndexedDB] Loaded form data and images!");
+      console.log('[IndexedDB] Loaded form data and images!');
       resolve({ data: stored.data, images });
     };
 
     request.onerror = () => {
-      console.error("[IndexedDB] Error loading form data:", request.error);
+      console.error('[IndexedDB] Error loading form data:', request.error);
       reject(request.error);
     };
   });
@@ -151,20 +146,20 @@ export const loadFormData = async (): Promise<{
 
 // Clear form data
 export const clearFormData = async (): Promise<void> => {
-  console.log("[IndexedDB] Clearing form data...");
+  console.log('[IndexedDB] Clearing form data...');
   const db = await openDB();
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], "readwrite");
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
-    const request = store.delete("current-form");
+    const request = store.delete('current-form');
 
     request.onsuccess = () => {
-      console.log("[IndexedDB] Form data cleared successfully!");
+      console.log('[IndexedDB] Form data cleared successfully!');
       resolve();
     };
     request.onerror = () => {
-      console.error("[IndexedDB] Error clearing form data:", request.error);
+      console.error('[IndexedDB] Error clearing form data:', request.error);
       reject(request.error);
     };
   });

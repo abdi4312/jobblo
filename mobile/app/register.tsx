@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,14 +7,14 @@ import {
   ImageBackground,
   ScrollView,
   StyleSheet,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useForm } from "@tanstack/react-form";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { useRegister } from "../features/auth/hooks/useAuth";
-import { ActivityIndicator, Alert } from "react-native";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useForm } from '@tanstack/react-form';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useRegister } from '../features/auth/hooks/useAuth';
+import { ActivityIndicator, Alert } from 'react-native';
 
 interface RegisterForm {
   fullName: string;
@@ -31,19 +31,19 @@ export default function RegisterScreen() {
 
   const form = useForm<RegisterForm>({
     defaultValues: {
-      fullName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
+      fullName: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
     },
     onSubmit: async ({ value }) => {
       if (value.password !== value.confirmPassword) {
-        Alert.alert("Error", "Passwords do not match");
+        Alert.alert('Error', 'Passwords do not match');
         return;
       }
 
-      const [name, ...lastNameArr] = value.fullName.split(" ");
-      const lastName = lastNameArr.join(" ");
+      const [name, ...lastNameArr] = value.fullName.split(' ');
+      const lastName = lastNameArr.join(' ');
 
       registerMutation.mutate({
         name,
@@ -59,7 +59,7 @@ export default function RegisterScreen() {
   return (
     <ImageBackground
       source={{
-        uri: "https://images.unsplash.com/photo-1581244276891-8309cfbb304c?q=80&w=2070&auto=format&fit=crop",
+        uri: 'https://images.unsplash.com/photo-1581244276891-8309cfbb304c?q=80&w=2070&auto=format&fit=crop',
       }}
       className="flex-1"
     >
@@ -72,14 +72,9 @@ export default function RegisterScreen() {
           >
             {/* Back Button */}
             <View className="flex-row items-center pt-4">
-              <TouchableOpacity
-                onPress={() => router.back()}
-                className="flex-row items-center"
-              >
+              <TouchableOpacity onPress={() => router.back()} className="flex-row items-center">
                 <Ionicons name="arrow-back" size={24} color="white" />
-                <Text className="text-white ml-2 text-base font-medium">
-                  Tilbake
-                </Text>
+                <Text className="text-white ml-2 text-base font-medium">Tilbake</Text>
               </TouchableOpacity>
             </View>
 
@@ -94,9 +89,7 @@ export default function RegisterScreen() {
                   <View className="w-2 h-2 bg-white rounded-full ml-2 mt-2" />
                 </View>
               </View>
-              <Text className="text-white/80 mt-2 text-lg">
-                Opprett ny konto
-              </Text>
+              <Text className="text-white/80 mt-2 text-lg">Opprett ny konto</Text>
             </View>
 
             {/* Form */}
@@ -149,11 +142,7 @@ export default function RegisterScreen() {
                 <Field name="password">
                   {(field) => (
                     <View className="flex-row items-center bg-white rounded-xl px-4 py-3">
-                      <Ionicons
-                        name="lock-closed-outline"
-                        size={20}
-                        color="#666"
-                      />
+                      <Ionicons name="lock-closed-outline" size={20} color="#666" />
                       <TextInput
                         className="flex-1 ml-3 text-base text-gray-800"
                         placeholder="........."
@@ -163,13 +152,9 @@ export default function RegisterScreen() {
                         onChangeText={(value) => field.handleChange(value)}
                         secureTextEntry={!showPassword}
                       />
-                      <TouchableOpacity
-                        onPress={() => setShowPassword(!showPassword)}
-                      >
+                      <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                         <Ionicons
-                          name={
-                            showPassword ? "eye-off-outline" : "eye-outline"
-                          }
+                          name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                           size={20}
                           color="#666"
                         />
@@ -181,17 +166,11 @@ export default function RegisterScreen() {
 
               {/* Confirm Password Input */}
               <View className="mt-4">
-                <Text className="text-white mb-2 text-base">
-                  Bekreft passord
-                </Text>
+                <Text className="text-white mb-2 text-base">Bekreft passord</Text>
                 <Field name="confirmPassword">
                   {(field) => (
                     <View className="flex-row items-center bg-white rounded-xl px-4 py-3">
-                      <Ionicons
-                        name="lock-closed-outline"
-                        size={20}
-                        color="#666"
-                      />
+                      <Ionicons name="lock-closed-outline" size={20} color="#666" />
                       <TextInput
                         className="flex-1 ml-3 text-base text-gray-800"
                         placeholder="........."
@@ -202,16 +181,10 @@ export default function RegisterScreen() {
                         secureTextEntry={!showConfirmPassword}
                       />
                       <TouchableOpacity
-                        onPress={() =>
-                          setShowConfirmPassword(!showConfirmPassword)
-                        }
+                        onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                       >
                         <Ionicons
-                          name={
-                            showConfirmPassword
-                              ? "eye-off-outline"
-                              : "eye-outline"
-                          }
+                          name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
                           size={20}
                           color="#666"
                         />
@@ -224,18 +197,16 @@ export default function RegisterScreen() {
               {/* Register Button */}
               <TouchableOpacity
                 onPress={() => {
-                  console.log("Register button pressed");
+                  console.log('Register button pressed');
                   form.handleSubmit();
                 }}
                 disabled={registerMutation.isPending}
-                className={`rounded-xl py-4 mt-6 items-center ${registerMutation.isPending ? "bg-[#E68A2E]/70" : "bg-[#E68A2E]"}`}
+                className={`rounded-xl py-4 mt-6 items-center ${registerMutation.isPending ? 'bg-[#E68A2E]/70' : 'bg-[#E68A2E]'}`}
               >
                 {registerMutation.isPending ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text className="text-white text-lg font-bold">
-                    Registrer deg
-                  </Text>
+                  <Text className="text-white text-lg font-bold">Registrer deg</Text>
                 )}
               </TouchableOpacity>
 
@@ -252,29 +223,21 @@ export default function RegisterScreen() {
                   <View className="mr-3 bg-white rounded-full p-1">
                     <Ionicons name="logo-google" size={16} color="black" />
                   </View>
-                  <Text className="text-white font-semibold">
-                    Continue with Google
-                  </Text>
+                  <Text className="text-white font-semibold">Continue with Google</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity className="flex-row items-center bg-black rounded-xl py-4 px-4 border border-gray-700 justify-center mt-3">
                   <Ionicons name="logo-apple" size={20} color="white" />
-                  <Text className="text-white ml-3 font-semibold">
-                    Continue with Apple
-                  </Text>
+                  <Text className="text-white ml-3 font-semibold">Continue with Apple</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Bottom Login Link */}
             <View className="flex-row justify-center mt-10 mb-6">
-              <Text className="text-white text-sm">
-                Har du allerede en konto?{" "}
-              </Text>
-              <TouchableOpacity onPress={() => router.push("/login")}>
-                <Text className="text-[#E68A2E] text-sm font-bold">
-                  Logg inn
-                </Text>
+              <Text className="text-white text-sm">Har du allerede en konto? </Text>
+              <TouchableOpacity onPress={() => router.push('/login')}>
+                <Text className="text-[#E68A2E] text-sm font-bold">Logg inn</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>

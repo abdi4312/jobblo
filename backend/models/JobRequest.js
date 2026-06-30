@@ -1,32 +1,40 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const jobRequestSchema = new mongoose.Schema(
   {
     serviceId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Service",
+      ref: 'Service',
       required: true,
     },
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     providerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     status: {
       type: String,
-      enum: ["pending", "accepted", "declined"],
-      default: "pending",
+      enum: ['pending', 'accepted', 'declined'],
+      default: 'pending',
     },
     message: {
       type: String,
+    },
+    favorite: {
+      type: Boolean,
+      default: false,
+    },
+    archived: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("JobRequest", jobRequestSchema);
+module.exports = mongoose.model('JobRequest', jobRequestSchema);

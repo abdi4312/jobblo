@@ -1,8 +1,8 @@
-import type { FavoritesResponse } from "../types/FavoritesTypes.ts";
-import mainLink from "./mainURLs.ts";
+import type { FavoritesResponse } from '../types/FavoritesTypes.ts';
+import mainLink from './mainURLs.ts';
 
 export async function getFavorites() {
-  const res = await mainLink.get<FavoritesResponse>("/api/favorites");
+  const res = await mainLink.get<FavoritesResponse>('/api/favorites');
   return res.data;
 }
 

@@ -1,4 +1,4 @@
-const Subscription = require("../models/Subscription");
+const Subscription = require('../models/Subscription');
 
 /**
  * Create or update user subscription
@@ -33,7 +33,7 @@ exports.upsertSubscription = async ({
         endDate: nextMonth,
         renewalDate: nextMonth,
         autoRenew,
-        status: "active",
+        status: 'active',
         discountAmount,
         discountCoupon,
         coupon: couponId,
@@ -41,9 +41,7 @@ exports.upsertSubscription = async ({
       planHistory: [],
     });
   } else {
-    const isPlanChanged =
-      !subscription.currentPlan ||
-      subscription.currentPlan.plan !== planName;
+    const isPlanChanged = !subscription.currentPlan || subscription.currentPlan.plan !== planName;
 
     // 📜 Push old plan to history
     if (isPlanChanged && subscription.currentPlan?.plan) {
@@ -53,13 +51,10 @@ exports.upsertSubscription = async ({
         planType: subscription.currentPlan.planType,
         startDate: subscription.currentPlan.startDate || now,
         endDate: now,
-        stripeSubscriptionId:
-          subscription.currentPlan.stripeSubscriptionId || null,
-        status: "expired",
-        discountAmount:
-          subscription.currentPlan.discountAmount || 0,
-        discountCoupon:
-          subscription.currentPlan.discountCoupon || null,
+        stripeSubscriptionId: subscription.currentPlan.stripeSubscriptionId || null,
+        status: 'expired',
+        discountAmount: subscription.currentPlan.discountAmount || 0,
+        discountCoupon: subscription.currentPlan.discountCoupon || null,
         coupon: subscription.currentPlan.coupon || null,
       });
     }
@@ -74,7 +69,7 @@ exports.upsertSubscription = async ({
       endDate: nextMonth,
       renewalDate: nextMonth,
       autoRenew,
-      status: "active",
+      status: 'active',
       discountAmount,
       discountCoupon,
       coupon: couponId,
@@ -84,7 +79,7 @@ exports.upsertSubscription = async ({
   await subscription.save();
 
   // 🔄 Also update the User model for quick access/display
-  const User = require("../models/User");
+  const User = require('../models/User');
   await User.findByIdAndUpdate(userId, {
     subscription: planName,
   });

@@ -1,20 +1,20 @@
-import { useState, useEffect, useRef } from "react";
-import { dateFormatter } from "../../utils/dateFormatter";
-import { timeFormatter } from "../../utils/timeFormatter";
-import { useParams, useNavigate } from "react-router-dom";
-import { useUserStore } from "../../stores/userStore";
-import { getChatById, sendMessage, type Chat, type ChatMessage } from "../../api/chatAPI";
-import { initSocket } from "../../socket/socket";
-import { toast } from "react-hot-toast";
-import styles from "./ChatView.module.css";
-import { ProfileTitleWrapper } from "../../components/layout/body/profile/ProfileTitleWrapper";
+import { useState, useEffect, useRef } from 'react';
+import { dateFormatter } from '../../utils/dateFormatter';
+import { timeFormatter } from '../../utils/timeFormatter';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useUserStore } from '../../stores/userStore';
+import { getChatById, sendMessage, type Chat, type ChatMessage } from '../../api/chatAPI';
+import { initSocket } from '../../socket/socket';
+import { toast } from 'react-hot-toast';
+import styles from './ChatView.module.css';
+import { ProfileTitleWrapper } from '../../components/layout/body/profile/ProfileTitleWrapper';
 
 export function ChatView() {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
   const { user } = useUserStore();
   const [chat, setChat] = useState<Chat | null>(null);
-  const [messageText, setMessageText] = useState("");
+  const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -34,9 +34,9 @@ export function ChatView() {
         const chatData = await getChatById(chatId);
         setChat(chatData);
       } catch (error) {
-        console.error("Error fetching chat:", error);
-        toast.error("Kunne ikke laste samtale");
-        navigate("/messages");
+        console.error('Error fetching chat:', error);
+        toast.error('Kunne ikke laste samtale');
+        navigate('/messages');
       } finally {
         setLoading(false);
       }
@@ -51,19 +51,22 @@ export function ChatView() {
     const socket = initSocket();
 
     // Join the chat room
-    socket.emit("join-chat", chatId);
+    socket.emit('join-chat', chatId);
 
     // Listen for new messages
     const handleReceiveMessage = (data: { chatId: string; message: ChatMessage }) => {
       if (data.chatId === chatId) {
         setChat((prevChat) => {
           if (!prevChat) return prevChat;
-          
-          const exists = prevChat.messages.some(m => 
-            (m._id && m._id === data.message._id) || 
-            (m.createdAt === data.message.createdAt && m.text === data.message.text && m.senderId === data.message.senderId)
+
+          const exists = prevChat.messages.some(
+            (m) =>
+              (m._id && m._id === data.message._id) ||
+              (m.createdAt === data.message.createdAt &&
+                m.text === data.message.text &&
+                m.senderId === data.message.senderId)
           );
-          
+
           if (exists) return prevChat;
 
           return {
@@ -75,17 +78,17 @@ export function ChatView() {
       }
     };
 
-    socket.on("receive-message", handleReceiveMessage);
+    socket.on('receive-message', handleReceiveMessage);
 
     return () => {
-      socket.emit("leave-chat", chatId);
-      socket.off("receive-message", handleReceiveMessage);
+      socket.emit('leave-chat', chatId);
+      socket.off('receive-message', handleReceiveMessage);
     };
   }, [chatId]);
 
   useEffect(() => {
     // Scroll to bottom when messages change
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chat?.messages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -95,12 +98,12 @@ export function ChatView() {
     try {
       setSending(true);
       const newMessage = await sendMessage(chatId, messageText.trim());
-      
+
       setChat((prevChat) => {
         if (!prevChat) return prevChat;
-        
+
         // Check if socket already added it to prevent double-display
-        const exists = prevChat.messages.some(m => m._id === newMessage._id);
+        const exists = prevChat.messages.some((m) => m._id === newMessage._id);
         if (exists) return prevChat;
 
         return {
@@ -110,10 +113,10 @@ export function ChatView() {
         };
       });
 
-      setMessageText("");
+      setMessageText('');
     } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error("Kunne ikke sende melding");
+      console.error('Error sending message:', error);
+      toast.error('Kunne ikke sende melding');
     } finally {
       setSending(false);
     }
@@ -141,36 +144,35 @@ export function ChatView() {
 
   return (
     <div className={styles.container}>
-      <ProfileTitleWrapper
-        title={otherUser?.name || "Chat"}
-        buttonText="Tilbake"
-      />
+      <ProfileTitleWrapper title={otherUser?.name || 'Chat'} buttonText="Tilbake" />
 
       <div className={styles.chatContainer}>
         <div className={styles.messagesContainer}>
           {chat.messages.length === 0 ? (
             <div className={styles.emptyState}>
-              <span className="material-symbols-outlined" style={{ fontSize: "48px", color: "#ccc" }}>
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: '48px', color: '#ccc' }}
+              >
                 chat_bubble_outline
               </span>
               <p>Ingen meldinger ennå. Send den første!</p>
             </div>
           ) : (
             chat.messages.map((msg, index) => {
-              const senderId = typeof msg.senderId === 'string' ? msg.senderId : (msg.senderId as { _id?: string })?._id;
+              const senderId =
+                typeof msg.senderId === 'string'
+                  ? msg.senderId
+                  : (msg.senderId as { _id?: string })?._id;
               const isOwnMessage = senderId === user?._id;
               return (
                 <div
                   key={msg._id || index}
-                  className={`${styles.messageWrapper} ${
-                    isOwnMessage ? styles.own : styles.other
-                  }`}
+                  className={`${styles.messageWrapper} ${isOwnMessage ? styles.own : styles.other}`}
                 >
                   <div className={styles.messageBubble}>
                     <p className={styles.messageText}>{msg.text}</p>
-                    <span className={styles.messageTime}>
-                      {formatMessageTime(msg.createdAt)}
-                    </span>
+                    <span className={styles.messageTime}>{formatMessageTime(msg.createdAt)}</span>
                   </div>
                 </div>
               );

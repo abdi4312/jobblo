@@ -1,5 +1,5 @@
-const Transaction = require("../models/Transaction");
-const User = require("../models/User");
+const Transaction = require('../models/Transaction');
+const User = require('../models/User');
 // GET ALL TRANSACTIONS (FOR ADMIN)
 exports.getTransactions = async (req, res) => {
   try {
@@ -15,21 +15,21 @@ exports.getTransactions = async (req, res) => {
     if (search) {
       // Pehle Users collection mein search karein ke kya koi user is email se match karta hai
       const matchedUsers = await User.find({
-        email: { $regex: search, $options: "i" },
-      }).select("_id");
+        email: { $regex: search, $options: 'i' },
+      }).select('_id');
 
       const userIds = matchedUsers.map((user) => user._id);
 
       // Ab Transaction query mein check karein
       query.$or = [
-        { stripeSessionId: { $regex: search, $options: "i" } }, // Search by ID
-        { planName: { $regex: search, $options: "i" } }, // Search by Plan
+        { stripeSessionId: { $regex: search, $options: 'i' } }, // Search by ID
+        { planName: { $regex: search, $options: 'i' } }, // Search by Plan
         { userId: { $in: userIds } }, // Search by matched User IDs
       ];
     }
 
     const transactions = await Transaction.find(query)
-      .populate("userId", "email name") // Email populate karna zaroori hai table ke liye
+      .populate('userId', 'email name') // Email populate karna zaroori hai table ke liye
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
@@ -42,10 +42,8 @@ exports.getTransactions = async (req, res) => {
       totalTransactions: total,
     });
   } catch (error) {
-    console.error("Backend Error:", error);
-    res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    console.error('Backend Error:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 };
 
@@ -59,7 +57,7 @@ exports.getUserTransactions = async (req, res) => {
       .limit(Number(limit));
 
     const total = await Transaction.countDocuments({ userId: req.user.id });
-    console.log("total", transactions);
+    console.log('total', transactions);
     res.status(200).json({
       success: true,
       transactions,
@@ -75,13 +73,11 @@ exports.getUserTransactions = async (req, res) => {
 exports.getTransactionById = async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id).populate(
-      "userId serviceId coupon",
+      'userId serviceId coupon'
     );
 
     if (!transaction) {
-      return res
-        .status(404)
-        .json({ success: false, error: "Transaction not found" });
+      return res.status(404).json({ success: false, error: 'Transaction not found' });
     }
 
     res.status(200).json({ success: true, transaction });
@@ -96,9 +92,9 @@ exports.updateTransactionStatus = async (req, res) => {
     const { status } = req.body; // Example: { "status": "refunded" }
 
     // Check karein ke status valid hai ya nahi (enum ke mutabiq)
-    const validStatuses = ["pending", "succeeded", "failed", "refunded"];
+    const validStatuses = ['pending', 'succeeded', 'failed', 'refunded'];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ message: "Invalid status value" });
+      return res.status(400).json({ message: 'Invalid status value' });
     }
 
     // Transaction dhoondo aur update karo
@@ -106,13 +102,13 @@ exports.updateTransactionStatus = async (req, res) => {
       id,
       {
         status: status,
-        refunded: status === "refunded" ? true : false, // Agar status refunded hai to boolean bhi true kar do
+        refunded: status === 'refunded' ? true : false, // Agar status refunded hai to boolean bhi true kar do
       },
-      { new: true }, // Updated document wapis mangwao
+      { new: true } // Updated document wapis mangwao
     );
 
     if (!updatedTransaction) {
-      return res.status(404).json({ message: "Transaction not found" });
+      return res.status(404).json({ message: 'Transaction not found' });
     }
 
     res.status(200).json({
@@ -120,9 +116,7 @@ exports.updateTransactionStatus = async (req, res) => {
       transaction: updatedTransaction,
     });
   } catch (error) {
-    console.error("Update Status Error:", error);
-    res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    console.error('Update Status Error:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 };

@@ -12,21 +12,17 @@ import {
   X,
   Tag,
   AlertCircle,
-} from "lucide-react";
-import { Slider } from "antd";
-import { JobCard } from "../../components/component/jobCard/JobCard";
+} from 'lucide-react';
+import { Slider } from 'antd';
+import { JobCard } from '../../components/component/jobCard/JobCard';
 const MapComponent = lazy(() =>
-  import("../../components/component/map/MapComponent").then((module) => ({
+  import('../../components/component/map/MapComponent').then((module) => ({
     default: module.MapComponent,
-  })),
+  }))
 );
-import { useJobs } from "../../features/jobsList/hooks";
-import { useFilterOptions } from "../../features/jobsList/filterHooks";
-import {
-  getLocationTree,
-  getLocationStats,
-  type LocationNode,
-} from "../../api/locationAPI";
+import { useJobs } from '../../features/jobsList/hooks';
+import { useFilterOptions } from '../../features/jobsList/filterHooks';
+import { getLocationTree, getLocationStats, type LocationNode } from '../../api/locationAPI';
 
 const ServiceListing = () => {
   const { categoryName } = useParams();
@@ -40,18 +36,16 @@ const ServiceListing = () => {
 
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [selectedSort, setSelectedSort] = useState({
-    label: "Nyeste først",
-    value: "newest",
+    label: 'Nyeste først',
+    value: 'newest',
   });
   const [localSearch, setLocalSearch] = useState(initialSearch);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    decodedCategoryName && decodedCategoryName !== "all"
-      ? [decodedCategoryName]
-      : [],
+    decodedCategoryName && decodedCategoryName !== 'all' ? [decodedCategoryName] : []
   );
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [locationSearch, setLocationSearch] = useState("");
+  const [locationSearch, setLocationSearch] = useState('');
   const [priceRange, setPriceRange] = useState({ min: 0, max: 100000 });
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [isUrgent, setIsUrgent] = useState(false);
@@ -61,23 +55,18 @@ const ServiceListing = () => {
   const [locationTree, setLocationTree] = useState<LocationNode[]>([]);
   const [locationStats, setLocationStats] = useState<any>(null);
   const [selectedCountyCodes, setSelectedCountyCodes] = useState<string[]>([]);
-  const [selectedMunicipalityCodes, setSelectedMunicipalityCodes] = useState<
-    string[]
-  >([]);
+  const [selectedMunicipalityCodes, setSelectedMunicipalityCodes] = useState<string[]>([]);
   const [selectedAreaCodes, setSelectedAreaCodes] = useState<string[]>([]);
   const [expandedCounties, setExpandedCounties] = useState<string[]>([]);
-  const [expandedMunicipalities, setExpandedMunicipalities] = useState<
-    string[]
-  >([]);
+  const [expandedMunicipalities, setExpandedMunicipalities] = useState<string[]>([]);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { data: filterOptions, isLoading: isFiltersLoading } =
-    useFilterOptions();
+  const { data: filterOptions, isLoading: isFiltersLoading } = useFilterOptions();
 
   // Update selectedCategories when categoryName param changes
   useEffect(() => {
-    if (decodedCategoryName && decodedCategoryName !== "all") {
+    if (decodedCategoryName && decodedCategoryName !== 'all') {
       setSelectedCategories([decodedCategoryName]);
     } else {
       setSelectedCategories([]);
@@ -104,14 +93,11 @@ const ServiceListing = () => {
     const fetchLocations = async () => {
       setIsLoadingLocations(true);
       try {
-        const [tree, stats] = await Promise.all([
-          getLocationTree(),
-          getLocationStats(),
-        ]);
+        const [tree, stats] = await Promise.all([getLocationTree(), getLocationStats()]);
         setLocationTree(tree);
         setLocationStats(stats);
       } catch (err) {
-        console.error("Failed to fetch location data:", err);
+        console.error('Failed to fetch location data:', err);
       } finally {
         setIsLoadingLocations(false);
       }
@@ -119,14 +105,7 @@ const ServiceListing = () => {
     fetchLocations();
   }, []);
 
-  const {
-    data,
-    isLoading,
-    isError,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useJobs({
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useJobs({
     categories: selectedCategories,
     locations: selectedLocations,
     countyCodes: selectedCountyCodes,
@@ -149,28 +128,25 @@ const ServiceListing = () => {
     if (!locationSearch.trim()) return filterOptions.locations;
 
     return filterOptions.locations.filter((loc) =>
-      loc.name.toLowerCase().includes(locationSearch.toLowerCase()),
+      loc.name.toLowerCase().includes(locationSearch.toLowerCase())
     );
   }, [filterOptions?.locations, locationSearch]);
 
   const sortOptions = filterOptions?.sortOptions || [
-    { label: "Nyeste først", value: "newest" },
-    { label: "Pris: lav til høy", value: "price_low" },
-    { label: "Pris: høy til lav", value: "price_high" },
-    { label: "Mest relevant", value: "relevant" },
+    { label: 'Nyeste først', value: 'newest' },
+    { label: 'Pris: lav til høy', value: 'price_low' },
+    { label: 'Pris: høy til lav', value: 'price_high' },
+    { label: 'Mest relevant', value: 'relevant' },
   ];
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsSortOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -183,34 +159,26 @@ const ServiceListing = () => {
 
   const toggleCategory = (catName: string) => {
     setSelectedCategories((prev) =>
-      prev.includes(catName)
-        ? prev.filter((c) => c !== catName)
-        : [...prev, catName],
+      prev.includes(catName) ? prev.filter((c) => c !== catName) : [...prev, catName]
     );
   };
 
   const toggleLocation = (locName: string) => {
     setSelectedLocations((prev) =>
-      prev.includes(locName)
-        ? prev.filter((l) => l !== locName)
-        : [...prev, locName],
+      prev.includes(locName) ? prev.filter((l) => l !== locName) : [...prev, locName]
     );
   };
 
   const toggleExpand = (catId: string) => {
     setExpandedCategories((prev) =>
-      prev.includes(catId)
-        ? prev.filter((id) => id !== catId)
-        : [...prev, catId],
+      prev.includes(catId) ? prev.filter((id) => id !== catId) : [...prev, catId]
     );
   };
 
   // New location toggle functions
   const toggleCounty = (countyCode: string) => {
     setSelectedCountyCodes((prev) =>
-      prev.includes(countyCode)
-        ? prev.filter((c) => c !== countyCode)
-        : [...prev, countyCode],
+      prev.includes(countyCode) ? prev.filter((c) => c !== countyCode) : [...prev, countyCode]
     );
   };
 
@@ -218,23 +186,19 @@ const ServiceListing = () => {
     setSelectedMunicipalityCodes((prev) =>
       prev.includes(municipalityCode)
         ? prev.filter((m) => m !== municipalityCode)
-        : [...prev, municipalityCode],
+        : [...prev, municipalityCode]
     );
   };
 
   const toggleArea = (areaCode: string) => {
     setSelectedAreaCodes((prev) =>
-      prev.includes(areaCode)
-        ? prev.filter((a) => a !== areaCode)
-        : [...prev, areaCode],
+      prev.includes(areaCode) ? prev.filter((a) => a !== areaCode) : [...prev, areaCode]
     );
   };
 
   const toggleCountyExpand = (countyCode: string) => {
     setExpandedCounties((prev) =>
-      prev.includes(countyCode)
-        ? prev.filter((c) => c !== countyCode)
-        : [...prev, countyCode],
+      prev.includes(countyCode) ? prev.filter((c) => c !== countyCode) : [...prev, countyCode]
     );
   };
 
@@ -242,7 +206,7 @@ const ServiceListing = () => {
     setExpandedMunicipalities((prev) =>
       prev.includes(municipalityCode)
         ? prev.filter((m) => m !== municipalityCode)
-        : [...prev, municipalityCode],
+        : [...prev, municipalityCode]
     );
   };
 
@@ -268,7 +232,7 @@ const ServiceListing = () => {
       {/* 0. Urgent Filter Toggle */}
       <section
         className={`p-6 rounded-3xl border-2 transition-all duration-300 flex items-center justify-between cursor-pointer shadow-sm ${
-          isUrgent ? "border-red-200 bg-red-50" : "border-gray-100 bg-white"
+          isUrgent ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-white'
         }`}
         onClick={() => setIsUrgent(!isUrgent)}
       >
@@ -276,36 +240,31 @@ const ServiceListing = () => {
           <div
             className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
               isUrgent
-                ? "bg-red-500 text-white shadow-lg shadow-red-200"
-                : "bg-gray-100 text-gray-400"
+                ? 'bg-red-500 text-white shadow-lg shadow-red-200'
+                : 'bg-gray-100 text-gray-400'
             }`}
           >
-            <AlertCircle
-              size={24}
-              className={isUrgent ? "animate-pulse" : ""}
-            />
+            <AlertCircle size={24} className={isUrgent ? 'animate-pulse' : ''} />
           </div>
           <div>
             <p
               className={`text-base font-bold transition-colors ${
-                isUrgent ? "text-red-700" : "text-gray-700"
+                isUrgent ? 'text-red-700' : 'text-gray-700'
               }`}
             >
               Haster
             </p>
-            <p className="text-xs text-gray-500 font-medium">
-              Vis kun hasteoppdrag
-            </p>
+            <p className="text-xs text-gray-500 font-medium">Vis kun hasteoppdrag</p>
           </div>
         </div>
         <div
           className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 shrink-0 ${
-            isUrgent ? "bg-red-500" : "bg-gray-200"
+            isUrgent ? 'bg-red-500' : 'bg-gray-200'
           }`}
         >
           <div
             className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
-              isUrgent ? "translate-x-5" : "translate-x-0"
+              isUrgent ? 'translate-x-5' : 'translate-x-0'
             }`}
           />
         </div>
@@ -330,8 +289,8 @@ const ServiceListing = () => {
                     onClick={() => toggleCategory(cat.name)}
                     className={`flex-1 text-left font-medium py-2 px-3 rounded-xl transition-all duration-200 ${
                       selectedCategories.includes(cat.name)
-                        ? "bg-[#2F7E4711] text-custom-green"
-                        : "text-gray-700 hover:bg-gray-50 hover:text-custom-green"
+                        ? 'bg-[#2F7E4711] text-custom-green'
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-custom-green'
                     }`}
                   >
                     <span className="flex items-center gap-2">
@@ -339,8 +298,8 @@ const ServiceListing = () => {
                       <span
                         className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                           selectedCategories.includes(cat.name)
-                            ? "bg-[#2F7E4722] text-custom-green"
-                            : "bg-gray-100 text-gray-400"
+                            ? 'bg-[#2F7E4722] text-custom-green'
+                            : 'bg-gray-100 text-gray-400'
                         }`}
                       >
                         {cat.count || 0}
@@ -352,8 +311,8 @@ const ServiceListing = () => {
                       onClick={() => toggleExpand(cat._id)}
                       className={`p-2 rounded-lg transition-all duration-200 ${
                         expandedCategories.includes(cat._id)
-                          ? "bg-[#2F7E4711] text-custom-green"
-                          : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                          ? 'bg-[#2F7E4711] text-custom-green'
+                          : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
                       }`}
                     >
                       {expandedCategories.includes(cat._id) ? (
@@ -372,8 +331,8 @@ const ServiceListing = () => {
                         onClick={() => toggleCategory(sub.name)}
                         className={`w-full text-left py-2 px-3 rounded-xl text-sm transition-all duration-200 ${
                           selectedCategories.includes(sub.name)
-                            ? "bg-[#2F7E4711] text-custom-green font-semibold"
-                            : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                            ? 'bg-[#2F7E4711] text-custom-green font-semibold'
+                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
                         }`}
                       >
                         <span className="flex items-center gap-2">
@@ -381,8 +340,8 @@ const ServiceListing = () => {
                           <span
                             className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
                               selectedCategories.includes(sub.name)
-                                ? "bg-[#2F7E4722] text-custom-green"
-                                : "bg-gray-100 text-gray-300"
+                                ? 'bg-[#2F7E4722] text-custom-green'
+                                : 'bg-gray-100 text-gray-300'
                             }`}
                           >
                             {sub.count || 0}
@@ -403,17 +362,11 @@ const ServiceListing = () => {
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.05)] group-hover:scale-105 transition-transform z-10">
-              <MapIcon
-                className="text-custom-green"
-                size={28}
-                strokeWidth={1.5}
-              />
+              <MapIcon className="text-custom-green" size={28} strokeWidth={1.5} />
             </div>
             <div>
               <h4 className="text-xl font-bold text-gray-900">Kartvisning</h4>
-              <p className="text-sm text-gray-500 font-medium">
-                Utforsk oppdrag nær deg
-              </p>
+              <p className="text-sm text-gray-500 font-medium">Utforsk oppdrag nær deg</p>
             </div>
           </div>
 
@@ -428,8 +381,9 @@ const ServiceListing = () => {
             >
               <MapComponent
                 coordinates={
-                  jobs.find((j) => j.location?.coordinates)?.location
-                    ?.coordinates || [10.7522, 59.9139]
+                  jobs.find((j) => j.location?.coordinates)?.location?.coordinates || [
+                    10.7522, 59.9139,
+                  ]
                 }
                 circleRadius={4000}
               />
@@ -622,10 +576,7 @@ const ServiceListing = () => {
             min={0}
             max={50000}
             step={100}
-            value={[
-              priceRange.min,
-              priceRange.max > 50000 ? 50000 : priceRange.max,
-            ]}
+            value={[priceRange.min, priceRange.max > 50000 ? 50000 : priceRange.max]}
             onChange={(value: number[]) => {
               setPriceRange({
                 min: value[0],
@@ -634,12 +585,12 @@ const ServiceListing = () => {
             }}
             styles={{
               track: {
-                background: "#ff8a7a",
+                background: '#ff8a7a',
               },
               handle: {
-                borderColor: "#ff8a7a",
-                backgroundColor: "#fff",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                borderColor: '#ff8a7a',
+                backgroundColor: '#fff',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
               },
             }}
           />
@@ -670,12 +621,10 @@ const ServiceListing = () => {
               <div className="relative">
                 <input
                   type="number"
-                  value={priceRange.max === 100000 ? "" : priceRange.max}
+                  value={priceRange.max === 100000 ? '' : priceRange.max}
                   onChange={(e) => {
                     const val =
-                      e.target.value === ""
-                        ? 100000
-                        : Math.max(0, parseInt(e.target.value) || 0);
+                      e.target.value === '' ? 100000 : Math.max(0, parseInt(e.target.value) || 0);
                     setPriceRange((prev) => ({ ...prev, max: val }));
                   }}
                   placeholder="∞"
@@ -724,9 +673,7 @@ const ServiceListing = () => {
         )}
 
         {/* LEFT SIDEBAR - Desktop only */}
-        <aside className="hidden lg:block w-72 shrink-0">
-          {renderFilterSidebarContent()}
-        </aside>
+        <aside className="hidden lg:block w-72 shrink-0">{renderFilterSidebarContent()}</aside>
 
         {/* MAIN CONTENT AREA */}
         <main className="flex-1">
@@ -741,10 +688,7 @@ const ServiceListing = () => {
             </button>
 
             {/* 2. Search Bar */}
-            <form
-              onSubmit={handleSearchSubmit}
-              className="relative flex-1 group"
-            >
+            <form onSubmit={handleSearchSubmit} className="relative flex-1 group">
               <div className="absolute left-8 top-1/2 -translate-y-1/2 text-custom-green transition-all duration-200 z-10 flex items-center justify-center w-8 h-8">
                 <Search size={20} strokeWidth={2} />
               </div>
@@ -752,18 +696,18 @@ const ServiceListing = () => {
                 type="text"
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
-                placeholder={decodedCategoryName || "Search..."}
+                placeholder={decodedCategoryName || 'Search...'}
                 className="w-full pl-12 pr-12 h-12 sm:h-14 bg-white rounded-full text-sm sm:text-base shadow-[0_4px_25px_rgba(0,0,0,0.06)] border-2 border-transparent focus:border-[#ff8a7a]/10 focus:ring-4 focus:ring-[#ff8a7a]/5 outline-none transition-all placeholder:text-gray-300 text-gray-900 font-normal no-underline decoration-transparent"
-                style={{ textDecoration: "none" }}
+                style={{ textDecoration: 'none' }}
               />
               {localSearch && (
                 <button
                   type="button"
                   onClick={() => {
-                    setLocalSearch("");
+                    setLocalSearch('');
                     setSearchParams({
                       ...Object.fromEntries(searchParams),
-                      search: "",
+                      search: '',
                     });
                   }}
                   className="absolute right-8 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-full text-custom-green transition-colors"
@@ -796,8 +740,8 @@ const ServiceListing = () => {
                       }}
                       className={`w-full flex items-center justify-between px-4 py-3 md:px-6 md:py-4 rounded-[18px] md:rounded-[24px] text-left font-bold text-sm md:text-[17px] transition-colors ${
                         selectedSort.value === option.value
-                          ? "bg-[#2F7E4711] text-custom-green"
-                          : "text-custom-black hover:bg-gray-50"
+                          ? 'bg-[#2F7E4711] text-custom-green'
+                          : 'text-custom-black hover:bg-gray-50'
                       }`}
                     >
                       <span>{option.label}</span>
@@ -819,9 +763,7 @@ const ServiceListing = () => {
             </div>
           ) : isError ? (
             <div className="text-center py-20">
-              <p className="text-red-500 font-bold text-xl">
-                Kunne ikke laste data.
-              </p>
+              <p className="text-red-500 font-bold text-xl">Kunne ikke laste data.</p>
               <button
                 onClick={() => window.location.reload()}
                 className="mt-4 bg-[#ff8a7a] text-white px-6 py-2 rounded-full font-bold"
@@ -834,12 +776,8 @@ const ServiceListing = () => {
               <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Search size={40} className="text-gray-300" />
               </div>
-              <p className="text-gray-500 font-bold text-xl">
-                Ingen tjenester funnet.
-              </p>
-              <p className="text-gray-400 mt-2">
-                Prøv å endre på filtrene dine eller søkeordet.
-              </p>
+              <p className="text-gray-500 font-bold text-xl">Ingen tjenester funnet.</p>
+              <p className="text-gray-400 mt-2">Prøv å endre på filtrene dine eller søkeordet.</p>
             </div>
           ) : (
             <>

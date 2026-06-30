@@ -1,11 +1,11 @@
-import CreateJobForm from "../../components/CreateJobForm/CreateJobForm";
-import mainLink from "../../api/mainURLs";
-import { useUserStore } from "../../stores/userStore";
-import { useNavigate, useParams } from "react-router-dom";
-import toast from "react-hot-toast";
-import { BriefcaseBusiness } from "lucide-react";
-import { useJobDetailQuery } from "../../features/jobDetail/hook.ts";
-import { Spinner } from "../../components/Ui/Spinner";
+import CreateJobForm from '../../components/CreateJobForm/CreateJobForm';
+import mainLink from '../../api/mainURLs';
+import { useUserStore } from '../../stores/userStore';
+import { useNavigate, useParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { BriefcaseBusiness } from 'lucide-react';
+import { useJobDetailQuery } from '../../features/jobDetail/hook.ts';
+import { Spinner } from '../../components/Ui/Spinner';
 
 export default function LeggUtOppdrag() {
   const { id } = useParams();
@@ -13,11 +13,11 @@ export default function LeggUtOppdrag() {
   const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
 
-  const { data: job, isLoading } = useJobDetailQuery(id || "");
+  const { data: job, isLoading } = useJobDetailQuery(id || '');
 
   if (!user) {
     return (
-      <div style={{ padding: "40px", textAlign: "center" }}>
+      <div style={{ padding: '40px', textAlign: 'center' }}>
         <h2>Du må være logget inn for å legge ut oppdrag</h2>
         <p>Vennligst logg inn for å fortsette.</p>
       </div>
@@ -35,32 +35,32 @@ export default function LeggUtOppdrag() {
   const userId = user._id;
 
   const handleFormSubmit = async (formData: FormData) => {
-    console.log("Sending job data (FormData)");
+    console.log('Sending job data (FormData)');
 
     try {
       const response = isEditMode
         ? await mainLink.put(`/api/services/${id}`, formData, {
             headers: {
-              "Content-Type": "multipart/form-data",
+              'Content-Type': 'multipart/form-data',
             },
           })
-        : await mainLink.post("/api/services", formData, {
+        : await mainLink.post('/api/services', formData, {
             headers: {
-              "Content-Type": "multipart/form-data",
+              'Content-Type': 'multipart/form-data',
             },
           });
 
       if (response.data) {
-        console.log(isEditMode ? "Job updated" : "Job created");
-        toast.success(isEditMode ? "Oppdrag oppdatert!" : "Oppdrag publisert!");
-        navigate("/");
+        console.log(isEditMode ? 'Job updated' : 'Job created');
+        toast.success(isEditMode ? 'Oppdrag oppdatert!' : 'Oppdrag publisert!');
+        navigate('/');
       } else {
-        console.error("Failed. Status:", response.status);
+        console.error('Failed. Status:', response.status);
         toast.error(`Kunne ikke lagre oppdrag. Status: ${response.status}`);
       }
     } catch (error) {
-      console.error("Error saving job:", error);
-      toast.error("Det oppstod en feil ved kommunikasjon med serveren");
+      console.error('Error saving job:', error);
+      toast.error('Det oppstod en feil ved kommunikasjon med serveren');
     }
   };
 
@@ -95,14 +95,14 @@ export default function LeggUtOppdrag() {
             </span>
 
             <h2 className="text-[28px] md:text-[42px] font-bold leading-tight">
-              {isEditMode ? "Rediger oppdrag" : "Legg ut oppdrag"}
+              {isEditMode ? 'Rediger oppdrag' : 'Legg ut oppdrag'}
             </h2>
           </div>
 
           <p className="text-[#4A5565] text-[16px] md:text-[18px] font-normal leading-relaxed">
             {isEditMode
-              ? "Oppdater informasjonen under for å endre ditt oppdrag"
-              : "Fyll ut informasjonen under for å legge ut ditt oppdrag"}
+              ? 'Oppdater informasjonen under for å endre ditt oppdrag'
+              : 'Fyll ut informasjonen under for å legge ut ditt oppdrag'}
           </p>
         </div>
 

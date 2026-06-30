@@ -1,5 +1,5 @@
-import {Button} from "../../components/Ui/button/Button";
-import vippsLogo from "../../assets/icons/vipps.png";
+import { Button } from '../../components/Ui/button/Button';
+import vippsLogo from '../../assets/icons/vipps.png';
 export default function SocialAuthButtons() {
   const handleGoogle = () => {
     window.location.href = `${import.meta.env.VITE_MAIN_URL}/api/auth/google`;
@@ -45,9 +45,6 @@ export default function SocialAuthButtons() {
         <span>Fortsett med Google</span>
       </button>
 
-      
-
-
       {/* Apple Button */}
       {/* <button
         onClick={handleVipps}
@@ -68,7 +65,6 @@ export default function SocialAuthButtons() {
       >
         <span className="text-[20px] -mt-0.5">
           <img className="w-12.5 h-8.75" alt="vipps mobilepay logo" src={vippsLogo}></img>
-          
         </span>
         <span>Fortsett med Vipps</span>
       </button>

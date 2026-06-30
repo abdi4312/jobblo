@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   AtSign,
   Image,
@@ -14,8 +14,8 @@ import {
   Clock,
   Briefcase,
   ShieldCheck,
-} from "lucide-react";
-import { useUserStore } from "../../../stores/userStore";
+} from 'lucide-react';
+import { useUserStore } from '../../../stores/userStore';
 
 export function SettingsLayout() {
   const location = useLocation();
@@ -27,7 +27,7 @@ export function SettingsLayout() {
   useEffect(() => {
     const updateSidebarState = () => {
       const isMobile = window.innerWidth < 768;
-      const isRootSettings = location.pathname === "/settings";
+      const isRootSettings = location.pathname === '/settings';
 
       if (!isMobile) {
         // Always show sidebar on desktop
@@ -42,82 +42,76 @@ export function SettingsLayout() {
     updateSidebarState();
 
     // Listen for resize
-    window.addEventListener("resize", updateSidebarState);
-    return () => window.removeEventListener("resize", updateSidebarState);
+    window.addEventListener('resize', updateSidebarState);
+    return () => window.removeEventListener('resize', updateSidebarState);
   }, [location.pathname]);
 
   const publicProfileLinks = [
-    { name: "Brukernavn", path: "/settings", icon: AtSign },
-    { name: "Fornavn og etternavn", path: "/settings/name", icon: User },
-    { name: "Bio", path: "/settings/bio", icon: PenLine },
-    { name: "Last opp profilbilde", path: "/settings/picture", icon: Image },
-    ...(user?.role === "company"
-      ? [{ name: "Last opp banner", path: "/settings/banner", icon: Image }]
+    { name: 'Brukernavn', path: '/settings', icon: AtSign },
+    { name: 'Fornavn og etternavn', path: '/settings/name', icon: User },
+    { name: 'Bio', path: '/settings/bio', icon: PenLine },
+    { name: 'Last opp profilbilde', path: '/settings/picture', icon: Image },
+    ...(user?.role === 'company'
+      ? [{ name: 'Last opp banner', path: '/settings/banner', icon: Image }]
       : []),
-    { name: "Jobbsøker-profil", path: "/settings/seeker", icon: Briefcase },
+    { name: 'Jobbsøker-profil', path: '/settings/seeker', icon: Briefcase },
   ];
 
   const personalInfoLinks = [
-    { name: "E-postadresse", path: "/settings/email", icon: AtSign },
-    { name: "Telefonnummer", path: "/settings/phone", icon: Phone },
-    { name: "Mine adresser", path: "/settings/addresses", icon: MapPin },
-    { name: "SafePay historikk", path: "/settings/safepay", icon: ShieldCheck },
-    { name: "Endre passord", path: "/settings/password", icon: User },
-    { name: "Økter", path: "/settings/sessions", icon: Monitor },
+    { name: 'E-postadresse', path: '/settings/email', icon: AtSign },
+    { name: 'Telefonnummer', path: '/settings/phone', icon: Phone },
+    { name: 'Mine adresser', path: '/settings/addresses', icon: MapPin },
+    { name: 'SafePay historikk', path: '/settings/safepay', icon: ShieldCheck },
+    { name: 'Endre passord', path: '/settings/password', icon: User },
+    { name: 'Økter', path: '/settings/sessions', icon: Monitor },
     {
-      name: "Slett profilen min",
-      path: "/settings/delete-account",
+      name: 'Slett profilen min',
+      path: '/settings/delete-account',
       icon: User,
     },
   ];
 
   const otherLinks = [
-    { name: "Lokasjon", path: "/settings/location", icon: MapPin },
-    { name: "Kommende", path: "/settings/upcoming", icon: AtSign },
-    { name: "Jobblo medlemskap", path: "/membership", icon: AtSign },
+    { name: 'Lokasjon', path: '/settings/location', icon: MapPin },
+    { name: 'Kommende', path: '/settings/upcoming', icon: AtSign },
+    { name: 'Jobblo medlemskap', path: '/membership', icon: AtSign },
     {
-      name: "Abonnementer",
-      path: "/settings/subscriptions",
+      name: 'Abonnementer',
+      path: '/settings/subscriptions',
       icon: CreditCard,
     },
   ];
 
   const privacyLinks = [
-    { name: "Varsler", path: "/settings/notifications", icon: Bell },
+    { name: 'Varsler', path: '/settings/notifications', icon: Bell },
     {
-      name: "Søkemotorsynlighet",
-      path: "/settings/visibility",
+      name: 'Søkemotorsynlighet',
+      path: '/settings/visibility',
       icon: AtSign,
     },
-    { name: "Blokkerte brukere", path: "/settings/blocked", icon: User },
+    { name: 'Blokkerte brukere', path: '/settings/blocked', icon: User },
     {
-      name: "Innstillinger for kapsler",
-      path: "/settings/cookies",
+      name: 'Innstillinger for kapsler',
+      path: '/settings/cookies',
       icon: AtSign,
     },
-    { name: "Om oss", path: "/settings/about", icon: PenLine },
+    { name: 'Om oss', path: '/settings/about', icon: PenLine },
   ];
 
   const currentPath = location.pathname;
 
   // Find current active tab name
-  const allLinks = [
-    ...publicProfileLinks,
-    ...personalInfoLinks,
-    ...otherLinks,
-    ...privacyLinks,
-  ];
-  let activeTab =
-    allLinks.find((link) => link.path === currentPath)?.name || "Innstillinger";
+  const allLinks = [...publicProfileLinks, ...personalInfoLinks, ...otherLinks, ...privacyLinks];
+  let activeTab = allLinks.find((link) => link.path === currentPath)?.name || 'Innstillinger';
 
   // Special case for Blocked users to show count in header
-  if (currentPath === "/settings/blocked" && user?.blockedUsers?.length > 0) {
+  if (currentPath === '/settings/blocked' && user?.blockedUsers?.length > 0) {
     activeTab = `Blokkerte brukere (${user.blockedUsers.length})`;
   }
 
   const handleBackToSidebar = () => {
     setShowSidebar(true);
-    navigate("/settings");
+    navigate('/settings');
   };
 
   return (
@@ -127,7 +121,7 @@ export function SettingsLayout() {
         <div className="flex flex-row border-b border-gray-100">
           {/* Settings title - hidden on mobile when viewing content */}
           <div
-            className={`${showSidebar ? "flex" : "hidden md:flex"} w-full md:w-64 p-4 sm:p-6 font-bold text-xl sm:text-lg text-gray-900 md:border-r border-gray-100 items-center justify-center md:justify-start`}
+            className={`${showSidebar ? 'flex' : 'hidden md:flex'} w-full md:w-64 p-4 sm:p-6 font-bold text-xl sm:text-lg text-gray-900 md:border-r border-gray-100 items-center justify-center md:justify-start`}
           >
             Innstillinger
           </div>
@@ -151,14 +145,14 @@ export function SettingsLayout() {
         <div className="flex flex-col md:flex-row flex-1 min-h-[400px] md:min-h-[600px]">
           {/* Sidebar - Hidden on mobile when viewing content */}
           <aside
-            className={`${showSidebar ? "flex" : "hidden"} md:flex w-full md:w-64 border-b md:border-b-0 md:border-r border-gray-100 p-2 md:p-4 flex-col gap-4 md:gap-6 overflow-y-auto md:overflow-x-visible no-scrollbar`}
+            className={`${showSidebar ? 'flex' : 'hidden'} md:flex w-full md:w-64 border-b md:border-b-0 md:border-r border-gray-100 p-2 md:p-4 flex-col gap-4 md:gap-6 overflow-y-auto md:overflow-x-visible no-scrollbar`}
           >
             <div className="flex flex-col gap-4 md:gap-6 px-2 md:px-0">
               {[
-                { title: "Offentlig profil", links: publicProfileLinks },
-                { title: "Personlig informasjon", links: personalInfoLinks },
-                { title: "ANNET", links: otherLinks },
-                { title: "PERSONVERN OG VILKÅR", links: privacyLinks },
+                { title: 'Offentlig profil', links: publicProfileLinks },
+                { title: 'Personlig informasjon', links: personalInfoLinks },
+                { title: 'ANNET', links: otherLinks },
+                { title: 'PERSONVERN OG VILKÅR', links: privacyLinks },
               ].map((group) => (
                 <div key={group.title} className="flex flex-col gap-2 md:gap-1">
                   <div className="hidden md:block text-xs font-bold text-gray-400 uppercase mb-2 px-4 whitespace-nowrap">
@@ -173,17 +167,13 @@ export function SettingsLayout() {
                         onClick={() => navigate(link.path)}
                         className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
                           isActive
-                            ? "bg-custom-green-light text-rose-600 md:text-gray-900 shadow-sm md:shadow-none border border-rose-100 md:border-0"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent"
+                            ? 'bg-custom-green-light text-rose-600 md:text-gray-900 shadow-sm md:shadow-none border border-rose-100 md:border-0'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
                         }`}
                       >
                         <Icon
                           size={18}
-                          className={
-                            isActive
-                              ? "text-rose-500 md:text-gray-900"
-                              : "text-gray-500"
-                          }
+                          className={isActive ? 'text-rose-500 md:text-gray-900' : 'text-gray-500'}
                         />
                         {link.name}
                       </button>
@@ -196,7 +186,7 @@ export function SettingsLayout() {
 
           {/* Main Content Area - Full width on mobile when sidebar hidden */}
           <main
-            className={`flex-1 p-4 sm:p-8 overflow-y-auto ${!showSidebar ? "block" : "hidden md:block"}`}
+            className={`flex-1 p-4 sm:p-8 overflow-y-auto ${!showSidebar ? 'block' : 'hidden md:block'}`}
           >
             <Outlet />
           </main>

@@ -1,4 +1,4 @@
-const SubscriptionPlan = require("../models/SubscriptionPlan");
+const SubscriptionPlan = require('../models/SubscriptionPlan');
 
 exports.getAllPlans = async (req, res) => {
   try {
@@ -6,7 +6,7 @@ exports.getAllPlans = async (req, res) => {
     res.status(200).json(plans);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error fetching plans" });
+    res.status(500).json({ message: 'Server error fetching plans' });
   }
 };
 
@@ -19,19 +19,17 @@ exports.updatePlan = async (req, res) => {
     const plan = await SubscriptionPlan.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { new: true, runValidators: true },
+      { new: true, runValidators: true }
     );
 
     if (!plan) {
-      return res.status(404).json({ message: "Plan not found" });
+      return res.status(404).json({ message: 'Plan not found' });
     }
 
-    res.status(200).json({ message: "Plan updated successfully", plan });
+    res.status(200).json({ message: 'Plan updated successfully', plan });
   } catch (err) {
-    console.error("Update plan error:", err);
-    res
-      .status(500)
-      .json({ message: "Server error updating plan", error: err.message });
+    console.error('Update plan error:', err);
+    res.status(500).json({ message: 'Server error updating plan', error: err.message });
   }
 };
 
@@ -39,12 +37,10 @@ exports.createPlan = async (req, res) => {
   try {
     const newPlan = new SubscriptionPlan(req.body);
     await newPlan.save();
-    res
-      .status(201)
-      .json({ message: "Plan created successfully", plan: newPlan });
+    res.status(201).json({ message: 'Plan created successfully', plan: newPlan });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error creating plan" });
+    res.status(500).json({ message: 'Server error creating plan' });
   }
 };
 
@@ -53,11 +49,11 @@ exports.deletePlan = async (req, res) => {
     const { id } = req.params;
     const plan = await SubscriptionPlan.findByIdAndDelete(id);
     if (!plan) {
-      return res.status(404).json({ message: "Plan not found" });
+      return res.status(404).json({ message: 'Plan not found' });
     }
-    res.status(200).json({ message: "Plan deleted successfully" });
+    res.status(200).json({ message: 'Plan deleted successfully' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error deleting plan" });
+    res.status(500).json({ message: 'Server error deleting plan' });
   }
 };

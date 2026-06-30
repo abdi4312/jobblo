@@ -1,5 +1,5 @@
-import React from "react";
-import { NotificationManager } from "../../settings/NotificationManager/NotificationManager";
+import React from 'react';
+import { NotificationManager } from '../../settings/NotificationManager/NotificationManager';
 
 export const NotificationsView = () => {
   return (

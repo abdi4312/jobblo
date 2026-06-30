@@ -54,14 +54,23 @@ router.get('/orders', authenticate, requireAdmin, adminController.getAllOrders);
 
 router.get('/services', authenticate, requireAdmin, adminController.getAllServices);
 
-router.get('/system-history', authenticate, requireAdmin, adminController.getSystemNotificationsHistory);
+router.get(
+  '/system-history',
+  authenticate,
+  requireAdmin,
+  adminController.getSystemNotificationsHistory
+);
 
 router.get('/hero', authenticate, requireAdmin, heroController.GetAllHeroes);
 router.post('/hero', authenticate, requireAdmin, upload.single('image'), heroController.CreateHero);
-router.put('/hero/:id', authenticate, requireAdmin, upload.single('image'), heroController.UpdateHero);
+router.put(
+  '/hero/:id',
+  authenticate,
+  requireAdmin,
+  upload.single('image'),
+  heroController.UpdateHero
+);
 router.delete('/hero/:id', authenticate, requireAdmin, heroController.DeleteHero);
-
-
 
 /**
  * @swagger

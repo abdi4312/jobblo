@@ -1,22 +1,16 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  getHomeHero,
-  getAllHeroes,
-  createHomeHero,
-  updateHomeHero,
-  deleteHomeHero,
-} from "./api";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getHomeHero, getAllHeroes, createHomeHero, updateHomeHero, deleteHomeHero } from './api';
 
 export const useHomeHero = () => {
   return useQuery({
-    queryKey: ["homeHero"],
+    queryKey: ['homeHero'],
     queryFn: getHomeHero,
   });
 };
 
 export const useAllHeroes = () => {
   return useQuery({
-    queryKey: ["allHeroes"],
+    queryKey: ['allHeroes'],
     queryFn: getAllHeroes,
   });
 };
@@ -26,8 +20,8 @@ export const useCreateHeroMutation = () => {
   return useMutation({
     mutationFn: createHomeHero,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["allHeroes"] });
-      queryClient.invalidateQueries({ queryKey: ["homeHero"] });
+      queryClient.invalidateQueries({ queryKey: ['allHeroes'] });
+      queryClient.invalidateQueries({ queryKey: ['homeHero'] });
     },
   });
 };
@@ -38,8 +32,8 @@ export const useUpdateHeroMutation = () => {
     mutationFn: ({ id, formData }: { id: string; formData: FormData }) =>
       updateHomeHero(id, formData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["allHeroes"] });
-      queryClient.invalidateQueries({ queryKey: ["homeHero"] });
+      queryClient.invalidateQueries({ queryKey: ['allHeroes'] });
+      queryClient.invalidateQueries({ queryKey: ['homeHero'] });
     },
   });
 };
@@ -49,8 +43,8 @@ export const useDeleteHeroMutation = () => {
   return useMutation({
     mutationFn: deleteHomeHero,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["allHeroes"] });
-      queryClient.invalidateQueries({ queryKey: ["homeHero"] });
+      queryClient.invalidateQueries({ queryKey: ['allHeroes'] });
+      queryClient.invalidateQueries({ queryKey: ['homeHero'] });
     },
   });
 };

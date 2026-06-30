@@ -24,7 +24,10 @@ export default function JobsSection({ jobs }: { jobs: Job[] }) {
         <button className={styles.filterButton}>
           <span>Filter</span>
           <svg className={styles.filterIcon} viewBox="0 0 21 21" fill="none">
-            <path d="M6.125 9.625H14.875V11.375H6.125V9.625ZM3.5 6.125H17.5V7.875H3.5V6.125ZM8.75 13.125H12.25V14.875H8.75V13.125Z" fill="var(--color-text-strong)"/>
+            <path
+              d="M6.125 9.625H14.875V11.375H6.125V9.625ZM3.5 6.125H17.5V7.875H3.5V6.125ZM8.75 13.125H12.25V14.875H8.75V13.125Z"
+              fill="var(--color-text-strong)"
+            />
           </svg>
         </button>
       </div>

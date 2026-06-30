@@ -1,6 +1,6 @@
-const User = require("../models/User");
-const Chat = require("../models/ChatMessage");
-const mongoose = require("mongoose");
+const User = require('../models/User');
+const Chat = require('../models/ChatMessage');
+const mongoose = require('mongoose');
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -10,18 +10,16 @@ exports.createOrGetChat = async (req, res) => {
     let { id } = req.user;
 
     if (!serviceId) {
-      return res.status(400).json({ message: "Service ID is required." });
+      return res.status(400).json({ message: 'Service ID is required.' });
     }
 
     if (id === providerId) {
-      return res
-        .status(400)
-        .json({ message: "You cannot create a chat with yourself." });
+      return res.status(400).json({ message: 'You cannot create a chat with yourself.' });
     }
 
-    const provider = await User.findById(providerId).select("role name");
+    const provider = await User.findById(providerId).select('role name');
     if (!provider) {
-      return res.status(404).json({ message: "Provider not found." });
+      return res.status(404).json({ message: 'Provider not found.' });
     }
 
     let chat = await Chat.findOne({
@@ -29,9 +27,9 @@ exports.createOrGetChat = async (req, res) => {
       providerId,
       serviceId,
     })
-      .populate("clientId", "name")
-      .populate("providerId", "name")
-      .populate("serviceId", "title description images");
+      .populate('clientId', 'name')
+      .populate('providerId', 'name')
+      .populate('serviceId', 'title description images');
 
     if (chat) {
       // If user previously deleted this chat, restore it by removing from deletedFor
@@ -65,9 +63,9 @@ exports.getMyChats = async (req, res) => {
       $or: [{ clientId: id }, { providerId: id }],
       deletedFor: { $ne: id },
     })
-      .populate("clientId", "name role avatarUrl")
-      .populate("providerId", "name role avatarUrl")
-      .populate("serviceId", "title description images")
+      .populate('clientId', 'name role avatarUrl')
+      .populate('providerId', 'name role avatarUrl')
+      .populate('serviceId', 'title description images')
       .sort({ updatedAt: -1 });
 
     res.json(chats);
@@ -81,27 +79,21 @@ exports.getChatById = async (req, res) => {
     const { id } = req.user;
     const { chatId } = req.params;
 
-    if (!isValidId(chatId))
-      return res.status(400).json({ error: "Invalid chat ID format" });
+    if (!isValidId(chatId)) return res.status(400).json({ error: 'Invalid chat ID format' });
 
     const chat = await Chat.findById(chatId)
-      .populate("clientId", "name avatarUrl")
-      .populate("providerId", "name avatarUrl")
-      .populate("serviceId", "title description images")
-      .populate("messages.senderId", "name avatarUrl");
+      .populate('clientId', 'name avatarUrl')
+      .populate('providerId', 'name avatarUrl')
+      .populate('serviceId', 'title description images')
+      .populate('messages.senderId', 'name avatarUrl');
 
     if (!chat) {
-      return res.status(404).json({ message: "Chat not found" });
+      return res.status(404).json({ message: 'Chat not found' });
     }
 
     // 🔒 Authorization check: user must be either client or provider of this chat
-    if (
-      chat.clientId._id.toString() !== id &&
-      chat.providerId._id.toString() !== id
-    ) {
-      return res
-        .status(403)
-        .json({ message: "Unauthorized: You are not part of this chat." });
+    if (chat.clientId._id.toString() !== id && chat.providerId._id.toString() !== id) {
+      return res.status(403).json({ message: 'Unauthorized: You are not part of this chat.' });
     }
 
     res.json(chat);
@@ -116,23 +108,17 @@ exports.sendMessage = async (req, res) => {
     const { id } = req.user;
     const { chatId } = req.params;
 
-    if (!isValidId(chatId))
-      return res.status(400).json({ error: "Invalid chat ID format" });
+    if (!isValidId(chatId)) return res.status(400).json({ error: 'Invalid chat ID format' });
 
     const chat = await Chat.findById(chatId);
 
     if (!chat) {
-      return res.status(404).json({ message: "Chat not found" });
+      return res.status(404).json({ message: 'Chat not found' });
     }
 
     // 🔒 Authorization check: user must be either client or provider of this chat
-    if (
-      chat.clientId._id.toString() !== id &&
-      chat.providerId._id.toString() !== id
-    ) {
-      return res
-        .status(403)
-        .json({ message: "Unauthorized: You are not part of this chat." });
+    if (chat.clientId._id.toString() !== id && chat.providerId._id.toString() !== id) {
+      return res.status(403).json({ message: 'Unauthorized: You are not part of this chat.' });
     }
 
     const message = {
@@ -148,9 +134,9 @@ exports.sendMessage = async (req, res) => {
     await chat.save();
 
     // Emit socket event to notify users in the chat room
-    const io = req.app.get("io");
+    const io = req.app.get('io');
     if (io) {
-      io.to(`chat-${chatId}`).emit("receive-message", {
+      io.to(`chat-${chatId}`).emit('receive-message', {
         chatId,
         message,
       });
@@ -175,7 +161,7 @@ exports.deleteForMe = async (req, res) => {
       $addToSet: { deletedFor: id },
     });
 
-    res.json({ success: true, message: "Chat hidden" });
+    res.json({ success: true, message: 'Chat hidden' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -188,18 +174,17 @@ exports.deleteForMe = async (req, res) => {
 exports.deleteChat = async (req, res) => {
   try {
     const { id } = req.user;
-    if (!id) return res.status(401).json({ error: "Unauthorized" });
+    if (!id) return res.status(401).json({ error: 'Unauthorized' });
 
     const { chatId } = req.params;
 
-    if (!isValidId(chatId))
-      return res.status(400).json({ error: "Invalid chat ID format" });
+    if (!isValidId(chatId)) return res.status(400).json({ error: 'Invalid chat ID format' });
 
     const chat = await Chat.findById(chatId);
-    if (!chat) return res.status(404).json({ error: "Chat not found" });
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
 
     if (chat.clientId.toString() !== id && chat.providerId.toString() !== id)
-      return res.status(403).json({ error: "Not allowed" });
+      return res.status(403).json({ error: 'Not allowed' });
 
     await Chat.findByIdAndDelete(chatId);
 

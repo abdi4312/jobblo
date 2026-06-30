@@ -1,7 +1,7 @@
 // routes/filterRoutes.js
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const filterController = require("../controllers/filterController");
+const filterController = require('../controllers/filterController');
 
 /**
  * @swagger
@@ -23,7 +23,7 @@ const filterController = require("../controllers/filterController");
  *       500:
  *         description: Serverfeil ved henting av filtervalg
  */
-router.get("/options", filterController.getFilterOptions);
+router.get('/options', filterController.getFilterOptions);
 
 /**
  * @swagger
@@ -63,6 +63,6 @@ router.get("/options", filterController.getFilterOptions);
  *         description: Serverfeil ved henting av resultater
  */
 
-router.post("/apply", filterController.applyFilters);
+router.post('/apply', filterController.applyFilters);
 
 module.exports = router;

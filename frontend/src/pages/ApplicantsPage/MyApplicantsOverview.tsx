@@ -1,43 +1,30 @@
-import React, { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  ChevronRight,
-  Users,
-  Calendar,
-  User,
-  Clock,
-  Filter,
-  Search,
-} from "lucide-react";
-import { useMyApplicantsOverviewQuery } from "../../features/applicants/hooks";
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronRight, Users, Calendar, User, Clock, Filter, Search } from 'lucide-react';
+import { useMyApplicantsOverviewQuery } from '../../features/applicants/hooks';
+import EmptyState from '../../components/Ui/EmptyState';
 
 const formatDate = (date: Date | string) => {
-  return new Date(date).toLocaleDateString("no-NO", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
+  return new Date(date).toLocaleDateString('no-NO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
   });
 };
 
 type StatusFilter =
-  | "all"
-  | "open"
-  | "in_progress"
-  | "completed"
-  | "awaiting_payment"
-  | "waiting_for_approval";
-type ApplicantFilter = "all" | "has_applicants" | "no_applicants";
-type SortOption = "newest" | "oldest" | "price_high" | "price_low";
+  'all' | 'open' | 'in_progress' | 'completed' | 'awaiting_payment' | 'waiting_for_approval';
+type ApplicantFilter = 'all' | 'has_applicants' | 'no_applicants';
+type SortOption = 'newest' | 'oldest' | 'price_high' | 'price_low';
 
 const MyApplicantsOverview: React.FC = () => {
   const navigate = useNavigate();
   const { data: services, isLoading, error } = useMyApplicantsOverviewQuery();
 
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [applicantFilter, setApplicantFilter] =
-    useState<ApplicantFilter>("all");
-  const [sortOption, setSortOption] = useState<SortOption>("newest");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [applicantFilter, setApplicantFilter] = useState<ApplicantFilter>('all');
+  const [sortOption, setSortOption] = useState<SortOption>('newest');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredAndSortedServices = useMemo(() => {
     if (!services) return [];
@@ -49,9 +36,7 @@ const MyApplicantsOverview: React.FC = () => {
       const lowercasedQuery = searchQuery.toLowerCase();
       filtered = filtered.filter((service) => {
         // Search by job title
-        const matchesTitle = service.title
-          .toLowerCase()
-          .includes(lowercasedQuery);
+        const matchesTitle = service.title.toLowerCase().includes(lowercasedQuery);
         // Search by worker name (selected worker)
         const matchesWorker =
           service.selectedWorker &&
@@ -59,9 +44,7 @@ const MyApplicantsOverview: React.FC = () => {
         // Search by category
         const matchesCategory =
           service.categories &&
-          service.categories.some((cat: string) =>
-            cat.toLowerCase().includes(lowercasedQuery),
-          );
+          service.categories.some((cat: string) => cat.toLowerCase().includes(lowercasedQuery));
         // Search by job ID
         const matchesId = service._id.toLowerCase().includes(lowercasedQuery);
 
@@ -70,31 +53,27 @@ const MyApplicantsOverview: React.FC = () => {
     }
 
     // Apply status filter
-    if (statusFilter !== "all") {
+    if (statusFilter !== 'all') {
       filtered = filtered.filter((service) => service.status === statusFilter);
     }
 
     // Apply applicant filter
-    if (applicantFilter === "has_applicants") {
+    if (applicantFilter === 'has_applicants') {
       filtered = filtered.filter((service) => service.applicantCount > 0);
-    } else if (applicantFilter === "no_applicants") {
+    } else if (applicantFilter === 'no_applicants') {
       filtered = filtered.filter((service) => service.applicantCount === 0);
     }
 
     // Apply sorting
     filtered.sort((a, b) => {
       switch (sortOption) {
-        case "newest":
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-        case "oldest":
-          return (
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          );
-        case "price_high":
+        case 'newest':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'oldest':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'price_high':
           return b.price - a.price;
-        case "price_low":
+        case 'price_low':
           return a.price - b.price;
         default:
           return 0;
@@ -115,13 +94,8 @@ const MyApplicantsOverview: React.FC = () => {
   if (error || !services) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#f5f0e8] p-4">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">
-          Kunne ikke laste oversikt
-        </h2>
-        <button
-          onClick={() => navigate(-1)}
-          className="text-custom-green font-medium"
-        >
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Kunne ikke laste oversikt</h2>
+        <button onClick={() => navigate(-1)} className="text-custom-green font-medium">
           Gå tilbake
         </button>
       </div>
@@ -154,22 +128,16 @@ const MyApplicantsOverview: React.FC = () => {
         <div className="bg-white rounded-2xl p-4 mb-6 border border-black/5">
           <div className="flex items-center gap-2 mb-4">
             <Filter size={18} className="text-gray-600" />
-            <span className="font-medium text-gray-800">
-              Filter og sortering
-            </span>
+            <span className="font-medium text-gray-800">Filter og sortering</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Status Filter */}
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-2 block">
-                Status
-              </label>
+              <label className="text-xs font-medium text-gray-500 mb-2 block">Status</label>
               <select
                 value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(e.target.value as StatusFilter)
-                }
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-custom-green"
               >
                 <option value="all">Alle</option>
@@ -177,22 +145,16 @@ const MyApplicantsOverview: React.FC = () => {
                 <option value="in_progress">I gang</option>
                 <option value="completed">Fullført</option>
                 <option value="awaiting_payment">Venter på betaling</option>
-                <option value="waiting_for_approval">
-                  Venter på godkjenning
-                </option>
+                <option value="waiting_for_approval">Venter på godkjenning</option>
               </select>
             </div>
 
             {/* Applicant Filter */}
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-2 block">
-                Søkere
-              </label>
+              <label className="text-xs font-medium text-gray-500 mb-2 block">Søkere</label>
               <select
                 value={applicantFilter}
-                onChange={(e) =>
-                  setApplicantFilter(e.target.value as ApplicantFilter)
-                }
+                onChange={(e) => setApplicantFilter(e.target.value as ApplicantFilter)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-custom-green"
               >
                 <option value="all">Alle</option>
@@ -203,9 +165,7 @@ const MyApplicantsOverview: React.FC = () => {
 
             {/* Sort */}
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-2 block">
-                Sortering
-              </label>
+              <label className="text-xs font-medium text-gray-500 mb-2 block">Sortering</label>
               <select
                 value={sortOption}
                 onChange={(e) => setSortOption(e.target.value as SortOption)}
@@ -232,36 +192,34 @@ const MyApplicantsOverview: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <span
                       className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                        service.status === "in_progress"
-                          ? "bg-blue-100 text-blue-600"
-                          : service.status === "open"
-                            ? "bg-green-100 text-green-600"
-                            : service.status === "awaiting_payment"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : service.status === "waiting_for_approval"
-                                ? "bg-purple-100 text-purple-700"
-                                : "bg-gray-100 text-gray-600"
+                        service.status === 'in_progress'
+                          ? 'bg-blue-100 text-blue-600'
+                          : service.status === 'open'
+                            ? 'bg-green-100 text-green-600'
+                            : service.status === 'awaiting_payment'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : service.status === 'waiting_for_approval'
+                                ? 'bg-purple-100 text-purple-700'
+                                : 'bg-gray-100 text-gray-600'
                       }`}
                     >
-                      {service.status === "in_progress"
-                        ? "I GANG"
-                        : service.status === "open"
-                          ? "AKTIV"
-                          : service.status === "completed"
-                            ? "FULLFØRT"
-                            : service.status === "awaiting_payment"
-                              ? "VENTER PÅ BETALING"
-                              : service.status === "waiting_for_approval"
-                                ? "VENTER PÅ GODKJENNING"
-                                : "AVSLUTTET"}
+                      {service.status === 'in_progress'
+                        ? 'I GANG'
+                        : service.status === 'open'
+                          ? 'AKTIV'
+                          : service.status === 'completed'
+                            ? 'FULLFØRT'
+                            : service.status === 'awaiting_payment'
+                              ? 'VENTER PÅ BETALING'
+                              : service.status === 'waiting_for_approval'
+                                ? 'VENTER PÅ GODKJENNING'
+                                : 'AVSLUTTET'}
                     </span>
                     <span className="text-[11px] text-gray-400 font-medium">
-                      {service.location?.city || "Oslo"}
+                      {service.location?.city || 'Oslo'}
                     </span>
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900 line-clamp-1">
-                    {service.title}
-                  </h3>
+                  <h3 className="text-lg font-bold text-gray-900 line-clamp-1">{service.title}</h3>
 
                   {/* Additional Info Row */}
                   <div className="flex flex-wrap gap-4 text-[12px] text-gray-500">
@@ -273,14 +231,12 @@ const MyApplicantsOverview: React.FC = () => {
                     {/* Last Activity */}
                     <div className="flex items-center gap-1">
                       <Clock size={14} />
-                      <span>
-                        Siste aktivitet: {formatDate(service.lastActivity)}
-                      </span>
+                      <span>Siste aktivitet: {formatDate(service.lastActivity)}</span>
                     </div>
                     {/* Categories */}
                     {service.categories && service.categories.length > 0 && (
                       <div className="flex items-center gap-1">
-                        <span>Kategori: {service.categories.join(", ")}</span>
+                        <span>Kategori: {service.categories.join(', ')}</span>
                       </div>
                     )}
                     {/* Deadline */}
@@ -304,22 +260,19 @@ const MyApplicantsOverview: React.FC = () => {
                   {/* Applicants Count */}
                   <div className="flex flex-col items-end">
                     <div className="flex items-center -space-x-2 mb-1">
-                      {service.applicantAvatars.map(
-                        (avatar: string, i: number) => (
-                          <img
-                            key={i}
-                            src={avatar}
-                            alt=""
-                            className="w-7 h-7 rounded-full border-2 border-white object-cover bg-gray-200"
-                          />
-                        ),
+                      {service.applicantAvatars.map((avatar: string, i: number) => (
+                        <img
+                          key={i}
+                          src={avatar}
+                          alt=""
+                          className="w-7 h-7 rounded-full border-2 border-white object-cover bg-gray-200"
+                        />
+                      ))}
+                      {service.applicantCount > 0 && service.applicantAvatars.length === 0 && (
+                        <div className="w-7 h-7 rounded-full border-2 border-white bg-custom-green flex items-center justify-center">
+                          <Users size={12} className="text-white" />
+                        </div>
                       )}
-                      {service.applicantCount > 0 &&
-                        service.applicantAvatars.length === 0 && (
-                          <div className="w-7 h-7 rounded-full border-2 border-white bg-custom-green flex items-center justify-center">
-                            <Users size={12} className="text-white" />
-                          </div>
-                        )}
                     </div>
                     <div className="text-right">
                       <span className="text-[15px] font-bold text-gray-900">
@@ -334,11 +287,9 @@ const MyApplicantsOverview: React.FC = () => {
                   {/* Price */}
                   <div className="text-right hidden sm:block">
                     <div className="text-[15px] font-bold text-gray-900">
-                      {service.price.toLocaleString("no-NO")} kr
+                      {service.price.toLocaleString('no-NO')} kr
                     </div>
-                    <div className="text-[10px] text-gray-400 font-bold uppercase">
-                      Pris
-                    </div>
+                    <div className="text-[10px] text-gray-400 font-bold uppercase">Pris</div>
                   </div>
 
                   {/* Arrow */}
@@ -351,11 +302,12 @@ const MyApplicantsOverview: React.FC = () => {
           ))}
 
           {filteredAndSortedServices.length === 0 && (
-            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
-              <Users size={48} className="mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-500 font-medium">
-                Ingen oppdrag som matcher filterene.
-              </p>
+            <div className="bg-white rounded-2xl border border-black/5">
+              <EmptyState
+                type="jobs"
+                title="Ingen oppdrag som matcher"
+                description="Prøv å endre filterene eller søk etter noe annet."
+              />
             </div>
           )}
         </div>

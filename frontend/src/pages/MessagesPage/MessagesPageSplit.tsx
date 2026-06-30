@@ -1,6 +1,6 @@
-import { useChatLogic } from "../../features/chat/useChatLogic";
-import { ChatSidebar } from "../../components/messagelist/ChatSidebar";
-import { ChatWindow } from "../../components/messagelist/ChatWindow";
+import { useChatLogic } from '../../features/chat/useChatLogic';
+import { ChatSidebar } from '../../components/messagelist/ChatSidebar';
+import { ChatWindow } from '../../components/messagelist/ChatWindow';
 
 /**
  * Main chat page component with split view for desktop and full screen for mobile

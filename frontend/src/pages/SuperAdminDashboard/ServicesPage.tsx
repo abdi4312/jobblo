@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
-import mainLink from "../../api/mainURLs";
-import Swal from "sweetalert2";
-import ServiceCard from "../../components/SuperAdminDashboard/Service/ServiceCard";
-import type { Service } from "../../features/services/types";
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import mainLink from '../../api/mainURLs';
+import Swal from 'sweetalert2';
+import ServiceCard from '../../components/SuperAdminDashboard/Service/ServiceCard';
+import type { Service } from '../../features/services/types';
 
 const ServicesPage: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
@@ -15,13 +15,11 @@ const ServicesPage: React.FC = () => {
   const fetchServices = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await mainLink.get(
-        `/api/admin/services?page=${currentPage}&limit=${limit}`,
-      );
+      const response = await mainLink.get(`/api/admin/services?page=${currentPage}&limit=${limit}`);
       setServices(response.data.services || []);
       setTotalPages(response.data.totalPages || 1);
     } catch (error) {
-      console.error("Error fetching services:", error);
+      console.error('Error fetching services:', error);
     } finally {
       setLoading(false);
     }
@@ -29,22 +27,22 @@ const ServicesPage: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     const result = await Swal.fire({
-      title: "Delete Service?",
-      text: "Are you sure you want to remove this service?",
-      icon: "warning",
+      title: 'Delete Service?',
+      text: 'Are you sure you want to remove this service?',
+      icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#2d4a3e",
-      confirmButtonText: "Yes, delete it!",
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#2d4a3e',
+      confirmButtonText: 'Yes, delete it!',
     });
 
     if (result.isConfirmed) {
       try {
         await mainLink.delete(`/api/admin/services/${id}`);
-        Swal.fire("Deleted!", "Service has been removed.", "success");
+        Swal.fire('Deleted!', 'Service has been removed.', 'success');
         fetchServices();
       } catch {
-        Swal.fire("Error", "Failed to delete service", "error");
+        Swal.fire('Error', 'Failed to delete service', 'error');
       }
     }
   };
@@ -56,9 +54,7 @@ const ServicesPage: React.FC = () => {
   return (
     <div className="animate-in fade-in duration-500 p-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">
-          Services
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Services</h1>
 
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <select
@@ -80,9 +76,7 @@ const ServicesPage: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20 text-gray-400 font-bold">
-          Loading Services...
-        </div>
+        <div className="flex justify-center py-20 text-gray-400 font-bold">Loading Services...</div>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -95,9 +89,7 @@ const ServicesPage: React.FC = () => {
             ))}
           </div>
           {services.length === 0 && (
-            <p className="text-center py-10 text-gray-400">
-              No services found.
-            </p>
+            <p className="text-center py-10 text-gray-400">No services found.</p>
           )}
         </>
       )}
@@ -116,10 +108,7 @@ const ServicesPage: React.FC = () => {
 
           {(() => {
             const maxVisible = 8;
-            let startPage = Math.max(
-              1,
-              currentPage - Math.floor(maxVisible / 2),
-            );
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
             let endPage = startPage + maxVisible - 1;
 
             if (endPage > totalPages) {
@@ -127,22 +116,21 @@ const ServicesPage: React.FC = () => {
               startPage = Math.max(1, endPage - maxVisible + 1);
             }
 
-            return Array.from(
-              { length: endPage - startPage + 1 },
-              (_, i) => startPage + i,
-            ).map((num) => (
-              <button
-                key={num}
-                onClick={() => setCurrentPage(num)}
-                className={`w-10 h-10 text-center flex items-center justify-center rounded-full font-bold transition-all ${
-                  currentPage === num
-                    ? "bg-[#2d4a3e] text-white shadow-md scale-110"
-                    : "text-gray-400 hover:bg-gray-100"
-                }`}
-              >
-                {num}
-              </button>
-            ));
+            return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map(
+              (num) => (
+                <button
+                  key={num}
+                  onClick={() => setCurrentPage(num)}
+                  className={`w-10 h-10 text-center flex items-center justify-center rounded-full font-bold transition-all ${
+                    currentPage === num
+                      ? 'bg-[#2d4a3e] text-white shadow-md scale-110'
+                      : 'text-gray-400 hover:bg-gray-100'
+                  }`}
+                >
+                  {num}
+                </button>
+              )
+            );
           })()}
 
           <button

@@ -1,36 +1,56 @@
-const JobRequest = require("../models/JobRequest");
-const Service = require("../models/Service");
-const Order = require("../models/Order");
+const JobRequest = require('../models/JobRequest');
+const Service = require('../models/Service');
+const Order = require('../models/Order');
 
 /**
  * GET /api/applicants/:serviceId
- * Get all applicants for a specific service
+ * Get all applicants for a specific service with sort/filter
  */
 exports.getApplicantsForService = async (req, res) => {
   try {
     const { serviceId } = req.params;
+    const { sort, filter } = req.query;
     const userId = req.userId; // Current logged-in user (owner of the service)
 
     const service = await Service.findById(serviceId);
     if (!service) {
-      return res.status(404).json({ error: "Oppdraget ble ikke funnet" });
+      return res.status(404).json({ error: 'Oppdraget ble ikke funnet' });
     }
 
     // Verify ownership
     if (service.userId.toString() !== userId) {
-      return res
-        .status(403)
-        .json({ error: "Ikke autorisert. Du eier ikke dette oppdraget." });
+      return res.status(403).json({ error: 'Ikke autorisert. Du eier ikke dette oppdraget.' });
+    }
+
+    // Build filter query
+    let query = { serviceId };
+    if (filter === 'favorites') {
+      query.favorite = true;
+    } else if (filter === 'archived') {
+      query.archived = true;
+    } else if (filter === 'notArchived') {
+      query.archived = false;
     }
 
     // Get all pending and accepted requests (applicants)
-    const requests = await JobRequest.find({ serviceId })
-      .populate({
-        path: "customerId",
-        select:
-          "name lastName avatarUrl verified isTrusted averageRating reviewCount skills locations createdAt",
-      })
-      .sort({ createdAt: -1 });
+    let requestsQuery = JobRequest.find(query).populate({
+      path: 'customerId',
+      select:
+        'name lastName avatarUrl verified isTrusted averageRating reviewCount skills locations createdAt',
+    });
+
+    // Apply sorting
+    if (sort === 'rating') {
+      // We'll sort after fetching because we need to populate first
+    } else if (sort === 'completedJobs') {
+      // Also sort after fetching
+    } else if (sort === 'favorites') {
+      requestsQuery = requestsQuery.sort({ favorite: -1, createdAt: -1 });
+    } else {
+      requestsQuery = requestsQuery.sort({ createdAt: -1 });
+    }
+
+    const requests = await requestsQuery;
 
     // Calculate additional stats per applicant (like completed jobs)
     // For a production app, this might be heavily aggregated, but we'll do simple counts here.
@@ -41,7 +61,7 @@ exports.getApplicantsForService = async (req, res) => {
         // Count completed orders where this applicant was the provider
         const completedJobsCount = await Order.countDocuments({
           providerId: applicant._id,
-          status: "completed",
+          status: 'completed',
         });
 
         // Calculate real response rate
@@ -50,23 +70,23 @@ exports.getApplicantsForService = async (req, res) => {
         });
         const respondedRequests = await JobRequest.countDocuments({
           providerId: applicant._id,
-          status: { $in: ["accepted", "declined"] },
+          status: { $in: ['accepted', 'declined'] },
         });
         const responseRatePercent =
-          totalRequests > 0
-            ? Math.round((respondedRequests / totalRequests) * 100)
-            : 100;
+          totalRequests > 0 ? Math.round((respondedRequests / totalRequests) * 100) : 100;
         const responseRate = `${responseRatePercent}%`;
-        const responseTime = "< 1t";
+        const responseTime = '< 1t';
 
         return {
           _id: reqDoc._id,
           status: reqDoc.status,
-          message: reqDoc.message || "Ingen melding",
+          message: reqDoc.message || 'Ingen melding',
           appliedAt: reqDoc.createdAt,
+          favorite: reqDoc.favorite,
+          archived: reqDoc.archived,
           applicant: {
             _id: applicant._id,
-            name: `${applicant.name} ${applicant.lastName || ""}`.trim(),
+            name: `${applicant.name} ${applicant.lastName || ''}`.trim(),
             avatarUrl: applicant.avatarUrl,
             verified: applicant.verified || applicant.isTrusted,
             skills: applicant.skills || [],
@@ -80,8 +100,16 @@ exports.getApplicantsForService = async (req, res) => {
             isFastResponder: true, // Mocked badge
           },
         };
-      }),
+      })
     );
+
+    // Apply sorting that depends on the populated data
+    let sortedApplicants = [...applicantsWithStats];
+    if (sort === 'rating') {
+      sortedApplicants.sort((a, b) => b.applicant.rating - a.applicant.rating);
+    } else if (sort === 'completedJobs') {
+      sortedApplicants.sort((a, b) => b.applicant.completedJobs - a.applicant.completedJobs);
+    }
 
     res.json({
       service: {
@@ -92,17 +120,17 @@ exports.getApplicantsForService = async (req, res) => {
         status: service.status,
         date: service.fromDate || service.createdAt,
       },
-      applicants: applicantsWithStats,
+      applicants: sortedApplicants,
       activeOrder: await Order.findOne({
         serviceId: service._id,
         status: {
-          $in: ["awaiting_payment", "paid", "in_progress", "completed"],
+          $in: ['awaiting_payment', 'paid', 'in_progress', 'completed'],
         },
-      }).select("_id status"),
+      }).select('_id status'),
     });
   } catch (err) {
-    console.error("Error fetching applicants:", err);
-    res.status(500).json({ error: "Serverfeil ved henting av søkere" });
+    console.error('Error fetching applicants:', err);
+    res.status(500).json({ error: 'Serverfeil ved henting av søkere' });
   }
 };
 
@@ -115,7 +143,7 @@ exports.getMyServicesWithApplicants = async (req, res) => {
     const userId = req.userId;
 
     // 1. Find all unique serviceIds that have at least one job request where the user is the provider
-    const uniqueServiceIds = await JobRequest.distinct("serviceId", {
+    const uniqueServiceIds = await JobRequest.distinct('serviceId', {
       providerId: userId,
     });
 
@@ -132,16 +160,16 @@ exports.getMyServicesWithApplicants = async (req, res) => {
       services.map(async (service) => {
         // Count job requests for this service
         const requests = await JobRequest.find({ serviceId: service._id })
-          .populate("customerId", "avatarUrl name lastName")
+          .populate('customerId', 'avatarUrl name lastName')
           .sort({ createdAt: -1 });
 
         // Find active order to get selected worker
         const activeOrder = await Order.findOne({
           serviceId: service._id,
           status: {
-            $in: ["awaiting_payment", "paid", "in_progress", "completed"],
+            $in: ['awaiting_payment', 'paid', 'in_progress', 'completed'],
           },
-        }).populate("customerId", "name lastName avatarUrl");
+        }).populate('customerId', 'name lastName avatarUrl');
 
         // Last activity: use latest between service updatedAt, last request createdAt, last order updatedAt
         let lastActivity = service.updatedAt;
@@ -172,17 +200,111 @@ exports.getMyServicesWithApplicants = async (req, res) => {
           selectedWorker: activeOrder?.customerId
             ? {
                 _id: activeOrder.customerId._id,
-                name: `${activeOrder.customerId.name} ${activeOrder.customerId.lastName || ""}`.trim(),
+                name: `${activeOrder.customerId.name} ${activeOrder.customerId.lastName || ''}`.trim(),
                 avatarUrl: activeOrder.customerId.avatarUrl,
               }
             : null,
         };
-      }),
+      })
     );
 
     res.json(servicesWithApplicants);
   } catch (err) {
-    console.error("Error fetching services with applicants:", err);
-    res.status(500).json({ error: "Serverfeil ved henting av oppdrag" });
+    console.error('Error fetching services with applicants:', err);
+    res.status(500).json({ error: 'Serverfeil ved henting av oppdrag' });
+  }
+};
+
+/**
+ * PATCH /api/applicants/:requestId/favorite
+ * Toggle favorite status of an applicant
+ */
+exports.toggleFavorite = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const userId = req.userId;
+
+    const jobRequest = await JobRequest.findById(requestId);
+    if (!jobRequest) {
+      return res.status(404).json({ error: 'Forespørsel ikke funnet' });
+    }
+
+    // Verify ownership
+    const service = await Service.findById(jobRequest.serviceId);
+    if (!service || service.userId.toString() !== userId) {
+      return res.status(403).json({ error: 'Ikke autorisert' });
+    }
+
+    jobRequest.favorite = !jobRequest.favorite;
+    await jobRequest.save();
+
+    res.json({ favorite: jobRequest.favorite });
+  } catch (err) {
+    console.error('Error toggling favorite:', err);
+    res.status(500).json({ error: 'Serverfeil ved endring av favoritt' });
+  }
+};
+
+/**
+ * PATCH /api/applicants/:requestId/archive
+ * Toggle archive status of an applicant
+ */
+exports.toggleArchive = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const userId = req.userId;
+
+    const jobRequest = await JobRequest.findById(requestId);
+    if (!jobRequest) {
+      return res.status(404).json({ error: 'Forespørsel ikke funnet' });
+    }
+
+    // Verify ownership
+    const service = await Service.findById(jobRequest.serviceId);
+    if (!service || service.userId.toString() !== userId) {
+      return res.status(403).json({ error: 'Ikke autorisert' });
+    }
+
+    jobRequest.archived = !jobRequest.archived;
+    await jobRequest.save();
+
+    res.json({ archived: jobRequest.archived });
+  } catch (err) {
+    console.error('Error toggling archive:', err);
+    res.status(500).json({ error: 'Serverfeil ved endring av arkiv' });
+  }
+};
+
+/**
+ * PATCH /api/applicants/:requestId/decline
+ * Decline an applicant and optionally archive
+ */
+exports.declineApplicant = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { archive = false } = req.body;
+    const userId = req.userId;
+
+    const jobRequest = await JobRequest.findById(requestId);
+    if (!jobRequest) {
+      return res.status(404).json({ error: 'Forespørsel ikke funnet' });
+    }
+
+    // Verify ownership
+    const service = await Service.findById(jobRequest.serviceId);
+    if (!service || service.userId.toString() !== userId) {
+      return res.status(403).json({ error: 'Ikke autorisert' });
+    }
+
+    jobRequest.status = 'declined';
+    if (archive) {
+      jobRequest.archived = true;
+    }
+    await jobRequest.save();
+
+    res.json({ status: jobRequest.status, archived: jobRequest.archived });
+  } catch (err) {
+    console.error('Error declining applicant:', err);
+    res.status(500).json({ error: 'Serverfeil ved avslåing av søker' });
   }
 };

@@ -9,13 +9,8 @@ interface DateTimePickerProps {
   onDateChange: (field: string, value: string) => void;
 }
 
-export function DateTimePicker({
-  startTime,
-  endTime,
-  onDateChange
-}: DateTimePickerProps) {
+export function DateTimePicker({ startTime, endTime, onDateChange }: DateTimePickerProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
-
 
   const handleDatePickerCancel = () => {
     setShowDatePicker(false);
@@ -40,9 +35,7 @@ export function DateTimePicker({
           <div className={styles.datePicker}>
             <div className={styles.datePickerHeader}>
               <div className={styles.datePickerDate}>
-                <div className={styles.datePickerTitle}>
-                  Velg dato
-                </div>
+                <div className={styles.datePickerTitle}>Velg dato</div>
                 <div className={styles.datePickerIcon}>
                   <svg
                     width="24"
@@ -59,66 +52,53 @@ export function DateTimePicker({
                 </div>
               </div>
             </div>
-            
+
             <div className={styles.datePickerReturn}>
               <div className={styles.dateInput}>
                 <div className={styles.dateInputWrapper}>
                   <div className={styles.dateInputStateLayer}>
                     <div className={styles.dateInputContent}>
                       <div className={styles.dateInputContainer}>
-                        <div className={styles.dateInputText}>
-                          dd/mm/yyyy
-                        </div>
+                        <div className={styles.dateInputText}>dd/mm/yyyy</div>
                       </div>
                       <div className={styles.dateInputLabelContainer}>
-                        <div className={styles.dateInputLabel}>
-                          Dato
-                        </div>
+                        <div className={styles.dateInputLabel}>Dato</div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              
+
               <div className={styles.endDateInput}>
                 <div className={styles.endDateInputWrapper}>
                   <div className={styles.endDateInputStateLayer}>
                     <div className={styles.endDateInputContent}>
                       <div className={styles.endDateInputLabelContainer}>
-                        <div className={styles.endDateInputLabel}>
-                          Sluttdato
-                        </div>
+                        <div className={styles.endDateInputLabel}>Sluttdato</div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-            
+
             <div className={styles.datePickerActions}>
               <div className={styles.datePickerButtonContainer}>
-                <button 
+                <button
                   className={styles.datePickerSecondaryButton}
                   onClick={handleDatePickerCancel}
                 >
                   <div className={styles.datePickerButtonContent}>
                     <div className={styles.datePickerButtonStateLayer}>
-                      <div className={styles.datePickerButtonLabel}>
-                        Avbryt
-                      </div>
+                      <div className={styles.datePickerButtonLabel}>Avbryt</div>
                     </div>
                   </div>
                 </button>
-                
-                <button 
-                  className={styles.datePickerPrimaryButton}
-                  onClick={handleDatePickerOK}
-                >
+
+                <button className={styles.datePickerPrimaryButton} onClick={handleDatePickerOK}>
                   <div className={styles.datePickerButtonContent}>
                     <div className={styles.datePickerButtonStateLayer}>
-                      <div className={styles.datePickerButtonLabel}>
-                        OK
-                      </div>
+                      <div className={styles.datePickerButtonLabel}>OK</div>
                     </div>
                   </div>
                 </button>
@@ -127,7 +107,7 @@ export function DateTimePicker({
           </div>
         </div>
       )}
-      
+
       <div className={styles.timeSection}>
         <div className={styles.timeSectionContainer}>
           <div className={styles.timeInput}>
@@ -144,9 +124,7 @@ export function DateTimePicker({
                     />
                   </div>
                   <div className={styles.timeInputLabelContainer}>
-                    <div className={styles.timeInputLabel}>
-                      Starttid
-                    </div>
+                    <div className={styles.timeInputLabel}>Starttid</div>
                   </div>
                 </div>
                 <div className={styles.timeInputTrailingIcon}>
@@ -172,7 +150,7 @@ export function DateTimePicker({
               </div>
             </div>
           </div>
-          
+
           <div className={styles.timeInput}>
             <div className={styles.timeInputWrapper}>
               <div className={styles.timeInputStateLayer}>
@@ -187,9 +165,7 @@ export function DateTimePicker({
                     />
                   </div>
                   <div className={styles.timeInputLabelContainer}>
-                    <div className={styles.timeInputLabel}>
-                      Sluttid
-                    </div>
+                    <div className={styles.timeInputLabel}>Sluttid</div>
                   </div>
                 </div>
                 <div className={styles.timeInputTrailingIcon}>

@@ -1,10 +1,10 @@
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation } from "swiper/modules";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { useFeaturedFavourites } from "../../../features/explore/hooks";
-import { useNavigate } from "react-router-dom";
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation } from 'swiper/modules';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { useFeaturedFavourites } from '../../../features/explore/hooks';
+import { useNavigate } from 'react-router-dom';
 
-import "swiper/css";
+import 'swiper/css';
 
 export function Favourites() {
   const navigate = useNavigate();
@@ -18,9 +18,9 @@ export function Favourites() {
   }
 
   const handleItemClick = (item: any) => {
-    if (item.type === "job") {
+    if (item.type === 'job') {
       navigate(`/job-listing/${item.originalId}`);
-    } else if (item.type === "provider" || item.type === "business") {
+    } else if (item.type === 'provider' || item.type === 'business') {
       navigate(`/profile/${item.originalId}`);
     }
   };
@@ -44,9 +44,7 @@ export function Favourites() {
             <h2 className="text-2xl md:text-3xl font-bold text-custom-black tracking-tight">
               Våre favoritter
             </h2>
-            <p className="text-gray-500 mt-2 text-[15px]">
-              Finn inspiration i våre favoritter
-            </p>
+            <p className="text-gray-500 mt-2 text-[15px]">Finn inspiration i våre favoritter</p>
           </div>
 
           {/* Custom Navigation Arrows */}
@@ -73,8 +71,8 @@ export function Favourites() {
         <Swiper
           modules={[Navigation]}
           navigation={{
-            prevEl: "#fav-prev",
-            nextEl: "#fav-next",
+            prevEl: '#fav-prev',
+            nextEl: '#fav-next',
           }}
           // 1. Transition speed (milli-seconds mein). 800ms-1000ms smooth lagta hai.
           speed={1000}

@@ -1,15 +1,15 @@
-import { NavLink } from "react-router-dom";
+import { NavLink } from 'react-router-dom';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   const footerLinks = [
-    { name: "Kundesenter", link: "/support" },
-    { name: "Jobb i Jobblo", link: "/sale-subscription-terms" },
-    { name: "Personvern", link: "/privacy" },
-    { name: "Vilkår for bruk", link: "/user-term" },
-    { name: "Om oss", link: "/about" },
-    { name: "Cookie-innstillinger", link: "/cookies" },
+    { name: 'Kundesenter', link: '/support' },
+    { name: 'Jobb i Jobblo', link: '/sale-subscription-terms' },
+    { name: 'Personvern', link: '/privacy' },
+    { name: 'Vilkår for bruk', link: '/user-term' },
+    { name: 'Om oss', link: '/about' },
+    { name: 'Cookie-innstillinger', link: '/cookies' },
   ];
 
   return (
@@ -35,9 +35,7 @@ const Footer = () => {
         </div>
 
         {/* Right Side: Copyright */}
-        <div className="text-custom-black whitespace-nowrap">
-          © Jobblo AS {currentYear}
-        </div>
+        <div className="text-custom-black whitespace-nowrap">© Jobblo AS {currentYear}</div>
       </div>
     </footer>
   );
