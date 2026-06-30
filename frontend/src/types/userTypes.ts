@@ -42,6 +42,15 @@ export type User = {
   createdAt?: string;
   updatedAt?: string;
   __v?: number;
+  postedJobsCount?: number;
+  responseRate?: number;
+  averageResponseTimeMinutes?: number;
+  repeatCustomersCount?: number;
+  hireRate?: number;
+  completionRate?: number;
+  jobsThisMonth?: number;
+  totalApplicationsReceived?: number;
+  completedJobs?: number;
 };
 
 export type AuthTokens = {

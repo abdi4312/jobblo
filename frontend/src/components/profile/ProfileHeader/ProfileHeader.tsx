@@ -399,34 +399,64 @@ export function ProfileHeader({
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-11 gap-3 mb-5">
         {[
-          { label: "Fullførte oppdrag", val: user?.completedJobs || 0 },
+          { label: "Fullførte", val: user?.completedJobs || 0 },
           {
-            label: "Snittrating",
+            label: "Rating",
             val: user?.averageRating?.toFixed(1) || "0.0",
           },
           {
-            label: "Utlagte oppdrag",
-            val: (user as any)?.postedJobsCount || 0,
+            label: "Utlagte",
+            val: user?.postedJobsCount || 0,
           },
           {
-            label: "Svarprosent",
-            val: `${(user as any)?.responseRate || "0"}%`,
+            label: "Svar %",
+            val: `${user?.responseRate || "0"}%`,
           },
           {
             label: "Totalt tjent",
-            val: `${(user as any)?.totalEarned || 0} kr`,
+            val: `${user?.earnings || 0} kr`,
+          },
+          {
+            label: "Responstid",
+            val: (() => {
+              const minutes = user?.averageResponseTimeMinutes || 0;
+              if (minutes < 60) return `${minutes} min`;
+              const hours = Math.floor(minutes / 60);
+              const remainingMinutes = minutes % 60;
+              return remainingMinutes > 0 ? `${hours}t ${remainingMinutes}m` : `${hours}t`;
+            })(),
+          },
+          {
+            label: "Gjent. kunder",
+            val: user?.repeatCustomersCount || 0,
+          },
+          {
+            label: "Ansettelse %",
+            val: `${user?.hireRate || "0"}%`,
+          },
+          {
+            label: "Fullfør %",
+            val: `${user?.completionRate || "0"}%`,
+          },
+          {
+            label: "Månedsjobber",
+            val: user?.jobsThisMonth || 0,
+          },
+          {
+            label: "Søknader",
+            val: user?.totalApplicationsReceived || 0,
           },
         ].map((stat, i) => (
           <div
             key={i}
-            className="bg-white border border-black/5 rounded-[14px] p-3.5 text-center"
+            className="bg-white border border-black/5 rounded-[14px] p-3 text-center flex flex-col justify-center w-full aspect-square max-w-[120px] mx-auto"
           >
-            <strong className="block text-[20px] font-medium text-custom-green mb-0.5">
+            <strong className="block text-lg sm:text-xl font-medium text-custom-green mb-1">
               {stat.val}
             </strong>
-            <span className="text-[10px] text-black/40 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs text-black/40 uppercase tracking-wide leading-tight">
               {stat.label}
             </span>
           </div>

@@ -231,8 +231,16 @@ exports.getUserById = async (req, res) => {
 
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // Calculate posted jobs count
+    // Calculate posted jobs count (as poster)
     const postedJobsCount = await Service.countDocuments({ userId: id });
+
+    // Calculate completed jobs (as provider: jobs user completed for others)
+    const completedOrdersAsProvider = await Order.countDocuments({
+      providerId: id,
+      status: "completed",
+    });
+    // Use either the incremented count from model OR recalculate to be safe
+    const completedJobs = user.completedJobs || completedOrdersAsProvider;
 
     // Calculate response rate
     const totalJobRequests = await JobRequest.countDocuments({
@@ -247,10 +255,94 @@ exports.getUserById = async (req, res) => {
         ? Math.round((respondedJobRequests / totalJobRequests) * 100)
         : 100;
 
+    // Calculate average response time
+    const jobRequestsWithResponse = await JobRequest.find({
+      providerId: id,
+      status: { $in: ["accepted", "declined"] },
+    });
+    let totalResponseTimeMs = 0;
+    jobRequestsWithResponse.forEach((jr) => {
+      if (jr.updatedAt && jr.createdAt) {
+        totalResponseTimeMs += jr.updatedAt - jr.createdAt;
+      }
+    });
+    const averageResponseTimeMinutes =
+      jobRequestsWithResponse.length > 0
+        ? Math.round(
+            totalResponseTimeMs / (1000 * 60 * jobRequestsWithResponse.length),
+          )
+        : 0;
+
+    // Calculate repeat customers (customers who ordered more than once)
+    const orders = await Order.find({
+      providerId: id,
+      status: { $in: ["completed", "paid"] },
+    });
+    const customerCounts = {};
+    orders.forEach((order) => {
+      const customerId = order.customerId.toString();
+      customerCounts[customerId] = (customerCounts[customerId] || 0) + 1;
+    });
+    const repeatCustomersCount = Object.values(customerCounts).filter(
+      (count) => count > 1,
+    ).length;
+
+    // Calculate hire rate (accepted job requests / total job requests)
+    const acceptedJobRequests = await JobRequest.countDocuments({
+      providerId: id,
+      status: "accepted",
+    });
+    const hireRate =
+      totalJobRequests > 0
+        ? Math.round((acceptedJobRequests / totalJobRequests) * 100)
+        : 0;
+
+    // Calculate completion rate (completed orders / total accepted orders as provider)
+    const totalAcceptedOrdersAsProvider = await Order.countDocuments({
+      providerId: id,
+      status: {
+        $in: [
+          "accepted",
+          "in_progress",
+          "completed",
+          "awaiting_payment",
+          "paid",
+        ],
+      },
+    });
+    const completionRate =
+      totalAcceptedOrdersAsProvider > 0
+        ? Math.round((completedJobs / totalAcceptedOrdersAsProvider) * 100)
+        : 0;
+
+    // Calculate jobs this month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const jobsThisMonth = await Service.countDocuments({
+      userId: id,
+      createdAt: { $gte: startOfMonth },
+    });
+
+    // Calculate total applications received (as a provider or as a poster?)
+    // Let's calculate both: as a provider (received job requests) and as a poster (received on their services)
+    const servicesByUser = await Service.find({ userId: id }, "_id");
+    const serviceIds = servicesByUser.map((s) => s._id);
+    const totalApplicationsReceived = await JobRequest.countDocuments({
+      serviceId: { $in: serviceIds },
+    });
+
     // Convert user to object and add the stats
     const userObj = user.toObject();
     userObj.postedJobsCount = postedJobsCount;
+    userObj.completedJobs = completedJobs;
     userObj.responseRate = responseRate;
+    userObj.averageResponseTimeMinutes = averageResponseTimeMinutes;
+    userObj.repeatCustomersCount = repeatCustomersCount;
+    userObj.hireRate = hireRate;
+    userObj.completionRate = completionRate;
+    userObj.jobsThisMonth = jobsThisMonth;
+    userObj.totalApplicationsReceived = totalApplicationsReceived;
 
     res.json(userObj);
   } catch (err) {

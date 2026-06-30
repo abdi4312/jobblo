@@ -49,7 +49,7 @@ export default function ProfilePage() {
         <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle,#fff_1px,transparent_1px)] bg-[length:24px_24px]"></div>
       </div>
 
-      <div className="max-w-[900px] mx-auto px-6 pb-12">
+      <div className="max-w-[1200px] mx-auto px-6 pb-12">
         <ProfileHeader
           user={userToDisplay}
           handlelogout={handleLogout}
