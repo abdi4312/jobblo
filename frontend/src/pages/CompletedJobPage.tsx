@@ -202,9 +202,7 @@ export default function CompletedJobPage() {
                     key={star}
                     size={20}
                     className={
-                      star <= review.rating
-                        ? "text-[#F59E0B] fill-[#F59E0B]"
-                        : "text-[#d1d5db]"
+                      star <= review.rating ? 'text-[#F59E0B] fill-[#F59E0B]' : 'text-[#d1d5db]'
                     }
                   />
                 ))}
@@ -216,16 +214,11 @@ export default function CompletedJobPage() {
                 </div>
               )}
             </div>
-            {review.comment && (
-              <p className="text-gray-700 mb-4">{review.comment}</p>
-            )}
+            {review.comment && <p className="text-gray-700 mb-4">{review.comment}</p>}
             {review.photos && review.photos.length > 0 && (
               <div className="grid grid-cols-3 gap-3 mb-4">
                 {review.photos.map((photo: string, index: number) => (
-                  <div
-                    key={index}
-                    className="relative aspect-square rounded-lg overflow-hidden"
-                  >
+                  <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
                     <img
                       src={photo}
                       alt={`Vurderingsbilde ${index + 1}`}
@@ -248,12 +241,8 @@ export default function CompletedJobPage() {
                   className="w-8 h-8 rounded-full object-cover"
                 />
                 <div>
-                  <p className="text-sm font-medium text-gray-900">
-                    {review.reviewer.name}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {formatDate(review.createdAt)}
-                  </p>
+                  <p className="text-sm font-medium text-gray-900">{review.reviewer.name}</p>
+                  <p className="text-xs text-gray-500">{formatDate(review.createdAt)}</p>
                 </div>
               </div>
             )}
