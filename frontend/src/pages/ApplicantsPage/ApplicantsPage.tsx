@@ -274,11 +274,11 @@ const ApplicantsPage: React.FC = () => {
           <div>
             <div className="flex flex-wrap items-center justify-between mb-4 gap-2">
               <h3 className="text-[15px] font-medium text-gray-900">{applicants.length} søkere</h3>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 w-full md:w-auto">
                 <select
                   value={filterBy}
                   onChange={(e) => setFilterBy(e.target.value)}
-                  className="text-[12px] text-gray-600 border border-black/15 rounded-full px-3 py-1 bg-white outline-none cursor-pointer"
+                  className="flex-1 min-w-[120px] text-[12px] text-gray-600 border border-black/15 rounded-full px-3 py-1 bg-white outline-none cursor-pointer"
                 >
                   <option value="notArchived">Ikke arkivert</option>
                   <option value="favorites">Favoritter</option>
@@ -287,7 +287,7 @@ const ApplicantsPage: React.FC = () => {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="text-[12px] text-gray-600 border border-black/15 rounded-full px-3 py-1 bg-white outline-none cursor-pointer"
+                  className="flex-1 min-w-[120px] text-[12px] text-gray-600 border border-black/15 rounded-full px-3 py-1 bg-white outline-none cursor-pointer"
                 >
                   <option value="createdAt">Sorter: Nyeste først</option>
                   <option value="rating">Høyest rating</option>
@@ -311,7 +311,7 @@ const ApplicantsPage: React.FC = () => {
                     }`}
                   >
                     {/* Top Right Buttons */}
-                    <div className="absolute top-4 right-4 flex gap-1">
+                    <div className="absolute top-4 right-4 flex flex-wrap gap-1 z-10">
                       <button
                         onClick={() => handleToggleFavorite(app._id)}
                         className={`p-1 rounded-full transition-all ${
@@ -354,7 +354,7 @@ const ApplicantsPage: React.FC = () => {
                       </button>
                     </div>
 
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-10 md:pt-0">
                       <div className="flex items-start gap-4">
                         <div className="relative flex-shrink-0">
                           <div className="w-12 h-12 rounded-full bg-[#c8d8c8] text-[#1a3a1a] font-medium flex items-center justify-center text-lg overflow-hidden">

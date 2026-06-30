@@ -216,22 +216,22 @@ export default function Alert() {
         </div>
 
         {/* Action buttons */}
-        <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
           <button
             onClick={handleMarkAllAsRead}
-            className="px-4 py-2 bg-[#16a34a] text-white rounded-full text-sm font-medium hover:bg-[#14532d] transition-colors"
+            className="flex-1 min-w-[120px] px-4 py-2 bg-[#16a34a] text-white rounded-full text-sm font-medium hover:bg-[#14532d] transition-colors"
           >
             Marker alle som lest
           </button>
           <button
             onClick={handleDeleteAll}
-            className="px-4 py-2 bg-white text-[#dc2626] border border-[#dc2626] rounded-full text-sm font-medium hover:bg-[#fee2e2] transition-colors"
+            className="flex-1 min-w-[120px] px-4 py-2 bg-white text-[#dc2626] border border-[#dc2626] rounded-full text-sm font-medium hover:bg-[#fee2e2] transition-colors"
           >
             Slett alle
           </button>
           <button
             onClick={() => setShowUnreadOnly(!showUnreadOnly)}
-            className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+            className={`flex-1 min-w-[120px] px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
               showUnreadOnly
                 ? 'bg-[#16a34a] text-white border-[#16a34a]'
                 : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
@@ -242,12 +242,12 @@ export default function Alert() {
         </div>
 
         {/* Category Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
           {categories.map((category) => (
             <button
               key={category.key}
               onClick={() => setActiveCategory(category.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
                 activeCategory === category.key
                   ? 'bg-[#16a34a] text-white'
                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'

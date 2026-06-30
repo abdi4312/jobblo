@@ -16,7 +16,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, setCu
         <div
           className="h-full bg-[#2D7A4D] transition-all duration-500 ease-out"
           style={{
-            width: `${((currentStep - 1) / (steps.length - 1)) * 100}%,
+            width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`,
           }}
         />
       </div>

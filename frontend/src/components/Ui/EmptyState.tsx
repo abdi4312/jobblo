@@ -51,20 +51,20 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   const { illustration, defaultTitle, defaultDescription, defaultActionLabel } = config[type];
 
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
       <img
         src={illustration}
         alt={title || defaultTitle}
-        className="w-40 h-40 object-cover mb-6 rounded-lg"
+        className="w-32 h-32 object-cover mb-6 rounded-full bg-gray-50"
       />
       <h3 className="text-xl font-bold text-gray-900 mb-2">{title || defaultTitle}</h3>
-      <p className="text-gray-500 max-w-md mb-8">{description || defaultDescription}</p>
+      <p className="text-gray-500 max-w-md mb-6">{description || defaultDescription}</p>
       {(actionLabel || defaultActionLabel) && onActionClick && (
         <Button
           icon={<Plus size={16} />}
           label={actionLabel || defaultActionLabel!}
           onClick={onActionClick}
-          className="bg-custom-green text-white rounded-full py-3 px-6"
+          className="w-full sm:w-auto bg-custom-green text-white rounded-full py-3 px-6"
         />
       )}
     </div>

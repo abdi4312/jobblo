@@ -90,17 +90,17 @@ export default function AnmeldelserPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex justify-center flex-wrap gap-2 px-5 ">
+        <div className="flex justify-center flex-wrap gap-2 px-5 overflow-x-auto pb-2">
           <button
             onClick={() => setActiveTab('received')}
-            className={`flex-1 max-w-50 py-3 px-5 rounded-[14px] shadow-sm text-[#364153] text-[16px] font-medium transition-all duration-200 border-none text-nowrap cursor-pointer
+            className={`flex-1 max-w-50 min-w-[140px] py-3 px-5 rounded-[14px] shadow-sm text-[#364153] text-[16px] font-medium transition-all duration-200 border-none text-nowrap cursor-pointer
             ${activeTab === 'received' ? 'bg-[#2F7E4740]' : 'bg-[#FFFFFF1A]'}`}
           >
-            Anmelder fått
+            Anmeldelser fått
           </button>
           <button
             onClick={() => setActiveTab('given')}
-            className={`flex-1 max-w-50 py-3 px-5 rounded-[14px] shadow-sm text-[16px] text-[#364153] font-medium transition-all duration-200 border-none text-nowrap cursor-pointer
+            className={`flex-1 max-w-50 min-w-[140px] py-3 px-5 rounded-[14px] shadow-sm text-[16px] text-[#364153] font-medium transition-all duration-200 border-none text-nowrap cursor-pointer
             ${activeTab === 'given' ? 'bg-[#2F7E4740]' : 'bg-[#FFFFFF1A]'}`}
           >
             Anmeldelser gitt

@@ -83,7 +83,11 @@ const SafePaySteps: React.FC<SafePayStepsProps> = ({ currentStep, orderId, servi
                     : 'text-gray-400'
               }`}
             >
-              {currentStep > step.id ? 'Fullført' : currentStep === step.id ? 'Nåværende' : 'Kommende'}
+              {currentStep > step.id
+                ? 'Fullført'
+                : currentStep === step.id
+                  ? 'Nåværende'
+                  : 'Kommende'}
             </span>
 
             {/* Connecting Line for Completed Steps */}

@@ -251,8 +251,8 @@ export default function CompletedJobPage() {
 
         {/* Tabs */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="border-b border-gray-200">
-            <nav className="flex gap-4 px-6">
+          <div className="border-b border-gray-200 overflow-x-auto">
+            <nav className="flex gap-4 px-6 min-w-max">
               {[
                 {
                   id: 'timeline',
@@ -283,7 +283,7 @@ export default function CompletedJobPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as 'timeline' | 'chat' | 'payment' | 'images')}
-                  className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
+                  className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${
                     activeTab === tab.id
                       ? 'border-custom-green text-custom-green'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'

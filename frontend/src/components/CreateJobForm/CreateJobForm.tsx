@@ -129,7 +129,7 @@ export default function CreateJobForm({
   }, [isAiPanelMinimized]);
 
   return (
-    <div className="max-w-300 mx-auto py-8">
+    <div className="max-w-5xl mx-auto px-4 py-6 md:py-8">
       <StepIndicator currentStep={currentStep} setCurrentStep={setCurrentStep} />
 
       <form onSubmit={(e) => e.preventDefault()} className="overflow-hidden">
@@ -169,8 +169,8 @@ export default function CreateJobForm({
                     )}
 
                     {!isAiPanelMinimized && (
-                      <div className="relative p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div className="flex-1 space-y-4 text-center md:text-left">
+                      <div className="relative p-5 md:p-6 flex flex-col items-center justify-between gap-4">
+                        <div className="flex-1 space-y-3 text-center">
                           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/10">
                             <Sparkles className="text-yellow-400 w-3 h-3" />
                             <span className="text-white text-[9px] font-bold uppercase tracking-wider opacity-90">
@@ -178,7 +178,7 @@ export default function CreateJobForm({
                             </span>
                           </div>
                           <div className="space-y-2">
-                            <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+                            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
                               {showSmartFillInput
                                 ? 'Beskriv oppdraget'
                                 : 'Fyll ut automatisk med AI'}
@@ -194,19 +194,19 @@ export default function CreateJobForm({
                             <button
                               type="button"
                               onClick={() => setShowSmartFillInput(true)}
-                              className="group w-full md:w-[280px] py-4 px-6 bg-white text-[#4F46E5] rounded-2xl font-black text-base
+                              className="group w-full md:w-[260px] py-3 px-4 bg-white text-[#4F46E5] rounded-2xl font-black text-base
                               shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2"
                             >
                               <Sparkles className="w-5 h-5 text-[#4F46E5]" />
                               PRØV SMART-UTFYLLING
                             </button>
                           ) : (
-                            <div className="w-full md:w-[400px] space-y-3 animate-in slide-in-from-right-4 duration-500">
+                            <div className="w-full md:w-[360px] space-y-3 animate-in slide-in-from-right-4 duration-500">
                               <textarea
                                 value={smartFillPrompt}
                                 onChange={(e) => setSmartFillPrompt(e.target.value)}
                                 placeholder="Beskriv jobben her..."
-                                className="w-full min-h-[120px] px-5 py-4 bg-white/5 backdrop-blur-xl border border-white/10
+                                className="w-full min-h-[100px] px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10
                                 rounded-2xl text-white placeholder-white/20 outline-none focus:border-white/30
                                 transition-all text-sm font-medium resize-none"
                               />
@@ -214,7 +214,7 @@ export default function CreateJobForm({
                                 <button
                                   type="button"
                                   onClick={() => setShowSmartFillInput(false)}
-                                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold
+                                  className="flex-1 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold
                                   transition-all border border-white/10"
                                 >
                                   Avbryt
@@ -223,7 +223,7 @@ export default function CreateJobForm({
                                   type="button"
                                   onClick={handleAiSmartFill}
                                   disabled={isGeneratingFullListing}
-                                  className="flex-[2] py-3 bg-white text-[#4F46E5] rounded-xl font-black text-xs
+                                  className="flex-[2] py-2 bg-white text-[#4F46E5] rounded-xl font-black text-xs
                                   hover:bg-gray-50 transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
                                 >
                                   {isGeneratingFullListing ? (

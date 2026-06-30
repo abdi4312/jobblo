@@ -33,12 +33,11 @@ exports.getApplicantsForService = async (req, res) => {
     }
 
     // Get all pending and accepted requests (applicants)
-    let requestsQuery = JobRequest.find(query)
-      .populate({
-        path: 'customerId',
-        select:
-          'name lastName avatarUrl verified isTrusted averageRating reviewCount skills locations createdAt',
-      });
+    let requestsQuery = JobRequest.find(query).populate({
+      path: 'customerId',
+      select:
+        'name lastName avatarUrl verified isTrusted averageRating reviewCount skills locations createdAt',
+    });
 
     // Apply sorting
     if (sort === 'rating') {

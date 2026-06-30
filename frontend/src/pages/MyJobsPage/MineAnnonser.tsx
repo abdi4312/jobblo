@@ -245,11 +245,11 @@ export default function MineAnnonser() {
                     </h3>
                   </div>
 
-                  <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2">
                     <p className="text-[24px] font-bold">{job.price}Kr</p>
                     <Button
                       label="Slett"
-                      className="bg-red-500! rounded-xl"
+                      className="bg-red-500! rounded-xl px-3 py-1 text-sm"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete(job._id);
