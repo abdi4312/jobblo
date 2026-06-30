@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check } from 'lucide-react';
+import { Check, Circle, CircleDot } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 interface SafePayStepsProps {
@@ -41,7 +41,7 @@ const SafePaySteps: React.FC<SafePayStepsProps> = ({ currentStep, orderId, servi
 
   return (
     <div className="flex items-center mb-8 relative">
-      <div className="absolute top-[13.5px] left-0 right-0 h-[1px] bg-[#e8e0d0] -z-10"></div>
+      <div className="absolute top-[13.5px] left-0 right-0 h-[1px] bg-gray-200 -z-10"></div>
       {steps.map((step, index) => (
         <React.Fragment key={step.id}>
           <div
@@ -51,15 +51,21 @@ const SafePaySteps: React.FC<SafePayStepsProps> = ({ currentStep, orderId, servi
             onClick={() => handleStepClick(step.id)}
           >
             <div
-              className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-medium transition-all z-10 ${
+              className={`w-7 h-7 rounded-full flex items-center justify-center transition-all z-10 ${
                 currentStep > step.id
                   ? 'bg-custom-green text-white group-hover:bg-[#14532d]'
                   : currentStep === step.id
                     ? 'bg-[#1a3a1a] text-white'
-                    : 'bg-white border border-[#e8e0d0] text-gray-400'
+                    : 'bg-white border border-gray-200 text-gray-400'
               }`}
             >
-              {currentStep > step.id ? <Check size={14} /> : step.id}
+              {currentStep > step.id ? (
+                <Check size={14} />
+              ) : currentStep === step.id ? (
+                <CircleDot size={16} className="fill-current" />
+              ) : (
+                <Circle size={16} strokeWidth={2} />
+              )}
             </div>
             <span
               className={`text-[11px] md:text-[12px] whitespace-nowrap transition-all ${
@@ -67,6 +73,17 @@ const SafePaySteps: React.FC<SafePayStepsProps> = ({ currentStep, orderId, servi
               } ${step.id < currentStep ? 'group-hover:text-custom-green' : ''}`}
             >
               {step.label}
+            </span>
+            <span
+              className={`text-[10px] md:text-[11px] whitespace-nowrap transition-all ${
+                currentStep > step.id
+                  ? 'text-custom-green font-medium'
+                  : currentStep === step.id
+                    ? 'text-[#1a3a1a] font-medium'
+                    : 'text-gray-400'
+              }`}
+            >
+              {currentStep > step.id ? 'Fullført' : currentStep === step.id ? 'Nåværende' : 'Kommende'}
             </span>
 
             {/* Connecting Line for Completed Steps */}
