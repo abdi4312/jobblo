@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -12,11 +12,16 @@ import {
   Route,
   Info,
   Star,
-  Zap,
+  Heart,
+  Archive,
+  Users,
 } from 'lucide-react';
 import {
   useApplicantsQuery,
   useCreateSafePayContractMutation,
+  useToggleApplicantFavoriteMutation,
+  useToggleApplicantArchiveMutation,
+  useDeclineApplicantMutation,
 } from '../../features/applicants/hooks';
 import { toast } from 'react-hot-toast';
 import { Button } from '../../components/Ui/button/Button';
@@ -26,8 +31,14 @@ import { createOrGetChat } from '../../api/chatAPI';
 const ApplicantsPage: React.FC = () => {
   const { serviceId } = useParams<{ serviceId: string }>();
   const navigate = useNavigate();
-  const { data, isLoading, error } = useApplicantsQuery(serviceId!);
+  const [sortBy, setSortBy] = useState<string>('createdAt');
+  const [filterBy, setFilterBy] = useState<string>('notArchived');
+  const [comparedApplicants, setComparedApplicants] = useState<string[]>([]);
+  const { data, isLoading, error } = useApplicantsQuery(serviceId!, sortBy, filterBy);
   const createContractMutation = useCreateSafePayContractMutation();
+  const toggleFavoriteMutation = useToggleApplicantFavoriteMutation(serviceId!);
+  const toggleArchiveMutation = useToggleApplicantArchiveMutation(serviceId!);
+  const declineMutation = useDeclineApplicantMutation(serviceId!);
 
   const activeOrder = data?.activeOrder;
 
@@ -113,7 +124,6 @@ const ApplicantsPage: React.FC = () => {
       {
         onSuccess: (res) => {
           toast.success('Kontrakt opprettet! Sender deg til SafePay Checkout.');
-          // Redirect to SafePay Checkout page (to be implemented/verified)
           navigate(`/safepay/checkout/${res.orderId}`);
         },
         onError: (err: any) => {
@@ -123,10 +133,37 @@ const ApplicantsPage: React.FC = () => {
     );
   };
 
+  const handleToggleFavorite = (requestId: string) => {
+    toggleFavoriteMutation.mutate(requestId);
+  };
+
+  const handleToggleArchive = (requestId: string) => {
+    toggleArchiveMutation.mutate(requestId);
+  };
+
+  const handleDecline = (requestId: string, archive = true) => {
+    declineMutation.mutate({ requestId, archive });
+  };
+
+  const toggleCompare = (applicantId: string) => {
+    setComparedApplicants((prev) => {
+      if (prev.includes(applicantId)) {
+        return prev.filter((id) => id !== applicantId);
+      } else if (prev.length < 3) {
+        return [...prev, applicantId];
+      }
+      return prev;
+    });
+  };
+
+  const comparedList = applicants.filter((app: any) =>
+    comparedApplicants.includes(app.applicant._id)
+  );
+
   return (
     <div className="min-h-screen bg-[#f5f0e8] font-sans">
       {/* Main Content */}
-      <div className="max-w-[1024px] mx-auto px-6 py-8">
+      <div className="max-w-[1200px] mx-auto px-6 py-8">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-[13px] text-gray-500 hover:text-gray-800 transition-colors mb-5"
@@ -167,31 +204,153 @@ const ApplicantsPage: React.FC = () => {
           </div>
         </div>
 
+        {comparedApplicants.length > 0 && (
+          <div className="bg-white border border-black/5 rounded-2xl p-5 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[14px] font-bold text-gray-900 flex items-center gap-2">
+                <Users size={16} className="text-custom-green" /> Sammenlign søkere
+              </h3>
+              <button
+                onClick={() => setComparedApplicants([])}
+                className="text-[12px] text-gray-500 hover:text-gray-700"
+              >
+                Fjern alle
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {comparedList.map((app: any) => (
+                <div key={app._id} className="border border-gray-200 rounded-xl p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-full bg-[#c8d8c8] flex items-center justify-center overflow-hidden">
+                      {app.applicant.avatarUrl ? (
+                        <img
+                          src={app.applicant.avatarUrl}
+                          alt={app.applicant.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="font-medium">
+                          {app.applicant.name
+                            .split(' ')
+                            .map((n: any) => n[0])
+                            .join('')}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-[14px] font-medium">{app.applicant.name}</div>
+                      <div className="text-[12px] text-gray-500">
+                        {app.applicant.skills?.join(', ')}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-[13px]">
+                    <div className="bg-gray-50 p-2 rounded-lg text-center">
+                      <div className="font-bold">{app.applicant.completedJobs}</div>
+                      <div className="text-[10px] text-gray-500 uppercase">Fullførte</div>
+                    </div>
+                    <div className="bg-gray-50 p-2 rounded-lg text-center">
+                      <div className="font-bold">{app.applicant.rating}★</div>
+                      <div className="text-[10px] text-gray-500 uppercase">Rating</div>
+                    </div>
+                    <div className="bg-gray-50 p-2 rounded-lg text-center">
+                      <div className="font-bold">{app.applicant.responseRate}</div>
+                      <div className="text-[10px] text-gray-500 uppercase">Svar%</div>
+                    </div>
+                    <div className="bg-gray-50 p-2 rounded-lg text-center">
+                      <div className="font-bold">{app.applicant.responseTime}</div>
+                      <div className="text-[10px] text-gray-500 uppercase">Svartid</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
           {/* Left Column - Applicants List */}
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between mb-4 gap-2">
               <h3 className="text-[15px] font-medium text-gray-900">{applicants.length} søkere</h3>
-              <select className="text-[12px] text-gray-600 border border-black/15 rounded-full px-3 py-1 bg-white outline-none cursor-pointer">
-                <option>Sorter: Beste match</option>
-                <option>Høyest rating</option>
-                <option>Flest oppdrag</option>
-              </select>
+              <div className="flex gap-2">
+                <select
+                  value={filterBy}
+                  onChange={(e) => setFilterBy(e.target.value)}
+                  className="text-[12px] text-gray-600 border border-black/15 rounded-full px-3 py-1 bg-white outline-none cursor-pointer"
+                >
+                  <option value="notArchived">Ikke arkivert</option>
+                  <option value="favorites">Favoritter</option>
+                  <option value="archived">Arkivert</option>
+                </select>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="text-[12px] text-gray-600 border border-black/15 rounded-full px-3 py-1 bg-white outline-none cursor-pointer"
+                >
+                  <option value="createdAt">Sorter: Nyeste først</option>
+                  <option value="rating">Høyest rating</option>
+                  <option value="completedJobs">Flest oppdrag</option>
+                  <option value="favorites">Favoritter først</option>
+                </select>
+              </div>
             </div>
 
             <div className="space-y-4">
               {applicants.map((app: any, index: number) => (
                 <div
                   key={app._id}
-                  className={`relative bg-white border rounded-2xl p-4 md:p-5 transition-all ${index === 0 ? 'border-2 border-custom-green' : 'border-black/5'}`}
+                  className={`relative bg-white border rounded-2xl p-4 md:p-5 transition-all ${
+                    app.favorite
+                      ? 'border-2 border-yellow-300'
+                      : app.archived
+                        ? 'opacity-60'
+                        : 'border-black/5'
+                  }`}
                 >
-                  {/* Top Right X Button */}
-                  <button
-                    className="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"
-                    title="Avvis søker"
-                  >
-                    <X size={18} />
-                  </button>
+                  {/* Top Right Buttons */}
+                  <div className="absolute top-4 right-4 flex gap-1">
+                    <button
+                      onClick={() => handleToggleFavorite(app._id)}
+                      className={`p-1 rounded-full transition-all ${
+                        app.favorite
+                          ? 'text-yellow-500 bg-yellow-100'
+                          : 'text-gray-400 hover:text-yellow-500 hover:bg-gray-100'
+                      }`}
+                      title="Favoritt"
+                    >
+                      <Heart size={18} fill={app.favorite ? 'currentColor' : 'none'} />
+                    </button>
+                    <button
+                      onClick={() => toggleCompare(app.applicant._id)}
+                      className={`p-1 rounded-full transition-all ${
+                        comparedApplicants.includes(app.applicant._id)
+                          ? 'text-custom-green bg-green-100'
+                          : 'text-gray-400 hover:text-custom-green hover:bg-gray-100'
+                      }`}
+                      title="Sammenlign"
+                    >
+                      <Users size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleToggleArchive(app._id)}
+                      className={`p-1 rounded-full transition-all ${
+                        app.archived
+                          ? 'text-custom-green bg-green-100'
+                          : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                      }`}
+                      title={app.archived ? 'Gjenopprett fra arkiv' : 'Arkiver'}
+                    >
+                      <Archive size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleDecline(app._id)}
+                      className="p-1 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-full transition-all"
+                      title="Avslå søker"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
 
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-start gap-4">

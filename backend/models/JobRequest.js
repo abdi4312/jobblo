@@ -25,6 +25,14 @@ const jobRequestSchema = new mongoose.Schema(
     message: {
       type: String,
     },
+    favorite: {
+      type: Boolean,
+      default: false,
+    },
+    archived: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

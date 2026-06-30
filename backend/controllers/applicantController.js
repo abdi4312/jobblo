@@ -4,11 +4,12 @@ const Order = require('../models/Order');
 
 /**
  * GET /api/applicants/:serviceId
- * Get all applicants for a specific service
+ * Get all applicants for a specific service with sort/filter
  */
 exports.getApplicantsForService = async (req, res) => {
   try {
     const { serviceId } = req.params;
+    const { sort, filter } = req.query;
     const userId = req.userId; // Current logged-in user (owner of the service)
 
     const service = await Service.findById(serviceId);
@@ -21,14 +22,36 @@ exports.getApplicantsForService = async (req, res) => {
       return res.status(403).json({ error: 'Ikke autorisert. Du eier ikke dette oppdraget.' });
     }
 
+    // Build filter query
+    let query = { serviceId };
+    if (filter === 'favorites') {
+      query.favorite = true;
+    } else if (filter === 'archived') {
+      query.archived = true;
+    } else if (filter === 'notArchived') {
+      query.archived = false;
+    }
+
     // Get all pending and accepted requests (applicants)
-    const requests = await JobRequest.find({ serviceId })
+    let requestsQuery = JobRequest.find(query)
       .populate({
         path: 'customerId',
         select:
           'name lastName avatarUrl verified isTrusted averageRating reviewCount skills locations createdAt',
-      })
-      .sort({ createdAt: -1 });
+      });
+
+    // Apply sorting
+    if (sort === 'rating') {
+      // We'll sort after fetching because we need to populate first
+    } else if (sort === 'completedJobs') {
+      // Also sort after fetching
+    } else if (sort === 'favorites') {
+      requestsQuery = requestsQuery.sort({ favorite: -1, createdAt: -1 });
+    } else {
+      requestsQuery = requestsQuery.sort({ createdAt: -1 });
+    }
+
+    const requests = await requestsQuery;
 
     // Calculate additional stats per applicant (like completed jobs)
     // For a production app, this might be heavily aggregated, but we'll do simple counts here.
@@ -60,6 +83,8 @@ exports.getApplicantsForService = async (req, res) => {
           status: reqDoc.status,
           message: reqDoc.message || 'Ingen melding',
           appliedAt: reqDoc.createdAt,
+          favorite: reqDoc.favorite,
+          archived: reqDoc.archived,
           applicant: {
             _id: applicant._id,
             name: `${applicant.name} ${applicant.lastName || ''}`.trim(),
@@ -79,6 +104,14 @@ exports.getApplicantsForService = async (req, res) => {
       })
     );
 
+    // Apply sorting that depends on the populated data
+    let sortedApplicants = [...applicantsWithStats];
+    if (sort === 'rating') {
+      sortedApplicants.sort((a, b) => b.applicant.rating - a.applicant.rating);
+    } else if (sort === 'completedJobs') {
+      sortedApplicants.sort((a, b) => b.applicant.completedJobs - a.applicant.completedJobs);
+    }
+
     res.json({
       service: {
         _id: service._id,
@@ -88,7 +121,7 @@ exports.getApplicantsForService = async (req, res) => {
         status: service.status,
         date: service.fromDate || service.createdAt,
       },
-      applicants: applicantsWithStats,
+      applicants: sortedApplicants,
       activeOrder: await Order.findOne({
         serviceId: service._id,
         status: {
@@ -180,5 +213,99 @@ exports.getMyServicesWithApplicants = async (req, res) => {
   } catch (err) {
     console.error('Error fetching services with applicants:', err);
     res.status(500).json({ error: 'Serverfeil ved henting av oppdrag' });
+  }
+};
+
+/**
+ * PATCH /api/applicants/:requestId/favorite
+ * Toggle favorite status of an applicant
+ */
+exports.toggleFavorite = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const userId = req.userId;
+
+    const jobRequest = await JobRequest.findById(requestId);
+    if (!jobRequest) {
+      return res.status(404).json({ error: 'Forespørsel ikke funnet' });
+    }
+
+    // Verify ownership
+    const service = await Service.findById(jobRequest.serviceId);
+    if (!service || service.userId.toString() !== userId) {
+      return res.status(403).json({ error: 'Ikke autorisert' });
+    }
+
+    jobRequest.favorite = !jobRequest.favorite;
+    await jobRequest.save();
+
+    res.json({ favorite: jobRequest.favorite });
+  } catch (err) {
+    console.error('Error toggling favorite:', err);
+    res.status(500).json({ error: 'Serverfeil ved endring av favoritt' });
+  }
+};
+
+/**
+ * PATCH /api/applicants/:requestId/archive
+ * Toggle archive status of an applicant
+ */
+exports.toggleArchive = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const userId = req.userId;
+
+    const jobRequest = await JobRequest.findById(requestId);
+    if (!jobRequest) {
+      return res.status(404).json({ error: 'Forespørsel ikke funnet' });
+    }
+
+    // Verify ownership
+    const service = await Service.findById(jobRequest.serviceId);
+    if (!service || service.userId.toString() !== userId) {
+      return res.status(403).json({ error: 'Ikke autorisert' });
+    }
+
+    jobRequest.archived = !jobRequest.archived;
+    await jobRequest.save();
+
+    res.json({ archived: jobRequest.archived });
+  } catch (err) {
+    console.error('Error toggling archive:', err);
+    res.status(500).json({ error: 'Serverfeil ved endring av arkiv' });
+  }
+};
+
+/**
+ * PATCH /api/applicants/:requestId/decline
+ * Decline an applicant and optionally archive
+ */
+exports.declineApplicant = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { archive = false } = req.body;
+    const userId = req.userId;
+
+    const jobRequest = await JobRequest.findById(requestId);
+    if (!jobRequest) {
+      return res.status(404).json({ error: 'Forespørsel ikke funnet' });
+    }
+
+    // Verify ownership
+    const service = await Service.findById(jobRequest.serviceId);
+    if (!service || service.userId.toString() !== userId) {
+      return res.status(403).json({ error: 'Ikke autorisert' });
+    }
+
+    jobRequest.status = 'declined';
+    if (archive) {
+      jobRequest.archived = true;
+    }
+    await jobRequest.save();
+
+    res.json({ status: jobRequest.status, archived: jobRequest.archived });
+  } catch (err) {
+    console.error('Error declining applicant:', err);
+    res.status(500).json({ error: 'Serverfeil ved avslåing av søker' });
   }
 };
