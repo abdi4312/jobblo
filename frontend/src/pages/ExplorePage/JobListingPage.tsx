@@ -52,23 +52,23 @@ export default function JobListingPage() {
   const { user } = useUserStore();
 
   const checkTrackingConsent = () => {
-    const consent = localStorage.getItem("cookie-consent");
-    return consent === "accepted" || consent === "customised";
+    const consent = localStorage.getItem('cookie-consent');
+    return consent === 'accepted' || consent === 'customised';
   };
 
   const handleNearbyJobsClick = () => {
     if (!checkTrackingConsent()) {
       // If no consent, just navigate to all jobs
-      navigate("/search/job/all");
+      navigate('/search/job/all');
       return;
     }
 
     // Try to get user's location
-    if ("geolocation" in navigator) {
+    if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           // We have location, could pass to search page
-          navigate("/search/job/all", {
+          navigate('/search/job/all', {
             state: {
               lat: position.coords.latitude,
               lng: position.coords.longitude,
@@ -77,12 +77,12 @@ export default function JobListingPage() {
         },
         () => {
           // If geolocation fails, just go to all jobs
-          navigate("/search/job/all");
-        },
+          navigate('/search/job/all');
+        }
       );
     } else {
       // If geolocation not available, just go to all jobs
-      navigate("/search/job/all");
+      navigate('/search/job/all');
     }
   };
 

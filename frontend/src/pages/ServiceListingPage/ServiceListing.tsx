@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-import { useState, useRef, useEffect, useMemo, lazy, Suspense } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-=======
 import { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import { useParams, useSearchParams, useLocation } from "react-router-dom";
->>>>>>> origin/main
 import {
   SlidersHorizontal,
   ArrowUpDown,
@@ -428,20 +423,6 @@ const ServiceListing = () => {
                     onClick={() => toggleCounty(county.code)}
                     className="flex-1 flex items-center gap-2 cursor-pointer font-medium py-1 px-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
                   >
-<<<<<<< HEAD
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedCountyCodes.includes(county.code)}
-                        onChange={(e) => e.stopPropagation()}
-                        onClick={() => toggleCounty(county.code)}
-                        className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green"
-                      />
-                      <span
-                        className={`text-sm ${selectedCountyCodes.includes(county.code) ? 'text-custom-green font-bold' : 'text-gray-700'}`}
-                      >
-                        {county.name}
-=======
                     <input
                       type="checkbox"
                       checked={selectedCountyCodes.includes(county.code)}
@@ -456,7 +437,6 @@ const ServiceListing = () => {
                     {locationStats && (
                       <span className="text-[10px] text-gray-400">
                         ({locationStats.counties[county.code] || 0})
->>>>>>> origin/main
                       </span>
                     )}
                   </div>
@@ -480,44 +460,6 @@ const ServiceListing = () => {
                     {county.children.map((municipality) => (
                       <div key={municipality.code} className="space-y-1">
                         <div className="flex items-center justify-between group">
-<<<<<<< HEAD
-                          <button
-                            onClick={() => toggleMunicipality(municipality.code)}
-                            className="flex-1 text-left py-1 px-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
-                          >
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={selectedMunicipalityCodes.includes(municipality.code)}
-                                onChange={(e) => e.stopPropagation()}
-                                onClick={() => toggleMunicipality(municipality.code)}
-                                className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green"
-                              />
-                              <span
-                                className={`text-sm ${selectedMunicipalityCodes.includes(municipality.code) ? 'text-custom-green font-bold' : 'text-gray-600'}`}
-                              >
-                                {municipality.name}
-                              </span>
-                              {locationStats && (
-                                <span className="text-[10px] text-gray-400">
-                                  ({locationStats.municipalities[municipality.code] || 0})
-                                </span>
-                              )}
-                            </div>
-                          </button>
-                          {municipality.children && municipality.children.length > 0 && (
-                            <button
-                              onClick={() => toggleMunicipalityExpand(municipality.code)}
-                              className="p-1 rounded-lg hover:bg-gray-100 text-gray-400"
-                            >
-                              {expandedMunicipalities.includes(municipality.code) ? (
-                                <ChevronDown size={14} />
-                              ) : (
-                                <ChevronRight size={14} />
-                              )}
-                            </button>
-                          )}
-=======
                           <div
                             onClick={() =>
                               toggleMunicipality(municipality.code)
@@ -564,7 +506,6 @@ const ServiceListing = () => {
                                 )}
                               </button>
                             )}
->>>>>>> origin/main
                         </div>
 
                         {/* Areas */}
@@ -580,30 +521,10 @@ const ServiceListing = () => {
                                     onClick={() => toggleArea(area.code)}
                                     className="flex-1 flex items-center gap-2 cursor-pointer py-1 px-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
                                   >
-<<<<<<< HEAD
-                                    <div className="flex items-center gap-2">
-                                      <input
-                                        type="checkbox"
-                                        checked={selectedAreaCodes.includes(area.code)}
-                                        onChange={(e) => e.stopPropagation()}
-                                        onClick={() => toggleArea(area.code)}
-                                        className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green"
-                                      />
-                                      <span
-                                        className={`text-sm ${selectedAreaCodes.includes(area.code) ? 'text-custom-green font-bold' : 'text-gray-500'}`}
-                                      >
-                                        {area.name}
-                                      </span>
-                                      {locationStats && (
-                                        <span className="text-[10px] text-gray-400">
-                                          ({locationStats.areas[area.code] || 0})
-                                        </span>
-=======
                                     <input
                                       type="checkbox"
                                       checked={selectedAreaCodes.includes(
                                         area.code,
->>>>>>> origin/main
                                       )}
                                       readOnly
                                       className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green cursor-pointer"
