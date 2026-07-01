@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import mainLink from '../../api/mainURLs';
-import Swal from 'sweetalert2';
+import { toast } from 'react-hot-toast';
 import ServiceCard from '../../components/SuperAdminDashboard/Service/ServiceCard';
+import ConfirmDialog from '../../components/Ui/ConfirmDialog';
 import type { Service } from '../../features/services/types';
 
 const ServicesPage: React.FC = () => {
@@ -11,6 +12,7 @@ const ServicesPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [limit, setLimit] = useState(6);
   const [loading, setLoading] = useState(true);
+  const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
 
   const fetchServices = useCallback(async () => {
     try {
@@ -25,25 +27,17 @@ const ServicesPage: React.FC = () => {
     }
   }, [currentPage, limit]);
 
-  const handleDelete = async (id: string) => {
-    const result = await Swal.fire({
-      title: 'Delete Service?',
-      text: 'Are you sure you want to remove this service?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#2d4a3e',
-      confirmButtonText: 'Yes, delete it!',
-    });
+  const confirmDelete = async () => {
+    if (!serviceToDelete) return;
 
-    if (result.isConfirmed) {
-      try {
-        await mainLink.delete(`/api/admin/services/${id}`);
-        Swal.fire('Deleted!', 'Service has been removed.', 'success');
-        fetchServices();
-      } catch {
-        Swal.fire('Error', 'Failed to delete service', 'error');
-      }
+    try {
+      await mainLink.delete(`/api/admin/services/${serviceToDelete}`);
+      toast.success('Service has been removed.');
+      fetchServices();
+    } catch {
+      toast.error('Failed to delete service');
+    } finally {
+      setServiceToDelete(null);
     }
   };
 
@@ -84,7 +78,7 @@ const ServicesPage: React.FC = () => {
               <ServiceCard
                 key={service._id}
                 data={service}
-                onDelete={() => handleDelete(service._id)}
+                onDelete={() => setServiceToDelete(service._id)}
               />
             ))}
           </div>
@@ -93,6 +87,17 @@ const ServicesPage: React.FC = () => {
           )}
         </>
       )}
+
+      <ConfirmDialog
+        title="Delete Service?"
+        description="Are you sure you want to remove this service?"
+        confirmText="Yes, delete it!"
+        cancelText="Cancel"
+        variant="destructive"
+        isOpen={!!serviceToDelete}
+        onOpenChange={(open) => !open && setServiceToDelete(null)}
+        onConfirm={confirmDelete}
+      />
 
       {/* Pagination Window Logic - NO CHANGES MADE */}
       {totalPages > 1 && (

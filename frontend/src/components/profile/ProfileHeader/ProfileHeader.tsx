@@ -20,6 +20,7 @@ import { toast } from 'react-hot-toast';
 import { BlockModal } from './BlockModal';
 import type { User } from '../../../types/userTypes';
 import { Button } from '../../Ui/button/Button';
+import ConfirmDialog from '../../Ui/ConfirmDialog';
 
 export function ProfileHeader({
   user,
@@ -35,6 +36,7 @@ export function ProfileHeader({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [isUnblockModalOpen, setIsUnblockModalOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const navigate = useNavigate();
   const blockMutation = useBlockUser();
@@ -216,12 +218,20 @@ export function ProfileHeader({
                           <Settings size={16} className="mr-2" /> Innstillinger
                         </button>
                         <div className="h-px bg-gray-100 my-1" />
-                        <button
-                          onClick={handlelogout}
-                          className="flex items-center w-full px-4 py-2 text-sm font-semibold hover:bg-gray-50 text-red-600"
-                        >
-                          Logg ut
-                        </button>
+                        <ConfirmDialog
+                          title="Er du sikker?"
+                          description="Vil du virkelig logge ut?"
+                          confirmText="Ja, logg ut"
+                          cancelText="Avbryt"
+                          isOpen={showLogoutConfirm}
+                          onOpenChange={setShowLogoutConfirm}
+                          onConfirm={handlelogout}
+                          trigger={
+                            <button className="flex items-center w-full px-4 py-2 text-sm font-semibold hover:bg-gray-50 text-red-600">
+                              Logg ut
+                            </button>
+                          }
+                        />
                       </div>
                     )}
                   </div>
@@ -364,12 +374,20 @@ export function ProfileHeader({
                   <Pencil size={14} />
                   <span>Rediger profil</span>
                 </button>
-                <button
-                  onClick={handlelogout}
-                  className="px-4.5 py-2.5 bg-red-500 text-white rounded-full text-[13px] flex items-center gap-1.5 hover:bg-red-600 transition-colors"
-                >
-                  <span>Logg ut</span>
-                </button>
+                <ConfirmDialog
+                  title="Er du sikker?"
+                  description="Vil du virkelig logge ut?"
+                  confirmText="Ja, logg ut"
+                  cancelText="Avbryt"
+                  isOpen={showLogoutConfirm}
+                  onOpenChange={setShowLogoutConfirm}
+                  onConfirm={handlelogout}
+                  trigger={
+                    <button className="px-4.5 py-2.5 bg-red-500 text-white rounded-full text-[13px] flex items-center gap-1.5 hover:bg-red-600 transition-colors">
+                      <span>Logg ut</span>
+                    </button>
+                  }
+                />
               </>
             ) : (
               // <button className="px-4.5 py-2.5 bg-custom-green text-white rounded-full text-[13px] flex items-center gap-1.5 hover:bg-[#25633a] transition-colors">

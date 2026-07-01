@@ -7,6 +7,7 @@ import {
 } from '../../features/homeHero/hooks';
 import { Plus, Trash2, Edit2, Check, X, Upload, Film, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import ConfirmDialog from '../../components/Ui/ConfirmDialog';
 
 const HomeHeroPage: React.FC = () => {
   const { data: heroes, isLoading } = useAllHeroes();
@@ -16,6 +17,7 @@ const HomeHeroPage: React.FC = () => {
 
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [heroToDelete, setHeroToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     isActive: true,
   });
@@ -84,13 +86,18 @@ const HomeHeroPage: React.FC = () => {
     setIsAdding(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Er du sikker på at du vil slette denne heroen?')) {
-      deleteMutation.mutate(id, {
-        onSuccess: () => toast.success('Hero slettet'),
-        onError: () => toast.error('Kunne ikke slette hero'),
-      });
-    }
+  const confirmDelete = () => {
+    if (!heroToDelete) return;
+    deleteMutation.mutate(heroToDelete, {
+      onSuccess: () => {
+        toast.success('Hero slettet');
+        setHeroToDelete(null);
+      },
+      onError: () => {
+        toast.error('Kunne ikke slette hero');
+        setHeroToDelete(null);
+      },
+    });
   };
 
   if (isLoading) return <div className="p-8">Laster...</div>;
@@ -254,7 +261,7 @@ const HomeHeroPage: React.FC = () => {
                 <Edit2 size={18} />
               </button>
               <button
-                onClick={() => handleDelete(hero._id)}
+                onClick={() => setHeroToDelete(hero._id)}
                 className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all"
                 title="Delete"
               >
@@ -269,6 +276,17 @@ const HomeHeroPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        title="Er du sikker?"
+        description="Vil du virkelig slette denne heroen?"
+        confirmText="Ja, slett"
+        cancelText="Avbryt"
+        variant="destructive"
+        isOpen={!!heroToDelete}
+        onOpenChange={(open) => !open && setHeroToDelete(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 };
