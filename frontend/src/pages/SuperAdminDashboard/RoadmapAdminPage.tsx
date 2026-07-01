@@ -1,6 +1,18 @@
 import React, { useState } from 'react';
 import { ListPlus, Trash2, Edit3, Loader2 } from 'lucide-react';
-import { Button, Space, Tag, Typography, Modal, Form, Input, Select, InputNumber, message, Progress } from 'antd';
+import {
+  Button,
+  Space,
+  Tag,
+  Typography,
+  Modal,
+  Form,
+  Input,
+  Select,
+  InputNumber,
+  message,
+  Progress,
+} from 'antd';
 import ConfirmDialog from '../../components/Ui/ConfirmDialog';
 import { AdminTable } from '../../components/Ui/AdminTable';
 import {
@@ -22,7 +34,10 @@ const RoadmapAdminPage = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFeature, setEditingFeature] = useState<RoadmapFeature | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ visible: boolean; id: string }>({ visible: false, id: '' });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ visible: boolean; id: string }>({
+    visible: false,
+    id: '',
+  });
   const [form] = Form.useForm();
 
   const handleOpenModal = (feature: RoadmapFeature | null = null) => {
@@ -93,7 +108,9 @@ const RoadmapAdminPage = () => {
       render: (_: any, record: RoadmapFeature) => (
         <Space direction="vertical" size="small">
           <Text strong>{record.title}</Text>
-          <Text type="secondary" className="text-xs">{record.description}</Text>
+          <Text type="secondary" className="text-xs">
+            {record.description}
+          </Text>
         </Space>
       ),
     },
@@ -111,7 +128,9 @@ const RoadmapAdminPage = () => {
       title: 'Tag',
       dataIndex: 'tag',
       key: 'tag',
-      render: (tag: string) => <Tag className="uppercase text-[10px] font-bold text-gray-400 italic">{tag}</Tag>,
+      render: (tag: string) => (
+        <Tag className="uppercase text-[10px] font-bold text-gray-400 italic">{tag}</Tag>
+      ),
     },
     {
       title: 'Progress',
@@ -119,7 +138,9 @@ const RoadmapAdminPage = () => {
       render: (_: any, record: RoadmapFeature) => (
         <Space align="center">
           <Progress percent={record.progress} size="small" strokeColor="#2d4a3e" />
-          <Text strong className="text-xs">{record.progress}%</Text>
+          <Text strong className="text-xs">
+            {record.progress}%
+          </Text>
         </Space>
       ),
     },
@@ -182,19 +203,11 @@ const RoadmapAdminPage = () => {
             progress: 0,
           }}
         >
-          <Form.Item
-            name="title"
-            label="Title"
-            rules={[{ required: true }]}
-          >
+          <Form.Item name="title" label="Title" rules={[{ required: true }]}>
             <Input placeholder="E.g. Chat Improvements" />
           </Form.Item>
 
-          <Form.Item
-            name="description"
-            label="Description"
-            rules={[{ required: true }]}
-          >
+          <Form.Item name="description" label="Description" rules={[{ required: true }]}>
             <Input.TextArea rows={3} placeholder="Detailed description..." />
           </Form.Item>
 
@@ -218,12 +231,7 @@ const RoadmapAdminPage = () => {
           </div>
 
           <Form.Item name="progress" label="Progress">
-            <InputNumber
-              min={0}
-              max={100}
-              className="w-full"
-              addonAfter="%"
-            />
+            <InputNumber min={0} max={100} className="w-full" addonAfter="%" />
           </Form.Item>
 
           <Form.Item className="flex justify-end">

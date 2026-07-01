@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Info, AlertTriangle, Tag, Plus, X } from 'lucide-react';
-import { Button, Space, Tag as AntTag, Typography, Modal, Form, Input, Select, message } from 'antd';
+import {
+  Button,
+  Space,
+  Tag as AntTag,
+  Typography,
+  Modal,
+  Form,
+  Input,
+  Select,
+  message,
+} from 'antd';
 import mainLink from '../../api/mainURLs';
 import ConfirmDialog from '../../components/Ui/ConfirmDialog';
 import { AdminTable } from '../../components/Ui/AdminTable';
@@ -15,7 +25,10 @@ const NotificationsPage = () => {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [sendConfirm, setSendConfirm] = useState<{ visible: boolean; data: any }>({ visible: false, data: null });
+  const [sendConfirm, setSendConfirm] = useState<{ visible: boolean; data: any }>({
+    visible: false,
+    data: null,
+  });
   const [form] = Form.useForm();
 
   const notificationTypes = [
@@ -89,7 +102,7 @@ const NotificationsPage = () => {
   };
 
   const getTypeInfo = (type: string) => {
-    return notificationTypes.find(t => t.id === type) || notificationTypes[3];
+    return notificationTypes.find((t) => t.id === type) || notificationTypes[3];
   };
 
   const columns = [
@@ -131,13 +144,9 @@ const NotificationsPage = () => {
         onFinish={handleSendConfirm}
         initialValues={{ type: 'system_update' }}
       >
-        <Form.Item
-          name="type"
-          label="Notification Type"
-          rules={[{ required: true }]}
-        >
+        <Form.Item name="type" label="Notification Type" rules={[{ required: true }]}>
           <Select>
-            {notificationTypes.map(type => (
+            {notificationTypes.map((type) => (
               <Option key={type.id} value={type.id}>
                 <Space>
                   {type.icon}
@@ -148,11 +157,7 @@ const NotificationsPage = () => {
           </Select>
         </Form.Item>
 
-        <Form.Item
-          name="content"
-          label="Notification Content"
-          rules={[{ required: true }]}
-        >
+        <Form.Item name="content" label="Notification Content" rules={[{ required: true }]}>
           <Input.TextArea rows={3} placeholder="Enter notification content..." />
         </Form.Item>
 

@@ -1,8 +1,8 @@
-import { User, Tag, HelpCircle, Briefcase } from "lucide-react";
-import * as Icons from "lucide-react";
+import { User, Tag, HelpCircle, Briefcase } from 'lucide-react';
+import * as Icons from 'lucide-react';
 
 interface SearchItemProps {
-  type: "query" | "user" | "category" | "list" | "job";
+  type: 'query' | 'user' | 'category' | 'list' | 'job';
   title: string;
   subtitle?: string;
   avatarUrl?: string;
@@ -65,14 +65,10 @@ export const SearchItem = ({
       );
     }
 
-    if (type === "job") {
+    if (type === 'job') {
       return (
         <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center flex-shrink-0">
-          <Briefcase
-            className="text-custom-green"
-            size={24}
-            strokeWidth={1.5}
-          />
+          <Briefcase className="text-custom-green" size={24} strokeWidth={1.5} />
         </div>
       );
     }
@@ -100,9 +96,9 @@ export const SearchItem = ({
           {title}
         </h3>
         <p className="text-[15px] text-gray-500 font-medium mt-1">
-          {type === "list"
-            ? `${count || 0} oppdrag · ${isPublic ? "Offentlig" : "Privat"}`
-            : type === "job"
+          {type === 'list'
+            ? `${count || 0} oppdrag · ${isPublic ? 'Offentlig' : 'Privat'}`
+            : type === 'job'
               ? price !== undefined
                 ? `kr ${price}`
                 : subtitle
