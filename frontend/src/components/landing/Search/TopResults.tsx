@@ -59,12 +59,10 @@ export const TopResults = ({
       {searchResults?.jobs?.results?.length > 0 && (
         <div className="space-y-5">
           <div className="flex items-center justify-between px-2">
-            <h4 className="text-[18px] font-bold text-[#1A1A1A]">
-              Jobber
-            </h4>
+            <h4 className="text-[18px] font-bold text-[#1A1A1A]">Jobber</h4>
             {searchResults.jobs.total > 3 && (
               <button
-                onClick={() => onSeeAll("Jobs")}
+                onClick={() => onSeeAll('Jobs')}
                 className="text-[14px] font-bold text-custom-green hover:underline transition-all"
               >
                 Se alle
@@ -76,7 +74,7 @@ export const TopResults = ({
               key={job._id}
               type="job"
               title={job.title}
-              subtitle={job.description?.substring(0, 50) + "..." || "Se jobbdetaljer"}
+              subtitle={job.description?.substring(0, 50) + '...' || 'Se jobbdetaljer'}
               price={job.price}
               onClick={() => {
                 onNavigate(`/service/${job._id}`);

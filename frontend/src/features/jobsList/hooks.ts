@@ -34,7 +34,7 @@ export const useJobs = ({
   urgent = false,
   minPrice,
   maxPrice,
-  tab = "Discover",
+  tab = 'Discover',
   lat,
   lng,
   radius,

@@ -46,7 +46,7 @@ export const fetchJobs = async ({
   urgent = false,
   minPrice,
   maxPrice,
-  tab = "Discover",
+  tab = 'Discover',
   lat,
   lng,
   radius,

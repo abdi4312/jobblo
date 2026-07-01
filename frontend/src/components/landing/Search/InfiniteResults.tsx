@@ -49,7 +49,7 @@ export const InfiniteResults = ({
 
       <div className="flex items-center justify-between px-2">
         <h4 className="text-[18px] font-bold text-[#1A1A1A]">
-          {activeTab === "Jobs" ? "Jobber" : activeTab} Search Results
+          {activeTab === 'Jobs' ? 'Jobber' : activeTab} Search Results
         </h4>
         <button
           onClick={onBackToTop}
@@ -106,13 +106,13 @@ export const InfiniteResults = ({
                   }}
                 />
               );
-            } else if (activeTab === "Jobs") {
+            } else if (activeTab === 'Jobs') {
               return (
                 <SearchItem
                   key={item._id}
                   type="job"
                   title={item.title}
-                  subtitle={item.description?.substring(0, 50) + "..." || "Se jobbdetaljer"}
+                  subtitle={item.description?.substring(0, 50) + '...' || 'Se jobbdetaljer'}
                   price={item.price}
                   onClick={() => {
                     onNavigate(`/service/${item._id}`);
