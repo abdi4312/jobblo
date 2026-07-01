@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useUserStore } from '../../stores/userStore';
 import { toast } from 'react-hot-toast';
+import ConfirmDialog from '../../components/Ui/ConfirmDialog';
 const DashboardLayout: React.FC = () => {
   const user = useUserStore((state) => state.user);
   const logout = useUserStore((state) => state.logout);
@@ -23,6 +24,8 @@ const DashboardLayout: React.FC = () => {
   const isSuperAdmin = user?.role === 'superAdmin'; // Check for superAdmin
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
   const handleLogout = () => {
     logout();
     toast.success('Du har blitt logget ut');
@@ -106,13 +109,21 @@ const DashboardLayout: React.FC = () => {
         </nav>
 
         {/* Logout Button */}
-        <button
-          className="flex items-center gap-3 text-gray-400 hover:text-red-600 font-medium p-3 transition-colors mt-auto border-t pt-6"
-          onClick={handleLogout}
-        >
-          <LogOut size={20} />
-          Logout
-        </button>
+        <ConfirmDialog
+          title="Er du sikker?"
+          description="Vil du virkelig logge ut?"
+          confirmText="Ja, logg ut"
+          cancelText="Avbryt"
+          isOpen={showLogoutConfirm}
+          onOpenChange={setShowLogoutConfirm}
+          onConfirm={handleLogout}
+          trigger={
+            <button className="flex items-center gap-3 text-gray-400 hover:text-red-600 font-medium p-3 transition-colors mt-auto border-t pt-6">
+              <LogOut size={20} />
+              Logout
+            </button>
+          }
+        />
       </aside>
 
       {/* --- Main Content Area --- */}

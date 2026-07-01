@@ -137,4 +137,6 @@ router.put('/users/:id/role', authenticate, requireAdmin, adminController.change
  */
 router.delete('/users/:id', authenticate, requireAdmin, adminController.deleteUser);
 
+router.delete('/services/:id', authenticate, requireAdmin, adminController.deleteService);
+
 module.exports = router;

@@ -1,16 +1,30 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { Button, Space, Tag, Typography, message } from 'antd';
 import mainLink from '../../api/mainURLs';
-import Swal from 'sweetalert2';
-import ServiceCard from '../../components/SuperAdminDashboard/Service/ServiceCard';
-import type { Service } from '../../features/services/types';
+import ConfirmDialog from '../../components/Ui/ConfirmDialog';
+import { AdminTable } from '../../components/Ui/AdminTable';
+
+const { Title, Text } = Typography;
+
+interface Service {
+  _id: string;
+  title: string;
+  description?: string;
+  price: { value?: number; unit?: string } | number;
+  duration: { value?: string | number; unit?: string } | string;
+  images?: string[];
+  image?: string;
+  createdAt: string;
+}
 
 const ServicesPage: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [limit, setLimit] = useState(6);
+  const [limit] = useState(6);
   const [loading, setLoading] = useState(true);
+  const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
 
   const fetchServices = useCallback(async () => {
     try {
@@ -25,124 +39,134 @@ const ServicesPage: React.FC = () => {
     }
   }, [currentPage, limit]);
 
-  const handleDelete = async (id: string) => {
-    const result = await Swal.fire({
-      title: 'Delete Service?',
-      text: 'Are you sure you want to remove this service?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#2d4a3e',
-      confirmButtonText: 'Yes, delete it!',
-    });
-
-    if (result.isConfirmed) {
-      try {
-        await mainLink.delete(`/api/admin/services/${id}`);
-        Swal.fire('Deleted!', 'Service has been removed.', 'success');
-        fetchServices();
-      } catch {
-        Swal.fire('Error', 'Failed to delete service', 'error');
-      }
-    }
-  };
-
   useEffect(() => {
     fetchServices();
   }, [fetchServices]);
 
-  return (
-    <div className="animate-in fade-in duration-500 p-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Services</h1>
+  const confirmDelete = async () => {
+    if (!serviceToDelete) return;
+    
+    try {
+      await mainLink.delete(`/api/admin/services/${serviceToDelete}`);
+      message.success('Service has been removed.');
+      fetchServices();
+    } catch {
+      message.error('Failed to delete service');
+    } finally {
+      setServiceToDelete(null);
+    }
+  };
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <select
-            title="Select Per Page"
-            value={limit}
-            onChange={(e) => {
-              setLimit(Number(e.target.value));
-              setCurrentPage(1);
-            }}
-            className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm font-semibold outline-none shadow-sm cursor-pointer"
-          >
-            <option value={6}>6 Per Page</option>
-            <option value={12}>12 Per Page</option>
-          </select>
-          <button className="flex-1 sm:flex-none bg-[#2d4a3e] text-white px-6 py-2.5 rounded-xl flex items-center justify-center gap-2 hover:bg-[#233b31] transition-all font-bold text-sm shadow-md active:scale-95">
-            <Plus size={18} /> Add New
-          </button>
-        </div>
-      </div>
+  const displayPrice = (price: any) => {
+    if (typeof price === 'object') {
+      return `${price.value || 0}${price.unit || 'kr'}`;
+    }
+    return `${price || 0} kr`;
+  };
 
-      {loading ? (
-        <div className="flex justify-center py-20 text-gray-400 font-bold">Loading Services...</div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((service) => (
-              <ServiceCard
-                key={service._id}
-                data={service}
-                onDelete={() => handleDelete(service._id)}
-              />
-            ))}
+  const displayDuration = (duration: any) => {
+    if (typeof duration === 'object') {
+      return `${duration.value || 'N/A'} ${duration.unit || ''}`;
+    }
+    return duration || 'Fixed';
+  };
+
+  const columns = [
+    {
+      title: 'Image',
+      key: 'image',
+      render: (_: any, record: Service) => {
+        const imageUrl = record.image || (record.images && record.images[0]);
+        return imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={record.title}
+            className="w-16 h-16 object-cover rounded"
+          />
+        ) : (
+          <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center">
+            <Text type="secondary" className="text-xs">No image</Text>
           </div>
-          {services.length === 0 && (
-            <p className="text-center py-10 text-gray-400">No services found.</p>
-          )}
-        </>
-      )}
+        );
+      },
+    },
+    {
+      title: 'Title',
+      dataIndex: 'title',
+      key: 'title',
+      render: (text: string) => <Text strong>{text}</Text>,
+    },
+    {
+      title: 'Description',
+      dataIndex: 'description',
+      key: 'description',
+      render: (desc: string) => desc || 'No description',
+      ellipsis: true,
+    },
+    {
+      title: 'Price',
+      dataIndex: 'price',
+      key: 'price',
+      render: (price: any) => <Tag color="blue">{displayPrice(price)}</Tag>,
+    },
+    {
+      title: 'Duration',
+      dataIndex: 'duration',
+      key: 'duration',
+      render: (duration: any) => <Tag color="green">{displayDuration(duration)}</Tag>,
+    },
+    {
+      title: 'Created At',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (date: string) => new Date(date).toLocaleDateString(),
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      render: (_: any, record: Service) => (
+        <Button
+          type="primary"
+          danger
+          onClick={() => setServiceToDelete(record._id)}
+          className="flex items-center"
+        >
+          Delete
+        </Button>
+      ),
+    },
+  ];
 
-      {/* Pagination Window Logic - NO CHANGES MADE */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center mt-12 gap-2">
-          <button
-            title="Previous Page"
-            disabled={currentPage === 1 || loading}
-            onClick={() => setCurrentPage((p) => p - 1)}
-            className="p-2 disabled:opacity-20 hover:bg-gray-50 rounded-full transition-all"
-          >
-            <ChevronLeft />
-          </button>
+  return (
+    <div className="p-4">
+      <Title level={2}>Services</Title>
 
-          {(() => {
-            const maxVisible = 8;
-            let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-            let endPage = startPage + maxVisible - 1;
+      <AdminTable
+        title="Services Management"
+        columns={columns}
+        dataSource={services}
+        rowKey="_id"
+        loading={loading}
+        pagination={{
+          current: currentPage,
+          pageSize: limit,
+          total: totalPages * limit,
+          onChange: (page) => setCurrentPage(page),
+        }}
+        showAddButton={true}
+        addButtonText="Add New"
+      />
 
-            if (endPage > totalPages) {
-              endPage = totalPages;
-              startPage = Math.max(1, endPage - maxVisible + 1);
-            }
-
-            return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map(
-              (num) => (
-                <button
-                  key={num}
-                  onClick={() => setCurrentPage(num)}
-                  className={`w-10 h-10 text-center flex items-center justify-center rounded-full font-bold transition-all ${
-                    currentPage === num
-                      ? 'bg-[#2d4a3e] text-white shadow-md scale-110'
-                      : 'text-gray-400 hover:bg-gray-100'
-                  }`}
-                >
-                  {num}
-                </button>
-              )
-            );
-          })()}
-
-          <button
-            title="Next Page"
-            disabled={currentPage === totalPages || loading}
-            onClick={() => setCurrentPage((p) => p + 1)}
-            className="p-2 disabled:opacity-20 hover:bg-gray-50 rounded-full transition-all"
-          >
-            <ChevronRight />
-          </button>
-        </div>
-      )}
+      <ConfirmDialog
+        title="Delete Service?"
+        description="Are you sure you want to remove this service?"
+        confirmText="Yes, delete it!"
+        cancelText="Cancel"
+        variant="destructive"
+        isOpen={!!serviceToDelete}
+        onOpenChange={(open) => !open && setServiceToDelete(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 };

@@ -4,18 +4,21 @@ import {
   CheckCircle2 as ActiveIcon,
   AlertCircle as ExpiredIcon,
   Clock as SoonIcon,
-  ChevronLeft as PrevIcon,
-  ChevronRight as NextIcon,
+  Edit,
+  Trash2,
 } from 'lucide-react';
-import Swal from 'sweetalert2';
-import HeroTable from '../../components/SuperAdminDashboard/Carousel/HeroTable';
-import HeroModal from '../../components/SuperAdminDashboard/Carousel/HeroModal';
+import { Button, Space, Tag as AntTag, Typography, Modal, Form, Input, InputNumber, DatePicker, ColorPicker, message } from 'antd';
+import ConfirmDialog from '../../components/Ui/ConfirmDialog';
+import { AdminTable } from '../../components/Ui/AdminTable';
 import {
   useAdminHeroes,
   useCreateHero,
   useUpdateHero,
   useDeleteHero,
 } from '../../features/hero/hooks';
+import dayjs from 'dayjs';
+
+const { Title, Text } = Typography;
 
 const CarouselPage: React.FC = () => {
   const { data: heroes = [], isLoading: loading } = useAdminHeroes();
@@ -26,50 +29,23 @@ const CarouselPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
-  const totalPages = Math.ceil(heroes.length / itemsPerPage);
-  const paginatedHeroes = heroes.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ visible: boolean; id: string }>({ visible: false, id: '' });
+  const [form] = Form.useForm();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const [formData, setFormData] = useState({
-    title: '',
-    subtitle: '',
-    buttonText: '',
-    buttonUrl: '',
-    footerText: '',
-    bgColor: '#132A22',
-    image: null as File | string | null,
-    activeFrom: '',
-    expireAt: '',
-  });
-
-  const handleEdit = (item: {
-    _id: string;
-    title?: string;
-    subtitle?: string;
-    buttonText?: string;
-    buttonUrl?: string;
-    footerText?: string;
-    bgColor?: string;
-    image?: string;
-    activeFrom?: string;
-    expireAt?: string;
-  }) => {
+  const handleEdit = (item: any) => {
     setEditingId(item._id);
-    setFormData({
+    form.setFieldsValue({
       title: item.title || '',
       subtitle: item.subtitle || '',
       buttonText: item.buttonText || '',
       buttonUrl: item.buttonUrl || '',
       footerText: item.footerText || '',
       bgColor: item.bgColor || '#132A22',
-      image: item.image || '',
-      activeFrom: item.activeFrom ? new Date(item.activeFrom).toISOString().split('T')[0] : '',
-      expireAt: item.expireAt ? new Date(item.expireAt).toISOString().split('T')[0] : '',
+      activeFrom: item.activeFrom ? dayjs(item.activeFrom) : null,
+      expireAt: item.expireAt ? dayjs(item.expireAt) : null,
     });
     setPreviewUrl(item.image || null);
     setShowModal(true);
@@ -79,23 +55,14 @@ const CarouselPage: React.FC = () => {
     setShowModal(false);
     setEditingId(null);
     setPreviewUrl(null);
-    setFormData({
-      title: '',
-      subtitle: '',
-      buttonText: '',
-      buttonUrl: '',
-      footerText: '',
-      bgColor: '#132A22',
-      image: null,
-      activeFrom: '',
-      expireAt: '',
-    });
+    setSelectedFile(null);
+    form.resetFields();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setFormData({ ...formData, image: file });
+      setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
     }
   };
@@ -104,10 +71,9 @@ const CarouselPage: React.FC = () => {
     if (!start || !end)
       return {
         label: 'N/A',
-        color: 'bg-gray-400',
+        color: 'default',
         icon: <ExpiredIcon size={12} />,
         dateInfo: 'No Date',
-        dateTextColor: 'text-gray-400',
       };
     const now = new Date();
     const startDate = new Date(start);
@@ -116,164 +82,287 @@ const CarouselPage: React.FC = () => {
     if (now < startDate) {
       return {
         label: 'Coming Soon',
-        color: 'bg-orange-400',
+        color: 'orange',
         icon: <SoonIcon size={12} />,
         dateInfo: `Starts: ${startDate.toLocaleDateString()}`,
-        dateTextColor: 'text-orange-500',
       };
     } else if (now > endDate) {
       return {
         label: 'Expired',
-        color: 'bg-red-500',
+        color: 'error',
         icon: <ExpiredIcon size={12} />,
         dateInfo: `Expired on: ${endDate.toLocaleDateString()}`,
-        dateTextColor: 'text-red-500',
       };
     } else {
       return {
         label: 'Active',
-        color: 'bg-green-500',
+        color: 'success',
         icon: <ActiveIcon size={12} />,
         dateInfo: `Ends: ${endDate.toLocaleDateString()}`,
-        dateTextColor: 'text-green-600',
       };
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (values: any) => {
     try {
       const data = new FormData();
-      data.append('title', formData.title);
-      data.append('subtitle', formData.subtitle);
-      data.append('buttonText', formData.buttonText);
-      data.append('buttonUrl', formData.buttonUrl);
-      data.append('footerText', formData.footerText);
-      data.append('bgColor', formData.bgColor);
-      data.append('activeFrom', formData.activeFrom);
-      data.append('expireAt', formData.expireAt);
+      data.append('title', values.title);
+      data.append('subtitle', values.subtitle);
+      data.append('buttonText', values.buttonText);
+      data.append('buttonUrl', values.buttonUrl);
+      data.append('footerText', values.footerText);
+      data.append('bgColor', values.bgColor);
+      data.append('activeFrom', values.activeFrom ? values.activeFrom.toISOString() : '');
+      data.append('expireAt', values.expireAt ? values.expireAt.toISOString() : '');
 
-      if (formData.image instanceof File) {
-        data.append('image', formData.image);
-      } else if (typeof formData.image === 'string') {
-        data.append('image', formData.image);
+      if (selectedFile) {
+        data.append('image', selectedFile);
+      } else if (values.imageUrl) {
+        data.append('image', values.imageUrl);
       }
 
       if (editingId) {
         await updateHeroMutation.mutateAsync({ id: editingId, formData: data });
-        Swal.fire('Suksess!', 'Hero banner er oppdatert', 'success');
+        message.success('Hero banner er oppdatert');
       } else {
         await createHeroMutation.mutateAsync(data);
-        Swal.fire('Suksess!', 'Hero banner er opprettet', 'success');
+        message.success('Hero banner er opprettet');
       }
       closeModal();
     } catch {
-      Swal.fire(
-        'Feil',
-        editingId ? 'Kunne ikke oppdatere hero' : 'Kunne ikke opprette hero',
-        'error'
-      );
+      message.error(editingId ? 'Kunne ikke oppdatere hero' : 'Kunne ikke opprette hero');
     }
   };
 
-  const handleDelete = async (id: string) => {
-    const result = await Swal.fire({
-      title: 'Er du sikker?',
-      text: 'Du vil ikke kunne angre dette!',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#2d4a3e',
-      confirmButtonText: 'Ja, slett den!',
-    });
-
-    if (result.isConfirmed) {
-      try {
-        await deleteHeroMutation.mutateAsync(id);
-        Swal.fire('Slettet!', 'Banneret har blitt slettet.', 'success');
-      } catch {
-        Swal.fire('Feil', 'Kunne ikke slette banneret', 'error');
-      }
+  const handleDelete = async () => {
+    try {
+      await deleteHeroMutation.mutateAsync(deleteConfirm.id);
+      message.success('Banneret har blitt slettet.');
+      setDeleteConfirm({ visible: false, id: '' });
+    } catch {
+      message.error('Kunne ikke slette banneret');
     }
   };
+
+  const columns = [
+    {
+      title: 'Banner',
+      key: 'banner',
+      render: (_: any, record: any) => (
+        <Space>
+          {record.image && (
+            <img
+              src={record.image}
+              alt={record.title}
+              className="w-16 h-10 object-cover rounded"
+            />
+          )}
+          <Text strong>{record.title || 'Untitled'}</Text>
+        </Space>
+      ),
+    },
+    {
+      title: 'Status',
+      key: 'status',
+      render: (_: any, record: any) => {
+        const status = getStatus(record.activeFrom, record.expireAt);
+        return (
+          <Space>
+            <AntTag color={status.color}>
+              <Space size="small">
+                {status.icon}
+                {status.label}
+              </Space>
+            </AntTag>
+          </Space>
+        );
+      },
+    },
+    {
+      title: 'Date Info',
+      key: 'date',
+      render: (_: any, record: any) => {
+        const status = getStatus(record.activeFrom, record.expireAt);
+        return <Text type="secondary" className="text-xs">{status.dateInfo}</Text>;
+      },
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      render: (_: any, record: any) => (
+        <Space>
+          <Button
+            type="primary"
+            icon={<Edit size={16} />}
+            onClick={() => handleEdit(record)}
+            className="flex items-center"
+          >
+            Edit
+          </Button>
+          <Button
+            type="primary"
+            danger
+            icon={<Trash2 size={16} />}
+            onClick={() => setDeleteConfirm({ visible: true, id: record._id })}
+            className="flex items-center"
+          >
+            Delete
+          </Button>
+        </Space>
+      ),
+    },
+  ];
 
   return (
-    <div className="animate-in fade-in duration-500 p-4 text-sans">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Carousel Management</h1>
-          <p className="text-gray-400 text-sm font-medium mt-1">
-            Administrer nettsidens hovedbannere
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            setEditingId(null);
-            setShowModal(true);
-          }}
-          className="bg-[#2d4a3e] text-white px-6 py-2.5 rounded-xl flex items-center gap-2 hover:bg-[#233b31] transition-all font-bold text-sm shadow-md active:scale-95"
+    <div className="p-4">
+      <Title level={2}>Carousel Management</Title>
+      <Text type="secondary" className="block mb-8">
+        Administrer nettsidens hovedbannere
+      </Text>
+
+      <AdminTable
+        title="Banners"
+        columns={columns}
+        dataSource={heroes}
+        rowKey="_id"
+        loading={loading}
+        pagination={{
+          current: currentPage,
+          pageSize: itemsPerPage,
+          total: heroes.length,
+          onChange: (p) => setCurrentPage(p),
+        }}
+        extra={
+          <Button
+            type="primary"
+            icon={<UploadIcon size={18} />}
+            onClick={() => {
+              setEditingId(null);
+              setShowModal(true);
+            }}
+            className="flex items-center"
+          >
+            Upload New Banner
+          </Button>
+        }
+        showAddButton={false}
+      />
+
+      <Modal
+        title={editingId ? 'Edit Banner' : 'Upload New Banner'}
+        open={showModal}
+        onCancel={closeModal}
+        footer={null}
+        width={600}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          initialValues={{ bgColor: '#132A22' }}
         >
-          <UploadIcon size={18} /> Upload New Banner
-        </button>
-      </div>
+          <Form.Item
+            name="title"
+            label="Title"
+            rules={[{ required: true }]}
+          >
+            <Input placeholder="Banner title" />
+          </Form.Item>
 
-      <div className="bg-white rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-gray-50 overflow-hidden">
-        <HeroTable
-          heroes={paginatedHeroes}
-          getStatus={getStatus}
-          handleEdit={handleEdit}
-          handleDelete={handleDelete}
-          loading={loading}
-        />
+          <Form.Item
+            name="subtitle"
+            label="Subtitle"
+          >
+            <Input placeholder="Banner subtitle" />
+          </Form.Item>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center mt-12 gap-2">
-            <button
-              title="Previous Page"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => p - 1)}
-              className="p-2 disabled:opacity-20 hover:bg-gray-50 rounded-full transition-all"
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item
+              name="buttonText"
+              label="Button Text"
             >
-              <PrevIcon size={20} />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
-              <button
-                title={`Go to Page ${num}`}
-                key={num}
-                onClick={() => setCurrentPage(num)}
-                className={`w-10 h-10 text-center flex items-center justify-center rounded-full font-bold transition-all ${
-                  currentPage === num
-                    ? 'bg-[#2d4a3e] text-white shadow-md scale-110'
-                    : 'text-gray-400 hover:bg-gray-50'
-                }`}
-              >
-                {num}
-              </button>
-            ))}
-            <button
-              title="Next Page"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((p) => p + 1)}
-              className="p-2 disabled:opacity-20 hover:bg-gray-50 rounded-full transition-all"
+              <Input placeholder="Learn more" />
+            </Form.Item>
+
+            <Form.Item
+              name="buttonUrl"
+              label="Button URL"
             >
-              <NextIcon size={20} />
-            </button>
+              <Input placeholder="https://example.com" />
+            </Form.Item>
           </div>
-        )}
-      </div>
 
-      {showModal && (
-        <HeroModal
-          editingId={editingId}
-          formData={formData}
-          setFormData={setFormData}
-          handleSubmit={handleSubmit}
-          closeModal={closeModal}
-          handleFileChange={handleFileChange}
-          previewUrl={previewUrl}
-        />
-      )}
+          <Form.Item
+            name="footerText"
+            label="Footer Text"
+          >
+            <Input placeholder="Banner footer text" />
+          </Form.Item>
+
+          <Form.Item
+            name="bgColor"
+            label="Background Color"
+          >
+            <ColorPicker format="hex" showText />
+          </Form.Item>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item
+              name="activeFrom"
+              label="Active From"
+            >
+              <DatePicker className="w-full" />
+            </Form.Item>
+
+            <Form.Item
+              name="expireAt"
+              label="Expires At"
+            >
+              <DatePicker className="w-full" />
+            </Form.Item>
+          </div>
+
+          <Form.Item label="Banner Image">
+            {previewUrl && (
+              <div className="mb-4">
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="w-full h-40 object-cover rounded-lg"
+                />
+              </div>
+            )}
+            <Input type="file" onChange={handleFileChange} accept="image/*" />
+            <Text type="secondary" className="text-xs mt-2 block">
+              Select an image for your banner
+            </Text>
+          </Form.Item>
+
+          <Form.Item className="flex justify-end">
+            <Space>
+              <Button onClick={closeModal}>Cancel</Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={createHeroMutation.isPending || updateHeroMutation.isPending}
+              >
+                {editingId ? 'Update Banner' : 'Create Banner'}
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <ConfirmDialog
+        title="Er du sikker?"
+        description="Du vil ikke kunne angre dette!"
+        confirmText="Ja, slett den!"
+        cancelText="Avbryt"
+        variant="destructive"
+        isOpen={deleteConfirm.visible}
+        onOpenChange={(open) => !open && setDeleteConfirm({ visible: false, id: '' })}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };
