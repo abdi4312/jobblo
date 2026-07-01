@@ -224,3 +224,37 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+exports.deleteService = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const mongoose = require('mongoose');
+
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ error: 'Invalid service ID format' });
+
+    const service = await Service.findById(id);
+    if (!service) return res.status(404).json({ error: 'Service not found' });
+
+    // ⭐ DELETE ALL IMAGES FROM CLOUDINARY
+    if (service.imageMetadata && service.imageMetadata.length > 0) {
+      const cloudinary = require('../config/cloudinary');
+      for (const meta of service.imageMetadata) {
+        if (meta.blobName) {
+          try {
+            await cloudinary.uploader.destroy(meta.blobName);
+          } catch (err) {
+            console.error('Cloudinary bulk deletion error:', err);
+          }
+        }
+      }
+    }
+
+    await service.deleteOne();
+
+    res.json({ message: 'Service deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};

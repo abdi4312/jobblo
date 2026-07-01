@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useUserStore } from '../../stores/userStore';
 import { useUserProfile } from './hooks';
-import { App } from 'antd';
 import { toast } from 'react-hot-toast';
 
 export const useProfileLogic = () => {
@@ -10,7 +9,6 @@ export const useProfileLogic = () => {
   const currentUser = useUserStore((state) => state.user);
   const logout = useUserStore((state) => state.logout);
   const navigate = useNavigate();
-  const { modal } = App.useApp();
   const [activeTab, setActiveTab] = useState('Om meg');
   const [profileType, setProfileType] = useState<'seeker' | 'poster'>('seeker');
 
@@ -33,17 +31,9 @@ export const useProfileLogic = () => {
   };
 
   const handleLogout = () => {
-    modal.confirm({
-      title: 'Er du sikker?',
-      content: 'Vil du virkelig logge ut?',
-      okText: 'Ja, logg ut',
-      cancelText: 'Avbryt',
-      onOk() {
-        logout();
-        toast.success('Du har blitt logget ut');
-        navigate('/');
-      },
-    });
+    logout();
+    toast.success('Du har blitt logget ut');
+    navigate('/');
   };
 
   const isBlockedByMe =
