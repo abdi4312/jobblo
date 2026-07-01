@@ -27,7 +27,11 @@ const TransactionsPage: React.FC = () => {
   const [limit] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('');
-  const [statusUpdate, setStatusUpdate] = useState<{ visible: boolean; id: string; newStatus: string }>({
+  const [statusUpdate, setStatusUpdate] = useState<{
+    visible: boolean;
+    id: string;
+    newStatus: string;
+  }>({
     visible: false,
     id: '',
     newStatus: '',
@@ -112,7 +116,9 @@ const TransactionsPage: React.FC = () => {
       render: (_: any, record: Transaction) => (
         <Space direction="vertical" size="small">
           <Text strong>{record.user?.name || 'N/A'}</Text>
-          <Text type="secondary" className="text-xs">{record.user?.email || ''}</Text>
+          <Text type="secondary" className="text-xs">
+            {record.user?.email || ''}
+          </Text>
         </Space>
       ),
     },

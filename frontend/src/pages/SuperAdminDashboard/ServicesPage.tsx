@@ -45,7 +45,7 @@ const ServicesPage: React.FC = () => {
 
   const confirmDelete = async () => {
     if (!serviceToDelete) return;
-    
+
     try {
       await mainLink.delete(`/api/admin/services/${serviceToDelete}`);
       message.success('Service has been removed.');
@@ -78,14 +78,12 @@ const ServicesPage: React.FC = () => {
       render: (_: any, record: Service) => {
         const imageUrl = record.image || (record.images && record.images[0]);
         return imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={record.title}
-            className="w-16 h-16 object-cover rounded"
-          />
+          <img src={imageUrl} alt={record.title} className="w-16 h-16 object-cover rounded" />
         ) : (
           <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center">
-            <Text type="secondary" className="text-xs">No image</Text>
+            <Text type="secondary" className="text-xs">
+              No image
+            </Text>
           </div>
         );
       },

@@ -7,7 +7,19 @@ import {
   Edit,
   Trash2,
 } from 'lucide-react';
-import { Button, Space, Tag as AntTag, Typography, Modal, Form, Input, InputNumber, DatePicker, ColorPicker, message } from 'antd';
+import {
+  Button,
+  Space,
+  Tag as AntTag,
+  Typography,
+  Modal,
+  Form,
+  Input,
+  InputNumber,
+  DatePicker,
+  ColorPicker,
+  message,
+} from 'antd';
 import ConfirmDialog from '../../components/Ui/ConfirmDialog';
 import { AdminTable } from '../../components/Ui/AdminTable';
 import {
@@ -31,7 +43,10 @@ const CarouselPage: React.FC = () => {
   const itemsPerPage = 5;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ visible: boolean; id: string }>({ visible: false, id: '' });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ visible: boolean; id: string }>({
+    visible: false,
+    id: '',
+  });
   const [form] = Form.useForm();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -151,11 +166,7 @@ const CarouselPage: React.FC = () => {
       render: (_: any, record: any) => (
         <Space>
           {record.image && (
-            <img
-              src={record.image}
-              alt={record.title}
-              className="w-16 h-10 object-cover rounded"
-            />
+            <img src={record.image} alt={record.title} className="w-16 h-10 object-cover rounded" />
           )}
           <Text strong>{record.title || 'Untitled'}</Text>
         </Space>
@@ -183,7 +194,11 @@ const CarouselPage: React.FC = () => {
       key: 'date',
       render: (_: any, record: any) => {
         const status = getStatus(record.activeFrom, record.expireAt);
-        return <Text type="secondary" className="text-xs">{status.dateInfo}</Text>;
+        return (
+          <Text type="secondary" className="text-xs">
+            {status.dateInfo}
+          </Text>
+        );
       },
     },
     {
@@ -261,63 +276,38 @@ const CarouselPage: React.FC = () => {
           onFinish={handleSubmit}
           initialValues={{ bgColor: '#132A22' }}
         >
-          <Form.Item
-            name="title"
-            label="Title"
-            rules={[{ required: true }]}
-          >
+          <Form.Item name="title" label="Title" rules={[{ required: true }]}>
             <Input placeholder="Banner title" />
           </Form.Item>
 
-          <Form.Item
-            name="subtitle"
-            label="Subtitle"
-          >
+          <Form.Item name="subtitle" label="Subtitle">
             <Input placeholder="Banner subtitle" />
           </Form.Item>
 
           <div className="grid grid-cols-2 gap-4">
-            <Form.Item
-              name="buttonText"
-              label="Button Text"
-            >
+            <Form.Item name="buttonText" label="Button Text">
               <Input placeholder="Learn more" />
             </Form.Item>
 
-            <Form.Item
-              name="buttonUrl"
-              label="Button URL"
-            >
+            <Form.Item name="buttonUrl" label="Button URL">
               <Input placeholder="https://example.com" />
             </Form.Item>
           </div>
 
-          <Form.Item
-            name="footerText"
-            label="Footer Text"
-          >
+          <Form.Item name="footerText" label="Footer Text">
             <Input placeholder="Banner footer text" />
           </Form.Item>
 
-          <Form.Item
-            name="bgColor"
-            label="Background Color"
-          >
+          <Form.Item name="bgColor" label="Background Color">
             <ColorPicker format="hex" showText />
           </Form.Item>
 
           <div className="grid grid-cols-2 gap-4">
-            <Form.Item
-              name="activeFrom"
-              label="Active From"
-            >
+            <Form.Item name="activeFrom" label="Active From">
               <DatePicker className="w-full" />
             </Form.Item>
 
-            <Form.Item
-              name="expireAt"
-              label="Expires At"
-            >
+            <Form.Item name="expireAt" label="Expires At">
               <DatePicker className="w-full" />
             </Form.Item>
           </div>
