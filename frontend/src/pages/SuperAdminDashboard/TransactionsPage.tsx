@@ -1,18 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Search,
-  CheckCircle2,
-  Clock,
-  ChevronLeft,
-  ChevronRight,
-  Filter,
-  ChevronDown,
-  RotateCcw,
-  XCircle,
-} from 'lucide-react';
+import { Search, Filter, CheckCircle2, XCircle, RotateCcw, Clock } from 'lucide-react';
+import { Table, Button, Card, Space, Tag, Typography, Select, message } from 'antd';
 import mainLink from '../../api/mainURLs';
-import TransactionTable from '../../components/SuperAdminDashboard/Transcaction/TransactionTable';
-import Swal from 'sweetalert2';
+import ConfirmDialog from '../../components/Ui/ConfirmDialog';
+
+const { Title, Text } = Typography;
+const { Option } = Select;
 
 interface Transaction {
   _id: string;
@@ -25,19 +18,21 @@ interface Transaction {
   createdAt?: string;
 }
 
-const TransactionPage: React.FC = () => {
+const TransactionsPage: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [limit] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('');
+  const [statusUpdate, setStatusUpdate] = useState<{ visible: boolean; id: string; newStatus: string }>({ visible: false, id: '', newStatus: '' });
 
   const fetchTransactions = useCallback(async () => {
     try {
       setLoading(true);
       const response = await mainLink.get(
-        `/api/admin/transactions?page=${currentPage}&limit=10&search=${searchQuery}&type=${selectedType}`
+        `/api/admin/transactions?page=${currentPage}&limit=${limit}&search=${searchQuery}&type=${selectedType}`
       );
       setTransactions(response.data?.transactions || []);
       setTotalPages(response.data?.totalPages || 1);
@@ -47,51 +42,22 @@ const TransactionPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchQuery, selectedType]);
+  }, [currentPage, limit, searchQuery, selectedType]);
 
-  // Status update karne wala function
-  const handleUpdateStatus = async (id: string, newStatus: string) => {
-    const confirmMessage =
-      newStatus === 'refunded'
-        ? 'Are you sure? This will also mark the transaction as refunded in the system.'
-        : `Change status to ${newStatus}?`;
+  const handleUpdateStatus = async () => {
+    try {
+      await mainLink.patch(`/api/admin/transactions/${statusUpdate.id}/status`, {
+        status: statusUpdate.newStatus,
+      });
 
-    const result = await Swal.fire({
-      title: 'Confirm Status Update',
-      text: confirmMessage,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#2d4a3e',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Yes, update it!',
-      cancelButtonText: 'Cancel',
-    });
-
-    if (result.isConfirmed) {
-      try {
-        await mainLink.patch(`/api/admin/transactions/${id}/status`, {
-          status: newStatus,
-        });
-
-        // Refresh the list
-        fetchTransactions();
-
-        Swal.fire({
-          title: 'Updated!',
-          text: `Transaction status changed to ${newStatus}`,
-          icon: 'success',
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      } catch (error: unknown) {
-        const err = error as { response?: { data?: { message?: string } } };
-        console.error('Update failed:', error);
-        Swal.fire({
-          title: 'Error!',
-          text: err.response?.data?.message || 'Failed to update status.',
-          icon: 'error',
-        });
-      }
+      // Refresh the list
+      fetchTransactions();
+      message.success(`Transaction status changed to ${statusUpdate.newStatus}`);
+      setStatusUpdate({ visible: false, id: '', newStatus: '' });
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      console.error('Update failed:', error);
+      message.error(err.response?.data?.message || 'Failed to update status.');
     }
   };
 
@@ -105,132 +71,174 @@ const TransactionPage: React.FC = () => {
 
   const getStatusConfig = (
     status: string
-  ): { label: string; color: string; bgColor: string; icon: React.ReactNode } => {
+  ): { label: string; color: string; icon: React.ReactNode } => {
     switch (status) {
       case 'succeeded':
         return {
           label: 'Succeeded',
-          color: 'text-emerald-600',
-          bgColor: 'bg-emerald-100',
+          color: 'success',
           icon: <CheckCircle2 size={14} />,
         };
       case 'failed':
         return {
           label: 'Failed',
-          color: 'text-rose-600',
-          bgColor: 'bg-rose-100',
+          color: 'error',
           icon: <XCircle size={14} />,
         };
       case 'refunded':
         return {
           label: 'Refunded',
-          color: 'text-gray-600',
-          bgColor: 'bg-gray-100',
+          color: 'default',
           icon: <RotateCcw size={14} />,
         };
       default:
         return {
           label: 'Pending',
-          color: 'text-amber-600',
-          bgColor: 'bg-amber-100',
+          color: 'warning',
           icon: <Clock size={14} />,
         };
     }
   };
 
+  const columns = [
+    {
+      title: 'User',
+      key: 'user',
+      render: (_: any, record: Transaction) => (
+        <Space direction="vertical" size="small">
+          <Text strong>{record.user?.name || 'N/A'}</Text>
+          <Text type="secondary" className="text-xs">{record.user?.email || ''}</Text>
+        </Space>
+      ),
+    },
+    {
+      title: 'Plan',
+      dataIndex: ['plan', 'name'],
+      key: 'plan',
+      render: (name: string) => name || 'N/A',
+    },
+    {
+      title: 'Type',
+      dataIndex: 'type',
+      key: 'type',
+      render: (type: string) => <Tag color="blue">{type}</Tag>,
+    },
+    {
+      title: 'Amount',
+      dataIndex: 'amount',
+      key: 'amount',
+      render: (amount: number) => <Text strong>{amount} NOK</Text>,
+    },
+    {
+      title: 'Status',
+      key: 'status',
+      render: (_: any, record: Transaction) => {
+        const config = getStatusConfig(record.status || '');
+        return <Tag color={config.color}>{config.label}</Tag>;
+      },
+    },
+    {
+      title: 'Created At',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (date: string) => new Date(date).toLocaleDateString(),
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      render: (_: any, record: Transaction) => (
+        <Select
+          defaultValue={record.status}
+          style={{ width: 120 }}
+          onChange={(value) => {
+            const confirmMessage =
+              value === 'refunded'
+                ? 'Are you sure? This will also mark the transaction as refunded in the system.'
+                : `Change status to ${value}?`;
+            setStatusUpdate({ visible: true, id: record._id, newStatus: value });
+          }}
+        >
+          <Option value="pending">Pending</Option>
+          <Option value="succeeded">Succeeded</Option>
+          <Option value="failed">Failed</Option>
+          <Option value="refunded">Refunded</Option>
+        </Select>
+      ),
+    },
+  ];
+
   return (
-    <div className="animate-in fade-in duration-500 p-6 font-sans max-w-[1600px] mx-auto bg-[#f8fafc] min-h-screen">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
-        <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Transactions</h1>
-          <p className="text-slate-400 text-sm font-medium mt-1">
-            Manage and track all customer payments
-          </p>
-        </div>
+    <div className="p-4">
+      <Title level={2}>Transactions</Title>
+      <Text type="secondary" className="block mb-8">
+        Manage and track all customer payments
+      </Text>
 
-        <div className="flex items-center gap-4 w-full lg:w-auto">
-          <div className="relative flex-1 sm:w-80 group">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[#2d4a3e]" size={20} />
-            <input
-              type="text"
-              placeholder="Search ID or Email..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full pl-14 pr-6 py-3.5 bg-white border border-slate-200 rounded-full shadow-sm focus:outline-none focus:ring-4 focus:ring-[#2d4a3e]/5 focus:border-[#2d4a3e]/20 transition-all text-sm"
-            />
-          </div>
-
-          <div className="relative w-full sm:w-60">
-            <Filter
-              className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-              size={18}
-            />
-            <select
-              title="Select Transaction Type"
-              value={selectedType}
-              onChange={(e) => {
-                setSelectedType(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full pl-14 pr-12 py-3.5 bg-white border border-slate-200 rounded-full appearance-none outline-none focus:ring-4 focus:ring-[#2d4a3e]/5 shadow-sm text-sm font-bold text-slate-600 cursor-pointer"
-            >
-              <option value="">All Transactions</option>
-              <option value="subscription">Subscriptions</option>
-              <option value="extra_contact">Extra Contacts</option>
-            </select>
-            <ChevronDown
-              className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-              size={16}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-[2.5rem] p-4 md:p-8 shadow-sm border border-slate-100 flex flex-col min-h-[600px]">
-        <TransactionTable
-          transactions={transactions}
-          loading={loading}
-          getStatusConfig={getStatusConfig}
-          onUpdateStatus={handleUpdateStatus}
-        />
-
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center py-10 gap-4 border-t border-slate-50 mt-auto">
-            <button
-              title="Previous Page"
-              disabled={currentPage === 1 || loading}
-              onClick={() => setCurrentPage((p) => p - 1)}
-              className="p-3 disabled:opacity-20 hover:bg-slate-50 rounded-2xl border border-slate-100 transition-all text-slate-600"
-            >
-              <ChevronLeft size={22} />
-            </button>
-            <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-[1.5rem] border border-slate-100">
-              <span className="text-[10px] font-black text-slate-400 px-2 uppercase tracking-[0.15em]">
-                Page
-              </span>
-              <span className="bg-[#2d4a3e] text-white min-w-[42px] h-10 flex items-center justify-center rounded-xl font-bold">
-                {currentPage}
-              </span>
-              <span className="text-[10px] font-black text-slate-400 px-2 uppercase tracking-[0.15em]">
-                of {totalPages}
-              </span>
+      <Card title="Transactions" className="shadow-sm">
+        <div className="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4">
+          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search
+                size={18}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                type="text"
+                placeholder="Search ID or Email..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm w-full outline-none focus:border-[#2d4a3e]"
+              />
             </div>
-            <button
-              title="Next Page"
-              disabled={currentPage === totalPages || loading}
-              onClick={() => setCurrentPage((p) => p + 1)}
-              className="p-3 disabled:opacity-20 hover:bg-slate-50 rounded-2xl border border-slate-100 transition-all text-slate-600"
+            <Select
+              placeholder="All Transactions"
+              value={selectedType || undefined}
+              onChange={(value) => {
+                setSelectedType(value);
+                setCurrentPage(1);
+              }}
+              style={{ width: 200 }}
+              suffixIcon={<Filter size={16} />}
             >
-              <ChevronRight size={22} />
-            </button>
+              <Option value="">All Transactions</Option>
+              <Option value="subscription">Subscriptions</Option>
+              <Option value="extra_contact">Extra Contacts</Option>
+            </Select>
           </div>
-        )}
-      </div>
+        </div>
+
+        <Table
+          columns={columns}
+          dataSource={transactions}
+          rowKey="_id"
+          loading={loading}
+          pagination={{
+            current: currentPage,
+            pageSize: limit,
+            total: totalPages * limit,
+            onChange: (page) => setCurrentPage(page),
+          }}
+        />
+      </Card>
+
+      <ConfirmDialog
+        title="Confirm Status Update"
+        description={
+          statusUpdate.newStatus === 'refunded'
+            ? 'Are you sure? This will also mark the transaction as refunded in the system.'
+            : `Change status to ${statusUpdate.newStatus}?`
+        }
+        confirmText="Yes, update it!"
+        cancelText="Cancel"
+        isOpen={statusUpdate.visible}
+        onOpenChange={(open) => !open && setStatusUpdate({ visible: false, id: '', newStatus: '' })}
+        onConfirm={handleUpdateStatus}
+      />
     </div>
   );
 };
 
-export default TransactionPage;
+export default TransactionsPage;
