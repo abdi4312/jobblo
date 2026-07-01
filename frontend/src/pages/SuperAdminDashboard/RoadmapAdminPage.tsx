@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ListPlus, Trash2, Edit3, Loader2 } from 'lucide-react';
-import { Table, Button, Card, Space, Tag, Typography, Modal, Form, Input, Select, InputNumber, message, Progress } from 'antd';
+import { Button, Space, Tag, Typography, Modal, Form, Input, Select, InputNumber, message, Progress } from 'antd';
 import ConfirmDialog from '../../components/Ui/ConfirmDialog';
+import { AdminTable } from '../../components/Ui/AdminTable';
 import {
   useRoadmapFeatures,
   useCreateRoadmapFeature,
@@ -153,26 +154,16 @@ const RoadmapAdminPage = () => {
     <div className="p-4">
       <Title level={2}>Roadmap Management</Title>
 
-      <Card title="Roadmap" className="shadow-sm">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <Button
-            type="primary"
-            icon={<ListPlus size={18} />}
-            onClick={() => handleOpenModal()}
-            className="bg-[#2d4a3e] hover:bg-[#1e332a] flex items-center"
-          >
-            Add New Entry
-          </Button>
-        </div>
-
-        <Table
-          columns={columns}
-          dataSource={features}
-          rowKey="_id"
-          loading={loading}
-          pagination={false}
-        />
-      </Card>
+      <AdminTable
+        title="Roadmap"
+        columns={columns}
+        dataSource={features}
+        rowKey="_id"
+        loading={loading}
+        pagination={false}
+        onAddButtonClick={() => handleOpenModal()}
+        addButtonText="Add New Entry"
+      />
 
       <Modal
         title={editingFeature ? 'Edit Feature' : 'Add New Feature'}

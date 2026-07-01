@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus } from 'lucide-react';
-import { Table, Button, Card, Space, Tag, Typography, message } from 'antd';
+import { Button, Space, Tag, Typography, message } from 'antd';
 import mainLink from '../../api/mainURLs';
 import ConfirmDialog from '../../components/Ui/ConfirmDialog';
+import { AdminTable } from '../../components/Ui/AdminTable';
 
 const { Title, Text } = Typography;
 
@@ -44,7 +45,7 @@ const ServicesPage: React.FC = () => {
 
   const confirmDelete = async () => {
     if (!serviceToDelete) return;
-
+    
     try {
       await mainLink.delete(`/api/admin/services/${serviceToDelete}`);
       message.success('Service has been removed.');
@@ -77,12 +78,14 @@ const ServicesPage: React.FC = () => {
       render: (_: any, record: Service) => {
         const imageUrl = record.image || (record.images && record.images[0]);
         return imageUrl ? (
-          <img src={imageUrl} alt={record.title} className="w-16 h-16 object-cover rounded" />
+          <img
+            src={imageUrl}
+            alt={record.title}
+            className="w-16 h-16 object-cover rounded"
+          />
         ) : (
           <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center">
-            <Text type="secondary" className="text-xs">
-              No image
-            </Text>
+            <Text type="secondary" className="text-xs">No image</Text>
           </div>
         );
       },
@@ -138,30 +141,21 @@ const ServicesPage: React.FC = () => {
     <div className="p-4">
       <Title level={2}>Services</Title>
 
-      <Card title="Services Management" className="shadow-sm">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <Button
-            type="primary"
-            icon={<Plus size={18} />}
-            className="bg-[#2d4a3e] hover:bg-[#233b31] flex items-center"
-          >
-            Add New
-          </Button>
-        </div>
-
-        <Table
-          columns={columns}
-          dataSource={services}
-          rowKey="_id"
-          loading={loading}
-          pagination={{
-            current: currentPage,
-            pageSize: limit,
-            total: totalPages * limit,
-            onChange: (page) => setCurrentPage(page),
-          }}
-        />
-      </Card>
+      <AdminTable
+        title="Services Management"
+        columns={columns}
+        dataSource={services}
+        rowKey="_id"
+        loading={loading}
+        pagination={{
+          current: currentPage,
+          pageSize: limit,
+          total: totalPages * limit,
+          onChange: (page) => setCurrentPage(page),
+        }}
+        showAddButton={true}
+        addButtonText="Add New"
+      />
 
       <ConfirmDialog
         title="Delete Service?"

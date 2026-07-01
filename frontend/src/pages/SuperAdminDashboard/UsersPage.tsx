@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Users, UserPlus, Calendar, Search } from 'lucide-react';
 import {
-  Table,
   Button,
-  Card,
   Space,
   Tag,
   Typography,
@@ -15,6 +13,7 @@ import {
 } from 'antd';
 import mainLink from '../../api/mainURLs';
 import ConfirmDialog from '../../components/Ui/ConfirmDialog';
+import { AdminTable } from '../../components/Ui/AdminTable';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -48,13 +47,6 @@ const UsersPage = () => {
   const [stats, setStats] = useState({ total: 0, new: 0, activeMonth: 0 });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newUser, setNewUser] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
-    role: 'user',
-  });
   const [deleteConfirm, setDeleteConfirm] = useState<{ visible: boolean; userId: string }>({
     visible: false,
     userId: '',
@@ -236,57 +228,33 @@ const UsersPage = () => {
         />
       </div>
 
-      <Card title="User Management" className="shadow-sm">
-        <div className="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4">
-          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search
-                size={18}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm w-full outline-none focus:border-[#2d4a3e]"
-              />
-            </div>
-            <Select
-              placeholder="All Roles"
-              value={roleFilter || undefined}
-              onChange={setRoleFilter}
-              style={{ width: 150 }}
-            >
-              <Option value="">All Roles</Option>
-              <Option value="user">User</Option>
-              <Option value="provider">Provider</Option>
-              <Option value="superAdmin">Super Admin</Option>
-            </Select>
-          </div>
-          <Button
-            type="primary"
-            icon={<UserPlus size={18} />}
-            onClick={() => setIsModalOpen(true)}
-            className="bg-[#2d4a3e] hover:bg-[#233b31] flex items-center"
-          >
-            Add New User
-          </Button>
-        </div>
-
-        <Table
-          columns={columns}
-          dataSource={users}
-          rowKey="_id"
-          loading={loading}
-          pagination={{
-            current: currentPage,
-            pageSize: limit,
-            total: totalPages * limit,
-            onChange: (page) => setCurrentPage(page),
-          }}
-        />
-      </Card>
+      <AdminTable
+        title="User Management"
+        columns={columns}
+        dataSource={users}
+        rowKey="_id"
+        loading={loading}
+        pagination={{
+          current: currentPage,
+          pageSize: limit,
+          total: totalPages * limit,
+          onChange: (page) => setCurrentPage(page),
+        }}
+        searchPlaceholder="Search..."
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        filterPlaceholder="All Roles"
+        filterValue={roleFilter}
+        onFilterChange={setRoleFilter}
+        filterOptions={[
+          { label: 'All Roles', value: '' },
+          { label: 'User', value: 'user' },
+          { label: 'Provider', value: 'provider' },
+          { label: 'Super Admin', value: 'superAdmin' },
+        ]}
+        onAddButtonClick={() => setIsModalOpen(true)}
+        addButtonText="Add New User"
+      />
 
       <Modal
         title="Add New User"
@@ -335,7 +303,7 @@ const UsersPage = () => {
       <ConfirmDialog
         title="Update User Role?"
         description={`Change role to ${roleChangeConfirm.newRole.toUpperCase()}?`}
-        confirmText="Yes, Update"
+        confirmText="Yes, update"
         cancelText="Cancel"
         isOpen={roleChangeConfirm.visible}
         onOpenChange={(open) =>

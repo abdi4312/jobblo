@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Filter, CheckCircle2, XCircle, RotateCcw, Clock } from 'lucide-react';
-import { Table, Button, Card, Space, Tag, Typography, Select, message } from 'antd';
+import { Table, Button, Space, Tag, Typography, Select, message } from 'antd';
 import mainLink from '../../api/mainURLs';
 import ConfirmDialog from '../../components/Ui/ConfirmDialog';
+import { AdminTable } from '../../components/Ui/AdminTable';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -26,7 +27,11 @@ const TransactionsPage: React.FC = () => {
   const [limit] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('');
-  const [statusUpdate, setStatusUpdate] = useState<{ visible: boolean; id: string; newStatus: string }>({ visible: false, id: '', newStatus: '' });
+  const [statusUpdate, setStatusUpdate] = useState<{ visible: boolean; id: string; newStatus: string }>({
+    visible: false,
+    id: '',
+    newStatus: '',
+  });
 
   const fetchTransactions = useCallback(async () => {
     try {
@@ -174,55 +179,29 @@ const TransactionsPage: React.FC = () => {
         Manage and track all customer payments
       </Text>
 
-      <Card title="Transactions" className="shadow-sm">
-        <div className="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4">
-          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search
-                size={18}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <input
-                type="text"
-                placeholder="Search ID or Email..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm w-full outline-none focus:border-[#2d4a3e]"
-              />
-            </div>
-            <Select
-              placeholder="All Transactions"
-              value={selectedType || undefined}
-              onChange={(value) => {
-                setSelectedType(value);
-                setCurrentPage(1);
-              }}
-              style={{ width: 200 }}
-              suffixIcon={<Filter size={16} />}
-            >
-              <Option value="">All Transactions</Option>
-              <Option value="subscription">Subscriptions</Option>
-              <Option value="extra_contact">Extra Contacts</Option>
-            </Select>
-          </div>
-        </div>
-
-        <Table
-          columns={columns}
-          dataSource={transactions}
-          rowKey="_id"
-          loading={loading}
-          pagination={{
-            current: currentPage,
-            pageSize: limit,
-            total: totalPages * limit,
-            onChange: (page) => setCurrentPage(page),
-          }}
-        />
-      </Card>
+      <AdminTable
+        title="Transactions"
+        columns={columns}
+        dataSource={transactions}
+        rowKey="_id"
+        loading={loading}
+        pagination={{
+          current: currentPage,
+          pageSize: limit,
+          total: totalPages * limit,
+          onChange: (page) => setCurrentPage(page),
+        }}
+        searchPlaceholder="Search ID or Email..."
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        filterPlaceholder="All Transactions"
+        filterValue={selectedType}
+        onFilterChange={setSelectedType}
+        filterOptions={[
+          { label: 'Subscriptions', value: 'subscription' },
+          { label: 'Extra Contacts', value: 'extra_contact' },
+        ]}
+      />
 
       <ConfirmDialog
         title="Confirm Status Update"

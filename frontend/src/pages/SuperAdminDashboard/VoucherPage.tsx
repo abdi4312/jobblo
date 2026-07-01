@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit3, Trash2 } from 'lucide-react';
 import {
-  Table,
   Button,
-  Card,
   Space,
   Tag,
   Typography,
@@ -18,6 +16,7 @@ import {
 } from 'antd';
 import mainLink from '../../api/mainURLs';
 import ConfirmDialog from '../../components/Ui/ConfirmDialog';
+import { AdminTable } from '../../components/Ui/AdminTable';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -232,31 +231,21 @@ const VoucherPage: React.FC = () => {
     <div className="p-4">
       <Title level={2}>Coupon Management</Title>
 
-      <Card title="Vouchers" className="shadow-sm">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <Button
-            type="primary"
-            icon={<Plus size={18} />}
-            onClick={() => handleOpenModal()}
-            className="bg-[#2d4a3e] hover:bg-[#233b31] flex items-center"
-          >
-            Add New Coupon
-          </Button>
-        </div>
-
-        <Table
-          columns={columns}
-          dataSource={vouchers}
-          rowKey="_id"
-          loading={isLoading}
-          pagination={{
-            current: currentPage,
-            pageSize: limit,
-            total: totalPages * limit,
-            onChange: (page) => setCurrentPage(page),
-          }}
-        />
-      </Card>
+      <AdminTable
+        title="Vouchers"
+        columns={columns}
+        dataSource={vouchers}
+        rowKey="_id"
+        loading={isLoading}
+        pagination={{
+          current: currentPage,
+          pageSize: limit,
+          total: totalPages * limit,
+          onChange: (page) => setCurrentPage(page),
+        }}
+        onAddButtonClick={() => handleOpenModal()}
+        addButtonText="Add New Coupon"
+      />
 
       <Modal
         title={editingCoupon ? 'Edit Coupon' : 'Create New Coupon'}

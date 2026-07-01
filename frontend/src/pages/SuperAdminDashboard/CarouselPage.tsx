@@ -7,8 +7,9 @@ import {
   Edit,
   Trash2,
 } from 'lucide-react';
-import { Table, Button, Card, Space, Tag as AntTag, Typography, Modal, Form, Input, InputNumber, DatePicker, ColorPicker, message } from 'antd';
+import { Button, Space, Tag as AntTag, Typography, Modal, Form, Input, InputNumber, DatePicker, ColorPicker, message } from 'antd';
 import ConfirmDialog from '../../components/Ui/ConfirmDialog';
+import { AdminTable } from '../../components/Ui/AdminTable';
 import {
   useAdminHeroes,
   useCreateHero,
@@ -219,8 +220,18 @@ const CarouselPage: React.FC = () => {
         Administrer nettsidens hovedbannere
       </Text>
 
-      <Card
+      <AdminTable
         title="Banners"
+        columns={columns}
+        dataSource={heroes}
+        rowKey="_id"
+        loading={loading}
+        pagination={{
+          current: currentPage,
+          pageSize: itemsPerPage,
+          total: heroes.length,
+          onChange: (p) => setCurrentPage(p),
+        }}
         extra={
           <Button
             type="primary"
@@ -234,21 +245,8 @@ const CarouselPage: React.FC = () => {
             Upload New Banner
           </Button>
         }
-        className="shadow-sm"
-      >
-        <Table
-          columns={columns}
-          dataSource={heroes}
-          rowKey="_id"
-          loading={loading}
-          pagination={{
-            current: currentPage,
-            pageSize: itemsPerPage,
-            total: heroes.length,
-            onChange: (p) => setCurrentPage(p),
-          }}
-        />
-      </Card>
+        showAddButton={false}
+      />
 
       <Modal
         title={editingId ? 'Edit Banner' : 'Upload New Banner'}

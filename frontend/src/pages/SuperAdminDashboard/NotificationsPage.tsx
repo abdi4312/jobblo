@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Info, AlertTriangle, Tag, Plus, X } from 'lucide-react';
-import { Table, Button, Card, Space, Tag as AntTag, Typography, Modal, Form, Input, Select, message } from 'antd';
+import { Button, Space, Tag as AntTag, Typography, Modal, Form, Input, Select, message } from 'antd';
 import mainLink from '../../api/mainURLs';
 import ConfirmDialog from '../../components/Ui/ConfirmDialog';
+import { AdminTable } from '../../components/Ui/AdminTable';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -122,6 +123,48 @@ const NotificationsPage = () => {
     },
   ];
 
+  const topSection = showForm ? (
+    <div className="w-full mb-6 p-6 bg-gray-50 rounded-xl">
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSendConfirm}
+        initialValues={{ type: 'system_update' }}
+      >
+        <Form.Item
+          name="type"
+          label="Notification Type"
+          rules={[{ required: true }]}
+        >
+          <Select>
+            {notificationTypes.map(type => (
+              <Option key={type.id} value={type.id}>
+                <Space>
+                  {type.icon}
+                  {type.label}
+                </Space>
+              </Option>
+            ))}
+          </Select>
+        </Form.Item>
+
+        <Form.Item
+          name="content"
+          label="Notification Content"
+          rules={[{ required: true }]}
+        >
+          <Input.TextArea rows={3} placeholder="Enter notification content..." />
+        </Form.Item>
+
+        <Form.Item className="flex justify-end">
+          <Button type="primary" htmlType="submit">
+            Send Notification
+          </Button>
+        </Form.Item>
+      </Form>
+    </div>
+  ) : null;
+
   return (
     <div className="p-4">
       <Title level={2}>System Notifications</Title>
@@ -129,8 +172,18 @@ const NotificationsPage = () => {
         Manage global broadcasts
       </Text>
 
-      <Card
+      <AdminTable
         title="Notifications"
+        columns={columns}
+        dataSource={history}
+        rowKey="_id"
+        loading={historyLoading}
+        pagination={{
+          current: page,
+          pageSize: 5,
+          total: totalPages * 5,
+          onChange: (p) => fetchHistory(p),
+        }}
         extra={
           <Button
             type="primary"
@@ -142,63 +195,9 @@ const NotificationsPage = () => {
             {showForm ? 'Close Form' : 'Create Notification'}
           </Button>
         }
-        className="shadow-sm"
-      >
-        {showForm && (
-          <div className="mb-8 p-6 bg-gray-50 rounded-xl">
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={handleSendConfirm}
-              initialValues={{ type: 'system_update' }}
-            >
-              <Form.Item
-                name="type"
-                label="Notification Type"
-                rules={[{ required: true }]}
-              >
-                <Select>
-                  {notificationTypes.map(type => (
-                    <Option key={type.id} value={type.id}>
-                      <Space>
-                        {type.icon}
-                        {type.label}
-                      </Space>
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-
-              <Form.Item
-                name="content"
-                label="Notification Content"
-                rules={[{ required: true }]}
-              >
-                <Input.TextArea rows={3} placeholder="Enter notification content..." />
-              </Form.Item>
-
-              <Form.Item className="flex justify-end">
-                <Button type="primary" htmlType="submit">
-                  Send Notification
-                </Button>
-              </Form.Item>
-            </Form>
-          </div>
-        )}
-
-        <Table
-          columns={columns}
-          dataSource={history}
-          rowKey="_id"
-          loading={historyLoading}
-          pagination={{
-            current: page,
-            pageSize: 5,
-            total: totalPages * 5,
-            onChange: (p) => fetchHistory(p),
-          }}
-        />
-      </Card>
+        topSection={topSection}
+        showAddButton={false}
+      />
 
       <ConfirmDialog
         title="Confirm Broadcast?"

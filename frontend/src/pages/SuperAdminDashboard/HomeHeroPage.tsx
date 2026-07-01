@@ -10,9 +10,7 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import {
-  Table,
   Button,
-  Card,
   Space,
   Tag as AntTag,
   Typography,
@@ -23,6 +21,7 @@ import {
   message,
 } from 'antd';
 import ConfirmDialog from '../../components/Ui/ConfirmDialog';
+import { AdminTable } from '../../components/Ui/AdminTable';
 import {
   useAllHeroes,
   useCreateHeroMutation,
@@ -211,8 +210,13 @@ const HomeHeroPage: React.FC = () => {
         Administrer nettsidens hovedhero-seksjon
       </Text>
 
-      <Card
+      <AdminTable
         title="Hero Banners"
+        columns={columns}
+        dataSource={heroes}
+        rowKey="_id"
+        loading={isLoading}
+        pagination={false}
         extra={
           <Button
             type="primary"
@@ -226,16 +230,8 @@ const HomeHeroPage: React.FC = () => {
             Add New Hero
           </Button>
         }
-        className="shadow-sm"
-      >
-        <Table
-          columns={columns}
-          dataSource={heroes}
-          rowKey="_id"
-          loading={isLoading}
-          pagination={false}
-        />
-      </Card>
+        showAddButton={false}
+      />
 
       <Modal
         title={editingId ? 'Edit Hero' : 'New Hero'}
