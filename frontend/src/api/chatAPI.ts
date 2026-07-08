@@ -1,11 +1,13 @@
 import mainLink from './mainURLs';
 
 export interface ChatMessage {
-  senderId: string | { _id: string; name: string; avatarUrl?: string };
-  text: string;
+  senderId?: string | { _id: string; name: string; avatarUrl?: string };
+  text?: string;
   createdAt: string;
   _id?: string;
   seenBy?: string[];
+  type?: 'text' | 'image' | 'system_payment' | 'system_contract' | 'system_status' | 'attachment';
+  systemData?: any;
 }
 
 export interface Chat {
@@ -27,13 +29,17 @@ export interface Chat {
     title?: string;
     description?: string;
     images?: string[];
+    price?: number;
+    categories?: string[];
     isSold?: boolean;
   };
   messages: ChatMessage[];
   lastMessage?: string;
   updatedAt?: string;
   deletedFor?: string[];
-  orderId?: string;
+  orderId?: any;
+  status?: 'requested' | 'agreed' | 'paid' | 'contracted' | 'completed' | 'cancelled';
+  agreedPrice?: number;
 }
 
 /**
@@ -71,10 +77,35 @@ export const sendMessage = async (chatId: string, text: string): Promise<ChatMes
 };
 
 /**
+ * Create a payment session for a chat
+ */
+export const createPaymentSession = async (chatId: string): Promise<{ url: string }> => {
+  const response = await mainLink.post(`/api/chats/${chatId}/payments`);
+  return response.data;
+};
+
+/**
+ * Create a contract for a chat
+ */
+export const createContract = async (chatId: string, agreedPrice?: number): Promise<Chat> => {
+  const body = agreedPrice !== undefined ? { agreedPrice } : {};
+  const response = await mainLink.post(`/api/chats/${chatId}/contracts`, body);
+  return response.data;
+};
+
+/**
  * Delete a chat (permanent)
  */
 export const deleteChat = async (chatId: string): Promise<void> => {
   await mainLink.delete(`/api/chats/${chatId}`);
+};
+
+/**
+ * Update agreed price for a chat
+ */
+export const updateAgreedPrice = async (chatId: string, agreedPrice: number): Promise<Chat> => {
+  const response = await mainLink.patch(`/api/chats/${chatId}/agreed-price`, { agreedPrice });
+  return response.data;
 };
 
 /**

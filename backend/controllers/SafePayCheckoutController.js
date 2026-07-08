@@ -6,6 +6,7 @@ const Payment = require('../models/Payment');
 const Notification = require('../models/Notification');
 const SafePayHistory = require('../models/SafePayHistory');
 const Review = require('../models/Review');
+const Chat = require('../models/ChatMessage');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 exports.getCheckoutDetails = async (req, res) => {
@@ -195,11 +196,28 @@ exports.checkoutSessionStatus = async (req, res) => {
     order.paymentStatus = 'paid';
     await order.save();
 
+    // If order has chatId, update chat status and add system message
+    if (order.chatId) {
+      const chat = await Chat.findById(order.chatId);
+      if (chat) {
+        chat.status = 'paid';
+        // Add system payment message
+        chat.messages.push({
+          type: 'system_payment',
+          systemData: { orderId: order._id, amount: order.agreedPrice },
+          text: `Betaling på ${order.agreedPrice} kr er reservert i escrow`,
+          createdAt: new Date(),
+        });
+        await chat.save();
+      }
+    }
+
     // 4. Prevent duplicate Payment creation
     const existingPayment = await Payment.findOne({ orderId: order._id });
     if (!existingPayment) {
       const payment = new Payment({
         orderId: order._id,
+        chatId: order.chatId,
         status: 'completed',
         amount: order.agreedPrice,
       });
@@ -227,6 +245,7 @@ exports.checkoutSessionStatus = async (req, res) => {
     res.json({
       payment_status: 'paid',
       orderId: order._id,
+      chatId: order.chatId,
     });
   } catch (err) {
     console.error('Error checking checkout session:', err);
@@ -314,6 +333,21 @@ exports.approveAndPayout = async (req, res) => {
       },
       { new: true }
     ).populate('serviceId');
+
+    // If order has chatId, update chat status to completed and add system message
+    if (order.chatId) {
+      const chat = await Chat.findById(order.chatId);
+      if (chat) {
+        chat.status = 'completed';
+        chat.messages.push({
+          type: 'system_status',
+          systemData: { orderId: order._id },
+          text: 'Jobben er fullført',
+          createdAt: new Date(),
+        });
+        await chat.save();
+      }
+    }
 
     // 2. Check if order is null (race condition: already updated by another request)
     if (!order) {

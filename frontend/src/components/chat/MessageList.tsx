@@ -1,14 +1,22 @@
 import React from 'react';
 import type { ChatMessage } from '../../api/chatAPI';
+import { CheckCircle2, FileText, CreditCard } from 'lucide-react';
 
 interface MessageListProps {
   messages: ChatMessage[];
   userId: string | null;
   formatTime: (date: string) => string;
   messagesEndRef: React.RefObject<HTMLDivElement>;
+  onSystemMessageClick?: (msg: ChatMessage) => void;
 }
 
-function MessageList({ messages, userId, formatTime, messagesEndRef }: MessageListProps) {
+function MessageList({
+  messages,
+  userId,
+  formatTime,
+  messagesEndRef,
+  onSystemMessageClick,
+}: MessageListProps) {
   const uniqueMessages = Array.from(
     new Map(
       messages.map((msg) => [
@@ -28,6 +36,19 @@ function MessageList({ messages, userId, formatTime, messagesEndRef }: MessageLi
     return acc;
   }, {});
 
+  const getSystemIcon = (type?: string) => {
+    switch (type) {
+      case 'system_contract':
+      case 'contract':
+        return <FileText size={14} />;
+      case 'system_payment':
+      case 'payment':
+        return <CreditCard size={14} />;
+      default:
+        return <CheckCircle2 size={14} />;
+    }
+  };
+
   return (
     <div className="flex-1 overflow-y-auto px-[18px] py-[14px] flex flex-col gap-[10px] bg-[#f5f0e8]">
       {uniqueMessages.length === 0 ? (
@@ -43,6 +64,21 @@ function MessageList({ messages, userId, formatTime, messagesEndRef }: MessageLi
             <div className="text-center text-[11px] text-[#aaa]">{date}</div>
 
             {msgs.map((msg, index) => {
+              if (msg.type?.startsWith('system') || msg.type === 'system') {
+                return (
+                  <div
+                    key={msg._id || index}
+                    className="flex justify-center"
+                    onClick={() => onSystemMessageClick && onSystemMessageClick(msg)}
+                  >
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 text-[#666] text-[12px] cursor-pointer hover:bg-white transition-colors">
+                      {getSystemIcon(msg.type)}
+                      {msg.text}
+                    </div>
+                  </div>
+                );
+              }
+
               const sender = typeof msg.senderId === 'string' ? null : msg.senderId;
               const senderId = typeof msg.senderId === 'string' ? msg.senderId : msg.senderId?._id;
               const isSentByMe = senderId === userId;
