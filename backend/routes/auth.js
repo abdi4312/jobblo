@@ -110,6 +110,11 @@ router.get('/sessions', authenticate, authController.getSessions);
 router.delete('/sessions/:sessionId', authenticate, authController.revokeSession);
 router.delete('/sessions/revoke-others', authenticate, authController.revokeAllOtherSessions);
 
+// Password Reset Routes (OTP-based)
+router.post('/forgot-password', authLimiter, authController.forgotPassword);
+router.post('/verify-otp', authLimiter, authController.verifyOtp);
+router.post('/reset-password', authLimiter, authController.resetPassword);
+
 // Google OAuth Routes
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 

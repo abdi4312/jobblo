@@ -3,7 +3,9 @@ const User = require('../models/User');
 const Session = require('../models/Session');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { generateTokens, createSession } = require('../utils/tokenUtils');
+const { sendOtpEmail } = require('../utils/emailService');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -406,5 +408,141 @@ exports.getProfile = async (req, res) => {
     return res.json(user);
   } catch (error) {
     return sendServerError(res, error, 'Get profile failed');
+  }
+};
+
+/**
+ * POST /api/auth/forgot-password
+ * Generates a 6-digit OTP and emails it to the user.
+ * Always responds with success to prevent email enumeration.
+ */
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+
+    if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return res.status(400).json({ error: 'Vennligst oppgi en gyldig e-postadresse' });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail });
+
+    // Always return success – prevents email enumeration
+    if (!user) {
+      return res.json({
+        message: 'Hvis kontoen eksisterer, har vi sendt en kode til e-posten din.',
+      });
+    }
+
+    // Generate a 6-digit numeric OTP
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+
+    // Hash OTP before storing (never store plain OTP)
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+
+    // Save hashed OTP + 10-minute expiry
+    await User.findByIdAndUpdate(user._id, {
+      passwordResetToken: hashedOtp,
+      passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+    });
+
+    // Send OTP email
+    await sendOtpEmail(user.email, otp, user.name);
+
+    return res.json({
+      message: 'Hvis kontoen eksisterer, har vi sendt en kode til e-posten din.',
+    });
+  } catch (error) {
+    return sendServerError(res, error, 'Forgot password failed');
+  }
+};
+
+/**
+ * POST /api/auth/verify-otp
+ * Verifies the 6-digit OTP. Returns a short-lived reset token on success
+ * that must be used immediately with reset-password.
+ */
+exports.verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+
+    if (!normalizedEmail || !otp) {
+      return res.status(400).json({ error: 'E-post og kode er påkrevd' });
+    }
+
+    const hashedOtp = crypto.createHash('sha256').update(String(otp)).digest('hex');
+
+    const user = await User.findOne({
+      email: normalizedEmail,
+      passwordResetToken: hashedOtp,
+      passwordResetExpires: { $gt: new Date() },
+    }).select('+passwordResetToken +passwordResetExpires');
+
+    if (!user) {
+      return res.status(400).json({ error: 'Ugyldig eller utløpt kode' });
+    }
+
+    // OTP is valid – generate a short-lived reset token (5 min) to authorize password change
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    await User.findByIdAndUpdate(user._id, {
+      passwordResetToken: hashedResetToken,
+      passwordResetExpires: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+    });
+
+    return res.json({
+      message: 'Kode bekreftet',
+      resetToken, // send raw token to client; client uses it in reset-password
+    });
+  } catch (error) {
+    return sendServerError(res, error, 'Verify OTP failed');
+  }
+};
+
+/**
+ * POST /api/auth/reset-password
+ * Resets the password using the reset token returned by verify-otp.
+ */
+exports.resetPassword = async (req, res) => {
+  try {
+    const { resetToken, password } = req.body;
+
+    if (!resetToken || !password) {
+      return res.status(400).json({ error: 'Token og passord er påkrevd' });
+    }
+
+    if (typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: 'Passordet må være minst 8 tegn' });
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: new Date() },
+    }).select('+passwordResetToken +passwordResetExpires +password');
+
+    if (!user) {
+      return res.status(400).json({ error: 'Ugyldig eller utløpt sesjonstoken. Start på nytt.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    await User.findByIdAndUpdate(user._id, {
+      password: hashedPassword,
+      passwordResetToken: undefined,
+      passwordResetExpires: undefined,
+    });
+
+    // Invalidate all sessions for security
+    await Session.deleteMany({ userId: user._id });
+
+    return res.json({
+      message: 'Passordet er oppdatert. Du kan nå logge inn.',
+    });
+  } catch (error) {
+    return sendServerError(res, error, 'Reset password failed');
   }
 };

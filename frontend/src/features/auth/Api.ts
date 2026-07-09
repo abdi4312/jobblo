@@ -47,3 +47,18 @@ export async function fetchProfile() {
   const res = await mainLink.get('/api/auth/profile');
   return res.data;
 }
+
+export async function forgotPassword(email: string) {
+  const res = await mainLink.post('/api/auth/forgot-password', { email });
+  return res.data;
+}
+
+export async function verifyOtp(email: string, otp: string) {
+  const res = await mainLink.post('/api/auth/verify-otp', { email, otp });
+  return res.data; // returns { resetToken }
+}
+
+export async function resetPassword(resetToken: string, password: string) {
+  const res = await mainLink.post('/api/auth/reset-password', { resetToken, password });
+  return res.data;
+}

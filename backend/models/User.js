@@ -159,6 +159,16 @@ const userSchema = new mongoose.Schema(
     stripeCustomerId: {
       type: String,
     },
+
+    // Password Reset
+    passwordResetToken: {
+      type: String,
+      select: false,
+    },
+    passwordResetExpires: {
+      type: Date,
+      select: false,
+    },
   },
   { timestamps: true }
 );

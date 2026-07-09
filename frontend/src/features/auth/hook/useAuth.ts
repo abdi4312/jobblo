@@ -8,6 +8,9 @@ import {
   revokeAllOtherSessions,
   fetchProfile,
   refreshToken,
+  forgotPassword,
+  verifyOtp,
+  resetPassword,
 } from '../Api';
 import { useUserStore } from '../../../stores/userStore';
 import { useNavigate } from 'react-router-dom';
@@ -124,6 +127,35 @@ export const useAuth = () => {
     },
   });
 
+  const forgotPasswordMutation = useMutation({
+    mutationFn: (email: string) => forgotPassword(email),
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || 'Noe gikk galt. Prøv igjen.');
+    },
+  });
+
+  const verifyOtpMutation = useMutation({
+    mutationFn: ({ email, otp }: { email: string; otp: string }) => verifyOtp(email, otp),
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || 'Ugyldig eller utløpt kode.');
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: ({ resetToken, password }: { resetToken: string; password: string }) =>
+      resetPassword(resetToken, password),
+    onSuccess: () => {
+      toast.success('Passordet er oppdatert! Du kan nå logge inn.');
+      navigate('/login');
+    },
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || 'Noe gikk galt. Start på nytt.');
+    },
+  });
+
   // Proactive Token Refresh (Keep session alive)
   useQuery({
     queryKey: ['auth-refresh'],
@@ -159,5 +191,14 @@ export const useAuth = () => {
     revokeSession: revokeSessionMutation.mutate,
     revokeOthers: revokeOthersMutation.mutate,
     isRevokingOthers: revokeOthersMutation.isPending,
+    forgotPassword: forgotPasswordMutation.mutate,
+    isSendingResetEmail: forgotPasswordMutation.isPending,
+    forgotPasswordSuccess: forgotPasswordMutation.isSuccess,
+    verifyOtp: verifyOtpMutation.mutate,
+    isVerifyingOtp: verifyOtpMutation.isPending,
+    verifyOtpData: verifyOtpMutation.data,
+    verifyOtpSuccess: verifyOtpMutation.isSuccess,
+    resetPassword: resetPasswordMutation.mutate,
+    isResettingPassword: resetPasswordMutation.isPending,
   };
 };
