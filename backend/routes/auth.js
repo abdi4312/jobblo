@@ -4,7 +4,7 @@ const User = require('../models/User');
 const { setCookie } = require('../utils/setCookie.js');
 
 const { authenticate } = require('../middleware/auth');
-const { authLimiter } = require('../middleware/rateLimiter');
+const { authLimiter, otpSendLimiter, otpVerifyLimiter } = require('../middleware/rateLimiter');
 const { generateTokens, createSession } = require('../utils/tokenUtils');
 
 const express = require('express');
@@ -107,8 +107,19 @@ router.post('/logout', authController.logout);
 router.post('/refresh-token', authController.refreshToken);
 router.get('/profile', authenticate, authController.getProfile);
 router.get('/sessions', authenticate, authController.getSessions);
-router.delete('/sessions/:sessionId', authenticate, authController.revokeSession);
+// ⚠️ revoke-others MUST be before /:sessionId — otherwise Express matches it as a sessionId param
 router.delete('/sessions/revoke-others', authenticate, authController.revokeAllOtherSessions);
+router.delete('/sessions/:sessionId', authenticate, authController.revokeSession);
+
+// Password Reset Routes (OTP-based)
+router.post('/forgot-password', otpSendLimiter, authController.forgotPassword);
+router.post('/verify-otp', otpVerifyLimiter, authController.verifyOtp);
+router.post('/reset-password', otpVerifyLimiter, authController.resetPassword);
+
+// Change Password (authenticated — requires current password + OTP)
+router.post('/change-password/send-otp', authenticate, otpSendLimiter, authController.changePasswordSendOtp);
+router.post('/change-password/send-otp-no-password', authenticate, otpSendLimiter, authController.changePasswordSendOtpNoPassword);
+router.post('/change-password/verify-otp', authenticate, otpVerifyLimiter, authController.changePasswordVerifyOtp);
 
 // Google OAuth Routes
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));

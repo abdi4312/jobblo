@@ -16,6 +16,15 @@ export type RegisterFormValues = {
   orgNumber?: string;
 };
 
+export type ForgotPasswordFormValues = {
+  email: string;
+};
+
+export type ResetPasswordFormValues = {
+  password: string;
+  confirmPassword: string;
+};
+
 export const loginValidationSchema = {
   email: [
     required<LoginFormValues>('email', 'Vennligst skriv inn e-post'),
@@ -76,5 +85,30 @@ export const registerValidationSchema = {
         values.role !== 'company' || /^\d{9}$/.test(values.orgNumber || ''),
       message: 'Organisasjonsnummer må være nøyaktig 9 siffer',
     },
+  ],
+};
+
+export const forgotPasswordValidationSchema = {
+  email: [
+    required<ForgotPasswordFormValues>('email', 'Vennligst skriv inn e-post'),
+    email<ForgotPasswordFormValues>('email', 'Vennligst skriv inn en gyldig e-post'),
+  ],
+};
+
+export const resetPasswordValidationSchema = {
+  password: [
+    required<ResetPasswordFormValues>('password', 'Vennligst skriv inn nytt passord'),
+    strongPassword<ResetPasswordFormValues>(
+      'password',
+      'Passordet må være minst 8 tegn og inneholde stor bokstav, liten bokstav og tall'
+    ),
+  ],
+  confirmPassword: [
+    required<ResetPasswordFormValues>('confirmPassword', 'Vennligst bekreft passordet'),
+    matchField<ResetPasswordFormValues>(
+      'confirmPassword',
+      'password',
+      'Passordene matcher ikke'
+    ),
   ],
 };
