@@ -342,6 +342,13 @@ exports.getUserById = async (req, res) => {
       serviceId: { $in: serviceIds },
     });
 
+    // Get user's reviews (as reviewee)
+    const Review = require('../models/Review');
+    const reviews = await Review.find({ revieweeId: id })
+      .populate('reviewerId', 'name lastName avatarUrl')
+      .populate('serviceId', 'title')
+      .sort({ createdAt: -1 });
+
     // Convert user to object and add the stats
     const userObj = user.toObject();
     userObj.postedJobsCount = postedJobsCount;
@@ -353,6 +360,7 @@ exports.getUserById = async (req, res) => {
     userObj.completionRate = completionRate;
     userObj.jobsThisMonth = jobsThisMonth;
     userObj.totalApplicationsReceived = totalApplicationsReceived;
+    userObj.reviews = reviews;
 
     res.json(userObj);
   } catch (err) {

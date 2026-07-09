@@ -46,11 +46,20 @@ const { authenticate, requireAdmin } = require('../middleware/auth');
  *     tags: [Notifikasjoner]
  *     parameters:
  *       - in: query
- *         name: userId
+ *         name: page
+ *         schema:
+ *           type: number
+ *         description: Side nummer for paginering
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: number
+ *         description: Antall notifikasjoner per side
+ *       - in: query
+ *         name: type
  *         schema:
  *           type: string
- *         required: true
- *         description: ID til brukeren som henter notifikasjonene
+ *         description: Filter etter notifikasjonstype
  *     responses:
  *       200:
  *         description: Liste over brukerens notifikasjoner
@@ -61,9 +70,7 @@ const { authenticate, requireAdmin } = require('../middleware/auth');
  *               items:
  *                 $ref: '#/components/schemas/Notification'
  *       400:
- *         description: Ugyldig bruker-ID eller mangler userId parameter
- *       404:
- *         description: Bruker ikke funnet
+ *         description: Ugyldig bruker-ID
  *       500:
  *         description: Server-feil
  */
@@ -75,12 +82,6 @@ router.get('/', authenticate, notificationController.getAllNotifications);
  *   get:
  *     summary: Hent antall uleste notifikasjoner
  *     tags: [Notifikasjoner]
- *     parameters:
- *       - in: query
- *         name: userId
- *         schema:
- *           type: string
- *         required: true
  *     responses:
  *       200:
  *         description: Antall uleste notifikasjoner
@@ -122,22 +123,23 @@ router.put('/:id/read', authenticate, notificationController.markAsRead);
  *   put:
  *     summary: Marker alle notifikasjoner som lest
  *     tags: [Notifikasjoner]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - userId
- *             properties:
- *               userId:
- *                 type: string
  *     responses:
  *       200:
  *         description: Alle notifikasjoner markert som lest
  */
 router.put('/read-all', authenticate, notificationController.markAllAsRead);
+
+/**
+ * @swagger
+ * /api/notifications/delete-all:
+ *   delete:
+ *     summary: Slett alle notifikasjoner for en bruker
+ *     tags: [Notifikasjoner]
+ *     responses:
+ *       200:
+ *         description: Alle notifikasjoner slettet
+ */
+router.delete('/delete-all', authenticate, notificationController.deleteAllNotifications);
 
 /**
  * @swagger
@@ -156,29 +158,6 @@ router.put('/read-all', authenticate, notificationController.markAllAsRead);
  *         description: Notifikasjon slettet
  */
 router.delete('/:id', authenticate, notificationController.deleteNotification);
-
-/**
- * @swagger
- * /api/notifications/delete-all:
- *   delete:
- *     summary: Slett alle notifikasjoner for en bruker
- *     tags: [Notifikasjoner]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - userId
- *             properties:
- *               userId:
- *                 type: string
- *     responses:
- *       200:
- *         description: Alle notifikasjoner slettet
- */
-router.delete('/delete-all', authenticate, notificationController.deleteAllNotifications);
 
 /**
  * @swagger
