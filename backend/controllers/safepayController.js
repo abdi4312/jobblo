@@ -118,6 +118,31 @@ exports.createContract = async (req, res) => {
 
     await order.save();
 
+    // Link chat to order and vice versa
+    const Chat = require('../models/ChatMessage');
+    const chat = await Chat.findOneAndUpdate(
+      {
+        clientId: userId,
+        providerId: applicantId,
+        serviceId: serviceId,
+      },
+      { orderId: order._id, status: 'contracted', agreedPrice: service.price },
+      { new: true }
+    );
+    if (chat) {
+      // Also update order to link back to chat
+      await Order.findByIdAndUpdate(order._id, { chatId: chat._id });
+
+      // Add system message to chat that contract was created
+      chat.messages.push({
+        type: 'system_contract',
+        systemData: { orderId: order._id },
+        text: 'Kontrakt er opprettet!',
+        createdAt: new Date(),
+      });
+      await chat.save();
+    }
+
     // Update service status to in_progress
     await Service.findByIdAndUpdate(serviceId, { status: 'in_progress' });
 
@@ -253,6 +278,21 @@ exports.startJob = async (req, res) => {
     });
     await order.save();
 
+    // If order has chatId, add system message to chat
+    if (order.chatId) {
+      const Chat = require('../models/ChatMessage');
+      const chat = await Chat.findById(order.chatId);
+      if (chat) {
+        chat.messages.push({
+          type: 'system_status',
+          systemData: { orderId: order._id },
+          text: 'Jobben er startet!',
+          createdAt: new Date(),
+        });
+        await chat.save();
+      }
+    }
+
     // Create notification for the other party
     const otherUserId =
       String(order.providerId) === String(userId) ? order.customerId : order.providerId;
@@ -365,10 +405,27 @@ exports.completeJobAndPayout = async (req, res) => {
     // 2. Create payment record
     const payment = new Payment({
       orderId: order._id,
+      chatId: order.chatId,
       status: 'released',
       amount: order.agreedPrice,
     });
     await payment.save();
+
+    // If order has chatId, update chat to completed status and add system message
+    if (order.chatId) {
+      const Chat = require('../models/ChatMessage');
+      const chat = await Chat.findById(order.chatId);
+      if (chat) {
+        chat.status = 'completed';
+        chat.messages.push({
+          type: 'system_status',
+          systemData: { orderId: order._id },
+          text: 'Jobben er fullført!',
+          createdAt: new Date(),
+        });
+        await chat.save();
+      }
+    }
 
     // 3. Create SafePayHistory record
     const service = order.serviceId;

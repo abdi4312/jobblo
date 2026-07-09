@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 const orderSchema = new mongoose.Schema(
   {
+    chatId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Chat',
+    },
     serviceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Service',

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const paymentSchema = new mongoose.Schema(
   {
     orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, index: true },
+    chatId: { type: mongoose.Schema.Types.ObjectId, ref: 'Chat', index: true },
     status: {
       type: String,
       enum: ['pending', 'completed', 'disputed', 'released'],

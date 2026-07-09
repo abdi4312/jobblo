@@ -61,6 +61,7 @@ export function MessagesPageSplit() {
         setNewMessage={setNewMessage}
         handleSend={handleSend}
         sending={sendMutation.isPending}
+        refetchActiveChat={activeChatQuery.refetch}
       />
     </div>
   );
