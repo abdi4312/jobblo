@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Service = require('../models/Service');
 const JobRequest = require('../models/JobRequest');
+const Order = require('../models/Order');
 const mongoose = require('mongoose');
 const Category = require('../models/Category');
 const List = require('../models/List');

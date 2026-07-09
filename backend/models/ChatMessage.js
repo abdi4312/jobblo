@@ -4,11 +4,9 @@ const messageSchema = new mongoose.Schema({
   senderId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
   },
   text: {
     type: String,
-    required: true,
   },
   attachments: [{ type: String }],
   serviceId: {
@@ -21,6 +19,14 @@ const messageSchema = new mongoose.Schema({
       ref: 'User',
     },
   ],
+  type: {
+    type: String,
+    enum: ['text', 'image', 'system_payment', 'system_contract', 'system_status', 'attachment'],
+    default: 'text',
+  },
+  systemData: {
+    type: mongoose.Schema.Types.Mixed,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -43,6 +49,18 @@ const chatSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Service',
       required: true,
+    },
+    orderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Order',
+    },
+    status: {
+      type: String,
+      enum: ['requested', 'agreed', 'paid', 'contracted', 'completed', 'cancelled'],
+      default: 'requested',
+    },
+    agreedPrice: {
+      type: Number,
     },
 
     messages: [messageSchema],

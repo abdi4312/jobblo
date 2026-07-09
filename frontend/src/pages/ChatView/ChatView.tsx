@@ -8,6 +8,22 @@ import { initSocket } from '../../socket/socket';
 import { toast } from 'react-hot-toast';
 import styles from './ChatView.module.css';
 import { ProfileTitleWrapper } from '../../components/layout/body/profile/ProfileTitleWrapper';
+import { Briefcase, X } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
+import { createContract } from '../../api/safePayAPI';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '../../components/Ui/sheet';
+
+const getOrderStage = (status: string, paymentStatus: string) => {
+  if (status === 'completed') return 'Fullført';
+  if (status === 'in_progress') return 'Pågår';
+  if (paymentStatus === 'paid') return 'Betalt';
+  if (status === 'awaiting_payment') return 'Venter på betaling';
+  if (status === 'accepted') return 'Godtatt';
+  if (status === 'pending') return 'Ventende';
+  if (status === 'cancelled') return 'Kansellert';
+  if (status === 'declined') return 'Avslått';
+  return 'Forespørsel';
+};
 
 export function ChatView() {
   const { chatId } = useParams<{ chatId: string }>();
@@ -17,6 +33,7 @@ export function ChatView() {
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const otherUser = chat
@@ -126,6 +143,59 @@ export function ChatView() {
     return `${dateFormatter.toRelative(dateString)} ${timeFormatter.toShortTime(dateString)}`;
   };
 
+  const createContractMutation = useMutation({
+    mutationFn: () =>
+      createContract({
+        serviceId: chat!.serviceId._id,
+        applicantId: otherUser!._id,
+      }),
+    onSuccess: (data) => {
+      toast.success('Kontrakt opprettet!');
+      navigate(`/safepay/checkout/${data.orderId}`);
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'Kunne ikke opprette kontrakt');
+    },
+  });
+
+  const handleCreateContract = () => {
+    if (!chat?.serviceId?._id || !otherUser?._id) {
+      toast.error('Mangler info for å opprette kontrakt');
+      return;
+    }
+    createContractMutation.mutate();
+  };
+
+  const handleStartSafePay = () => {
+    if (chat?.orderId?._id || chat?.orderId) {
+      const orderId = chat.orderId._id || chat.orderId;
+      if (chat.orderId.paymentStatus === 'paid') {
+        navigate(`/safepay/approval/${orderId}`);
+      } else {
+        navigate(`/safepay/checkout/${orderId}`);
+      }
+    } else {
+      toast('SafePay flow coming soon! You need to create a contract first!');
+    }
+  };
+
+  const handleSystemMessageClick = (msg: ChatMessage) => {
+    if (msg.systemData?.orderId) {
+      navigate(`/safepay/checkout/${msg.systemData.orderId}`);
+    }
+  };
+
+  const getSystemIcon = (type?: string) => {
+    switch (type) {
+      case 'contract':
+        return <Briefcase size={14} />;
+      case 'payment':
+        return <Briefcase size={14} />;
+      default:
+        return <Briefcase size={14} />;
+    }
+  };
+
   if (loading) {
     return (
       <div className={styles.container}>
@@ -146,6 +216,135 @@ export function ChatView() {
     <div className={styles.container}>
       <ProfileTitleWrapper title={otherUser?.name || 'Chat'} buttonText="Tilbake" />
 
+      {chat?.serviceId && (
+        <>
+          {/* Sticky Job Header */}
+          <div
+            className="bg-white border-b border-black/[0.06] px-[18px] py-[12px] shrink-0 cursor-pointer hover:bg-[#f9f9f7] transition-colors sticky top-0 z-10"
+            onClick={() => setSheetOpen(true)}
+          >
+            <div className="flex items-start gap-[12px]">
+              {/* Image */}
+              <div className="w-[60px] h-[60px] flex-shrink-0 bg-gray-100 rounded-[8px] overflow-hidden">
+                {chat.serviceId.images && chat.serviceId.images.length > 0 ? (
+                  <img
+                    src={chat.serviceId.images[0]}
+                    alt={chat.serviceId.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-[#f0faf0]">
+                    <Briefcase size={24} className="text-[#16a34a]" />
+                  </div>
+                )}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-[13px] font-semibold text-custom-black truncate">
+                      {chat.serviceId.title || 'Oppdrag'}
+                    </h4>
+                    {chat.serviceId.categories && chat.serviceId.categories.length > 0 && (
+                      <p className="text-[11px] text-gray-500 mt-[1px] truncate">
+                        {chat.serviceId.categories.join(', ')}
+                      </p>
+                    )}
+                    <p className="text-[12px] font-medium text-[#16a34a] mt-[2px]">
+                      {chat.serviceId.price ? `${chat.serviceId.price} kr` : ''}
+                    </p>
+                    <span className="inline-block mt-[4px] px-[8px] py-[2px] rounded-full text-[10px] font-medium bg-gray-100 text-gray-700">
+                      {chat.orderId
+                        ? getOrderStage(chat.orderId.status, chat.orderId.paymentStatus)
+                        : 'Forespørsel'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* In-thread Action Bar */}
+          <div className="bg-white border-b border-black/[0.06] px-[18px] py-[10px] shrink-0">
+            <div className="flex gap-[8px]">
+              {!chat.orderId ? (
+                <button
+                  onClick={handleCreateContract}
+                  className="flex-1 px-[12px] py-[8px] rounded-full text-[11px] font-semibold cursor-pointer border-none bg-[#16a34a] text-white hover:bg-[#138e3f] transition-colors"
+                >
+                  Opprett kontrakt
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={handleStartSafePay}
+                    className="flex-1 px-[12px] py-[8px] rounded-full text-[11px] font-semibold cursor-pointer border-none bg-[#16a34a] text-white hover:bg-[#138e3f] transition-colors"
+                  >
+                    Start fiks ferdig-betaling
+                  </button>
+                  <button
+                    onClick={() => {
+                      const orderId = chat.orderId._id || chat.orderId;
+                      navigate(`/safepay/checkout/${orderId}`);
+                    }}
+                    className="flex-1 px-[12px] py-[8px] rounded-full text-[11px] font-semibold cursor-pointer border border-[#16a34a] text-[#16a34a] bg-white hover:bg-gray-50 transition-colors"
+                  >
+                    Se kontrakt
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Job Detail Sheet */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-[20px] px-0">
+          <SheetHeader className="px-[18px] pb-2 border-b border-gray-100">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="text-lg font-semibold">Oppdrag</SheetTitle>
+              <SheetClose className="rounded-full p-1 hover:bg-gray-100">
+                <X size={20} />
+              </SheetClose>
+            </div>
+          </SheetHeader>
+          <div className="px-[18px] py-4 overflow-y-auto">
+            {chat.serviceId.images && chat.serviceId.images.length > 0 && (
+              <div className="w-full h-[200px] rounded-[12px] overflow-hidden mb-4">
+                <img
+                  src={chat.serviceId.images[0]}
+                  alt={chat.serviceId.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <h2 className="text-xl font-bold text-custom-black mb-2">{chat.serviceId.title}</h2>
+            {chat.serviceId.categories && chat.serviceId.categories.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {chat.serviceId.categories.map((cat, idx) => (
+                  <span
+                    key={idx}
+                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
+                  >
+                    {cat}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-2xl font-bold text-[#16a34a] mb-4">
+              {chat.serviceId.price} kr
+            </p>
+            {chat.serviceId.description && (
+              <p className="text-gray-700 text-sm leading-relaxed">
+                {chat.serviceId.description}
+              </p>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <div className={styles.chatContainer}>
         <div className={styles.messagesContainer}>
           {chat.messages.length === 0 ? (
@@ -160,6 +359,21 @@ export function ChatView() {
             </div>
           ) : (
             chat.messages.map((msg, index) => {
+              if (msg.type === 'system') {
+                return (
+                  <div
+                    key={msg._id || index}
+                    className="flex justify-center mb-3"
+                    onClick={() => handleSystemMessageClick(msg)}
+                  >
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 text-[#666] text-[12px] cursor-pointer hover:bg-white transition-colors">
+                      {getSystemIcon(msg.systemData?.type)}
+                      {msg.text}
+                    </div>
+                  </div>
+                );
+              }
+
               const senderId =
                 typeof msg.senderId === 'string'
                   ? msg.senderId
