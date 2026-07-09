@@ -17,6 +17,7 @@ export const RegisterForm = () => {
   const { register, isRegistering } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [serverError, setServerError] = useState('');
 
   const { values, errors, handleChange, validate } = useForm<RegisterFormValues>(
     {
@@ -34,23 +35,32 @@ export const RegisterForm = () => {
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate()) return;
+    setServerError('');
 
-    if (!validate()) {
-      toast.error('Vennligst rett opp feilene i skjemaet');
-      return;
-    }
-
-    register({
-      name: values.name,
-      lastName: values.lastName,
-      email: values.email,
-      password: values.password,
-      role: values.role,
-      ...(values.role === 'company' && {
-        companyName: values.companyName,
-        orgNumber: values.orgNumber,
-      }),
-    });
+    register(
+      {
+        name: values.name,
+        lastName: values.lastName,
+        email: values.email,
+        password: values.password,
+        role: values.role,
+        ...(values.role === 'company' && {
+          companyName: values.companyName,
+          orgNumber: values.orgNumber,
+        }),
+      },
+      {
+        onError: (error: unknown) => {
+          const err = error as { response?: { data?: { error?: string; message?: string } } };
+          const msg =
+            err.response?.data?.error ||
+            err.response?.data?.message ||
+            'Registrering mislyktes. Prøv igjen.';
+          setServerError(msg);
+        },
+      }
+    );
   };
 
   return (
