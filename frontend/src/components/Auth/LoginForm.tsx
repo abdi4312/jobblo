@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
-import LoginIcon from '../../assets/images/Login/login-icon.png';
+import { Eye, EyeOff } from 'lucide-react';
 import SocialAuthButtons from '../SocialAuthButtons/AuthButton.tsx';
 import { Input } from '../Ui/Input.tsx';
 import { Button } from '../Ui/button/Button';
@@ -14,7 +12,7 @@ export const LoginForm = () => {
   const navigate = useNavigate();
   const { login, isLoggingIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [serverError, setServerError] = useState('');
 
   const { values, errors, handleChange, validate } = useForm<LoginFormValues>(
     {
@@ -25,12 +23,21 @@ export const LoginForm = () => {
   );
 
   const handleLogin = () => {
-    if (!validate()) {
-      toast.error('Vennligst fyll ut alle felt riktig');
-      return;
-    }
-
-    login({ email: values.email, password: values.password });
+    if (!validate()) return;
+    setServerError('');
+    login(
+      { email: values.email, password: values.password },
+      {
+        onError: (error: unknown) => {
+          const err = error as { response?: { data?: { error?: string; message?: string } } };
+          const msg =
+            err.response?.data?.error ||
+            err.response?.data?.message ||
+            'Innlogging mislyktes. Sjekk e-post og passord.';
+          setServerError(msg);
+        },
+      }
+    );
   };
 
   return (
@@ -44,6 +51,13 @@ export const LoginForm = () => {
         </div>
 
         <div className="flex flex-col gap-6">
+          {/* Server error banner */}
+          {serverError && (
+            <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+              <span>{serverError}</span>
+            </div>
+          )}
+
           {/* Email Input */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wider">
@@ -53,7 +67,7 @@ export const LoginForm = () => {
               type="email"
               value={values.email}
               placeholder="deg@eksempel.no"
-              onChange={(e) => handleChange('email', e.target.value)}
+              onChange={(e) => { handleChange('email', e.target.value); setServerError(''); }}
               error={errors.email}
               className="rounded-lg border-black focus:border-black placeholder:text-gray-400 h-12"
             />
