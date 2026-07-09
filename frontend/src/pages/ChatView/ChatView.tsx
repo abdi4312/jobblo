@@ -11,7 +11,13 @@ import { ProfileTitleWrapper } from '../../components/layout/body/profile/Profil
 import { Briefcase, X } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { createContract } from '../../api/safePayAPI';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '../../components/Ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetClose,
+} from '../../components/Ui/sheet';
 
 const getOrderStage = (status: string, paymentStatus: string) => {
   if (status === 'completed') return 'Fullført';
@@ -29,6 +35,7 @@ export function ChatView() {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
   const { user } = useUserStore();
+  // Debug: Log chat data
   const [chat, setChat] = useState<Chat | null>(null);
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -49,6 +56,9 @@ export function ChatView() {
       try {
         setLoading(true);
         const chatData = await getChatById(chatId);
+        console.log('ChatView - Fetched chat data:', chatData);
+        console.log('ChatView - serviceId:', chatData.serviceId);
+        console.log('ChatView - serviceId.images:', chatData.serviceId?.images);
         setChat(chatData);
       } catch (error) {
         console.error('Error fetching chat:', error);
@@ -226,11 +236,24 @@ export function ChatView() {
             <div className="flex items-start gap-[12px]">
               {/* Image */}
               <div className="w-[60px] h-[60px] flex-shrink-0 bg-gray-100 rounded-[8px] overflow-hidden">
-                {chat.serviceId.images && chat.serviceId.images.length > 0 ? (
+                {(chat.serviceId.images && chat.serviceId.images.length > 0) ||
+                chat.serviceId.image ? (
                   <img
-                    src={chat.serviceId.images[0]}
+                    src={
+                      chat.serviceId.images && chat.serviceId.images.length > 0
+                        ? chat.serviceId.images[0]
+                        : chat.serviceId.image
+                    }
                     alt={chat.serviceId.title}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('ChatView - Image failed to load:', e.currentTarget.src);
+                      const parent = e.currentTarget.parentElement;
+                      if (parent) {
+                        parent.innerHTML =
+                          '<div class="w-full h-full flex items-center justify-center bg-[#f0faf0]"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></div>';
+                      }
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-[#f0faf0]">
@@ -266,32 +289,38 @@ export function ChatView() {
           </div>
 
           {/* In-thread Action Bar */}
-          <div className="bg-white border-b border-black/[0.06] px-[18px] py-[10px] shrink-0">
-            <div className="flex gap-[8px]">
+          <div className="bg-white border-b border-gray-100 px-4 py-3 shrink-0">
+            <div className="flex gap-3">
               {!chat.orderId ? (
                 <button
                   onClick={handleCreateContract}
-                  className="flex-1 px-[12px] py-[8px] rounded-full text-[11px] font-semibold cursor-pointer border-none bg-[#16a34a] text-white hover:bg-[#138e3f] transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none bg-gradient-to-r from-[#16a34a] to-[#15803d] text-white shadow-sm hover:shadow-md hover:from-[#15803d] hover:to-[#14532d] transition-all duration-200 transform hover:-translate-y-0.5"
                 >
                   Opprett kontrakt
                 </button>
               ) : (
                 <>
-                  <button
-                    onClick={handleStartSafePay}
-                    className="flex-1 px-[12px] py-[8px] rounded-full text-[11px] font-semibold cursor-pointer border-none bg-[#16a34a] text-white hover:bg-[#138e3f] transition-colors"
-                  >
-                    Start fiks ferdig-betaling
-                  </button>
-                  <button
-                    onClick={() => {
-                      const orderId = chat.orderId._id || chat.orderId;
-                      navigate(`/safepay/checkout/${orderId}`);
-                    }}
-                    className="flex-1 px-[12px] py-[8px] rounded-full text-[11px] font-semibold cursor-pointer border border-[#16a34a] text-[#16a34a] bg-white hover:bg-gray-50 transition-colors"
-                  >
-                    Se kontrakt
-                  </button>
+                  {/* Only show payment button if payment isn't completed yet */}
+                  {chat.orderId.paymentStatus !== 'paid' && (
+                    <button
+                      onClick={handleStartSafePay}
+                      className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none bg-gradient-to-r from-[#16a34a] to-[#15803d] text-white shadow-sm hover:shadow-md hover:from-[#15803d] hover:to-[#14532d] transition-all duration-200 transform hover:-translate-y-0.5"
+                    >
+                      Start fiks ferdig-betaling
+                    </button>
+                  )}
+                  {/* Always show view contract button unless order is canceled/declined */}
+                  {chat.orderId.status !== 'canceled' && chat.orderId.status !== 'declined' && (
+                    <button
+                      onClick={() => {
+                        const orderId = chat.orderId._id || chat.orderId;
+                        navigate(`/safepay/checkout/${orderId}`);
+                      }}
+                      className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#16a34a] text-[#16a34a] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
+                    >
+                      Se kontrakt
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -311,12 +340,21 @@ export function ChatView() {
             </div>
           </SheetHeader>
           <div className="px-[18px] py-4 overflow-y-auto">
-            {chat.serviceId.images && chat.serviceId.images.length > 0 && (
+            {((chat.serviceId.images && chat.serviceId.images.length > 0) ||
+              chat.serviceId.image) && (
               <div className="w-full h-[200px] rounded-[12px] overflow-hidden mb-4">
                 <img
-                  src={chat.serviceId.images[0]}
+                  src={
+                    chat.serviceId.images && chat.serviceId.images.length > 0
+                      ? chat.serviceId.images[0]
+                      : chat.serviceId.image
+                  }
                   alt={chat.serviceId.title}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error('ChatView Sheet - Image failed to load:', e.currentTarget.src);
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
               </div>
             )}
@@ -333,13 +371,9 @@ export function ChatView() {
                 ))}
               </div>
             )}
-            <p className="text-2xl font-bold text-[#16a34a] mb-4">
-              {chat.serviceId.price} kr
-            </p>
+            <p className="text-2xl font-bold text-[#16a34a] mb-4">{chat.serviceId.price} kr</p>
             {chat.serviceId.description && (
-              <p className="text-gray-700 text-sm leading-relaxed">
-                {chat.serviceId.description}
-              </p>
+              <p className="text-gray-700 text-sm leading-relaxed">{chat.serviceId.description}</p>
             )}
           </div>
         </SheetContent>

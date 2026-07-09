@@ -52,9 +52,9 @@ export default function Alert() {
     hasNextPage,
     isFetchingNextPage,
     isLoading: isNotificationsLoading,
-  } = useNotifications(userId, activeCategory === 'all' ? undefined : activeCategory);
+  } = useNotifications(activeCategory === 'all' ? undefined : activeCategory);
 
-  const { data: unreadCountData } = useUnreadCount(userId);
+  const { data: unreadCountData } = useUnreadCount();
 
   // --- Action Hooks ---
   const markAsReadMutation = useMarkAsRead();
@@ -108,9 +108,8 @@ export default function Alert() {
   };
 
   const handleMarkAllAsRead = async () => {
-    if (!userId) return;
     try {
-      await markAllAsReadMutation.mutateAsync(userId);
+      await markAllAsReadMutation.mutateAsync();
       toast.success('Alle markert som lest');
     } catch (error) {
       toast.error('Kunne ikke markere alle som lest');
@@ -118,10 +117,9 @@ export default function Alert() {
   };
 
   const handleDeleteAll = async () => {
-    if (!userId) return;
     if (!confirm('Er du sikker på at du vil slette alle varsler?')) return;
     try {
-      await deleteAllNotificationsMutation.mutateAsync(userId);
+      await deleteAllNotificationsMutation.mutateAsync();
       toast.success('Alle varsler slettet');
     } catch (error) {
       toast.error('Kunne ikke slette alle varsler');
