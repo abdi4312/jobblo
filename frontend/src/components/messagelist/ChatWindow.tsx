@@ -84,6 +84,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   refetchActiveChat,
 }) => {
   const navigate = useNavigate();
+  // Debug: Log activeChat and serviceId
+  console.log('ChatWindow - activeChat:', activeChat);
+  console.log('ChatWindow - serviceId:', activeChat?.serviceId);
+  console.log('ChatWindow - serviceId.images:', activeChat?.serviceId?.images);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isEditingPrice, setIsEditingPrice] = useState(false);
   const [newAgreedPrice, setNewAgreedPrice] = useState<string>('');
@@ -192,11 +196,25 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 <div className="flex items-start gap-[12px]">
                   {/* Image */}
                   <div className="w-[60px] h-[60px] flex-shrink-0 bg-gray-100 rounded-[8px] overflow-hidden">
-                    {activeChat.serviceId.images && activeChat.serviceId.images.length > 0 ? (
+                    {(activeChat.serviceId.images && activeChat.serviceId.images.length > 0) ||
+                    activeChat.serviceId.image ? (
                       <img
-                        src={activeChat.serviceId.images[0]}
+                        src={
+                          activeChat.serviceId.images && activeChat.serviceId.images.length > 0
+                            ? activeChat.serviceId.images[0]
+                            : activeChat.serviceId.image
+                        }
                         alt={activeChat.serviceId.title}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.error('ChatWindow - Image failed to load:', e.currentTarget.src);
+                          // Replace with fallback
+                          const parent = e.currentTarget.parentElement;
+                          if (parent) {
+                            parent.innerHTML =
+                              '<div class="w-full h-full flex items-center justify-center bg-[#f0faf0]"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></div>';
+                          }
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-[#f0faf0]">
@@ -295,32 +313,39 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
               {/* In-thread Action Bar (only show if chat is ready) */}
               {isChatReady && (
-                <div className="bg-white border-b border-black/[0.06] px-[18px] py-[10px] shrink-0">
-                  <div className="flex gap-[8px]">
+                <div className="bg-white border-b border-gray-100 px-4 py-3 shrink-0">
+                  <div className="flex gap-3">
                     {!activeChat.orderId ? (
                       <button
                         onClick={handleCreateContract}
-                        className="flex-1 px-[12px] py-[8px] rounded-full text-[11px] font-semibold cursor-pointer border-none bg-[#16a34a] text-white hover:bg-[#138e3f] transition-colors"
+                        className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none bg-gradient-to-r from-[#16a34a] to-[#15803d] text-white shadow-sm hover:shadow-md hover:from-[#15803d] hover:to-[#14532d] transition-all duration-200 transform hover:-translate-y-0.5"
                       >
                         Opprett kontrakt
                       </button>
                     ) : (
                       <>
-                        <button
-                          onClick={handleStartSafePay}
-                          className="flex-1 px-[12px] py-[8px] rounded-full text-[11px] font-semibold cursor-pointer border-none bg-[#16a34a] text-white hover:bg-[#138e3f] transition-colors"
-                        >
-                          Start fiks ferdig-betaling
-                        </button>
-                        <button
-                          onClick={() => {
-                            const orderId = activeChat.orderId._id || activeChat.orderId;
-                            navigate(`/safepay/checkout/${orderId}`);
-                          }}
-                          className="flex-1 px-[12px] py-[8px] rounded-full text-[11px] font-semibold cursor-pointer border border-[#16a34a] text-[#16a34a] bg-white hover:bg-gray-50 transition-colors"
-                        >
-                          Se kontrakt
-                        </button>
+                        {/* Only show payment button if payment isn't completed yet */}
+                        {activeChat.orderId.paymentStatus !== 'paid' && (
+                          <button
+                            onClick={handleStartSafePay}
+                            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none bg-gradient-to-r from-[#16a34a] to-[#15803d] text-white shadow-sm hover:shadow-md hover:from-[#15803d] hover:to-[#14532d] transition-all duration-200 transform hover:-translate-y-0.5"
+                          >
+                            Start fiks ferdig-betaling
+                          </button>
+                        )}
+                        {/* Always show view contract button unless order is canceled/declined? */}
+                        {activeChat.orderId.status !== 'canceled' &&
+                          activeChat.orderId.status !== 'declined' && (
+                            <button
+                              onClick={() => {
+                                const orderId = activeChat.orderId._id || activeChat.orderId;
+                                navigate(`/safepay/checkout/${orderId}`);
+                              }}
+                              className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#16a34a] text-[#16a34a] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
+                            >
+                              Se kontrakt
+                            </button>
+                          )}
                       </>
                     )}
                   </div>
@@ -342,12 +367,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   </div>
                 </SheetHeader>
                 <div className="px-[18px] py-4 overflow-y-auto">
-                  {activeChat.serviceId.images && activeChat.serviceId.images.length > 0 && (
+                  {((activeChat.serviceId.images && activeChat.serviceId.images.length > 0) ||
+                    activeChat.serviceId.image) && (
                     <div className="w-full h-[200px] rounded-[12px] overflow-hidden mb-4">
                       <img
-                        src={activeChat.serviceId.images[0]}
+                        src={
+                          activeChat.serviceId.images && activeChat.serviceId.images.length > 0
+                            ? activeChat.serviceId.images[0]
+                            : activeChat.serviceId.image
+                        }
                         alt={activeChat.serviceId.title}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.error(
+                            'ChatWindow Sheet - Image failed to load:',
+                            e.currentTarget.src
+                          );
+                          e.currentTarget.style.display = 'none';
+                        }}
                       />
                     </div>
                   )}

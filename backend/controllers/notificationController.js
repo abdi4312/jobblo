@@ -5,14 +5,11 @@ const mongoose = require('mongoose');
 // GET /api/notifications - Get all notifications for a user
 exports.getAllNotifications = async (req, res) => {
   try {
-    const { userId, page = 1, limit = 5, type } = req.query;
+    const userId = req.userId; // Use req.userId set by auth middleware
+    const { page = 1, limit = 5, type } = req.query;
 
-    if (!userId) {
-      return res.status(400).json({ error: 'userId query parameter is required' });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ error: 'Invalid user ID format' });
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
     }
 
     // Pagination calculation
@@ -90,7 +87,7 @@ exports.markAsRead = async (req, res) => {
 // PUT /api/notifications/read-all - Mark all notifications as read for a user
 exports.markAllAsRead = async (req, res) => {
   try {
-    const { userId } = req.body;
+    const userId = req.userId; // Use req.userId set by auth middleware
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ error: 'Invalid user ID' });
@@ -128,7 +125,7 @@ exports.deleteNotification = async (req, res) => {
 // DELETE /api/notifications/delete-all - Delete all notifications for a user
 exports.deleteAllNotifications = async (req, res) => {
   try {
-    const { userId } = req.body;
+    const userId = req.userId; // Use req.userId set by auth middleware
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ error: 'Invalid user ID' });
@@ -145,7 +142,7 @@ exports.deleteAllNotifications = async (req, res) => {
 // GET /api/notifications/unread-count - Get unread count for a user
 exports.getUnreadCount = async (req, res) => {
   try {
-    const { userId } = req.query;
+    const userId = req.userId; // Use req.userId set by auth middleware
 
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ error: 'Invalid user ID' });

@@ -1,13 +1,12 @@
 import mainLink from '../../api/mainURLs';
 
-export async function getNotifications(userId: string, page: number = 1, type?: string) {
-  // Backend query params ke mutabiq URL update kiya
-  let url = `/api/notifications?userId=${userId}&page=${page}`;
+export async function getNotifications(page: number = 1, type?: string) {
+  let url = `/api/notifications?page=${page}`;
   if (type) {
     url += `&type=${type}`;
   }
   const res = await mainLink.get(url);
-  return res.data; // Expected: { data: [], totalPages: 10, page: 1 }
+  return res.data;
 }
 
 export async function markAsRead(id: string) {
@@ -15,8 +14,8 @@ export async function markAsRead(id: string) {
   return res.data;
 }
 
-export async function markAllAsRead(userId: string) {
-  const res = await mainLink.put(`/api/notifications/read-all`, { userId });
+export async function markAllAsRead() {
+  const res = await mainLink.put(`/api/notifications/read-all`);
   return res.data;
 }
 
@@ -25,14 +24,12 @@ export async function deleteNotification(id: string) {
   return res.data;
 }
 
-export async function deleteAllNotifications(userId: string) {
-  const res = await mainLink.delete(`/api/notifications/delete-all`, {
-    data: { userId },
-  });
+export async function deleteAllNotifications() {
+  const res = await mainLink.delete(`/api/notifications/delete-all`);
   return res.data;
 }
 
-export async function getUnreadCount(userId: string) {
-  const res = await mainLink.get(`/api/notifications/unread-count?userId=${userId}`);
+export async function getUnreadCount() {
+  const res = await mainLink.get(`/api/notifications/unread-count`);
   return res.data;
 }

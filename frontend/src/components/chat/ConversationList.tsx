@@ -69,13 +69,34 @@ const ConversationList: React.FC<ConversationListProps> = ({
               <div
                 key={chat._id}
                 onClick={() => navigate(`/messages/${chat._id}`)}
-                className={`relative flex items-center gap-[10px] px-[14px] py-[11px] cursor-pointer border-b border-black/[0.04] transition-all ${
+                className={`relative flex items-center gap-[12px] px-[14px] py-[12px] cursor-pointer border-b border-black/[0.04] transition-all ${
                   isActive ? 'bg-[#f0faf0]' : 'hover:bg-[#f9f9f7]'
                 }`}
               >
-                {/* Avatar-seksjon */}
+                {/* Product Image */}
                 <div className="relative shrink-0">
-                  <div className="w-[38px] h-[38px] rounded-full bg-[#dcfce7] text-[#166534] text-[13px] font-medium flex items-center justify-center overflow-hidden">
+                  <div className="w-[54px] h-[54px] rounded-[10px] bg-gray-100 overflow-hidden">
+                    {(chat.serviceId?.images && chat.serviceId.images.length > 0) ||
+                    chat.serviceId?.image ? (
+                      <img
+                        src={
+                          chat.serviceId.images && chat.serviceId.images.length > 0
+                            ? chat.serviceId.images[0]
+                            : chat.serviceId.image
+                        }
+                        alt={chat.serviceId?.title || 'Produkt'}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-[#f0faf0]">
+                        <span className="material-symbols-outlined text-[#16a34a] text-[24px]">
+                          local_mall
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {/* User Avatar Overlay */}
+                  <div className="absolute -bottom-1 -right-1 w-[22px] h-[22px] rounded-full bg-white border-2 border-white overflow-hidden">
                     {otherPerson?.avatarUrl ? (
                       <img
                         src={otherPerson.avatarUrl}
@@ -83,32 +104,36 @@ const ConversationList: React.FC<ConversationListProps> = ({
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span>{otherPerson?.name?.charAt(0) || 'U'}</span>
+                      <div className="w-full h-full bg-[#dcfce7] flex items-center justify-center">
+                        <span className="text-[#166534] text-[10px] font-medium">
+                          {otherPerson?.name?.charAt(0) || 'U'}
+                        </span>
+                      </div>
                     )}
                   </div>
                   {isOnline && (
-                    <div className="absolute bottom-[1px] right-[1px] w-[8px] h-[8px] bg-[#16a34a] rounded-full border-[1.5px] border-white"></div>
+                    <div className="absolute bottom-3 right-0 w-[8px] h-[8px] bg-[#16a34a] rounded-full border-[1.5px] border-white"></div>
                   )}
                 </div>
 
-                {/* Innholdsseksjon */}
+                {/* Content Section */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline justify-between mb-0.5">
-                    <span
-                      className={`text-[13px] truncate ${
-                        hasUnread ? 'font-bold text-custom-black' : 'text-custom-black'
+                  <div className="flex items-start justify-between mb-1">
+                    <h3
+                      className={`text-[14px] font-medium truncate flex-1 mr-2 ${
+                        hasUnread ? 'text-custom-black' : 'text-custom-black'
                       }`}
                     >
-                      {otherPerson?.name || 'Ukjent'}
-                    </span>
-                    <span className="text-[11px] text-[#aaa]">
+                      {chat.serviceId?.title || otherPerson?.name || 'Ukjent'}
+                    </h3>
+                    <span className="text-[12px] text-[#888] shrink-0">
                       {formatTime(chat.updatedAt || '')}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <p
-                      className={`text-[12px] truncate flex-1 ${
-                        hasUnread ? 'text-[#333] font-medium' : 'text-[#888]'
+                      className={`text-[13px] truncate flex-1 ${
+                        hasUnread ? 'text-[#555]' : 'text-[#999]'
                       }`}
                     >
                       {chat.lastMessage || 'Start samtale...'}
@@ -119,9 +144,10 @@ const ConversationList: React.FC<ConversationListProps> = ({
                   </div>
                 </div>
 
-                {hasSafePay && (
-                  <span className="text-[9px] bg-[#f0faf0] text-[#166534] rounded-full px-[6px] py-[2px] border border-[#c6f0d8] shrink-0">
-                    SafePay
+                {/* Solgt Badge */}
+                {chat.serviceId?.isSold && (
+                  <span className="text-[10px] font-medium bg-[#fef3c7] text-[#d97706] rounded-full px-[8px] py-[3px] shrink-0">
+                    Solgt
                   </span>
                 )}
               </div>

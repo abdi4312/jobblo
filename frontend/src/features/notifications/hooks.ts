@@ -11,11 +11,14 @@ import { useEffect } from 'react';
 import { initSocket } from '../../socket/socket';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { useUserStore } from '../../stores/userStore';
 
-export const useNotifications = (userId: string | undefined, type?: string) => {
+export const useNotifications = (type?: string) => {
+  const user = useUserStore((state) => state.user);
+  const userId = user?._id;
   return useInfiniteQuery({
-    queryKey: ['notifications', userId, type],
-    queryFn: ({ pageParam = 1 }) => getNotifications(userId!, pageParam, type),
+    queryKey: ['notifications', type],
+    queryFn: ({ pageParam = 1 }) => getNotifications(pageParam, type),
     getNextPageParam: (lastPage) => {
       const nextPage = lastPage.currentPage + 1;
       return nextPage <= lastPage.totalPages ? nextPage : undefined;
@@ -37,12 +40,8 @@ export const useOrderApprovalSocket = (userId: string | undefined) => {
 
     const handleOrderApproved = (data: { orderId: string; chatId: string }) => {
       toast.success('Din forespørsel er godkjent!');
-      queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['orders', userId] });
-      // Auto-navigation removed as per user request
-      // setTimeout(() => {
-      //   navigate(`/messages/${data.chatId}`);
-      // }, 2000);
     };
 
     socket.on('order_approved', handleOrderApproved);
@@ -53,7 +52,9 @@ export const useOrderApprovalSocket = (userId: string | undefined) => {
   }, [userId, navigate, queryClient]);
 };
 
-export const useUnreadCount = (userId: string | undefined) => {
+export const useUnreadCount = () => {
+  const user = useUserStore((state) => state.user);
+  const userId = user?._id;
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -65,8 +66,8 @@ export const useUnreadCount = (userId: string | undefined) => {
     socket.emit('join', userId);
 
     const handleNewNotification = () => {
-      queryClient.invalidateQueries({ queryKey: ['unreadCount', userId] });
-      queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     };
 
     socket.on('new_notification', handleNewNotification);
@@ -77,8 +78,8 @@ export const useUnreadCount = (userId: string | undefined) => {
   }, [userId, queryClient]);
 
   return useQuery({
-    queryKey: ['unreadCount', userId],
-    queryFn: () => getUnreadCount(userId!),
+    queryKey: ['unreadCount'],
+    queryFn: () => getUnreadCount(),
     enabled: !!userId,
   });
 };
@@ -87,7 +88,7 @@ export const useMarkAsRead = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: markAsRead,
-    onSuccess: (_, id) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
     },
