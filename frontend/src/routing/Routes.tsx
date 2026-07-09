@@ -69,6 +69,7 @@ const LeggUtOppdrag = lazy(() => import('../pages/LeggUtOppdragPage/LeggUtOppdra
 const Alert = lazy(() => import('../pages/AlertPage/Alert.tsx'));
 const LoginPage = lazy(() => import('../pages/LoginPage/LoginPage.tsx'));
 const RegisterPage = lazy(() => import('../pages/RegisterPage/RegisterPage.tsx'));
+const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage/ForgotPasswordPage.tsx'));
 const AnmeldelserPage = lazy(() => import('../pages/AnmeldelserPage/AnmeldelserPage.tsx'));
 
 const ListDetailPage = lazy(() =>
@@ -334,6 +335,11 @@ export const routes: RouteObject[] = [
   {
     path: 'register',
     element: <PublicRoute>{withSuspense(RegisterPage)}</PublicRoute>,
+  },
+
+  {
+    path: 'forgot-password',
+    element: <PublicRoute>{withSuspense(ForgotPasswordPage)}</PublicRoute>,
   },
 
   {

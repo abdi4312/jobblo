@@ -67,6 +67,7 @@ export const LoginForm = () => {
               </label>
               <button
                 type="button"
+                onClick={() => navigate('/forgot-password')}
                 className="text-[12px] font-bold text-black uppercase tracking-wider hover:underline"
               >
                 Glemt?
