@@ -412,6 +412,123 @@ exports.getProfile = async (req, res) => {
 };
 
 /**
+ * POST /api/auth/change-password/send-otp
+ * Authenticated user — verify current password then send OTP to their email.
+ */
+exports.changePasswordSendOtp = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { currentPassword } = req.body;
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Nåværende passord er påkrevd' });
+    }
+
+    const user = await User.findById(userId).select('+password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      return res.status(400).json({ error: 'Nåværende passord er feil' });
+    }
+
+    // Generate 6-digit OTP
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+
+    await User.findByIdAndUpdate(userId, {
+      passwordResetToken: hashedOtp,
+      passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 min
+    });
+
+    await sendOtpEmail(user.email, otp, user.name);
+
+    return res.json({ message: 'Kode sendt til e-posten din.' });
+  } catch (error) {
+    return sendServerError(res, error, 'Change password send OTP failed');
+  }
+};
+
+/**
+ * POST /api/auth/change-password/send-otp-no-password
+ * Authenticated user — forgot current password flow.
+ * Sends OTP without requiring current password (identity already confirmed via session).
+ */
+exports.changePasswordSendOtpNoPassword = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+
+    await User.findByIdAndUpdate(userId, {
+      passwordResetToken: hashedOtp,
+      passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 min
+    });
+
+    await sendOtpEmail(user.email, otp, user.name);
+
+    return res.json({
+      message: 'Kode sendt til e-posten din.',
+      // Return masked email so frontend can show hint
+      maskedEmail: user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3'),
+    });
+  } catch (error) {
+    return sendServerError(res, error, 'Change password send OTP (no password) failed');
+  }
+};
+
+/**
+ * POST /api/auth/change-password/verify-otp
+ * Verify OTP and change the password in one step.
+ */
+exports.changePasswordVerifyOtp = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { otp, newPassword } = req.body;
+
+    if (!otp || !newPassword) {
+      return res.status(400).json({ error: 'Kode og nytt passord er påkrevd' });
+    }
+
+    if (typeof newPassword !== 'string' || newPassword.length < 8) {
+      return res.status(400).json({ error: 'Passordet må være minst 8 tegn' });
+    }
+
+    const hashedOtp = crypto.createHash('sha256').update(String(otp)).digest('hex');
+
+    const user = await User.findOne({
+      _id: userId,
+      passwordResetToken: hashedOtp,
+      passwordResetExpires: { $gt: new Date() },
+    }).select('+passwordResetToken +passwordResetExpires +password');
+
+    if (!user) {
+      return res.status(400).json({ error: 'Ugyldig eller utløpt kode' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    await User.findByIdAndUpdate(userId, {
+      password: hashedPassword,
+      passwordResetToken: undefined,
+      passwordResetExpires: undefined,
+    });
+
+    return res.json({ message: 'Passordet er oppdatert.' });
+  } catch (error) {
+    return sendServerError(res, error, 'Change password verify OTP failed');
+  }
+};
+
+/**
  * POST /api/auth/forgot-password
  * Generates a 6-digit OTP and emails it to the user.
  * Returns a generic success message to prevent email enumeration,

@@ -55,10 +55,20 @@ export async function forgotPassword(email: string) {
 
 export async function verifyOtp(email: string, otp: string) {
   const res = await mainLink.post('/api/auth/verify-otp', { email, otp });
-  return res.data; // returns { resetToken }
+  return res.data;
 }
 
 export async function resetPassword(resetToken: string, password: string) {
   const res = await mainLink.post('/api/auth/reset-password', { resetToken, password });
+  return res.data;
+}
+
+export async function changePasswordSendOtp(currentPassword: string) {
+  const res = await mainLink.post('/api/auth/change-password/send-otp', { currentPassword });
+  return res.data;
+}
+
+export async function changePasswordVerifyOtp(otp: string, newPassword: string) {
+  const res = await mainLink.post('/api/auth/change-password/verify-otp', { otp, newPassword });
   return res.data;
 }
