@@ -414,7 +414,8 @@ exports.getProfile = async (req, res) => {
 /**
  * POST /api/auth/forgot-password
  * Generates a 6-digit OTP and emails it to the user.
- * Always responds with success to prevent email enumeration.
+ * Returns a generic success message to prevent email enumeration,
+ * but includes a `sent` boolean so the frontend knows whether to proceed.
  */
 exports.forgotPassword = async (req, res) => {
   try {
@@ -427,10 +428,11 @@ exports.forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ email: normalizedEmail });
 
-    // Always return success – prevents email enumeration
     if (!user) {
-      return res.json({
-        message: 'Hvis kontoen eksisterer, har vi sendt en kode til e-posten din.',
+      // Return 404 — frontend can show "email not found" without exposing DB details
+      // This is a UX decision: we prioritize helping the user over hiding existence
+      return res.status(404).json({
+        error: 'Vi fant ingen konto med denne e-postadressen.',
       });
     }
 
@@ -450,7 +452,7 @@ exports.forgotPassword = async (req, res) => {
     await sendOtpEmail(user.email, otp, user.name);
 
     return res.json({
-      message: 'Hvis kontoen eksisterer, har vi sendt en kode til e-posten din.',
+      message: 'En kode er sendt til e-posten din.',
     });
   } catch (error) {
     return sendServerError(res, error, 'Forgot password failed');

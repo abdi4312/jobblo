@@ -4,7 +4,7 @@ const User = require('../models/User');
 const { setCookie } = require('../utils/setCookie.js');
 
 const { authenticate } = require('../middleware/auth');
-const { authLimiter } = require('../middleware/rateLimiter');
+const { authLimiter, otpSendLimiter, otpVerifyLimiter } = require('../middleware/rateLimiter');
 const { generateTokens, createSession } = require('../utils/tokenUtils');
 
 const express = require('express');
@@ -111,9 +111,9 @@ router.delete('/sessions/:sessionId', authenticate, authController.revokeSession
 router.delete('/sessions/revoke-others', authenticate, authController.revokeAllOtherSessions);
 
 // Password Reset Routes (OTP-based)
-router.post('/forgot-password', authLimiter, authController.forgotPassword);
-router.post('/verify-otp', authLimiter, authController.verifyOtp);
-router.post('/reset-password', authLimiter, authController.resetPassword);
+router.post('/forgot-password', otpSendLimiter, authController.forgotPassword);
+router.post('/verify-otp', otpVerifyLimiter, authController.verifyOtp);
+router.post('/reset-password', otpVerifyLimiter, authController.resetPassword);
 
 // Google OAuth Routes
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
