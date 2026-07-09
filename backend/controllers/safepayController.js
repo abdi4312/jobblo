@@ -494,7 +494,7 @@ exports.completeJobAndPayout = async (req, res) => {
     console.log('completeJobAndPayout: Found reviewee:', reviewee);
     if (reviewee) {
       // Calculate new average rating from all reviews
-      const allReviews = await Review.find({ revieweeId, revieweeRole });
+      const allReviews = await Review.find({ revieweeId });
       console.log('completeJobAndPayout: All reviews for reviewee:', allReviews);
       const reviewCount = allReviews.length;
       const averageRating =
@@ -506,7 +506,7 @@ exports.completeJobAndPayout = async (req, res) => {
 
       // Update provider's stats
       reviewee.completedJobs = (reviewee.completedJobs || 0) + 1;
-      reviewee.averageRating = parseFloat(averageRating.toFixed(1));
+      reviewee.averageRating = Math.round(averageRating * 10) / 10;
       reviewee.reviewCount = reviewCount;
       reviewee.earnings = (reviewee.earnings || 0) + netProvider;
       await reviewee.save();

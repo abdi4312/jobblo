@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 function authorizeReviewAction(req, review) {
-  const isAdmin = req.user.role === 'admin';
+  const isAdmin = req.user?.role === 'admin' || req.user?.role === 'superAdmin';
   const isOwner = review.reviewerId.toString() === String(req.userId);
 
   // Only admin OR the review owner can proceed
@@ -63,17 +63,16 @@ exports.createReview = async (req, res) => {
     console.log('createReview: Review created:', review);
 
     // Update reviewee stats
-    const allReviews = await Review.find({ revieweeId, revieweeRole });
+    const allReviews = await Review.find({ revieweeId });
     console.log('createReview: All reviews for reviewee:', allReviews);
     const reviewCount = allReviews.length;
-    const averageRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount;
+    const averageRating = reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
     console.log('createReview: Calculated stats:', {
       reviewCount,
       averageRating,
     });
 
-    // We might want separate stats for seeker vs poster in the future,
-    // but for now we update the main user stats
+    // Update the main user stats
     const updatedUser = await User.findByIdAndUpdate(
       revieweeId,
       {
@@ -85,7 +84,7 @@ exports.createReview = async (req, res) => {
     console.log('createReview: Updated user:', updatedUser);
 
     const populatedReview = await Review.findById(review._id)
-      .populate('reviewerId', 'name username avatarUrl')
+      .populate('reviewerId', 'name lastName username avatarUrl')
       .populate('serviceId', 'title');
 
     res.status(201).json(populatedReview);
@@ -93,6 +92,7 @@ exports.createReview = async (req, res) => {
     if (err.code === 11000) {
       return res.status(400).json({ error: 'Du har allerede gitt vurdering for dette oppdraget' });
     }
+    console.error('createReview Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -141,13 +141,9 @@ exports.updateReview = async (req, res) => {
     await review.save();
 
     // Update reviewee stats
-    const allReviews = await Review.find({
-      revieweeId: review.revieweeId,
-      revieweeRole: review.revieweeRole,
-    });
+    const allReviews = await Review.find({ revieweeId: review.revieweeId });
     const reviewCount = allReviews.length;
-    const averageRating =
-      reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
+    const averageRating = reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
 
     await User.findByIdAndUpdate(review.revieweeId, {
       reviewCount,
@@ -155,7 +151,7 @@ exports.updateReview = async (req, res) => {
     });
 
     const populatedReview = await Review.findById(review._id)
-      .populate('reviewerId', 'name username avatarUrl')
+      .populate('reviewerId', 'name lastName username avatarUrl')
       .populate('serviceId', 'title');
 
     res.json(populatedReview);
@@ -176,12 +172,13 @@ exports.getUserReviews = async (req, res) => {
     }
 
     const reviews = await Review.find(query)
-      .populate('reviewerId', 'name username avatarUrl')
+      .populate('reviewerId', 'name lastName username avatarUrl')
       .populate('serviceId', 'title')
       .sort({ createdAt: -1 });
 
     res.json(reviews);
   } catch (err) {
+    console.error('getUserReviews Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -198,11 +195,12 @@ exports.getReviewByOrder = async (req, res) => {
     }
 
     const review = await Review.findOne(query)
-      .populate('reviewerId', 'name username avatarUrl')
+      .populate('reviewerId', 'name lastName username avatarUrl')
       .populate('serviceId', 'title');
 
     res.json(review);
   } catch (err) {
+    console.error('getReviewByOrder Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -212,11 +210,12 @@ exports.getReviewByOrderId = async (req, res) => {
     const { orderId } = req.params;
 
     const review = await Review.findOne({ orderId })
-      .populate('reviewerId', 'name username avatarUrl')
+      .populate('reviewerId', 'name lastName username avatarUrl')
       .populate('serviceId', 'title');
 
     res.json(review);
   } catch (err) {
+    console.error('getReviewByOrderId Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -224,11 +223,12 @@ exports.getReviewByOrderId = async (req, res) => {
 exports.getAllReviews = async (req, res) => {
   try {
     const reviews = await Review.find({})
-      .populate('reviewerId', 'name avatarUrl')
+      .populate('reviewerId', 'name lastName avatarUrl')
       .populate('serviceId', 'title');
 
     res.json(reviews);
   } catch (err) {
+    console.error('getAllReviews Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -256,13 +256,9 @@ exports.deleteReview = async (req, res) => {
     await Review.findByIdAndDelete(id);
 
     // Update reviewee stats
-    const allReviews = await Review.find({
-      revieweeId: review.revieweeId,
-      revieweeRole: review.revieweeRole,
-    });
+    const allReviews = await Review.find({ revieweeId: review.revieweeId });
     const reviewCount = allReviews.length;
-    const averageRating =
-      reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
+    const averageRating = reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
 
     await User.findByIdAndUpdate(review.revieweeId, {
       reviewCount,
@@ -271,6 +267,7 @@ exports.deleteReview = async (req, res) => {
 
     res.json({ message: 'Review deleted successfully' });
   } catch (err) {
+    console.error('deleteReview Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -283,13 +280,13 @@ exports.getLatestReviews = async (req, res) => {
     const reviews = await Review.find()
       .sort({ _id: -1 }) // Sort by newest first
       .limit(limit)
-      .populate('reviewerId', 'name avatarUrl')
-      .populate('serviceId', 'title userId')
+      .populate('reviewerId', 'name lastName avatarUrl')
       .populate({
         path: 'serviceId',
+        select: 'title userId',
         populate: {
           path: 'userId',
-          select: 'name avatarUrl',
+          select: 'name lastName avatarUrl',
         },
       });
 
@@ -298,7 +295,7 @@ exports.getLatestReviews = async (req, res) => {
       count: reviews.length,
     });
   } catch (err) {
-    console.error(err);
+    console.error('getLatestReviews Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
