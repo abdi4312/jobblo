@@ -5,35 +5,41 @@ const User = require('../models/User');
 const Order = require('../models/Order');
 const Notification = require('../models/Notification');
 
+/**
+ * Legacy admin controller — kept for backward compatibility with existing routes.
+ * New features use backend/controllers/admin/ modular controllers.
+ */
+
 // Authentication handled by middleware - req.user and req.userId available
 exports.getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = Math.min(100, parseInt(req.query.limit) || 10);
     const skip = (page - 1) * limit;
 
-    // --- Filter Logic ---
-    let query = {};
+    let query = { isDeleted: { $ne: true } };
     if (req.query.search) {
+      const escaped = req.query.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query.$or = [
-        { name: { $regex: req.query.search, $options: 'i' } },
-        { email: { $regex: req.query.search, $options: 'i' } },
+        { name: { $regex: escaped, $options: 'i' } },
+        { email: { $regex: escaped, $options: 'i' } },
       ];
     }
     if (req.query.role) {
-      query.role = req.query.role;
+      const validRoles = ['user', 'provider', 'company', 'superAdmin'];
+      if (validRoles.includes(req.query.role)) {
+        query.role = req.query.role;
+      }
     }
 
-    // --- Current Month Logic ---
     const startOfMonth = new Date();
-    startOfMonth.setDate(1); // Mahine ki 1st date
-    startOfMonth.setHours(0, 0, 0, 0); // Time reset taaki exact start se count ho
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
 
-    // Parallel Queries for better performance
     const [totalUsers, activeThisMonth, users] = await Promise.all([
-      User.countDocuments(query), // Filtered total users
-      User.countDocuments({ createdAt: { $gte: startOfMonth } }), // Is mahine ke new users
-      User.find(query).select('-password').skip(skip).limit(limit).sort({ createdAt: -1 }),
+      User.countDocuments(query),
+      User.countDocuments({ isDeleted: { $ne: true }, createdAt: { $gte: startOfMonth } }),
+      User.find(query).select('-password -passwordResetToken -passwordResetExpires').skip(skip).limit(limit).sort({ createdAt: -1 }),
     ]);
 
     res.json({
@@ -41,22 +47,27 @@ exports.getAllUsers = async (req, res) => {
       totalPages: Math.ceil(totalUsers / limit),
       currentPage: page,
       totalUsers,
-      activeThisMonth, // Yeh naya field frontend ke liye
+      activeThisMonth,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    console.error('[Admin] getAllUsers error');
+    res.status(500).json({ error: 'Serverfeil.' });
   }
 };
 
 exports.createUser = async (req, res) => {
   try {
     const { name, email, phone, password, role } = req.body;
-    const hashed = await bcrypt.hash(password, 10);
-    // Check if user already exists
+
+    const ASSIGNABLE_ROLES = ['user', 'provider', 'company'];
+    if (role && !ASSIGNABLE_ROLES.includes(role)) {
+      return res.status(400).json({ message: `Ugyldig rolle. Tillatte roller: ${ASSIGNABLE_ROLES.join(', ')}.` });
+    }
+
+    const hashed = await bcrypt.hash(password, 12);
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'Email already registered' });
+      return res.status(400).json({ message: 'E-postadressen er allerede registrert.' });
     }
 
     const newUser = new User({
@@ -68,21 +79,46 @@ exports.createUser = async (req, res) => {
     });
 
     await newUser.save();
-    res.status(201).json({ message: 'User created successfully', user: newUser });
+    const safeUser = newUser.toObject();
+    delete safeUser.password;
+    res.status(201).json({ message: 'Bruker opprettet.', user: safeUser });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to create user', error });
+    console.error('[Admin] createUser error');
+    res.status(500).json({ message: 'Kunne ikke opprette bruker.' });
   }
 };
 
 exports.getAllOrders = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(100, parseInt(req.query.limit) || 20);
+    const skip = (page - 1) * limit;
+
+    const total = await Order.countDocuments();
     const orders = await Order.find()
       .populate('customerId', 'name email')
       .populate('providerId', 'name email')
-      .populate('serviceId', 'title');
-    res.json(orders);
+      .populate('serviceId', 'title')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    res.json({
+      success: true,
+      data: orders,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPreviousPage: page > 1,
+      },
+    });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    console.error('[Admin] getAllOrders error');
+    res.status(500).json({ error: 'Serverfeil.' });
   }
 };
 
@@ -204,24 +240,66 @@ exports.DeleteHero = async (req, res) => {
 exports.changeUserRole = async (req, res) => {
   try {
     const { role } = req.body;
-    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select(
-      '-password'
-    );
+    const ASSIGNABLE_ROLES = ['user', 'provider', 'company'];
+    if (!role || !ASSIGNABLE_ROLES.includes(role)) {
+      return res.status(400).json({ error: `Ugyldig rolle. Tillatte roller: ${ASSIGNABLE_ROLES.join(', ')}.` });
+    }
 
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'Ugyldig bruker-ID.' });
+    }
+
+    // Prevent self-demotion
+    if (req.params.id === req.user._id.toString()) {
+      return res.status(403).json({ error: 'Du kan ikke endre din egen rolle.' });
+    }
+
+    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true, runValidators: true }).select('-password -passwordResetToken -passwordResetExpires');
+    if (!user) return res.status(404).json({ error: 'Bruker ikke funnet.' });
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    console.error('[Admin] changeUserRole error');
+    res.status(500).json({ error: 'Serverfeil.' });
   }
 };
 
 exports.deleteUser = async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ message: 'User deleted successfully' });
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'Ugyldig bruker-ID.' });
+    }
+
+    // Cannot delete self
+    if (req.params.id === req.user._id.toString()) {
+      return res.status(403).json({ error: 'Du kan ikke slette din egen konto.' });
+    }
+
+    const targetUser = await User.findById(req.params.id).select('role isDeleted');
+    if (!targetUser || targetUser.isDeleted) {
+      return res.status(404).json({ error: 'Bruker ikke funnet.' });
+    }
+
+    // Cannot delete the last superAdmin
+    if (targetUser.role === 'superAdmin') {
+      const count = await User.countDocuments({ role: 'superAdmin', isDeleted: { $ne: true } });
+      if (count <= 1) {
+        return res.status(403).json({ error: 'Kan ikke slette den siste superadmin.' });
+      }
+    }
+
+    // Soft delete — preserves financial and order history
+    await User.findByIdAndUpdate(req.params.id, {
+      isDeleted: true,
+      deletedAt: new Date(),
+      accountStatus: 'inactive',
+    });
+
+    res.json({ message: 'Bruker deaktivert og arkivert.' });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    console.error('[Admin] deleteUser error');
+    res.status(500).json({ error: 'Serverfeil.' });
   }
 };
 

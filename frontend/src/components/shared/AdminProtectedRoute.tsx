@@ -1,22 +1,22 @@
 import { Navigate } from 'react-router-dom';
 import { useUserStore } from '../../stores/userStore';
 
+/**
+ * Guards all /dashboard routes.
+ * Only users with role === 'superAdmin' may access the admin panel.
+ * Frontend-only guard — backend enforces requireAdmin on every API call.
+ */
 export const AdminProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const user = useUserStore((state) => state.user);
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
 
-  // Debugging ke liye
-  console.log('Current User:', user);
-
-  // 1. Agar user login hi nahi hai, to login page par bhejo
-  if (!user) {
+  if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />;
   }
 
-  // 2. Agar user admin NAHI hai, to profile ya home par bhejo
   if (user.role !== 'superAdmin') {
     return <Navigate to="/profile" replace />;
   }
 
-  // 3. Agar user admin hai, to children (Admin Page) dikhao
   return children;
 };

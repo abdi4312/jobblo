@@ -6,9 +6,12 @@ const paymentSchema = new mongoose.Schema(
     chatId: { type: mongoose.Schema.Types.ObjectId, ref: 'Chat', index: true },
     status: {
       type: String,
-      enum: ['pending', 'completed', 'disputed', 'released'],
+      enum: ['pending', 'completed', 'disputed', 'released', 'refunded'],
       default: 'pending',
     },
+    stripePaymentIntentId: { type: String },
+    stripeSessionId: { type: String },
+    stripeEventId: { type: String },
     amount: { type: Number, required: true, min: 0 },
     paymentProviderId: { type: String },
     transactionId: { type: String },

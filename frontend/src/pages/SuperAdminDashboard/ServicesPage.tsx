@@ -1,172 +1,222 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus } from 'lucide-react';
-import { Button, Space, Tag, Typography, message } from 'antd';
-import mainLink from '../../api/mainURLs';
-import ConfirmDialog from '../../components/Ui/ConfirmDialog';
-import { AdminTable } from '../../components/Ui/AdminTable';
+import React, { useState, useCallback } from 'react';
+import { Briefcase } from 'lucide-react';
+import { useAdminServices, useUpdateServiceStatus, useDeleteAdminService } from '../../hooks/admin';
+import type { AdminServicesQuery, AdminService } from '../../api/admin';
+import {
+  AdminDataTable,
+  AdminSearchInput,
+  AdminFilterSelect,
+  AdminStatusBadge,
+  AdminConfirmDialog,
+  AdminPageHeader,
+} from '../../components/admin';
+import type { ColumnDef } from '../../components/admin/AdminDataTable';
 
-const { Title, Text } = Typography;
+const STATUS_OPTIONS = [
+  { label: 'Åpen', value: 'open' },
+  { label: 'Lukket', value: 'closed' },
+  { label: 'Pågår', value: 'in_progress' },
+  { label: 'Fullført', value: 'completed' },
+  { label: 'Venter', value: 'pending' },
+  { label: 'Avbrutt', value: 'cancelled' },
+  { label: 'Utløpt', value: 'expired' },
+  { label: 'Utkast', value: 'draft' },
+];
 
-interface Service {
-  _id: string;
-  title: string;
-  description?: string;
-  price: { value?: number; unit?: string } | number;
-  duration: { value?: string | number; unit?: string } | string;
-  images?: string[];
-  image?: string;
-  createdAt: string;
-}
+export default function ServicesPage() {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<AdminService | null>(null);
+  const [statusTarget, setStatusTarget] = useState<{ service: AdminService; newStatus: string } | null>(null);
 
-const ServicesPage: React.FC = () => {
-  const [services, setServices] = useState<Service[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [limit] = useState(6);
-  const [loading, setLoading] = useState(true);
-  const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
+  const handleSearchChange = useCallback((val: string) => {
+    setSearch(val);
+    clearTimeout((handleSearchChange as any)._t);
+    (handleSearchChange as any)._t = setTimeout(() => {
+      setDebouncedSearch(val);
+      setPage(1);
+    }, 400);
+  }, []);
 
-  const fetchServices = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await mainLink.get(`/api/admin/services?page=${currentPage}&limit=${limit}`);
-      setServices(response.data.services || []);
-      setTotalPages(response.data.totalPages || 1);
-    } catch (error) {
-      console.error('Error fetching services:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, limit]);
-
-  useEffect(() => {
-    fetchServices();
-  }, [fetchServices]);
-
-  const confirmDelete = async () => {
-    if (!serviceToDelete) return;
-
-    try {
-      await mainLink.delete(`/api/admin/services/${serviceToDelete}`);
-      message.success('Service has been removed.');
-      fetchServices();
-    } catch {
-      message.error('Failed to delete service');
-    } finally {
-      setServiceToDelete(null);
-    }
+  const query: AdminServicesQuery = {
+    page,
+    limit: 15,
+    search: debouncedSearch,
+    ...(statusFilter && { status: statusFilter }),
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
   };
 
-  const displayPrice = (price: any) => {
-    if (typeof price === 'object') {
-      return `${price.value || 0}${price.unit || 'kr'}`;
-    }
-    return `${price || 0} kr`;
-  };
+  const { data, isLoading, isError, refetch } = useAdminServices(query);
+  const statusMutation = useUpdateServiceStatus();
+  const deleteMutation = useDeleteAdminService();
 
-  const displayDuration = (duration: any) => {
-    if (typeof duration === 'object') {
-      return `${duration.value || 'N/A'} ${duration.unit || ''}`;
-    }
-    return duration || 'Fixed';
-  };
-
-  const columns = [
+  const columns: ColumnDef<AdminService>[] = [
     {
-      title: 'Image',
       key: 'image',
-      render: (_: any, record: Service) => {
-        const imageUrl = record.image || (record.images && record.images[0]);
-        return imageUrl ? (
-          <img src={imageUrl} alt={record.title} className="w-16 h-16 object-cover rounded" />
+      header: 'Bilde',
+      render: (s) => {
+        const img = s.images?.[0];
+        return img ? (
+          <img src={img} alt={s.title} className="w-12 h-12 object-cover rounded-lg" />
         ) : (
-          <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center">
-            <Text type="secondary" className="text-xs">
-              No image
-            </Text>
+          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+            <Briefcase size={16} className="text-gray-300" />
           </div>
         );
       },
+      className: 'w-16',
     },
     {
-      title: 'Title',
-      dataIndex: 'title',
       key: 'title',
-      render: (text: string) => <Text strong>{text}</Text>,
+      header: 'Tittel',
+      render: (s) => (
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-gray-800 truncate max-w-[200px]">{s.title}</p>
+          <p className="text-xs text-gray-400 truncate max-w-[200px]">
+            {s.categories.slice(0, 2).join(', ')}
+          </p>
+        </div>
+      ),
     },
     {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-      render: (desc: string) => desc || 'No description',
-      ellipsis: true,
+      key: 'provider',
+      header: 'Tilbyder',
+      render: (s) => (
+        <div>
+          <p className="text-sm text-gray-700">{s.userId?.name ?? '–'}</p>
+          <p className="text-xs text-gray-400">{s.userId?.email ?? ''}</p>
+        </div>
+      ),
     },
     {
-      title: 'Price',
-      dataIndex: 'price',
       key: 'price',
-      render: (price: any) => <Tag color="blue">{displayPrice(price)}</Tag>,
+      header: 'Pris',
+      render: (s) => (
+        <span className="font-semibold text-gray-800">
+          {s.price.toLocaleString('nb-NO')} NOK
+        </span>
+      ),
     },
     {
-      title: 'Duration',
-      dataIndex: 'duration',
-      key: 'duration',
-      render: (duration: any) => <Tag color="green">{displayDuration(duration)}</Tag>,
+      key: 'status',
+      header: 'Status',
+      render: (s) => <AdminStatusBadge status={s.status} />,
     },
     {
-      title: 'Created At',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date: string) => new Date(date).toLocaleDateString(),
+      key: 'views',
+      header: 'Visninger',
+      render: (s) => <span className="text-sm text-gray-600">{s.views}</span>,
     },
     {
-      title: 'Action',
-      key: 'action',
-      render: (_: any, record: Service) => (
-        <Button
-          type="primary"
-          danger
-          onClick={() => setServiceToDelete(record._id)}
-          className="flex items-center"
-        >
-          Delete
-        </Button>
+      key: 'date',
+      header: 'Opprettet',
+      render: (s) =>
+        new Date(s.createdAt).toLocaleDateString('nb-NO', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+    },
+    {
+      key: 'actions',
+      header: 'Handlinger',
+      className: 'whitespace-nowrap',
+      render: (s) => (
+        <div className="flex items-center gap-1.5">
+          {/* Quick status toggle open/closed */}
+          <button
+            onClick={() =>
+              setStatusTarget({
+                service: s,
+                newStatus: s.status === 'open' ? 'closed' : 'open',
+              })
+            }
+            className="px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            aria-label={`${s.status === 'open' ? 'Lukk' : 'Åpne'} ${s.title}`}
+          >
+            {s.status === 'open' ? 'Lukk' : 'Åpne'}
+          </button>
+          <button
+            onClick={() => setDeleteTarget(s)}
+            className="px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+            aria-label={`Slett ${s.title}`}
+          >
+            Slett
+          </button>
+        </div>
       ),
     },
   ];
 
   return (
-    <div className="p-4">
-      <Title level={2}>Services</Title>
-
-      <AdminTable
-        title="Services Management"
-        columns={columns}
-        dataSource={services}
-        rowKey="_id"
-        loading={loading}
-        pagination={{
-          current: currentPage,
-          pageSize: limit,
-          total: totalPages * limit,
-          onChange: (page) => setCurrentPage(page),
-        }}
-        showAddButton={true}
-        addButtonText="Add New"
+    <div className="space-y-6">
+      <AdminPageHeader
+        title="Tjenester"
+        description="Alle tjenester publisert på plattformen"
       />
 
-      <ConfirmDialog
-        title="Delete Service?"
-        description="Are you sure you want to remove this service?"
-        confirmText="Yes, delete it!"
-        cancelText="Cancel"
+      <AdminDataTable
+        columns={columns}
+        data={data?.services ?? []}
+        keyExtractor={(s) => s._id}
+        loading={isLoading}
+        error={isError}
+        onRetry={refetch}
+        emptyTitle="Ingen tjenester"
+        emptyDescription="Ingen tjenester matcher søket."
+        pagination={data?.pagination}
+        onPageChange={setPage}
+        toolbar={
+          <div className="flex flex-wrap gap-3 w-full">
+            <AdminSearchInput
+              value={search}
+              onChange={handleSearchChange}
+              placeholder="Søk på tittel eller beskrivelse..."
+              className="flex-1 min-w-[200px]"
+            />
+            <AdminFilterSelect
+              value={statusFilter}
+              onChange={(v) => { setStatusFilter(v); setPage(1); }}
+              options={STATUS_OPTIONS}
+              placeholder="Alle statuser"
+            />
+          </div>
+        }
+      />
+
+      {/* Status change confirm */}
+      <AdminConfirmDialog
+        title="Endre tjenestestatus?"
+        description={`Sett "${statusTarget?.service.title}" til "${statusTarget?.newStatus}"?`}
+        confirmText="Ja, oppdater"
+        cancelText="Avbryt"
+        isOpen={!!statusTarget}
+        onOpenChange={(open) => !open && setStatusTarget(null)}
+        onConfirm={async () => {
+          if (!statusTarget) return;
+          await statusMutation.mutateAsync({ id: statusTarget.service._id, status: statusTarget.newStatus });
+          setStatusTarget(null);
+        }}
+      />
+
+      {/* Delete confirm */}
+      <AdminConfirmDialog
+        title="Slett tjeneste?"
+        description={`"${deleteTarget?.title}" vil bli permanent slettet. Bilder fjernes fra Cloudinary.`}
+        confirmText="Ja, slett"
+        cancelText="Avbryt"
         variant="destructive"
-        isOpen={!!serviceToDelete}
-        onOpenChange={(open) => !open && setServiceToDelete(null)}
-        onConfirm={confirmDelete}
+        isOpen={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          await deleteMutation.mutateAsync(deleteTarget._id);
+          setDeleteTarget(null);
+        }}
       />
     </div>
   );
-};
-
-export default ServicesPage;
+}
