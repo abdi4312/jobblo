@@ -1,7 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import type { RouteObject } from 'react-router-dom';
 import App from '../App.tsx';
-import MainLoading from '../assets/loading/main-loading.gif';
 import { ProtectedRoute } from '../components/shared/ProtectedRoute.tsx';
 import { PublicRoute } from '../components/shared/PublicRoute.tsx';
 import { AdminProtectedRoute } from '../components/shared/AdminProtectedRoute.tsx';
@@ -127,6 +126,9 @@ const TransactionsPage = lazy(() => import('../pages/SuperAdminDashboard/Transac
 const RoadmapAdminPage = lazy(() => import('../pages/SuperAdminDashboard/RoadmapAdminPage.tsx'));
 const PlansAdminPage = lazy(() => import('../pages/SuperAdminDashboard/PlansAdminPage.tsx'));
 const ActivityLogPage = lazy(() => import('../pages/SuperAdminDashboard/ActivityLogPage.tsx'));
+const SafePayAdminPage = lazy(() => import('../pages/SuperAdminDashboard/SafePayPage.tsx'));
+const SafePayDetailPage = lazy(() => import('../pages/SuperAdminDashboard/SafePayDetailPage.tsx'));
+const DisputesPage = lazy(() => import('../pages/SuperAdminDashboard/DisputesPage.tsx'));
 
 // =======================
 // Routes
@@ -419,6 +421,21 @@ export const routes: RouteObject[] = [
       {
         path: 'activity',
         element: withSuspense(ActivityLogPage),
+      },
+
+      {
+        path: 'safepay',
+        element: withSuspense(SafePayAdminPage),
+      },
+
+      {
+        path: 'safepay/:orderId',
+        element: withSuspense(SafePayDetailPage),
+      },
+
+      {
+        path: 'disputes',
+        element: withSuspense(DisputesPage),
       },
 
       {

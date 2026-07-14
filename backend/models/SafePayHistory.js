@@ -35,7 +35,7 @@ const safePayHistorySchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'in_progress', 'completed', 'refunded', 'cancelled'],
+      enum: ['pending', 'in_progress', 'completed', 'refunded', 'cancelled', 'disputed'],
       default: 'pending',
     },
     paymentDate: { type: Date },

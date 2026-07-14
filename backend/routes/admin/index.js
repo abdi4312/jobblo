@@ -11,8 +11,10 @@ const servicesAdminController = require('../../controllers/admin/servicesAdminCo
 const reviewsAdminController = require('../../controllers/admin/reviewsAdminController');
 const categoriesAdminController = require('../../controllers/admin/categoriesAdminController');
 const transactionsAdminController = require('../../controllers/admin/transactionsAdminController');
+const safePayAdminController = require('../../controllers/admin/safePayAdminController');
+const disputesAdminController = require('../../controllers/admin/disputesAdminController');
 
-// Apply auth + admin check + rate limiter to ALL routes in this router
+// Apply auth + admin check + rate limiter to ALL routes
 router.use(authenticate, requireAdmin, adminLimiter);
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
@@ -54,6 +56,25 @@ router.delete('/categories/:id', categoriesAdminController.deleteCategory);
 // ── Transactions ───────────────────────────────────────────────────────────
 router.get('/transactions', transactionsAdminController.getTransactions);
 router.get('/transactions/:id', transactionsAdminController.getTransactionById);
+
+// ── SafePay ────────────────────────────────────────────────────────────────
+router.get('/safepay', safePayAdminController.getSafePayList);
+router.get('/safepay/summary', safePayAdminController.getSafePaySummary);
+router.get('/safepay/:orderId', safePayAdminController.getSafePayDetail);
+router.get('/safepay/:orderId/timeline', safePayAdminController.getSafePayTimeline);
+router.get('/safepay/:orderId/chat', safePayAdminController.getSafePayChat);
+
+// ── Disputes ───────────────────────────────────────────────────────────────
+router.get('/disputes', disputesAdminController.getDisputes);
+router.get('/disputes/summary', disputesAdminController.getDisputesSummary);
+router.get('/disputes/:disputeId', disputesAdminController.getDisputeById);
+router.patch('/disputes/:disputeId/assign', disputesAdminController.assignDispute);
+router.patch('/disputes/:disputeId/status', disputesAdminController.updateDisputeStatus);
+router.post('/disputes/:disputeId/request-information', disputesAdminController.requestInformation);
+router.post('/disputes/:disputeId/message', disputesAdminController.addDisputeMessage);
+router.post('/disputes/:disputeId/internal-note', disputesAdminController.addInternalNote);
+router.post('/disputes/:disputeId/resolve', disputesAdminController.resolveDispute);
+router.post('/disputes/:disputeId/reopen', disputesAdminController.reopenDispute);
 
 // ── Activity Log ───────────────────────────────────────────────────────────
 router.get('/activity', activityAdminController.getActivityLog);

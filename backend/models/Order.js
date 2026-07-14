@@ -29,6 +29,7 @@ const orderSchema = new mongoose.Schema(
         'cancelled',
         'awaiting_payment',
         'paid',
+        'disputed',
       ],
       default: 'pending',
     },

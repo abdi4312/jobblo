@@ -17,6 +17,8 @@ import {
     X,
     Star,
     Tag,
+    Shield,
+    AlertTriangle,
 } from 'lucide-react';
 import { useUserStore } from '../../stores/userStore';
 import { toast } from 'sonner';
@@ -62,6 +64,8 @@ const NAV_GROUPS: NavGroup[] = [
         label: 'Økonomi',
         items: [
             { label: 'Transaksjoner', to: '/dashboard/transactions', icon: <CreditCard size={18} /> },
+            { label: 'SafePay', to: '/dashboard/safepay', icon: <Shield size={18} /> },
+            { label: 'Tvister', to: '/dashboard/disputes', icon: <AlertTriangle size={18} /> },
             { label: 'Abonnementer', to: '/dashboard/plans', icon: <ShieldCheck size={18} /> },
             { label: 'Kuponger', to: '/dashboard/voucher', icon: <Ticket size={18} /> },
         ],
