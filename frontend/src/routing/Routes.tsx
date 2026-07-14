@@ -113,8 +113,12 @@ const CompletedJobPage = lazy(() => import('../pages/CompletedJobPage.tsx'));
 // =======================
 
 const DashboardLayout = lazy(() => import('../pages/SuperAdminDashboard/DashboardLayout.tsx'));
+const DashboardOverviewPage = lazy(() => import('../pages/SuperAdminDashboard/DashboardOverviewPage.tsx'));
 const UsersPage = lazy(() => import('../pages/SuperAdminDashboard/UsersPage.tsx'));
 const ServicesPage = lazy(() => import('../pages/SuperAdminDashboard/ServicesPage.tsx'));
+const OrdersPage = lazy(() => import('../pages/SuperAdminDashboard/OrdersPage.tsx'));
+const ReviewsPage = lazy(() => import('../pages/SuperAdminDashboard/ReviewsPage.tsx'));
+const CategoriesPage = lazy(() => import('../pages/SuperAdminDashboard/CategoriesPage.tsx'));
 const VoucherPage = lazy(() => import('../pages/SuperAdminDashboard/VoucherPage.tsx'));
 const CarouselPage = lazy(() => import('../pages/SuperAdminDashboard/CarouselPage.tsx'));
 const HomeHeroPage = lazy(() => import('../pages/SuperAdminDashboard/HomeHeroPage.tsx'));
@@ -122,6 +126,7 @@ const NotificationsPage = lazy(() => import('../pages/SuperAdminDashboard/Notifi
 const TransactionsPage = lazy(() => import('../pages/SuperAdminDashboard/TransactionsPage.tsx'));
 const RoadmapAdminPage = lazy(() => import('../pages/SuperAdminDashboard/RoadmapAdminPage.tsx'));
 const PlansAdminPage = lazy(() => import('../pages/SuperAdminDashboard/PlansAdminPage.tsx'));
+const ActivityLogPage = lazy(() => import('../pages/SuperAdminDashboard/ActivityLogPage.tsx'));
 
 // =======================
 // Routes
@@ -349,7 +354,7 @@ export const routes: RouteObject[] = [
     children: [
       {
         index: true,
-        element: withSuspense(UsersPage),
+        element: withSuspense(DashboardOverviewPage),
       },
 
       {
@@ -360,6 +365,21 @@ export const routes: RouteObject[] = [
       {
         path: 'services',
         element: withSuspense(ServicesPage),
+      },
+
+      {
+        path: 'orders',
+        element: withSuspense(OrdersPage),
+      },
+
+      {
+        path: 'reviews',
+        element: withSuspense(ReviewsPage),
+      },
+
+      {
+        path: 'categories',
+        element: withSuspense(CategoriesPage),
       },
 
       {
@@ -394,6 +414,11 @@ export const routes: RouteObject[] = [
       {
         path: 'plans',
         element: withSuspense(PlansAdminPage),
+      },
+
+      {
+        path: 'activity',
+        element: withSuspense(ActivityLogPage),
       },
 
       {

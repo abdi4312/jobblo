@@ -21,6 +21,7 @@ const uploadRouter = require('./routes/upload');
 const ordersRouter = require('./routes/order');
 const notificationsRouter = require('./routes/notifications');
 const adminRouter = require('./routes/admin');
+const adminV2Router = require('./routes/admin/index');
 const reviewsRouter = require('./routes/review');
 const categoryRouter = require('./routes/category');
 const filterRouter = require('./routes/filter');
@@ -101,6 +102,9 @@ app.use('/api/home-hero', homeHeroRouter);
 app.use('/api/config', globalConfigRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/notifications', notificationsRouter);
+// New modular admin router mounted FIRST — takes priority over legacy routes
+app.use('/api/admin', adminV2Router);
+// Legacy admin router — kept for backward compat (hero, system-history)
 app.use('/api/admin', adminRouter);
 app.use('/api', reviewsRouter);
 app.use('/api/categories', categoryRouter);
@@ -111,7 +115,7 @@ app.use('/api/chats', chatRouter);
 app.use('/api/stripe', stripeRouter);
 app.use('/api/coupons', couponRouter);
 app.use('/api/transactions', transactionRoutes);
-app.use('/api/admin/transactions', transactionRoutes);
+// Note: /api/admin/transactions is handled by adminV2Router above
 app.use('/api/jobbloShop', jobbloShopRouter);
 app.use('/api/lists', listsRouter);
 app.use('/api/ai', aiRouter);

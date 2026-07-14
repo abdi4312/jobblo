@@ -160,6 +160,17 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
 
+    // Soft delete — admin action only. Never hard-delete users with financial history.
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+
     // Password Reset
     passwordResetToken: {
       type: String,
@@ -187,5 +198,11 @@ userSchema.index({
   'oauthProviders.provider': 1,
   'oauthProviders.providerId': 1,
 });
+
+// Admin query indexes
+userSchema.index({ role: 1, isDeleted: 1 });
+userSchema.index({ accountStatus: 1, isDeleted: 1 });
+userSchema.index({ createdAt: -1 });
+userSchema.index({ lastLogin: -1 });
 
 module.exports = mongoose.model('User', userSchema);

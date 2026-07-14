@@ -48,4 +48,16 @@ const otpVerifyLimiter = rateLimit({
   },
 });
 
-module.exports = { apiLimiter, authLimiter, otpSendLimiter, otpVerifyLimiter };
+// Admin API rate limiter — 200 requests per IP per 15 minutes
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'For mange forespørsler. Prøv igjen om 15 minutter.',
+  },
+});
+
+module.exports = { apiLimiter, authLimiter, otpSendLimiter, otpVerifyLimiter, adminLimiter };
