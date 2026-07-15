@@ -56,7 +56,7 @@ const chatSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['requested', 'agreed', 'paid', 'contracted', 'in_progress', 'completed', 'disputed', 'cancelled'],
+      enum: ['requested', 'agreed', 'paid', 'contracted', 'in_progress', 'completed', 'disputed', 'cancelled', 'restricted'],
       default: 'requested',
     },
     agreedPrice: {

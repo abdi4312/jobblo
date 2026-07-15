@@ -1,18 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, MoreHorizontal, ChevronLeft } from 'lucide-react';
+import { User, MoreHorizontal, ChevronLeft, Flag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { ChatReportDialog } from '../admin/chat/ChatReportDialog';
 
 interface ChatHeaderProps {
   isMobile: boolean;
   otherUser?: { avatarUrl?: string; name?: string; _id?: string };
   isOnline: boolean;
   hasService: boolean;
+  chatId?: string;
 }
 
-function ChatHeader({ isMobile, otherUser, isOnline, hasService }: ChatHeaderProps) {
+function ChatHeader({ isMobile, otherUser, isOnline, hasService, chatId }: ChatHeaderProps) {
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -116,18 +119,31 @@ function ChatHeader({ isMobile, otherUser, isOnline, hasService }: ChatHeaderPro
                 Archive this thread
               </button>
               <button
-                className="w-full text-left px-6 py-4 text-[16px] font-bold text-custom-black hover:bg-[#f9f9f7] transition-colors"
+                className="w-full text-left px-6 py-4 text-[16px] font-bold text-custom-black hover:bg-[#f9f9f7] transition-colors flex items-center gap-2"
                 onClick={() => {
                   setShowMenu(false);
-                  toast('Report feature coming soon!');
+                  if (chatId) {
+                    setShowReportDialog(true);
+                  } else {
+                    toast('Chat ikke tilgjengelig for rapportering.');
+                  }
                 }}
               >
-                Report chat
+                <Flag size={16} className="text-red-500" /> Rapporter chat
               </button>
             </div>
           )}
         </div>
       </div>
+
+      {chatId && (
+        <ChatReportDialog
+          chatId={chatId}
+          open={showReportDialog}
+          onClose={() => setShowReportDialog(false)}
+          scope="chat"
+        />
+      )}
     </div>
   );
 }

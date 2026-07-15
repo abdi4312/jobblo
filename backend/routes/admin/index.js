@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, requireAdmin } = require('../../middleware/auth');
 const { adminLimiter } = require('../../middleware/rateLimiter');
+const upload = require('../../middleware/multer');
 
 const dashboardController = require('../../controllers/admin/dashboardController');
 const usersAdminController = require('../../controllers/admin/usersAdminController');
@@ -13,8 +14,11 @@ const categoriesAdminController = require('../../controllers/admin/categoriesAdm
 const transactionsAdminController = require('../../controllers/admin/transactionsAdminController');
 const safePayAdminController = require('../../controllers/admin/safePayAdminController');
 const disputesAdminController = require('../../controllers/admin/disputesAdminController');
+const chatsAdminController = require('../../controllers/admin/chatsAdminController');
+const chatReportsAdminController = require('../../controllers/admin/chatReportsAdminController');
+const evidenceUploadController = require('../../controllers/admin/evidenceUploadController');
 
-// Apply auth + admin check + rate limiter to ALL routes
+// All routes require authentication, superAdmin role, and admin rate limiter
 router.use(authenticate, requireAdmin, adminLimiter);
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
@@ -75,6 +79,28 @@ router.post('/disputes/:disputeId/message', disputesAdminController.addDisputeMe
 router.post('/disputes/:disputeId/internal-note', disputesAdminController.addInternalNote);
 router.post('/disputes/:disputeId/resolve', disputesAdminController.resolveDispute);
 router.post('/disputes/:disputeId/reopen', disputesAdminController.reopenDispute);
+
+// ── Admin Chats ────────────────────────────────────────────────────────────
+router.get('/chats', chatsAdminController.getChats);
+router.get('/chats/:chatId', chatsAdminController.getChatById);
+router.get('/chats/:chatId/messages', chatsAdminController.getChatMessages);
+router.get('/chats/:chatId/reports', chatsAdminController.getChatReports);
+router.post('/chats/:chatId/access-log', chatsAdminController.logChatAccess);
+
+// ── Admin Chat Reports ─────────────────────────────────────────────────────
+router.get('/chat-reports', chatReportsAdminController.getReports);
+router.get('/chat-reports/summary', chatReportsAdminController.getReportsSummary);
+router.get('/chat-reports/:reportId', chatReportsAdminController.getReportById);
+router.patch('/chat-reports/:reportId/assign', chatReportsAdminController.assignReport);
+router.patch('/chat-reports/:reportId/priority', chatReportsAdminController.updatePriority);
+router.patch('/chat-reports/:reportId/status', chatReportsAdminController.updateStatus);
+router.post('/chat-reports/:reportId/internal-notes', chatReportsAdminController.addInternalNote);
+router.post('/chat-reports/:reportId/request-information', chatReportsAdminController.requestInformation);
+router.post('/chat-reports/:reportId/official-message', chatReportsAdminController.addOfficialMessage);
+router.post('/chat-reports/:reportId/resolve', chatReportsAdminController.resolveReport);
+router.post('/chat-reports/:reportId/reopen', chatReportsAdminController.reopenReport);
+router.post('/chat-reports/:reportId/create-dispute', chatReportsAdminController.createDisputeFromReport);
+router.post('/chat-reports/:reportId/evidence', upload.array('files', 5), evidenceUploadController.uploadEvidence);
 
 // ── Activity Log ───────────────────────────────────────────────────────────
 router.get('/activity', activityAdminController.getActivityLog);

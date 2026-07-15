@@ -19,6 +19,9 @@ import {
     Tag,
     Shield,
     AlertTriangle,
+    MessageSquare,
+    Flag,
+    Eye,
 } from 'lucide-react';
 import { useUserStore } from '../../stores/userStore';
 import { toast } from 'sonner';
@@ -82,6 +85,9 @@ const NAV_GROUPS: NavGroup[] = [
     {
         label: 'System',
         items: [
+            { label: 'Chat-gjennomgang', to: '/dashboard/chat-review', icon: <Eye size={18} /> },
+            { label: 'Chatter', to: '/dashboard/chats', icon: <MessageSquare size={18} /> },
+            { label: 'Chatrapporter', to: '/dashboard/chat-reports', icon: <Flag size={18} /> },
             { label: 'Aktivitetslogg', to: '/dashboard/activity', icon: <ShieldCheck size={18} /> },
         ],
     },
