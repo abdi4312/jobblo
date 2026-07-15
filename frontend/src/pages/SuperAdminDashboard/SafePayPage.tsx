@@ -13,6 +13,7 @@ import {
     AdminStatCardSkeleton,
     AdminErrorState,
 } from '../../components/admin';
+import { ChatIdCell } from '../../components/admin/chat/ChatIdCell';
 import type { ColumnDef } from '../../components/admin/AdminDataTable';
 
 const STATUS_OPTIONS = [
@@ -53,6 +54,11 @@ export default function SafePayPage() {
                     {c._id.slice(-8).toUpperCase()}
                 </Link>
             ),
+        },
+        {
+            key: 'chatId',
+            header: 'Chat ID',
+            render: (c) => <ChatIdCell chatId={c.chatId} reviewSource="safepay" />,
         },
         {
             key: 'service',

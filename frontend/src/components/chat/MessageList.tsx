@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { ChatMessage } from '../../api/chatAPI';
-import { CheckCircle2, FileText, CreditCard } from 'lucide-react';
+import { CheckCircle2, FileText, CreditCard, Flag } from 'lucide-react';
+import { ChatReportDialog } from '../admin/chat/ChatReportDialog';
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -8,6 +9,7 @@ interface MessageListProps {
   formatTime: (date: string) => string;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   onSystemMessageClick?: (msg: ChatMessage) => void;
+  chatId?: string;
 }
 
 function MessageList({
@@ -16,7 +18,10 @@ function MessageList({
   formatTime,
   messagesEndRef,
   onSystemMessageClick,
+  chatId,
 }: MessageListProps) {
+  const [reportTarget, setReportTarget] = useState<{ messageId: string } | null>(null);
+
   const uniqueMessages = Array.from(
     new Map(
       messages.map((msg) => [
@@ -86,7 +91,7 @@ function MessageList({
               return (
                 <div
                   key={msg._id || index}
-                  className={`flex gap-[7px] ${isSentByMe ? 'flex-row-reverse' : 'flex-row'}`}
+                  className={`group relative flex gap-[7px] ${isSentByMe ? 'flex-row-reverse' : 'flex-row'}`}
                 >
                   {!isSentByMe && (
                     <div className="shrink-0 mt-auto">
@@ -109,10 +114,19 @@ function MessageList({
                       {msg.text}
                     </div>
 
-                    <div
-                      className={`text-[10px] text-[#aaa] mt-[2px] ${isSentByMe ? 'text-right' : 'text-left'}`}
-                    >
-                      {formatTime(msg.createdAt)}
+                    <div className={`flex items-center gap-2 ${isSentByMe ? 'flex-row-reverse' : ''}`}>
+                      <div className="text-[10px] text-[#aaa] mt-[2px]">
+                        {formatTime(msg.createdAt)}
+                      </div>
+                      {!isSentByMe && chatId && msg._id && (
+                        <button
+                          onClick={() => setReportTarget({ messageId: msg._id! })}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-red-50"
+                          title="Rapporter melding"
+                        >
+                          <Flag size={10} className="text-red-400" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -122,6 +136,16 @@ function MessageList({
         ))
       )}
       <div ref={messagesEndRef} />
+
+      {chatId && reportTarget && (
+        <ChatReportDialog
+          chatId={chatId}
+          open={true}
+          onClose={() => setReportTarget(null)}
+          scope="message"
+          messageId={reportTarget.messageId}
+        />
+      )}
     </div>
   );
 }
