@@ -5,6 +5,14 @@ import { AdminEmptyState } from './AdminEmptyState';
 import { AdminErrorState } from './AdminErrorState';
 import { AdminPagination } from './AdminPagination';
 import type { Pagination } from '../../types/admin';
+import {
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+} from '../Ui/table';
 
 export interface ColumnDef<T> {
     key: string;
@@ -61,44 +69,43 @@ export function AdminDataTable<T>({
                 <AdminEmptyState title={emptyTitle} description={emptyDescription} />
             ) : (
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm" role="grid">
-                        <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50">
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="border-b border-gray-100 bg-gray-50 hover:bg-gray-50">
                                 {columns.map((col) => (
-                                    <th
+                                    <TableHead
                                         key={col.key}
-                                        scope="col"
                                         className={cn(
-                                            'px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap',
+                                            'text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap px-4 py-3',
                                             col.headerClassName
                                         )}
                                     >
                                         {col.header}
-                                    </th>
+                                    </TableHead>
                                 ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody className="divide-y divide-gray-50">
                             {data.map((row) => (
-                                <tr
+                                <TableRow
                                     key={keyExtractor(row)}
                                     className="hover:bg-gray-50/50 transition-colors"
                                 >
                                     {columns.map((col) => (
-                                        <td
+                                        <TableCell
                                             key={col.key}
                                             className={cn(
-                                                'px-4 py-3 text-gray-700 align-middle',
+                                                'text-gray-700 px-4 py-3',
                                                 col.className
                                             )}
                                         >
                                             {col.render(row)}
-                                        </td>
+                                        </TableCell>
                                     ))}
-                                </tr>
+                                </TableRow>
                             ))}
-                        </tbody>
-                    </table>
+                        </TableBody>
+                    </Table>
                 </div>
             )}
 

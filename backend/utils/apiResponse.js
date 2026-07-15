@@ -39,7 +39,7 @@ const sendError = (res, message = 'Internal server error.', statusCode = 500, er
  * @param {Function} fn - Async controller function
  */
 const asyncHandler = (fn) => (req, res, next) => {
-  Promise.resolve(fn(req, res, next)).catch((err) => {
+  return Promise.resolve(fn(req, res, next)).catch((err) => {
     // Log to server, never expose to client
     console.error('[Admin Controller Error]', err.message);
     return sendError(res, 'Internal server error.', 500);

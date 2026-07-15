@@ -184,6 +184,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             otherUser={otherUser ?? undefined}
             isOnline={isOtherUserOnline}
             hasService={!!activeChat?.serviceId?._id}
+            chatId={activeChat?._id}
           />
 
           {activeChat?.serviceId && (
@@ -424,6 +425,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               formatTime={formatTime}
               messagesEndRef={messagesEndRef}
               onSystemMessageClick={handleSystemMessageClick}
+              chatId={activeChat?._id}
             />
           </div>
 

@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Pagination } from '../../types/admin';
 import { cn } from '@/lib/utils';
+import { Button } from '../Ui/Button';
 
 interface AdminPaginationProps {
     pagination: Pagination;
@@ -35,14 +36,16 @@ export function AdminPagination({
             </p>
 
             <div className="flex items-center gap-1.5">
-                <button
+                <Button
+                    variant="outline"
+                    size="icon"
                     onClick={() => onPageChange(page - 1)}
                     disabled={!hasPreviousPage}
-                    className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-[#2d4a3e] focus:ring-offset-1"
+                    className="border-gray-200 text-gray-600 disabled:opacity-40"
                     aria-label="Forrige side"
                 >
                     <ChevronLeft size={16} />
-                </button>
+                </Button>
 
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum: number;
@@ -56,31 +59,34 @@ export function AdminPagination({
                         pageNum = page - 2 + i;
                     }
                     return (
-                        <button
+                        <Button
                             key={pageNum}
+                            variant={pageNum === page ? 'default' : 'outline'}
                             onClick={() => onPageChange(pageNum)}
                             className={cn(
-                                'min-w-[36px] h-9 px-3 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#2d4a3e] focus:ring-offset-1',
+                                'min-w-[36px] h-9 px-3 rounded-lg text-sm font-medium',
                                 pageNum === page
-                                    ? 'bg-[#2d4a3e] text-white'
-                                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                                    ? 'bg-[#2d4a3e] text-white hover:bg-[#233b31]'
+                                    : 'border-gray-200 text-gray-600'
                             )}
                             aria-label={`Side ${pageNum}`}
                             aria-current={pageNum === page ? 'page' : undefined}
                         >
                             {pageNum}
-                        </button>
+                        </Button>
                     );
                 })}
 
-                <button
+                <Button
+                    variant="outline"
+                    size="icon"
                     onClick={() => onPageChange(page + 1)}
                     disabled={!hasNextPage}
-                    className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-[#2d4a3e] focus:ring-offset-1"
+                    className="border-gray-200 text-gray-600 disabled:opacity-40"
                     aria-label="Neste side"
                 >
                     <ChevronRight size={16} />
-                </button>
+                </Button>
             </div>
         </div>
     );

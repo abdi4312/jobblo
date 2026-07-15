@@ -1,5 +1,6 @@
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '../Ui/Button';
 
 interface AdminErrorStateProps {
     title?: string;
@@ -28,14 +29,14 @@ export function AdminErrorState({
             <h3 className="text-sm font-semibold text-gray-700 mb-1">{title}</h3>
             <p className="text-sm text-gray-400 max-w-xs mb-4">{description}</p>
             {onRetry && (
-                <button
+                <Button
                     onClick={onRetry}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#2d4a3e] hover:bg-[#233b31] rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#2d4a3e] focus:ring-offset-2"
+                    className="flex items-center gap-2 rounded-lg bg-[#2d4a3e] hover:bg-[#233b31] text-white"
                     aria-label="Prøv igjen"
                 >
                     <RefreshCw size={15} />
                     Prøv igjen
-                </button>
+                </Button>
             )}
         </div>
     );

@@ -129,6 +129,11 @@ const ActivityLogPage = lazy(() => import('../pages/SuperAdminDashboard/Activity
 const SafePayAdminPage = lazy(() => import('../pages/SuperAdminDashboard/SafePayPage.tsx'));
 const SafePayDetailPage = lazy(() => import('../pages/SuperAdminDashboard/SafePayDetailPage.tsx'));
 const DisputesPage = lazy(() => import('../pages/SuperAdminDashboard/DisputesPage.tsx'));
+const AdminChatsPage = lazy(() => import('../pages/SuperAdminDashboard/AdminChatsPage.tsx'));
+const AdminChatDetailsPage = lazy(() => import('../pages/SuperAdminDashboard/AdminChatDetailsPage.tsx'));
+const ChatReportsPage = lazy(() => import('../pages/SuperAdminDashboard/ChatReportsPage.tsx'));
+const ChatReportDetailPage = lazy(() => import('../pages/SuperAdminDashboard/ChatReportDetailPage.tsx'));
+const ChatReviewPage = lazy(() => import('../pages/SuperAdminDashboard/ChatReviewPage.tsx'));
 
 // =======================
 // Routes
@@ -431,6 +436,31 @@ export const routes: RouteObject[] = [
       {
         path: 'safepay/:orderId',
         element: withSuspense(SafePayDetailPage),
+      },
+
+      {
+        path: 'chats',
+        element: withSuspense(AdminChatsPage),
+      },
+
+      {
+        path: 'chats/:chatId',
+        element: withSuspense(AdminChatDetailsPage),
+      },
+
+      {
+        path: 'chat-reports',
+        element: withSuspense(ChatReportsPage),
+      },
+
+      {
+        path: 'chat-reports/:reportId',
+        element: withSuspense(ChatReportDetailPage),
+      },
+
+      {
+        path: 'chat-review',
+        element: withSuspense(ChatReviewPage),
       },
 
       {
