@@ -168,7 +168,7 @@ function makeReq(overrides = {}) {
     params: {},
     body: {},
     query: {},
-    userId: new mongoose.Types.ObjectId(),
+    userId: String(new mongoose.Types.ObjectId()),
     user: { _id: new mongoose.Types.ObjectId(), name: 'Admin Test', role: 'superAdmin' },
     ip: '127.0.0.1',
     headers: { 'user-agent': 'test-agent' },
@@ -214,7 +214,7 @@ describe('Chat Report System', () => {
     test('returns 400 for invalid Chat ID', async () => {
       req.params.chatId = 'invalid';
       req.body = { scope: 'chat', reportType: 'spam', title: 'Test', description: 'Test description' };
-      await chatReportController.submitReport(req, res);
+      await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
     });
@@ -224,7 +224,7 @@ describe('Chat Report System', () => {
       req.params.chatId = chatId;
       req.body = { scope: 'chat', reportType: 'spam', title: 'Test', description: 'Test description' };
       Chat.findById.mockReturnValue(mockQuery(null));
-      await chatReportController.submitReport(req, res);
+      await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
     });
 
@@ -235,7 +235,7 @@ describe('Chat Report System', () => {
       Chat.findById.mockReturnValue(mockQuery({
         _id: chatId, clientId: new mongoose.Types.ObjectId(), providerId: new mongoose.Types.ObjectId(), messages: [],
       }));
-      await chatReportController.submitReport(req, res);
+      await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(403);
     });
 
@@ -244,7 +244,7 @@ describe('Chat Report System', () => {
       req.params.chatId = chatId;
       req.body = { scope: 'chat', reportType: 'spam', title: '', description: 'Test' };
       Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId: req.userId, providerId: new mongoose.Types.ObjectId(), messages: [] }));
-      await chatReportController.submitReport(req, res);
+      await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
@@ -253,7 +253,7 @@ describe('Chat Report System', () => {
       req.params.chatId = chatId;
       req.body = { scope: 'chat', reportType: 'spam', title: 'Test', description: '' };
       Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId: req.userId, providerId: new mongoose.Types.ObjectId(), messages: [] }));
-      await chatReportController.submitReport(req, res);
+      await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
@@ -267,7 +267,7 @@ describe('Chat Report System', () => {
       ChatReport.findOne.mockReturnValue(mockQuery(null));
       ChatReport.create.mockResolvedValue({ _id: new mongoose.Types.ObjectId(), chatId, scope: 'chat', reportType: 'scam_or_fraud', reportedBy: clientId, reportedUser: providerId });
       User.find.mockReturnValue(mockQuery([]));
-      await chatReportController.submitReport(req, res);
+      await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
     });
@@ -283,7 +283,7 @@ describe('Chat Report System', () => {
       ChatReport.findOne.mockReturnValue(mockQuery(null));
       ChatReport.create.mockResolvedValue({ _id: new mongoose.Types.ObjectId(), chatId, scope: 'message', messageId: String(messageId) });
       User.find.mockReturnValue(mockQuery([]));
-      await chatReportController.submitReport(req, res);
+      await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
@@ -292,7 +292,7 @@ describe('Chat Report System', () => {
       req.params.chatId = chatId;
       req.body = { scope: 'message', messageId: 'nonexistent', reportType: 'harassment', title: 'Test', description: 'Test' };
       Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId: req.userId, providerId: new mongoose.Types.ObjectId(), messages: [{ _id: new mongoose.Types.ObjectId() }] }));
-      await chatReportController.submitReport(req, res);
+      await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
@@ -302,7 +302,7 @@ describe('Chat Report System', () => {
       req.body = { scope: 'chat', reportType: 'spam', title: 'Spam', description: 'Duplicate' };
       Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId: req.userId, providerId: new mongoose.Types.ObjectId(), orderId: null, serviceId: null, messages: [] }));
       ChatReport.findOne.mockReturnValue(mockQuery({ _id: new mongoose.Types.ObjectId() }));
-      await chatReportController.submitReport(req, res);
+      await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(429);
     });
 
@@ -318,7 +318,7 @@ describe('Chat Report System', () => {
       ChatReport.findOne.mockReturnValue(mockQuery(null));
       ChatReport.create.mockResolvedValue({ _id: new mongoose.Types.ObjectId(), chatId, orderId, serviceId, safePayOrderId: orderId });
       User.find.mockReturnValue(mockQuery([]));
-      await chatReportController.submitReport(req, res);
+      await chatReportController.submitChatReport(req, res);
       expect(ChatReport.create).toHaveBeenCalledWith(expect.objectContaining({ chatId, orderId, serviceId }));
     });
   });
@@ -1451,7 +1451,7 @@ describe('Chat Report System', () => {
       Dispute.findOne.mockReturnValue(mockQuery(null));
       await safePayAdmin.getSafePayDetail(req, res);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        data: expect.objectContaining({ chat: expect.objectContaining({ _id: chatId }) }),
+        data: expect.objectContaining({ chatMeta: expect.objectContaining({ _id: chatId }) }),
       }));
     });
   });

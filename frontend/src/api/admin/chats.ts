@@ -283,13 +283,51 @@ export const sendChatReportOfficialMessage = async (
 
 export const resolveChatReport = async (
     reportId: string,
-    payload: { outcome: string; reason: string }
+    outcomeOrPayload: string | { outcome: string; reason: string },
+    reason?: string
 ): Promise<AdminChatReportItem> => {
+    const payload = typeof outcomeOrPayload === 'string'
+        ? { outcome: outcomeOrPayload, reason: reason ?? '' }
+        : outcomeOrPayload;
     const res = await mainLink.post<ApiResponse<{ report: AdminChatReportItem }>>(
         `/api/admin/chat-reports/${reportId}/resolve`,
         payload
     );
     return res.data.data.report;
+};
+
+// ── Additional chat functions ─────────────────────────────────────────────────
+export const fetchAdminChatMessages = async (
+    chatId: string,
+    accessReason: string
+): Promise<{ messages: AdminChatMessage[]; accessLogged: boolean; reason: string }> => {
+    const params = toParams({ accessReason });
+    const res = await mainLink.get<ApiResponse<{ messages: AdminChatMessage[]; accessLogged: boolean; reason: string }>>(
+        `/api/admin/chats/${chatId}/messages?${params}`
+    );
+    return res.data.data;
+};
+
+export const fetchAdminChatReportsForChat = async (
+    chatId: string
+): Promise<AdminChatReport[]> => {
+    const res = await mainLink.get<ApiResponse<{ reports: AdminChatReport[] }>>(
+        `/api/admin/chats/${chatId}/reports`
+    );
+    return res.data.data.reports;
+};
+
+export const fetchChatReportsSummary = async (): Promise<AdminChatReportsSummary> => {
+    const res = await mainLink.get<ApiResponse<AdminChatReportsSummary>>('/api/admin/chat-reports/summary');
+    return res.data.data;
+};
+
+export const createDisputeFromReport = async (reportId: string): Promise<{ disputeId: string }> => {
+    const res = await mainLink.post<ApiResponse<{ disputeId: string }>>(
+        `/api/admin/chat-reports/${reportId}/create-dispute`,
+        {}
+    );
+    return res.data.data;
 };
 
 export const dismissChatReport = async (
