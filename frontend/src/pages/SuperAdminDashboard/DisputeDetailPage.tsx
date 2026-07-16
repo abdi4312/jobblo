@@ -168,8 +168,8 @@ export default function DisputeDetailPage() {
                             <div className="relative pl-6">
                                 <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-100" />
                                 <div className="space-y-3">
-                                    {[...d.timeline].reverse().map((t) => (
-                                        <div key={t._id} className="relative">
+                                    {[...d.timeline].reverse().map((t, idx) => (
+                                        <div key={idx} className="relative">
                                             <div className="absolute -left-4 w-2 h-2 rounded-full bg-gray-300 border-2 border-white mt-1" />
                                             <p className="text-xs font-medium text-gray-700">{t.action.replace(/_/g, ' ')}</p>
                                             {t.note && <p className="text-xs text-gray-500 mt-0.5">{t.note}</p>}
