@@ -1,196 +1,210 @@
 const mongoose = require('mongoose');
+const rateLimit = require('express-rate-limit');
 const Chat = require('../models/ChatMessage');
-const ChatReport = require('../models/ChatReport');
+const { ChatReport, VALID_REPORT_TYPES } = require('../models/ChatReport');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
-const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
+const { parseObjectId } = require('../utils/pagination');
 
-const VALID_REPORT_TYPES = ChatReport.schema.path('reportType').enumValues;
-const ALLOWED_EVIDENCE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
-const MAX_EVIDENCE_SIZE = 5 * 1024 * 1024; // 5MB
+// Per-user report submission rate limiter — max 5 per hour
+const reportSubmitLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message:
+      'You have already submitted a report for this chat recently. Please wait before reporting again.',
+  },
+});
 
-/**
- * POST /api/chats/:chatId/reports
- * Authenticated user submits a report for a chat or specific message.
- */
-exports.submitReport = async (req, res) => {
+// ── POST /api/chats/:chatId/reports ──────────────────────────────────────────
+const submitChatReport = async (req, res) => {
   try {
-    const { chatId } = req.params;
-    const userId = req.userId;
-
-    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+    const chatId = parseObjectId(req.params.chatId);
+    if (!chatId) {
       return res.status(400).json({ success: false, message: 'Ugyldig Chat ID.' });
     }
 
-    const { scope, messageId, reportType, title, description, evidence } = req.body;
+    const { scope, messageId, reportType, title, description } = req.body;
 
+    // Validate scope
     if (!scope || !['chat', 'message'].includes(scope)) {
-      return res.status(400).json({ success: false, message: '"scope" må være "chat" eller "message".' });
-    }
-    if (!reportType || !VALID_REPORT_TYPES.includes(reportType)) {
-      return res.status(400).json({ success: false, message: 'Ugyldig rapporttype.' });
-    }
-    if (!title?.trim() || title.trim().length > 200) {
-      return res.status(400).json({ success: false, message: 'Tittel er påkrevd (maks 200 tegn).' });
-    }
-    if (!description?.trim() || description.trim().length > 2000) {
-      return res.status(400).json({ success: false, message: 'Beskrivelse er påkrevd (maks 2000 tegn).' });
+      return res.status(400).json({ success: false, message: 'Ugyldig scope. Tillatte: chat, message.' });
     }
 
-    // Validate evidence if provided
-    let validatedEvidence = [];
-    if (evidence && Array.isArray(evidence)) {
-      for (const item of evidence) {
-        if (!item.fileUrl || typeof item.fileUrl !== 'string') {
-          return res.status(400).json({ success: false, message: 'Hvert bevis må ha en fileUrl.' });
-        }
-        validatedEvidence.push({
-          fileUrl: item.fileUrl,
-          fileType: item.fileType || 'unknown',
-          description: item.description || '',
+    // Validate reportType
+    if (!reportType || !VALID_REPORT_TYPES.includes(reportType)) {
+      return res.status(400).json({
+        success: false,
+        message: `Ugyldig rapporttype. Tillatte: ${VALID_REPORT_TYPES.join(', ')}.`,
+      });
+    }
+
+    // Validate title
+    if (!title || title.trim().length < 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tittel er påkrevd (min. 5 tegn).',
+      });
+    }
+
+    // Validate description
+    if (!description || description.trim().length < 20) {
+      return res.status(400).json({
+        success: false,
+        message: 'Beskrivelse er påkrevd (min. 20 tegn).',
+      });
+    }
+    if (description.trim().length > 3000) {
+      return res.status(400).json({ success: false, message: 'Beskrivelse er for lang (maks 3000 tegn).' });
+    }
+
+    // Fetch chat
+    const chat = await Chat.findById(chatId).lean();
+    if (!chat) {
+      return res.status(404).json({ success: false, message: 'Chat ikke funnet.' });
+    }
+
+    const reporterId = req.user._id.toString();
+    const clientId = chat.clientId?.toString();
+    const providerId = chat.providerId?.toString();
+
+    // Verify reporter is a participant
+    if (reporterId !== clientId && reporterId !== providerId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Du er ikke en deltaker i denne chatten.',
+      });
+    }
+
+    // Determine reported user (the other participant)
+    const reportedUserId = reporterId === clientId ? chat.providerId : chat.clientId;
+    if (!reportedUserId) {
+      return res.status(400).json({ success: false, message: 'Motparten i chatten ble ikke funnet.' });
+    }
+
+    // Validate messageId when scope is message
+    if (scope === 'message') {
+      if (!messageId) {
+        return res.status(400).json({
+          success: false,
+          message: 'messageId er påkrevd når scope er "message".',
+        });
+      }
+      const msgExists = chat.messages?.some((m) => String(m._id) === String(messageId));
+      if (!msgExists) {
+        return res.status(404).json({ success: false, message: 'Melding ikke funnet i denne chatten.' });
+      }
+    }
+
+    // Duplicate report check — same user, same chat, within last 24 hours
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const duplicate = await ChatReport.findOne({
+      chatId,
+      reportedBy: req.user._id,
+      createdAt: { $gte: oneDayAgo },
+    }).lean();
+
+    if (duplicate) {
+      return res.status(429).json({
+        success: false,
+        message:
+          'You have already submitted a report for this chat recently. Please wait before reporting again.',
+      });
+    }
+
+    // Process evidence files (uploaded via multer, available on req.files)
+    const evidence = [];
+    if (req.files && Array.isArray(req.files)) {
+      for (const file of req.files.slice(0, 5)) {
+        evidence.push({
+          fileUrl: file.path || file.location || file.filename,
+          fileType: file.mimetype,
+          description: '',
           uploadedAt: new Date(),
         });
       }
     }
 
-    const chat = await Chat.findById(chatId);
-    if (!chat) return res.status(404).json({ success: false, message: 'Chat ikke funnet.' });
-
-    const isParticipant =
-      String(chat.clientId) === String(userId) ||
-      String(chat.providerId) === String(userId);
-    if (!isParticipant) {
-      return res.status(403).json({ success: false, message: 'Ikke autorisert.' });
-    }
-
-    // The reported user is the other participant
-    const reportedUserId =
-      String(chat.clientId) === String(userId) ? chat.providerId : chat.clientId;
-
-    // Validate message ID when scope = 'message'
-    let validatedMessageId = null;
-    if (scope === 'message') {
-      if (!messageId) {
-        return res.status(400).json({ success: false, message: 'messageId er påkrevd for meldingsrapporter.' });
-      }
-      const msgExists = chat.messages.some((m) => String(m._id) === String(messageId));
-      if (!msgExists) {
-        return res.status(400).json({ success: false, message: 'Meldingen ble ikke funnet i denne chatten.' });
-      }
-      validatedMessageId = messageId;
-    }
-
-    // Duplicate prevention: same user, same chat, same type within 24 hours
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const duplicate = await ChatReport.findOne({
-      chatId,
-      reportedBy: userId,
-      reportType,
-      createdAt: { $gte: oneDayAgo },
-    });
-    if (duplicate) {
-      return res.status(429).json({
-        success: false,
-        message: 'Du har allerede sendt en lignende rapport for denne chatten nylig.',
-      });
-    }
-
+    // Create the report
     const report = await ChatReport.create({
       chatId,
-      orderId: chat.orderId ?? null,
-      serviceId: chat.serviceId ?? null,
-      safePayOrderId: chat.orderId ?? null,
-      messageId: validatedMessageId,
+      orderId: chat.orderId || null,
+      serviceId: chat.serviceId || null,
+      safePayOrderId: chat.orderId || null, // same order is the safePayOrder in this model
+      messageId: scope === 'message' ? String(messageId) : undefined,
       scope,
-      reportedBy: userId,
+      reportedBy: req.user._id,
       reportedUser: reportedUserId,
       reportType,
       title: title.trim(),
       description: description.trim(),
-      evidence: validatedEvidence,
-      timeline: [{ action: 'report_opened', actorId: userId, description: `Rapport åpnet: ${reportType}` }],
+      evidence,
+      timeline: [
+        {
+          action: 'report_submitted',
+          actorId: req.user._id,
+          description: `Rapport innlevert av bruker. Type: ${reportType}`,
+          createdAt: new Date(),
+        },
+      ],
     });
 
-    // Notify Super Admins
-    const admins = await User.find({ role: 'superAdmin', isDeleted: { $ne: true } }, { _id: 1 }).lean();
-    await Promise.all(
-      admins.map((admin) =>
-        Notification.create({
-          userId: admin._id,
-          type: 'system',
-          content: `Ny chatrapport: ${title.trim()} (${reportType})`,
-          senderId: userId,
-        }).catch(() => {})
-      )
-    );
+    // Notify Super Admin(s)
+    try {
+      const admins = await User.find({ role: 'superAdmin', isDeleted: false }).select('_id').lean();
+      if (admins.length > 0) {
+        await Notification.insertMany(
+          admins.map((a) => ({
+            userId: a._id,
+            type: 'alert',
+            content: `Ny chatrapport mottatt: "${title.trim()}" (${reportType})`,
+            orderId: chat.orderId || null,
+          }))
+        );
+      }
+    } catch {
+      // notification failure is non-critical
+    }
 
     return res.status(201).json({
       success: true,
-      message: 'Rapport sendt inn. Admin vil gjennomgå den snart.',
-      reportId: report._id,
+      message: 'Rapport innlevert.',
+      data: {
+        reportId: report._id,
+        status: report.status,
+        createdAt: report.createdAt,
+      },
     });
   } catch (err) {
-    console.error('[ChatReport] submitReport error:', err.message);
-    return res.status(500).json({ success: false, message: 'Serverfeil.' });
+    console.error('[chatReportController] submitChatReport:', err.message);
+    return res.status(500).json({ success: false, message: 'Internal server error.' });
   }
 };
 
-/**
- * POST /api/chats/:chatId/reports/evidence
- * Upload evidence files for a report (user-facing).
- */
-exports.uploadEvidence = async (req, res) => {
+// ── GET /api/chats/:chatId/reports/me ────────────────────────────────────────
+const getMyChatReports = async (req, res) => {
   try {
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ success: false, message: 'Ingen filer lastet opp.' });
-    }
-
-    const urls = [];
-    for (const file of req.files) {
-      if (!ALLOWED_EVIDENCE_MIMES.includes(file.mimetype)) {
-        return res.status(400).json({ success: false, message: `Ugyldig filtype: ${file.mimetype}.` });
-      }
-      if (file.size > MAX_EVIDENCE_SIZE) {
-        return res.status(400).json({ success: false, message: `Fil ${file.originalname} er for stor (maks 5MB).` });
-      }
-      const fileUrl = await uploadToCloudinary(file, 'report-evidence');
-      urls.push({ fileUrl, fileType: file.mimetype, originalName: file.originalname });
-    }
-
-    return res.status(200).json({ success: true, files: urls });
-  } catch (err) {
-    console.error('[ChatReport] uploadEvidence error:', err.message);
-    return res.status(500).json({ success: false, message: 'Serverfeil ved opplasting.' });
-  }
-};
-
-/**
- * GET /api/chats/:chatId/reports/me
- * Authenticated user views their own reports for a chat.
- */
-exports.getMyReports = async (req, res) => {
-  try {
-    const { chatId } = req.params;
-    const userId = req.userId;
-
-    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+    const chatId = parseObjectId(req.params.chatId);
+    if (!chatId) {
       return res.status(400).json({ success: false, message: 'Ugyldig Chat ID.' });
     }
 
-    const chat = await Chat.findById(chatId).select('clientId providerId').lean();
-    if (!chat) return res.status(404).json({ success: false, message: 'Chat ikke funnet.' });
-
-    const isParticipant =
-      String(chat.clientId) === String(userId) || String(chat.providerId) === String(userId);
-    if (!isParticipant) return res.status(403).json({ success: false, message: 'Ikke autorisert.' });
-
-    const reports = await ChatReport.find({ chatId, reportedBy: userId })
-      .select('reportType title status scope createdAt')
+    const reports = await ChatReport.find({
+      chatId,
+      reportedBy: req.user._id,
+    })
+      .select('scope reportType title status priority createdAt updatedAt')
       .sort({ createdAt: -1 })
       .lean();
 
-    return res.json({ success: true, reports });
-  } catch {
-    return res.status(500).json({ success: false, message: 'Serverfeil.' });
+    return res.json({ success: true, data: { reports } });
+  } catch (err) {
+    console.error('[chatReportController] getMyChatReports:', err.message);
+    return res.status(500).json({ success: false, message: 'Internal server error.' });
   }
 };
+
+module.exports = { submitChatReport, getMyChatReports, reportSubmitLimiter };

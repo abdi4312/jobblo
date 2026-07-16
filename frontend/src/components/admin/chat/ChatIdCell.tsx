@@ -1,58 +1,62 @@
 import React, { useState } from 'react';
-import { Copy, CheckCircle2, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Copy, CheckCircle2, MessageSquare } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ChatIdCellProps {
     chatId?: string | null;
-    showOpenLink?: boolean;
+    /** URL source param — used to pre-select access reason */
     reviewSource?: 'safepay' | 'report';
     reportId?: string;
 }
 
-export function ChatIdCell({ chatId, showOpenLink = true, reviewSource, reportId }: ChatIdCellProps) {
+export function ChatIdCell({ chatId, reviewSource = 'safepay', reportId }: ChatIdCellProps) {
     const [copied, setCopied] = useState(false);
 
     if (!chatId) {
-        return <span className="text-xs text-gray-300 italic">Ingen chat</span>;
+        return <span className="text-xs text-gray-400 italic">Ingen tilknyttet chat</span>;
     }
 
     const truncated = `${chatId.slice(0, 8)}…${chatId.slice(-4)}`;
 
     const handleCopy = (e: React.MouseEvent) => {
         e.preventDefault();
-        e.stopPropagation();
-        navigator.clipboard.writeText(chatId).catch(() => { });
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
+        navigator.clipboard.writeText(chatId).then(() => {
+            setCopied(true);
+            toast.success('Chat ID kopiert');
+            setTimeout(() => setCopied(false), 1500);
+        });
     };
+
+    const reviewUrl = reportId
+        ? `/dashboard/chat-review?chatId=${chatId}&reportId=${reportId}&source=${reviewSource}`
+        : `/dashboard/chat-review?chatId=${chatId}&source=${reviewSource}`;
 
     return (
         <div className="flex items-center gap-1.5">
-            <span className="font-mono text-xs text-gray-600">{truncated}</span>
+            <span className="font-mono text-xs text-gray-600 select-all" title={chatId}>
+                {truncated}
+            </span>
             <button
                 onClick={handleCopy}
-                className="text-gray-400 hover:text-gray-700 transition-colors"
+                className="p-0.5 rounded text-gray-400 hover:text-gray-700 transition-colors"
                 aria-label="Kopier Chat ID"
                 title="Kopier Chat ID"
             >
-                {copied ? <CheckCircle2 size={12} className="text-green-500" /> : <Copy size={12} />}
+                {copied ? (
+                    <CheckCircle2 size={12} className="text-green-500" aria-hidden="true" />
+                ) : (
+                    <Copy size={12} aria-hidden="true" />
+                )}
             </button>
-            {showOpenLink && (
-                <Link
-                    to={(() => {
-                        if (!reviewSource) return `/dashboard/chats/${chatId}`;
-                        let url = `/dashboard/chat-review?chatId=${chatId}&source=${reviewSource}`;
-                        if (reportId) url += `&reportId=${reportId}`;
-                        return url;
-                    })()}
-                    className="text-[#2d4a3e] hover:text-[#233b31] transition-colors"
-                    aria-label={reviewSource ? 'Gå til chat-gjennomgang' : 'Åpne chat'}
-                    title={reviewSource ? 'Gå til chat-gjennomgang' : 'Åpne chat'}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <ExternalLink size={12} />
-                </Link>
-            )}
+            <Link
+                to={reviewUrl}
+                className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-[#2d4a3e] bg-[#eef5f2] hover:bg-[#d7ece4] rounded transition-colors"
+                title="Gjennomgå chat"
+            >
+                <MessageSquare size={10} aria-hidden="true" />
+                Gjennomgå
+            </Link>
         </div>
     );
 }

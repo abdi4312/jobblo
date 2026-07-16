@@ -151,6 +151,80 @@ const SafePayApproval: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [showSkipDialog, setShowSkipDialog] = useState(false);
 
+  // ── Dispute state ────────────────────────────────────────────────────────
+  const [showDisputeDialog, setShowDisputeDialog] = useState(false);
+  const [disputeForm, setDisputeForm] = useState({
+    reasonCategory: '',
+    title: '',
+    description: '',
+  });
+  const [disputeTouched, setDisputeTouched] = useState({
+    reasonCategory: false,
+    title: false,
+    description: false,
+  });
+  const [disputeSubmitting, setDisputeSubmitting] = useState(false);
+
+  // Validation rules
+  const disputeErrors = {
+    reasonCategory: !disputeForm.reasonCategory ? 'Velg en årsak' : '',
+    title:
+      !disputeForm.title.trim()
+        ? 'Tittel er påkrevd'
+        : disputeForm.title.trim().length < 5
+          ? 'Minst 5 tegn'
+          : disputeForm.title.trim().length > 200
+            ? 'Maks 200 tegn'
+            : '',
+    description:
+      !disputeForm.description.trim()
+        ? 'Beskrivelse er påkrevd'
+        : disputeForm.description.trim().length < 20
+          ? 'Minst 20 tegn'
+          : disputeForm.description.trim().length > 2000
+            ? 'Maks 2000 tegn'
+            : '',
+  };
+  const disputeIsValid = !disputeErrors.reasonCategory && !disputeErrors.title && !disputeErrors.description;
+
+  const DISPUTE_REASON_OPTIONS = [
+    { value: 'work_not_completed', label: 'Jobb ikke fullført' },
+    { value: 'poor_quality', label: 'Dårlig kvalitet' },
+    { value: 'different_from_agreement', label: 'Avviker fra avtalen' },
+    { value: 'customer_not_cooperating', label: 'Kunde samarbeider ikke' },
+    { value: 'provider_not_cooperating', label: 'Tilbyder samarbeider ikke' },
+    { value: 'payment_issue', label: 'Betalingsproblem' },
+    { value: 'unauthorized_payment', label: 'Uautorisert betaling' },
+    { value: 'fraud_or_scam', label: 'Svindel eller bedrageri' },
+    { value: 'damaged_property', label: 'Skadet eiendom' },
+    { value: 'other', label: 'Annet' },
+  ];
+
+  const handleOpenDispute = async () => {
+    // Mark all fields touched so errors show
+    setDisputeTouched({ reasonCategory: true, title: true, description: true });
+    if (!disputeIsValid) return;
+    setDisputeSubmitting(true);
+    try {
+      await mainLink.post(`/api/safepay/contract/${orderId}/dispute`, {
+        reasonCategory: disputeForm.reasonCategory,
+        title: disputeForm.title.trim(),
+        description: disputeForm.description.trim(),
+      });
+      toast.success('Tvist opprettet. Admin vil gjennomgå saken.');
+      setShowDisputeDialog(false);
+      setDisputeForm({ reasonCategory: '', title: '', description: '' });
+      setDisputeTouched({ reasonCategory: false, title: false, description: false });
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Noe gikk galt. Prøv igjen.';
+      toast.error(msg);
+    } finally {
+      setDisputeSubmitting(false);
+    }
+  };
+
   const [ratings, setRatings] = useState({
     overall: 0,
     punctuality: 0,
@@ -390,27 +464,23 @@ const SafePayApproval: React.FC = () => {
                 <div
                   key={item.id}
                   onClick={!isOrderCompleted && !isSuccess ? () => toggleCheck(item.id) : undefined}
-                  className={`flex items-center gap-3 p-3.5 rounded-xl ${
-                    isOrderCompleted || isSuccess ? 'cursor-not-allowed' : 'cursor-pointer'
-                  } border transition-all ${
-                    item.checked
+                  className={`flex items-center gap-3 p-3.5 rounded-xl ${isOrderCompleted || isSuccess ? 'cursor-not-allowed' : 'cursor-pointer'
+                    } border transition-all ${item.checked
                       ? 'bg-[#f0faf0] border-[#c6f0d8]'
                       : 'bg-[#f9f9f7] border-transparent hover:border-black/10'
-                  }`}
+                    }`}
                 >
                   <div
-                    className={`w-5.5 h-5.5 rounded-md border-2 flex items-center justify-center transition-all ${
-                      item.checked
-                        ? 'bg-custom-green border-custom-green'
-                        : 'bg-white border-[#c8d8c8]'
-                    }`}
+                    className={`w-5.5 h-5.5 rounded-md border-2 flex items-center justify-center transition-all ${item.checked
+                      ? 'bg-custom-green border-custom-green'
+                      : 'bg-white border-[#c8d8c8]'
+                      }`}
                   >
                     {item.checked && <Check size={14} className="text-white" strokeWidth={3} />}
                   </div>
                   <span
-                    className={`text-[13px] font-medium ${
-                      item.checked ? 'text-[#166534]' : 'text-gray-600'
-                    }`}
+                    className={`text-[13px] font-medium ${item.checked ? 'text-[#166534]' : 'text-gray-600'
+                      }`}
                   >
                     {item.text}
                   </span>
@@ -476,9 +546,8 @@ const SafePayApproval: React.FC = () => {
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 disabled={isOrderCompleted}
-                className={`w-full bg-white border border-black/10 rounded-xl p-4 text-[13px] text-gray-800 outline-none focus:border-custom-green min-h-[100px] ${
-                  isOrderCompleted ? 'cursor-not-allowed bg-gray-50' : ''
-                }`}
+                className={`w-full bg-white border border-black/10 rounded-xl p-4 text-[13px] text-gray-800 outline-none focus:border-custom-green min-h-[100px] ${isOrderCompleted ? 'cursor-not-allowed bg-gray-50' : ''
+                  }`}
                 placeholder="Skriv en anmeldelse..."
               />
 
@@ -545,19 +614,17 @@ const SafePayApproval: React.FC = () => {
               {/* Recommend Worker Checkbox */}
               <div className="mt-6">
                 <div
-                  className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${
-                    recommendWorker
-                      ? 'bg-[#f0faf0] border-[#c6f0d8]'
-                      : 'bg-[#f9f9f7] border-transparent hover:border-black/10'
-                  } ${isOrderCompleted ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                  className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${recommendWorker
+                    ? 'bg-[#f0faf0] border-[#c6f0d8]'
+                    : 'bg-[#f9f9f7] border-transparent hover:border-black/10'
+                    } ${isOrderCompleted ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                   onClick={() => !isOrderCompleted && setRecommendWorker(!recommendWorker)}
                 >
                   <div
-                    className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
-                      recommendWorker
-                        ? 'bg-custom-green border-custom-green'
-                        : 'bg-white border-[#c8d8c8]'
-                    }`}
+                    className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${recommendWorker
+                      ? 'bg-custom-green border-custom-green'
+                      : 'bg-white border-[#c8d8c8]'
+                      }`}
                   >
                     {recommendWorker && <Check size={16} className="text-white" strokeWidth={3} />}
                   </div>
@@ -597,9 +664,9 @@ const SafePayApproval: React.FC = () => {
                         size={20}
                         className={
                           star <=
-                          (orderData.providerId.averageRating
-                            ? Math.round(orderData.providerId.averageRating)
-                            : 5)
+                            (orderData.providerId.averageRating
+                              ? Math.round(orderData.providerId.averageRating)
+                              : 5)
                             ? 'text-[#F59E0B] fill-[#F59E0B]'
                             : 'text-[#d1d5db]'
                         }
@@ -608,9 +675,8 @@ const SafePayApproval: React.FC = () => {
                   </div>
                   <div className="text-sm text-gray-600">
                     {orderData.providerId.averageRating
-                      ? `${orderData.providerId.averageRating.toFixed(1)} av 5 • ${
-                          orderData.providerId.completedJobs || 0
-                        } fullførte jobber`
+                      ? `${orderData.providerId.averageRating.toFixed(1)} av 5 • ${orderData.providerId.completedJobs || 0
+                      } fullførte jobber`
                       : '4.7 av 5 · 12 vurderinger'}
                   </div>
                 </div>
@@ -649,13 +715,12 @@ const SafePayApproval: React.FC = () => {
                   Status
                 </span>
                 <span
-                  className={`text-sm font-bold px-3 py-1 rounded-full ${
-                    orderData.status === 'completed'
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : orderData.status === 'paid'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-amber-100 text-amber-700'
-                  }`}
+                  className={`text-sm font-bold px-3 py-1 rounded-full ${orderData.status === 'completed'
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : orderData.status === 'paid'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-amber-100 text-amber-700'
+                    }`}
                 >
                   {orderData.status === 'completed'
                     ? 'Fullført'
@@ -745,13 +810,146 @@ const SafePayApproval: React.FC = () => {
           )}
 
           <div className="text-center mt-5">
-            <a
-              href="#"
+            <button
+              type="button"
+              onClick={() => setShowDisputeDialog(true)}
               className="inline-flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-red-500 transition-colors"
             >
               <AlertTriangle size={14} /> Ikke fornøyd? Opprett en tvist
-            </a>
+            </button>
           </div>
+
+          {/* ── Dispute dialog ──────────────────────────────────────────── */}
+          {showDisputeDialog && (
+            <div
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="dispute-dialog-title"
+            >
+              <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+                <h3 id="dispute-dialog-title" className="text-lg font-bold text-gray-900">
+                  Opprett en tvist
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Fyll ut alle feltene. Admin vil gjennomgå saken og kontakte deg.
+                </p>
+
+                {/* Reason */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Årsak <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={disputeForm.reasonCategory}
+                    onChange={(e) => {
+                      setDisputeForm((f) => ({ ...f, reasonCategory: e.target.value }));
+                      setDisputeTouched((t) => ({ ...t, reasonCategory: true }));
+                    }}
+                    onBlur={() => setDisputeTouched((t) => ({ ...t, reasonCategory: true }))}
+                    className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${disputeTouched.reasonCategory && disputeErrors.reasonCategory
+                        ? 'border-red-400 bg-red-50'
+                        : 'border-gray-300'
+                      }`}
+                  >
+                    <option value="">Velg årsak…</option>
+                    {DISPUTE_REASON_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  {disputeTouched.reasonCategory && disputeErrors.reasonCategory && (
+                    <p className="mt-1 text-xs text-red-500">{disputeErrors.reasonCategory}</p>
+                  )}
+                </div>
+
+                {/* Title */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-sm font-medium text-gray-700">
+                      Tittel <span className="text-red-500">*</span>
+                    </label>
+                    <span className={`text-xs ${disputeForm.title.length > 200 ? 'text-red-500' : 'text-gray-400'}`}>
+                      {disputeForm.title.length}/200
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    maxLength={200}
+                    placeholder="Kort beskrivelse av problemet (min. 5 tegn)"
+                    value={disputeForm.title}
+                    onChange={(e) => {
+                      setDisputeForm((f) => ({ ...f, title: e.target.value }));
+                      setDisputeTouched((t) => ({ ...t, title: true }));
+                    }}
+                    onBlur={() => setDisputeTouched((t) => ({ ...t, title: true }))}
+                    className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${disputeTouched.title && disputeErrors.title
+                        ? 'border-red-400 bg-red-50'
+                        : 'border-gray-300'
+                      }`}
+                  />
+                  {disputeTouched.title && disputeErrors.title && (
+                    <p className="mt-1 text-xs text-red-500">{disputeErrors.title}</p>
+                  )}
+                </div>
+
+                {/* Description */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-sm font-medium text-gray-700">
+                      Beskrivelse <span className="text-red-500">*</span>
+                    </label>
+                    <span className={`text-xs ${disputeForm.description.length > 2000 ? 'text-red-500' : 'text-gray-400'}`}>
+                      {disputeForm.description.length}/2000
+                    </span>
+                  </div>
+                  <textarea
+                    rows={4}
+                    maxLength={2000}
+                    placeholder="Beskriv problemet i detalj (min. 20 tegn)…"
+                    value={disputeForm.description}
+                    onChange={(e) => {
+                      setDisputeForm((f) => ({ ...f, description: e.target.value }));
+                      setDisputeTouched((t) => ({ ...t, description: true }));
+                    }}
+                    onBlur={() => setDisputeTouched((t) => ({ ...t, description: true }))}
+                    className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 resize-none ${disputeTouched.description && disputeErrors.description
+                        ? 'border-red-400 bg-red-50'
+                        : 'border-gray-300'
+                      }`}
+                  />
+                  {disputeTouched.description && disputeErrors.description && (
+                    <p className="mt-1 text-xs text-red-500">{disputeErrors.description}</p>
+                  )}
+                </div>
+
+                <p className="text-xs text-amber-600 bg-amber-50 rounded-xl p-3">
+                  ⚠️ Utbetaling til tilbyder fryses mens tvisten behandles.
+                </p>
+
+                <div className="flex gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDisputeDialog(false);
+                      setDisputeForm({ reasonCategory: '', title: '', description: '' });
+                      setDisputeTouched({ reasonCategory: false, title: false, description: false });
+                    }}
+                    className="flex-1 py-3 border border-gray-300 rounded-full text-gray-700 font-bold hover:bg-gray-50 transition-colors text-sm"
+                  >
+                    Avbryt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenDispute}
+                    disabled={disputeSubmitting}
+                    className="flex-1 py-3 bg-red-500 text-white rounded-full font-bold hover:bg-red-600 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {disputeSubmitting ? 'Sender…' : 'Send tvist'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
