@@ -15,6 +15,10 @@ const safePayAdminController = require('../../controllers/admin/safePayAdminCont
 const disputesAdminController = require('../../controllers/admin/disputesAdminController');
 const chatsAdminController = require('../../controllers/admin/chatsAdminController');
 const chatReportsAdminController = require('../../controllers/admin/chatReportsAdminController');
+const systemAdminController = require('../../controllers/admin/systemAdminController');
+const contentAdminController = require('../../controllers/admin/contentAdminController');
+const evidenceUploadController = require('../../controllers/admin/evidenceUploadController');
+const shopAdminController = require('../../controllers/admin/shopAdminController');
 
 // Apply auth + admin check + rate limiter to ALL routes
 router.use(authenticate, requireAdmin, adminLimiter);
@@ -99,5 +103,50 @@ router.post('/chat-reports/:reportId/reopen', chatReportsAdminController.reopenR
 
 // ── Activity Log ───────────────────────────────────────────────────────────
 router.get('/activity', activityAdminController.getActivityLog);
+
+// ── System Monitoring ──────────────────────────────────────────────────────
+router.get('/system/health', systemAdminController.getSystemHealth);
+router.get('/system/metrics', systemAdminController.getSystemMetrics);
+router.get('/system/errors', systemAdminController.getSystemErrors);
+router.get('/system/disk', systemAdminController.getDiskInfo);
+
+// ── Content Management ─────────────────────────────────────────────────────
+// Global Config
+router.get('/config', contentAdminController.getAllConfigs);
+router.get('/config/:key', contentAdminController.getConfigByKey);
+router.put('/config', contentAdminController.updateConfig);
+router.delete('/config/:key', contentAdminController.deleteConfig);
+
+// Feature Flags
+router.get('/feature-flags', contentAdminController.getFeatureFlags);
+router.put('/feature-flags/toggle', contentAdminController.toggleFeatureFlag);
+
+// Homepage Content
+router.get('/content/homepage', contentAdminController.getHomepageContent);
+router.put('/content/homepage', contentAdminController.updateHomepageContent);
+
+// Navigation & Footer
+router.get('/content/navigation', contentAdminController.getNavigation);
+router.put('/content/navigation', contentAdminController.updateNavigation);
+router.get('/content/footer', contentAdminController.getFooter);
+router.put('/content/footer', contentAdminController.updateFooter);
+
+// Announcements
+router.get('/content/announcements', contentAdminController.getAnnouncements);
+router.put('/content/announcements', contentAdminController.updateAnnouncement);
+
+// Maintenance Mode
+router.get('/maintenance', contentAdminController.getMaintenanceMode);
+router.put('/maintenance', contentAdminController.toggleMaintenanceMode);
+
+// ── Evidence Upload ────────────────────────────────────────────────────────
+router.post('/chat-reports/:reportId/evidence', evidenceUploadController.uploadEvidence);
+
+// ── Shop Management ────────────────────────────────────────────────────────
+router.get('/shop', shopAdminController.getShopItems);
+router.post('/shop', shopAdminController.createShopItem);
+router.put('/shop/:id', shopAdminController.updateShopItem);
+router.put('/shop/:id/toggle', shopAdminController.toggleShopItem);
+router.delete('/shop/:id', shopAdminController.deleteShopItem);
 
 module.exports = router;

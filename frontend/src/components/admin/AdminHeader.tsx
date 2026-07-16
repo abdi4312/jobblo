@@ -1,6 +1,7 @@
 import { Menu, Bell } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useUserStore } from '../../stores/userStore';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface AdminHeaderProps {
     onMobileMenuOpen: () => void;
@@ -70,8 +71,9 @@ export function AdminHeader({ onMobileMenuOpen }: AdminHeaderProps) {
                 </nav>
             </div>
 
-            {/* Right: notification placeholder + profile */}
+            {/* Right: language switcher + notification + profile */}
             <div className="flex items-center gap-2 shrink-0">
+                <LanguageSwitcher />
                 {/* Notification bell — placeholder until notification API is wired */}
                 <button
                     className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 min-w-[44px] min-h-[44px] flex items-center justify-center"

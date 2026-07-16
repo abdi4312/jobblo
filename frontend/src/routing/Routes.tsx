@@ -129,6 +129,17 @@ const AdminChatDetailsPage = lazy(() => import('../pages/SuperAdminDashboard/Adm
 const ChatReportsPage = lazy(() => import('../pages/SuperAdminDashboard/ChatReportsPage.tsx'));
 const AdminChatReportDetailPage = lazy(() => import('../pages/SuperAdminDashboard/AdminChatReportDetailPage.tsx'));
 
+// ── New System & Content Pages ────────────────────────────────────────────────
+const SystemHealthPage = lazy(() => import('../pages/SuperAdminDashboard/SystemHealthPage.tsx'));
+const FeatureFlagsPage = lazy(() => import('../pages/SuperAdminDashboard/FeatureFlagsPage.tsx'));
+const HomepageCMSPage = lazy(() => import('../pages/SuperAdminDashboard/HomepageCMSPage.tsx'));
+const GlobalSettingsPage = lazy(() => import('../pages/SuperAdminDashboard/GlobalSettingsPage.tsx'));
+const NavigationFooterPage = lazy(() => import('../pages/SuperAdminDashboard/NavigationFooterPage.tsx'));
+const AnnouncementsPage = lazy(() => import('../pages/SuperAdminDashboard/AnnouncementsPage.tsx'));
+const MaintenanceModePage = lazy(() => import('../pages/SuperAdminDashboard/MaintenanceModePage.tsx'));
+const ErrorLogsPage = lazy(() => import('../pages/SuperAdminDashboard/ErrorLogsPage.tsx'));
+const ShopAdminPage = lazy(() => import('../pages/SuperAdminDashboard/ShopAdminPage.tsx'));
+
 // =======================
 // Routes
 // =======================
@@ -251,6 +262,17 @@ export const routes: RouteObject[] = [
       { path: 'chats/:chatId', element: withSuspense(AdminChatDetailsPage) },
       { path: 'chat-reports', element: withSuspense(ChatReportsPage) },
       { path: 'chat-reports/:reportId', element: withSuspense(AdminChatReportDetailPage) },
+
+      // ── System & Content Pages (new) ──────────────────────────────────
+      { path: 'system-health', element: withSuspense(SystemHealthPage) },
+      { path: 'feature-flags', element: withSuspense(FeatureFlagsPage) },
+      { path: 'homepage-cms', element: withSuspense(HomepageCMSPage) },
+      { path: 'settings', element: withSuspense(GlobalSettingsPage) },
+      { path: 'navigation-footer', element: withSuspense(NavigationFooterPage) },
+      { path: 'announcements', element: withSuspense(AnnouncementsPage) },
+      { path: 'maintenance', element: withSuspense(MaintenanceModePage) },
+      { path: 'error-logs', element: withSuspense(ErrorLogsPage) },
+      { path: 'shop', element: withSuspense(ShopAdminPage) },
 
       { path: '*', element: withSuspense(NotFoundPage) },
     ],

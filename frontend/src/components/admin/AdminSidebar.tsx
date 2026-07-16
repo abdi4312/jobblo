@@ -22,11 +22,20 @@ import {
     MessageSquare,
     Flag,
     Eye,
+    Settings,
+    Globe,
+    ToggleLeft,
+    Server,
+    Menu,
+    Megaphone,
+    Wrench,
+    AlertCircle,
 } from 'lucide-react';
 import { useUserStore } from '../../stores/userStore';
 import { toast } from 'sonner';
 import { AdminConfirmDialog } from './AdminConfirmDialog';
 import { cn } from '@/lib/utils';
+import { useTranslate } from '../../i18n/useTranslate';
 
 // ─── Nav structure ────────────────────────────────────────────────────────────
 interface NavItem {
@@ -41,57 +50,74 @@ interface NavGroup {
     items: NavItem[];
 }
 
-const NAV_GROUPS: NavGroup[] = [
-    {
-        label: 'Oversikt',
-        items: [
-            { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard size={18} />, end: true },
-        ],
-    },
-    {
-        label: 'Markedsplass',
-        items: [
-            { label: 'Tjenester', to: '/dashboard/services', icon: <Briefcase size={18} /> },
-            { label: 'Ordrer', to: '/dashboard/orders', icon: <ShoppingCart size={18} /> },
-            { label: 'Vurderinger', to: '/dashboard/reviews', icon: <Star size={18} /> },
-            { label: 'Kategorier', to: '/dashboard/categories', icon: <Tag size={18} /> },
-        ],
-    },
-    {
-        label: 'Brukere',
-        items: [
-            { label: 'Alle brukere', to: '/dashboard/users', icon: <Users size={18} /> },
-        ],
-    },
-    {
-        label: 'Økonomi',
-        items: [
-            { label: 'Transaksjoner', to: '/dashboard/transactions', icon: <CreditCard size={18} /> },
-            { label: 'SafePay', to: '/dashboard/safepay', icon: <Shield size={18} /> },
-            { label: 'Tvister', to: '/dashboard/disputes', icon: <AlertTriangle size={18} /> },
-            { label: 'Abonnementer', to: '/dashboard/plans', icon: <ShieldCheck size={18} /> },
-            { label: 'Kuponger', to: '/dashboard/voucher', icon: <Ticket size={18} /> },
-        ],
-    },
-    {
-        label: 'Innhold',
-        items: [
-            { label: 'Varslinger', to: '/dashboard/notifications', icon: <Bell size={18} /> },
-            { label: 'Hjem Hero', to: '/dashboard/home-hero', icon: <ImageIcon size={18} /> },
-            { label: 'Karusell', to: '/dashboard/carousel', icon: <ImageIcon size={18} /> },
-            { label: 'Veikart', to: '/dashboard/roadmap', icon: <Rocket size={18} /> },
-        ],
-    },
-    {
-        label: 'System',
-        items: [
-            { label: 'Chat-gjennomgang', to: '/dashboard/chat-review', icon: <Eye size={18} /> },
-            { label: 'Chatter', to: '/dashboard/chats', icon: <MessageSquare size={18} /> },
-            { label: 'Chatrapporter', to: '/dashboard/chat-reports', icon: <Flag size={18} /> },
-            { label: 'Aktivitetslogg', to: '/dashboard/activity', icon: <ShieldCheck size={18} /> },
-        ],
-    },
-];
+function useNavGroups(): NavGroup[] {
+    const { t } = useTranslate();
+    return [
+        {
+            label: t('nav.oversikt'),
+            items: [
+                { label: t('nav.dashboard'), to: '/dashboard', icon: <LayoutDashboard size={18} />, end: true },
+            ],
+        },
+        {
+            label: t('nav.markedsplass'),
+            items: [
+                { label: t('nav.tjenester'), to: '/dashboard/services', icon: <Briefcase size={18} /> },
+                { label: t('nav.ordrer'), to: '/dashboard/orders', icon: <ShoppingCart size={18} /> },
+                { label: t('nav.vurderinger'), to: '/dashboard/reviews', icon: <Star size={18} /> },
+                { label: t('nav.kategorier'), to: '/dashboard/categories', icon: <Tag size={18} /> },
+            ],
+        },
+        {
+            label: t('nav.brukere'),
+            items: [
+                { label: t('nav.alle_brukere'), to: '/dashboard/users', icon: <Users size={18} /> },
+            ],
+        },
+        {
+            label: t('nav.okonomi'),
+            items: [
+                { label: t('nav.transaksjoner'), to: '/dashboard/transactions', icon: <CreditCard size={18} /> },
+                { label: t('nav.safepay'), to: '/dashboard/safepay', icon: <Shield size={18} /> },
+                { label: t('nav.tvister'), to: '/dashboard/disputes', icon: <AlertTriangle size={18} /> },
+                { label: t('nav.abonnementer'), to: '/dashboard/plans', icon: <ShieldCheck size={18} /> },
+                { label: t('nav.kuponger'), to: '/dashboard/voucher', icon: <Ticket size={18} /> },
+            ],
+        },
+        {
+            label: t('nav.innhold'),
+            items: [
+                { label: t('nav.varslinger'), to: '/dashboard/notifications', icon: <Bell size={18} /> },
+                { label: t('nav.hjemmeside_cms'), to: '/dashboard/homepage-cms', icon: <Globe size={18} /> },
+                { label: t('nav.hjem_hero'), to: '/dashboard/home-hero', icon: <ImageIcon size={18} /> },
+                { label: t('nav.karusell'), to: '/dashboard/carousel', icon: <ImageIcon size={18} /> },
+                { label: t('nav.navigasjon_footer'), to: '/dashboard/navigation-footer', icon: <Menu size={18} /> },
+                { label: t('nav.kunngjoringer'), to: '/dashboard/announcements', icon: <Megaphone size={18} /> },
+                { label: t('nav.shop'), to: '/dashboard/shop', icon: <ShoppingCart size={18} /> },
+                { label: t('nav.veikart'), to: '/dashboard/roadmap', icon: <Rocket size={18} /> },
+            ],
+        },
+        {
+            label: t('nav.moderering'),
+            items: [
+                { label: t('nav.chat_gjennomgang'), to: '/dashboard/chat-review', icon: <Eye size={18} /> },
+                { label: t('nav.chatter'), to: '/dashboard/chats', icon: <MessageSquare size={18} /> },
+                { label: t('nav.chatrapporter'), to: '/dashboard/chat-reports', icon: <Flag size={18} /> },
+            ],
+        },
+        {
+            label: t('nav.operations'),
+            items: [
+                { label: t('nav.systemhelse'), to: '/dashboard/system-health', icon: <Server size={18} /> },
+                { label: t('nav.feil_logger'), to: '/dashboard/error-logs', icon: <AlertCircle size={18} /> },
+                { label: t('nav.funksjonsflagg'), to: '/dashboard/feature-flags', icon: <ToggleLeft size={18} /> },
+                { label: t('nav.globale_instillinger'), to: '/dashboard/settings', icon: <Settings size={18} /> },
+                { label: t('nav.vedlikeholdsmodus'), to: '/dashboard/maintenance', icon: <Wrench size={18} /> },
+                { label: t('nav.aktivitetslogg'), to: '/dashboard/activity', icon: <ShieldCheck size={18} /> },
+            ],
+        },
+    ];
+}
 
 // ─── SidebarLink ─────────────────────────────────────────────────────────────
 function SidebarLink({
@@ -138,6 +164,7 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
     const logout = useUserStore((s) => s.logout);
     const user = useUserStore((s) => s.user);
     const navigate = useNavigate();
+    const NAV_GROUPS = useNavGroups();
 
     const handleLogout = async () => {
         await logout();
