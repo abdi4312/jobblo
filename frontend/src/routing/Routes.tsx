@@ -41,7 +41,6 @@ import SettingsPage from '../pages/SettingsPage.tsx';
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
-    {/* <div className="w-10 h-10 border-4 border-custom-green/30 border-t-custom-green rounded-full animate-spin" /> */}
     <Lottie animationData={Loging} loop autoplay />
   </div>
 );
@@ -57,32 +56,27 @@ const withSuspense = (Component: React.ComponentType) => (
 );
 
 // =======================
-// Pages
+// User Pages
 // =======================
 
 const LandingPage = lazy(() => import('../pages/LandingPage/LandingPage.tsx'));
 const JobListingPage = lazy(() => import('../pages/ExplorePage/JobListingPage.tsx'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage/ProfilePage.tsx'));
-
 const LeggUtOppdrag = lazy(() => import('../pages/LeggUtOppdragPage/LeggUtOppdrag.tsx'));
 const Alert = lazy(() => import('../pages/AlertPage/Alert.tsx'));
 const LoginPage = lazy(() => import('../pages/LoginPage/LoginPage.tsx'));
 const RegisterPage = lazy(() => import('../pages/RegisterPage/RegisterPage.tsx'));
 const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage/ForgotPasswordPage.tsx'));
 const AnmeldelserPage = lazy(() => import('../pages/AnmeldelserPage/AnmeldelserPage.tsx'));
-
 const ListDetailPage = lazy(() =>
   import('../pages/FavoritesPage/ListDetail/ListDetailPage.tsx').then((m) => ({
     default: m.ListDetailPage,
   }))
 );
-
 const TeamPage = lazy(() => import('../pages/TeamPage/TeamPage.tsx'));
 const SupportPage = lazy(() => import('../pages/SupportPage/SupportPage.tsx'));
 const MineAnnonser = lazy(() => import('../pages/MyJobsPage/MineAnnonser.tsx'));
-const JobListingDetailPage = lazy(
-  () => import('../pages/JobListingDetailPage/JobListingDetailPage.tsx')
-);
+const JobListingDetailPage = lazy(() => import('../pages/JobListingDetailPage/JobListingDetailPage.tsx'));
 const ApplicantsPage = lazy(() => import('../pages/ApplicantsPage/ApplicantsPage.tsx'));
 const MyApplicantsOverview = lazy(() => import('../pages/ApplicantsPage/MyApplicantsOverview.tsx'));
 const SafePayCheckout = lazy(() => import('../pages/SafePayPage/SafePayCheckout.tsx'));
@@ -94,10 +88,7 @@ const MessagesPageSplit = lazy(() =>
     default: m.MessagesPageSplit,
   }))
 );
-
-const SaleSubscriptionTermsPage = lazy(
-  () => import('../pages/SaleSubscriptionTermsPage/SaleSubscriptionTermsPage.tsx')
-);
+const SaleSubscriptionTermsPage = lazy(() => import('../pages/SaleSubscriptionTermsPage/SaleSubscriptionTermsPage.tsx'));
 const JobbloUserTerm = lazy(() => import('../pages/UserTerm/UserTerm.tsx'));
 const SuccessPage = lazy(() => import('../components/subscription/success.tsx'));
 const ContactSuccessPage = lazy(() => import('../pages/ContactSuccessPage.tsx'));
@@ -129,11 +120,14 @@ const ActivityLogPage = lazy(() => import('../pages/SuperAdminDashboard/Activity
 const SafePayAdminPage = lazy(() => import('../pages/SuperAdminDashboard/SafePayPage.tsx'));
 const SafePayDetailPage = lazy(() => import('../pages/SuperAdminDashboard/SafePayDetailPage.tsx'));
 const DisputesPage = lazy(() => import('../pages/SuperAdminDashboard/DisputesPage.tsx'));
+const DisputeDetailPage = lazy(() => import('../pages/SuperAdminDashboard/DisputeDetailPage.tsx'));
+
+// ── Chat System Admin Pages (new) ──────────────────────────────────────────────
+const ChatReviewPage = lazy(() => import('../pages/SuperAdminDashboard/ChatReviewPage.tsx'));
 const AdminChatsPage = lazy(() => import('../pages/SuperAdminDashboard/AdminChatsPage.tsx'));
 const AdminChatDetailsPage = lazy(() => import('../pages/SuperAdminDashboard/AdminChatDetailsPage.tsx'));
 const ChatReportsPage = lazy(() => import('../pages/SuperAdminDashboard/ChatReportsPage.tsx'));
-const ChatReportDetailPage = lazy(() => import('../pages/SuperAdminDashboard/ChatReportDetailPage.tsx'));
-const ChatReviewPage = lazy(() => import('../pages/SuperAdminDashboard/ChatReviewPage.tsx'));
+const AdminChatReportDetailPage = lazy(() => import('../pages/SuperAdminDashboard/AdminChatReportDetailPage.tsx'));
 
 // =======================
 // Routes
@@ -144,98 +138,27 @@ export const routes: RouteObject[] = [
     path: '/',
     element: <App />,
     children: [
-      {
-        index: true,
-        element: withSuspense(LandingPage),
-      },
-
-      {
-        path: 'oauth-success',
-        element: <OAuthSuccess />,
-      },
-
-      {
-        path: 'home',
-        element: withSuspense(JobListingPage),
-      },
-
-      {
-        path: 'search/job/:categoryName',
-        element: withSuspense(ServiceListingPage),
-      },
-
-      {
-        path: 'job-listing/:id',
-        element: withSuspense(JobListingDetailPage),
-      },
-      {
-        path: 'completed-job/:orderId?',
-        element: <ProtectedRoute>{withSuspense(CompletedJobPage)}</ProtectedRoute>,
-      },
-
-      {
-        path: 'job-applicants/:serviceId',
-        element: <ProtectedRoute>{withSuspense(ApplicantsPage)}</ProtectedRoute>,
-      },
-
-      {
-        path: 'my-applicants',
-        element: <ProtectedRoute>{withSuspense(MyApplicantsOverview)}</ProtectedRoute>,
-      },
-
-      {
-        path: 'safepay/checkout/:orderId',
-        element: <ProtectedRoute>{withSuspense(SafePayCheckout)}</ProtectedRoute>,
-      },
-
-      {
-        path: 'safepay/success',
-        element: <ProtectedRoute>{withSuspense(SafePaySuccess)}</ProtectedRoute>,
-      },
-
-      {
-        path: 'safepay/approval/:orderId',
-        element: <ProtectedRoute>{withSuspense(SafePayApproval)}</ProtectedRoute>,
-      },
-
-      {
-        path: 'profile',
-        element: <ProtectedRoute>{withSuspense(ProfilePage)}</ProtectedRoute>,
-      },
-
-      {
-        path: 'profile/:userId',
-        element: withSuspense(ProfilePage),
-      },
-
-      {
-        path: 'mine-annonser',
-        element: <ProtectedRoute>{withSuspense(MineAnnonser)}</ProtectedRoute>,
-      },
-
-      {
-        path: 'Publish-job',
-        element: <ProtectedRoute>{withSuspense(LeggUtOppdrag)}</ProtectedRoute>,
-      },
-
-      {
-        path: 'Publish-job/:id',
-        element: <ProtectedRoute>{withSuspense(LeggUtOppdrag)}</ProtectedRoute>,
-      },
-
-      {
-        path: 'alerts',
-        element: <ProtectedRoute>{withSuspense(Alert)}</ProtectedRoute>,
-      },
+      { index: true, element: withSuspense(LandingPage) },
+      { path: 'oauth-success', element: <OAuthSuccess /> },
+      { path: 'home', element: withSuspense(JobListingPage) },
+      { path: 'search/job/:categoryName', element: withSuspense(ServiceListingPage) },
+      { path: 'job-listing/:id', element: withSuspense(JobListingDetailPage) },
+      { path: 'completed-job/:orderId?', element: <ProtectedRoute>{withSuspense(CompletedJobPage)}</ProtectedRoute> },
+      { path: 'job-applicants/:serviceId', element: <ProtectedRoute>{withSuspense(ApplicantsPage)}</ProtectedRoute> },
+      { path: 'my-applicants', element: <ProtectedRoute>{withSuspense(MyApplicantsOverview)}</ProtectedRoute> },
+      { path: 'safepay/checkout/:orderId', element: <ProtectedRoute>{withSuspense(SafePayCheckout)}</ProtectedRoute> },
+      { path: 'safepay/success', element: <ProtectedRoute>{withSuspense(SafePaySuccess)}</ProtectedRoute> },
+      { path: 'safepay/approval/:orderId', element: <ProtectedRoute>{withSuspense(SafePayApproval)}</ProtectedRoute> },
+      { path: 'profile', element: <ProtectedRoute>{withSuspense(ProfilePage)}</ProtectedRoute> },
+      { path: 'profile/:userId', element: withSuspense(ProfilePage) },
+      { path: 'mine-annonser', element: <ProtectedRoute>{withSuspense(MineAnnonser)}</ProtectedRoute> },
+      { path: 'Publish-job', element: <ProtectedRoute>{withSuspense(LeggUtOppdrag)}</ProtectedRoute> },
+      { path: 'Publish-job/:id', element: <ProtectedRoute>{withSuspense(LeggUtOppdrag)}</ProtectedRoute> },
+      { path: 'alerts', element: <ProtectedRoute>{withSuspense(Alert)}</ProtectedRoute> },
 
       {
         path: 'settings',
-        element: (
-          <ProtectedRoute>
-            <SettingsLayout />
-          </ProtectedRoute>
-        ),
-
+        element: <ProtectedRoute><SettingsLayout /></ProtectedRoute>,
         children: [
           {
             path: '',
@@ -267,75 +190,20 @@ export const routes: RouteObject[] = [
         ],
       },
 
-      {
-        path: 'Anmeldelser',
-        element: withSuspense(AnmeldelserPage),
-      },
-
-      {
-        path: 'favorites/list/:listId',
-        element: <ProtectedRoute>{withSuspense(ListDetailPage)}</ProtectedRoute>,
-      },
-
-      {
-        path: 'subscription/success',
-        element: withSuspense(SuccessPage),
-      },
-
-      {
-        path: 'coins',
-        element: <ProtectedRoute>{withSuspense(CoinsPage)}</ProtectedRoute>,
-      },
-
-      {
-        path: 'team',
-        element: withSuspense(TeamPage),
-      },
-
-      {
-        path: 'contact/success',
-        element: withSuspense(ContactSuccessPage),
-      },
-
-      {
-        path: 'support',
-        element: withSuspense(SupportPage),
-      },
-
-      {
-        path: 'messages',
-        element: <ProtectedRoute>{withSuspense(MessagesPageSplit)}</ProtectedRoute>,
-      },
-
-      {
-        path: 'messages/:conversationId',
-        element: <ProtectedRoute>{withSuspense(MessagesPageSplit)}</ProtectedRoute>,
-      },
-
-      {
-        path: 'sale-subscription-terms',
-        element: withSuspense(SaleSubscriptionTermsPage),
-      },
-
-      {
-        path: 'user-term',
-        element: withSuspense(JobbloUserTerm),
-      },
-
-      {
-        path: 'membership',
-        element: <ProtectedRoute>{withSuspense(PricingPage)}</ProtectedRoute>,
-      },
-
-      {
-        path: 'upcoming',
-        element: withSuspense(UpcomingFeatures),
-      },
-
-      {
-        path: '*',
-        element: withSuspense(NotFoundPage),
-      },
+      { path: 'Anmeldelser', element: withSuspense(AnmeldelserPage) },
+      { path: 'favorites/list/:listId', element: <ProtectedRoute>{withSuspense(ListDetailPage)}</ProtectedRoute> },
+      { path: 'subscription/success', element: withSuspense(SuccessPage) },
+      { path: 'coins', element: <ProtectedRoute>{withSuspense(CoinsPage)}</ProtectedRoute> },
+      { path: 'team', element: withSuspense(TeamPage) },
+      { path: 'contact/success', element: withSuspense(ContactSuccessPage) },
+      { path: 'support', element: withSuspense(SupportPage) },
+      { path: 'messages', element: <ProtectedRoute>{withSuspense(MessagesPageSplit)}</ProtectedRoute> },
+      { path: 'messages/:conversationId', element: <ProtectedRoute>{withSuspense(MessagesPageSplit)}</ProtectedRoute> },
+      { path: 'sale-subscription-terms', element: withSuspense(SaleSubscriptionTermsPage) },
+      { path: 'user-term', element: withSuspense(JobbloUserTerm) },
+      { path: 'membership', element: <ProtectedRoute>{withSuspense(PricingPage)}</ProtectedRoute> },
+      { path: 'upcoming', element: withSuspense(UpcomingFeatures) },
+      { path: '*', element: withSuspense(NotFoundPage) },
     ],
   },
 
@@ -357,121 +225,34 @@ export const routes: RouteObject[] = [
   {
     path: 'dashboard',
     element: <AdminProtectedRoute>{withSuspense(DashboardLayout)}</AdminProtectedRoute>,
-
     children: [
-      {
-        index: true,
-        element: withSuspense(DashboardOverviewPage),
-      },
+      { index: true, element: withSuspense(DashboardOverviewPage) },
+      { path: 'users', element: withSuspense(UsersPage) },
+      { path: 'services', element: withSuspense(ServicesPage) },
+      { path: 'orders', element: withSuspense(OrdersPage) },
+      { path: 'reviews', element: withSuspense(ReviewsPage) },
+      { path: 'categories', element: withSuspense(CategoriesPage) },
+      { path: 'voucher', element: withSuspense(VoucherPage) },
+      { path: 'carousel', element: withSuspense(CarouselPage) },
+      { path: 'home-hero', element: withSuspense(HomeHeroPage) },
+      { path: 'transactions', element: withSuspense(TransactionsPage) },
+      { path: 'notifications', element: withSuspense(NotificationsPage) },
+      { path: 'roadmap', element: withSuspense(RoadmapAdminPage) },
+      { path: 'plans', element: withSuspense(PlansAdminPage) },
+      { path: 'activity', element: withSuspense(ActivityLogPage) },
+      { path: 'safepay', element: withSuspense(SafePayAdminPage) },
+      { path: 'safepay/:orderId', element: withSuspense(SafePayDetailPage) },
+      { path: 'disputes', element: withSuspense(DisputesPage) },
+      { path: 'disputes/:disputeId', element: withSuspense(DisputeDetailPage) },
 
-      {
-        path: 'users',
-        element: withSuspense(UsersPage),
-      },
+      // ── Chat System (new) ───────────────────────────────────────────────
+      { path: 'chat-review', element: withSuspense(ChatReviewPage) },
+      { path: 'chats', element: withSuspense(AdminChatsPage) },
+      { path: 'chats/:chatId', element: withSuspense(AdminChatDetailsPage) },
+      { path: 'chat-reports', element: withSuspense(ChatReportsPage) },
+      { path: 'chat-reports/:reportId', element: withSuspense(AdminChatReportDetailPage) },
 
-      {
-        path: 'services',
-        element: withSuspense(ServicesPage),
-      },
-
-      {
-        path: 'orders',
-        element: withSuspense(OrdersPage),
-      },
-
-      {
-        path: 'reviews',
-        element: withSuspense(ReviewsPage),
-      },
-
-      {
-        path: 'categories',
-        element: withSuspense(CategoriesPage),
-      },
-
-      {
-        path: 'voucher',
-        element: withSuspense(VoucherPage),
-      },
-
-      {
-        path: 'carousel',
-        element: withSuspense(CarouselPage),
-      },
-      {
-        path: 'home-hero',
-        element: withSuspense(HomeHeroPage),
-      },
-
-      {
-        path: 'transactions',
-        element: withSuspense(TransactionsPage),
-      },
-
-      {
-        path: 'notifications',
-        element: withSuspense(NotificationsPage),
-      },
-
-      {
-        path: 'roadmap',
-        element: withSuspense(RoadmapAdminPage),
-      },
-
-      {
-        path: 'plans',
-        element: withSuspense(PlansAdminPage),
-      },
-
-      {
-        path: 'activity',
-        element: withSuspense(ActivityLogPage),
-      },
-
-      {
-        path: 'safepay',
-        element: withSuspense(SafePayAdminPage),
-      },
-
-      {
-        path: 'safepay/:orderId',
-        element: withSuspense(SafePayDetailPage),
-      },
-
-      {
-        path: 'chats',
-        element: withSuspense(AdminChatsPage),
-      },
-
-      {
-        path: 'chats/:chatId',
-        element: withSuspense(AdminChatDetailsPage),
-      },
-
-      {
-        path: 'chat-reports',
-        element: withSuspense(ChatReportsPage),
-      },
-
-      {
-        path: 'chat-reports/:reportId',
-        element: withSuspense(ChatReportDetailPage),
-      },
-
-      {
-        path: 'chat-review',
-        element: withSuspense(ChatReviewPage),
-      },
-
-      {
-        path: 'disputes',
-        element: withSuspense(DisputesPage),
-      },
-
-      {
-        path: '*',
-        element: withSuspense(NotFoundPage),
-      },
+      { path: '*', element: withSuspense(NotFoundPage) },
     ],
   },
 ];

@@ -92,6 +92,8 @@ const getSafePayList = asyncHandler(async (req, res) => {
   const final = enriched.map((o) => ({
     ...o,
     chatStatus: o.chatId ? chatMap[String(o.chatId)]?.status ?? null : null,
+    // chatId is already on the order — expose it explicitly for the admin table
+    chatId: o.chatId ?? null,
   }));
 
   return sendSuccess(res, { contracts: final }, 'SafePay-kontrakter hentet.', buildPagination(total, page, limit));
