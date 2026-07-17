@@ -17,10 +17,12 @@ import mainLink from '../../api/mainURLs';
 import { toast } from 'react-hot-toast';
 import { Button } from '../../components/Ui/button/Button';
 import SafePaySteps from '../../components/SafePay/SafePaySteps';
+import { useUserStore } from '../../stores/userStore';
 
 const SafePayCheckout: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
+  const { user } = useUserStore();
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'vipps' | 'apple'>('card');
 
   // Fetch Checkout Details from new backend
@@ -76,6 +78,25 @@ const SafePayCheckout: React.FC = () => {
   }
 
   const { order, calculation } = data;
+
+  // Check if current user is the customer (order owner)
+  const isCustomer = String(order.customerId._id) === String(user?._id);
+
+  if (!isCustomer) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#f5f0e8] p-4">
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Ikke tilgang</h2>
+        <p className="text-gray-600 mb-4">Kun oppdragsgiver kan gjøre betalinger.</p>
+        <button
+          onClick={() => navigate(-1)}
+          className="text-custom-green font-medium flex items-center gap-2"
+        >
+          <ArrowLeft size={18} /> Gå tilbake
+        </button>
+      </div>
+    );
+  }
+
   const isPaid = ['paid', 'in_progress', 'completed'].includes(order.status);
 
   return (

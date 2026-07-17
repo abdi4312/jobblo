@@ -84,17 +84,14 @@ exports.createSafePaySession = async (req, res) => {
       return res.status(400).json({ error: 'Denne kontrakten er allerede betalt' });
     }
 
-    // Allow both customer AND provider to create checkout session
+    // Only allow customer (job poster) to create checkout session
     const customerIdStr = order.customerId.toString();
-    const providerIdStr = order.providerId.toString();
     const userIdStr = String(userId);
     console.log('createSafePaySession - customerIdStr:', customerIdStr);
-    console.log('createSafePaySession - providerIdStr:', providerIdStr);
     console.log('createSafePaySession - userIdStr:', userIdStr);
     console.log('createSafePaySession - is customer:', customerIdStr === userIdStr);
-    console.log('createSafePaySession - is provider:', providerIdStr === userIdStr);
 
-    if (customerIdStr !== userIdStr && providerIdStr !== userIdStr) {
+    if (customerIdStr !== userIdStr) {
       return res.status(403).json({ error: 'Ikke autorisert' });
     }
 
@@ -179,12 +176,11 @@ exports.checkoutSessionStatus = async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Allow both customer AND provider to check session status
+    // Only allow customer (job poster) to check session status
     const customerIdStr = order.customerId.toString();
-    const providerIdStr = order.providerId.toString();
     const userIdStr = String(req.userId);
 
-    if (customerIdStr !== userIdStr && providerIdStr !== userIdStr) {
+    if (customerIdStr !== userIdStr) {
       return res.status(403).json({ error: 'Ikke autorisert' });
     }
 
@@ -287,12 +283,11 @@ exports.approveAndPayout = async (req, res) => {
       return res.status(404).json({ error: 'Kontrakten ble ikke funnet' });
     }
 
-    // Allow both customer AND provider to approve payout
+    // Only allow customer (job poster) to approve payout
     const customerIdStr = order.customerId.toString();
-    const providerIdStr = order.providerId.toString();
     const userIdStr = String(userId);
 
-    if (customerIdStr !== userIdStr && providerIdStr !== userIdStr) {
+    if (customerIdStr !== userIdStr) {
       return res.status(403).json({ error: 'Ikke autorisert til å godkjenne denne kontrakten' });
     }
 
