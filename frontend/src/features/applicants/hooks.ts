@@ -3,6 +3,8 @@ import {
   getApplicants,
   createSafePayContract,
   getMyApplicantsOverview,
+  getMyApplicationsOverview,
+  withdrawMyApplication,
   toggleApplicantFavorite,
   toggleApplicantArchive,
   declineApplicant,
@@ -20,6 +22,23 @@ export const useMyApplicantsOverviewQuery = () => {
   return useQuery({
     queryKey: ['applicants-overview'],
     queryFn: getMyApplicantsOverview,
+  });
+};
+
+export const useMyApplicationsOverviewQuery = (status?: string) => {
+  return useQuery({
+    queryKey: ['my-applications-overview', status],
+    queryFn: () => getMyApplicationsOverview(status),
+  });
+};
+
+export const useWithdrawApplicationMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: withdrawMyApplication,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-applications-overview'] });
+    },
   });
 };
 

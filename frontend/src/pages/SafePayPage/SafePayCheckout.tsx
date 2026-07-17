@@ -17,10 +17,12 @@ import mainLink from '../../api/mainURLs';
 import { toast } from 'react-hot-toast';
 import { Button } from '../../components/Ui/button/Button';
 import SafePaySteps from '../../components/SafePay/SafePaySteps';
+import { useUserStore } from '../../stores/userStore';
 
 const SafePayCheckout: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
+  const { user } = useUserStore();
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'vipps' | 'apple'>('card');
 
   // Fetch Checkout Details from new backend
@@ -76,6 +78,53 @@ const SafePayCheckout: React.FC = () => {
   }
 
   const { order, calculation } = data;
+
+  // Check roles
+  const isCustomer = String(order.customerId._id) === String(user?._id);
+  const isProvider = String(order.providerId?._id) === String(user?._id);
+
+  // Provider should not see the checkout/payment page — redirect to their work page
+  if (isProvider && !isCustomer) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#f5f0e8] p-4">
+        <div className="max-w-[420px] w-full bg-white rounded-2xl p-8 text-center shadow-sm border border-black/5">
+          <div className="w-14 h-14 bg-[#f0faf0] rounded-full flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck size={28} className="text-custom-green" />
+          </div>
+          <h2 className="text-[18px] font-bold text-gray-900 mb-2">Kontrakt og betaling</h2>
+          <p className="text-[13px] text-gray-500 mb-6">
+            Betaling håndteres av oppdragsgiver. Du kan se oppdragets status og starte arbeid fra din arbeidsside.
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={() => navigate(`/provider/orders/${orderId}`)}
+              className="w-full bg-custom-green text-white rounded-full py-3 font-bold hover:bg-[#14532d]"
+            >
+              Gå til mitt oppdrag
+            </Button>
+            <button
+              onClick={() => navigate(-1)}
+              className="text-[13px] text-gray-400 hover:text-gray-600 mt-1"
+            >
+              Gå tilbake
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isCustomer && !isProvider) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#f5f0e8] p-4">
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Ikke tilgang</h2>
+        <button onClick={() => navigate(-1)} className="text-custom-green font-medium flex items-center gap-2">
+          <ArrowLeft size={18} /> Gå tilbake
+        </button>
+      </div>
+    );
+  }
+
   const isPaid = ['paid', 'in_progress', 'completed'].includes(order.status);
 
   return (

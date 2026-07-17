@@ -136,6 +136,17 @@ const JobListingDetailPage = () => {
     (req) => req.serviceId?._id === id && req.customerId?._id === currentUser?._id
   );
 
+  // ── Service status guard ───────────────────────────────────────────────────
+  const CLOSED_STATUSES = ['completed', 'in_progress', 'closed', 'cancelled', 'expired'];
+  const isServiceClosed = job && CLOSED_STATUSES.includes(job.status);
+  const SERVICE_STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+    completed: { label: 'Oppdrag fullført', color: 'text-gray-600', bg: 'bg-gray-100 border-gray-200' },
+    in_progress: { label: 'Utfører er valgt — pågår', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
+    closed: { label: 'Oppdrag er lukket', color: 'text-gray-600', bg: 'bg-gray-100 border-gray-200' },
+    cancelled: { label: 'Oppdrag er kansellert', color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
+    expired: { label: 'Oppdrag har utløpt', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
+  };
+
   const [lng, lat] = job?.location?.coordinates || [0, 0];
   const hasCoordinates = job?.location?.coordinates && (lng !== 0 || lat !== 0);
 
@@ -368,6 +379,21 @@ const JobListingDetailPage = () => {
                     {job.title || 'Uten tittel'}
                   </h1>
                   <div className="flex flex-wrap items-center gap-3 mb-2">
+                    {/* Service status chip */}
+                    {job.status && job.status !== 'open' && job.status !== 'pending' && (
+                      <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${job.status === 'completed' ? 'bg-gray-100 border-gray-200 text-gray-600' :
+                          job.status === 'in_progress' ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                            job.status === 'cancelled' ? 'bg-red-50 border-red-200 text-red-600' :
+                              job.status === 'expired' ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                                'bg-gray-100 border-gray-200 text-gray-600'
+                        }`}>
+                        {job.status === 'completed' ? '✅ Fullført' :
+                          job.status === 'in_progress' ? '🔨 Under arbeid' :
+                            job.status === 'cancelled' ? '❌ Kansellert' :
+                              job.status === 'expired' ? '⏰ Utløpt' :
+                                job.status === 'closed' ? '🔒 Lukket' : job.status}
+                      </span>
+                    )}
                     {job.favCount !== undefined && job.favCount > 0 && (
                       <div className="flex items-center gap-1.5 text-sm font-bold text-custom-green bg-custom-green/5 px-3 py-1 rounded-full border border-[#2F7E47]/10">
                         <Bookmark size={14} fill="#2F7E47" color="#2F7E47" />
@@ -395,15 +421,28 @@ const JobListingDetailPage = () => {
             {/* Contact Button */}
             {job._id && (
               <div className="space-y-3">
-                <JobButton
-                  handleSendMessage={handleCreateOrder}
-                  id={job._id}
-                  job={job}
-                  isOwnJob={isOwnJob}
-                  isMsgLoading={isMessageLoading}
-                  hasRequested={hasRequested}
-                  isTimerActive={isTimerActive}
-                />
+                {/* Status banner — shown when service is not open */}
+                {isServiceClosed && job.status && SERVICE_STATUS_LABELS[job.status] && (
+                  <div className={`flex items-center gap-2.5 border rounded-xl px-4 py-3 text-[13px] font-medium ${SERVICE_STATUS_LABELS[job.status].bg} ${SERVICE_STATUS_LABELS[job.status].color}`}>
+                    <span className="text-lg">
+                      {job.status === 'completed' ? '✅' : job.status === 'in_progress' ? '🔨' : job.status === 'cancelled' ? '❌' : '⏸️'}
+                    </span>
+                    {SERVICE_STATUS_LABELS[job.status].label} — søknad er ikke mulig
+                  </div>
+                )}
+
+                {/* Apply button — disabled if service is closed */}
+                <div className={isServiceClosed ? 'opacity-50 pointer-events-none' : ''}>
+                  <JobButton
+                    handleSendMessage={isServiceClosed ? () => { } : handleCreateOrder}
+                    id={job._id}
+                    job={job}
+                    isOwnJob={isOwnJob}
+                    isMsgLoading={isMessageLoading}
+                    hasRequested={hasRequested}
+                    isTimerActive={isTimerActive}
+                  />
+                </div>
 
                 {isTimerActive && (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
@@ -445,11 +484,10 @@ const JobListingDetailPage = () => {
                   {job.checklist.map((item: any, idx: number) => (
                     <div key={idx} className="flex items-start gap-2">
                       <div
-                        className={`mt-1 w-5 h-5 rounded border flex items-center justify-center shrink-0 ${
-                          item.checked
-                            ? 'bg-custom-green border-custom-green'
-                            : 'bg-gray-100 border-gray-300'
-                        }`}
+                        className={`mt-1 w-5 h-5 rounded border flex items-center justify-center shrink-0 ${item.checked
+                          ? 'bg-custom-green border-custom-green'
+                          : 'bg-gray-100 border-gray-300'
+                          }`}
                       >
                         {item.checked && <CheckCircle2 size={14} className="text-white" />}
                       </div>
