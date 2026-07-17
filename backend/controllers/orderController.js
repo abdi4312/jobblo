@@ -35,6 +35,39 @@ exports.createJobRequest = async (req, res) => {
     const service = await Service.findById(serviceId);
     if (!service) return res.status(404).json({ error: 'Service not found' });
 
+    // ── Block applications on non-open services ───────────────────────────────
+    const BLOCKED_STATUSES = [
+      'completed', 'in_progress', 'closed', 'cancelled',
+      'expired', 'draft', 'waiting_for_approval',
+    ];
+    if (BLOCKED_STATUSES.includes(service.status)) {
+      const STATUS_MESSAGES = {
+        completed:            'Dette oppdraget er allerede fullført.',
+        in_progress:          'Dette oppdraget er under arbeid og tar ikke imot nye søknader.',
+        closed:               'Dette oppdraget er lukket.',
+        cancelled:            'Dette oppdraget er kansellert.',
+        expired:              'Dette oppdraget har utløpt.',
+        draft:                'Dette oppdraget er ikke publisert ennå.',
+        waiting_for_approval: 'Dette oppdraget venter på godkjenning.',
+      };
+      return res.status(400).json({
+        error: STATUS_MESSAGES[service.status] || 'Dette oppdraget er ikke tilgjengelig.',
+        serviceStatus: service.status,
+      });
+    }
+
+    // Block if an active order/contract already exists for this service
+    const activeOrder = await Order.findOne({
+      serviceId,
+      status: { $in: ['awaiting_payment', 'paid', 'in_progress', 'ready_for_review', 'disputed'] },
+    });
+    if (activeOrder) {
+      return res.status(400).json({
+        error: 'En utfører er allerede valgt for dette oppdraget.',
+        serviceStatus: service.status,
+      });
+    }
+
     const providerId = service.userId;
 
     if (providerId.toString() === customerId)

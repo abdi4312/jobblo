@@ -22,6 +22,7 @@ import mainLink from '../../api/mainURLs';
 import { toast } from 'react-hot-toast';
 import { Button } from '../../components/Ui/button/Button';
 import SafePaySteps from '../../components/SafePay/SafePaySteps';
+import { useUserStore } from '../../stores/userStore';
 
 // Reusable Star Rating Component
 interface StarRatingProps {
@@ -148,6 +149,7 @@ const StarRating: React.FC<StarRatingProps> = ({
 const SafePayApproval: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
+  const { user } = useUserStore();
   const [isSuccess, setIsSuccess] = useState(false);
   const [showSkipDialog, setShowSkipDialog] = useState(false);
 
@@ -168,24 +170,23 @@ const SafePayApproval: React.FC = () => {
   // Validation rules
   const disputeErrors = {
     reasonCategory: !disputeForm.reasonCategory ? 'Velg en årsak' : '',
-    title:
-      !disputeForm.title.trim()
-        ? 'Tittel er påkrevd'
-        : disputeForm.title.trim().length < 5
-          ? 'Minst 5 tegn'
-          : disputeForm.title.trim().length > 200
-            ? 'Maks 200 tegn'
-            : '',
-    description:
-      !disputeForm.description.trim()
-        ? 'Beskrivelse er påkrevd'
-        : disputeForm.description.trim().length < 20
-          ? 'Minst 20 tegn'
-          : disputeForm.description.trim().length > 2000
-            ? 'Maks 2000 tegn'
-            : '',
+    title: !disputeForm.title.trim()
+      ? 'Tittel er påkrevd'
+      : disputeForm.title.trim().length < 5
+        ? 'Minst 5 tegn'
+        : disputeForm.title.trim().length > 200
+          ? 'Maks 200 tegn'
+          : '',
+    description: !disputeForm.description.trim()
+      ? 'Beskrivelse er påkrevd'
+      : disputeForm.description.trim().length < 20
+        ? 'Minst 20 tegn'
+        : disputeForm.description.trim().length > 2000
+          ? 'Maks 2000 tegn'
+          : '',
   };
-  const disputeIsValid = !disputeErrors.reasonCategory && !disputeErrors.title && !disputeErrors.description;
+  const disputeIsValid =
+    !disputeErrors.reasonCategory && !disputeErrors.title && !disputeErrors.description;
 
   const DISPUTE_REASON_OPTIONS = [
     { value: 'work_not_completed', label: 'Jobb ikke fullført' },
@@ -290,7 +291,15 @@ const SafePayApproval: React.FC = () => {
       toast.success('Jobb godkjent!');
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.error || 'Kunne ikke godkjenne jobben');
+      const status = err.response?.status;
+      const message = err.response?.data?.error || 'Kunne ikke godkjenne jobben';
+      if (status === 403) {
+        toast.error('Ikke tilgang. Kun oppdragsgiver kan godkjenne jobben.');
+      } else if (status === 400 && message.includes('ready_for_review')) {
+        toast.error('Utfører har ikke meldt jobben som ferdig ennå.');
+      } else {
+        toast.error(message);
+      }
     },
   });
 
@@ -349,6 +358,25 @@ const SafePayApproval: React.FC = () => {
   }
 
   const { order: orderData, calculation } = checkoutData;
+
+  // Check if current user is the customer (order owner)
+  const isCustomer = String(orderData.customerId._id) === String(user?._id);
+
+  if (!isCustomer) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#f5f0e8] p-4">
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Ikke tilgang</h2>
+        <p className="text-gray-600 mb-4">Kun oppdragsgiver kan godkjenne jobber.</p>
+        <button
+          onClick={() => navigate(-1)}
+          className="text-custom-green font-medium flex items-center gap-2"
+        >
+          <ArrowLeft size={18} /> Gå tilbake
+        </button>
+      </div>
+    );
+  }
+
   const isOrderCompleted = orderData.status === 'completed';
 
   if (isSuccess) {
@@ -472,8 +500,8 @@ const SafePayApproval: React.FC = () => {
                 >
                   <div
                     className={`w-5.5 h-5.5 rounded-md border-2 flex items-center justify-center transition-all ${item.checked
-                      ? 'bg-custom-green border-custom-green'
-                      : 'bg-white border-[#c8d8c8]'
+                        ? 'bg-custom-green border-custom-green'
+                        : 'bg-white border-[#c8d8c8]'
                       }`}
                   >
                     {item.checked && <Check size={14} className="text-white" strokeWidth={3} />}
@@ -615,15 +643,15 @@ const SafePayApproval: React.FC = () => {
               <div className="mt-6">
                 <div
                   className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${recommendWorker
-                    ? 'bg-[#f0faf0] border-[#c6f0d8]'
-                    : 'bg-[#f9f9f7] border-transparent hover:border-black/10'
+                      ? 'bg-[#f0faf0] border-[#c6f0d8]'
+                      : 'bg-[#f9f9f7] border-transparent hover:border-black/10'
                     } ${isOrderCompleted ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                   onClick={() => !isOrderCompleted && setRecommendWorker(!recommendWorker)}
                 >
                   <div
                     className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${recommendWorker
-                      ? 'bg-custom-green border-custom-green'
-                      : 'bg-white border-[#c8d8c8]'
+                        ? 'bg-custom-green border-custom-green'
+                        : 'bg-white border-[#c8d8c8]'
                       }`}
                   >
                     {recommendWorker && <Check size={16} className="text-white" strokeWidth={3} />}
@@ -716,10 +744,10 @@ const SafePayApproval: React.FC = () => {
                 </span>
                 <span
                   className={`text-sm font-bold px-3 py-1 rounded-full ${orderData.status === 'completed'
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : orderData.status === 'paid'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-amber-100 text-amber-700'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : orderData.status === 'paid'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-amber-100 text-amber-700'
                     }`}
                 >
                   {orderData.status === 'completed'
@@ -854,7 +882,9 @@ const SafePayApproval: React.FC = () => {
                   >
                     <option value="">Velg årsak…</option>
                     {DISPUTE_REASON_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
                     ))}
                   </select>
                   {disputeTouched.reasonCategory && disputeErrors.reasonCategory && (
@@ -868,7 +898,9 @@ const SafePayApproval: React.FC = () => {
                     <label className="text-sm font-medium text-gray-700">
                       Tittel <span className="text-red-500">*</span>
                     </label>
-                    <span className={`text-xs ${disputeForm.title.length > 200 ? 'text-red-500' : 'text-gray-400'}`}>
+                    <span
+                      className={`text-xs ${disputeForm.title.length > 200 ? 'text-red-500' : 'text-gray-400'}`}
+                    >
                       {disputeForm.title.length}/200
                     </span>
                   </div>
@@ -898,7 +930,9 @@ const SafePayApproval: React.FC = () => {
                     <label className="text-sm font-medium text-gray-700">
                       Beskrivelse <span className="text-red-500">*</span>
                     </label>
-                    <span className={`text-xs ${disputeForm.description.length > 2000 ? 'text-red-500' : 'text-gray-400'}`}>
+                    <span
+                      className={`text-xs ${disputeForm.description.length > 2000 ? 'text-red-500' : 'text-gray-400'}`}
+                    >
                       {disputeForm.description.length}/2000
                     </span>
                   </div>
@@ -932,7 +966,11 @@ const SafePayApproval: React.FC = () => {
                     onClick={() => {
                       setShowDisputeDialog(false);
                       setDisputeForm({ reasonCategory: '', title: '', description: '' });
-                      setDisputeTouched({ reasonCategory: false, title: false, description: false });
+                      setDisputeTouched({
+                        reasonCategory: false,
+                        title: false,
+                        description: false,
+                      });
                     }}
                     className="flex-1 py-3 border border-gray-300 rounded-full text-gray-700 font-bold hover:bg-gray-50 transition-colors text-sm"
                   >

@@ -79,6 +79,8 @@ const MineAnnonser = lazy(() => import('../pages/MyJobsPage/MineAnnonser.tsx'));
 const JobListingDetailPage = lazy(() => import('../pages/JobListingDetailPage/JobListingDetailPage.tsx'));
 const ApplicantsPage = lazy(() => import('../pages/ApplicantsPage/ApplicantsPage.tsx'));
 const MyApplicantsOverview = lazy(() => import('../pages/ApplicantsPage/MyApplicantsOverview.tsx'));
+const MyApplicationsPage = lazy(() => import('../pages/MyApplicationsPage/MyApplicationsPage.tsx'));
+const ProviderOrderDetailPage = lazy(() => import('../pages/ProviderWorkPage/ProviderOrderDetailPage.tsx'));
 const SafePayCheckout = lazy(() => import('../pages/SafePayPage/SafePayCheckout.tsx'));
 const SafePaySuccess = lazy(() => import('../pages/SafePayPage/SafePaySuccess.tsx'));
 const SafePayApproval = lazy(() => import('../pages/SafePayPage/SafePayApproval.tsx'));
@@ -157,6 +159,8 @@ export const routes: RouteObject[] = [
       { path: 'completed-job/:orderId?', element: <ProtectedRoute>{withSuspense(CompletedJobPage)}</ProtectedRoute> },
       { path: 'job-applicants/:serviceId', element: <ProtectedRoute>{withSuspense(ApplicantsPage)}</ProtectedRoute> },
       { path: 'my-applicants', element: <ProtectedRoute>{withSuspense(MyApplicantsOverview)}</ProtectedRoute> },
+      { path: 'my-applications', element: <ProtectedRoute>{withSuspense(MyApplicationsPage)}</ProtectedRoute> },
+      { path: 'provider/orders/:orderId', element: <ProtectedRoute>{withSuspense(ProviderOrderDetailPage)}</ProtectedRoute> },
       { path: 'safepay/checkout/:orderId', element: <ProtectedRoute>{withSuspense(SafePayCheckout)}</ProtectedRoute> },
       { path: 'safepay/success', element: <ProtectedRoute>{withSuspense(SafePaySuccess)}</ProtectedRoute> },
       { path: 'safepay/approval/:orderId', element: <ProtectedRoute>{withSuspense(SafePayApproval)}</ProtectedRoute> },

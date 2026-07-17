@@ -13,6 +13,19 @@ export const getMyApplicantsOverview = async () => {
   return res.data;
 };
 
+/** Provider: all services they applied to, with full order/chat/status */
+export const getMyApplicationsOverview = async (status?: string) => {
+  const params: any = {};
+  if (status) params.status = status;
+  const res = await mainLink.get('/api/my-applications', { params });
+  return res.data;
+};
+
+export const withdrawMyApplication = async (requestId: string) => {
+  const res = await mainLink.delete(`/api/my-applications/${requestId}`);
+  return res.data;
+};
+
 export const createSafePayContract = async (data: {
   serviceId: string;
   applicantId: string;

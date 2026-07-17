@@ -62,40 +62,39 @@ exports.createSafePaySession = async (req, res) => {
     const { orderId } = req.body;
     const userId = req.userId;
 
-    console.log('createSafePaySession - userId:', userId);
-    console.log('createSafePaySession - typeof userId:', typeof userId);
-
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
       return res.status(400).json({ error: 'Ugyldig orderId' });
     }
 
     const order = await Order.findById(orderId).populate('serviceId');
-    console.log('createSafePaySession - order:', order);
-    console.log('createSafePaySession - order.customerId:', order.customerId);
-    console.log('createSafePaySession - typeof order.customerId:', typeof order.customerId);
-    console.log('createSafePaySession - order.customerId.toString():', order.customerId.toString());
-    console.log('createSafePaySession - String(order.customerId):', String(order.customerId));
 
     if (!order) {
       return res.status(404).json({ error: 'Kontrakten ble ikke funnet' });
     }
 
-    if (['paid', 'in_progress', 'completed'].includes(order.status)) {
-      return res.status(400).json({ error: 'Denne kontrakten er allerede betalt' });
+    // ── SECURITY: Only customer (job poster/payer) may create checkout ─────────
+    if (String(order.customerId) !== String(userId)) {
+      return res.status(403).json({ error: 'Ikke tilgang. Kun oppdragsgiver kan gjøre betalinger.' });
     }
 
-    // Allow both customer AND provider to create checkout session
-    const customerIdStr = order.customerId.toString();
-    const providerIdStr = order.providerId.toString();
-    const userIdStr = String(userId);
-    console.log('createSafePaySession - customerIdStr:', customerIdStr);
-    console.log('createSafePaySession - providerIdStr:', providerIdStr);
-    console.log('createSafePaySession - userIdStr:', userIdStr);
-    console.log('createSafePaySession - is customer:', customerIdStr === userIdStr);
-    console.log('createSafePaySession - is provider:', providerIdStr === userIdStr);
+    // Already paid — return 409
+    if (order.paymentStatus === 'paid') {
+      return res.status(409).json({ error: 'Ordre er allerede betalt.' });
+    }
+    if (['paid', 'in_progress', 'ready_for_review', 'completed'].includes(order.status)) {
+      return res.status(409).json({ error: 'Ordre er allerede betalt.' });
+    }
 
-    if (customerIdStr !== userIdStr && providerIdStr !== userIdStr) {
-      return res.status(403).json({ error: 'Ikke autorisert' });
+    // Return existing open session if one exists (prevent duplicate sessions)
+    if (order.checkoutSessionId && order.checkoutSessionStatus === 'open') {
+      try {
+        const existingSession = await stripe.checkout.sessions.retrieve(order.checkoutSessionId);
+        if (existingSession.status === 'open') {
+          return res.json({ url: existingSession.url, reused: true });
+        }
+      } catch (_) {
+        // Session expired/invalid — create new one
+      }
     }
 
     const user = await User.findById(userId);
@@ -117,14 +116,12 @@ exports.createSafePaySession = async (req, res) => {
     const fee = Math.round(order.agreedPrice * 0.03);
     const total = order.agreedPrice + fee;
 
-    // Check Stripe minimum amount requirement (NOK 3.00 = 300 øre)
     if (total < 3) {
       return res.status(400).json({
         error: 'Beløpet er for lavt. Minimumsbeløpet for betaling er 3 kr inkludert gebyr.',
       });
     }
 
-    // 8. Fix FRONTEND_URL path joining
     const frontendUrl = process.env.FRONTEND_URL?.replace(/\/$/, '');
 
     const session = await stripe.checkout.sessions.create({
@@ -153,9 +150,15 @@ exports.createSafePaySession = async (req, res) => {
       },
     });
 
+    // Store session ID on order for reconciliation
+    await Order.findByIdAndUpdate(orderId, {
+      checkoutSessionId: session.id,
+      checkoutSessionStatus: 'open',
+      checkoutSessionCreatedAt: new Date(),
+    });
+
     res.json({ url: session.url });
   } catch (err) {
-    console.error('Error creating Stripe session:', err);
     res.status(500).json({ error: 'Kunne ikke starte betalingen' });
   }
 };
@@ -170,7 +173,7 @@ exports.checkoutSessionStatus = async (req, res) => {
     }
 
     const metadata = session.metadata;
-    if (!metadata.orderId) {
+    if (!metadata?.orderId) {
       return res.status(400).json({ error: 'Invalid session metadata' });
     }
 
@@ -179,12 +182,11 @@ exports.checkoutSessionStatus = async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Allow both customer AND provider to check session status
-    const customerIdStr = order.customerId.toString();
-    const providerIdStr = order.providerId.toString();
-    const userIdStr = String(req.userId);
-
-    if (customerIdStr !== userIdStr && providerIdStr !== userIdStr) {
+    // Only customer or provider can check status
+    const isParticipant =
+      String(order.customerId) === String(req.userId) ||
+      String(order.providerId) === String(req.userId);
+    if (!isParticipant) {
       return res.status(403).json({ error: 'Ikke autorisert' });
     }
 
@@ -192,63 +194,103 @@ exports.checkoutSessionStatus = async (req, res) => {
       return res.json({ payment_status: session.payment_status });
     }
 
-    order.status = 'paid';
-    order.paymentStatus = 'paid';
-    await order.save();
+    // Already paid — return current state
+    if (['paid', 'in_progress', 'ready_for_review', 'completed'].includes(order.status)) {
+      return res.json({ payment_status: 'paid', orderId: order._id, chatId: order.chatId, alreadyConfirmed: true });
+    }
 
-    // If order has chatId, update chat status and add system message
-    if (order.chatId) {
-      const chat = await Chat.findById(order.chatId);
-      if (chat) {
+    // Update order status atomically
+    const updatedOrder = await Order.findOneAndUpdate(
+      { _id: metadata.orderId, status: { $in: ['awaiting_payment', 'pending', 'accepted'] } },
+      {
+        $set: {
+          status: 'paid',
+          paymentStatus: 'paid',
+          paymentConfirmedAt: new Date(),
+          checkoutSessionId: session.id,
+          checkoutSessionStatus: 'complete',
+          paymentIntentId: session.payment_intent,
+        },
+        $push: {
+          history: {
+            action: 'payment_confirmed',
+            userId: null,
+            timestamp: new Date(),
+            data: { stripeSessionId: session.id, message: 'Betaling bekreftet' },
+          },
+        },
+      },
+      { new: true }
+    );
+
+    if (updatedOrder?.chatId) {
+      const chat = await Chat.findById(updatedOrder.chatId);
+      if (chat && !['paid', 'completed'].includes(chat.status)) {
         chat.status = 'paid';
-        // Add system payment message
         chat.messages.push({
           type: 'system_payment',
-          systemData: { orderId: order._id, amount: order.agreedPrice },
-          text: `Betaling på ${order.agreedPrice} kr er reservert i escrow`,
+          systemData: { orderId: updatedOrder._id, amount: updatedOrder.agreedPrice },
+          text: `Betaling på ${updatedOrder.agreedPrice} kr er bekreftet og holdes i SafePay`,
           createdAt: new Date(),
         });
         await chat.save();
       }
     }
 
-    // 4. Prevent duplicate Payment creation
-    const existingPayment = await Payment.findOne({ orderId: order._id });
+    // Create Payment record (prevent duplicates)
+    const existingPayment = await Payment.findOne({ orderId: metadata.orderId });
     if (!existingPayment) {
-      const payment = new Payment({
-        orderId: order._id,
-        chatId: order.chatId,
-        status: 'completed',
-        amount: order.agreedPrice,
-      });
-      await payment.save();
+      try {
+        await Payment.create({
+          orderId: metadata.orderId,
+          chatId: updatedOrder?.chatId,
+          status: 'completed',
+          amount: updatedOrder?.agreedPrice || 0,
+          stripeSessionId: session.id,
+          stripePaymentIntentId: session.payment_intent,
+        });
 
-      // Send notifications only once when payment is first created
-      const providerNotification = new Notification({
-        userId: order.providerId,
-        type: 'order',
-        content: 'Betaling for oppdraget er mottatt! Jobben kan nå starte.',
-        orderId: order._id,
-        senderId: order.customerId,
-      });
+        // Mark both users as SafePay users
+        await User.updateMany(
+          { _id: { $in: [order.customerId, order.providerId].filter(Boolean) }, isSafePayUser: { $ne: true } },
+          { $set: { isSafePayUser: true, safePayActivatedAt: new Date() } }
+        );
 
-      const customerNotification = new Notification({
-        userId: order.customerId,
-        type: 'order',
-        content: 'Betalingen er mottatt! Oppdraget kan nå starte.',
-        orderId: order._id,
-        senderId: order.customerId,
-      });
-      await Promise.all([providerNotification.save(), customerNotification.save()]);
+        await Promise.all([
+          Notification.create({
+            userId: order.providerId,
+            type: 'order',
+            content: 'Betaling mottatt! Du kan nå starte jobben.',
+            orderId: order._id,
+            senderId: order.customerId,
+          }),
+          Notification.create({
+            userId: order.customerId,
+            type: 'order',
+            content: 'Betalingen er bekreftet.',
+            orderId: order._id,
+            senderId: order.customerId,
+          }),
+        ]);
+      } catch (dupErr) {
+        if (dupErr.code !== 11000) throw dupErr;
+      }
+    }
+
+    // Emit socket events
+    const io = req.app?.get('io');
+    if (io) {
+      io.to(`user_${order.providerId}`).emit('payment_confirmed', { orderId: order._id });
+      io.to(`user_${order.customerId}`).emit('payment_confirmed', { orderId: order._id });
     }
 
     res.json({
       payment_status: 'paid',
       orderId: order._id,
       chatId: order.chatId,
+      alreadyConfirmed: false,
     });
   } catch (err) {
-    console.error('Error checking checkout session:', err);
     res.status(500).json({ error: 'Serverfeil ved sjekking av betaling' });
   }
 };
@@ -258,16 +300,14 @@ exports.approveAndPayout = async (req, res) => {
     const { orderId, ratings, comment, photos, recommendWorker } = req.body;
     const userId = req.userId;
 
-    // Validate orderId format
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
       return res.status(400).json({ error: 'Ugyldig orderId' });
     }
 
-    // Validate ratings are present and each at least 1 star
+    // Validate ratings
     if (!ratings) {
       return res.status(400).json({ error: 'Vurderinger er påkrevd' });
     }
-
     const requiredRatingFields = ['overall', 'punctuality', 'quality', 'communication', 'tidiness'];
     for (const field of requiredRatingFields) {
       if (typeof ratings[field] !== 'number' || ratings[field] < 1 || ratings[field] > 5) {
@@ -276,8 +316,6 @@ exports.approveAndPayout = async (req, res) => {
         });
       }
     }
-
-    // Optional comment validation (if present, not too long)
     if (comment && comment.length > 1000) {
       return res.status(400).json({ error: 'Kommentaren kan ikke være lenger enn 1000 tegn' });
     }
@@ -287,34 +325,44 @@ exports.approveAndPayout = async (req, res) => {
       return res.status(404).json({ error: 'Kontrakten ble ikke funnet' });
     }
 
-    // Allow both customer AND provider to approve payout
-    const customerIdStr = order.customerId.toString();
-    const providerIdStr = order.providerId.toString();
-    const userIdStr = String(userId);
-
-    if (customerIdStr !== userIdStr && providerIdStr !== userIdStr) {
-      return res.status(403).json({ error: 'Ikke autorisert til å godkjenne denne kontrakten' });
+    // ── SECURITY: ONLY customer (job owner / payer) can approve ───────────────
+    if (String(order.customerId) !== String(userId)) {
+      return res.status(403).json({
+        error: 'Ikke tilgang. Kun oppdragsgiver kan godkjenne og utbetale.',
+      });
     }
 
-    // 5. Do not allow for already completed orders
+    // ── STATE CHECK: must be ready_for_review ─────────────────────────────────
     if (order.status === 'completed') {
       return res.status(400).json({ error: 'Jobben er allerede fullført' });
     }
-
-    if (
-      order.status !== 'in_progress' &&
-      order.status !== 'paid' &&
-      order.status !== 'awaiting_payment'
-    ) {
-      return res.status(400).json({ error: 'Jobben kan ikke fullføres fra denne statusen' });
+    if (order.status !== 'ready_for_review') {
+      return res.status(400).json({
+        error: `Jobben kan ikke godkjennes fra status "${order.status}". Utfører må melde jobben som ferdig først.`,
+      });
+    }
+    if (order.paymentStatus !== 'paid') {
+      return res.status(400).json({ error: 'Betaling er ikke bekreftet' });
     }
 
+    // ── Check no active dispute ────────────────────────────────────────────────
+    const Dispute = require('../models/Dispute');
+    const activeDispute = await Dispute.findOne({
+      orderId,
+      status: { $nin: ['resolved', 'closed', 'cancelled'] },
+    });
+    if (activeDispute) {
+      return res.status(400).json({ error: 'Kan ikke godkjenne under aktiv tvist' });
+    }
+
+    // ── Atomic update: complete the order ─────────────────────────────────────
     order = await Order.findOneAndUpdate(
-      { _id: orderId, status: { $ne: 'completed' } },
+      { _id: orderId, status: 'ready_for_review' },
       {
         $set: {
           status: 'completed',
           paymentStatus: 'paid',
+          completedAt: new Date(),
           'review.overall': ratings.overall,
           'review.punctuality': ratings.punctuality,
           'review.quality': ratings.quality,
@@ -324,174 +372,141 @@ exports.approveAndPayout = async (req, res) => {
         },
         $push: {
           history: {
-            action: 'payout_approved',
-            userId: userId,
+            action: 'work_approved',
+            userId,
             timestamp: new Date(),
-            data: { ratings, comment, photos, recommendWorker },
+            data: { ratings, comment, recommendWorker },
           },
         },
       },
       { new: true }
     ).populate('serviceId');
 
-    // If order has chatId, update chat status to completed and add system message
+    if (!order) {
+      return res.status(400).json({ error: 'Jobben er allerede fullført' });
+    }
+
+    const fee = Math.round(order.agreedPrice * 0.03);
+    const tax = 0;
+    const totalCustomer = order.agreedPrice + fee;
+    const netProvider = order.agreedPrice - fee;
+
+    // ── Update chat to completed ───────────────────────────────────────────────
     if (order.chatId) {
       const chat = await Chat.findById(order.chatId);
       if (chat) {
         chat.status = 'completed';
         chat.messages.push({
           type: 'system_status',
-          systemData: { orderId: order._id },
-          text: 'Jobben er fullført',
+          systemData: { event: 'work_approved', orderId: order._id },
+          text: 'Jobb godkjent av oppdragsgiver — utbetaling klar',
           createdAt: new Date(),
         });
         await chat.save();
       }
     }
 
-    // 2. Check if order is null (race condition: already updated by another request)
-    if (!order) {
-      return res.status(400).json({ error: 'Jobben er allerede fullført' });
+    // ── Complete service ───────────────────────────────────────────────────────
+    await Service.findByIdAndUpdate(order.serviceId._id, { status: 'completed' });
+
+    // ── SafePayHistory (idempotent) ────────────────────────────────────────────
+    const existingHistory = await SafePayHistory.findOne({ orderId: order._id });
+    if (!existingHistory) {
+      try {
+        await SafePayHistory.create({
+          orderId: order._id,
+          serviceId: order.serviceId._id,
+          customerId: order.customerId,
+          providerId: order.providerId,
+          serviceTitle: order.serviceId.title || 'Uten navn',
+          amounts: { agreedPrice: order.agreedPrice, fee, tax, totalCustomer, netProvider },
+          status: 'completed',
+          paymentDate: new Date(),
+          ratings,
+          reviewComment: comment,
+        });
+      } catch (e) {
+        if (e.code !== 11000) throw e;
+      }
     }
 
-    const fee = Math.round(order.agreedPrice * 0.03);
-    const tax = Math.round(order.agreedPrice * 0);
-    const totalCustomer = order.agreedPrice + fee;
-    const netProvider = order.agreedPrice - fee;
+    // ── Review: customer reviews provider ─────────────────────────────────────
+    // revieweeId = provider (the one who did the work)
+    // reviewerId = customer (the one who approves)
+    const existingReview = await Review.findOne({ orderId: order._id, reviewerId: userId });
+    if (!existingReview) {
+      try {
+        await Review.create({
+          orderId: order._id,
+          serviceId: order.serviceId._id,
+          reviewerId: userId,               // customer writes the review
+          revieweeId: order.providerId,     // review is ABOUT the provider
+          revieweeRole: 'poster',           // provider is being reviewed
+          rating: ratings.overall,
+          comment: comment || '',
+          photos: photos || [],
+          recommendWorker: recommendWorker || false,
+        });
+      } catch (e) {
+        if (e.code !== 11000) throw e;
+      }
+    }
 
-    // 7. Use order.serviceId._id because serviceId is populated
-    await Service.findByIdAndUpdate(order.serviceId._id, {
-      status: 'completed',
-    });
+    // ── Update provider stats ──────────────────────────────────────────────────
+    const provider = await User.findById(order.providerId);
+    if (provider) {
+      const allProviderReviews = await Review.find({ revieweeId: order.providerId });
+      const reviewCount = allProviderReviews.length;
+      const averageRating =
+        reviewCount > 0
+          ? allProviderReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
+          : 0;
 
-    // Check if we already processed this order to prevent duplicates
-    const [existingPayment, existingHistory] = await Promise.all([
-      Payment.findOne({ orderId: order._id }),
-      SafePayHistory.findOne({ orderId: order._id }),
+      provider.completedJobs = (provider.completedJobs || 0) + 1;
+      provider.earnings = (provider.earnings || 0) + netProvider;
+      provider.averageRating = parseFloat(averageRating.toFixed(1));
+      provider.reviewCount = reviewCount;
+      // Mark as SafePay user
+      if (!provider.isSafePayUser) {
+        provider.isSafePayUser = true;
+        provider.safePayActivatedAt = new Date();
+      }
+      await provider.save();
+    }
+
+    // ── Also update customer as SafePay user ───────────────────────────────────
+    await User.findOneAndUpdate(
+      { _id: order.customerId, isSafePayUser: { $ne: true } },
+      { $set: { isSafePayUser: true, safePayActivatedAt: new Date() } }
+    );
+
+    // ── Notifications ──────────────────────────────────────────────────────────
+    await Promise.allSettled([
+      Notification.create({
+        userId: order.providerId,
+        type: 'order',
+        content: `Jobb godkjent! ${netProvider} kr er lagt til din saldo.`,
+        orderId: order._id,
+        senderId: userId,
+      }),
+      Notification.create({
+        userId: order.customerId,
+        type: 'order',
+        content: 'Oppdraget er fullført og godkjent.',
+        orderId: order._id,
+        senderId: userId,
+      }),
     ]);
 
-    if (!existingPayment) {
-      const payment = new Payment({
-        orderId: order._id,
-        status: 'released',
-        amount: order.agreedPrice,
-      });
-      await payment.save();
+    // ── Socket events ──────────────────────────────────────────────────────────
+    const io = req.app?.get('io');
+    if (io) {
+      io.to(`user_${order.providerId}`).emit('order_completed', { orderId: order._id, netProvider });
+      io.to(`user_${order.customerId}`).emit('order_completed', { orderId: order._id });
     }
-
-    if (!existingHistory) {
-      const service = order.serviceId;
-      const safePayHistory = new SafePayHistory({
-        orderId: order._id,
-        serviceId: service._id,
-        customerId: order.customerId,
-        providerId: order.providerId,
-        serviceTitle: service.title || 'Uten navn',
-        amounts: {
-          agreedPrice: order.agreedPrice,
-          fee,
-          tax,
-          totalCustomer,
-          netProvider,
-        },
-        status: 'completed',
-        paymentDate: new Date(),
-        ratings,
-        reviewComment: comment,
-      });
-      await safePayHistory.save();
-    }
-
-    // Determine who is reviewing who
-    const isCustomerReviewing = String(userId) === String(order.customerId);
-    const reviewerId = userId;
-    const revieweeId = isCustomerReviewing ? order.providerId : order.customerId;
-    const revieweeRole = isCustomerReviewing ? 'poster' : 'seeker';
-    console.log('approveAndPayout: Review info:', {
-      isCustomerReviewing,
-      reviewerId,
-      revieweeId,
-      revieweeRole,
-    });
-
-    // Check if a review for this order already exists
-    let review = await Review.findOne({
-      orderId: order._id,
-      reviewerId,
-    });
-
-    if (!review) {
-      // Create the review document
-      console.log('approveAndPayout: Creating new review');
-      review = await Review.create({
-        orderId: order._id,
-        serviceId: order.serviceId._id,
-        reviewerId,
-        revieweeId,
-        revieweeRole,
-        rating: ratings.overall,
-        comment: comment || '',
-        photos: photos || [],
-        recommendWorker: recommendWorker || false,
-      });
-      console.log('approveAndPayout: Review created:', review);
-    } else {
-      console.log('approveAndPayout: Review already exists:', review);
-      // Update existing review
-      review.rating = ratings.overall;
-      review.comment = comment || '';
-      review.photos = photos || [];
-      review.recommendWorker = recommendWorker || false;
-      await review.save();
-    }
-
-    // Update the reviewee's stats
-    const reviewee = await User.findById(revieweeId);
-    console.log('approveAndPayout: Found reviewee:', reviewee);
-    if (reviewee) {
-      // Calculate new average rating from all reviews for this reviewee
-      const allReviews = await Review.find({ revieweeId, revieweeRole });
-      console.log('approveAndPayout: All reviews for reviewee:', allReviews);
-      const reviewCount = allReviews.length;
-      const averageRating =
-        reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
-      console.log('approveAndPayout: Calculated stats:', {
-        reviewCount,
-        averageRating,
-      });
-
-      // Only update completedJobs and earnings if the reviewee is the provider (they're the one doing the job)
-      if (isCustomerReviewing) {
-        reviewee.completedJobs = (reviewee.completedJobs || 0) + 1;
-        reviewee.earnings = (reviewee.earnings || 0) + netProvider;
-      }
-
-      reviewee.averageRating = parseFloat(averageRating.toFixed(1));
-      reviewee.reviewCount = reviewCount;
-      await reviewee.save();
-      console.log('approveAndPayout: Saved reviewee:', reviewee);
-    }
-
-    // 6. Keep as internal wallet update only, no real payout wording
-    const providerNotification = new Notification({
-      userId: order.providerId,
-      type: 'order',
-      content: `Oppdraget er fullført! ${netProvider} kr er lagt til din saldo.`,
-      orderId: order._id,
-      senderId: userId,
-    });
-    const customerNotification = new Notification({
-      userId: order.customerId,
-      type: 'order',
-      content: `Oppdraget er fullført.`,
-      orderId: order._id,
-      senderId: userId,
-    });
-    await Promise.all([providerNotification.save(), customerNotification.save()]);
 
     res.json({ message: 'Jobb godkjent og beløp lagt til saldo', orderId });
   } catch (err) {
-    console.error('Error approving payout:', err);
     res.status(500).json({ error: 'Serverfeil ved godkjenning av utbetaling' });
   }
 };

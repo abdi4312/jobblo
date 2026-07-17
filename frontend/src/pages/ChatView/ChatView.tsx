@@ -49,6 +49,9 @@ export function ChatView() {
       : chat.clientId
     : null;
 
+  // Check if current user is service owner (customer)
+  const isServiceOwner = chat?.serviceId?.userId === user?._id;
+
   useEffect(() => {
     if (!chatId) return;
 
@@ -289,42 +292,63 @@ export function ChatView() {
           </div>
 
           {/* In-thread Action Bar */}
-          <div className="bg-white border-b border-gray-100 px-4 py-3 shrink-0">
-            <div className="flex gap-3">
-              {!chat.orderId ? (
-                <button
-                  onClick={handleCreateContract}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none bg-gradient-to-r from-[#16a34a] to-[#15803d] text-white shadow-sm hover:shadow-md hover:from-[#15803d] hover:to-[#14532d] transition-all duration-200 transform hover:-translate-y-0.5"
-                >
-                  Opprett kontrakt
-                </button>
-              ) : (
-                <>
-                  {/* Only show payment button if payment isn't completed yet */}
-                  {chat.orderId.paymentStatus !== 'paid' && (
-                    <button
-                      onClick={handleStartSafePay}
-                      className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none bg-gradient-to-r from-[#16a34a] to-[#15803d] text-white shadow-sm hover:shadow-md hover:from-[#15803d] hover:to-[#14532d] transition-all duration-200 transform hover:-translate-y-0.5"
-                    >
-                      Start fiks ferdig-betaling
-                    </button>
-                  )}
-                  {/* Always show view contract button unless order is canceled/declined */}
-                  {chat.orderId.status !== 'canceled' && chat.orderId.status !== 'declined' && (
-                    <button
-                      onClick={() => {
-                        const orderId = chat.orderId._id || chat.orderId;
-                        navigate(`/safepay/checkout/${orderId}`);
-                      }}
-                      className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#16a34a] text-[#16a34a] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
-                    >
-                      Se kontrakt
-                    </button>
-                  )}
-                </>
-              )}
+          {isServiceOwner && (
+            <div className="bg-white border-b border-gray-100 px-4 py-3 shrink-0">
+              <div className="flex gap-3">
+                {!chat.orderId ? (
+                  <button
+                    onClick={handleCreateContract}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none bg-gradient-to-r from-[#16a34a] to-[#15803d] text-white shadow-sm hover:shadow-md hover:from-[#15803d] hover:to-[#14532d] transition-all duration-200 transform hover:-translate-y-0.5"
+                  >
+                    Opprett kontrakt
+                  </button>
+                ) : (
+                  <>
+                    {/* Only show payment button if payment isn't completed yet */}
+                    {chat.orderId.paymentStatus !== 'paid' && (
+                      <button
+                        onClick={handleStartSafePay}
+                        className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none bg-gradient-to-r from-[#16a34a] to-[#15803d] text-white shadow-sm hover:shadow-md hover:from-[#15803d] hover:to-[#14532d] transition-all duration-200 transform hover:-translate-y-0.5"
+                      >
+                        Start fiks ferdig-betaling
+                      </button>
+                    )}
+                    {/* Always show view contract button unless order is canceled/declined */}
+                    {chat.orderId.status !== 'canceled' && chat.orderId.status !== 'declined' && (
+                      <button
+                        onClick={() => {
+                          const orderId = chat.orderId._id || chat.orderId;
+                          navigate(`/safepay/checkout/${orderId}`);
+                        }}
+                        className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#16a34a] text-[#16a34a] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
+                      >
+                        Se kontrakt
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+          {/* If not service owner, maybe show view contract button (always (if order exists) */}
+          {!isServiceOwner &&
+            chat.orderId &&
+            chat.orderId.status !== 'canceled' &&
+            chat.orderId.status !== 'declined' && (
+              <div className="bg-white border-b border-gray-100 px-4 py-3 shrink-0">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      const orderId = chat.orderId._id || chat.orderId;
+                      navigate(`/safepay/checkout/${orderId}`);
+                    }}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#16a34a] text-[#16a34a] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
+                  >
+                    Se kontrakt
+                  </button>
+                </div>
+              </div>
+            )}
         </>
       )}
 
