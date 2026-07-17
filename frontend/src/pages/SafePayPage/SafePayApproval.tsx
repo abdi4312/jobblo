@@ -291,7 +291,15 @@ const SafePayApproval: React.FC = () => {
       toast.success('Jobb godkjent!');
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.error || 'Kunne ikke godkjenne jobben');
+      const status = err.response?.status;
+      const message = err.response?.data?.error || 'Kunne ikke godkjenne jobben';
+      if (status === 403) {
+        toast.error('Ikke tilgang. Kun oppdragsgiver kan godkjenne jobben.');
+      } else if (status === 400 && message.includes('ready_for_review')) {
+        toast.error('Utfører har ikke meldt jobben som ferdig ennå.');
+      } else {
+        toast.error(message);
+      }
     },
   });
 
@@ -484,27 +492,23 @@ const SafePayApproval: React.FC = () => {
                 <div
                   key={item.id}
                   onClick={!isOrderCompleted && !isSuccess ? () => toggleCheck(item.id) : undefined}
-                  className={`flex items-center gap-3 p-3.5 rounded-xl ${
-                    isOrderCompleted || isSuccess ? 'cursor-not-allowed' : 'cursor-pointer'
-                  } border transition-all ${
-                    item.checked
+                  className={`flex items-center gap-3 p-3.5 rounded-xl ${isOrderCompleted || isSuccess ? 'cursor-not-allowed' : 'cursor-pointer'
+                    } border transition-all ${item.checked
                       ? 'bg-[#f0faf0] border-[#c6f0d8]'
                       : 'bg-[#f9f9f7] border-transparent hover:border-black/10'
-                  }`}
+                    }`}
                 >
                   <div
-                    className={`w-5.5 h-5.5 rounded-md border-2 flex items-center justify-center transition-all ${
-                      item.checked
+                    className={`w-5.5 h-5.5 rounded-md border-2 flex items-center justify-center transition-all ${item.checked
                         ? 'bg-custom-green border-custom-green'
                         : 'bg-white border-[#c8d8c8]'
-                    }`}
+                      }`}
                   >
                     {item.checked && <Check size={14} className="text-white" strokeWidth={3} />}
                   </div>
                   <span
-                    className={`text-[13px] font-medium ${
-                      item.checked ? 'text-[#166534]' : 'text-gray-600'
-                    }`}
+                    className={`text-[13px] font-medium ${item.checked ? 'text-[#166534]' : 'text-gray-600'
+                      }`}
                   >
                     {item.text}
                   </span>
@@ -570,9 +574,8 @@ const SafePayApproval: React.FC = () => {
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 disabled={isOrderCompleted}
-                className={`w-full bg-white border border-black/10 rounded-xl p-4 text-[13px] text-gray-800 outline-none focus:border-custom-green min-h-[100px] ${
-                  isOrderCompleted ? 'cursor-not-allowed bg-gray-50' : ''
-                }`}
+                className={`w-full bg-white border border-black/10 rounded-xl p-4 text-[13px] text-gray-800 outline-none focus:border-custom-green min-h-[100px] ${isOrderCompleted ? 'cursor-not-allowed bg-gray-50' : ''
+                  }`}
                 placeholder="Skriv en anmeldelse..."
               />
 
@@ -639,19 +642,17 @@ const SafePayApproval: React.FC = () => {
               {/* Recommend Worker Checkbox */}
               <div className="mt-6">
                 <div
-                  className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${
-                    recommendWorker
+                  className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${recommendWorker
                       ? 'bg-[#f0faf0] border-[#c6f0d8]'
                       : 'bg-[#f9f9f7] border-transparent hover:border-black/10'
-                  } ${isOrderCompleted ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                    } ${isOrderCompleted ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                   onClick={() => !isOrderCompleted && setRecommendWorker(!recommendWorker)}
                 >
                   <div
-                    className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
-                      recommendWorker
+                    className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${recommendWorker
                         ? 'bg-custom-green border-custom-green'
                         : 'bg-white border-[#c8d8c8]'
-                    }`}
+                      }`}
                   >
                     {recommendWorker && <Check size={16} className="text-white" strokeWidth={3} />}
                   </div>
@@ -691,9 +692,9 @@ const SafePayApproval: React.FC = () => {
                         size={20}
                         className={
                           star <=
-                          (orderData.providerId.averageRating
-                            ? Math.round(orderData.providerId.averageRating)
-                            : 5)
+                            (orderData.providerId.averageRating
+                              ? Math.round(orderData.providerId.averageRating)
+                              : 5)
                             ? 'text-[#F59E0B] fill-[#F59E0B]'
                             : 'text-[#d1d5db]'
                         }
@@ -702,9 +703,8 @@ const SafePayApproval: React.FC = () => {
                   </div>
                   <div className="text-sm text-gray-600">
                     {orderData.providerId.averageRating
-                      ? `${orderData.providerId.averageRating.toFixed(1)} av 5 • ${
-                          orderData.providerId.completedJobs || 0
-                        } fullførte jobber`
+                      ? `${orderData.providerId.averageRating.toFixed(1)} av 5 • ${orderData.providerId.completedJobs || 0
+                      } fullførte jobber`
                       : '4.7 av 5 · 12 vurderinger'}
                   </div>
                 </div>
@@ -743,13 +743,12 @@ const SafePayApproval: React.FC = () => {
                   Status
                 </span>
                 <span
-                  className={`text-sm font-bold px-3 py-1 rounded-full ${
-                    orderData.status === 'completed'
+                  className={`text-sm font-bold px-3 py-1 rounded-full ${orderData.status === 'completed'
                       ? 'bg-emerald-100 text-emerald-700'
                       : orderData.status === 'paid'
                         ? 'bg-blue-100 text-blue-700'
                         : 'bg-amber-100 text-amber-700'
-                  }`}
+                    }`}
                 >
                   {orderData.status === 'completed'
                     ? 'Fullført'
@@ -876,11 +875,10 @@ const SafePayApproval: React.FC = () => {
                       setDisputeTouched((t) => ({ ...t, reasonCategory: true }));
                     }}
                     onBlur={() => setDisputeTouched((t) => ({ ...t, reasonCategory: true }))}
-                    className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${
-                      disputeTouched.reasonCategory && disputeErrors.reasonCategory
+                    className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${disputeTouched.reasonCategory && disputeErrors.reasonCategory
                         ? 'border-red-400 bg-red-50'
                         : 'border-gray-300'
-                    }`}
+                      }`}
                   >
                     <option value="">Velg årsak…</option>
                     {DISPUTE_REASON_OPTIONS.map((o) => (
@@ -916,11 +914,10 @@ const SafePayApproval: React.FC = () => {
                       setDisputeTouched((t) => ({ ...t, title: true }));
                     }}
                     onBlur={() => setDisputeTouched((t) => ({ ...t, title: true }))}
-                    className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${
-                      disputeTouched.title && disputeErrors.title
+                    className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${disputeTouched.title && disputeErrors.title
                         ? 'border-red-400 bg-red-50'
                         : 'border-gray-300'
-                    }`}
+                      }`}
                   />
                   {disputeTouched.title && disputeErrors.title && (
                     <p className="mt-1 text-xs text-red-500">{disputeErrors.title}</p>
@@ -949,11 +946,10 @@ const SafePayApproval: React.FC = () => {
                       setDisputeTouched((t) => ({ ...t, description: true }));
                     }}
                     onBlur={() => setDisputeTouched((t) => ({ ...t, description: true }))}
-                    className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 resize-none ${
-                      disputeTouched.description && disputeErrors.description
+                    className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 resize-none ${disputeTouched.description && disputeErrors.description
                         ? 'border-red-400 bg-red-50'
                         : 'border-gray-300'
-                    }`}
+                      }`}
                   />
                   {disputeTouched.description && disputeErrors.description && (
                     <p className="mt-1 text-xs text-red-500">{disputeErrors.description}</p>

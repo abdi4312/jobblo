@@ -3,12 +3,55 @@ import { Plus } from 'lucide-react';
 import { Button } from './button/Button';
 
 interface EmptyStateProps {
-  type: 'jobs' | 'applicants' | 'notifications' | 'reviews';
+  type: 'jobs' | 'applicants' | 'notifications' | 'reviews' | 'applications';
   title?: string;
   description?: string;
   actionLabel?: string;
   onActionClick?: () => void;
 }
+
+const config: Record<string, {
+  illustration: string;
+  defaultTitle: string;
+  defaultDescription: string;
+  defaultActionLabel: string | null;
+}> = {
+  jobs: {
+    illustration:
+      'https://coresg-normal.trae.ai/api/ide/v1/text-to-image?prompt=empty%20state%20illustration%20of%20a%20briefcase%20with%20no%20jobs%20found%2C%20friendly%20style%2C%20pastel%20colors&image_size=square_hd',
+    defaultTitle: 'Ingen oppdrag enda',
+    defaultDescription: 'Opprett ditt første oppdrag og finn kvalifiserte arbeidere.',
+    defaultActionLabel: 'Opprett oppdrag',
+  },
+  applicants: {
+    illustration:
+      'https://coresg-normal.trae.ai/api/ide/v1/text-to-image?prompt=empty%20state%20illustration%20of%20people%20waiting%20to%20apply%20for%20a%20job%2C%20friendly%20style%2C%20pastel%20colors&image_size=square_hd',
+    defaultTitle: 'Ingen søkere enda',
+    defaultDescription: 'Vent på at søkere skal søke om jobben din.',
+    defaultActionLabel: null,
+  },
+  notifications: {
+    illustration:
+      'https://coresg-normal.trae.ai/api/ide/v1/text-to-image?prompt=empty%20state%20illustration%20of%20a%20bell%20with%20no%20notifications%2C%20friendly%20style%2C%20pastel%20colors&image_size=square_hd',
+    defaultTitle: 'Ingen varsler',
+    defaultDescription: 'Du har ingen nye varsler enda.',
+    defaultActionLabel: null,
+  },
+  reviews: {
+    illustration:
+      'https://coresg-normal.trae.ai/api/ide/v1/text-to-image?prompt=empty%20state%20illustration%20of%20stars%20with%20no%20reviews%20yet%2C%20friendly%20style%2C%20pastel%20colors&image_size=square_hd',
+    defaultTitle: 'Ingen anmeldelser enda',
+    defaultDescription: 'Start å samle anmeldelser etter fullførte oppdrag.',
+    defaultActionLabel: null,
+  },
+  applications: {
+    illustration:
+      'https://coresg-normal.trae.ai/api/ide/v1/text-to-image?prompt=empty%20state%20illustration%20of%20a%20person%20with%20no%20job%20applications%20yet%2C%20friendly%20style%2C%20pastel%20colors&image_size=square_hd',
+    defaultTitle: 'Ingen søknader enda',
+    defaultDescription: 'Du har ikke søkt på noen oppdrag ennå. Utforsk oppdrag for å komme i gang.',
+    defaultActionLabel: 'Utforsk oppdrag',
+  },
+};
 
 const EmptyState: React.FC<EmptyStateProps> = ({
   type,
@@ -17,38 +60,8 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   actionLabel,
   onActionClick,
 }) => {
-  const config = {
-    jobs: {
-      illustration:
-        'https://coresg-normal.trae.ai/api/ide/v1/text-to-image?prompt=empty%20state%20illustration%20of%20a%20briefcase%20with%20no%20jobs%20found%2C%20friendly%20style%2C%20pastel%20colors&image_size=square_hd',
-      defaultTitle: 'Ingen oppdrag enda',
-      defaultDescription: 'Opprett ditt første oppdrag og finn kvalifiserte arbeidere.',
-      defaultActionLabel: 'Opprett oppdrag',
-    },
-    applicants: {
-      illustration:
-        'https://coresg-normal.trae.ai/api/ide/v1/text-to-image?prompt=empty%20state%20illustration%20of%20people%20waiting%20to%20apply%20for%20a%20job%2C%20friendly%20style%2C%20pastel%20colors&image_size=square_hd',
-      defaultTitle: 'Ingen søkere enda',
-      defaultDescription: 'Vent på at søkere skal søke om jobben din.',
-      defaultActionLabel: null,
-    },
-    notifications: {
-      illustration:
-        'https://coresg-normal.trae.ai/api/ide/v1/text-to-image?prompt=empty%20state%20illustration%20of%20a%20bell%20with%20no%20notifications%2C%20friendly%20style%2C%20pastel%20colors&image_size=square_hd',
-      defaultTitle: 'Ingen varsler',
-      defaultDescription: 'Du har ingen nye varsler enda.',
-      defaultActionLabel: null,
-    },
-    reviews: {
-      illustration:
-        'https://coresg-normal.trae.ai/api/ide/v1/text-to-image?prompt=empty%20state%20illustration%20of%20stars%20with%20no%20reviews%20yet%2C%20friendly%20style%2C%20pastel%20colors&image_size=square_hd',
-      defaultTitle: 'Ingen anmeldelser enda',
-      defaultDescription: 'Start å samle anmeldelser etter fullførte oppdrag.',
-      defaultActionLabel: null,
-    },
-  };
-
-  const { illustration, defaultTitle, defaultDescription, defaultActionLabel } = config[type];
+  const typeConfig = config[type] ?? config['jobs'];
+  const { illustration, defaultTitle, defaultDescription, defaultActionLabel } = typeConfig;
 
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
