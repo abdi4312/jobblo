@@ -65,7 +65,8 @@ export default function CompletedJobPage() {
             mainLink.get(`/api/orders/${orderId}/completed-details`),
             mainLink.get(`/api/orders/${orderId}/review`).catch(() => null),
           ]);
-          setData({ ...response.data, review: reviewResponse?.data || null });
+          const reviewsData = Array.isArray(reviewResponse?.data) ? reviewResponse.data : reviewResponse?.data ? [reviewResponse.data] : [];
+          setData({ ...response.data, reviews: reviewsData });
         } else if (serviceIdParam) {
           // Case 2: We only have a service ID
           const serviceRes = await mainLink.get(`/api/services/${serviceIdParam}`);
@@ -78,7 +79,7 @@ export default function CompletedJobPage() {
             chat: null,
             transactions: [],
             timeline: [],
-            review: null,
+            reviews: [],
           });
         } else {
           navigate(-1);
@@ -102,7 +103,7 @@ export default function CompletedJobPage() {
   }
   if (!data) return null;
 
-  const { service, order, customer, provider, payment, chat, timeline, review } = data;
+  const { service, order, customer, provider, payment, chat, timeline, reviews = [] } = data;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -188,64 +189,73 @@ export default function CompletedJobPage() {
           </div>
         </div>
 
-        {/* Review Card */}
-        {review && (
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4">
+        {/* Review Cards */}
+        {reviews.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="flex items-center gap-2 text-[15px] font-medium text-gray-900">
               <Star size={18} className="text-[#F59E0B]" />
-              Vurdering
-            </div>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    size={20}
-                    className={
-                      star <= review.rating ? 'text-[#F59E0B] fill-[#F59E0B]' : 'text-[#d1d5db]'
-                    }
-                  />
-                ))}
-              </div>
-              {review.recommendWorker && (
-                <div className="flex items-center gap-1 px-2 py-1 bg-custom-green/10 text-custom-green rounded-full text-xs font-medium">
-                  <ThumbsUp size={12} />
-                  Anbefales
+              Vurderinger ({reviews.length})
+            </h3>
+            {reviews.map((rev: any) => (
+              <div key={rev._id} className="bg-white rounded-xl shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${rev.revieweeRole === 'poster' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}`}>
+                    {rev.revieweeRole === 'poster' ? 'Utfører vurdert' : 'Oppdragsgiver vurdert'}
+                  </span>
                 </div>
-              )}
-            </div>
-            {review.comment && <p className="text-gray-700 mb-4">{review.comment}</p>}
-            {review.photos && review.photos.length > 0 && (
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                {review.photos.map((photo: string, index: number) => (
-                  <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
-                    <img
-                      src={photo}
-                      alt={`Vurderingsbilde ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        size={20}
+                        className={
+                          star <= rev.rating ? 'text-[#F59E0B] fill-[#F59E0B]' : 'text-[#d1d5db]'
+                        }
+                      />
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-            {review.reviewer && (
-              <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
-                <img
-                  src={
-                    review.reviewer.avatarUrl ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                      review.reviewer.name
-                    )}&background=e5e7eb&color=374151`
-                  }
-                  alt=""
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{review.reviewer.name}</p>
-                  <p className="text-xs text-gray-500">{formatDate(review.createdAt)}</p>
+                  {rev.recommendWorker && (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-custom-green/10 text-custom-green rounded-full text-xs font-medium">
+                      <ThumbsUp size={12} />
+                      Anbefales
+                    </div>
+                  )}
                 </div>
+                {rev.comment && <p className="text-gray-700 mb-4">{rev.comment}</p>}
+                {rev.photos && rev.photos.length > 0 && (
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    {rev.photos.map((photo: string, index: number) => (
+                      <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
+                        <img
+                          src={photo}
+                          alt={`Vurderingsbilde ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {rev.reviewerId && (
+                  <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
+                    <img
+                      src={
+                        rev.reviewerId.avatarUrl ||
+                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                          rev.reviewerId.name
+                        )}&background=e5e7eb&color=374151`
+                      }
+                      alt=""
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{rev.reviewerId.name} {rev.reviewerId.lastName || ''}</p>
+                      <p className="text-xs text-gray-500">{formatDate(rev.createdAt)}</p>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            ))}
           </div>
         )}
 

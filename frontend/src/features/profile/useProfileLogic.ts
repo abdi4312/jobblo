@@ -12,9 +12,9 @@ export const useProfileLogic = () => {
   const [activeTab, setActiveTab] = useState('Om meg');
   const [profileType, setProfileType] = useState<'seeker' | 'poster'>('seeker');
 
-  const { data: profileUser, isLoading } = useUserProfile(userId);
+  const { data: profileUser, isLoading } = useUserProfile(userId || currentUser?._id);
 
-  const userToDisplay = userId ? profileUser : currentUser;
+  const userToDisplay = profileUser || currentUser;
   const isOwnProfile = !userId || userId === currentUser?._id;
 
   // Set default profile type for companies
