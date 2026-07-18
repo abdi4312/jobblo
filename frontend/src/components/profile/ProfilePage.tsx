@@ -44,12 +44,12 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="bg-[#f5f0e8] min-h-screen -mt-6">
-      <div className="hero-band h-[130px] bg-[#1a3a1a] relative">
+    <div className="bg-[#f5f0e8] min-h-screen">
+      <div className="hero-band h-[80px] sm:h-[120px] bg-[#1a3a1a] relative">
         <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle,#fff_1px,transparent_1px)] bg-[length:24px_24px]"></div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-6 pb-12">
+      <div className="max-w-[960px] mx-auto px-3 sm:px-4 pb-12 sm:pb-16">
         <ProfileHeader
           user={userToDisplay}
           handlelogout={handleLogout}
@@ -60,40 +60,38 @@ export default function ProfilePage() {
         {isBlockedByMe ? (
           <BlockedUserView />
         ) : (
-          <>
-            <div className="flex flex-col gap-6">
-              {userToDisplay?.role !== 'company' && (
-                <div className="flex bg-white border border-black/5 rounded-full p-1 w-fit mb-2">
-                  {[
-                    { id: 'seeker', label: 'Som jobbsøker' },
-                    { id: 'poster', label: 'Som oppdragsgiver' },
-                  ].map((opt) => (
-                    <button
-                      key={opt.id}
-                      onClick={() => handleProfileTypeChange(opt.id as 'seeker' | 'poster')}
-                      className={`px-5 py-2 text-[13px] rounded-full transition-all ${
-                        profileType === opt.id
-                          ? 'bg-custom-green text-white font-medium shadow-sm'
-                          : 'text-black/40 hover:text-black/60'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+          <div className="flex flex-col gap-4 sm:gap-5 mt-4 sm:mt-5">
+            {userToDisplay?.role !== 'company' && (
+              <div className="flex bg-white/60 backdrop-blur-sm border border-black/5 rounded-lg p-0.5 w-fit">
+                {[
+                  { id: 'seeker', label: 'Jobbsøker' },
+                  { id: 'poster', label: 'Oppdragsgiver' },
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => handleProfileTypeChange(opt.id as 'seeker' | 'poster')}
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 text-[12px] sm:text-[13px] rounded-md transition-all font-medium ${
+                      profileType === opt.id
+                        ? 'bg-[#1a3a1a] text-white shadow-sm'
+                        : 'text-black/50 hover:text-black/70 hover:bg-white/80'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
-              <ProfileNav
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                isOwnProfile={isOwnProfile}
-                profileType={profileType}
-                userRole={userToDisplay?.role}
-              />
+            <ProfileNav
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              isOwnProfile={isOwnProfile}
+              profileType={profileType}
+              userRole={userToDisplay?.role}
+            />
 
-              <ItemsGrid activeTab={activeTab} user={userToDisplay} profileType={profileType} />
-            </div>
-          </>
+            <ItemsGrid activeTab={activeTab} user={userToDisplay} profileType={profileType} />
+          </div>
         )}
       </div>
     </div>
