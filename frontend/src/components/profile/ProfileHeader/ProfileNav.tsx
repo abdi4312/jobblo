@@ -1,4 +1,3 @@
-import { LayoutGrid, Bookmark, Briefcase, Star, Clock, User, Award } from 'lucide-react';
 import { useUserStore } from '../../../stores/userStore';
 
 interface ProfileNavProps {
@@ -17,27 +16,9 @@ export function ProfileNav({
   userRole,
 }: ProfileNavProps) {
   const userStoreUser = useUserStore((state) => state.user);
-  const seekerTabs = [
-    { name: 'Om meg', icon: User },
-    { name: 'Fullførte', icon: Briefcase },
-    { name: 'Vurderinger', icon: Star },
-    { name: 'Portfolio', icon: LayoutGrid },
-    { name: 'Sertifiseringer', icon: Award },
-  ];
-
-  const posterTabs = [
-    { name: 'Aktive', icon: LayoutGrid },
-    { name: 'Tidligere', icon: Briefcase },
-    { name: 'Vurderinger', icon: Star },
-  ];
-
-  const companyTabs = [
-    { name: 'Portfolio', icon: LayoutGrid },
-    { name: 'Sertifiseringer', icon: Award },
-    { name: 'Aktive', icon: Briefcase },
-    { name: 'Tidligere', icon: Clock },
-    { name: 'Vurderinger', icon: Star },
-  ];
+  const seekerTabs = ['Om meg', 'Fullførte', 'Vurderinger', 'Portfolio', 'Sertifiseringer'];
+  const posterTabs = ['Aktive', 'Tidligere', 'Vurderinger'];
+  const companyTabs = ['Portfolio', 'Sertifiseringer', 'Aktive', 'Tidligere', 'Vurderinger'];
 
   const tabs =
     profileType === 'seeker'
@@ -47,26 +28,20 @@ export function ProfileNav({
         : posterTabs;
 
   return (
-    <div className="flex border-b border-black/5 mb-5">
+    <div className="bg-white/60 backdrop-blur-sm rounded-lg border border-black/5 px-1 flex gap-0.5 overflow-x-auto no-scrollbar">
       {tabs.map((tab) => {
-        const Icon = tab.icon;
-        const isActive = activeTab === tab.name;
+        const isActive = activeTab === tab;
         return (
           <button
-            key={tab.name}
-            onClick={() => onTabChange(tab.name)}
-            className={`flex items-center gap-1.5 py-3 px-4.5 text-[13px] border-b-2 transition-all whitespace-nowrap ${
+            key={tab}
+            onClick={() => onTabChange(tab)}
+            className={`py-2 sm:py-2.5 px-2.5 sm:px-3.5 text-[11px] sm:text-[12px] font-medium transition-all rounded-md whitespace-nowrap shrink-0 ${
               isActive
-                ? 'border-custom-green text-custom-green font-medium'
-                : 'border-transparent text-black/40 hover:text-black/60'
+                ? 'bg-[#1a3a1a] text-white shadow-sm'
+                : 'text-black/40 hover:text-black/60 hover:bg-white/60'
             }`}
           >
-            <Icon
-              size={14}
-              className={isActive ? 'text-custom-green' : 'text-black/40'}
-              strokeWidth={isActive ? 2.5 : 2}
-            />
-            <span>{tab.name}</span>
+            {tab}
           </button>
         );
       })}

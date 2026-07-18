@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     ArrowLeft, ShieldCheck, MessageCircle, Play, CheckSquare,
     Upload, Clock, AlertTriangle, FileText, Check, ChevronRight,
-    Loader2, Camera, TrendingUp,
+    Loader2, Camera, TrendingUp, Star,
 } from 'lucide-react';
 import mainLink from '../../api/mainURLs';
 import { toast } from 'react-hot-toast';
@@ -35,6 +35,30 @@ const ACTION_LABELS: Record<string, string> = {
     payout_approved: 'Utbetaling godkjent',
 };
 
+const MiniStarRating: React.FC<{ value: number; onChange: (v: number) => void; size?: number }> = ({ value, onChange, size = 24 }) => {
+    const [hover, setHover] = useState<number | null>(null);
+    const display = hover ?? value;
+    return (
+        <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((s) => (
+                <button
+                    key={s}
+                    type="button"
+                    onMouseEnter={() => setHover(s)}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={() => onChange(s)}
+                    className="cursor-pointer transition-transform hover:scale-110"
+                >
+                    <Star
+                        size={size}
+                        className={s <= display ? 'text-[#F59E0B] fill-[#F59E0B]' : 'text-[#d1d5db]'}
+                    />
+                </button>
+            ))}
+        </div>
+    );
+};
+
 const ProviderOrderDetailPage: React.FC = () => {
     const { orderId } = useParams<{ orderId: string }>();
     const navigate = useNavigate();
@@ -43,6 +67,11 @@ const ProviderOrderDetailPage: React.FC = () => {
     const [showEvidence, setShowEvidence] = useState(false);
     const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
     const [completionNote, setCompletionNote] = useState('');
+
+    // Provider review state
+    const [showReviewForm, setShowReviewForm] = useState(false);
+    const [reviewRating, setReviewRating] = useState(0);
+    const [reviewComment, setReviewComment] = useState('');
 
     const { data, isLoading, error } = useQuery({
         queryKey: ['provider-order', orderId],
@@ -93,6 +122,42 @@ const ProviderOrderDetailPage: React.FC = () => {
             invalidate();
         },
         onError: (e: any) => toast.error(e.response?.data?.error || 'Opplasting feilet'),
+    });
+
+    // Check if provider already reviewed this order
+    const { data: existingReviews } = useQuery({
+        queryKey: ['order-reviews', orderId],
+        queryFn: async () => {
+            const res = await mainLink.get(`/api/orders/${orderId}/review`);
+            return Array.isArray(res.data) ? res.data : res.data ? [res.data] : [];
+        },
+        enabled: !!orderId,
+    });
+
+    const providerHasReviewed = existingReviews?.some(
+        (r: any) => r.revieweeRole === 'seeker' && (r.reviewerId?._id || r.reviewerId) === user?._id
+    );
+
+    const reviewMutation = useMutation({
+        mutationFn: async () => {
+            const res = await mainLink.post('/api/reviews', {
+                orderId,
+                serviceId: data?.order?.serviceId?._id,
+                revieweeId: data?.order?.customerId?._id,
+                revieweeRole: 'seeker',
+                rating: reviewRating,
+                comment: reviewComment,
+            });
+            return res.data;
+        },
+        onSuccess: () => {
+            toast.success('Vurdering sendt!');
+            setShowReviewForm(false);
+            setReviewRating(0);
+            setReviewComment('');
+            queryClient.invalidateQueries({ queryKey: ['order-reviews', orderId] });
+        },
+        onError: (e: any) => toast.error(e.response?.data?.error || 'Kunne ikke sende vurdering'),
     });
 
     if (isLoading) {
@@ -380,6 +445,58 @@ const ProviderOrderDetailPage: React.FC = () => {
                     {status === 'completed' && (
                         <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center text-[13px] text-green-700 font-medium">
                             🎉 Oppdrag fullført
+                        </div>
+                    )}
+
+                    {/* Provider review of customer */}
+                    {status === 'completed' && isProvider && !providerHasReviewed && !showReviewForm && (
+                        <Button
+                            onClick={() => setShowReviewForm(true)}
+                            className="w-full bg-white border border-black/10 text-gray-800 rounded-full py-3.5 text-[14px] font-bold flex items-center justify-center gap-2"
+                        >
+                            <Star size={17} className="text-[#F59E0B]" /> Vurder oppdragsgiver
+                        </Button>
+                    )}
+                    {status === 'completed' && isProvider && providerHasReviewed && (
+                        <div className="bg-[#f9f9f7] border border-black/5 rounded-xl p-4 text-center text-[13px] text-gray-500">
+                            ✓ Du har vurdert oppdragsgiver
+                        </div>
+                    )}
+
+                    {/* Provider review form */}
+                    {showReviewForm && (
+                        <div className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-black/5">
+                            <h3 className="font-semibold text-[14px] text-gray-800 mb-3 flex items-center gap-2">
+                                <Star size={15} className="text-[#F59E0B]" /> Vurder oppdragsgiver
+                            </h3>
+                            <p className="text-[12px] text-gray-500 mb-4">
+                                Hvordan var din opplevelse med {data?.order?.customerId?.name}?
+                            </p>
+                            <div className="mb-4">
+                                <p className="text-[11px] text-gray-400 uppercase font-bold mb-2 tracking-wider">Helhetlig opplevelse</p>
+                                <MiniStarRating value={reviewRating} onChange={setReviewRating} />
+                            </div>
+                            <textarea
+                                value={reviewComment}
+                                onChange={(e) => setReviewComment(e.target.value)}
+                                placeholder="Skriv en anmeldelse..."
+                                className="w-full border border-black/10 rounded-xl p-3 text-[13px] min-h-[80px] outline-none focus:border-custom-green mb-3"
+                            />
+                            <div className="flex gap-2">
+                                <Button
+                                    onClick={() => reviewMutation.mutate()}
+                                    loading={reviewMutation.isPending}
+                                    disabled={reviewRating === 0}
+                                    label="Send vurdering"
+                                    className="bg-custom-green text-white rounded-full px-6 py-2.5 text-[13px] font-medium"
+                                />
+                                <Button
+                                    onClick={() => { setShowReviewForm(false); setReviewRating(0); setReviewComment(''); }}
+                                    label="Avbryt"
+                                    variant="outline"
+                                    className="rounded-full px-6 py-2.5 text-[13px]"
+                                />
+                            </div>
                         </div>
                     )}
 

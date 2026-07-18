@@ -209,11 +209,12 @@ exports.getReviewByOrderId = async (req, res) => {
   try {
     const { orderId } = req.params;
 
-    const review = await Review.findOne({ orderId })
+    const reviews = await Review.find({ orderId })
       .populate('reviewerId', 'name lastName username avatarUrl')
+      .populate('revieweeId', 'name lastName username avatarUrl')
       .populate('serviceId', 'title');
 
-    res.json(review);
+    res.json(reviews);
   } catch (err) {
     console.error('getReviewByOrderId Error:', err);
     res.status(500).json({ error: 'Server error' });
