@@ -33,6 +33,7 @@ import { dateFormatter } from '../../utils/dateFormatter';
 import { ShareModal } from '../../components/shared/ShareModal/ShareModal';
 import { UpgradeModal } from '../../components/shared/UpgradeModal';
 import { BuyContactModal } from '../../components/shared/BuyContactModal';
+import OrderRequestModal from '../../components/job/OrderRequestModal';
 import mainLink from '../../api/mainURLs';
 
 import { usePlans } from '../../features/plans/hooks';
@@ -45,6 +46,7 @@ const JobListingDetailPage = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
   const [isTimerActive, setIsTimerActive] = useState(false);
   const [unlockTime, setUnlockTime] = useState<string | null>(null);
@@ -169,17 +171,24 @@ const JobListingDetailPage = () => {
       return;
     }
 
+    setIsOrderModalOpen(true);
+  };
+
+  const handleOrderSubmit = (message?: string) => {
+    if (!job?._id) return;
+
     createJobRequestMutation.mutate(
-      { serviceId: job._id },
+      { serviceId: job._id, message },
       {
         onSuccess: () => {
+          setIsOrderModalOpen(false);
           toast.success('Forespørsel sendt! Venter på godkjenning.');
-          // Redirection removed as per user request
         },
         onError: (err: any) => {
           if (err.response?.status === 403 && err.response?.data?.isDelayed) {
             setUnlockTime(err.response.data.unlockAt);
             setIsTimerActive(true);
+            setIsOrderModalOpen(false);
             toast.error(err.response.data.message);
             return;
           }
@@ -190,7 +199,8 @@ const JobListingDetailPage = () => {
               usage: err.response.data.usage,
               perContactPrice: err.response.data.perContactPrice,
             });
-            setIsBuyModalOpen(true); // Show BuyContactModal instead of UpgradeModal
+            setIsOrderModalOpen(false);
+            setIsBuyModalOpen(true);
             return;
           }
           toast.error(err.response?.data?.error || 'Kunne ikke sende forespørsel');
@@ -671,6 +681,14 @@ const JobListingDetailPage = () => {
         onConfirm={handleBuyContact}
         price={upgradeInfo.perContactPrice || 0}
         isLoading={isPaymentRedirecting}
+      />
+
+      <OrderRequestModal
+        isOpen={isOrderModalOpen}
+        onClose={() => setIsOrderModalOpen(false)}
+        onConfirm={handleOrderSubmit}
+        isLoading={createJobRequestMutation.isPending}
+        jobTitle={job.title}
       />
     </div>
   );
