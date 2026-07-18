@@ -25,7 +25,7 @@ function authorizeOrderAction(req, order) {
  */
 exports.createJobRequest = async (req, res) => {
   try {
-    const { serviceId } = req.body;
+    const { serviceId, message } = req.body;
     const customerId = req.userId;
 
     if (!serviceId) return res.status(400).json({ error: 'Service ID is required' });
@@ -105,6 +105,7 @@ exports.createJobRequest = async (req, res) => {
       serviceId,
       customerId,
       providerId,
+      ...(message && { message }),
     });
 
     // --- INCREMENT CONTACT USAGE ---
