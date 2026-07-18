@@ -100,7 +100,7 @@ export const updateOrderStatus = async (orderId: string, status: string): Promis
 /**
  * Create a new job request (Application)
  */
-export const createJobRequest = async (payload: { serviceId: string }): Promise<JobRequest> => {
+export const createJobRequest = async (payload: { serviceId: string; message?: string }): Promise<JobRequest> => {
   const response = await mainLink.post('/api/orders/request', payload);
   return response.data;
 };
