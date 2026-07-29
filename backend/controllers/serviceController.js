@@ -113,19 +113,19 @@ exports.getServiceById = async (req, res) => {
 
     if (!service) return res.status(404).json({ error: 'Service not found' });
 
-    // Fetch applicant count if maxApplicants is set
-    let applicantCount = 0;
-    if (service.maxApplicants > 0) {
-      applicantCount = await JobRequest.countDocuments({
-        serviceId: service._id,
-        status: { $in: ['pending', 'accepted'] },
-      });
-    }
+    // Fetch applicant count if maxApplicants is set (HIDDEN FOR NOW)
+    // let applicantCount = 0;
+    // if (service.maxApplicants > 0) {
+    //   applicantCount = await JobRequest.countDocuments({
+    //     serviceId: service._id,
+    //     status: { $in: ['pending', 'accepted'] },
+    //   });
+    // }
 
     const serviceData = service.toObject();
-    serviceData.currentApplicants = applicantCount;
-    serviceData.isLimitReached =
-      service.maxApplicants > 0 && applicantCount >= service.maxApplicants;
+    // serviceData.currentApplicants = applicantCount;
+    // serviceData.isLimitReached =
+    //   service.maxApplicants > 0 && applicantCount >= service.maxApplicants;
 
     res.json(serviceData);
   } catch (err) {
@@ -172,19 +172,19 @@ exports.getServiceDetails = async (req, res) => {
     // Similar services
     const similarServices = await findSimilarServices(service);
 
-    // Fetch applicant count if maxApplicants is set
-    let applicantCount = 0;
-    if (service.maxApplicants > 0) {
-      applicantCount = await JobRequest.countDocuments({
-        serviceId: service._id,
-        status: { $in: ['pending', 'accepted'] },
-      });
-    }
+    // Fetch applicant count if maxApplicants is set (HIDDEN FOR NOW)
+    // let applicantCount = 0;
+    // if (service.maxApplicants > 0) {
+    //   applicantCount = await JobRequest.countDocuments({
+    //     serviceId: service._id,
+    //     status: { $in: ['pending', 'accepted'] },
+    //   });
+    // }
 
     const serviceData = service.toObject();
-    serviceData.currentApplicants = applicantCount;
-    serviceData.isLimitReached =
-      service.maxApplicants > 0 && applicantCount >= service.maxApplicants;
+    // serviceData.currentApplicants = applicantCount;
+    // serviceData.isLimitReached =
+    //   service.maxApplicants > 0 && applicantCount >= service.maxApplicants;
 
     res.json({
       service: serviceData,

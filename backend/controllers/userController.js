@@ -106,11 +106,15 @@ exports.searchUsers = async (req, res) => {
   }
 };
 
-// Get Top 10 Users by Rating and Reviews
+// Get Top 10 Users by Rating and Reviews (only paid subscription users)
 exports.getTopUsers = async (req, res) => {
   try {
-    const topUsers = await User.find({ _id: { $ne: req.userId } })
-      .select('name lastName email avatarUrl averageRating reviewCount')
+    const topUsers = await User.find({
+      _id: { $ne: req.userId },
+      // TODO: Uncomment below when paid users exist to restrict to paid only
+      // subscription: { $ne: 'Standard' },
+    })
+      .select('name lastName email avatarUrl averageRating reviewCount subscription skills hourlyRate locations')
       .sort({ reviewCount: -1, averageRating: -1 })
       .limit(10);
     res.status(200).json(topUsers);

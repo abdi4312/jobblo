@@ -20,7 +20,7 @@ exports.getCheckoutDetails = async (req, res) => {
     const order = await Order.findById(orderId)
       .populate({
         path: 'serviceId',
-        select: 'title location price duration equipment userId checklist',
+        select: 'title location price equipment userId checklist', // duration hidden for now
       })
       .populate('customerId', 'name lastName avatarUrl')
       .populate('providerId', 'name lastName avatarUrl averageRating')

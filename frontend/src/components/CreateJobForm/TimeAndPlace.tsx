@@ -266,8 +266,8 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
         </div>
       </div>
 
-      {/* 3. Duration Section */}
-      <div className="box-card-custom rounded-[14px] p-4 md:p-6">
+      {/* 3. Duration Section - HIDDEN FOR NOW */}
+      {/* <div className="box-card-custom rounded-[14px] p-4 md:p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 bg-[#2D7A4D]/10 rounded-full flex items-center justify-center text-[#2D7A4D] shrink-0">
             <Clock size={22} />
@@ -312,7 +312,7 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
             </Select>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };
