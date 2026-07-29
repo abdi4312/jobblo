@@ -416,8 +416,8 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
         </div>
       </div>
 
-      {/* 5. Max Applicants Section */}
-      <div className="box-card-custom rounded-[14px] p-4 md:p-6">
+      {/* 5. Max Applicants Section - HIDDEN FOR NOW */}
+      {/* <div className="box-card-custom rounded-[14px] p-4 md:p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 bg-[#2D7A4D]/10 rounded-full flex items-center justify-center text-[#2D7A4D]">
             <Plus size={22} />
@@ -447,7 +447,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
             </p>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

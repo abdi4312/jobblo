@@ -80,7 +80,7 @@ const serviceSchema = new mongoose.Schema(
       value: { type: Number, min: 0 },
       unit: {
         type: String,
-        enum: ['minutes', 'hours', 'days'],
+        enum: ['minutes', 'hours', 'days', 'timer', 'minutter', 'dager'],
         default: 'hours',
       },
     },

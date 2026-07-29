@@ -340,7 +340,7 @@ export default function JobListingPage() {
               : null}
         </div>
 
-        {/* Recommended Workers Section */}
+        {/* Recommended Workers Section - Only shows paid subscription users */}
         <div className="flex justify-between items-center mb-2 sm:mb-3">
           <h3 className="text-sm font-medium text-[#1a1a1a]">Anbefalte oppdragstakere nær deg</h3>
           <button
