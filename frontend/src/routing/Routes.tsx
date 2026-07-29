@@ -91,6 +91,8 @@ const MessagesPageSplit = lazy(() =>
   }))
 );
 const SaleSubscriptionTermsPage = lazy(() => import('../pages/SaleSubscriptionTermsPage/SaleSubscriptionTermsPage.tsx'));
+const CookiePolicyPage = lazy(() => import('../pages/CookiePolicyPage/CookiePolicyPage.tsx'));
+const AboutPage = lazy(() => import('../pages/AboutPage/AboutPage.tsx'));
 const JobbloUserTerm = lazy(() => import('../pages/UserTerm/UserTerm.tsx'));
 const SuccessPage = lazy(() => import('../components/subscription/success.tsx'));
 const ContactSuccessPage = lazy(() => import('../pages/ContactSuccessPage.tsx'));
@@ -215,6 +217,8 @@ export const routes: RouteObject[] = [
       { path: 'messages', element: <ProtectedRoute>{withSuspense(MessagesPageSplit)}</ProtectedRoute> },
       { path: 'messages/:conversationId', element: <ProtectedRoute>{withSuspense(MessagesPageSplit)}</ProtectedRoute> },
       { path: 'sale-subscription-terms', element: withSuspense(SaleSubscriptionTermsPage) },
+      { path: 'cookies', element: withSuspense(CookiePolicyPage) },
+      { path: 'about', element: withSuspense(AboutPage) },
       { path: 'user-term', element: withSuspense(JobbloUserTerm) },
       { path: 'membership', element: <ProtectedRoute>{withSuspense(PricingPage)}</ProtectedRoute> },
       { path: 'upcoming', element: withSuspense(UpcomingFeatures) },

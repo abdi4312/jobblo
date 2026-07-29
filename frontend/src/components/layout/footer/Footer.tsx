@@ -5,9 +5,8 @@ const Footer = () => {
 
   const footerLinks = [
     { name: 'Kundesenter', link: '/support' },
-    { name: 'Jobb i Jobblo', link: '/sale-subscription-terms' },
-    { name: 'Personvern', link: '/privacy' },
-    { name: 'Vilkår for bruk', link: '/user-term' },
+    // { name: 'Personvern', link: '/cookies' },
+    { name: 'Vilkår for bruk', link: '/sale-subscription-terms' },
     { name: 'Om oss', link: '/about' },
     { name: 'Cookie-innstillinger', link: '/cookies' },
   ];

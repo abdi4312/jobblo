@@ -19,18 +19,18 @@ type TabConfig = {
 };
 
 const tabs: TabConfig[] = [
-  { id: 'active', label: 'Active Jobs', statuses: ['open'] },
-  { id: 'pending', label: 'Pending Applications', statuses: ['pending'] },
-  { id: 'in_progress', label: 'In Progress', statuses: ['in_progress'] },
+  { id: 'active', label: 'Aktive oppdrag', statuses: ['open'] },
+  { id: 'pending', label: 'Ventende søknader', statuses: ['pending'] },
+  { id: 'in_progress', label: 'Pågående', statuses: ['in_progress'] },
   {
     id: 'waiting_for_approval',
-    label: 'Waiting for Approval',
+    label: 'Venter på godkjenning',
     statuses: ['waiting_for_approval'],
   },
-  { id: 'completed', label: 'Completed Jobs', statuses: ['completed'] },
-  { id: 'cancelled', label: 'Cancelled Jobs', statuses: ['cancelled'] },
-  { id: 'expired', label: 'Expired Jobs', statuses: ['expired'] },
-  { id: 'draft', label: 'Draft Jobs', statuses: ['draft'] },
+  { id: 'completed', label: 'Fullførte oppdrag', statuses: ['completed'] },
+  { id: 'cancelled', label: 'Kansellerte oppdrag', statuses: ['cancelled'] },
+  { id: 'expired', label: 'Utløpte oppdrag', statuses: ['expired'] },
+  { id: 'draft', label: 'Utkast', statuses: ['draft'] },
 ];
 
 export default function MineAnnonser() {
@@ -125,7 +125,7 @@ export default function MineAnnonser() {
   };
 
   if (isLoading) return <JobDetailCardSkeleton />;
-  if (error) return <div>Feil ved henting av annonser</div>;
+  if (error) return <div>Feil ved lasting av annonser</div>;
 
   if (editingService) {
     return (
@@ -215,8 +215,8 @@ export default function MineAnnonser() {
       {filteredAndSortedServices.length === 0 ? (
         <EmptyState
           type="jobs"
-          title="Ingen jobs i denne kategorien"
-          description={`Det ser ut som du ikke har noen jobs i ${currentTab.label} ennå.`}
+          title="Ingen oppdrag i denne kategorien"
+          description={`Det ser ut som du ikke har noen oppdrag i "${currentTab.label}" ennå.`}
           actionLabel={activeTab === 'active' ? 'Lag din første annonse' : undefined}
           onActionClick={activeTab === 'active' ? () => navigate('/publish-job') : undefined}
         />
