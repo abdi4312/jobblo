@@ -28,11 +28,11 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   formatTime,
   onlineUsers,
 }) => {
-  const filterTypes = ['Alle', 'Kjøper', 'Selger'] as const;
+  const filterTypes = ['Alle', 'Forespørsler Sendt', 'Forespørsel Mottatt'] as const;
   const filterMap: Record<(typeof filterTypes)[number], FilterType> = {
     Alle: 'All',
-    Kjøper: 'Purchases',
-    Selger: 'Sales',
+    'Forespørsler Sendt': 'Purchases',
+    'Forespørsel Mottatt': 'Sales',
   };
 
   return (
@@ -56,11 +56,10 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <button
             key={label}
             onClick={() => setActiveFilter(filterMap[label])}
-            className={`px-[10px] py-[8px] text-[12px] font-medium cursor-pointer border-b-[2px] transition-colors ${
-              activeFilter === filterMap[label]
+            className={`px-[10px] py-[8px] text-[12px] font-medium cursor-pointer border-b-[2px] transition-colors ${activeFilter === filterMap[label]
                 ? 'text-[#16a34a] border-[#16a34a]'
                 : 'text-[#888] border-transparent'
-            }`}
+              }`}
           >
             {label}
           </button>

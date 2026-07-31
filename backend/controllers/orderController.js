@@ -119,6 +119,43 @@ exports.createJobRequest = async (req, res) => {
     await jobRequest.populate('serviceId');
     await jobRequest.populate('customerId', 'name');
 
+    // ── Create or get Chat so it appears in "Forespørsler Sendt" ──────────────
+    const Chat = require('../models/ChatMessage');
+    let chat = await Chat.findOne({
+      clientId: customerId,   // applicant
+      providerId: providerId, // job owner
+      serviceId,
+    });
+
+    if (!chat) {
+      const initialMessages = [];
+      // Add the application message as first chat message if provided
+      if (req.body.message) {
+        initialMessages.push({
+          senderId: customerId,
+          text: req.body.message,
+          createdAt: new Date(),
+          seenBy: [customerId],
+        });
+      }
+      // Add system message about the application
+      initialMessages.push({
+        type: 'system_status',
+        systemData: { event: 'application_submitted', requestId: jobRequest._id },
+        text: `Forespørsel sendt for "${service.title}"`,
+        createdAt: new Date(),
+      });
+
+      chat = await Chat.create({
+        clientId: customerId,
+        providerId: providerId,
+        serviceId,
+        messages: initialMessages,
+        lastMessage: req.body.message || `Forespørsel sendt for "${service.title}"`,
+        status: 'requested',
+      });
+    }
+
     // Send notification to provider
     const notification = await Notification.create({
       userId: providerId,
@@ -135,7 +172,7 @@ exports.createJobRequest = async (req, res) => {
       io.to(`user_${providerId}`).emit('new_job_request', jobRequest);
     }
 
-    res.status(201).json(jobRequest);
+    res.status(201).json({ ...jobRequest.toObject(), chatId: chat._id });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

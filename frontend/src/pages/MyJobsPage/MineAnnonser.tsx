@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CreateJobForm from '../../components/CreateJobForm/CreateJobForm';
-import { Clock4, MapPin, Pencil, Search, Filter } from 'lucide-react';
-import { Button } from '../../components/Ui/Button';
+import { Clock4, MapPin, Pencil, Search, Trash2 } from 'lucide-react';
 import { useMyServices } from '../../features/services/hooks';
 import { useServiceActions } from '../../features/services/hooks';
 import type { Service } from '../../features/services/types';
@@ -10,6 +9,8 @@ import { JobDetailCardSkeleton } from '../../components/Loading/JobDetailCardSke
 import mainLink from '../../api/mainURLs';
 import { useQuery } from '@tanstack/react-query';
 import EmptyState from '../../components/Ui/EmptyState';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/Ui/select';
+import ConfirmDialog from '../../components/Ui/ConfirmDialog';
 
 // Define the tabs configuration
 type TabConfig = {
@@ -38,9 +39,8 @@ export default function MineAnnonser() {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [activeTab, setActiveTab] = useState<string>('active');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'price_high' | 'price_low'>(
-    'newest'
-  );
+  const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'price_high' | 'price_low'>('newest');
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   // Tanstack Hooks (called first, no conditionals before!)
   const { data: services = [], isLoading, error } = useMyServices();
@@ -110,8 +110,12 @@ export default function MineAnnonser() {
   };
 
   const handleDelete = (serviceId: string) => {
-    if (confirm('Er du sikker på at du vil slette denne annonsen?')) {
-      deleteMutation.mutate(serviceId);
+    setDeleteTargetId(serviceId);
+  };
+  const confirmDelete = async () => {
+    if (deleteTargetId) {
+      deleteMutation.mutate(deleteTargetId);
+      setDeleteTargetId(null);
     }
   };
 
@@ -163,51 +167,44 @@ export default function MineAnnonser() {
 
   return (
     <div className="p-0 max-w-300 mx-auto min-h-screen">
-      {/* Tabs */}
+      {/* Filters — Select dropdowns */}
       <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200 px-4 py-4">
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                activeTab === tab.id
-                  ? 'bg-custom-green text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Status filter */}
+          <Select value={activeTab} onValueChange={(v) => setActiveTab(v)}>
+            <SelectTrigger className="w-full sm:w-[220px] rounded-full border-black/10 bg-white text-[13px] font-medium h-10">
+              <SelectValue placeholder="Filter status" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              {tabs.map((tab) => (
+                <SelectItem key={tab.id} value={tab.id}>{tab.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        {/* Search and Sort */}
-        <div className="flex flex-col md:flex-row gap-3">
+          {/* Sort */}
+          <Select value={sortOption} onValueChange={(v) => setSortOption(v as any)}>
+            <SelectTrigger className="w-full sm:w-[180px] rounded-full border-black/10 bg-white text-[13px] font-medium h-10">
+              <SelectValue placeholder="Sorter" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              <SelectItem value="newest">Nyeste først</SelectItem>
+              <SelectItem value="oldest">Eldste først</SelectItem>
+              <SelectItem value="price_high">Høyeste pris</SelectItem>
+              <SelectItem value="price_low">Laveste pris</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Search */}
           <div className="relative flex-1">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Søk etter jobbnavn, kategori eller jobb-ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-custom-green bg-white text-sm"
+              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-full text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-custom-green/30"
             />
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter size={18} className="text-gray-500" />
-            <select
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value as any)}
-              className="px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-custom-green"
-            >
-              <option value="newest">Nyeste først</option>
-              <option value="oldest">Eldste først</option>
-              <option value="price_high">Høyeste pris</option>
-              <option value="price_low">Laveste pris</option>
-            </select>
           </div>
         </div>
       </div>
@@ -324,14 +321,16 @@ export default function MineAnnonser() {
 
                   <div className="flex items-center gap-2">
                     <p className="text-[24px] font-bold">{job.price}Kr</p>
-                    <Button
-                      label="Slett"
-                      className="bg-red-500! rounded-xl px-3 py-1 text-sm"
+                    <button
+                      className="w-8 h-8 flex items-center justify-center rounded-full bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete(job._id);
                       }}
-                    />
+                      title="Slett annonse"
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -339,6 +338,18 @@ export default function MineAnnonser() {
           })}
         </div>
       )}
+
+      {/* Delete Confirm Dialog */}
+      <ConfirmDialog
+        title="Slett annonse?"
+        description="Er du sikker på at du vil slette denne annonsen? Handlingen kan ikke angres."
+        confirmText="Ja, slett"
+        cancelText="Avbryt"
+        variant="destructive"
+        onConfirm={confirmDelete}
+        isOpen={!!deleteTargetId}
+        onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}
+      />
     </div>
   );
 }

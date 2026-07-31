@@ -35,7 +35,7 @@ export const ContactInformation: React.FC<ContactInformationProps> = ({
               Telefonnummer
             </label>
             <input
-              type="tel"
+              type="number"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="Ditt nummer"

@@ -5,6 +5,8 @@ import {
   MapPin,
   Pencil,
   ShieldCheck,
+  FileText,
+  Users,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -322,6 +324,21 @@ export function ProfileHeader({
           </div>
         )}
       </div>
+
+      {/* Quick links — own profile */}
+      {isOwnProfile && (
+        <div className="flex flex-wrap gap-2 mt-4">
+          <button onClick={() => navigate('/mine-annonser')} className="flex items-center gap-1.5 bg-white border border-black/10 rounded-full text-[12px] font-medium px-3 py-1.5 text-gray-600 hover:bg-[#f0faf0] hover:border-custom-green/30 hover:text-custom-green transition-all">
+            <FileText size={13} /> Mine annonser
+          </button>
+          <button onClick={() => navigate('/my-applicants')} className="flex items-center gap-1.5 bg-white border border-black/10 rounded-full text-[12px] font-medium px-3 py-1.5 text-gray-600 hover:bg-[#f0faf0] hover:border-custom-green/30 hover:text-custom-green transition-all">
+            <Users size={13} /> Mine søkere
+          </button>
+          <button onClick={() => navigate('/settings/safepay')} className="flex items-center gap-1.5 bg-white border border-black/10 rounded-full text-[12px] font-medium px-3 py-1.5 text-gray-600 hover:bg-[#f0faf0] hover:border-custom-green/30 hover:text-custom-green transition-all">
+            <ShieldCheck size={13} /> SafePay
+          </button>
+        </div>
+      )}
 
       <BlockModal
         user={user}
