@@ -140,56 +140,55 @@ export default function CreateJobForm({
               {!isAiPanelHidden && (
                 <div className="px-4 pt-4">
                   <div
-                    className={`relative overflow-hidden transition-all duration-500 rounded-3xl shadow-lg ${
-                      showSmartFillInput
-                        ? 'bg-linear-to-br from-[#1b4b2f] to-[#143924]'
-                        : 'bg-[#1b4b2f]'
-                    }`}
+                    className={`relative overflow-hidden transition-all duration-500 rounded-3xl shadow-lg ${showSmartFillInput
+                      ? 'bg-linear-to-br from-[#1b4b2f] to-[#143924]'
+                      : 'bg-[#1b4b2f]'
+                      }`}
                   >
                     {/* Minimize and close buttons (only when not minimized) */}
                     {!isAiPanelMinimized && (
-                      <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
+                      <div className="absolute top-1.5 right-2 flex items-center gap-1.5 z-10">
                         <button
                           type="button"
                           onClick={() => setIsAiPanelMinimized(!isAiPanelMinimized)}
-                          className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white"
+                          className="w-7 h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white"
                           title={isAiPanelMinimized ? 'Expand AI' : 'Minimize AI'}
                         >
-                          {isAiPanelMinimized ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+                          {isAiPanelMinimized ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                         </button>
                         <button
                           type="button"
                           onClick={() => setIsAiPanelHidden(true)}
-                          className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white"
+                          className="w-7 h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white"
                           title="Hide AI panel"
                         >
-                          <X size={18} />
+                          <X size={14} />
                         </button>
                       </div>
                     )}
 
                     {!isAiPanelMinimized && (
-                      <div className="relative p-5 md:p-6 flex flex-col items-center justify-between gap-4">
-                        <div className="flex-1 space-y-3 text-center">
+                      <div className="relative p-5 md:p-16 pt-10 md:pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="flex-1 space-y-3 text-center md:text-left">
                           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/10">
                             <Sparkles className="text-yellow-400 w-3 h-3" />
                             <span className="text-white text-[9px] font-bold uppercase tracking-wider opacity-90">
                               Jobblo AI Assistant
                             </span>
                           </div>
-                          <div className="space-y-2">
-                            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
+                          <div className="space-y-1">
+                            <h2 className="text-lg md:text-xl font-black text-white tracking-tight">
                               {showSmartFillInput
                                 ? 'Beskriv oppdraget'
                                 : 'Fyll ut automatisk med AI'}
                             </h2>
-                            <p className="text-white/60 text-xs md:text-sm font-medium max-w-md">
-                              Spar tid! Fortell oss hva du trenger hjelp med, så ordner vi resten.
+                            <p className="text-white/60 text-[11px] md:text-xs font-medium max-w-sm">
+                              Fortell kort hva som skal gjøres – ta gjerne med størrelse, tilstand og tidspunkt.
                             </p>
                           </div>
                         </div>
 
-                        <div className="w-full md:w-auto">
+                        <div className="w-full md:w-auto md:min-w-[420px]">
                           {!showSmartFillInput ? (
                             <button
                               type="button"
@@ -201,13 +200,13 @@ export default function CreateJobForm({
                               PRØV SMART-UTFYLLING
                             </button>
                           ) : (
-                            <div className="w-full md:w-[360px] space-y-3 animate-in slide-in-from-right-4 duration-500">
+                            <div className="w-full space-y-3 animate-in slide-in-from-right-4 duration-500">
                               <textarea
                                 value={smartFillPrompt}
                                 onChange={(e) => setSmartFillPrompt(e.target.value)}
-                                placeholder="Beskriv jobben her..."
+                                placeholder="F.eks. Male en liten bod på 8 m² utvendig, bør være ferdig i mai."
                                 className="w-full min-h-[100px] px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10
-                                rounded-2xl text-white placeholder-white/20 outline-none focus:border-white/30
+                                rounded-2xl text-white placeholder-white/40 outline-none focus:border-white/30
                                 transition-all text-sm font-medium resize-none"
                               />
                               <div className="flex gap-2">
