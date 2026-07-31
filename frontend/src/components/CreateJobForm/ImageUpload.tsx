@@ -28,16 +28,35 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     }
   }, [initialFiles]);
 
+  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    const updatedFiles = [...selectedFiles, ...files];
+    const validFiles: File[] = [];
+    const rejected: string[] = [];
+
+    for (const file of files) {
+      if (file.size > MAX_FILE_SIZE) {
+        rejected.push(file.name);
+      } else {
+        validFiles.push(file);
+      }
+    }
+
+    if (rejected.length > 0) {
+      alert(`Følgende bilder overskrider 2 MB og ble ikke lagt til:\n${rejected.join('\n')}`);
+    }
+
+    if (validFiles.length === 0) return;
+
+    const updatedFiles = [...selectedFiles, ...validFiles];
 
     setSelectedFiles(updatedFiles);
     onImagesChange(updatedFiles);
 
-    const newPreviews = files.map((file) => URL.createObjectURL(file));
+    const newPreviews = validFiles.map((file) => URL.createObjectURL(file));
     setPreviews((prev) => [...prev, ...newPreviews]);
   };
 
@@ -79,6 +98,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             <Upload size={24} />
           </p>
           <p className="text-[12px] font-medium">Last opp</p>
+          <p className="text-[10px] text-gray-400">Maks 2 MB per bilde</p>
         </div>
         <div
           onClick={() => cameraInputRef.current?.click()}
