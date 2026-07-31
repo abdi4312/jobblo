@@ -106,7 +106,16 @@ const ServiceListing = () => {
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useJobs({
     categories: selectedCategories,
     locations: selectedLocations,
-    countyCodes: selectedCountyCodes,
+    // Smart county/municipality filter: if specific municipalities are selected under a county,
+    // only send municipalityCodes (not the broad county), to avoid showing all county jobs.
+    countyCodes: selectedCountyCodes.filter((countyCode) => {
+      // Only send county code if NO municipalities from that county are individually selected
+      const county = locationTree.find((c) => c.code === countyCode);
+      if (!county?.children) return true;
+      const munCodes = county.children.map((m) => m.code);
+      const hasSpecificMun = munCodes.some((mc) => selectedMunicipalityCodes.includes(mc));
+      return !hasSpecificMun; // exclude county if user drilled down to specific municipalities
+    }),
     municipalityCodes: selectedMunicipalityCodes,
     areaCodes: selectedAreaCodes,
     search: initialSearch,
@@ -175,17 +184,57 @@ const ServiceListing = () => {
 
   // New location toggle functions
   const toggleCounty = (countyCode: string) => {
-    setSelectedCountyCodes((prev) =>
-      prev.includes(countyCode) ? prev.filter((c) => c !== countyCode) : [...prev, countyCode]
-    );
+    const isSelected = selectedCountyCodes.includes(countyCode);
+
+    if (isSelected) {
+      // Deselect county and all its municipalities/areas
+      setSelectedCountyCodes((prev) => prev.filter((c) => c !== countyCode));
+      const county = locationTree.find((c) => c.code === countyCode);
+      if (county?.children) {
+        const munCodes = county.children.map((m) => m.code);
+        setSelectedMunicipalityCodes((prev) => prev.filter((m) => !munCodes.includes(m)));
+        const areaCodes = county.children.flatMap((m) => m.children?.map((a) => a.code) || []);
+        setSelectedAreaCodes((prev) => prev.filter((a) => !areaCodes.includes(a)));
+      }
+      // Collapse
+      setExpandedCounties((prev) => prev.filter((c) => c !== countyCode));
+    } else {
+      // Select county (shows all jobs in that county) — but DON'T auto-select sub-municipalities
+      setSelectedCountyCodes((prev) => [...prev, countyCode]);
+      // Just expand to show sub-items (user can optionally drill down)
+      setExpandedCounties((prev) => prev.includes(countyCode) ? prev : [...prev, countyCode]);
+    }
   };
 
   const toggleMunicipality = (municipalityCode: string) => {
-    setSelectedMunicipalityCodes((prev) =>
-      prev.includes(municipalityCode)
-        ? prev.filter((m) => m !== municipalityCode)
-        : [...prev, municipalityCode]
-    );
+    const isSelected = selectedMunicipalityCodes.includes(municipalityCode);
+
+    if (isSelected) {
+      // Deselect municipality and its areas
+      setSelectedMunicipalityCodes((prev) => prev.filter((m) => m !== municipalityCode));
+      // Remove any areas under this municipality
+      const parentCounty = locationTree.find((c) =>
+        c.children?.some((m) => m.code === municipalityCode)
+      );
+      const municipality = parentCounty?.children?.find((m) => m.code === municipalityCode);
+      if (municipality?.children) {
+        const areaCodes = municipality.children.map((a) => a.code);
+        setSelectedAreaCodes((prev) => prev.filter((a) => !areaCodes.includes(a)));
+      }
+      // Collapse
+      setExpandedMunicipalities((prev) => prev.filter((m) => m !== municipalityCode));
+    } else {
+      // Select municipality (shows jobs in that municipality)
+      setSelectedMunicipalityCodes((prev) => [...prev, municipalityCode]);
+      // Expand to show areas if they exist
+      const parentCounty = locationTree.find((c) =>
+        c.children?.some((m) => m.code === municipalityCode)
+      );
+      const municipality = parentCounty?.children?.find((m) => m.code === municipalityCode);
+      if (municipality?.children && municipality.children.length > 0) {
+        setExpandedMunicipalities((prev) => prev.includes(municipalityCode) ? prev : [...prev, municipalityCode]);
+      }
+    }
   };
 
   const toggleArea = (areaCode: string) => {
@@ -229,26 +278,23 @@ const ServiceListing = () => {
     <div className="space-y-8">
       {/* 0. Urgent Filter Toggle */}
       <section
-        className={`p-6 rounded-3xl border-2 transition-all duration-300 flex items-center justify-between cursor-pointer shadow-sm ${
-          isUrgent ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-white'
-        }`}
+        className={`p-6 rounded-3xl border-2 transition-all duration-300 flex items-center justify-between cursor-pointer shadow-sm ${isUrgent ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-white'
+          }`}
         onClick={() => setIsUrgent(!isUrgent)}
       >
         <div className="flex items-center gap-4">
           <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
-              isUrgent
-                ? 'bg-red-500 text-white shadow-lg shadow-red-200'
-                : 'bg-gray-100 text-gray-400'
-            }`}
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${isUrgent
+              ? 'bg-red-500 text-white shadow-lg shadow-red-200'
+              : 'bg-gray-100 text-gray-400'
+              }`}
           >
             <AlertCircle size={24} className={isUrgent ? 'animate-pulse' : ''} />
           </div>
           <div>
             <p
-              className={`text-base font-bold transition-colors ${
-                isUrgent ? 'text-red-700' : 'text-gray-700'
-              }`}
+              className={`text-base font-bold transition-colors ${isUrgent ? 'text-red-700' : 'text-gray-700'
+                }`}
             >
               Haster
             </p>
@@ -256,14 +302,12 @@ const ServiceListing = () => {
           </div>
         </div>
         <div
-          className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 shrink-0 ${
-            isUrgent ? 'bg-red-500' : 'bg-gray-200'
-          }`}
+          className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 shrink-0 ${isUrgent ? 'bg-red-500' : 'bg-gray-200'
+            }`}
         >
           <div
-            className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
-              isUrgent ? 'translate-x-5' : 'translate-x-0'
-            }`}
+            className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${isUrgent ? 'translate-x-5' : 'translate-x-0'
+              }`}
           />
         </div>
       </section>
@@ -285,20 +329,18 @@ const ServiceListing = () => {
                 <div className="flex items-center justify-between group">
                   <button
                     onClick={() => toggleCategory(cat.name)}
-                    className={`flex-1 text-left font-medium py-2 px-3 rounded-xl transition-all duration-200 ${
-                      selectedCategories.includes(cat.name)
-                        ? 'bg-[#2F7E4711] text-custom-green'
-                        : 'text-gray-700 hover:bg-gray-50 hover:text-custom-green'
-                    }`}
+                    className={`flex-1 text-left font-medium py-2 px-3 rounded-xl transition-all duration-200 ${selectedCategories.includes(cat.name)
+                      ? 'bg-[#2F7E4711] text-custom-green'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-custom-green'
+                      }`}
                   >
                     <span className="flex items-center gap-2">
                       {cat.name}
                       <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          selectedCategories.includes(cat.name)
-                            ? 'bg-[#2F7E4722] text-custom-green'
-                            : 'bg-gray-100 text-gray-400'
-                        }`}
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${selectedCategories.includes(cat.name)
+                          ? 'bg-[#2F7E4722] text-custom-green'
+                          : 'bg-gray-100 text-gray-400'
+                          }`}
                       >
                         {cat.count || 0}
                       </span>
@@ -307,11 +349,10 @@ const ServiceListing = () => {
                   {cat.subcategories && cat.subcategories.length > 0 && (
                     <button
                       onClick={() => toggleExpand(cat._id)}
-                      className={`p-2 rounded-lg transition-all duration-200 ${
-                        expandedCategories.includes(cat._id)
-                          ? 'bg-[#2F7E4711] text-custom-green'
-                          : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
-                      }`}
+                      className={`p-2 rounded-lg transition-all duration-200 ${expandedCategories.includes(cat._id)
+                        ? 'bg-[#2F7E4711] text-custom-green'
+                        : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                        }`}
                     >
                       {expandedCategories.includes(cat._id) ? (
                         <ChevronDown size={18} />
@@ -327,20 +368,18 @@ const ServiceListing = () => {
                       <button
                         key={sub._id}
                         onClick={() => toggleCategory(sub.name)}
-                        className={`w-full text-left py-2 px-3 rounded-xl text-sm transition-all duration-200 ${
-                          selectedCategories.includes(sub.name)
-                            ? 'bg-[#2F7E4711] text-custom-green font-semibold'
-                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
-                        }`}
+                        className={`w-full text-left py-2 px-3 rounded-xl text-sm transition-all duration-200 ${selectedCategories.includes(sub.name)
+                          ? 'bg-[#2F7E4711] text-custom-green font-semibold'
+                          : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                          }`}
                       >
                         <span className="flex items-center gap-2">
                           {sub.name}
                           <span
-                            className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                              selectedCategories.includes(sub.name)
-                                ? 'bg-[#2F7E4722] text-custom-green'
-                                : 'bg-gray-100 text-gray-300'
-                            }`}
+                            className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${selectedCategories.includes(sub.name)
+                              ? 'bg-[#2F7E4722] text-custom-green'
+                              : 'bg-gray-100 text-gray-300'
+                              }`}
                           >
                             {sub.count || 0}
                           </span>
@@ -721,11 +760,10 @@ const ServiceListing = () => {
                         setSelectedSort(option);
                         setIsSortOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-4 py-3 md:px-6 md:py-4 rounded-[18px] md:rounded-[24px] text-left font-bold text-sm md:text-[17px] transition-colors ${
-                        selectedSort.value === option.value
-                          ? 'bg-[#2F7E4711] text-custom-green'
-                          : 'text-custom-black hover:bg-gray-50'
-                      }`}
+                      className={`w-full flex items-center justify-between px-4 py-3 md:px-6 md:py-4 rounded-[18px] md:rounded-[24px] text-left font-bold text-sm md:text-[17px] transition-colors ${selectedSort.value === option.value
+                        ? 'bg-[#2F7E4711] text-custom-green'
+                        : 'text-custom-black hover:bg-gray-50'
+                        }`}
                     >
                       <span>{option.label}</span>
                       {selectedSort.value === option.value && (

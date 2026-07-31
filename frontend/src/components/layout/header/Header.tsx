@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { getMyChats } from '../../../api/chatAPI';
 import { initSocket } from '../../../socket/socket';
 import { NavLink } from 'react-router-dom';
-import { Bell, FileText, Home, MessageCircle, Plus, User, Users } from 'lucide-react';
+import { Bell, FileText, Home, MessageCircle, Plus, User, Users, Crown } from 'lucide-react';
 import { useUnreadCount } from '../../../features/notifications/hooks';
 import { useNotificationSound } from '../../../hooks/useNotificationSound';
 
@@ -220,14 +220,14 @@ export default function Header() {
     { name: 'Legg ut oppdrag', icon: <Plus size={20} />, path: '/publish-job' },
     { name: 'Hjem', icon: <Home size={25} />, path: '/home' },
     {
-      name: 'Mine Annonser',
-      icon: <FileText size={18} />,
-      path: '/mine-annonser',
-    },
-    {
       name: 'Søkere',
       icon: <Users size={18} />,
       path: '/my-applicants',
+    },
+    {
+      name: 'Medlemskap',
+      icon: <Crown size={18} />,
+      path: '/membership',
     },
     {
       name: 'Meldinger',
@@ -294,8 +294,7 @@ export default function Header() {
                     key={index}
                     to={link.path}
                     className={({ isActive }) =>
-                      `relative flex items-center gap-2 cursor-pointer group py-2 ${
-                        isActive ? 'border-b-2 border-[#2F7E47]' : ''
+                      `relative flex items-center gap-2 cursor-pointer group py-2 ${isActive ? 'border-b-2 border-[#2F7E47]' : ''
                       }`
                     }
                   >
@@ -327,8 +326,7 @@ export default function Header() {
               <NavLink
                 to="/home"
                 className={({ isActive }) =>
-                  `transition-all cursor-pointer ${
-                    isActive ? 'text-custom-green!' : 'text-custom-green!'
+                  `transition-all cursor-pointer ${isActive ? 'text-custom-green!' : 'text-custom-green!'
                   }`
                 }
               >
@@ -353,9 +351,8 @@ export default function Header() {
           />
         )}
         <div
-          className={`fixed top-0 left-0 h-full w-64 bg-white z-50 transform transition-transform duration-300 md:hidden ${
-            menuOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
+          className={`fixed top-0 left-0 h-full w-64 bg-white z-50 transform transition-transform duration-300 md:hidden ${menuOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
         >
           <div className="flex justify-between items-center p-4 border-b">
             <span className="font-semibold">Meny</span>
@@ -370,8 +367,7 @@ export default function Header() {
                     to="/home"
                     onClick={() => setMenuOpen(false)}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 p-3 rounded-lg ${
-                        isActive ? 'bg-green-50 text-custom-green! font-bold' : 'text-gray-700!'
+                      `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-green-50 text-custom-green! font-bold' : 'text-gray-700!'
                       }`
                     }
                   >
@@ -397,8 +393,7 @@ export default function Header() {
                     to={link.path}
                     onClick={() => setMenuOpen(false)}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 p-3 rounded-lg ${
-                        isActive ? 'bg-green-50 text-custom-green! font-bold' : 'text-gray-700!'
+                      `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-green-50 text-custom-green! font-bold' : 'text-gray-700!'
                       }`
                     }
                   >
