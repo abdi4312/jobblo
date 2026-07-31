@@ -74,7 +74,7 @@ const JobButton: React.FC<JobButtonProps> = ({
                     ? 'Fulltegnet'
                     : isTimerActive
                       ? 'Cooldown'
-                      : 'Order Now'
+                      : 'Send forespørsel'
           }
           icon={
             isMsgLoading ? (
@@ -84,11 +84,10 @@ const JobButton: React.FC<JobButtonProps> = ({
             )
           }
           className={`flex-1 h-12 text-[14px]! rounded-xl font-semibold! transition-all! whitespace-nowrap
-                        ${
-                          !isOwnJob && (hasRequested || isLimitReached || isTimerActive)
-                            ? 'bg-gray-100! text-gray-400! cursor-not-allowed!'
-                            : 'bg-custom-green! text-white! hover:bg-[#266b3c]!'
-                        } 
+                        ${!isOwnJob && (hasRequested || isLimitReached || isTimerActive)
+              ? 'bg-gray-100! text-gray-400! cursor-not-allowed!'
+              : 'bg-custom-green! text-white! hover:bg-[#266b3c]!'
+            } 
                     `}
         />
 
