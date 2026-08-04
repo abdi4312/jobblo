@@ -110,8 +110,17 @@ export function SettingsLayout() {
   }
 
   const handleBackToSidebar = () => {
-    setShowSidebar(true);
-    navigate('/settings');
+    const isMobile = window.innerWidth < 768;
+    const isSubPage = location.pathname !== '/settings';
+
+    if (isMobile && isSubPage) {
+      // On mobile sub-page: go back to settings sidebar
+      setShowSidebar(true);
+      navigate('/settings');
+    } else {
+      // On settings root or desktop: go back to where user came from
+      navigate(-1);
+    }
   };
 
   return (
@@ -127,10 +136,10 @@ export function SettingsLayout() {
           </div>
           {/* Active tab title with back button */}
           <div className="flex-1 p-4 sm:p-6 font-semibold text-lg text-gray-800 flex items-center md:justify-start bg-white border-gray-100 min-w-0">
-            {/* Mobile back button - only show when sidebar is hidden on small screens */}
+            {/* Mobile: back to sidebar when on sub-page */}
             {!showSidebar && (
               <button
-                title="Tilbake til sidste side"
+                title="Tilbake"
                 type="button"
                 onClick={handleBackToSidebar}
                 className="md:hidden mr-3 p-2 -ml-2 hover:bg-gray-200 rounded-full transition-colors flex items-center justify-center shrink-0"
@@ -138,6 +147,15 @@ export function SettingsLayout() {
                 <ArrowLeft size={20} className="text-gray-600" />
               </button>
             )}
+            {/* Desktop: always show a back button that goes to previous history entry */}
+            <button
+              title="Gå tilbake"
+              type="button"
+              onClick={() => navigate(-1)}
+              className="hidden md:flex mr-3 p-1.5 -ml-1.5 hover:bg-gray-100 rounded-full transition-colors items-center justify-center shrink-0"
+            >
+              <ArrowLeft size={18} className="text-gray-500" />
+            </button>
             <span className="truncate">{activeTab}</span>
           </div>
         </div>
@@ -165,11 +183,10 @@ export function SettingsLayout() {
                       <button
                         key={link.path}
                         onClick={() => navigate(link.path)}
-                        className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
-                          isActive
-                            ? 'bg-custom-green-light text-rose-600 md:text-gray-900 shadow-sm md:shadow-none border border-rose-100 md:border-0'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
-                        }`}
+                        className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${isActive
+                          ? 'bg-custom-green-light text-rose-600 md:text-gray-900 shadow-sm md:shadow-none border border-rose-100 md:border-0'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
+                          }`}
                       >
                         <Icon
                           size={18}

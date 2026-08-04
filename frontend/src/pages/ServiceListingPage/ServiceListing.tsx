@@ -130,6 +130,47 @@ const ServiceListing = () => {
 
   const jobs = data?.pages.flatMap((page) => page.data) || [];
 
+  // Norwegian county/municipality center coordinates [lng, lat]
+  const NORWAY_CENTERS: Record<string, [number, number]> = {
+    '03': [10.7522, 59.9139], '11': [5.7331, 58.9700], '15': [6.3648, 62.4720],
+    '18': [14.3747, 67.2804], '31': [11.3950, 59.5200], '32': [10.2052, 60.7945],
+    '33': [9.0568, 60.2729], '34': [10.8080, 61.1155], '39': [10.2323, 59.2816],
+    '40': [8.7277, 59.4358], '42': [7.9964, 58.1599], '46': [5.3329, 60.3913],
+    '50': [10.3951, 63.4305], '55': [18.9551, 69.6492], '56': [23.2594, 70.0712],
+    '0301': [10.7522, 59.9139], '1103': [5.7331, 58.9700], '1201': [5.3220, 60.3913],
+    '1601': [10.3951, 63.4305], '0101': [11.3883, 59.2836], '0106': [11.0670, 59.1286],
+    '4204': [7.9964, 58.1599], '1001': [7.9964, 58.1599], '1004': [7.5945, 58.0788],
+    '1014': [7.1699, 58.1000], '4601': [5.3220, 60.3913], '5001': [10.3951, 63.4305],
+    '0401': [11.0688, 60.7945],
+  };
+
+  // Derive map center from selected location filters
+  const mapCoordinates = useMemo((): [number, number] => {
+    // Priority: area > municipality > county > first job > Oslo fallback
+    if (selectedAreaCodes.length > 0) {
+      const hit = NORWAY_CENTERS[selectedAreaCodes[0]];
+      if (hit) return hit;
+    }
+    if (selectedMunicipalityCodes.length > 0) {
+      const hit = NORWAY_CENTERS[selectedMunicipalityCodes[0]];
+      if (hit) return hit;
+    }
+    if (selectedCountyCodes.length > 0) {
+      const hit = NORWAY_CENTERS[selectedCountyCodes[0]];
+      if (hit) return hit;
+    }
+    // Fall back to first job with coordinates
+    const firstJob = jobs.find((j) => (j as any).location?.coordinates);
+    if ((firstJob as any)?.location?.coordinates) return (firstJob as any).location.coordinates as [number, number];
+    return [10.7522, 59.9139]; // Oslo
+  }, [selectedAreaCodes, selectedMunicipalityCodes, selectedCountyCodes, jobs]);
+
+  // Zoom radius: tighter when a specific area/municipality is selected
+  const mapRadius = selectedAreaCodes.length > 0 ? 2000
+    : selectedMunicipalityCodes.length > 0 ? 5000
+      : selectedCountyCodes.length > 0 ? 20000
+        : 5000;
+
   const filteredLocations = useMemo(() => {
     if (!filterOptions?.locations) return [];
     if (!locationSearch.trim()) return filterOptions.locations;
@@ -417,26 +458,10 @@ const ServiceListing = () => {
               }
             >
               <MapComponent
-                coordinates={
-                  jobs.find((j) => j.location?.coordinates)?.location?.coordinates || [
-                    10.7522, 59.9139,
-                  ]
-                }
-                circleRadius={4000}
+                coordinates={mapCoordinates}
+                circleRadius={mapRadius}
               />
             </Suspense>
-            {/* Overlay to catch clicks and prevent map interaction inside sidebar */}
-            <div className="absolute inset-0 bg-transparent z-50 cursor-pointer" />
-
-            {/* Norway zoom-like overlay style from reference */}
-            <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm p-1.5 rounded-lg shadow-sm border border-gray-100 z-[60] flex flex-col gap-1">
-              <div className="w-5 h-5 flex items-center justify-center text-gray-400 font-bold text-sm">
-                +
-              </div>
-              <div className="w-5 h-5 flex items-center justify-center text-gray-400 font-bold text-sm">
-                -
-              </div>
-            </div>
           </div>
         </div>
       </section>

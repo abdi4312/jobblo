@@ -196,7 +196,8 @@ exports.reconcilePayment = async (req, res) => {
     if (!order.checkoutSessionId) return res.status(400).json({ status: 'no_session', message: 'Ingen betalingssesjon funnet' });
 
     // Lazy stripe initialization
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const { getStripe } = require('../config/stripe');
+    const stripe = await getStripe();
 
     let session;
     try { session = await stripe.checkout.sessions.retrieve(order.checkoutSessionId); }

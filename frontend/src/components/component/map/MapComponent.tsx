@@ -1,66 +1,58 @@
 import styles from './MapComponent.module.css';
-import { Circle, MapContainer, TileLayer } from 'react-leaflet';
-import type { LatLngLiteral } from 'leaflet';
-import { useMemo } from 'react';
+import { APIProvider, Map, Circle } from '@vis.gl/react-google-maps';
 
-const EARTH_RADIUS_METERS = 6371000;
-
-function randomPointInCircle(center: LatLngLiteral, radiusMeters: number): LatLngLiteral {
-  const u = Math.max(Math.random(), 1e-6);
-  const v = Math.random();
-  const distance = Math.sqrt(u) * radiusMeters;
-  const angle = 2 * Math.PI * v;
-  const deltaLat = (distance * Math.cos(angle)) / EARTH_RADIUS_METERS;
-  const deltaLng =
-    (distance * Math.sin(angle)) / (EARTH_RADIUS_METERS * Math.cos((center.lat * Math.PI) / 180));
-
-  return {
-    lat: center.lat + (deltaLat * 180) / Math.PI,
-    lng: center.lng + (deltaLng * 180) / Math.PI,
-  };
-}
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
+const circleRadius = 1000; // 1 KM
 
 export function MapComponent({
   coordinates,
-  circleRadius,
 }: {
   coordinates: [number, number];
-  circleRadius: number;
+  circleRadius?: number; // accepted but ignored — always 1 km
 }) {
   const [lng, lat] = coordinates;
+  const center = { lat, lng };
 
-  const randomCenter = useMemo(() => {
-    const center: LatLngLiteral = { lng, lat };
-    return randomPointInCircle(center, circleRadius);
-  }, [lng, lat, circleRadius]);
+  if (!GOOGLE_MAPS_API_KEY) {
+    return (
+      <div
+        className={styles.container}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#f3f4f6',
+          color: '#9ca3af',
+          fontSize: 12,
+        }}
+      >
+        Google Maps API key mangler
+      </div>
+    );
+  }
 
   return (
-    <div className={styles.container}>
-      <MapContainer
-        className={styles.map}
-        center={randomCenter}
-        zoom={10}
-        scrollWheelZoom={true}
-        dragging={true}
-        zoomControl={true}
-        touchZoom={true}
-        doubleClickZoom={true}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <Circle
-          center={randomCenter}
-          radius={circleRadius}
-          pathOptions={{
-            color: '#ff8a7a',
-            fillColor: '#ff8a7a',
-            fillOpacity: 0.2,
-            weight: 2,
-          }}
-        />
-      </MapContainer>
+    <div className={styles.container} key={`${lng},${lat}`}>
+      <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+        <Map
+          style={{ width: '100%', height: '100%' }}
+          defaultCenter={center}
+          defaultZoom={13}
+          gestureHandling="greedy"
+          disableDefaultUI={false}
+          mapId="jobblo-map"
+        >
+          <Circle
+            center={center}
+            radius={circleRadius}
+            strokeColor="#ff8a7a"
+            strokeOpacity={0.9}
+            strokeWeight={2}
+            fillColor="#ff8a7a"
+            fillOpacity={0.18}
+          />
+        </Map>
+      </APIProvider>
     </div>
   );
 }
