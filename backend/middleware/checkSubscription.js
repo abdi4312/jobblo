@@ -5,10 +5,11 @@ const Transaction = require('../models/Transaction');
 const Service = require('../models/Service');
 const JobRequest = require('../models/JobRequest');
 const GlobalConfig = require('../models/GlobalConfig');
-const stripe = require('../config/stripe');
+const { getStripe } = require('../config/stripe');
 
 exports.checkSubscription = async (req, res, next) => {
   try {
+    const stripe = await getStripe();
     const userId = req.user._id;
     const { serviceId, sessionId } = req.body;
 

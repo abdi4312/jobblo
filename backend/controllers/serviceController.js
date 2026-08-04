@@ -23,6 +23,11 @@ exports.getAllServices = async (req, res) => {
 
     const query = {};
 
+    // Always filter for public-facing statuses (not draft/completed/cancelled)
+    if (!userId) {
+      query.status = { $in: ['open', 'active'] };
+    }
+
     if (userId) {
       query.userId = userId;
     }
@@ -36,11 +41,12 @@ exports.getAllServices = async (req, res) => {
       query.categories = { $in: categoriesArray };
     }
 
+    const searchConditions = [];
     if (search) {
-      query.$or = [
+      searchConditions.push(
         { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-      ];
+        { description: { $regex: search, $options: 'i' } }
+      );
     }
 
     if (minPrice || maxPrice) {
@@ -49,23 +55,51 @@ exports.getAllServices = async (req, res) => {
       if (maxPrice) query.price.$lte = Number(maxPrice);
     }
 
-    // Location code filters
-    const locationQueries = [];
+    // Location code filters — use $and so location + search don't overwrite each other
+    const locationConditions = [];
+
     if (countyCodes) {
-      const codes = countyCodes.split(',').map((c) => c.trim());
-      locationQueries.push({ countyCode: { $in: codes } });
-    }
-    if (municipalityCodes) {
-      const codes = municipalityCodes.split(',').map((c) => c.trim());
-      locationQueries.push({ municipalityCode: { $in: codes } });
-    }
-    if (areaCodes) {
-      const codes = areaCodes.split(',').map((c) => c.trim());
-      locationQueries.push({ areaCode: { $in: codes } });
+      const codes = countyCodes.split(',').map((c) => c.trim()).filter(Boolean);
+      if (codes.length > 0) {
+        // Match jobs stored directly with countyCode OR jobs stored with a municipality
+        // that belongs to the selected county (for backwards compatibility)
+        const NorwayMunicipality = require('../models/NorwayMunicipality');
+        const munisInCounty = await NorwayMunicipality.find({ countyCode: { $in: codes } }).select('code').lean();
+        const munCodes = munisInCounty.map((m) => m.code);
+
+        const countyOrConditions = [{ countyCode: { $in: codes } }];
+        if (munCodes.length > 0) {
+          countyOrConditions.push({ municipalityCode: { $in: munCodes } });
+        }
+        locationConditions.push({ $or: countyOrConditions });
+      }
     }
 
-    if (locationQueries.length > 0) {
-      query.$or = locationQueries;
+    if (municipalityCodes) {
+      const codes = municipalityCodes.split(',').map((c) => c.trim()).filter(Boolean);
+      if (codes.length > 0) {
+        locationConditions.push({ municipalityCode: { $in: codes } });
+      }
+    }
+
+    if (areaCodes) {
+      const codes = areaCodes.split(',').map((c) => c.trim()).filter(Boolean);
+      if (codes.length > 0) {
+        locationConditions.push({ areaCode: { $in: codes } });
+      }
+    }
+
+    // Combine location conditions with $or (match any selected region)
+    // Combine search and location using $and so neither overwrites the other
+    const andConditions = [];
+    if (searchConditions.length > 0) {
+      andConditions.push({ $or: searchConditions });
+    }
+    if (locationConditions.length > 0) {
+      andConditions.push({ $or: locationConditions });
+    }
+    if (andConditions.length > 0) {
+      query.$and = andConditions;
     }
 
     // Construct sort object

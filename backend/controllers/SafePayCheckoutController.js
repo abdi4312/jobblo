@@ -7,7 +7,7 @@ const Notification = require('../models/Notification');
 const SafePayHistory = require('../models/SafePayHistory');
 const Review = require('../models/Review');
 const Chat = require('../models/ChatMessage');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { getStripe } = require('../config/stripe');
 
 exports.getCheckoutDetails = async (req, res) => {
   try {
@@ -59,6 +59,7 @@ exports.getCheckoutDetails = async (req, res) => {
 
 exports.createSafePaySession = async (req, res) => {
   try {
+    const stripe = await getStripe();
     const { orderId } = req.body;
     const userId = req.userId;
 
@@ -165,6 +166,7 @@ exports.createSafePaySession = async (req, res) => {
 
 exports.checkoutSessionStatus = async (req, res) => {
   try {
+    const stripe = await getStripe();
     const { sessionId } = req.params;
 
     const session = await stripe.checkout.sessions.retrieve(sessionId);

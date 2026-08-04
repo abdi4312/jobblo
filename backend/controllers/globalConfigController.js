@@ -15,16 +15,17 @@ exports.getConfigByKey = async (req, res) => {
     const { key } = req.params;
     let config = await GlobalConfig.findOne({ key });
 
-    // Fallback defaults if config is missing in DB
-    if (!config) {
-      const defaults = {
-        ADS_FOR_NON_SUBSCRIBERS: { value: false },
-        FREE_PRIVATE_JOBS_UNDER_10000: { value: false },
-      };
+      // Fallback defaults if config is missing in DB
+      if (!config) {
+        const defaults = {
+          ADS_FOR_NON_SUBSCRIBERS: { value: false },
+          FREE_PRIVATE_JOBS_UNDER_10000: { value: false },
+          STRIPE_TEST_MODE: { value: false },
+        };
 
-      if (defaults[key]) {
-        return res.status(200).json({ key, ...defaults[key], isDefault: true });
-      }
+        if (defaults[key]) {
+          return res.status(200).json({ key, ...defaults[key], isDefault: true });
+        }
 
       return res.status(404).json({ message: 'Config not found' });
     }
@@ -63,6 +64,11 @@ exports.initializeConfigs = async (req, res) => {
         key: 'ADS_FOR_NON_SUBSCRIBERS',
         value: true,
         description: 'Enable ads for non-subscribers',
+      },
+      {
+        key: 'STRIPE_TEST_MODE',
+        value: false,
+        description: 'Enable Stripe test mode (use test API keys)',
       },
     ];
 

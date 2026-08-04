@@ -2,7 +2,7 @@ const Coupon = require('../models/Coupon');
 const Subscription = require('../models/Subscription');
 const User = require('../models/User');
 const Service = require('../models/Service');
-const stripe = require('../config/stripe');
+const { getStripe } = require('../config/stripe');
 const SubscriptionPlan = require('../models/SubscriptionPlan');
 const calculateDiscount = require('../utils/calculateDiscount');
 const { validateCouponLogic } = require('../utils/couponValidation');
@@ -15,6 +15,7 @@ nextMonth.setMonth(now.getMonth() + 1);
 
 exports.createCheckoutSession = async (req, res) => {
   try {
+    const stripe = await getStripe();
     const { planId, couponCode } = req.body;
     const user = req.user;
 
@@ -87,6 +88,7 @@ exports.createCheckoutSession = async (req, res) => {
 
 exports.checkoutSessionStatus = async (req, res) => {
   try {
+    const stripe = await getStripe();
     const { sessionId } = req.params;
 
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
@@ -174,6 +176,7 @@ exports.checkoutSessionStatus = async (req, res) => {
 
 exports.createExtraContactPayment = async (req, res) => {
   try {
+    const stripe = await getStripe();
     const user = req.user;
     const { amount, serviceId } = req.body;
 
@@ -232,6 +235,7 @@ exports.createExtraContactPayment = async (req, res) => {
 
 exports.extraContactPaymentStatus = async (req, res) => {
   try {
+    const stripe = await getStripe();
     const { sessionId } = req.params;
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
