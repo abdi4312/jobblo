@@ -35,11 +35,10 @@ export function ProfileNav({
           <button
             key={tab}
             onClick={() => onTabChange(tab)}
-            className={`py-2 sm:py-2.5 px-2.5 sm:px-3.5 text-[11px] sm:text-[12px] font-medium transition-all rounded-md whitespace-nowrap shrink-0 ${
-              isActive
-                ? 'bg-[#1a3a1a] text-white shadow-sm'
-                : 'text-black/40 hover:text-black/60 hover:bg-white/60'
-            }`}
+            className={`py-2 sm:py-2.5 px-2.5 sm:px-3.5 text-[11px] sm:text-[12px] font-medium transition-all rounded-md whitespace-nowrap shrink-0 ${isActive
+              ? 'bg-[#1a3a1a] text-white shadow-sm'
+              : 'text-black/40 hover:text-black/60 hover:bg-white/60'
+              }`}
           >
             {tab}
           </button>
