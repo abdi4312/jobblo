@@ -20,6 +20,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-query-devtools": "^5.91.3",
+    "@vis.gl/react-google-maps": "^1.9.0",
     "antd": "^5.27.6",
     "axios": "^1.13.2",
     "class-variance-authority": "^0.7.1",

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Edit, ShieldCheck, Settings, Info, Plus, Trash2 } from 'lucide-react';
+import { Edit, ShieldCheck, Settings, Info, Plus, Trash2, CreditCard } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -98,7 +98,7 @@ export default function PlansAdminPage() {
             const [plansData, configsData] = await Promise.all([getPlans(), getConfigs()]);
             setPlans(Array.isArray(plansData) ? plansData : plansData?.plans ?? []);
             const configArr = Array.isArray(configsData) ? configsData : configsData?.configs ?? [];
-            if (configArr.length === 0) {
+            if (configArr.length === 0 || !configArr.some((c: GlobalConfig) => c.key === 'STRIPE_TEST_MODE')) {
                 await initializeConfigs();
                 const newConfigs = await getConfigs();
                 setConfigs(Array.isArray(newConfigs) ? newConfigs : newConfigs?.configs ?? []);
@@ -168,6 +168,18 @@ export default function PlansAdminPage() {
             fetchData();
         } catch {
             toast.error('Kunne ikke oppdatere innstilling.');
+        }
+    };
+
+    const stripeTestMode = configs.find((c) => c.key === 'STRIPE_TEST_MODE');
+
+    const handleToggleStripeTestMode = async (value: boolean) => {
+        try {
+            await updateConfig('STRIPE_TEST_MODE', value);
+            toast.success(value ? 'Stripe testmodus aktivert. Test-nøkler er nå i bruk.' : 'Stripe testmodus deaktivert. Produksjons-nøkler er nå i bruk.');
+            fetchData();
+        } catch {
+            toast.error('Kunne ikke oppdatere Stripe-innstilling.');
         }
     };
 
@@ -260,6 +272,37 @@ export default function PlansAdminPage() {
                 description="Administrer prisplaner og globale funksjonsbrytere"
             />
 
+            {/* Stripe Test Mode Toggle */}
+            <div className={`rounded-2xl border p-5 ${stripeTestMode?.value ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
+                <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                        <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                            <CreditCard size={16} /> Stripe Testmodus
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-1">
+                            {stripeTestMode?.value
+                                ? 'Aktiv: Betalinger bruker Stripe test-nøkler. Ingen ekte belastninger skjer.'
+                                : 'Inaktiv: Betalinger bruker produksjons-nøkler (ekte belastninger).'}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${stripeTestMode?.value ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                            {stripeTestMode?.value ? 'TEST' : 'LIVE'}
+                        </span>
+                        <button
+                            onClick={() => handleToggleStripeTestMode(!stripeTestMode?.value)}
+                            disabled={stripeTestMode === undefined}
+                            className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ${stripeTestMode?.value ? 'bg-amber-500' : 'bg-gray-300'}`}
+                            aria-label={`Stripe testmodus: ${stripeTestMode?.value ? 'På' : 'Av'}`}
+                            role="switch"
+                            aria-checked={!!stripeTestMode?.value}
+                        >
+                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${stripeTestMode?.value ? 'translate-x-6' : ''}`} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             {/* Global Feature Toggles */}
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
                 <h3 className="text-sm font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -275,7 +318,7 @@ export default function PlansAdminPage() {
                     <p className="text-sm text-gray-400">Ingen konfigurasjoner funnet.</p>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {configs.map((config) => (
+                        {configs.filter((config) => config.key !== 'STRIPE_TEST_MODE').map((config) => (
                             <ConfigToggle key={config.key} config={config} onToggle={handleToggleConfig} />
                         ))}
                     </div>

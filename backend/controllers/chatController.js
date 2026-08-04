@@ -2,7 +2,7 @@ const User = require('../models/User');
 const Chat = require('../models/ChatMessage');
 const Order = require('../models/Order');
 const Service = require('../models/Service');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { getStripe } = require('../config/stripe');
 const mongoose = require('mongoose');
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -186,6 +186,7 @@ exports.deleteForMe = async (req, res) => {
  */
 exports.createPaymentSession = async (req, res) => {
   try {
+    const stripe = await getStripe();
     const { id } = req.user;
     const { chatId } = req.params;
 

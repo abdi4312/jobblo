@@ -341,7 +341,8 @@ const resolveDispute = asyncHandler(async (req, res) => {
   try {
     // For full/partial refund — call Stripe API
     if (['full_refund_to_customer', 'partial_refund'].includes(outcome) && payment?.stripePaymentIntentId) {
-      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+      const { getStripe } = require('../../config/stripe');
+      const stripe = await getStripe();
       const refundAmount = outcome === 'full_refund_to_customer'
         ? Math.round(securedAmount * 100) // Stripe uses øre/cents
         : Math.round(cust * 100);
