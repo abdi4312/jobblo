@@ -5,6 +5,7 @@ import { Spinner } from '../Ui/Spinner';
 import { useProfileLogic } from '../../features/profile/useProfileLogic';
 import { BlockedUserView } from './ProfilePageComponents/BlockedUserView';
 import { CustomSwitcher } from '../Ui/CustomSwitcher';
+import * as Icons from '../../assets/icons/index';
 
 export default function ProfilePage() {
   const {
@@ -45,8 +46,16 @@ export default function ProfilePage() {
 
   return (
     <div className="bg-[#f5f0e8] min-h-screen">
-      <div className="hero-band h-[80px] sm:h-[120px] bg-[#1a3a1a] relative">
-        <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle,#fff_1px,transparent_1px)] bg-[length:24px_24px]"></div>
+      <div className="hero-band h-[80px] sm:h-[120px] bg-[#1a3a1a] relative overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 flex flex-wrap items-center justify-center gap-x-10 sm:gap-x-14 gap-y-4 sm:gap-y-5 opacity-[0.06] pointer-events-none"
+          style={{ filter: 'brightness(0) invert(1)' }}
+        >
+          {Array.from({ length: 40 }).map((_, i) => (
+            <Icons.JobbloIcon key={i} className="w-[130px] sm:w-[160px] h-auto shrink-0" />
+          ))}
+        </div>
       </div>
 
       <div className="max-w-[960px] mx-auto px-3 sm:px-4 pb-12 sm:pb-16">
