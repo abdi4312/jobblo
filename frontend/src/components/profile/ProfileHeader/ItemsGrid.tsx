@@ -425,7 +425,7 @@ export function ItemsGrid({
     const displayReviews = realReviews || [];
 
     if (displayReviews.length === 0) {
-      return <EmptyState title="Ingen vurderinger" description="Vurderinger vil vises her" />;
+      return <EmptyState title="Ingen vurderinger" description="Vurderinger vil vises her" icon={<Star size={36} className="text-custom-green" />} />;
     }
 
     return (

@@ -16,9 +16,9 @@ export function ProfileNav({
   userRole,
 }: ProfileNavProps) {
   const userStoreUser = useUserStore((state) => state.user);
-  const seekerTabs = ['Om meg', 'Fullførte', 'Vurderinger', 'Portfolio', 'Sertifiseringer'];
+  const seekerTabs = ['Om meg', 'Fullførte', 'Vurderinger'];
   const posterTabs = ['Aktive', 'Tidligere', 'Vurderinger'];
-  const companyTabs = ['Portfolio', 'Sertifiseringer', 'Aktive', 'Tidligere', 'Vurderinger'];
+  const companyTabs = ['Aktive', 'Tidligere', 'Vurderinger'];
 
   const tabs =
     profileType === 'seeker'
