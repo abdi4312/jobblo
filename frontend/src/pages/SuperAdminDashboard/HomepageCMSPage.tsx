@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Save, RefreshCw, Image, Link, Type, MessageSquare } from 'lucide-react';
 import { useHomepageContent, useUpdateHomepageContent } from '../../hooks/admin/content';
 import { AdminPageHeader, AdminLoadingSkeleton, AdminErrorState } from '../../components/admin';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 export default function HomepageCMSPage() {
   const { data: content, isLoading, isError, refetch } = useHomepageContent();

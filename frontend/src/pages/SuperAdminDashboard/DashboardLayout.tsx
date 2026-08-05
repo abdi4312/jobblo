@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AdminSidebar } from '../../components/admin/AdminSidebar';
 import { AdminHeader } from '../../components/admin/AdminHeader';
 import { LanguageProvider } from '../../i18n/LanguageContext';
@@ -9,6 +10,17 @@ const DashboardLayout: React.FC = () => {
 
   return (
     <LanguageProvider>
+      <Toaster
+        position="bottom-center"
+        toastOptions={{
+          style: {
+            background: '#333',
+            color: '#fff',
+            zIndex: 99999,
+            borderRadius: '12px',
+          },
+        }}
+      />
       <div className="flex h-screen overflow-hidden bg-gray-50">
         <AdminSidebar
           mobileOpen={mobileOpen}

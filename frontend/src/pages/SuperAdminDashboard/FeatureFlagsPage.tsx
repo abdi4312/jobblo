@@ -3,7 +3,7 @@ import { ToggleLeft, ToggleRight, RefreshCw } from 'lucide-react';
 import { useFeatureFlags, useToggleFeatureFlag } from '../../hooks/admin/content';
 import { AdminPageHeader, AdminLoadingSkeleton, AdminErrorState } from '../../components/admin';
 import { AdminEmptyState } from '../../components/admin/AdminEmptyState';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 function formatKey(key: string): string {
   const cleaned = key.replace(/^flag_/i, '');

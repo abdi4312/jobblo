@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Edit3, Trash2, Ticket, Percent, InfinityIcon, Calendar } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import mainLink from '../../api/mainURLs';
 import {
     AdminDataTable,

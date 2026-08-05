@@ -32,7 +32,7 @@ import {
     AlertCircle,
 } from 'lucide-react';
 import { useUserStore } from '../../stores/userStore';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import { AdminConfirmDialog } from './AdminConfirmDialog';
 import { cn } from '@/lib/utils';
 import { useTranslate } from '../../i18n/useTranslate';

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Save, RefreshCw, Megaphone } from 'lucide-react';
 import { useAnnouncements, useUpdateAnnouncement } from '../../hooks/admin/content';
 import { AdminPageHeader, AdminLoadingSkeleton, AdminErrorState, AdminEmptyState } from '../../components/admin';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 interface Announcement {
   key: string;

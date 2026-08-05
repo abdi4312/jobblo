@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Users, UserPlus, Calendar, Plus, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import { useAdminUsers, useCreateAdminUser, useChangeUserRole, useSoftDeleteUser, useVerifyUser, useUpdateUserStatus } from '../../hooks/admin';
 import { AdminDataTable, AdminSearchInput, AdminFilterSelect, AdminStatusBadge, AdminConfirmDialog, AdminPageHeader, AdminStatCard } from '../../components/admin';
 import type { AdminUser } from '../../types/admin';

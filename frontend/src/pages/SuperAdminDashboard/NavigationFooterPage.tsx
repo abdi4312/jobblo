@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Save, RefreshCw, Link, Mail, Globe, Copyright } from 'lucide-react';
 import { useNavigation, useUpdateNavigation, useFooter, useUpdateFooter } from '../../hooks/admin/content';
 import { AdminPageHeader, AdminLoadingSkeleton, AdminErrorState } from '../../components/admin';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 const parseLines = (str: string): { label: string; url: string }[] =>
   str.split('\n').filter(Boolean).map(line => {
