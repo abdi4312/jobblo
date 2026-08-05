@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Copy, CheckCircle2, Eye, MessageSquare } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import { fetchAdminChats } from '../../api/admin/chats';
 import type { AdminChatSummary } from '../../api/admin/chats';
 import {

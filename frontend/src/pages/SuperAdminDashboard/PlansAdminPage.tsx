@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Edit, ShieldCheck, Settings, Info, Plus, Trash2, CreditCard } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import {
     getPlans,
     updatePlan,

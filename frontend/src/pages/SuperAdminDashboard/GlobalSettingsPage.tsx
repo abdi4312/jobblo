@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '../../components/Ui/Input';
 import { Textarea } from '../../components/Ui/textarea';
 import { Button } from '../../components/Ui/Button';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 interface ConfigEntry {
   key: string;
