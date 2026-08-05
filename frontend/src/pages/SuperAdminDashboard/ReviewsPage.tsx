@@ -104,12 +104,15 @@ export default function ReviewsPage() {
         {
             key: 'date',
             header: 'Dato',
-            render: (r) =>
-                new Date(r.createdAt).toLocaleDateString('nb-NO', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                }),
+            render: (r) => (
+                <span>
+                    {new Date(r.createdAt).toLocaleDateString('nb-NO', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                    })}
+                </span>
+            ),
         },
         {
             key: 'actions',

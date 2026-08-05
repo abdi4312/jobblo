@@ -35,7 +35,7 @@ const getCategories = asyncHandler(async (req, res) => {
  * POST /api/admin/categories
  */
 const createCategory = asyncHandler(async (req, res) => {
-  const { name, description, sortOrder, isActive } = req.body;
+  const { name, description, icon, sortOrder, isActive } = req.body;
   if (!name?.trim()) return sendError(res, 'Kategorinavn er påkrevd.', 400);
 
   const existing = await Category.findOne({ name: name.trim() });
@@ -46,6 +46,7 @@ const createCategory = asyncHandler(async (req, res) => {
     name: name.trim(),
     slug,
     description: description?.trim(),
+    icon: icon?.trim() || undefined,
     sortOrder: sortOrder ?? 0,
     isActive: isActive !== false,
   });
@@ -69,13 +70,14 @@ const updateCategory = asyncHandler(async (req, res) => {
   const id = parseObjectId(req.params.id);
   if (!id) return sendError(res, 'Ugyldig kategori-ID.', 400);
 
-  const { name, description, sortOrder, isActive } = req.body;
+  const { name, description, icon, sortOrder, isActive } = req.body;
   const update = {};
   if (name !== undefined) {
     update.name = name.trim();
     update.slug = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   }
   if (description !== undefined) update.description = description.trim();
+  if (icon !== undefined) update.icon = icon.trim();
   if (sortOrder !== undefined) update.sortOrder = sortOrder;
   if (isActive !== undefined) update.isActive = isActive;
 
