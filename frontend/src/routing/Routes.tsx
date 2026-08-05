@@ -98,6 +98,7 @@ const SuccessPage = lazy(() => import('../components/subscription/success.tsx'))
 const ContactSuccessPage = lazy(() => import('../pages/ContactSuccessPage.tsx'));
 const ServiceListingPage = lazy(() => import('../pages/ServiceListingPage/ServiceListing.tsx'));
 const UpcomingFeatures = lazy(() => import('../pages/UpcomingFeaturesPage/UpcomingFeatures.tsx'));
+const MembershipPage = lazy(() => import('../pages/MembershipPage/MembershipPage.tsx'));
 const PricingPage = lazy(() => import('../pages/PricingPage/PricingPage.tsx'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage/NotFoundPage.tsx'));
 const CompletedJobPage = lazy(() => import('../pages/CompletedJobPage.tsx'));
@@ -220,7 +221,7 @@ export const routes: RouteObject[] = [
       { path: 'cookies', element: withSuspense(CookiePolicyPage) },
       { path: 'about', element: withSuspense(AboutPage) },
       { path: 'user-term', element: withSuspense(JobbloUserTerm) },
-      { path: 'membership', element: <ProtectedRoute>{withSuspense(PricingPage)}</ProtectedRoute> },
+      { path: 'membership', element: <ProtectedRoute>{withSuspense(MembershipPage)}</ProtectedRoute> },
       { path: 'upcoming', element: withSuspense(UpcomingFeatures) },
       { path: '*', element: withSuspense(NotFoundPage) },
     ],
