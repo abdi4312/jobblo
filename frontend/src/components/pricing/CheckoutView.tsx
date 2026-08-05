@@ -45,17 +45,17 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
           className="flex items-center gap-2 text-[#6C757D] hover:text-[#212529] mb-8 font-semibold transition-colors"
         >
           <ArrowLeft size={20} />
-          Back to plans
+          Tilbake til planer
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Order Summary */}
           <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#E9ECEF]">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-[#E0883515] flex items-center justify-center text-orange-custom">
+              <div className="w-10 h-10 rounded-xl bg-[#1a3a1a]/10 flex items-center justify-center text-[#1a3a1a]">
                 <ShoppingCart size={20} />
               </div>
-              <h2 className="text-2xl font-bold text-[#212529]">Order Summary</h2>
+              <h2 className="text-2xl font-bold text-[#212529]">Ordresammendrag</h2>
             </div>
 
             <div className="space-y-6">
@@ -63,7 +63,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <h3 className="text-xl font-bold text-[#212529]">{selectedPlan.name}</h3>
-                    <p className="text-sm text-[#6C757D]">Monthly subscription</p>
+                    <p className="text-sm text-[#6C757D]">Månedlig abonnement</p>
                   </div>
                   <span className="text-xl font-black text-[#212529]">{selectedPlan.price} kr</span>
                 </div>
@@ -71,7 +71,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
 
               <div className="space-y-3">
                 <div className="flex justify-between text-[#6C757D]">
-                  <span>Subtotal</span>
+                  <span>Delsum</span>
                   <span>{selectedPlan.price} kr</span>
                 </div>
 
@@ -79,7 +79,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   <div className="flex justify-between text-[#22C55E] font-medium">
                     <span className="flex items-center gap-1">
                       <Tag size={14} />
-                      Discount (
+                      Rabatt (
                       {discountInfo.type === 'percentage'
                         ? `${discountInfo.amount}%`
                         : `${discountInfo.amount} kr`}
@@ -90,7 +90,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                 )}
 
                 <div className="pt-4 border-t border-[#F8F9FA] flex justify-between items-center">
-                  <span className="text-lg font-bold text-[#212529]">Total to pay</span>
+                  <span className="text-lg font-bold text-[#212529]">Totalt å betale</span>
                   <span className="text-3xl font-black text-custom-green">
                     {discountInfo ? discountInfo.finalPrice : selectedPlan.price} kr
                   </span>
@@ -99,7 +99,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
 
               <div className="mt-8">
                 <p className="text-sm font-bold text-[#212529] uppercase tracking-wider mb-4">
-                  Included features
+                  Inkluderte funksjoner
                 </p>
                 <ul className="space-y-3">
                   {selectedPlan.featuresText?.slice(0, 4).map((feature, i) => (
@@ -118,33 +118,33 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
             {/* Promo Code Card */}
             <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#E9ECEF]">
               <h3 className="text-lg font-bold text-[#212529] mb-4 flex items-center gap-2">
-                <Tag size={18} className="text-orange-custom" />
-                Do you have a promo code?
+                <Tag size={18} className="text-custom-green" />
+                Har du en rabattkode?
               </h3>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Enter code"
+                  placeholder="Skriv inn kode"
                   value={promoCode}
                   onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                  className="h-12 rounded-xl border-[#E9ECEF] focus:border-orange-custom focus:ring-0"
+                  className="h-12 rounded-xl border-[#E9ECEF] focus:border-custom-green focus:ring-0"
                   disabled={isApplyingPromo || !!discountInfo}
                 />
                 <Button
                   onClick={handleApplyPromo}
                   loading={isApplyingPromo}
                   disabled={!promoCode.trim() || !!discountInfo}
-                  className="h-12 px-6 rounded-xl bg-[#212529] text-white hover:bg-black border-none font-bold"
+                  className="h-12 px-6 rounded-xl bg-[#1a3a1a] text-white hover:bg-[#254d25] border-none font-bold"
                 >
-                  Apply
+                  Bruk
                 </Button>
               </div>
               {discountInfo && (
                 <div className="mt-3 flex items-center justify-between bg-[#F0FFF4] px-4 py-2 rounded-lg border border-[#C6F6D5]">
                   <span className="text-sm text-[#2F855A] font-medium">
-                    Code <strong>{discountInfo.code}</strong> activated!
+                    Kode <strong>{discountInfo.code}</strong> er aktivert!
                   </span>
                   <button
-                    title="Remove discount code"
+                    title="Fjern rabattkode"
                     onClick={() => {
                       setDiscountInfo(null);
                       setPromoCode('');
@@ -158,17 +158,17 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
             </div>
 
             {/* Checkout Button */}
-            <div className="bg-[#2d4a3e] rounded-3xl p-8 shadow-lg text-white relative overflow-hidden">
+            <div className="bg-[#1a3a1a] rounded-3xl p-8 shadow-lg text-white relative overflow-hidden">
               <div className="relative z-10">
-                <h3 className="text-xl font-bold mb-2">Complete upgrade</h3>
+                <h3 className="text-xl font-bold mb-2">Fullfør oppgradering</h3>
                 <p className="text-sm text-white/70 mb-8">
-                  You will be redirected to Stripe for a safe and secure payment.
+                  Du sendes videre til Stripe for sikker betaling.
                 </p>
                 <Button
-                  label={isRedirecting ? 'Redirecting...' : 'Go to payment'}
+                  label={isRedirecting ? 'Sender deg videre...' : 'Gå til betaling'}
                   onClick={handleCheckout}
                   disabled={isRedirecting}
-                  className="w-full py-4 !bg-white !text-[#2d4a3e] rounded-2xl font-black text-lg hover:!bg-orange-50 transition-all shadow-xl"
+                  className="w-full py-4 !bg-white !text-[#1a3a1a] rounded-2xl font-black text-lg hover:!bg-[#f0faf0] transition-all shadow-xl"
                 />
                 <div className="mt-6 flex items-center justify-center gap-4 opacity-60">
                   <img
@@ -178,7 +178,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   />
                 </div>
               </div>
-              {/* Decorative Background Pattern */}
               <div className="absolute top-0 right-0 -translate-y-1/4 translate-x-1/4 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
             </div>
           </div>

@@ -8,12 +8,13 @@ interface PricingSwitcherProps {
 
 export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ userType, setUserType }) => {
   const tabs = [
-    { id: 'business', label: 'Business' },
-    { id: 'private', label: 'Individual' },
+    { id: 'private', label: 'Privatperson' },
+    { id: 'business', label: 'Bedrift' },
   ] as const;
+
   return (
-    <div className="flex justify-center mb-12">
-      <div className="inline-flex box-card-custom w-full max-w-100">
+    <div className="flex justify-center mb-10">
+      <div className="inline-flex box-card-custom w-full max-w-xs">
         {tabs.map((tab) => (
           <Button
             key={tab.id}
