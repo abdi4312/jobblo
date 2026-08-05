@@ -130,9 +130,18 @@ export function SettingsLayout() {
         <div className="flex flex-row border-b border-gray-100">
           {/* Settings title - hidden on mobile when viewing content */}
           <div
-            className={`${showSidebar ? 'flex' : 'hidden md:flex'} w-full md:w-64 p-4 sm:p-6 font-bold text-xl sm:text-lg text-gray-900 md:border-r border-gray-100 items-center justify-center md:justify-start`}
+            className={`${showSidebar ? 'flex' : 'hidden md:flex'} w-full md:w-64 p-4 sm:p-6 font-bold text-xl sm:text-lg text-gray-900 md:border-r border-gray-100 items-center justify-between`}
           >
-            Innstillinger
+
+            <span>Innstillinger</span>
+            <button
+              type="button"
+              title="Gå til profil"
+              onClick={() => navigate('/profile')}
+              className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-700 flex items-center justify-center"
+            >
+              <User size={17} />
+            </button>
           </div>
           {/* Active tab title with back button */}
           <div className="flex-1 p-4 sm:p-6 font-semibold text-lg text-gray-800 flex items-center md:justify-start bg-white border-gray-100 min-w-0">
