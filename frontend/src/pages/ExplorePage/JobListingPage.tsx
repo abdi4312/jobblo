@@ -122,7 +122,7 @@ export default function JobListingPage() {
   const { data: topUsersData } = useTopUsers();
 
   const jobs = jobsData?.pages.flatMap((page) => page.data) || [];
-  const categories = categoriesData?.slice(0, 8) || [];
+  const categories = categoriesData || [];
 
   const getInitials = (name: string, lastName?: string) => {
     return `${name.charAt(0)}${lastName ? lastName.charAt(0) : ''}`.toUpperCase();

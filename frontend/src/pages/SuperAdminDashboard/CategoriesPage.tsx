@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, type ComponentType } from 'react';
 import { Plus, Loader2, Tag } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import {
     useAdminCategories,
     useCreateAdminCategory,
@@ -25,11 +26,11 @@ const ACTIVE_OPTIONS = [
 
 interface CategoryForm {
     name: string;
-    description: string;
+    icon: string;
     sortOrder: string;
 }
 
-const emptyForm: CategoryForm = { name: '', description: '', sortOrder: '0' };
+const emptyForm: CategoryForm = { name: '', icon: '', sortOrder: '0' };
 
 export default function CategoriesPage() {
     const [page, setPage] = useState(1);
@@ -66,7 +67,7 @@ export default function CategoriesPage() {
     const openCreate = () => { setForm(emptyForm); setFormError(''); setCreateOpen(true); };
     const openEdit = (cat: AdminCategory) => {
         setEditTarget(cat);
-        setForm({ name: cat.name, description: cat.description ?? '', sortOrder: String(cat.sortOrder) });
+        setForm({ name: cat.name, icon: cat.icon ?? '', sortOrder: String(cat.sortOrder) });
         setFormError('');
     };
 
@@ -75,7 +76,7 @@ export default function CategoriesPage() {
         if (createOpen) {
             await createMutation.mutateAsync({
                 name: form.name.trim(),
-                description: form.description.trim() || undefined,
+                icon: form.icon.trim() || undefined,
                 sortOrder: parseInt(form.sortOrder, 10) || 0,
             });
             setCreateOpen(false);
@@ -84,7 +85,7 @@ export default function CategoriesPage() {
                 id: editTarget._id,
                 payload: {
                     name: form.name.trim(),
-                    description: form.description.trim() || undefined,
+                    icon: form.icon.trim() || undefined,
                     sortOrder: parseInt(form.sortOrder, 10) || 0,
                 },
             });
@@ -112,13 +113,19 @@ export default function CategoriesPage() {
             ),
         },
         {
-            key: 'description',
-            header: 'Beskrivelse',
-            render: (c) => (
-                <span className="text-sm text-gray-500 truncate max-w-[200px] block">
-                    {c.description ?? <span className="text-gray-300 italic">–</span>}
-                </span>
-            ),
+            key: 'icon',
+            header: 'Ikon',
+            render: (c) => {
+                const IconComp = (LucideIcons as Record<string, ComponentType>)[c.icon ?? ''];
+                return IconComp ? (
+                    <span className="flex items-center gap-2">
+                        <IconComp size={16} className="text-[#2d4a3e]" />
+                        <span className="text-xs text-gray-400 font-mono">{c.icon}</span>
+                    </span>
+                ) : (
+                    <span className="text-sm text-gray-400 italic">–</span>
+                );
+            },
         },
         {
             key: 'sortOrder',
@@ -248,16 +255,32 @@ export default function CategoriesPage() {
                         </div>
 
                         <div>
-                            <label htmlFor="cat-desc" className="block text-sm font-medium text-gray-700 mb-1">
-                                Beskrivelse
+                            <label htmlFor="cat-icon" className="block text-sm font-medium text-gray-700 mb-1">
+                                Ikon (lucide-navn)
                             </label>
-                            <textarea
-                                id="cat-desc"
-                                rows={2}
-                                value={form.description}
-                                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 resize-none"
-                            />
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-xl shrink-0">
+                                    {(() => {
+                                        const PreviewIcon = (LucideIcons as Record<string, ComponentType>)[form.icon];
+                                        return PreviewIcon ? (
+                                            <PreviewIcon size={18} className="text-[#2d4a3e]" />
+                                        ) : (
+                                            <Tag size={18} className="text-gray-400" />
+                                        );
+                                    })()}
+                                </div>
+                                <input
+                                    id="cat-icon"
+                                    type="text"
+                                    value={form.icon}
+                                    onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))}
+                                    placeholder="f.eks. Wrench, Truck, Hammer"
+                                    className="w-full px-3 py-2.5 text-sm font-mono border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50"
+                                />
+                            </div>
+                            <p className="text-xs text-gray-400 mt-1">
+                                Navnet på et lucide-react-ikon, f.eks. <code className="font-mono">Wrench</code>
+                            </p>
                         </div>
 
                         <div>
