@@ -5,8 +5,7 @@ const { asyncHandler, sendSuccess, sendError, buildPagination } = require('../..
 const { parsePagination, parseObjectId, parseSort, parseDate } = require('../../utils/pagination');
 const { logActivity } = require('../../services/admin/activityService');
 
-// Allowed role values — canonical set. 'superAdmin' is not assignable via normal form.
-const ASSIGNABLE_ROLES = ['user', 'provider', 'company'];
+// Allowed role values — canonical set. All roles assignable via admin.
 const ALL_ROLES = ['user', 'provider', 'company', 'superAdmin'];
 
 // Fields never returned in user lists or details
@@ -83,8 +82,8 @@ const createUser = asyncHandler(async (req, res) => {
     return sendError(res, 'Navn, e-post og passord er påkrevd.', 400);
   }
 
-  if (role && !ASSIGNABLE_ROLES.includes(role)) {
-    return sendError(res, `Ugyldig rolle. Tillatte roller: ${ASSIGNABLE_ROLES.join(', ')}.`, 400);
+  if (role && !ALL_ROLES.includes(role)) {
+    return sendError(res, `Ugyldig rolle. Tillatte roller: ${ALL_ROLES.join(', ')}.`, 400);
   }
 
   const existing = await User.findOne({ email: email.toLowerCase().trim() });
@@ -147,10 +146,10 @@ const changeUserRole = asyncHandler(async (req, res) => {
   if (!id) return sendError(res, 'Ugyldig bruker-ID.', 400);
 
   const { role } = req.body;
-  if (!role || !ASSIGNABLE_ROLES.includes(role)) {
+  if (!role || !ALL_ROLES.includes(role)) {
     return sendError(
       res,
-      `Ugyldig rolle. Tilgjengelige roller: ${ASSIGNABLE_ROLES.join(', ')}.`,
+      `Ugyldig rolle. Tilgjengelige roller: ${ALL_ROLES.join(', ')}.`,
       400
     );
   }
