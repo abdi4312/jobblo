@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import { Shield } from 'lucide-react';
 import { fetchAdminChatById, fetchAdminChatReportById } from '../../api/admin/chats';
 import type { AdminChatDetailResponse, AdminChatReportDetail } from '../../api/admin/chats';

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import * as safePayApi from '../../api/admin/safepay';
 import type { SafePayQuery, DisputesQuery } from '../../types/admin/safepay';
 

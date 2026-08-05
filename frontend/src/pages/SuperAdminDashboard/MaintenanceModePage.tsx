@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Save, RefreshCw, AlertTriangle, Wrench } from 'lucide-react';
 import { useMaintenanceMode, useToggleMaintenanceMode } from '../../hooks/admin/content';
 import { AdminPageHeader, AdminLoadingSkeleton, AdminErrorState } from '../../components/admin';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 export default function MaintenanceModePage() {
   const [saving, setSaving] = useState(false);

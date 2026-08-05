@@ -9,7 +9,7 @@ import {
     AdminStatusBadge, AdminLoadingSkeleton, AdminErrorState, AdminPageHeader,
 } from '../../components/admin';
 import type { Dispute, DisputeOutcome } from '../../types/admin/safepay';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 const OUTCOME_OPTIONS: { label: string; value: DisputeOutcome }[] = [
     { label: 'Frigi til tilbyder', value: 'release_to_provider' },

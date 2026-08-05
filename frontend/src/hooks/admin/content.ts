@@ -8,7 +8,7 @@ import {
     fetchAnnouncements, updateAnnouncement,
     fetchMaintenanceMode, toggleMaintenanceMode,
 } from '../../api/admin/content';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 export const useFeatureFlags = () =>
     useQuery({ queryKey: ['admin', 'feature-flags'], queryFn: fetchFeatureFlags });

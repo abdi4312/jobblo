@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import * as chatsApi from '../../api/admin/chats';
 import type { AdminChatsQuery, ChatReportsQuery } from '../../types/admin/chats';
 

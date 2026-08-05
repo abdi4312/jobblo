@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus, Save, Edit3, Trash2, ShoppingBag, Coins, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import mainLink from '../../api/mainURLs';
 import { AdminDataTable, AdminPageHeader, AdminConfirmDialog, AdminStatusBadge } from '../../components/admin';
 import type { ColumnDef } from '../../components/admin/AdminDataTable';
