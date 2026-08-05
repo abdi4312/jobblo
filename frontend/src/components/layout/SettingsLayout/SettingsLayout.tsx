@@ -140,7 +140,7 @@ export function SettingsLayout() {
               onClick={() => navigate('/profile')}
               className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-700 flex items-center justify-center"
             >
-              <User size={17} />
+              <ArrowLeft size={17} />
             </button>
           </div>
           {/* Active tab title with back button */}
