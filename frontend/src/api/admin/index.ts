@@ -189,6 +189,7 @@ export interface AdminCategory {
     name: string;
     slug: string;
     description?: string;
+    icon?: string;
     sortOrder: number;
     isActive: boolean;
     createdAt: string;
@@ -208,7 +209,7 @@ export const fetchAdminCategories = async (
 };
 
 export const createAdminCategory = async (payload: {
-    name: string; description?: string; sortOrder?: number;
+    name: string; icon?: string; sortOrder?: number;
 }): Promise<AdminCategory> => {
     const res = await mainLink.post<ApiResponse<{ category: AdminCategory }>>('/api/admin/categories', payload);
     return res.data.data.category;
