@@ -52,7 +52,7 @@ export function AdminDataTable<T>({
     className,
 }: AdminDataTableProps<T>) {
     return (
-        <div className={cn('bg-white rounded-2xl border border-gray-100 overflow-hidden', className)}>
+        <div className={cn('bg-white rounded-2xl border border-gray-100 overflow-hidden', className)} translate="no">
             {toolbar && (
                 <div className="p-4 border-b border-gray-100 flex flex-wrap gap-3 items-center">
                     {toolbar}
