@@ -317,7 +317,7 @@ export function ProfileHeader({
               onConfirm={handlelogout}
               trigger={
                 <button className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-black/5 text-red-500 rounded-lg text-[11px] sm:text-[12px] font-medium hover:bg-red-50 transition-colors">
-                  Ut
+                  Logg Ut
                 </button>
               }
             />
