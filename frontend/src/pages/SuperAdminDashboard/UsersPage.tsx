@@ -7,12 +7,15 @@ import type { AdminUser } from '../../types/admin';
 import type { ColumnDef } from '../../components/admin/AdminDataTable';
 import { useUserStore } from '../../stores/userStore';
 
-// Role options — superAdmin is NOT in this list (cannot be set via form)
+// Role options — create form (all roles allowed)
 const ROLE_OPTIONS = [
   { label: 'Bruker', value: 'user' },
   { label: 'Tilbyder', value: 'provider' },
   { label: 'Bedrift', value: 'company' },
+  { label: 'Super Admin', value: 'superAdmin' },
 ];
+// Role change options — same set as create
+const CHANGE_ROLE_OPTIONS = ROLE_OPTIONS;
 const ROLE_FILTER_OPTIONS = [
   { label: 'Bruker', value: 'user' },
   { label: 'Tilbyder', value: 'provider' },
@@ -150,8 +153,8 @@ export default function UsersPage() {
                 {u.accountStatus === 'active' ? 'Deaktiver' : 'Aktiver'}
               </button>
             )}
-            {/* Change role — only for non-superAdmin targets and non-self */}
-            {!isSelf && u.role !== 'superAdmin' && (
+            {/* Change role — not allowed for self */}
+            {!isSelf && (
               <select
                 value={u.role}
                 onChange={(e) => {
@@ -163,7 +166,7 @@ export default function UsersPage() {
                 className="px-2 py-1.5 text-xs font-medium border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50"
                 aria-label={`Endre rolle for ${u.name}`}
               >
-                {ROLE_OPTIONS.map((r) => (
+                {CHANGE_ROLE_OPTIONS.map((r) => (
                   <option key={r.value} value={r.value}>
                     {r.label}
                   </option>
