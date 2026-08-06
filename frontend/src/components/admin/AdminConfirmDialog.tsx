@@ -23,6 +23,7 @@ interface AdminConfirmDialogProps {
     onConfirm: () => void | Promise<void>;
     isOpen?: boolean;
     onOpenChange?: (open: boolean) => void;
+    children?: React.ReactNode;
 }
 
 export function AdminConfirmDialog({
@@ -35,6 +36,7 @@ export function AdminConfirmDialog({
     onConfirm,
     isOpen: controlledOpen,
     onOpenChange: controlledOnOpenChange,
+    children,
 }: AdminConfirmDialogProps) {
     const [internalOpen, setInternalOpen] = React.useState(false);
     const [loading, setLoading] = React.useState(false);
@@ -62,6 +64,7 @@ export function AdminConfirmDialog({
                     <AlertDialogTitle>{title}</AlertDialogTitle>
                     <AlertDialogDescription>{description}</AlertDialogDescription>
                 </AlertDialogHeader>
+                {children}
                 <AlertDialogFooter>
                     <AlertDialogCancel disabled={loading}>{cancelText}</AlertDialogCancel>
                     <AlertDialogAction

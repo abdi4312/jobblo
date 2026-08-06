@@ -29,6 +29,9 @@ const variantMap: Record<string, string> = {
     succeeded: 'bg-green-100 text-green-700',
     open: 'bg-sky-100 text-sky-700',
     in_progress: 'bg-yellow-100 text-yellow-700',
+    under_review: 'bg-yellow-100 text-yellow-700',
+    resolved: 'bg-green-100 text-green-700',
+    dismissed: 'bg-red-100 text-red-600',
     pending: 'bg-yellow-100 text-yellow-700',
     awaiting_payment: 'bg-orange-100 text-orange-700',
     inactive: 'bg-gray-100 text-gray-500',
@@ -63,6 +66,9 @@ const labelMap: Record<string, string> = {
     failed: 'Feilet',
     open: 'Åpen',
     closed: 'Lukket',
+    under_review: 'Under behandling',
+    resolved: 'Løst',
+    dismissed: 'Avvist',
 };
 
 interface AdminStatusBadgeProps {

@@ -133,6 +133,8 @@ const AdminChatsPage = lazy(() => import('../pages/SuperAdminDashboard/AdminChat
 const AdminChatDetailsPage = lazy(() => import('../pages/SuperAdminDashboard/AdminChatDetailsPage.tsx'));
 const ChatReportsPage = lazy(() => import('../pages/SuperAdminDashboard/ChatReportsPage.tsx'));
 const AdminChatReportDetailPage = lazy(() => import('../pages/SuperAdminDashboard/AdminChatReportDetailPage.tsx'));
+const JobReportsPage = lazy(() => import('../pages/SuperAdminDashboard/JobReportsPage.tsx'));
+const JobReportDetailPage = lazy(() => import('../pages/SuperAdminDashboard/JobReportDetailPage.tsx'));
 
 // ── New System & Content Pages ────────────────────────────────────────────────
 const SystemHealthPage = lazy(() => import('../pages/SuperAdminDashboard/SystemHealthPage.tsx'));
@@ -271,6 +273,8 @@ export const routes: RouteObject[] = [
       { path: 'chats/:chatId', element: withSuspense(AdminChatDetailsPage) },
       { path: 'chat-reports', element: withSuspense(ChatReportsPage) },
       { path: 'chat-reports/:reportId', element: withSuspense(AdminChatReportDetailPage) },
+      { path: 'job-reports', element: withSuspense(JobReportsPage) },
+      { path: 'job-reports/:reportId', element: withSuspense(JobReportDetailPage) },
 
       // ── System & Content Pages (new) ──────────────────────────────────
       { path: 'system-health', element: withSuspense(SystemHealthPage) },

@@ -15,6 +15,7 @@ const safePayAdminController = require('../../controllers/admin/safePayAdminCont
 const disputesAdminController = require('../../controllers/admin/disputesAdminController');
 const chatsAdminController = require('../../controllers/admin/chatsAdminController');
 const chatReportsAdminController = require('../../controllers/admin/chatReportsAdminController');
+const jobReportsAdminController = require('../../controllers/admin/jobReportsAdminController');
 const systemAdminController = require('../../controllers/admin/systemAdminController');
 const contentAdminController = require('../../controllers/admin/contentAdminController');
 const evidenceUploadController = require('../../controllers/admin/evidenceUploadController');
@@ -100,6 +101,13 @@ router.post('/chat-reports/:reportId/official-message', chatReportsAdminControll
 router.post('/chat-reports/:reportId/resolve', chatReportsAdminController.resolveReport);
 router.post('/chat-reports/:reportId/dismiss', chatReportsAdminController.resolveReport); // dismiss via resolve with no_violation outcome
 router.post('/chat-reports/:reportId/reopen', chatReportsAdminController.reopenReport);
+
+// ── Job Reports ───────────────────────────────────────────────────────────────
+router.get('/job-reports', jobReportsAdminController.getReports);
+router.get('/job-reports/summary', jobReportsAdminController.getReportsSummary);
+router.get('/job-reports/:reportId', jobReportsAdminController.getReportById);
+router.patch('/job-reports/:reportId/assign', jobReportsAdminController.assignReport);
+router.patch('/job-reports/:reportId/status', jobReportsAdminController.updateStatus);
 
 // ── Activity Log ───────────────────────────────────────────────────────────
 router.get('/activity', activityAdminController.getActivityLog);
