@@ -60,6 +60,8 @@ export default function CreateJobForm({
     setMunicipalityCode,
     areaCode,
     setAreaCode,
+    coordinates,
+    setCoordinates,
     categories,
     setCategories,
     price,
@@ -354,6 +356,8 @@ export default function CreateJobForm({
                 setMunicipalityCode={setMunicipalityCode}
                 areaCode={areaCode}
                 setAreaCode={setAreaCode}
+                coordinates={coordinates}
+                setCoordinates={setCoordinates}
                 durationValue={durationValue as any}
                 setDurationValue={setDurationValue}
                 durationUnit={durationUnit}

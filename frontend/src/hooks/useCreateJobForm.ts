@@ -27,6 +27,8 @@ interface InitialData {
   phone?: string;
   email?: string;
   images?: string[];
+  latitude?: number;
+  longitude?: number;
 }
 
 export const useCreateJobForm = (
@@ -68,6 +70,11 @@ export const useCreateJobForm = (
   const [countyCode, setCountyCode] = useState(initialData?.countyCode || '');
   const [municipalityCode, setMunicipalityCode] = useState(initialData?.municipalityCode || '');
   const [areaCode, setAreaCode] = useState(initialData?.areaCode || '');
+  const [coordinates, setCoordinates] = useState<[number, number] | null>(() =>
+    initialData?.latitude != null && initialData?.longitude != null
+      ? [initialData.latitude, initialData.longitude]
+      : null
+  );
   const durationValue = values.durationValue;
   const fromDate = values.fromDate;
   const toDate = values.toDate;
@@ -267,6 +274,9 @@ export const useCreateJobForm = (
           setCountyCode(data.countyCode || '');
           setMunicipalityCode(data.municipalityCode || '');
           setAreaCode(data.areaCode || '');
+          if (data.latitude != null && data.longitude != null) {
+            setCoordinates([data.latitude, data.longitude]);
+          }
           setDurationUnit(data.durationUnit || 'minutes');
           setHourlyRate(data.hourlyRate || '');
           setPaymentType(data.paymentType || 'Fastpris');
@@ -307,6 +317,8 @@ export const useCreateJobForm = (
           countyCode,
           municipalityCode,
           areaCode,
+          latitude: coordinates?.[0] ?? null,
+          longitude: coordinates?.[1] ?? null,
           fromDate,
           toDate,
           durationValue,
@@ -350,8 +362,8 @@ export const useCreateJobForm = (
     smartFillPrompt,
     maxApplicants,
     checklistItems,
+    coordinates,
   ]);
-
   const validateStep = (step: number) => {
     const currentErrors: Partial<Record<keyof JobFormValues, string>> = {};
     let isValid = true;
@@ -460,8 +472,8 @@ export const useCreateJobForm = (
       formData.append('location[address]', values.address);
       formData.append('location[city]', values.city);
       formData.append('location[type]', 'Point');
-      formData.append('location[coordinates][0]', '10.7461');
-      formData.append('location[coordinates][1]', '59.9127');
+      formData.append('location[coordinates][0]', (coordinates?.[1] ?? 10.7461).toString()); // lng
+      formData.append('location[coordinates][1]', (coordinates?.[0] ?? 59.9127).toString()); // lat
       if (countyCode) formData.append('countyCode', countyCode);
       if (municipalityCode) formData.append('municipalityCode', municipalityCode);
       if (areaCode) formData.append('areaCode', areaCode);
@@ -536,7 +548,11 @@ export const useCreateJobForm = (
       location: {
         address: values.address,
         city: values.city,
-        coordinates: [10.7461, 59.9127] as [number, number],
+        coordinates: (
+          coordinates
+            ? [coordinates[1], coordinates[0]]
+            : [10.7461, 59.9127]
+        ) as [number, number],
       },
       duration: {
         value: durationValue ? parseInt(durationValue.toString()) : 0,
@@ -565,6 +581,7 @@ export const useCreateJobForm = (
     fromDate,
     toDate,
     currentUser,
+    coordinates,
   ]);
 
   return {
@@ -584,6 +601,8 @@ export const useCreateJobForm = (
     setMunicipalityCode,
     areaCode,
     setAreaCode,
+    coordinates,
+    setCoordinates,
     categories: values.categories,
     setCategories,
     equipment,

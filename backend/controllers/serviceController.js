@@ -19,6 +19,9 @@ exports.getAllServices = async (req, res) => {
       countyCodes,
       municipalityCodes,
       areaCodes,
+      lat,
+      lng,
+      radius,
     } = req.query;
 
     const query = {};
@@ -87,6 +90,16 @@ exports.getAllServices = async (req, res) => {
       if (codes.length > 0) {
         locationConditions.push({ areaCode: { $in: codes } });
       }
+    }
+
+    // Geo filter: lat/lng/radius (meters) → services within a circle around the point
+    const latNum = Number(lat);
+    const lngNum = Number(lng);
+    const radiusNum = Number(radius);
+    if (lat && lng && radius && !isNaN(latNum) && !isNaN(lngNum) && !isNaN(radiusNum) && radiusNum > 0) {
+      query['location.coordinates'] = {
+        $geoWithin: { $centerSphere: [[lngNum, latNum], radiusNum / 6378100] },
+      };
     }
 
     // Combine location conditions with $or (match any selected region)
