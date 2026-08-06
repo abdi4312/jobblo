@@ -53,7 +53,7 @@ exports.createUser = async (req, res) => {
       name,
       lastName,
       email,
-      phone,
+      phone: phone?.trim() || undefined,
       avatarUrl,
       bio,
       role,
