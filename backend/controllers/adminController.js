@@ -73,7 +73,7 @@ exports.createUser = async (req, res) => {
     const newUser = new User({
       name,
       email,
-      phone,
+      phone: phone?.trim() || undefined,
       password: hashed,
       role: role || 'user',
     });
