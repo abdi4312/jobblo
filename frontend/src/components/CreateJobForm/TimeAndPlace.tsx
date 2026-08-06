@@ -1,7 +1,12 @@
 import React from 'react';
 import { MapPin, Calendar, Clock, Info, AlertCircle, Loader2 } from 'lucide-react';
+import { APIProvider } from '@vis.gl/react-google-maps';
 import { useLocationTree } from '../../features/locations/hooks';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../Ui/select';
+import { LocationPickerMap } from './LocationPickerMap';
+import { AddressAutocomplete } from './AddressAutocomplete';
+
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
 
 interface TimeAndPlaceProps {
   address: string;
@@ -14,6 +19,8 @@ interface TimeAndPlaceProps {
   setMunicipalityCode?: (val: string) => void;
   areaCode?: string;
   setAreaCode?: (val: string) => void;
+  coordinates?: [number, number] | null;
+  setCoordinates?: (val: [number, number]) => void;
   durationValue: string | number;
   setDurationValue: (val: string) => void;
   durationUnit: string;
@@ -36,6 +43,8 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
   setMunicipalityCode,
   areaCode,
   setAreaCode,
+  coordinates,
+  setCoordinates,
   durationValue,
   setDurationValue,
   durationUnit,
@@ -55,26 +64,10 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
   // Get selected area from municipality's children
   const selectedArea = selectedMunicipality?.children?.find((a) => a.code === areaCode);
 
-  return (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-      {/* 1. Location Section */}
-      <div className="box-card-custom rounded-[14px] p-4 md:p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-[#2D7A4D]/10 rounded-full flex items-center justify-center text-[#2D7A4D] shrink-0">
-            <MapPin size={22} />
-          </div>
-          <div>
-            <h2 className="font-bold text-lg md:text-xl text-custom-black">
-              Hvor skal det gjøres?
-            </h2>
-            <p className="text-gray-500 text-xs md:text-sm">
-              Oppgi adresse og lokasjon for oppdraget
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {/* County */}
+  const locationFields = (
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        {/* County */}
           <div className="space-y-2">
             <label className="text-[11px] md:text-[13px] font-bold text-gray-400 uppercase tracking-wider ml-1">
               Fylke
@@ -166,20 +159,17 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
             <label className="text-[11px] md:text-[13px] font-bold text-gray-400 uppercase tracking-wider ml-1">
               Gateadresse *
             </label>
-            <input
-              type="text"
+            <AddressAutocomplete
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              required
+              onValueChange={setAddress}
+              onAddressSelect={({ address: fullAddress, city: addrCity, lat, lng }) => {
+                setAddress(fullAddress);
+                if (addrCity) setCity(addrCity);
+                if (setCoordinates && lat && lng) setCoordinates([lat, lng]);
+              }}
+              error={errors?.address}
               placeholder="F.eks. Storgata 1"
-              className={`w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border bg-white text-sm md:text-base outline-none transition-all
-                ${errors?.address ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5' : 'border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5'}`}
             />
-            {errors?.address && (
-              <p className="mt-1 text-red-500 text-[10px] md:text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
-                <AlertCircle size={12} /> {errors.address}
-              </p>
-            )}
           </div>
 
           {/* City (kept for backwards compatibility) */}
@@ -205,6 +195,46 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
             )}
           </div>
         </div>
+
+        {/* Location map */}
+        <div className="mt-5 md:mt-6">
+          <LocationPickerMap
+            coordinates={coordinates}
+            onCoordinatesChange={setCoordinates}
+            onReverseGeocode={({ address: geoAddress, city: geoCity, manual }) => {
+              if (geoAddress && (manual || !address)) setAddress(geoAddress);
+              if (geoCity) setCity(geoCity);
+            }}
+          />
+        </div>
+      </>
+  );
+
+  return (
+    <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+      {/* 1. Location Section */}
+      <div className="box-card-custom rounded-[14px] p-4 md:p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-[#2D7A4D]/10 rounded-full flex items-center justify-center text-[#2D7A4D] shrink-0">
+            <MapPin size={22} />
+          </div>
+          <div>
+            <h2 className="font-bold text-lg md:text-xl text-custom-black">
+              Hvor skal det gjøres?
+            </h2>
+            <p className="text-gray-500 text-xs md:text-sm">
+              Oppgi adresse og lokasjon for oppdraget
+            </p>
+          </div>
+        </div>
+
+        {GOOGLE_MAPS_API_KEY ? (
+          <APIProvider apiKey={GOOGLE_MAPS_API_KEY} libraries={['places', 'marker']}>
+            {locationFields}
+          </APIProvider>
+        ) : (
+          locationFields
+        )}
       </div>
 
       {/* 2. Time Section */}

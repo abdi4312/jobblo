@@ -12,6 +12,7 @@ import {
   X,
   Tag,
   AlertCircle,
+  Locate,
 } from 'lucide-react';
 import { Slider } from 'antd';
 import { JobCard } from '../../components/component/jobCard/JobCard';
@@ -48,6 +49,15 @@ const ServiceListing = () => {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [isUrgent, setIsUrgent] = useState(false);
   const [shouldUseLocation, setShouldUseLocation] = useState(true); // Track if we should use the initial location
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+
+  // Location to anchor search/map to: manual "Min posisjon" first, then hero-button location state
+  const activeLocation =
+    userLocation ??
+    (shouldUseLocation && locationState?.lat != null && locationState?.lng != null
+      ? { lat: locationState.lat, lng: locationState.lng }
+      : null);
 
   // New location filter states
   const [locationTree, setLocationTree] = useState<LocationNode[]>([]);
@@ -71,8 +81,13 @@ const ServiceListing = () => {
     }
   }, [decodedCategoryName]);
 
-  // Disable location filter when any filter changes
+  // Disable location filter when any filter changes (but keep the initial location on first load)
+  const hasInteracted = useRef(false);
   useEffect(() => {
+    if (!hasInteracted.current) {
+      hasInteracted.current = true;
+      return;
+    }
     setShouldUseLocation(false);
   }, [
     selectedCategories,
@@ -124,8 +139,9 @@ const ServiceListing = () => {
     maxPrice: priceRange.max,
     urgent: isUrgent,
     limit: 16,
-    lat: shouldUseLocation ? locationState?.lat : undefined,
-    lng: shouldUseLocation ? locationState?.lng : undefined,
+    lat: activeLocation?.lat,
+    lng: activeLocation?.lng,
+    radius: activeLocation ? 5000 : undefined,
   });
 
   const jobs = data?.pages.flatMap((page) => page.data) || [];
@@ -146,7 +162,8 @@ const ServiceListing = () => {
 
   // Derive map center from selected location filters
   const mapCoordinates = useMemo((): [number, number] => {
-    // Priority: area > municipality > county > first job > Oslo fallback
+    // Priority: active location > area > municipality > county > first job > Oslo fallback
+    if (activeLocation) return [activeLocation.lng, activeLocation.lat];
     if (selectedAreaCodes.length > 0) {
       const hit = NORWAY_CENTERS[selectedAreaCodes[0]];
       if (hit) return hit;
@@ -163,13 +180,27 @@ const ServiceListing = () => {
     const firstJob = jobs.find((j) => (j as any).location?.coordinates);
     if ((firstJob as any)?.location?.coordinates) return (firstJob as any).location.coordinates as [number, number];
     return [10.7522, 59.9139]; // Oslo
-  }, [selectedAreaCodes, selectedMunicipalityCodes, selectedCountyCodes, jobs]);
+  }, [activeLocation, selectedAreaCodes, selectedMunicipalityCodes, selectedCountyCodes, jobs]);
 
   // Zoom radius: tighter when a specific area/municipality is selected
-  const mapRadius = selectedAreaCodes.length > 0 ? 2000
-    : selectedMunicipalityCodes.length > 0 ? 5000
-      : selectedCountyCodes.length > 0 ? 20000
-        : 5000;
+  const mapRadius = activeLocation ? 5000
+    : selectedAreaCodes.length > 0 ? 2000
+      : selectedMunicipalityCodes.length > 0 ? 5000
+        : selectedCountyCodes.length > 0 ? 20000
+          : 5000;
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) return;
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setIsLocating(false);
+      },
+      () => setIsLocating(false),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
+  };
 
   const filteredLocations = useMemo(() => {
     if (!filterOptions?.locations) return [];
@@ -462,6 +493,21 @@ const ServiceListing = () => {
                 circleRadius={mapRadius}
               />
             </Suspense>
+
+            {/* Current location button */}
+            <button
+              onClick={handleUseCurrentLocation}
+              disabled={isLocating}
+              title="Bruk min nåværende posisjon"
+              className="absolute top-2 left-2 z-10 flex items-center gap-1.5 bg-white/95 backdrop-blur rounded-full px-3 py-1.5 shadow-md text-xs font-semibold text-gray-700 hover:bg-white hover:text-custom-green transition-all disabled:opacity-60 cursor-pointer"
+            >
+              {isLocating ? (
+                <Loader2 size={13} className="animate-spin text-custom-green" />
+              ) : (
+                <Locate size={13} className="text-custom-green" />
+              )}
+              {isLocating ? 'Henter...' : 'Min posisjon'}
+            </button>
           </div>
         </div>
       </section>

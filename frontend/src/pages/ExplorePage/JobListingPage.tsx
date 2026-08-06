@@ -51,23 +51,12 @@ export default function JobListingPage() {
   const navigate = useNavigate();
   const { user } = useUserStore();
 
-  const checkTrackingConsent = () => {
-    const consent = localStorage.getItem('cookie-consent');
-    return consent === 'accepted' || consent === 'customised';
-  };
-
   const handleNearbyJobsClick = () => {
-    if (!checkTrackingConsent()) {
-      // If no consent, just navigate to all jobs
-      navigate('/search/job/all');
-      return;
-    }
-
-    // Try to get user's location
+    // Try to get user's location and show jobs near it
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          // We have location, could pass to search page
+          // We have location, pass it to the search page
           navigate('/search/job/all', {
             state: {
               lat: position.coords.latitude,
