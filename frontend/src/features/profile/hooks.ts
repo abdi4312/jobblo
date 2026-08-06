@@ -90,11 +90,22 @@ export const useSearchUsers = (query?: string) => {
   });
 };
 
-export const useTopUsers = () => {
+export const useTopUsers = (
+  page = 1,
+  limit = 10,
+  opts?: { postNumber?: string; postSted?: string; address?: string }
+) => {
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   return useQuery({
-    queryKey: ['topUsers'],
-    queryFn: () => getTopUsers(),
+    queryKey: [
+      'topUsers',
+      page,
+      limit,
+      opts?.postNumber ?? '',
+      opts?.postSted ?? '',
+      opts?.address ?? '',
+    ],
+    queryFn: () => getTopUsers(page, limit, opts),
     enabled: isAuthenticated,
   });
 };

@@ -71,7 +71,7 @@ function SearchComponent() {
       ? activeTab === 'Top'
         ? searchResults?.people?.results
         : infiniteResults
-      : topPeople;
+      : topPeople?.data ?? [];
 
   const isPeopleLoading =
     searchQuery.length >= 2

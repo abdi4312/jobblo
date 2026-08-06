@@ -1,5 +1,10 @@
 import { useOutletContext } from 'react-router-dom';
+import { APIProvider } from '@vis.gl/react-google-maps';
+import { MapPin } from 'lucide-react';
 import type { SettingsContextType } from '../../../pages/SettingsPage';
+import { LocationPickerMap } from '../../CreateJobForm/LocationPickerMap';
+
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
 
 export const AddressesView = () => {
   const { form, handleChange, handleUpdate, updateUser, user } =
@@ -12,6 +17,28 @@ export const AddressesView = () => {
     form.postSted === user?.postSted;
 
   const isDisabled = isUnchanged || updateUser?.isPending;
+
+  const handleReverseGeocode = ({
+    address,
+    city,
+    postNumber,
+    manual,
+  }: {
+    address: string;
+    city: string;
+    postNumber?: string;
+    manual?: boolean;
+  }) => {
+    // Fyll kun feltene ved manuelt kartklikk / dragging (ikke automatisk på åpning)
+    if (!manual) return;
+    if (address) handleChange('address', address);
+    if (city) handleChange('postSted', city);
+    if (postNumber) handleChange('postNumber', postNumber);
+  };
+
+  const locationPicker = (
+    <LocationPickerMap onReverseGeocode={handleReverseGeocode} />
+  );
 
   return (
     <section className="flex flex-col gap-6 max-w-2xl">
@@ -63,6 +90,24 @@ export const AddressesView = () => {
             onChange={(event) => handleChange('postSted', event.target.value)}
           />
         </div>
+      </div>
+
+      {/* Kart for å velge adresse */}
+      <div>
+        <div className="flex items-center gap-1.5 mb-2 text-xs font-bold text-gray-500 uppercase tracking-tight ml-1">
+          <MapPin size={13} />
+          Velg adresse på kartet
+        </div>
+        {GOOGLE_MAPS_API_KEY ? (
+          <APIProvider apiKey={GOOGLE_MAPS_API_KEY} libraries={['marker']}>
+            {locationPicker}
+          </APIProvider>
+        ) : (
+          locationPicker
+        )}
+        <p className="mt-1.5 text-xs text-gray-400 ml-1">
+          Klikk på kartet eller bruk knappen for å fylle inn adressen automatisk.
+        </p>
       </div>
 
       {/* Handling-knapp */}

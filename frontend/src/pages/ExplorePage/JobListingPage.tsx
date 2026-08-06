@@ -132,7 +132,7 @@ export default function JobListingPage() {
   };
 
   const recommendedWorkers =
-    topUsersData?.slice(0, 4).map((user, index) => ({
+    (topUsersData?.data ?? []).slice(0, 4).map((user, index) => ({
       _id: (user as any)._id,
       initials: getInitials(user.name, user.lastName),
       name: `${user.name} ${user.lastName || ''}`,
@@ -333,7 +333,7 @@ export default function JobListingPage() {
         <div className="flex justify-between items-center mb-2 sm:mb-3">
           <h3 className="text-sm font-medium text-[#1a1a1a]">Anbefalte oppdragstakere nær deg</h3>
           <button
-            onClick={() => navigate('/search/job/all')}
+            onClick={() => navigate('/oppdragstakere')}
             className="text-xs text-[#16a34a] no-underline bg-transparent border-none cursor-pointer"
           >
             Se alle

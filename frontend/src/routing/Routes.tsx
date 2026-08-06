@@ -61,6 +61,7 @@ const withSuspense = (Component: React.ComponentType) => (
 
 const LandingPage = lazy(() => import('../pages/LandingPage/LandingPage.tsx'));
 const JobListingPage = lazy(() => import('../pages/ExplorePage/JobListingPage.tsx'));
+const RecommendedTaskersPage = lazy(() => import('../pages/ExplorePage/RecommendedTaskersPage.tsx'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage/ProfilePage.tsx'));
 const LeggUtOppdrag = lazy(() => import('../pages/LeggUtOppdragPage/LeggUtOppdrag.tsx'));
 const Alert = lazy(() => import('../pages/AlertPage/Alert.tsx'));
@@ -159,6 +160,7 @@ export const routes: RouteObject[] = [
       { index: true, element: withSuspense(LandingPage) },
       { path: 'oauth-success', element: <OAuthSuccess /> },
       { path: 'home', element: withSuspense(JobListingPage) },
+      { path: 'oppdragstakere', element: withSuspense(RecommendedTaskersPage) },
       { path: 'search/job/:categoryName', element: withSuspense(ServiceListingPage) },
       { path: 'job-listing/:id', element: withSuspense(JobListingDetailPage) },
       { path: 'completed-job/:orderId?', element: <ProtectedRoute>{withSuspense(CompletedJobPage)}</ProtectedRoute> },

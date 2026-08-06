@@ -1,50 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Map, Marker, useMap } from '@vis.gl/react-google-maps';
 import { Locate, Loader2, MapPin } from 'lucide-react';
+import { reverseGeocode, type ReverseGeocodeResult } from '../../utils/reverseGeocode';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
 const MAP_ID = 'jobblo-map-picker';
 
 const DEFAULT_LOCATION = { lat: 59.9127, lng: 10.7461 }; // Oslo
 
-interface ReverseGeocodeResult {
-  address: string;
-  city: string;
-  manual?: boolean;
-}
-
 interface LocationPickerMapProps {
   coordinates?: [number, number] | null;
   onCoordinatesChange?: (coords: [number, number]) => void;
-  onReverseGeocode?: (result: ReverseGeocodeResult) => void;
+  onReverseGeocode?: (result: ReverseGeocodeResult & { manual?: boolean }) => void;
 }
-
-const reverseGeocode = async (lat: number, lng: number): Promise<ReverseGeocodeResult | null> => {
-  if (!GOOGLE_MAPS_API_KEY) return null;
-  try {
-    const res = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}&language=no`
-    );
-    const data = await res.json();
-    if (data.status !== 'OK' || !data.results?.[0]) return null;
-
-    const result = data.results[0];
-    const components = result.address_components || [];
-    const pick = (types: string[]) =>
-      components.find((c: any) => types.some((t) => c.types.includes(t)))?.long_name || '';
-
-    const street = pick(['route']) || pick(['street_address']);
-    const number = pick(['street_number']);
-    const city = pick(['locality']) || pick(['postal_town']) || pick(['administrative_area_level_1']);
-
-    return {
-      address: [street, number].filter(Boolean).join(' ') || result.formatted_address || '',
-      city,
-    };
-  } catch {
-    return null;
-  }
-};
 
 export function LocationPickerMap({
   coordinates,
@@ -77,7 +45,7 @@ export function LocationPickerMap({
   );
 
   const getCurrentLocation = useCallback(
-    (opts?: { pan?: boolean }) => {
+    (opts?: { pan?: boolean; manual?: boolean }) => {
       if (!navigator.geolocation) {
         setLocationError('Geolokasjon støttes ikke i denne nettleseren.');
         return;
@@ -86,7 +54,10 @@ export function LocationPickerMap({
       setLocationError('');
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setLocation(pos.coords.latitude, pos.coords.longitude, { pan: true });
+          setLocation(pos.coords.latitude, pos.coords.longitude, {
+            pan: true,
+            manual: opts?.manual ?? false,
+          });
           setIsLocating(false);
         },
         () => {
@@ -171,7 +142,7 @@ export function LocationPickerMap({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={getCurrentLocation}
+          onClick={() => getCurrentLocation({ manual: true })}
           disabled={isLocating}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#2D7A4D] text-white text-sm font-semibold rounded-xl hover:bg-[#25663f] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >

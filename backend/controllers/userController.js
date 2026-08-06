@@ -109,15 +109,151 @@ exports.searchUsers = async (req, res) => {
 // Get Top 10 Users by Rating and Reviews (only paid subscription users)
 exports.getTopUsers = async (req, res) => {
   try {
-    const topUsers = await User.find({
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    const filter = {
       _id: { $ne: req.userId },
       // TODO: Uncomment below when paid users exist to restrict to paid only
       // subscription: { $ne: 'Standard' },
-    })
-      .select('name lastName email avatarUrl averageRating reviewCount subscription skills hourlyRate locations')
-      .sort({ reviewCount: -1, averageRating: -1 })
-      .limit(10);
-    res.status(200).json(topUsers);
+    };
+
+    const baseSelect =
+      'name lastName email avatarUrl averageRating reviewCount subscription skills hourlyRate locations postNumber postSted';
+    const sort = { reviewCount: -1, averageRating: -1 };
+
+    // Location-aware ordering:
+    // 1. Same location — postSted matches viewer city, OR postSted/address
+    //    contains a location token from the viewer (e.g. "Haroonabad" from
+    //    "Dahranwala - Haroonabad Road"). Works for any country.
+    // 2. Same postnr-region (first 2 digits) — nearby for Norwegian post codes.
+    // 3. Broader region (first 1 digit).
+    // 4. Everyone else (top rated).
+    const prefix =
+      typeof req.query.postNumber === 'string' ? req.query.postNumber.trim().slice(0, 2) : '';
+    const isNumericPrefix = /^\d{2}$/.test(prefix);
+    const city = typeof req.query.postSted === 'string' ? req.query.postSted.trim() : '';
+    const address = typeof req.query.address === 'string' ? req.query.address.trim() : '';
+
+    if (isNumericPrefix || city || address) {
+      const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Match a string ignoring casing and spaces: "Haroon Abad" == "Haroonabad"
+      const fuzzyRegex = (c, anchored) => {
+        const normalized = c.toLowerCase().replace(/[^a-zæøå0-9]/g, '');
+        if (!normalized) return null;
+        const pattern =
+          normalized.split('').map((ch) => `${escapeRegex(ch)}\\s*`).join('');
+        return new RegExp(`${anchored ? '^' : ''}${pattern}${anchored ? '$' : ''}`, 'i');
+      };
+
+      const STOP_WORDS = new Set([
+        'road', 'street', 'gate', 'gata', 'veg', 'vei', 'veien', 'rd', 'st', 'no', 'nr',
+        'norge', 'norway', 'pakistan', 'punjab', 'highway', 'motorway',
+      ]);
+      const extractTokens = (...strings) => {
+        const set = new Set();
+        for (const s of strings) {
+          const normalized = (s || '').toLowerCase().replace(/[^a-zæøå0-9]+/g, ' ').trim();
+          for (const tok of normalized.split(' ')) {
+            if (tok.length >= 4 && !STOP_WORDS.has(tok)) set.add(tok);
+          }
+        }
+        return [...set];
+      };
+
+      const prefix1 = prefix.slice(0, 1);
+      const cityReg = fuzzyRegex(city, true);
+      const tokens = extractTokens(city, address);
+      const tokenRegs = tokens.map((t) => fuzzyRegex(t, false));
+
+      // Tier 1: same location
+      const tier1Or = [];
+      if (cityReg) tier1Or.push({ postSted: { $regex: cityReg } });
+      for (const re of tokenRegs) {
+        tier1Or.push({ postSted: { $regex: re } });
+        tier1Or.push({ address: { $regex: re } });
+      }
+
+      const seen = new Set();
+      let nearbyCount = 0;
+      const mark = (u, nearby) => ({ ...u, nearby: !!nearby });
+      const pushUnique = (arr, u, nearby) => {
+        const key = String(u._id);
+        if (seen.has(key)) return;
+        seen.add(key);
+        if (nearby) nearbyCount += 1;
+        arr.push(mark(u, nearby));
+      };
+
+      const [nearby, samePrefix, region] = await Promise.all([
+        tier1Or.length
+          ? User.find({ ...filter, $or: tier1Or })
+              .select(baseSelect)
+              .sort(sort)
+              .lean()
+          : [],
+        isNumericPrefix
+          ? User.find({ ...filter, postNumber: { $regex: `^${prefix}` } })
+              .select(baseSelect)
+              .sort(sort)
+              .lean()
+          : [],
+        isNumericPrefix
+          ? User.find({ ...filter, postNumber: { $regex: `^${prefix1}` } })
+              .select(baseSelect)
+              .sort(sort)
+              .lean()
+          : [],
+      ]);
+
+      const ordered = [];
+      nearby.forEach((u) => pushUnique(ordered, u, true));
+      samePrefix.forEach((u) => pushUnique(ordered, u, true));
+      region.forEach((u) => pushUnique(ordered, u, false));
+
+      const othersFilter = { ...filter };
+      if (tier1Or.length) {
+        othersFilter.postSted = { $nin: [cityReg, ...tokenRegs].filter(Boolean) };
+        othersFilter.address = { $nin: tokenRegs.length ? tokenRegs : [cityReg].filter(Boolean) };
+      }
+      if (isNumericPrefix) othersFilter.postNumber = { $nin: [new RegExp(`^${prefix1}`)] };
+
+      const othersSkip = Math.max(0, skip - ordered.length);
+      const othersLimit = Math.max(0, skip + limit - ordered.length);
+      if (othersLimit > 0) {
+        const others = await User.find(othersFilter)
+          .select(baseSelect)
+          .sort(sort)
+          .skip(othersSkip)
+          .limit(othersLimit)
+          .lean();
+        others.forEach((u) => pushUnique(ordered, u, false));
+      }
+
+      const paginated = ordered.slice(skip, skip + limit);
+      const [total] = await Promise.all([User.countDocuments(filter)]);
+
+      return res.status(200).json({
+        data: paginated,
+        location: { nearbyCount },
+        pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      });
+    }
+
+    const [topUsers, total] = await Promise.all([
+      User.find(filter)
+        .select(baseSelect)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit),
+      User.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
+      data: topUsers,
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     console.error('Get top users error:', error);
     res.status(500).json({ error: 'Server error' });

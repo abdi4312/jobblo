@@ -30,8 +30,14 @@ export const searchUsers = async (query?: string) => {
   return response.data;
 };
 
-export const getTopUsers = async () => {
-  const response = await mainLink.get('/api/users/top');
+export const getTopUsers = async (
+  page = 1,
+  limit = 10,
+  opts?: { postNumber?: string; postSted?: string; address?: string }
+) => {
+  const response = await mainLink.get('/api/users/top', {
+    params: { page, limit, ...(opts || {}) },
+  });
   return response.data;
 };
 
