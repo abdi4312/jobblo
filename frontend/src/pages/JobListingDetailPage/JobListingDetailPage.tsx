@@ -34,6 +34,9 @@ import { ShareModal } from '../../components/shared/ShareModal/ShareModal';
 import { UpgradeModal } from '../../components/shared/UpgradeModal';
 import { BuyContactModal } from '../../components/shared/BuyContactModal';
 import OrderRequestModal from '../../components/job/OrderRequestModal';
+import ReportJobModal from '../../components/job/ReportJobModal';
+import { submitUserJobReport } from '../../api/admin/jobReports';
+import { useMutation } from '@tanstack/react-query';
 import mainLink from '../../api/mainURLs';
 
 import { usePlans } from '../../features/plans/hooks';
@@ -47,6 +50,7 @@ const JobListingDetailPage = () => {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
   const [isTimerActive, setIsTimerActive] = useState(false);
   const [unlockTime, setUnlockTime] = useState<string | null>(null);
@@ -61,6 +65,18 @@ const JobListingDetailPage = () => {
   const sendMessageMutation = useSendMessageMutation();
   const stripeMutation = useStripeMutation();
   const createJobRequestMutation = useCreateJobRequestMutation();
+
+  const submitReportMutation = useMutation({
+    mutationFn: (payload: { reportType: string; description: string }) =>
+      submitUserJobReport(id!, payload),
+    onSuccess: () => {
+      toast.success('Takk! Rapporten din er sendt til oss. Vi ser på saken.');
+      setIsReportModalOpen(false);
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Kunne ikke sende rapporten. Prøv igjen.');
+    },
+  });
 
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const currentUser = useUserStore((state) => state.user);
@@ -639,7 +655,10 @@ const JobListingDetailPage = () => {
               >
                 <Share2 size={16} /> Del
               </button>
-              <button className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
+              <button
+                onClick={() => setIsReportModalOpen(true)}
+                className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+              >
                 Rapporter
               </button>
             </div>
@@ -688,6 +707,14 @@ const JobListingDetailPage = () => {
         onClose={() => setIsOrderModalOpen(false)}
         onConfirm={handleOrderSubmit}
         isLoading={createJobRequestMutation.isPending}
+        jobTitle={job.title}
+      />
+
+      <ReportJobModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        onSubmit={submitReportMutation.mutate}
+        isLoading={submitReportMutation.isPending}
         jobTitle={job.title}
       />
     </div>

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const serviceController = require('../controllers/serviceController');
+const jobReportController = require('../controllers/jobReportController');
 const { authenticate } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
@@ -352,5 +353,39 @@ router.get('/:id/time-entries', authenticate, serviceController.getTimeEntries);
  *       - bearerAuth: []
  */
 router.put('/:id/checklist/:itemId', authenticate, serviceController.updateChecklistItem);
+
+/**
+ * -------------------------------------------------------
+ *  REPORT SERVICE
+ * -------------------------------------------------------
+ */
+
+/**
+ * @swagger
+ * /api/services/{id}/reports:
+ *   post:
+ *     summary: Report a service/annonse (authenticated users only)
+ *     tags: [Tjenester]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [reportType, description]
+ *             properties:
+ *               reportType:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Report submitted
+ *       400:
+ *         description: Invalid input
+ */
+router.post('/:id/reports', authenticate, jobReportController.submitJobReport);
 
 module.exports = router;

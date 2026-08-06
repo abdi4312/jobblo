@@ -140,9 +140,23 @@ export function ProfileHeader({
                   label="Rediger"
                   onClick={() => navigate('/settings')}
                   icon={<Pencil size={13} />}
-                  className="rounded-lg font-medium px-3 sm:px-5 text-[11px] sm:text-[13px] cursor-pointer"
+                  className="w-auto rounded-lg font-medium px-3 sm:px-5 text-[11px] sm:text-[13px] cursor-pointer shrink-0"
                 />
-                <div className="relative">
+                <ConfirmDialog
+                  title="Logg ut?"
+                  description="Vil du logge ut?"
+                  confirmText="Ja, logg ut"
+                  cancelText="Avbryt"
+                  isOpen={showLogoutConfirm}
+                  onOpenChange={setShowLogoutConfirm}
+                  onConfirm={handlelogout}
+                  trigger={
+                    <button className="shrink-0 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-black/5 text-red-500 rounded-lg text-[11px] sm:text-[12px] font-medium hover:bg-red-50 transition-colors">
+                      Logg Ut
+                    </button>
+                  }
+                />
+                <div className="relative shrink-0">
                   <button
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
                     className="bg-gray-100 hover:bg-gray-200 p-1.5 sm:p-2 rounded-lg transition-colors"
@@ -157,21 +171,6 @@ export function ProfileHeader({
                       >
                         <Settings size={13} className="mr-2" /> Innstillinger
                       </button>
-                      <div className="h-px bg-gray-100 my-1" />
-                      <ConfirmDialog
-                        title="Logg ut?"
-                        description="Vil du logge ut?"
-                        confirmText="Ja, logg ut"
-                        cancelText="Avbryt"
-                        isOpen={showLogoutConfirm}
-                        onOpenChange={setShowLogoutConfirm}
-                        onConfirm={handlelogout}
-                        trigger={
-                          <button className="flex items-center w-full px-4 py-2 text-[13px] hover:bg-gray-50 text-red-500">
-                            Logg ut
-                          </button>
-                        }
-                      />
                     </div>
                   )}
                 </div>

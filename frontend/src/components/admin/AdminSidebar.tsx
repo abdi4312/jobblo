@@ -103,6 +103,7 @@ function useNavGroups(): NavGroup[] {
                 { label: t('nav.chat_gjennomgang'), to: '/dashboard/chat-review', icon: <Eye size={18} /> },
                 { label: t('nav.chatter'), to: '/dashboard/chats', icon: <MessageSquare size={18} /> },
                 { label: t('nav.chatrapporter'), to: '/dashboard/chat-reports', icon: <Flag size={18} /> },
+                { label: t('nav.jobrapporter'), to: '/dashboard/job-reports', icon: <AlertTriangle size={18} /> },
             ],
         },
         {
