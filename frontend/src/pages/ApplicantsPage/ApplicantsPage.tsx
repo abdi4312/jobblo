@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -43,19 +43,6 @@ const ApplicantsPage: React.FC = () => {
 
   const activeOrder = data?.activeOrder;
 
-  // Auto-redirect if we are beyond Step 1
-  useEffect(() => {
-    if (activeOrder) {
-      if (activeOrder.status === 'awaiting_payment') {
-        navigate(`/safepay/checkout/${activeOrder._id}`);
-      } else if (['paid', 'in_progress'].includes(activeOrder.status)) {
-        navigate(`/safepay/success?orderId=${activeOrder._id}`);
-      } else if (activeOrder.status === 'completed') {
-        navigate(`/safepay/approval/${activeOrder._id}`);
-      }
-    }
-  }, [activeOrder, navigate]);
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -80,22 +67,30 @@ const ApplicantsPage: React.FC = () => {
 
   const { service, applicants } = data;
 
-  // Dynamic step based on active order status
-  const currentStep = !activeOrder
-    ? 1
-    : activeOrder.status === 'awaiting_payment'
+  // This page is always step 1 ("Velg søker"), so the steps bar always
+  // shows this page as the current step.
+  const currentStep = 1;
+
+  // The order's real progress is used to mark steps as fullført in the sidebar.
+  const progressStep =
+    activeOrder?.status === 'awaiting_payment'
       ? 2
-      : activeOrder.status === 'paid'
+      : activeOrder?.status === 'paid' || activeOrder?.status === 'in_progress'
         ? 3
-        : activeOrder.status === 'in_progress'
-          ? 3
-          : activeOrder.status === 'completed'
-            ? 4
-            : 1;
+        : activeOrder?.status === 'completed'
+          ? 4
+          : 1;
 
   const isJobAlreadyPaid =
     activeOrder && ['paid', 'in_progress', 'completed'].includes(activeOrder.status);
   const hasAwaitingPayment = activeOrder && activeOrder.status === 'awaiting_payment';
+
+  const jobDateLabel = service.date
+    ? new Date(service.date).toLocaleDateString('no-NO', {
+        day: 'numeric',
+        month: 'long',
+      })
+    : 'Fullført oppdrag';
 
   const handleStartChat = async (applicantId: string) => {
     try {
@@ -173,7 +168,11 @@ const ApplicantsPage: React.FC = () => {
         </button>
 
         {/* Steps Bar */}
-        <SafePaySteps currentStep={currentStep} serviceId={serviceId} orderId={activeOrder?._id} />
+        <SafePaySteps
+          currentStep={currentStep}
+          serviceId={serviceId}
+          orderId={activeOrder?._id}
+        />
 
         {/* Oppdrag Summary */}
         <div className="bg-[#1a3a1a] rounded-2xl p-5 md:p-6 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -496,66 +495,71 @@ const ApplicantsPage: React.FC = () => {
                 <Route size={18} className="text-custom-green" /> Neste steg
               </div>
               <div className="space-y-0">
-                {/* Step 1 */}
-                <div className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="w-2.5 h-2.5 rounded-full bg-custom-green mt-1"></div>
-                    <div className="w-[1px] flex-1 bg-black/10 my-1 min-h-[30px]"></div>
-                  </div>
-                  <div className="pb-5">
-                    <div className="text-[13px] font-bold text-gray-900 leading-tight">
-                      Velg en søker
+                {[
+                  {
+                    label: 'Velg en søker',
+                    desc: 'Søker valgt',
+                    stepNumber: 1,
+                  },
+                  {
+                    label: 'Start SafePay',
+                    desc: 'Kontrakt genereres automatisk',
+                    stepNumber: 2,
+                  },
+                  {
+                    label: 'Jobben utføres',
+                    desc: jobDateLabel,
+                    stepNumber: 3,
+                  },
+                  {
+                    label: 'Godkjenn og utbetal',
+                    desc: `${Math.round(service.price * 0.97)} kr til oppdragstaker`,
+                    stepNumber: 4,
+                  },
+                ].map((step) => {
+                  const stepNumber = step.stepNumber ?? 1;
+                  const isCurrent = stepNumber === currentStep;
+                  const isDone = stepNumber < progressStep;
+                  const isLast = stepNumber === 4;
+                  return (
+                    <div key={step.label} className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div
+                          className={`w-2.5 h-2.5 rounded-full mt-1 ${
+                            isCurrent
+                              ? 'bg-[#1a3a1a] ring-4 ring-[#1a3a1a]/15'
+                              : isDone
+                                ? 'bg-custom-green'
+                                : 'bg-gray-200'
+                          }`}
+                        ></div>
+                        {!isLast && (
+                          <div className="w-[1px] flex-1 bg-black/10 my-1 min-h-[30px]"></div>
+                        )}
+                      </div>
+                      <div className={isLast ? '' : 'pb-5'}>
+                        <div
+                          className={`text-[13px] leading-tight ${
+                            isCurrent ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'
+                          }`}
+                        >
+                          {stepNumber}. {step.label}
+                        </div>
+                        <div
+                          className={`text-[11px] mt-0.5 ${
+                            isCurrent
+                              ? 'text-custom-green font-bold'
+                              : isDone
+                                ? 'text-custom-green'
+                                : 'text-gray-400'
+                          }`}
+                        >
+                          {isCurrent ? 'Du er her nå' : isDone ? 'Fullført' : step.desc}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-[11px] text-gray-400 mt-0.5">Du er her nå</div>
-                  </div>
-                </div>
-                {/* Step 2 */}
-                <div className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="w-2.5 h-2.5 rounded-full bg-gray-200 mt-1"></div>
-                    <div className="w-[1px] flex-1 bg-black/10 my-1 min-h-[30px]"></div>
-                  </div>
-                  <div className="pb-5">
-                    <div className="text-[13px] font-bold text-gray-900 leading-tight">
-                      Start SafePay
-                    </div>
-                    <div className="text-[11px] text-gray-400 mt-0.5">
-                      Kontrakt genereres automatisk
-                    </div>
-                  </div>
-                </div>
-                {/* Step 3 */}
-                <div className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="w-2.5 h-2.5 rounded-full bg-gray-200 mt-1"></div>
-                    <div className="w-[1px] flex-1 bg-black/10 my-1 min-h-[30px]"></div>
-                  </div>
-                  <div className="pb-5">
-                    <div className="text-[13px] font-bold text-gray-900 leading-tight">
-                      Jobben utføres
-                    </div>
-                    <div className="text-[11px] text-gray-400 mt-0.5">
-                      {new Date(service.date).toLocaleDateString('no-NO', {
-                        day: 'numeric',
-                        month: 'long',
-                      })}
-                    </div>
-                  </div>
-                </div>
-                {/* Step 4 */}
-                <div className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="w-2.5 h-2.5 rounded-full bg-gray-200 mt-1"></div>
-                  </div>
-                  <div>
-                    <div className="text-[13px] font-bold text-gray-900 leading-tight">
-                      Godkjenn og utbetal
-                    </div>
-                    <div className="text-[11px] text-gray-400 mt-0.5">
-                      {Math.round(service.price * 0.97)} kr til oppdragstaker
-                    </div>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
             </div>
 

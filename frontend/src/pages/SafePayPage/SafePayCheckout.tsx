@@ -131,15 +131,19 @@ const SafePayCheckout: React.FC = () => {
     <div className="min-h-screen bg-[#f5f0e8] font-sans pb-12">
       <div className="max-w-[1024px] mx-auto px-6 py-8">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() =>
+            navigate(`/job-applicants/${order.serviceId._id}`, {
+              state: { fromSteps: true },
+            })
+          }
           className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-800 transition-colors mb-6"
         >
           <ArrowLeft size={16} /> Tilbake til søkere
         </button>
 
-        {/* Steps Bar */}
+        {/* Steps Bar - this page is always step 2 (Kontrakt og betaling) */}
         <SafePaySteps
-          currentStep={isPaid ? 3 : 2}
+          currentStep={2}
           orderId={orderId}
           serviceId={order.serviceId._id}
         />
@@ -280,9 +284,7 @@ const SafePayCheckout: React.FC = () => {
             </div>
           </div>
 
-          {!isPaid ? (
-            <>
-              <div className="space-y-2.5 mb-4">
+          <div className="space-y-2.5 mb-4">
                 {/* Card Method */}
                 <div
                   onClick={() => setPaymentMethod('card')}
@@ -363,26 +365,28 @@ const SafePayCheckout: React.FC = () => {
               <Button
                 onClick={() => paymentMutation.mutate()}
                 loading={paymentMutation.isPending}
-                className="w-full bg-custom-green text-white rounded-full py-3.5 text-[15px] font-medium flex items-center justify-center gap-2 hover:bg-[#14532d] transition-colors shadow-lg"
+                disabled={isPaid}
+                className="w-full bg-custom-green text-white rounded-full py-3.5 text-[15px] font-medium flex items-center justify-center gap-2 hover:bg-[#14532d] transition-colors shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <ShieldCheck size={18} /> Bekreft og betal {calculation.total} kr
+                {isPaid ? (
+                  <>
+                    <CheckCircle2 size={18} /> Betaling fullført
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck size={18} /> Bekreft og betal {calculation.total} kr
+                  </>
+                )}
               </Button>
-            </>
-          ) : (
-            <div className="bg-[#f0faf0] border border-custom-green rounded-xl p-6 text-center">
-              <CheckCircle2 size={40} className="text-custom-green mx-auto mb-3" />
-              <h3 className="text-[16px] font-bold text-gray-900 mb-1">Betaling fullført</h3>
-              <p className="text-[13px] text-gray-500 mb-4">
-                Du har allerede betalt for dette oppdraget via SafePay.
-              </p>
-              <Button
-                onClick={() => navigate(`/safepay/approval/${order._id}`)}
-                className="w-full bg-custom-green text-white rounded-full py-3 font-bold"
-              >
-                Gå til godkjenning
-              </Button>
-            </div>
-          )}
+
+              {isPaid && (
+                <button
+                  onClick={() => navigate(`/safepay/approval/${order._id}`)}
+                  className="w-full text-center text-[13px] text-custom-green font-medium mt-3 hover:underline"
+                >
+                  Gå til godkjenning
+                </button>
+              )}
 
           <p className="text-center text-[11px] text-gray-400 mt-4.5 leading-relaxed">
             Ved å bekrefte godtar du{' '}

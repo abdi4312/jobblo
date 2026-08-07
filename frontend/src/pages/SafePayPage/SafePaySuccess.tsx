@@ -24,6 +24,19 @@ const SafePaySuccess: React.FC = () => {
     enabled: !!sessionId,
   });
 
+  // Fetch order details so step 1 ("Velg søker") is reachable from the steps bar
+  const { data: checkoutData } = useQuery({
+    queryKey: ['safepay-checkout', orderId],
+    queryFn: async () => {
+      if (!orderId) return null;
+      const res = await mainLink.get(`/api/safepay-checkout/details/${orderId}`);
+      return res.data;
+    },
+    enabled: !!orderId,
+  });
+
+  const serviceId = checkoutData?.order?.serviceId?._id;
+
   useEffect(() => {
     if (error) {
       toast.error('Kunne ikke bekrefte betalingen');
@@ -33,7 +46,7 @@ const SafePaySuccess: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#f5f0e8] font-sans flex flex-col items-center py-12 px-6">
       <div className="max-w-[1024px] w-full mb-12">
-        <SafePaySteps currentStep={3} orderId={orderId || undefined} />
+        <SafePaySteps currentStep={3} orderId={orderId || undefined} serviceId={serviceId} />
       </div>
 
       <div className="max-w-[500px] w-full bg-white rounded-3xl p-8 text-center shadow-sm border border-black/5">

@@ -108,7 +108,11 @@ export default function JobListingPage() {
   });
   const { data: categoriesData } = useCategories();
   const { data: statsData } = useDashboardStats();
-  const { data: topUsersData } = useTopUsers();
+  const { data: topUsersData } = useTopUsers(1, 10, {
+    postNumber: user?.postNumber,
+    postSted: user?.postSted,
+    address: user?.address,
+  });
 
   const jobs = jobsData?.pages.flatMap((page) => page.data) || [];
   const categories = categoriesData || [];
@@ -140,7 +144,7 @@ export default function JobListingPage() {
       rating: user.averageRating,
       count: user.reviewCount,
       rate: user.hourlyRate ? `${user.hourlyRate} kr/t` : 'Tilgjengelig',
-      location: user.locations?.[0] || 'Norge',
+      location: (user as any).postSted || user.locations?.[0] || 'Norge',
       sponsored: index === 0,
       avatarUrl: user.avatarUrl,
     })) || [];

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Check, Circle, CircleDot } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface SafePayStepsProps {
   currentStep: number;
@@ -26,9 +26,6 @@ const SafePaySteps: React.FC<SafePayStepsProps> = ({ currentStep, orderId, servi
   ];
 
   const handleStepClick = (stepId: number) => {
-    // Only allow clicking steps that are already completed or the current one
-    if (stepId >= currentStep) return;
-
     if (stepId === 1 && serviceId) {
       navigate(steps[0].path(serviceId));
     } else if (orderId) {
@@ -42,61 +39,67 @@ const SafePaySteps: React.FC<SafePayStepsProps> = ({ currentStep, orderId, servi
   return (
     <div className="flex items-center mb-8 relative">
       <div className="absolute top-[13.5px] left-0 right-0 h-[1px] bg-gray-200 -z-10"></div>
-      {steps.map((step, index) => (
-        <React.Fragment key={step.id}>
-          <div
-            className={`flex flex-col items-center gap-2 flex-1 relative ${
-              step.id < currentStep ? 'cursor-pointer group' : ''
-            }`}
-            onClick={() => handleStepClick(step.id)}
-          >
+      {steps.map((step, index) => {
+        const done = step.id < currentStep;
+        const isCurrent = step.id === currentStep;
+        const status = isCurrent ? 'Nåværende' : done ? 'Fullført' : 'Kommende';
+        // A step is only clickable if we actually have the id needed to navigate to it
+        const navigable = step.id === 1 ? !!serviceId : !!orderId;
+
+        return (
+          <React.Fragment key={step.id}>
             <div
-              className={`w-7 h-7 rounded-full flex items-center justify-center transition-all z-10 ${
-                currentStep > step.id
-                  ? 'bg-custom-green text-white group-hover:bg-[#14532d]'
-                  : currentStep === step.id
-                    ? 'bg-[#1a3a1a] text-white'
-                    : 'bg-white border border-gray-200 text-gray-400'
+              className={`flex flex-col items-center gap-2 flex-1 relative ${
+                navigable ? 'cursor-pointer group' : ''
               }`}
+              onClick={() => handleStepClick(step.id)}
             >
-              {currentStep > step.id ? (
-                <Check size={14} />
-              ) : currentStep === step.id ? (
-                <CircleDot size={16} className="fill-current" />
-              ) : (
-                <Circle size={16} strokeWidth={2} />
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all z-10 ${
+                  isCurrent
+                    ? 'bg-[#1a3a1a] text-white'
+                    : done
+                      ? 'bg-custom-green text-white group-hover:bg-[#14532d]'
+                      : 'bg-white border border-gray-200 text-gray-400'
+                }`}
+              >
+                {done ? (
+                  <Check size={14} />
+                ) : (
+                  <span className="text-[11px] font-bold leading-none">{step.id}</span>
+                )}
+              </div>
+              <span
+                className={`text-[11px] md:text-[12px] text-center leading-tight transition-all ${
+                  isCurrent
+                    ? 'text-[#1a3a1a] font-bold'
+                    : done
+                      ? 'text-gray-900 font-medium'
+                      : 'text-gray-400'
+                } ${navigable && !isCurrent ? 'group-hover:text-custom-green' : ''}`}
+              >
+                {step.label}
+              </span>
+              <span
+                className={`text-[10px] md:text-[11px] whitespace-nowrap transition-all ${
+                  isCurrent
+                    ? 'text-[#1a3a1a] font-bold'
+                    : done
+                      ? 'text-custom-green font-medium'
+                      : 'text-gray-400'
+                }`}
+              >
+                {status}
+              </span>
+
+              {/* Connecting line for the step(s) below */}
+              {index < steps.length - 1 && done && (
+                <div className="absolute top-[13.5px] left-[50%] w-full h-[1px] bg-custom-green -z-0"></div>
               )}
             </div>
-            <span
-              className={`text-[11px] md:text-[12px] whitespace-nowrap transition-all ${
-                currentStep >= step.id ? 'text-gray-900 font-medium' : 'text-gray-400'
-              } ${step.id < currentStep ? 'group-hover:text-custom-green' : ''}`}
-            >
-              {step.label}
-            </span>
-            <span
-              className={`text-[10px] md:text-[11px] whitespace-nowrap transition-all ${
-                currentStep > step.id
-                  ? 'text-custom-green font-medium'
-                  : currentStep === step.id
-                    ? 'text-[#1a3a1a] font-medium'
-                    : 'text-gray-400'
-              }`}
-            >
-              {currentStep > step.id
-                ? 'Fullført'
-                : currentStep === step.id
-                  ? 'Nåværende'
-                  : 'Kommende'}
-            </span>
-
-            {/* Connecting Line for Completed Steps */}
-            {index < steps.length - 1 && currentStep > step.id && (
-              <div className="absolute top-[13.5px] left-[50%] w-full h-[1px] bg-custom-green -z-0"></div>
-            )}
-          </div>
-        </React.Fragment>
-      ))}
+          </React.Fragment>
+        );
+      })}
     </div>
   );
 };
