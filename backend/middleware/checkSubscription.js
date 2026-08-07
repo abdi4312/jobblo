@@ -48,11 +48,21 @@ exports.checkSubscription = async (req, res, next) => {
     const currentPlanType = user.planType || 'private';
 
     // 3. Get Plan Details
-    const planDoc = await SubscriptionPlan.findOne({
+    let planDoc = await SubscriptionPlan.findOne({
       name: currentPlanName,
       type: currentPlanType,
       isActive: true,
     });
+
+    // Fallback: if the exact plan name doesn't exist for this type
+    // (e.g. company users default to "Standard" but business plans are
+    // Start/Pro/Premium), use the cheapest active plan of the same type.
+    if (!planDoc) {
+      planDoc = await SubscriptionPlan.findOne({
+        type: currentPlanType,
+        isActive: true,
+      }).sort({ price: 1 });
+    }
 
     if (!planDoc) {
       return res.status(403).json({ message: 'Invalid subscription plan' });

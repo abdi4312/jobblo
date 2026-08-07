@@ -219,7 +219,9 @@ const JobListingDetailPage = () => {
             setIsBuyModalOpen(true);
             return;
           }
-          toast.error(err.response?.data?.error || 'Kunne ikke sende forespørsel');
+          toast.error(
+            err.response?.data?.error || err.response?.data?.message || 'Kunne ikke sende forespørsel'
+          );
         },
       }
     );

@@ -155,7 +155,7 @@ exports.register = async (req, res) => {
     await Subscription.create({
       userId: user._id,
       currentPlan: {
-        plan: 'Standard',
+        plan: role === 'company' ? 'Start' : 'Standard',
         planType: role === 'company' ? 'business' : 'private',
         startDate: new Date(),
         status: 'active',
