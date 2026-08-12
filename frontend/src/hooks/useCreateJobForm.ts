@@ -404,7 +404,18 @@ export const useCreateJobForm = (
         if (rules) {
           for (const rule of rules) {
             if (!rule.test(values)) {
-              currentErrors[field] = rule.message;
+              if (field === 'price') {
+                if (paymentType === 'Anbud') {
+                  currentErrors[field] =
+                    'Vennligst oppgi et antatt budsjett større enn 0 kr for anbudet';
+                } else if (paymentType === 'Timepris') {
+                  currentErrors[field] = 'Vennligst oppgi en timepris større enn 0 kr';
+                } else {
+                  currentErrors[field] = 'Vennligst oppgi en fastpris større enn 0 kr';
+                }
+              } else {
+                currentErrors[field] = rule.message;
+              }
               isValid = false;
               break;
             }
@@ -483,8 +494,15 @@ export const useCreateJobForm = (
       if (!values.address) missing.push(labels.address);
       if (!values.city) missing.push(labels.city);
       const priceVal = values.price;
-      if (!priceVal || priceVal === '0' || Number(priceVal) <= 0)
-        missing.push(labels.price);
+      if (!priceVal || priceVal === '0' || Number(priceVal) <= 0 || isNaN(Number(priceVal))) {
+        if (paymentType === 'Anbud') {
+          missing.push('antatt budsjett for anbud');
+        } else if (paymentType === 'Timepris') {
+          missing.push('timepris');
+        } else {
+          missing.push('fastpris');
+        }
+      }
       const durVal = values.durationValue;
       if (!durVal || durVal === '0' || Number(durVal) <= 0)
         missing.push(labels.durationValue);
