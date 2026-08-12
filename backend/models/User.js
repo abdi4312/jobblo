@@ -163,6 +163,67 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
 
+    // Stripe Connect (payout destination for workers/providers)
+    stripeConnectAccountId: {
+      type: String,
+      trim: true,
+    },
+    payoutOnboardingStatus: {
+      type: String,
+      enum: ['none', 'started', 'restricted', 'enabled', 'pending_verification'],
+      default: 'none',
+    },
+    payoutEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    chargesEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    detailsSubmitted: {
+      type: Boolean,
+      default: false,
+    },
+    connectAccountCreatedAt: {
+      type: Date,
+    },
+    payoutOnboardingLastRefreshedAt: {
+      type: Date,
+    },
+
+    // Payout / bank account details (DEPRECATED — raw fields, replaced by Stripe Connect)
+    // Kept as write-tolerant only; never returned outside owner's own profile.
+    payoutMethod: {
+      type: String,
+      enum: ['bank', 'vipps', 'iban', null],
+      default: null,
+    },
+    bankAccountNumber: {
+      type: String,
+      trim: true,
+      select: false,
+    },
+    iban: {
+      type: String,
+      trim: true,
+      select: false,
+    },
+    bicSwift: {
+      type: String,
+      trim: true,
+      select: false,
+    },
+    vippsHandle: {
+      type: String,
+      trim: true,
+      select: false,
+    },
+    payoutVerified: {
+      type: Boolean,
+      default: false,
+    },
+
     // Soft delete — admin action only. Never hard-delete users with financial history.
     isDeleted: {
       type: Boolean,

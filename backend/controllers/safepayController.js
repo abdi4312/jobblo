@@ -409,7 +409,6 @@ exports.completeJobAndPayout = async (req, res) => {
       status: 'released',
       amount: order.agreedPrice,
     });
-    await payment.save();
 
     // If order has chatId, update chat to completed status and add system message
     if (order.chatId) {
@@ -504,18 +503,60 @@ exports.completeJobAndPayout = async (req, res) => {
         averageRating,
       });
 
-      // Update provider's stats
+      // Update provider's stats (excluding earnings, which is updated only after confirmed transfer)
       reviewee.completedJobs = (reviewee.completedJobs || 0) + 1;
       reviewee.averageRating = Math.round(averageRating * 10) / 10;
       reviewee.reviewCount = reviewCount;
-      reviewee.earnings = (reviewee.earnings || 0) + netProvider;
       await reviewee.save();
-      console.log('completeJobAndPayout: Saved reviewee:', reviewee);
+      console.log('completeJobAndPayout: Saved reviewee stats:', reviewee);
     }
 
-    // Bug 6: Add TODO comment about real payout
-    // TODO: Integrate with actual payment gateway to release funds to provider
-    // For now this is an internal wallet transfer only
+    // ── Actual Stripe Connect transfer to provider ─────────────────────────────
+    const releasePayoutToProvider = require('../services/payout/releasePayoutToProvider');
+    let payoutResult;
+    try {
+      const sourcePayment = await Payment.findOne({ orderId: order._id });
+      payoutResult = await releasePayoutToProvider({
+        orderId:                 order._id,
+        providerId:              order.providerId,
+        customerId:              order.customerId,
+        serviceId:               service._id,
+        grossAmount:             order.agreedPrice,
+        platformFee:             fee,
+        releaseSource:           'legacy_complete',
+        releasedBy:              userId,
+        stripePaymentIntentId:   sourcePayment?.stripePaymentIntentId,
+        stripeCheckoutSessionId: sourcePayment?.stripeSessionId,
+        safePayHistoryId:        safePayHistory._id,
+      });
+
+      if (!payoutResult.alreadyPaid) {
+        await User.findByIdAndUpdate(order.providerId, { $inc: { earnings: netProvider } });
+      }
+    } catch (payoutErr) {
+      console.error('completeJobAndPayout: Stripe transfer failed:', payoutErr.message);
+      const isSetupRequired = ['PAYOUT_SETUP_REQUIRED', 'PAYOUT_NOT_ENABLED'].includes(payoutErr.code);
+      const userMessage = isSetupRequired
+        ? 'Jobben er fullført, men utbetalingen krever at oppdragstaker fullfører Stripe Connect-oppsett.'
+        : 'Jobben er fullført, men utbetalingen mislyktes midlertidig og vil bli forsøkt igjen.';
+
+      await Notification.create({
+        userId: order.providerId,
+        type: 'order',
+        content: isSetupRequired
+          ? 'Jobben er fullført! Fullfør Stripe Connect-oppsett under Innstillinger → Utbetaling for å motta pengene.'
+          : `Overføring mislyktes: ${payoutErr.message}. Kontakt support.`,
+        orderId: order._id,
+        senderId: userId,
+      }).catch(() => {});
+
+      return res.status(200).json({
+        message: 'Oppdraget fullført',
+        order,
+        payoutWarning: userMessage,
+        payoutErrorCode: payoutErr.code || 'TRANSFER_FAILED',
+      });
+    }
 
     // 5. Create notifications for both parties
     const providerNotification = new Notification({
@@ -537,7 +578,7 @@ exports.completeJobAndPayout = async (req, res) => {
     res.json({
       message: 'Oppdraget fullført og beløp utbetalt',
       order,
-      payment,
+      payoutResult,
     });
   } catch (err) {
     console.error('Error completing job:', err);

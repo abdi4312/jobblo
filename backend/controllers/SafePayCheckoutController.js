@@ -465,10 +465,8 @@ exports.approveAndPayout = async (req, res) => {
           : 0;
 
       provider.completedJobs = (provider.completedJobs || 0) + 1;
-      provider.earnings = (provider.earnings || 0) + netProvider;
       provider.averageRating = parseFloat(averageRating.toFixed(1));
       provider.reviewCount = reviewCount;
-      // Mark as SafePay user
       if (!provider.isSafePayUser) {
         provider.isSafePayUser = true;
         provider.safePayActivatedAt = new Date();
@@ -481,6 +479,66 @@ exports.approveAndPayout = async (req, res) => {
       { _id: order.customerId, isSafePayUser: { $ne: true } },
       { $set: { isSafePayUser: true, safePayActivatedAt: new Date() } }
     );
+
+    // ── Actual Stripe Connect transfer to provider ─────────────────────────────
+    const releasePayoutToProvider = require('../services/payout/releasePayoutToProvider');
+    let payoutResult;
+    try {
+      // Source the payment record for reconciliation
+      const sourcePayment = await Payment.findOne({ orderId: order._id });
+      payoutResult = await releasePayoutToProvider({
+        orderId:                 order._id,
+        providerId:              order.providerId,
+        customerId:              order.customerId,
+        serviceId:               order.serviceId._id,
+        grossAmount:             order.agreedPrice,
+        platformFee:             fee,
+        releaseSource:           'customer_approve',
+        releasedBy:              userId,
+        stripePaymentIntentId:   sourcePayment?.stripePaymentIntentId,
+        stripeCheckoutSessionId: sourcePayment?.stripeSessionId,
+        safePayHistoryId:        (await SafePayHistory.findOne({ orderId: order._id }))?._id,
+      });
+
+      // Only increment virtual earnings after confirmed transfer
+      if (!payoutResult.alreadyPaid) {
+        await User.findByIdAndUpdate(order.providerId, { $inc: { earnings: netProvider } });
+      }
+    } catch (payoutErr) {
+      // Transfer failed — funds remain on platform, order stays completed for work credit
+      // but provider is NOT marked paid and earnings are NOT incremented
+      console.error('approveAndPayout: Stripe transfer failed:', payoutErr.message);
+
+      const isSetupRequired = ['PAYOUT_SETUP_REQUIRED', 'PAYOUT_NOT_ENABLED'].includes(payoutErr.code);
+      const userMessage = isSetupRequired
+        ? 'Jobben er godkjent, men utbetalingen krever at oppdragstaker fullfører Stripe Connect-oppsett før penger kan overføres.'
+        : 'Jobben er godkjent, men utbetalingen mislyktes midlertidig. Pengene er trygge og vil bli forsøkt igjen.';
+
+      // Notify provider of action needed
+      await Notification.create({
+        userId: order.providerId,
+        type: 'order',
+        content: isSetupRequired
+          ? 'Jobben er godkjent! Fullfør Stripe Connect-oppsett under Innstillinger → Utbetaling for å motta pengene.'
+          : `Jobb godkjent, men overføring mislyktes: ${payoutErr.message}. Kontakt support.`,
+        orderId: order._id,
+        senderId: userId,
+      }).catch(() => {});
+
+      // Return success for the job approval itself, with payout warning
+      const io = req.app?.get('io');
+      if (io) {
+        io.to(`user_${order.providerId}`).emit('order_completed', { orderId: order._id, payoutPending: true });
+        io.to(`user_${order.customerId}`).emit('order_completed', { orderId: order._id });
+      }
+
+      return res.status(200).json({
+        message: 'Jobb godkjent',
+        orderId,
+        payoutWarning: userMessage,
+        payoutErrorCode: payoutErr.code || 'TRANSFER_FAILED',
+      });
+    }
 
     // ── Notifications ──────────────────────────────────────────────────────────
     await Promise.allSettled([

@@ -14,6 +14,7 @@ import {
   Clock,
   Briefcase,
   ShieldCheck,
+  Banknote ,
 } from 'lucide-react';
 import { useUserStore } from '../../../stores/userStore';
 
@@ -62,6 +63,7 @@ export function SettingsLayout() {
     { name: 'Telefonnummer', path: '/settings/phone', icon: Phone },
     { name: 'Mine adresser', path: '/settings/addresses', icon: MapPin },
     { name: 'SafePay historikk', path: '/settings/safepay', icon: ShieldCheck },
+    { name: 'Utbetalinger', path: '/settings/payout', icon: Banknote },
     { name: 'Endre passord', path: '/settings/password', icon: User },
     { name: 'Økter', path: '/settings/sessions', icon: Monitor },
     {

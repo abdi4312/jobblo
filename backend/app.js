@@ -124,6 +124,7 @@ app.use('/api/explore', exploreRouter);
 app.use('/api/applicants', applicantsRouter);
 app.use('/api/safepay', safePayRouter);
 app.use('/api/safepay-checkout', safePayCheckoutRouter);
+app.use('/api/connect', require('./routes/connect'));
 app.use('/api/my-applications', myApplicationsRouter);
 app.use('/api/upcomingFeatures', upcomingFeatureRouter);
 app.use('/api/location-filter', locationFilterRouter);

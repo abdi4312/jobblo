@@ -434,6 +434,35 @@ const resolveDispute = asyncHandler(async (req, res) => {
 
     await session.commitTransaction();
 
+    let payoutResult = null;
+    let payoutError = null;
+    if (outcome === 'release_to_provider') {
+      const releasePayoutToProvider = require('../../services/payout/releasePayoutToProvider');
+      const User = require('../../models/User');
+      try {
+        payoutResult = await releasePayoutToProvider({
+          orderId: order._id,
+          providerId: order.providerId,
+          customerId: order.customerId,
+          serviceId: order.serviceId,
+          grossAmount: securedAmount,
+          platformFee: fee,
+          releaseSource: 'dispute_release',
+          releasedBy: req.user._id,
+          stripePaymentIntentId: payment?.stripePaymentIntentId,
+          stripeCheckoutSessionId: payment?.stripeSessionId,
+          disputeId: dispute._id,
+        });
+
+        if (!payoutResult.alreadyPaid) {
+          await User.findByIdAndUpdate(order.providerId, { $inc: { earnings: securedAmount - fee } });
+        }
+      } catch (pErr) {
+        console.error('resolveDispute: Stripe transfer failed for provider:', pErr.message);
+        payoutError = pErr.message;
+      }
+    }
+
     // Notifications outside transaction
     try {
       await Promise.all([

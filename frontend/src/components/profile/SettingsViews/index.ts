@@ -19,3 +19,4 @@ export * from './SubscriptionView';
 export * from './NotificationsView';
 export * from './SeekerSettingsView';
 export * from './SafePayHistoryView';
+export * from './PayoutSettingsView';

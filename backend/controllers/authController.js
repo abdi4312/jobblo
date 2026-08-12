@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { generateTokens, createSession } = require('../utils/tokenUtils');
 const { sendOtpEmail } = require('../utils/emailService');
+const { OWN_USER_SELECT, sanitizeUserOwner, SENSITIVE_STRIP } = require('../utils/userProjections');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -33,12 +34,12 @@ const allowedRoles = ['user', 'company'];
 
 const sanitizeUser = (user) => {
   if (!user) return null;
-
-  const userObject = typeof user.toObject === 'function' ? user.toObject() : user;
-
-  delete userObject.password;
-  delete userObject.__v;
-
+  const userObject = typeof user.toObject === 'function' ? user.toObject() : { ...user };
+  for (const key of SENSITIVE_STRIP) delete userObject[key];
+  delete userObject.bankAccountNumber;
+  delete userObject.iban;
+  delete userObject.bicSwift;
+  delete userObject.vippsHandle;
   return userObject;
 };
 
@@ -399,13 +400,13 @@ exports.getProfile = async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const user = await User.findById(userId).select('-password -__v');
+    const user = await User.findById(userId).select(OWN_USER_SELECT);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    return res.json(user);
+    return res.json(sanitizeUserOwner(user));
   } catch (error) {
     return sendServerError(res, error, 'Get profile failed');
   }
@@ -537,7 +538,9 @@ exports.changePasswordVerifyOtp = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const normalizedEmail = String(email || '')
+      .trim()
+      .toLowerCase();
 
     if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return res.status(400).json({ error: 'Vennligst oppgi en gyldig e-postadresse' });
@@ -584,7 +587,9 @@ exports.forgotPassword = async (req, res) => {
 exports.verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const normalizedEmail = String(email || '')
+      .trim()
+      .toLowerCase();
 
     if (!normalizedEmail || !otp) {
       return res.status(400).json({ error: 'E-post og kode er påkrevd' });
