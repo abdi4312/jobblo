@@ -156,17 +156,22 @@ export const JobCard = ({ job, isOwner }: JobCardProps) => {
 
         {/* Tittel */}
         <h2 className="text-custom-black font-bold text-[15px] leading-tight line-clamp-2">
-          {job.title}
+          {job?.title || 'Uten tittel'}
         </h2>
 
         {/* Pris */}
         <div className="text-custom-black font-bold text-[16px]">
-          {job.price.toLocaleString()} kr
+          {typeof job?.price === 'number'
+            ? job.price.toLocaleString()
+            : job?.price
+              ? String(job.price)
+              : '0'}{' '}
+          kr
         </div>
 
         {/* Lokasjon */}
         <div className="text-[#6A6A6A] text-[13px] font-medium">
-          {job.location?.city || 'Norge'}
+          {job?.location?.city || job?.location?.address || 'Norge'}
         </div>
 
         {/* Status Badge (som "Fix finished") */}

@@ -184,6 +184,8 @@ export const routes: RouteObject[] = [
       { path: 'oauth-success', element: <OAuthSuccess /> },
       { path: 'home', element: withSuspense(JobListingPage) },
       { path: 'oppdragstakere', element: withSuspense(RecommendedTaskersPage) },
+      { path: 'search', element: withSuspense(ServiceListingPage) },
+      { path: 'search/job', element: withSuspense(ServiceListingPage) },
       { path: 'search/job/:categoryName', element: withSuspense(ServiceListingPage) },
       { path: 'job-listing/:id', element: withSuspense(JobListingDetailPage) },
       {

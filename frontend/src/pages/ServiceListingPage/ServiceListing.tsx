@@ -30,7 +30,8 @@ const ServiceListing = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const locationState = location.state as { lat?: number; lng?: number } | null;
-  const initialSearch = searchParams.get('search') || '';
+  const initialSearch =
+    searchParams.get('search') || searchParams.get('q') || searchParams.get('query') || '';
   const decodedCategoryName = categoryName ? decodeURIComponent(categoryName) : undefined;
 
   const [isSortOpen, setIsSortOpen] = useState(false);
@@ -39,6 +40,12 @@ const ServiceListing = () => {
     value: 'newest',
   });
   const [localSearch, setLocalSearch] = useState(initialSearch);
+
+  useEffect(() => {
+    const currentSearch =
+      searchParams.get('search') || searchParams.get('q') || searchParams.get('query') || '';
+    setLocalSearch(currentSearch);
+  }, [searchParams]);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     decodedCategoryName && decodedCategoryName !== 'all' ? [decodedCategoryName] : []
@@ -118,7 +125,16 @@ const ServiceListing = () => {
     fetchLocations();
   }, []);
 
-  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useJobs({
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useJobs({
     categories: selectedCategories,
     locations: selectedLocations,
     // Smart county/municipality filter: if specific municipalities are selected under a county,
@@ -854,11 +870,17 @@ const ServiceListing = () => {
               <p className="text-gray-500 font-medium">Laster tjenester...</p>
             </div>
           ) : isError ? (
-            <div className="text-center py-20">
-              <p className="text-red-500 font-bold text-xl">Kunne ikke laste data.</p>
+            <div className="text-center py-16 bg-red-50/50 rounded-3xl p-8 border border-red-100 max-w-lg mx-auto my-8">
+              <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle size={32} />
+              </div>
+              <p className="text-red-700 font-bold text-xl mb-2">Kunne ikke laste søkeresultater.</p>
+              <p className="text-red-500/80 text-sm mb-6">
+                {error instanceof Error ? error.message : 'Det oppstod en feil under henting av oppdrag.'}
+              </p>
               <button
-                onClick={() => window.location.reload()}
-                className="mt-4 bg-[#ff8a7a] text-white px-6 py-2 rounded-full font-bold"
+                onClick={() => refetch()}
+                className="bg-[#ff8a7a] hover:bg-[#e07566] text-white px-6 py-2.5 rounded-full font-bold shadow-md transition-all active:scale-95 cursor-pointer"
               >
                 Prøv igjen
               </button>
@@ -868,8 +890,10 @@ const ServiceListing = () => {
               <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Search size={40} className="text-gray-300" />
               </div>
-              <p className="text-gray-500 font-bold text-xl">Ingen tjenester funnet.</p>
-              <p className="text-gray-400 mt-2">Prøv å endre på filtrene dine eller søkeordet.</p>
+              <p className="text-gray-700 font-bold text-xl">Ingen tjenester funnet.</p>
+              <p className="text-gray-400 mt-2 text-sm">
+                Prøv å endre på filtrene dine eller søkeordet for å finne flere resultater.
+              </p>
             </div>
           ) : (
             <>
