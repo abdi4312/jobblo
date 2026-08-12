@@ -7,6 +7,13 @@ const Notification = require('../../models/Notification');
 const { logActivity } = require('./activityService');
 
 /**
+ * Order statuses a user-initiated dispute may be opened from.
+ * Active stages (paid / in_progress) and the approval stage
+ * (ready_for_review), plus post-completion. BUG-003.
+ */
+const DISPUTE_ELIGIBLE_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed'];
+
+/**
  * Allowed Order status transitions.
  * Key: current status → Value: array of permitted next statuses
  */
@@ -131,9 +138,8 @@ async function openDispute({
   const order = await Order.findById(orderId);
   if (!order) throw new Error('Ordre ikke funnet');
 
-  // Only allow dispute when in eligible state
-  const ELIGIBLE = ['paid', 'in_progress', 'completed'];
-  if (!ELIGIBLE.includes(order.status)) {
+  // Only allow dispute when in eligible state (shared with admin chat-report flow)
+  if (!DISPUTE_ELIGIBLE_STATUSES.includes(order.status)) {
     throw new Error(`Tvist kan ikke åpnes for ordre med status: ${order.status}`);
   }
 
@@ -241,4 +247,4 @@ async function openDispute({
   return dispute;
 }
 
-module.exports = { syncSafePayStatus, openDispute, isValidTransition };
+module.exports = { syncSafePayStatus, openDispute, isValidTransition, DISPUTE_ELIGIBLE_STATUSES };

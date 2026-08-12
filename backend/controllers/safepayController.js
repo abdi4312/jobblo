@@ -143,8 +143,8 @@ exports.createContract = async (req, res) => {
       await chat.save();
     }
 
-    // Update service status to in_progress
-    await Service.findByIdAndUpdate(serviceId, { status: 'in_progress' });
+    // Update service status to awaiting_payment (contract created, waiting for payment)
+    await Service.findByIdAndUpdate(serviceId, { status: 'awaiting_payment' });
 
     // 3. Update JobRequest status if provided (Bug 4)
     if (requestId) {

@@ -703,7 +703,6 @@ exports.updateChecklistItem = async (req, res) => {
 exports.getMyPostedServices = async (req, res) => {
   try {
     const services = await Service.find({ userId: req.userId })
-      .populate('categories')
       .populate('userId', 'name email avatarUrl verified role orgNumber companyName')
       .sort({ _id: -1 });
 

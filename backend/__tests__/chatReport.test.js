@@ -102,7 +102,12 @@ jest.mock('../utils/cloudinaryUpload', () => ({
 }));
 
 jest.mock('../services/admin/activityService');
-jest.mock('../services/admin/safePayStateService');
+jest.mock('../services/admin/safePayStateService', () => ({
+  openDispute: jest.fn(),
+  syncSafePayStatus: jest.fn(),
+  isValidTransition: jest.fn(),
+  DISPUTE_ELIGIBLE_STATUSES: ['paid', 'in_progress', 'ready_for_review', 'completed'],
+}));
 
 // ── Module refs ───────────────────────────────────────────────────────────
 const Chat = require('../models/ChatMessage');

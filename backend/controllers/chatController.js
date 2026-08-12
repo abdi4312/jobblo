@@ -318,8 +318,8 @@ exports.createContract = async (req, res) => {
 
     await chat.save();
 
-    // Update service status
-    await Service.findByIdAndUpdate(chat.serviceId._id, { status: 'in_progress' });
+    // Update service status to awaiting_payment (contract created, waiting for payment)
+    await Service.findByIdAndUpdate(chat.serviceId._id, { status: 'awaiting_payment' });
 
     // Populate chat for response
     const updatedChat = await Chat.findById(chatId)

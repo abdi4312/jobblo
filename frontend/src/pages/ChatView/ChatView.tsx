@@ -52,6 +52,33 @@ export function ChatView() {
   // Check if current user is service owner (customer)
   const isServiceOwner = chat?.serviceId?.userId === user?._id;
 
+  // ponytail: shared helper for order-based navigation (BUG-005 fix).
+  // Customer (service owner) → /safepay/* pages (payment / approval / checkout)
+  // Provider (applicant) → /provider/orders/:orderId (their active work page)
+  // Without this, providers land on the customer-side payment/approval screens
+  // and get stuck (no link back to their checklist / progress).
+  const navigateToOrder = (
+    orderIdInput: string,
+    opts: { preferApprovalWhenPaid?: boolean } = {}
+  ) => {
+    const id = orderIdInput;
+    if (!id) return;
+    const order = chat?.orderId;
+    // Default to provider work page when viewer is NOT customer (aka provider)
+    const viewerIsProvider = !isServiceOwner;
+    if (viewerIsProvider) {
+      navigate(`/provider/orders/${id}`);
+      return;
+    }
+    // Customer side routing
+    const paymentStatus = typeof order === 'object' ? order.paymentStatus : undefined;
+    if (opts.preferApprovalWhenPaid && paymentStatus === 'paid') {
+      navigate(`/safepay/approval/${id}`);
+    } else {
+      navigate(`/safepay/checkout/${id}`);
+    }
+  };
+
   useEffect(() => {
     if (!chatId) return;
 
@@ -182,11 +209,8 @@ export function ChatView() {
   const handleStartSafePay = () => {
     if (chat?.orderId?._id || chat?.orderId) {
       const orderId = chat.orderId._id || chat.orderId;
-      if (chat.orderId.paymentStatus === 'paid') {
-        navigate(`/safepay/approval/${orderId}`);
-      } else {
-        navigate(`/safepay/checkout/${orderId}`);
-      }
+      // ponytail BUG-005: customer goes to approval/checkout pages; provider always goes to their work page
+      navigateToOrder(orderId, { preferApprovalWhenPaid: true });
     } else {
       toast('SafePay flow coming soon! You need to create a contract first!');
     }
@@ -194,7 +218,8 @@ export function ChatView() {
 
   const handleSystemMessageClick = (msg: ChatMessage) => {
     if (msg.systemData?.orderId) {
-      navigate(`/safepay/checkout/${msg.systemData.orderId}`);
+      // ponytail BUG-005: route to correct viewer's page (provider → work page)
+      navigateToOrder(msg.systemData.orderId);
     }
   };
 
@@ -318,7 +343,8 @@ export function ChatView() {
                       <button
                         onClick={() => {
                           const orderId = chat.orderId._id || chat.orderId;
-                          navigate(`/safepay/checkout/${orderId}`);
+                          // ponytail BUG-005: customer → checkout; provider → /provider/orders (navigateToOrder resolves role)
+                          navigateToOrder(orderId);
                         }}
                         className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#16a34a] text-[#16a34a] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
                       >
@@ -340,11 +366,12 @@ export function ChatView() {
                   <button
                     onClick={() => {
                       const orderId = chat.orderId._id || chat.orderId;
-                      navigate(`/safepay/checkout/${orderId}`);
+                      // ponytail BUG-005: provider (viewer is NOT service owner) must always go to /provider/orders/:orderId
+                      navigateToOrder(orderId);
                     }}
                     className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#16a34a] text-[#16a34a] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
                   >
-                    Se kontrakt
+                    Se oppdrag
                   </button>
                 </div>
               </div>

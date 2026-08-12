@@ -53,13 +53,14 @@ export const FormActions: React.FC<FormActionsProps> = ({
           />
         ) : (
           <Button
-            type="submit"
-            label="Publiser"
+            type="button"
+            label={isSubmitting ? 'Publiserer...' : 'Publiser'}
             variant="default"
             icon={<CheckCircle2 size={20} />}
             iconPosition="right"
             onClick={handleFinalSubmit}
             loading={isSubmitting}
+            disabled={isSubmitting}
             className="px-8 py-3"
           />
         )}

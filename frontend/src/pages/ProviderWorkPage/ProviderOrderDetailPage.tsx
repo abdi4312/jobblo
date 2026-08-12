@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     ArrowLeft, ShieldCheck, MessageCircle, Play, CheckSquare,
     Upload, Clock, AlertTriangle, FileText, Check, ChevronRight,
-    Loader2, Camera, TrendingUp, Star,
+    Loader2, Camera, TrendingUp, Star, X,
 } from 'lucide-react';
 import mainLink from '../../api/mainURLs';
 import { toast } from 'react-hot-toast';
@@ -34,6 +34,19 @@ const ACTION_LABELS: Record<string, string> = {
     dispute_opened: 'Tvist åpnet',
     payout_approved: 'Utbetaling godkjent',
 };
+
+const DISPUTE_REASON_OPTIONS = [
+    { value: 'work_not_completed', label: 'Jobb ikke fullført' },
+    { value: 'poor_quality', label: 'Dårlig kvalitet' },
+    { value: 'different_from_agreement', label: 'Avviker fra avtalen' },
+    { value: 'customer_not_cooperating', label: 'Kunde samarbeider ikke' },
+    { value: 'provider_not_cooperating', label: 'Tilbyder samarbeider ikke' },
+    { value: 'payment_issue', label: 'Betalingsproblem' },
+    { value: 'unauthorized_payment', label: 'Uautorisert betaling' },
+    { value: 'fraud_or_scam', label: 'Svindel eller bedrageri' },
+    { value: 'damaged_property', label: 'Skadet eiendom' },
+    { value: 'other', label: 'Annet' },
+];
 
 const MiniStarRating: React.FC<{ value: number; onChange: (v: number) => void; size?: number }> = ({ value, onChange, size = 24 }) => {
     const [hover, setHover] = useState<number | null>(null);
@@ -72,6 +85,19 @@ const ProviderOrderDetailPage: React.FC = () => {
     const [showReviewForm, setShowReviewForm] = useState(false);
     const [reviewRating, setReviewRating] = useState(0);
     const [reviewComment, setReviewComment] = useState('');
+
+    // Dispute state (BUG-003: applicant could not raise a dispute)
+    const [showDisputeDialog, setShowDisputeDialog] = useState(false);
+    const [disputeForm, setDisputeForm] = useState({
+        reasonCategory: '',
+        title: '',
+        description: '',
+    });
+    const [disputeTouched, setDisputeTouched] = useState({
+        reasonCategory: false,
+        title: false,
+        description: false,
+    });
 
     const { data, isLoading, error } = useQuery({
         queryKey: ['provider-order', orderId],
@@ -124,6 +150,33 @@ const ProviderOrderDetailPage: React.FC = () => {
         onError: (e: any) => toast.error(e.response?.data?.error || 'Opplasting feilet'),
     });
 
+    // Dispute mutation — works for the applicant (provider) side too.
+    // We re-use the same backend endpoint as the customer side.
+    const disputeMutation = useMutation({
+        mutationFn: async () => {
+            const res = await mainLink.post(`/api/safepay/contract/${orderId}/dispute`, {
+                reasonCategory: disputeForm.reasonCategory,
+                title: disputeForm.title.trim(),
+                description: disputeForm.description.trim(),
+            });
+            return res.data;
+        },
+        onSuccess: () => {
+            toast.success('Tvist opprettet. Admin vil gjennomgå saken.');
+            setShowDisputeDialog(false);
+            setDisputeForm({ reasonCategory: '', title: '', description: '' });
+            setDisputeTouched({ reasonCategory: false, title: false, description: false });
+            invalidate();
+        },
+        onError: (err: any) => {
+            const msg =
+                err?.response?.data?.message ??
+                err?.response?.data?.error ??
+                'Noe gikk galt. Prøv igjen.';
+            toast.error(msg);
+        },
+    });
+
     // Check if provider already reviewed this order
     const { data: existingReviews } = useQuery({
         queryKey: ['order-reviews', orderId],
@@ -160,6 +213,33 @@ const ProviderOrderDetailPage: React.FC = () => {
         onError: (e: any) => toast.error(e.response?.data?.error || 'Kunne ikke sende vurdering'),
     });
 
+    // Dispute form validation
+    const disputeErrors = {
+        reasonCategory: !disputeForm.reasonCategory ? 'Velg en årsak' : '',
+        title: !disputeForm.title.trim()
+            ? 'Tittel er påkrevd'
+            : disputeForm.title.trim().length < 5
+                ? 'Minst 5 tegn'
+                : disputeForm.title.trim().length > 200
+                    ? 'Maks 200 tegn'
+                    : '',
+        description: !disputeForm.description.trim()
+            ? 'Beskrivelse er påkrevd'
+            : disputeForm.description.trim().length < 20
+                ? 'Minst 20 tegn'
+                : disputeForm.description.trim().length > 2000
+                    ? 'Maks 2000 tegn'
+                    : '',
+    };
+    const disputeIsValid =
+        !disputeErrors.reasonCategory && !disputeErrors.title && !disputeErrors.description;
+
+    const openDispute = () => {
+        setDisputeTouched({ reasonCategory: true, title: true, description: true });
+        if (!disputeIsValid) return;
+        disputeMutation.mutate();
+    };
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-[#f5f0e8]">
@@ -185,6 +265,12 @@ const ProviderOrderDetailPage: React.FC = () => {
     const canUpload = isProvider && ['paid', 'in_progress'].includes(status);
     const canMarkReady = isProvider && status === 'in_progress' && !activeDispute;
     const canApprove = isCustomer && status === 'ready_for_review' && !activeDispute;
+    // Applicant can raise a dispute at any active/approval stage, before the
+    // order is closed (completed/cancelled/refunded). Mirrors the customer side.
+    const canRaiseDispute =
+        isProvider &&
+        !activeDispute &&
+        ['paid', 'in_progress', 'ready_for_review'].includes(status);
 
     return (
         <div className="min-h-screen bg-[#f5f0e8] pb-16">
@@ -273,20 +359,53 @@ const ProviderOrderDetailPage: React.FC = () => {
                                 const completed = item.providerCompleted ?? item.checked;
                                 const canToggle = isProvider && ['paid', 'in_progress'].includes(status);
                                 return (
-                                    <div
+                                    <label
                                         key={item.id}
-                                        onClick={() => canToggle && checklistMutation.mutate({ itemId: item.id, val: !completed })}
-                                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${completed ? 'bg-[#f0faf0] border-[#c6f0d8]' : 'bg-[#f9f9f7] border-transparent'
-                                            } ${canToggle ? 'cursor-pointer hover:border-black/10' : 'cursor-default'}`}
+                                        htmlFor={`provider-check-${item.id}`}
+                                        role="button"
+                                        tabIndex={canToggle ? 0 : -1}
+                                        aria-checked={!!completed}
+                                        aria-disabled={!canToggle}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            if (!canToggle) return;
+                                            // ponytail: direct click toggles (mirrors SafePayApproval fix).
+                                            // Do not rely on label→sr-only input propagation which can fail silently.
+                                            checklistMutation.mutate({ itemId: item.id, val: !completed });
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (!canToggle) return;
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                checklistMutation.mutate({ itemId: item.id, val: !completed });
+                                            }
+                                        }}
+                                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all select-none ${completed ? 'bg-[#f0faf0] border-[#c6f0d8]' : 'bg-[#f9f9f7] border-transparent'
+                                            } ${canToggle ? 'cursor-pointer hover:border-black/10 hover:bg-[#f0faf0]/50' : 'cursor-default opacity-90'}`}
                                     >
-                                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${completed ? 'bg-custom-green border-custom-green' : 'border-gray-300'}`}>
+                                        <input
+                                            id={`provider-check-${item.id}`}
+                                            type="checkbox"
+                                            checked={!!completed}
+                                            disabled={!canToggle}
+                                            onChange={() => {
+                                                if (canToggle) {
+                                                    checklistMutation.mutate({ itemId: item.id, val: !completed });
+                                                }
+                                            }}
+                                            className="sr-only"
+                                        />
+                                        <span
+                                            aria-hidden="true"
+                                            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${completed ? 'bg-custom-green border-custom-green' : 'border-gray-300 bg-white'}`}
+                                        >
                                             {completed && <Check size={12} className="text-white" strokeWidth={3} />}
-                                        </div>
+                                        </span>
                                         <span className={`text-[13px] flex-1 ${completed ? 'text-[#166534]' : 'text-gray-600'}`}>{item.text}</span>
                                         {item.customerConfirmed && (
                                             <span className="text-[10px] text-custom-green font-medium">✓ Bekreftet</span>
                                         )}
-                                    </div>
+                                    </label>
                                 );
                             })}
                         </div>
@@ -500,17 +619,174 @@ const ProviderOrderDetailPage: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Dispute */}
-                    {['paid', 'in_progress', 'ready_for_review'].includes(status) && !activeDispute && (
-                        <button
-                            onClick={() => navigate(`/safepay/approval/${orderId}`)}
-                            className="w-full text-center text-[12px] text-gray-400 hover:text-red-500 py-2 flex items-center justify-center gap-1 transition-colors"
-                        >
-                            <AlertTriangle size={13} /> Opprett tvist
-                        </button>
+                    {/* Dispute — applicant side (BUG-003) */}
+                    {canRaiseDispute && (
+                        <div className="pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowDisputeDialog(true)}
+                                className="w-full text-center text-[12px] text-gray-400 hover:text-red-500 py-2 flex items-center justify-center gap-1.5 transition-colors"
+                            >
+                                <AlertTriangle size={13} /> Noe gikk galt? Opprett en tvist
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Active dispute notice */}
+                    {activeDispute && (
+                        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center text-[13px] text-red-700 font-medium">
+                            ⚠️ Tvist pågår — admin gjennomgår saken
+                        </div>
                     )}
                 </div>
             </div>
+
+            {/* Dispute dialog (BUG-003) */}
+            {showDisputeDialog && (
+                <div
+                    className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="provider-dispute-dialog-title"
+                >
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between">
+                            <h3
+                                id="provider-dispute-dialog-title"
+                                className="text-lg font-bold text-gray-900"
+                            >
+                                Opprett en tvist
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setShowDisputeDialog(false)}
+                                className="text-gray-400 hover:text-gray-700"
+                                aria-label="Lukk"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                            Fyll ut alle feltene. Admin vil gjennomgå saken og kontakte begge parter.
+                        </p>
+
+                        {/* Reason */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Årsak <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                value={disputeForm.reasonCategory}
+                                onChange={(e) => {
+                                    setDisputeForm((f) => ({ ...f, reasonCategory: e.target.value }));
+                                    setDisputeTouched((t) => ({ ...t, reasonCategory: true }));
+                                }}
+                                onBlur={() => setDisputeTouched((t) => ({ ...t, reasonCategory: true }))}
+                                className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${disputeTouched.reasonCategory && disputeErrors.reasonCategory
+                                        ? 'border-red-400 bg-red-50'
+                                        : 'border-gray-300'
+                                    }`}
+                            >
+                                <option value="">Velg årsak…</option>
+                                {DISPUTE_REASON_OPTIONS.map((o) => (
+                                    <option key={o.value} value={o.value}>
+                                        {o.label}
+                                    </option>
+                                ))}
+                            </select>
+                            {disputeTouched.reasonCategory && disputeErrors.reasonCategory && (
+                                <p className="mt-1 text-xs text-red-500">{disputeErrors.reasonCategory}</p>
+                            )}
+                        </div>
+
+                        {/* Title */}
+                        <div>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="text-sm font-medium text-gray-700">
+                                    Tittel <span className="text-red-500">*</span>
+                                </label>
+                                <span
+                                    className={`text-xs ${disputeForm.title.length > 200 ? 'text-red-500' : 'text-gray-400'}`}
+                                >
+                                    {disputeForm.title.length}/200
+                                </span>
+                            </div>
+                            <input
+                                type="text"
+                                maxLength={200}
+                                placeholder="Kort beskrivelse av problemet (min. 5 tegn)"
+                                value={disputeForm.title}
+                                onChange={(e) => {
+                                    setDisputeForm((f) => ({ ...f, title: e.target.value }));
+                                    setDisputeTouched((t) => ({ ...t, title: true }));
+                                }}
+                                onBlur={() => setDisputeTouched((t) => ({ ...t, title: true }))}
+                                className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${disputeTouched.title && disputeErrors.title
+                                        ? 'border-red-400 bg-red-50'
+                                        : 'border-gray-300'
+                                    }`}
+                            />
+                            {disputeTouched.title && disputeErrors.title && (
+                                <p className="mt-1 text-xs text-red-500">{disputeErrors.title}</p>
+                            )}
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="text-sm font-medium text-gray-700">
+                                    Beskrivelse <span className="text-red-500">*</span>
+                                </label>
+                                <span
+                                    className={`text-xs ${disputeForm.description.length > 2000 ? 'text-red-500' : 'text-gray-400'}`}
+                                >
+                                    {disputeForm.description.length}/2000
+                                </span>
+                            </div>
+                            <textarea
+                                rows={4}
+                                maxLength={2000}
+                                placeholder="Beskriv problemet i detalj (min. 20 tegn)…"
+                                value={disputeForm.description}
+                                onChange={(e) => {
+                                    setDisputeForm((f) => ({ ...f, description: e.target.value }));
+                                    setDisputeTouched((t) => ({ ...t, description: true }));
+                                }}
+                                onBlur={() => setDisputeTouched((t) => ({ ...t, description: true }))}
+                                className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 resize-none ${disputeTouched.description && disputeErrors.description
+                                        ? 'border-red-400 bg-red-50'
+                                        : 'border-gray-300'
+                                    }`}
+                            />
+                            {disputeTouched.description && disputeErrors.description && (
+                                <p className="mt-1 text-xs text-red-500">{disputeErrors.description}</p>
+                            )}
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowDisputeDialog(false);
+                                    setDisputeTouched({ reasonCategory: false, title: false, description: false });
+                                }}
+                                className="flex-1 py-2.5 border border-gray-300 rounded-full text-gray-700 font-bold hover:bg-gray-50 transition-colors"
+                            >
+                                Avbryt
+                            </button>
+                            <button
+                                type="button"
+                                onClick={openDispute}
+                                disabled={disputeMutation.isPending}
+                                className="flex-1 py-2.5 bg-red-500 text-white rounded-full font-bold hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                            >
+                                {disputeMutation.isPending && <Loader2 size={14} className="animate-spin" />}
+                                Send tvist
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
