@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const publicStatsRouter = require('./publicStats');
 
 /**
  * @swagger
@@ -21,5 +22,8 @@ const router = express.Router();
 router.get('/', function (req, res, next) {
   res.json({ message: 'Velkommen til Jobblo!' });
 });
+
+// Mount public stats under /api/public (keeps admin-only routes separate)
+router.use('/api/public', publicStatsRouter);
 
 module.exports = router;
