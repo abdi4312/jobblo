@@ -183,6 +183,16 @@ exports.updateCustomerChecklist = async (req, res) => {
   }
 };
 
+// ponytail: conservative server-side limits for proof-of-work photos
+const MAX_IMAGES_PER_EVIDENCE_TYPE = 10;
+const EVIDENCE_LOCKED_STATUSES = [
+  'ready_for_review',
+  'completed',
+  'disputed',
+  'cancelled',
+  'declined',
+];
+
 // POST /api/safepay/orders/:orderId/evidence
 exports.uploadEvidence = async (req, res) => {
   try {
@@ -191,21 +201,41 @@ exports.uploadEvidence = async (req, res) => {
     const userId = req.userId;
     const files = req.files || [];
     if (!isValidId(orderId)) return res.status(400).json({ error: 'Ugyldig orderId' });
+    if (!['before', 'after'].includes(evidenceType))
+      return res.status(400).json({ error: 'Ugyldig evidenceType. Bruk "before" eller "after".' });
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ error: 'Ordre ikke funnet' });
     if (String(order.providerId) !== String(userId))
-      return res.status(403).json({ error: 'Kun utfører' });
+      return res.status(403).json({ error: 'Kun utfører kan laste opp bevis' });
     if (!['paid', 'in_progress'].includes(order.status))
-      return res.status(400).json({ error: 'Ugyldig ordrestatus' });
+      return res.status(400).json({
+        error: EVIDENCE_LOCKED_STATUSES.includes(order.status)
+          ? `Kan ikke laste opp bevis i status "${order.status}". Jobben er allerede sendt til gjennomgang.`
+          : 'Ugyldig ordrestatus',
+      });
     if (!files.length && !completionNote)
       return res.status(400).json({ error: 'Minst én fil eller notat kreves' });
+
+    // Validate files (MIME + size — belt-and-suspenders, multer route layer also checks)
     const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
     for (const f of files) {
       if (!ALLOWED.includes(f.mimetype))
-        return res.status(400).json({ error: `Ugyldig filtype: ${f.mimetype}` });
+        return res
+          .status(400)
+          .json({ error: `Ugyldig filtype: ${f.mimetype}. Tillatt: JPEG, PNG, WebP, PDF.` });
       if (f.size > 10 * 1024 * 1024)
-        return res.status(400).json({ error: `Fil for stor: ${f.originalname}` });
+        return res.status(400).json({ error: `Fil for stor (maks 10 MB): ${f.originalname}` });
     }
+
+    // Max count per type to prevent storage bloat
+    const arrayField = evidenceType === 'before' ? 'beforeImages' : 'afterImages';
+    const currentCount = (order[arrayField] || []).length;
+    if (currentCount + files.length > MAX_IMAGES_PER_EVIDENCE_TYPE) {
+      return res.status(400).json({
+        error: `Maks ${MAX_IMAGES_PER_EVIDENCE_TYPE} bilder tillatt per type. Har allerede ${currentCount}, prøver å legge til ${files.length}.`,
+      });
+    }
+
     const cloudinary = require('../config/cloudinary');
     const urls = [];
     for (const file of files) {
@@ -218,7 +248,6 @@ exports.uploadEvidence = async (req, res) => {
       });
       urls.push(result.secure_url);
     }
-    const arrayField = evidenceType === 'before' ? 'beforeImages' : 'afterImages';
     const upd = {
       $push: {
         [arrayField]: { $each: urls },
@@ -237,8 +266,13 @@ exports.uploadEvidence = async (req, res) => {
       if (chat) {
         chat.messages.push({
           type: 'system_status',
-          systemData: { event: 'evidence_uploaded', orderId: order._id, count: urls.length },
-          text: `Utfører lastet opp ${urls.length} bilde(r)`,
+          systemData: {
+            event: 'evidence_uploaded',
+            orderId: order._id,
+            count: urls.length,
+            evidenceType,
+          },
+          text: `Utfører lastet opp ${urls.length} ${evidenceType === 'before' ? 'før-arbeid' : 'etter-arbeid'} bilde(r)`,
           createdAt: new Date(),
         });
         await chat.save();
@@ -247,6 +281,55 @@ exports.uploadEvidence = async (req, res) => {
     res.json({ message: 'Bevis lastet opp', urls, order: updated });
   } catch (err) {
     res.status(500).json({ error: 'Serverfeil ved opplasting' });
+  }
+};
+
+// DELETE /api/safepay/orders/:orderId/evidence
+exports.deleteEvidence = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { url, evidenceType = 'after' } = req.body;
+    const userId = req.userId;
+    if (!isValidId(orderId)) return res.status(400).json({ error: 'Ugyldig orderId' });
+    if (!url) return res.status(400).json({ error: 'URL mangler' });
+    if (!['before', 'after'].includes(evidenceType))
+      return res.status(400).json({ error: 'Ugyldig evidenceType' });
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ error: 'Ordre ikke funnet' });
+    if (String(order.providerId) !== String(userId))
+      return res.status(403).json({ error: 'Kun utfører kan fjerne bevis' });
+    // Lifecycle lock: must not silently replace evidence once review starts
+    if (!['paid', 'in_progress'].includes(order.status))
+      return res.status(400).json({
+        error: `Kan ikke fjerne bevis i status "${order.status}". Arbeidet er allerede sendt til gjennomgang.`,
+      });
+    const arrayField = evidenceType === 'before' ? 'beforeImages' : 'afterImages';
+    const arr = order[arrayField] || [];
+    if (!arr.includes(url))
+      return res.status(404).json({ error: 'Bilde ikke funnet i denne kategorien' });
+
+    // Remove from Cloudinary too (best-effort — don't block DB update on cleanup failure)
+    const { deleteFromCloudinary } = require('../utils/cloudinaryUpload');
+    deleteFromCloudinary(url).catch((e) => console.warn('Cloudinary cleanup warning:', e.message));
+
+    const updated = await Order.findByIdAndUpdate(
+      orderId,
+      {
+        $pull: { [arrayField]: url },
+        $push: {
+          history: {
+            action: 'evidence_removed',
+            userId,
+            timestamp: new Date(),
+            data: { evidenceType, url },
+          },
+        },
+      },
+      { new: true }
+    );
+    res.json({ message: 'Bilde fjernet', order: updated });
+  } catch (err) {
+    res.status(500).json({ error: 'Serverfeil ved fjerning av bevis' });
   }
 };
 
