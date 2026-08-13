@@ -19,6 +19,7 @@ import { dateFormatter } from '../../utils/dateFormatter';
 import { timeFormatter } from '../../utils/timeFormatter';
 import { Button } from '../../components/Ui/button/Button';
 import { useUpdateJobRequestStatusMutation } from '../../features/jobDetail/hook';
+import { useUserStore } from '../../stores/userStore';
 
 interface NotificationItemProps {
   alert: AlertType;
@@ -109,17 +110,60 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
   onNavigate,
 }) => {
   const updateStatusMutation = useUpdateJobRequestStatusMutation();
+  const { user } = useUserStore();
 
   const config =
     notificationConfig[alert.type as keyof typeof notificationConfig] || notificationConfig.general;
 
+  // Get orderId (could be string or populated object)
+  const getOrderId = () => {
+    if (typeof alert.orderId === 'string') return alert.orderId;
+    if (typeof alert.orderId === 'object' && alert.orderId !== null && alert.orderId._id) {
+      return alert.orderId._id;
+    }
+    return null;
+  };
+
+  // Determine if current user is service owner (customer) or provider
+  const resolveOrderRoute = () => {
+    const orderId = getOrderId();
+    if (!orderId) return null;
+
+    const order = typeof alert.orderId === 'object' ? alert.orderId : null;
+    const isCustomer = order && user && String(order.customerId) === String(user._id);
+    const isProvider = order && user && String(order.providerId) === String(user._id);
+
+    // If we know for sure they are the provider, send them to their work page
+    if (isProvider || !isCustomer) {
+      return `/provider/orders/${orderId}`;
+    }
+    // If customer, go to approval or checkout based on payment status
+    if (isCustomer) {
+      const paymentStatus = order?.paymentStatus;
+      if (paymentStatus === 'paid') {
+        return `/safepay/approval/${orderId}`;
+      }
+      return `/safepay/checkout/${orderId}`;
+    }
+    return null;
+  };
+
   const handleCardClick = () => {
     if ((alert.type === 'follow' || alert.type === 'favorite') && alert.senderId?._id) {
       onNavigate(`/profile/${alert.senderId._id}`);
+      return;
+    }
+    // Navigate to order page if orderId exists (order notifications)
+    const orderRoute = resolveOrderRoute();
+    if (alert.type === 'order' && orderRoute) {
+      onNavigate(orderRoute);
     }
   };
 
-  const isClickable = alert.type === 'follow' || alert.type === 'favorite';
+  const isClickable =
+    alert.type === 'follow' ||
+    alert.type === 'favorite' ||
+    (alert.type === 'order' && getOrderId());
   const isRequestNotification = alert.type === 'order' && alert.requestId;
 
   // Check if request is already handled
@@ -299,12 +343,23 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                         typeof reqId.serviceId === 'object' ? reqId.serviceId._id : reqId.serviceId;
                       onNavigate(`/job-applicants/${serviceId}`);
                     }
-                  } else if (isClickable && alert.senderId?._id) {
-                    onNavigate(`/profile/${alert.senderId._id}`);
+                  } else {
+                    const orderRoute = resolveOrderRoute();
+                    if (alert.type === 'order' && orderRoute) {
+                      onNavigate(orderRoute);
+                    } else if (isClickable && alert.senderId?._id) {
+                      onNavigate(`/profile/${alert.senderId._id}`);
+                    }
                   }
                 }}
               >
-                {isClickable ? 'Se profil' : alert.requestId ? 'Se søknad' : 'Se varsel'}
+                {isClickable && !getOrderId()
+                  ? 'Se profil'
+                  : alert.requestId
+                    ? 'Se søknad'
+                    : getOrderId()
+                      ? 'Se oppdrag'
+                      : 'Se varsel'}
               </Button>
             )}
           </div>

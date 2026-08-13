@@ -63,7 +63,12 @@ export default function FeatureFlagsPage() {
     return (
       <div className="space-y-6">
         <AdminPageHeader title="Funksjonsflagg" description="Slå funksjoner av og på i plattformen" />
-        <AdminEmptyState title="Ingen funksjonsflagg" description="Det er ingen funksjonsflagg konfigurert ennå." />
+        <AdminEmptyState
+          title="Ingen funksjonsflagg konfigurert"
+          description={
+            'Det finnes ingen funksjonsflagg i systemet akkurat nå. Du kan opprette konfigurasjoner under Globale innstillinger med prefikset "feature_" eller "flag_" hvis du ønsker å bruke denne funksjonaliteten.'
+          }
+        />
       </div>
     );
   }

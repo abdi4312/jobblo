@@ -8,7 +8,7 @@ const Notification = require('../../models/Notification');
 const { asyncHandler, sendSuccess, sendError, buildPagination } = require('../../utils/apiResponse');
 const { parsePagination, parseObjectId, parseSort, parseDate } = require('../../utils/pagination');
 const { logActivity } = require('../../services/admin/activityService');
-const { openDispute } = require('../../services/admin/safePayStateService');
+const { openDispute, DISPUTE_ELIGIBLE_STATUSES } = require('../../services/admin/safePayStateService');
 
 const SORT_FIELDS = ['createdAt', 'updatedAt'];
 const TERMINAL_STATUSES = ['resolved', 'dismissed', 'closed'];
@@ -279,8 +279,7 @@ const createDisputeFromReport = asyncHandler(async (req, res) => {
   const order = await Order.findById(orderId).select('status customerId providerId').lean();
   if (!order) return sendError(res, 'Ordre ikke funnet.', 404);
 
-  const eligible = ['paid', 'in_progress'];
-  if (!eligible.includes(order.status)) {
+  if (!DISPUTE_ELIGIBLE_STATUSES.includes(order.status)) {
     return sendError(res, `Tvist kan ikke åpnes for ordre med status: ${order.status}.`, 400);
   }
 

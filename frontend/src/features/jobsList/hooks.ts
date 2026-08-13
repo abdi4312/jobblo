@@ -86,7 +86,7 @@ export const useJobs = ({
 
     getNextPageParam: (lastPage, allPages) => {
       const currentPage = allPages.length;
-      const totalPages = lastPage.pagination.totalPages;
+      const totalPages = lastPage?.pagination?.totalPages ?? 1;
 
       return currentPage < totalPages ? currentPage + 1 : undefined;
     },

@@ -106,7 +106,11 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
       <div className="box-card-custom p-4 md:p-6 rounded-[14px]">
         <div className="flex items-center justify-between mb-4 md:mb-6">
           <label className="text-[11px] md:text-sm font-bold text-gray-700 uppercase tracking-wider">
-            {paymentType === 'Timepris' ? 'Timepris (NOK) *' : 'Antatt budsjett (NOK) *'}
+            {paymentType === 'Timepris'
+              ? 'Timepris (NOK) *'
+              : paymentType === 'Anbud'
+                ? 'Antatt budsjett (NOK) *'
+                : 'Fastpris (NOK) *'}
           </label>
         </div>
         <div className="relative">
@@ -115,6 +119,7 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
           </span>
           <input
             type="number"
+            min="1"
             value={paymentType === 'Timepris' ? hourlyRate : price}
             onChange={(e) => {
               if (paymentType === 'Timepris') {
@@ -123,7 +128,7 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
                 setPrice(e.target.value);
               }
             }}
-            placeholder="0"
+            placeholder={paymentType === 'Anbud' ? 'f.eks. 5000' : '0'}
             className={`w-full pl-16 md:pl-20 pr-4 md:pr-6 py-3 md:py-4 rounded-xl border bg-white text-lg md:text-xl font-bold text-custom-black outline-none transition-all
               ${errors?.price ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5' : 'border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5'}`}
           />
@@ -133,12 +138,20 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
             <AlertCircle size={12} /> {errors.price}
           </p>
         )}
+        {paymentType === 'Anbud' && (
+          <div className="mt-4 p-3 bg-green-50 rounded-xl border border-green-100 flex items-center gap-3">
+            <Info size={16} className="text-[#2D7A4D] shrink-0" />
+            <p className="text-xs text-green-800 font-medium">
+              Oppgi et antatt budsjett for at oppdragstakere skal ha en økonomisk referanse når de gir anbud.
+            </p>
+          </div>
+        )}
         {paymentType === 'Timepris' && (
           <div className="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100 flex items-center gap-3">
             <Info size={16} className="text-blue-500 shrink-0" />
             <p className="text-xs text-blue-700">
               Totalpris vil bli beregnet automatisk basert på antall timer:{' '}
-              <strong>{price} NOK</strong>
+              <strong>{price || 0} NOK</strong>
             </p>
           </div>
         )}

@@ -52,6 +52,7 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      style={{ touchAction: 'pan-y' }}
     >
       <img
         key={currentIndex}
@@ -68,7 +69,7 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
         <button
           onClick={handlePrevious}
           aria-label="Forrige bilde"
-          className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-10 p-2 sm:p-2.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white hover:text-custom-black hover:scale-110"
+          className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-10 p-3 sm:p-2.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white transition-all duration-200 hover:bg-white hover:text-custom-black hover:scale-110 opacity-100 md:opacity-0 md:group-hover:opacity-100"
         >
           <ChevronLeft size={18} strokeWidth={2.5} />
         </button>
@@ -79,7 +80,7 @@ const JobImageCarousel: React.FC<JobImageCarouselProps> = ({ images }) => {
         <button
           onClick={handleNext}
           aria-label="Neste bilde"
-          className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-10 p-2 sm:p-2.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-white hover:text-custom-black hover:scale-110"
+          className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-10 p-3 sm:p-2.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white transition-all duration-200 hover:bg-white hover:text-custom-black hover:scale-110 opacity-100 md:opacity-0 md:group-hover:opacity-100"
         >
           <ChevronRight size={18} strokeWidth={2.5} />
         </button>

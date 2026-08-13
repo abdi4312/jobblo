@@ -48,6 +48,8 @@ export interface Service {
   status:
     | 'open'
     | 'closed'
+    | 'awaiting_payment'
+    | 'paid'
     | 'in_progress'
     | 'completed'
     | 'pending'

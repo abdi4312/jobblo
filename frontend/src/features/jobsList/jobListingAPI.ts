@@ -75,17 +75,26 @@ export const fetchJobs = async ({
     },
   });
 
-  if (res.data.success && Array.isArray(res.data.data)) {
-    return {
-      data: res.data.data,
-      pagination: res.data.pagination || {
-        total: res.data.count || res.data.data.length,
-        totalPages: 1,
-        page: 1,
-        limit: res.data.data.length,
-      },
-    };
+  const responseData = res.data;
+
+  let rawList: Jobs[] = [];
+  if (Array.isArray(responseData)) {
+    rawList = responseData;
+  } else if (Array.isArray(responseData?.data)) {
+    rawList = responseData.data;
+  } else if (Array.isArray(responseData?.services)) {
+    rawList = responseData.services;
   }
 
-  return res.data;
+  const pagination = responseData?.pagination || {
+    total: responseData?.count || rawList.length,
+    totalPages: Math.max(1, Math.ceil((responseData?.count || rawList.length) / limit)),
+    page: Number(page),
+    limit: Number(limit),
+  };
+
+  return {
+    data: rawList,
+    pagination,
+  };
 };

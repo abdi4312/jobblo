@@ -18,7 +18,16 @@ const mainLink = axios.create({
   withCredentials: true,
 });
 
-// interceptors from lib/axios
+// interceptors from lib/axios (includes normalization of API errors)
 setupInterceptors(mainLink);
+
+// Response interceptor that maps known error shape to simpler form (redundant but safe)
+mainLink.interceptors.response.use((r) => r, (err) => {
+  const data = err?.response?.data;
+  if (data && data.error) {
+    err.apiError = data.error;
+  }
+  return Promise.reject(err);
+});
 
 export default mainLink;

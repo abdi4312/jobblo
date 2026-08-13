@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useCategories } from '../../features/categories/hooks';
-import { Search, Info, Check, Sparkles, Loader2, X, Plus, AlertCircle } from 'lucide-react';
+import { Search, Info, Check, Sparkles, Loader2, X, Plus, AlertCircle, Wand2 } from 'lucide-react';
 import type { CategoryType } from '../../features/categories/types';
 import mainLink from '../../api/mainURLs';
 import toast from 'react-hot-toast';
@@ -22,6 +22,27 @@ interface BasicInformationProps {
   maxApplicants: string | number;
   setMaxApplicants: (val: string | number) => void;
   errors?: any;
+  // BUG-012: optional context for richer AI suggestions
+  durationValue?: string | number;
+  durationUnit?: string;
+  city?: string;
+  countyCode?: string;
+  paymentType?: string;
+  equipment?: string;
+  urgent?: boolean;
+  // Output: which fields were AI-generated (so parent can show labels)
+  onAiGenerated?: (flags: {
+    title?: boolean;
+    description?: boolean;
+    price?: boolean;
+    duration?: boolean;
+    hourlyRate?: boolean;
+    tags?: boolean;
+  }) => void;
+  aiGeneratedFlags?: {
+    title?: boolean;
+    description?: boolean;
+  };
 }
 
 export const BasicInformation: React.FC<BasicInformationProps> = ({
@@ -41,6 +62,15 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
   maxApplicants,
   setMaxApplicants,
   errors,
+  durationValue,
+  durationUnit,
+  city,
+  countyCode,
+  paymentType,
+  equipment,
+  urgent,
+  onAiGenerated,
+  aiGeneratedFlags,
 }) => {
   const { data: categoryData = [], isLoading, error } = useCategories();
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,43 +98,78 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
       return;
     }
 
+    const userHas = {
+      description: description.trim().length >= 20,
+      price: !!price && String(price).length > 0 && Number(price) > 0,
+      hourlyRate: false,
+      duration: !!durationValue && String(durationValue).length > 0 && Number(durationValue) > 0,
+    };
+    const flags: any = {};
+
     setIsGenerating(true);
     try {
       const res = await mainLink.post('/api/ai/generate-job-info', {
         title,
         category: categories,
+        paymentType,
+        duration: durationValue
+          ? { value: durationValue, unit: durationUnit || 'minutes' }
+          : undefined,
+        city,
+        countyCode,
+        equipment,
+        urgent,
+        existingDescription: description || undefined,
       });
 
       if (res.data?.success) {
         const {
           description: aiDesc,
           estimatedPrice,
+          suggestedPrice,
+          priceMin,
           hourlyRate: aiHourlyRate,
           category: aiCategory,
           duration: aiDuration,
           skills: aiSkills,
+          pricingReasoning,
         } = res.data.data;
-        setDescription(aiDesc);
 
+        if (!userHas.description && aiDesc) {
+          setDescription(aiDesc);
+          flags.description = true;
+        }
         if (aiSkills && Array.isArray(aiSkills)) {
           setTags(aiSkills);
+          flags.tags = true;
         }
-
         if (aiHourlyRate) {
           setHourlyRate(aiHourlyRate.toString());
+          flags.hourlyRate = true;
         }
-
-        if (estimatedPrice && !price) {
-          setPrice(estimatedPrice.toString());
+        if (!userHas.price) {
+          const suggested = suggestedPrice ?? estimatedPrice ?? priceMin;
+          if (typeof suggested === 'number' && suggested > 0) {
+            setPrice(suggested.toString());
+            flags.price = true;
+          }
         }
-        if (aiCategory) {
+        if (aiCategory && !categories) {
           setCategories(aiCategory);
         }
-        if (aiDuration && aiDuration.value) {
+        if (!userHas.duration && aiDuration && aiDuration.value) {
           setDurationValue(aiDuration.value.toString());
           setDurationUnit(aiDuration.unit || 'minutes');
+          flags.duration = true;
         }
-        toast.success('Beskrivelse generert med AI!');
+
+        toast.success(
+          `AI foreslo beskrivelse.${
+            pricingReasoning ? ` (Estimat: ${pricingReasoning})` : ''
+          } Rediger fritt.`,
+          { duration: 5000 }
+        );
+        onAiGenerated?.(flags);
       }
     } catch (err: any) {
       console.error(err);
@@ -112,7 +177,10 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
         err.response?.data?.message ||
         err.response?.data?.error ||
         'Kunne ikke generere AI-innhold. Sjekk API-nøkkel.';
-      toast.error(errorMessage);
+      const details = err.response?.data?.validationErrors?.length
+        ? ` (${err.response.data.validationErrors.slice(0, 2).join(', ')})`
+        : '';
+      toast.error(errorMessage + details);
     } finally {
       setIsGenerating(false);
     }
@@ -124,47 +192,89 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
       return;
     }
 
+    const userHas = {
+      title: title.trim().length >= 5,
+      description: description.trim().length >= 20,
+      price: !!price && String(price).length > 0 && Number(price) > 0,
+      duration: !!durationValue && String(durationValue).length > 0 && Number(durationValue) > 0,
+    };
+    const flags: any = {};
+
     setIsGeneratingTitle(true);
     try {
       const res = await mainLink.post('/api/ai/generate-title', {
         description: titleAiPrompt,
+        category: categories,
+        paymentType,
+        duration: durationValue
+          ? { value: durationValue, unit: durationUnit || 'minutes' }
+          : undefined,
+        city,
+        countyCode,
+        equipment,
+        urgent,
       });
 
       if (res.data?.success) {
         const {
           title: aiTitle,
           estimatedPrice,
+          suggestedPrice,
+          priceMin,
           hourlyRate: aiHourlyRate,
           duration: aiDuration,
           skills: aiSkills,
+          pricingReasoning,
         } = res.data.data;
-        setTitle(aiTitle);
 
+        if (!userHas.title && aiTitle) {
+          setTitle(aiTitle);
+          flags.title = true;
+        }
         if (aiSkills && Array.isArray(aiSkills)) {
           setTags(aiSkills);
+          flags.tags = true;
         }
-
         if (aiHourlyRate) {
           setHourlyRate(aiHourlyRate.toString());
+          flags.hourlyRate = true;
         }
-
-        if (aiDuration && aiDuration.value) {
+        if (!userHas.duration && aiDuration && aiDuration.value) {
           setDurationValue(aiDuration.value.toString());
           setDurationUnit(aiDuration.unit || 'minutes');
+          flags.duration = true;
         }
-
-        if (estimatedPrice) {
-          setPrice(estimatedPrice.toString());
+        if (!userHas.price) {
+          const suggested = suggestedPrice ?? estimatedPrice ?? priceMin;
+          if (typeof suggested === 'number' && suggested > 0) {
+            setPrice(suggested.toString());
+            flags.price = true;
+          }
         }
         setShowTitleAiInput(false);
         setTitleAiPrompt('');
-        toast.success('Tittel og pris generert!');
+        const filled: string[] = [];
+        if (flags.title) filled.push('tittel');
+        if (flags.price) filled.push('pris');
+        if (flags.duration) filled.push('varighet');
+        toast.success(
+          filled.length > 0
+            ? `AI foreslo: ${filled.join(', ')}.${
+                pricingReasoning ? ` (Estimat: ${pricingReasoning})` : ''
+              } Rediger fritt.`
+            : `AI ga forslag.${pricingReasoning ? ` (Estimat: ${pricingReasoning})` : ''} Rediger fritt.`,
+          { duration: 5000 }
+        );
+        onAiGenerated?.(flags);
       }
     } catch (err: any) {
       console.error('TITLE GEN ERROR:', err);
       const errorMessage =
         err.response?.data?.error || err.response?.data?.message || 'Kunne ikke generere tittel.';
-      toast.error(errorMessage);
+      const details = err.response?.data?.validationErrors?.length
+        ? ` (${err.response.data.validationErrors.slice(0, 2).join(', ')})`
+        : '';
+      toast.error(errorMessage + details);
     } finally {
       setIsGeneratingTitle(false);
     }
@@ -196,7 +306,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
               Generer med AI
             </button>
             <span
-              className={`text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded-full 
+              className={`text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded-full
               ${title.length > 50 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}
             >
               {title.length}/70
@@ -290,7 +400,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
                   type="button"
                   onClick={() => setCategories(catName)}
                   className={`
-                                        relative group px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-xs md:text-sm font-bold transition-all duration-300 
+                                        relative group px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-xs md:text-sm font-bold transition-all duration-300
                                         border flex items-center justify-between
                                         ${
                                           isSelected

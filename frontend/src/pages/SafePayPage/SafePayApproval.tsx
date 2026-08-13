@@ -16,12 +16,17 @@ import {
   MessageCircle,
   Bell,
   Wallet,
+  Camera,
+  X,
+  ZoomIn,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import mainLink from '../../api/mainURLs';
 import { toast } from 'react-hot-toast';
 import { Button } from '../../components/Ui/button/Button';
 import SafePaySteps from '../../components/SafePay/SafePaySteps';
+import { ContractViewModal } from '../../components/SafePay/ContractViewModal';
 import { useUserStore } from '../../stores/userStore';
 
 // Reusable Star Rating Component
@@ -57,7 +62,6 @@ const StarRating: React.FC<StarRatingProps> = ({
 
   const handleStarClick = (starValue: number) => {
     if (disabled) return;
-    // Mobile behavior: tap same star to deselect
     if (lastTappedStar === starValue) {
       onChange(0);
       setLastTappedStar(null);
@@ -88,7 +92,6 @@ const StarRating: React.FC<StarRatingProps> = ({
 
   return (
     <div className="flex flex-col items-start gap-2">
-      {/* Aria-live region for screen readers */}
       <div aria-live="polite" className="sr-only">
         {displayValue > 0 ? labels[displayValue as keyof typeof labels] : 'Ingen vurdering valgt'}
       </div>
@@ -134,7 +137,6 @@ const StarRating: React.FC<StarRatingProps> = ({
         })}
       </div>
 
-      {/* Contextual Label */}
       {showLabel && displayValue > 0 && (
         <div className="animate-in fade-in slide-in-from-top-2 duration-300">
           <p className="text-sm font-medium text-gray-700">
@@ -146,12 +148,36 @@ const StarRating: React.FC<StarRatingProps> = ({
   );
 };
 
+const ImageLightbox: React.FC<{ url: string; onClose: () => void }> = ({ url, onClose }) => (
+  <div
+    className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4"
+    onClick={onClose}
+    role="dialog"
+    aria-modal="true"
+  >
+    <button
+      onClick={onClose}
+      className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center"
+      aria-label="Lukk"
+    >
+      <X size={20} />
+    </button>
+    <img
+      src={url}
+      alt="Forstørret bilde"
+      className="max-w-full max-h-[90vh] object-contain rounded-lg"
+      onClick={(e) => e.stopPropagation()}
+    />
+  </div>
+);
+
 const SafePayApproval: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { user } = useUserStore();
   const [isSuccess, setIsSuccess] = useState(false);
   const [showSkipDialog, setShowSkipDialog] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   // ── Dispute state ────────────────────────────────────────────────────────
   const [showDisputeDialog, setShowDisputeDialog] = useState(false);
@@ -202,7 +228,6 @@ const SafePayApproval: React.FC = () => {
   ];
 
   const handleOpenDispute = async () => {
-    // Mark all fields touched so errors show
     setDisputeTouched({ reasonCategory: true, title: true, description: true });
     if (!disputeIsValid) return;
     setDisputeSubmitting(true);
@@ -237,6 +262,7 @@ const SafePayApproval: React.FC = () => {
   const [comment, setComment] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [recommendWorker, setRecommendWorker] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   // Fetch Order Details
   const {
@@ -277,9 +303,21 @@ const SafePayApproval: React.FC = () => {
   // Approval Mutation
   const approveMutation = useMutation({
     mutationFn: async () => {
+      // client-side validation: overall must be present
+      if (!ratings || typeof ratings.overall !== 'number' || ratings.overall < 1) {
+        throw new Error('Vennligst gi en helhetlig vurdering (1-5 stjerner)');
+      }
+
+      // construct payload ratings with only provided optional fields
+      const payloadRatings: any = { overall: ratings.overall };
+      if (ratings.punctuality && ratings.punctuality > 0) payloadRatings.punctuality = ratings.punctuality;
+      if (ratings.quality && ratings.quality > 0) payloadRatings.quality = ratings.quality;
+      if (ratings.communication && ratings.communication > 0) payloadRatings.communication = ratings.communication;
+      if (ratings.tidiness && ratings.tidiness > 0) payloadRatings.tidiness = ratings.tidiness;
+
       const res = await mainLink.post('/api/safepay-checkout/approve', {
         orderId,
-        ratings,
+        ratings: payloadRatings,
         comment,
         photos,
         recommendWorker,
@@ -320,6 +358,12 @@ const SafePayApproval: React.FC = () => {
   const handleApprove = () => {
     const allChecked = checklist.every((item) => item.checked);
     if (!allChecked && !showSkipDialog) {
+      toast.error('Merk av alle sjekklistepunktene, eller hopp over sjekklisten.');
+      return;
+    }
+    // Ensure overall rating exists
+    if (!ratings || typeof ratings.overall !== 'number' || ratings.overall < 1) {
+      toast.error('Vennligst gi en helhetlig vurdering (1-5 stjerner)');
       return;
     }
     approveMutation.mutate();
@@ -379,6 +423,12 @@ const SafePayApproval: React.FC = () => {
 
   const isOrderCompleted = orderData.status === 'completed';
 
+  // ── Proof-of-work evidence from the provider ─────────────────────────────
+  const beforeImages: string[] = orderData.beforeImages || [];
+  const afterImages: string[] = orderData.afterImages || [];
+  const completionNote: string | undefined = orderData.completionNote;
+  const hasAnyEvidence = beforeImages.length > 0 || afterImages.length > 0 || !!completionNote;
+
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-[#f5f0e8] flex items-center justify-center px-6">
@@ -428,6 +478,18 @@ const SafePayApproval: React.FC = () => {
         </button>
 
         <SafePaySteps currentStep={4} orderId={orderId} serviceId={orderData.serviceId._id} />
+
+        {/* Contract view link */}
+        <div className="flex justify-end mb-2">
+          <ContractViewModal
+            orderId={orderId!}
+            trigger={
+              <span className="flex items-center gap-1.5 text-[13px] text-[#1a3a1a] font-semibold hover:underline cursor-pointer">
+                <FileText size={14} /> Se kontrakt
+              </span>
+            }
+          />
+        </div>
 
         {/* Job Status Banner */}
         <div className="bg-white border border-black/5 rounded-2xl p-6 mb-4 shadow-sm">
@@ -480,6 +542,127 @@ const SafePayApproval: React.FC = () => {
           </div>
         </div>
 
+        {/* ── Proof of work / Arbeidsbevis (CRITICAL — BEFORE approval) ─────── */}
+        <div className="bg-white border border-black/5 rounded-2xl p-6 mb-4 shadow-sm">
+          <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
+            <Camera size={18} className="text-custom-green" /> Arbeidsbevis / Proof of work
+            <span className="text-[11px] text-gray-400 ml-auto font-normal">Levert av utfører</span>
+          </div>
+
+          {hasAnyEvidence ? (
+            <div className="space-y-4">
+              {/* Completion note first */}
+              {completionNote && (
+                <div className="bg-[#f9f9f7] rounded-xl p-4 border border-black/5">
+                  <p className="text-[11px] text-gray-400 uppercase font-bold tracking-wider mb-1.5">
+                    Ferdigstillingsnotat fra utfører
+                  </p>
+                  <p className="text-[13px] text-gray-700 leading-relaxed">{completionNote}</p>
+                </div>
+              )}
+
+              {/* Before images */}
+              {beforeImages.length > 0 && (
+                <div>
+                  <p className="text-[11px] text-gray-400 uppercase font-bold tracking-wider mb-2">
+                    Før arbeid ({beforeImages.length})
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {beforeImages.map((url, i) => (
+                      <div
+                        key={`b-${i}`}
+                        className="relative aspect-square rounded-xl overflow-hidden bg-[#f9f9f7] group cursor-zoom-in"
+                        onClick={() => setLightboxUrl(url)}
+                      >
+                        {url.toLowerCase().endsWith('.pdf') ? (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
+                            <FileText size={28} />
+                            <span className="text-[10px] mt-1 truncate px-1">PDF #{i + 1}</span>
+                          </div>
+                        ) : (
+                          <img
+                            src={url}
+                            alt={`Før arbeid ${i + 1}`}
+                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          />
+                        )}
+                        <button
+                          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLightboxUrl(url);
+                          }}
+                          aria-label="Forstørr bilde"
+                        >
+                          <ZoomIn size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* After images */}
+              {afterImages.length > 0 && (
+                <div>
+                  <p className="text-[11px] text-gray-400 uppercase font-bold tracking-wider mb-2">
+                    Etter arbeid ({afterImages.length})
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {afterImages.map((url, i) => (
+                      <div
+                        key={`a-${i}`}
+                        className="relative aspect-square rounded-xl overflow-hidden bg-[#f9f9f7] group cursor-zoom-in"
+                        onClick={() => setLightboxUrl(url)}
+                      >
+                        {url.toLowerCase().endsWith('.pdf') ? (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
+                            <FileText size={28} />
+                            <span className="text-[10px] mt-1 truncate px-1">PDF #{i + 1}</span>
+                          </div>
+                        ) : (
+                          <img
+                            src={url}
+                            alt={`Etter arbeid ${i + 1}`}
+                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          />
+                        )}
+                        <button
+                          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLightboxUrl(url);
+                          }}
+                          aria-label="Forstørr bilde"
+                        >
+                          <ZoomIn size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ── Neutral empty state for zero photos ── */
+            <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center bg-[#fafaf8]">
+              <ImageIcon size={40} className="mx-auto text-gray-300 mb-3" />
+              <p className="text-[14px] font-medium text-gray-600 mb-1">
+                Ingen arbeidsbevis lastet opp
+              </p>
+              <p className="text-[12px] text-gray-400 max-w-md mx-auto">
+                Utfører har ikke lastet opp bilder eller dokumentasjon for denne jobben. Du kan
+                fortsatt godkjenne jobben nedenfor hvis alt er i orden, eller åpne en tvist hvis du
+                forventet visuelt bevis.
+              </p>
+              <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-gray-400">
+                <ShieldCheck size={14} className="text-custom-green" />
+                <span>Du kan likevel vurdere jobben nedenfor basert på samtale og resultat.</span>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Checklist */}
         {checklist.length > 0 && (
           <div className="bg-white border border-black/5 rounded-2xl p-6 mb-4 shadow-sm">
@@ -488,32 +671,64 @@ const SafePayApproval: React.FC = () => {
               riktig?
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-              {checklist.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={!isOrderCompleted && !isSuccess ? () => toggleCheck(item.id) : undefined}
-                  className={`flex items-center gap-3 p-3.5 rounded-xl ${isOrderCompleted || isSuccess ? 'cursor-not-allowed' : 'cursor-pointer'
-                    } border transition-all ${item.checked
-                      ? 'bg-[#f0faf0] border-[#c6f0d8]'
-                      : 'bg-[#f9f9f7] border-transparent hover:border-black/10'
-                    }`}
-                >
-                  <div
-                    className={`w-5.5 h-5.5 rounded-md border-2 flex items-center justify-center transition-all ${item.checked
-                        ? 'bg-custom-green border-custom-green'
-                        : 'bg-white border-[#c8d8c8]'
-                      }`}
+              {checklist.map((item) => {
+                const canToggle = !isOrderCompleted && !isSuccess;
+                return (
+                  <label
+                    key={item.id}
+                    htmlFor={`checklist-${item.id}`}
+                    role="button"
+                    tabIndex={canToggle ? 0 : -1}
+                    aria-checked={!!item.checked}
+                    aria-disabled={!canToggle}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (!canToggle) return;
+                      toggleCheck(item.id);
+                    }}
+                    onKeyDown={(e) => {
+                      if (!canToggle) return;
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleCheck(item.id);
+                      }
+                    }}
+                    className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all select-none ${
+                      item.checked
+                        ? 'bg-[#f0faf0] border-[#c6f0d8]'
+                        : 'bg-[#f9f9f7] border-transparent'
+                    } ${canToggle ? 'cursor-pointer hover:border-black/10 hover:bg-[#f0faf0]/50' : 'cursor-not-allowed opacity-90'}`}
                   >
-                    {item.checked && <Check size={14} className="text-white" strokeWidth={3} />}
-                  </div>
-                  <span
-                    className={`text-[13px] font-medium ${item.checked ? 'text-[#166534]' : 'text-gray-600'
+                    <input
+                      id={`checklist-${item.id}`}
+                      type="checkbox"
+                      checked={!!item.checked}
+                      disabled={!canToggle}
+                      onChange={() => {
+                        if (canToggle) toggleCheck(item.id);
+                      }}
+                      className="sr-only"
+                    />
+                    <span
+                      aria-hidden="true"
+                      className={`w-5.5 h-5.5 rounded-md border-2 flex items-center justify-center transition-all ${
+                        item.checked
+                          ? 'bg-custom-green border-custom-green'
+                          : 'bg-white border-[#c8d8c8]'
                       }`}
-                  >
-                    {item.text}
-                  </span>
-                </div>
-              ))}
+                    >
+                      {item.checked && <Check size={14} className="text-white" strokeWidth={3} />}
+                    </span>
+                    <span
+                      className={`text-[13px] font-medium ${
+                        item.checked ? 'text-[#166534]' : 'text-gray-600'
+                      }`}
+                    >
+                      {item.text}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
 
             {/* Skip option */}
@@ -548,40 +763,60 @@ const SafePayApproval: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                {[
-                  { id: 'punctuality', label: 'Punktlighet' },
-                  { id: 'quality', label: 'Kvalitet' },
-                  { id: 'communication', label: 'Kommunikasjon' },
-                  { id: 'tidiness', label: 'Ryddighet' },
-                ].map((cat) => (
-                  <div key={cat.id} className="bg-[#f9f9f7] rounded-xl p-3">
-                    <div className="text-[11px] text-gray-400 uppercase font-bold mb-2 tracking-wider">
-                      {cat.label}
+              <div className="mb-4">
+                {!showDetails ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowDetails(true)}
+                    className="text-sm text-gray-600 underline"
+                  >
+                    Gi mer detaljert vurdering (valgfritt)
+                  </button>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                      {[
+                        { id: 'punctuality', label: 'Punktlighet' },
+                        { id: 'quality', label: 'Kvalitet' },
+                        { id: 'communication', label: 'Kommunikasjon' },
+                        { id: 'tidiness', label: 'Ryddighet' },
+                      ].map((cat) => (
+                        <div key={cat.id} className="bg-[#f9f9f7] rounded-xl p-3">
+                          <div className="text-[11px] text-gray-400 uppercase font-bold mb-2 tracking-wider">
+                            {cat.label}
+                          </div>
+                          <StarRating
+                            value={(ratings as any)[cat.id]}
+                            onChange={(val) => setRatings((prev) => ({ ...prev, [cat.id]: val }))}
+                            disabled={isOrderCompleted}
+                            size={14}
+                            showLabel={false}
+                          />
+                        </div>
+                      ))}
                     </div>
-                    <StarRating
-                      value={(ratings as any)[cat.id]}
-                      onChange={(val) => setRatings((prev) => ({ ...prev, [cat.id]: val }))}
-                      disabled={isOrderCompleted}
-                      size={14}
-                      showLabel={false}
-                    />
-                  </div>
-                ))}
+                    <button type="button" onClick={() => setShowDetails(false)} className="text-sm text-gray-500 underline">
+                      Skjul detaljert vurdering
+                    </button>
+                  </>
+                )}
               </div>
 
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 disabled={isOrderCompleted}
-                className={`w-full bg-white border border-black/10 rounded-xl p-4 text-[13px] text-gray-800 outline-none focus:border-custom-green min-h-[100px] ${isOrderCompleted ? 'cursor-not-allowed bg-gray-50' : ''
-                  }`}
+                className={`w-full bg-white border border-black/10 rounded-xl p-4 text-[13px] text-gray-800 outline-none focus:border-custom-green min-h-[100px] ${
+                  isOrderCompleted ? 'cursor-not-allowed bg-gray-50' : ''
+                }`}
                 placeholder="Skriv en anmeldelse..."
               />
 
-              {/* Photos Upload */}
+              {/* Photos Upload — Customer's own photos for review */}
               <div className="mt-6">
-                <p className="text-[13px] text-gray-500 mb-2">Legg til bilder (frivillig)</p>
+                <p className="text-[13px] text-gray-500 mb-2">
+                  Legg til dine egne bilder (frivillig)
+                </p>
                 {photos.length > 0 && (
                   <div className="grid grid-cols-3 gap-3 mb-3">
                     {photos.map((photo, index) => (
@@ -634,7 +869,7 @@ const SafePayApproval: React.FC = () => {
                     className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-custom-green transition-colors"
                   >
                     <FileText size={18} className="text-gray-400" />
-                    <span className="text-[13px] text-gray-500">Last opp bilder</span>
+                    <span className="text-[13px] text-gray-500">Last opp dine egne bilder</span>
                   </label>
                 )}
               </div>
@@ -642,17 +877,19 @@ const SafePayApproval: React.FC = () => {
               {/* Recommend Worker Checkbox */}
               <div className="mt-6">
                 <div
-                  className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${recommendWorker
+                  className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${
+                    recommendWorker
                       ? 'bg-[#f0faf0] border-[#c6f0d8]'
                       : 'bg-[#f9f9f7] border-transparent hover:border-black/10'
-                    } ${isOrderCompleted ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                  } ${isOrderCompleted ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                   onClick={() => !isOrderCompleted && setRecommendWorker(!recommendWorker)}
                 >
                   <div
-                    className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${recommendWorker
+                    className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
+                      recommendWorker
                         ? 'bg-custom-green border-custom-green'
                         : 'bg-white border-[#c8d8c8]'
-                      }`}
+                    }`}
                   >
                     {recommendWorker && <Check size={16} className="text-white" strokeWidth={3} />}
                   </div>
@@ -692,9 +929,9 @@ const SafePayApproval: React.FC = () => {
                         size={20}
                         className={
                           star <=
-                            (orderData.providerId.averageRating
-                              ? Math.round(orderData.providerId.averageRating)
-                              : 5)
+                          (orderData.providerId.averageRating
+                            ? Math.round(orderData.providerId.averageRating)
+                            : 5)
                             ? 'text-[#F59E0B] fill-[#F59E0B]'
                             : 'text-[#d1d5db]'
                         }
@@ -703,8 +940,9 @@ const SafePayApproval: React.FC = () => {
                   </div>
                   <div className="text-sm text-gray-600">
                     {orderData.providerId.averageRating
-                      ? `${orderData.providerId.averageRating.toFixed(1)} av 5 • ${orderData.providerId.completedJobs || 0
-                      } fullførte jobber`
+                      ? `${orderData.providerId.averageRating.toFixed(1)} av 5 • ${
+                          orderData.providerId.completedJobs || 0
+                        } fullførte jobber`
                       : '4.7 av 5 · 12 vurderinger'}
                   </div>
                 </div>
@@ -743,12 +981,13 @@ const SafePayApproval: React.FC = () => {
                   Status
                 </span>
                 <span
-                  className={`text-sm font-bold px-3 py-1 rounded-full ${orderData.status === 'completed'
+                  className={`text-sm font-bold px-3 py-1 rounded-full ${
+                    orderData.status === 'completed'
                       ? 'bg-emerald-100 text-emerald-700'
                       : orderData.status === 'paid'
                         ? 'bg-blue-100 text-blue-700'
                         : 'bg-amber-100 text-amber-700'
-                    }`}
+                  }`}
                 >
                   {orderData.status === 'completed'
                     ? 'Fullført'
@@ -875,10 +1114,11 @@ const SafePayApproval: React.FC = () => {
                       setDisputeTouched((t) => ({ ...t, reasonCategory: true }));
                     }}
                     onBlur={() => setDisputeTouched((t) => ({ ...t, reasonCategory: true }))}
-                    className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${disputeTouched.reasonCategory && disputeErrors.reasonCategory
+                    className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${
+                      disputeTouched.reasonCategory && disputeErrors.reasonCategory
                         ? 'border-red-400 bg-red-50'
                         : 'border-gray-300'
-                      }`}
+                    }`}
                   >
                     <option value="">Velg årsak…</option>
                     {DISPUTE_REASON_OPTIONS.map((o) => (
@@ -914,10 +1154,11 @@ const SafePayApproval: React.FC = () => {
                       setDisputeTouched((t) => ({ ...t, title: true }));
                     }}
                     onBlur={() => setDisputeTouched((t) => ({ ...t, title: true }))}
-                    className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${disputeTouched.title && disputeErrors.title
+                    className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${
+                      disputeTouched.title && disputeErrors.title
                         ? 'border-red-400 bg-red-50'
                         : 'border-gray-300'
-                      }`}
+                    }`}
                   />
                   {disputeTouched.title && disputeErrors.title && (
                     <p className="mt-1 text-xs text-red-500">{disputeErrors.title}</p>
@@ -946,10 +1187,11 @@ const SafePayApproval: React.FC = () => {
                       setDisputeTouched((t) => ({ ...t, description: true }));
                     }}
                     onBlur={() => setDisputeTouched((t) => ({ ...t, description: true }))}
-                    className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 resize-none ${disputeTouched.description && disputeErrors.description
+                    className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 resize-none ${
+                      disputeTouched.description && disputeErrors.description
                         ? 'border-red-400 bg-red-50'
                         : 'border-gray-300'
-                      }`}
+                    }`}
                   />
                   {disputeTouched.description && disputeErrors.description && (
                     <p className="mt-1 text-xs text-red-500">{disputeErrors.description}</p>
@@ -990,6 +1232,9 @@ const SafePayApproval: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Lightbox for evidence images */}
+      {lightboxUrl && <ImageLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
     </div>
   );
 };

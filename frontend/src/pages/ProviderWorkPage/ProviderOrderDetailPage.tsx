@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     ArrowLeft, ShieldCheck, MessageCircle, Play, CheckSquare,
     Upload, Clock, AlertTriangle, FileText, Check, ChevronRight,
-    Loader2, Camera, TrendingUp, Star,
+    Loader2, Camera, TrendingUp, Star, X, Image as ImageIcon, ZoomIn, Trash2,
 } from 'lucide-react';
 import mainLink from '../../api/mainURLs';
 import { toast } from 'react-hot-toast';
 import { useUserStore } from '../../stores/userStore';
 import { Button } from '../../components/Ui/button/Button';
+import { ContractViewModal } from '../../components/SafePay/ContractViewModal';
 
 // ── Status config ──────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -31,9 +32,35 @@ const ACTION_LABELS: Record<string, string> = {
     work_approved: 'Jobb godkjent',
     job_completed: 'Fullført',
     evidence_uploaded: 'Bevis lastet opp',
+    evidence_removed: 'Bevis fjernet',
     dispute_opened: 'Tvist åpnet',
     payout_approved: 'Utbetaling godkjent',
 };
+
+const DISPUTE_REASON_OPTIONS = [
+    { value: 'work_not_completed', label: 'Jobb ikke fullført' },
+    { value: 'poor_quality', label: 'Dårlig kvalitet' },
+    { value: 'different_from_agreement', label: 'Avviker fra avtalen' },
+    { value: 'customer_not_cooperating', label: 'Kunde samarbeider ikke' },
+    { value: 'provider_not_cooperating', label: 'Tilbyder samarbeider ikke' },
+    { value: 'payment_issue', label: 'Betalingsproblem' },
+    { value: 'unauthorized_payment', label: 'Uautorisert betaling' },
+    { value: 'fraud_or_scam', label: 'Svindel eller bedrageri' },
+    { value: 'damaged_property', label: 'Skadet eiendom' },
+    { value: 'other', label: 'Annet' },
+];
+
+const MAX_IMAGES_PER_TYPE = 10;
+const ALLOWED_MIME = 'image/jpeg,image/png,image/webp,application/pdf';
+const MAX_FILE_MB = 10;
+
+type EvidenceTab = 'before' | 'after';
+
+interface PendingFile {
+    file: File;
+    preview: string;
+    id: string;
+}
 
 const MiniStarRating: React.FC<{ value: number; onChange: (v: number) => void; size?: number }> = ({ value, onChange, size = 24 }) => {
     const [hover, setHover] = useState<number | null>(null);
@@ -59,19 +86,58 @@ const MiniStarRating: React.FC<{ value: number; onChange: (v: number) => void; s
     );
 };
 
+const ImageLightbox: React.FC<{ url: string; onClose: () => void }> = ({ url, onClose }) => (
+    <div
+        className="fixed inset-0 bg-black/85 z-[100] flex items-center justify-center p-4"
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+    >
+        <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center"
+            aria-label="Lukk"
+        >
+            <X size={20} />
+        </button>
+        <img
+            src={url}
+            alt="Forstørret bilde"
+            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+        />
+    </div>
+);
+
 const ProviderOrderDetailPage: React.FC = () => {
     const { orderId } = useParams<{ orderId: string }>();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const user = useUserStore((s) => s.user);
-    const [showEvidence, setShowEvidence] = useState(false);
-    const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+
+    // ── Evidence / proof-of-work state ────────────────────────────────────────
+    const [evidenceTab, setEvidenceTab] = useState<EvidenceTab>('after');
+    const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
     const [completionNote, setCompletionNote] = useState('');
+    const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
     // Provider review state
     const [showReviewForm, setShowReviewForm] = useState(false);
     const [reviewRating, setReviewRating] = useState(0);
     const [reviewComment, setReviewComment] = useState('');
+
+    // Dispute state
+    const [showDisputeDialog, setShowDisputeDialog] = useState(false);
+    const [disputeForm, setDisputeForm] = useState({
+        reasonCategory: '',
+        title: '',
+        description: '',
+    });
+    const [disputeTouched, setDisputeTouched] = useState({
+        reasonCategory: false,
+        title: false,
+        description: false,
+    });
 
     const { data, isLoading, error } = useQuery({
         queryKey: ['provider-order', orderId],
@@ -107,21 +173,58 @@ const ProviderOrderDetailPage: React.FC = () => {
     const evidenceMutation = useMutation({
         mutationFn: async () => {
             const fd = new FormData();
-            evidenceFiles.forEach((f) => fd.append('files', f));
+            const tabFiles = pendingFiles.filter((f) => f.file);
+            tabFiles.forEach((pf) => fd.append('files', pf.file));
             if (completionNote) fd.append('completionNote', completionNote);
-            fd.append('evidenceType', 'after');
+            fd.append('evidenceType', evidenceTab);
             return mainLink.post(`/api/safepay/orders/${orderId}/evidence`, fd, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
         },
         onSuccess: () => {
             toast.success('Bevis lastet opp!');
-            setEvidenceFiles([]);
+            pendingFiles.forEach((pf) => URL.revokeObjectURL(pf.preview));
+            setPendingFiles([]);
             setCompletionNote('');
-            setShowEvidence(false);
             invalidate();
         },
         onError: (e: any) => toast.error(e.response?.data?.error || 'Opplasting feilet'),
+    });
+
+    const removeUploadedMutation = useMutation({
+        mutationFn: async ({ url, evidenceType }: { url: string; evidenceType: EvidenceTab }) =>
+            mainLink.delete(`/api/safepay/orders/${orderId}/evidence`, { data: { url, evidenceType } }),
+        onSuccess: () => {
+            toast.success('Bilde fjernet');
+            invalidate();
+        },
+        onError: (e: any) => toast.error(e.response?.data?.error || 'Kunne ikke fjerne bildet'),
+    });
+
+    // Dispute mutation
+    const disputeMutation = useMutation({
+        mutationFn: async () => {
+            const res = await mainLink.post(`/api/safepay/contract/${orderId}/dispute`, {
+                reasonCategory: disputeForm.reasonCategory,
+                title: disputeForm.title.trim(),
+                description: disputeForm.description.trim(),
+            });
+            return res.data;
+        },
+        onSuccess: () => {
+            toast.success('Tvist opprettet. Admin vil gjennomgå saken.');
+            setShowDisputeDialog(false);
+            setDisputeForm({ reasonCategory: '', title: '', description: '' });
+            setDisputeTouched({ reasonCategory: false, title: false, description: false });
+            invalidate();
+        },
+        onError: (err: any) => {
+            const msg =
+                err?.response?.data?.message ??
+                err?.response?.data?.error ??
+                'Noe gikk galt. Prøv igjen.';
+            toast.error(msg);
+        },
     });
 
     // Check if provider already reviewed this order
@@ -160,6 +263,68 @@ const ProviderOrderDetailPage: React.FC = () => {
         onError: (e: any) => toast.error(e.response?.data?.error || 'Kunne ikke sende vurdering'),
     });
 
+    // Dispute form validation
+    const disputeErrors = {
+        reasonCategory: !disputeForm.reasonCategory ? 'Velg en årsak' : '',
+        title: !disputeForm.title.trim()
+            ? 'Tittel er påkrevd'
+            : disputeForm.title.trim().length < 5
+                ? 'Minst 5 tegn'
+                : disputeForm.title.trim().length > 200
+                    ? 'Maks 200 tegn'
+                    : '',
+        description: !disputeForm.description.trim()
+            ? 'Beskrivelse er påkrevd'
+            : disputeForm.description.trim().length < 20
+                ? 'Minst 20 tegn'
+                : disputeForm.description.trim().length > 2000
+                    ? 'Maks 2000 tegn'
+                    : '',
+    };
+    const disputeIsValid =
+        !disputeErrors.reasonCategory && !disputeErrors.title && !disputeErrors.description;
+
+    const openDispute = () => {
+        setDisputeTouched({ reasonCategory: true, title: true, description: true });
+        if (!disputeIsValid) return;
+        disputeMutation.mutate();
+    };
+
+    // ── Evidence helpers ───────────────────────────────────────────────────────
+    const addPendingFiles = (fl: FileList | File[]) => {
+        const list = Array.from(fl);
+        const tabUploadedCount = data?.order
+            ? (evidenceTab === 'before' ? (data.order.beforeImages?.length || 0) : (data.order.afterImages?.length || 0))
+            : 0;
+        const allowedSlots = MAX_IMAGES_PER_TYPE - tabUploadedCount - pendingFiles.length;
+        if (allowedSlots <= 0) {
+            toast.error(`Maks ${MAX_IMAGES_PER_TYPE} bilder i kategorien "${evidenceTab === 'before' ? 'Før arbeid' : 'Etter arbeid'}"`);
+            return;
+        }
+        const accepted: PendingFile[] = [];
+        for (const f of list) {
+            if (accepted.length >= allowedSlots) break;
+            // Frontend validation mirrors backend — user gets fast feedback
+            const okMime = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(f.type);
+            if (!okMime) { toast.error(`Ugyldig filtype: ${f.name}. Tillatt: JPEG, PNG, WebP, PDF.`); continue; }
+            if (f.size > MAX_FILE_MB * 1024 * 1024) { toast.error(`Fil for stor (maks ${MAX_FILE_MB} MB): ${f.name}`); continue; }
+            accepted.push({
+                file: f,
+                preview: f.type.startsWith('image/') ? URL.createObjectURL(f) : '',
+                id: `${f.name}-${f.size}-${Math.random().toString(36).slice(2, 8)}`,
+            });
+        }
+        setPendingFiles((prev) => [...prev, ...accepted]);
+    };
+
+    const removePendingFile = (id: string) => {
+        setPendingFiles((prev) => {
+            const found = prev.find((p) => p.id === id);
+            if (found?.preview) URL.revokeObjectURL(found.preview);
+            return prev.filter((p) => p.id !== id);
+        });
+    };
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-[#f5f0e8]">
@@ -185,15 +350,39 @@ const ProviderOrderDetailPage: React.FC = () => {
     const canUpload = isProvider && ['paid', 'in_progress'].includes(status);
     const canMarkReady = isProvider && status === 'in_progress' && !activeDispute;
     const canApprove = isCustomer && status === 'ready_for_review' && !activeDispute;
+    const canRaiseDispute =
+        isProvider &&
+        !activeDispute &&
+        ['paid', 'in_progress', 'ready_for_review'].includes(status);
+
+    const beforeImgs: string[] = order.beforeImages || [];
+    const afterImgs: string[] = order.afterImages || [];
+    const tabUploadedUrls = evidenceTab === 'before' ? beforeImgs : afterImgs;
+    const tabTotalUsed = tabUploadedUrls.length + pendingFiles.length;
+
+    // ponytail: show evidence section whenever there's anything uploaded OR user can upload;
+    // otherwise it collapses for statuses outside the provider's active-work window
+    const showEvidenceSection = canUpload || beforeImgs.length > 0 || afterImgs.length > 0;
+    const evidenceLocked = !canUpload;
 
     return (
         <div className="min-h-screen bg-[#f5f0e8] pb-16">
             <div className="max-w-3xl mx-auto px-4 py-8">
 
-                {/* Back */}
-                <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-800 mb-6">
-                    <ArrowLeft size={15} /> Tilbake
-                </button>
+                {/* Back + contract view */}
+                <div className="flex items-center justify-between mb-6">
+                    <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-800">
+                        <ArrowLeft size={15} /> Tilbake
+                    </button>
+                    <ContractViewModal
+                        orderId={orderId!}
+                        trigger={
+                            <span className="flex items-center gap-1.5 text-[13px] text-[#1a3a1a] font-semibold hover:underline cursor-pointer">
+                                <FileText size={14} /> Se kontrakt
+                            </span>
+                        }
+                    />
+                </div>
 
                 {/* Header card */}
                 <div className="bg-[#1a3a1a] rounded-2xl p-5 mb-4 text-white">
@@ -273,39 +462,286 @@ const ProviderOrderDetailPage: React.FC = () => {
                                 const completed = item.providerCompleted ?? item.checked;
                                 const canToggle = isProvider && ['paid', 'in_progress'].includes(status);
                                 return (
-                                    <div
+                                    <label
                                         key={item.id}
-                                        onClick={() => canToggle && checklistMutation.mutate({ itemId: item.id, val: !completed })}
-                                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${completed ? 'bg-[#f0faf0] border-[#c6f0d8]' : 'bg-[#f9f9f7] border-transparent'
-                                            } ${canToggle ? 'cursor-pointer hover:border-black/10' : 'cursor-default'}`}
+                                        htmlFor={`provider-check-${item.id}`}
+                                        role="button"
+                                        tabIndex={canToggle ? 0 : -1}
+                                        aria-checked={!!completed}
+                                        aria-disabled={!canToggle}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            if (!canToggle) return;
+                                            checklistMutation.mutate({ itemId: item.id, val: !completed });
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (!canToggle) return;
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                checklistMutation.mutate({ itemId: item.id, val: !completed });
+                                            }
+                                        }}
+                                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all select-none ${completed ? 'bg-[#f0faf0] border-[#c6f0d8]' : 'bg-[#f9f9f7] border-transparent'
+                                            } ${canToggle ? 'cursor-pointer hover:border-black/10 hover:bg-[#f0faf0]/50' : 'cursor-default opacity-90'}`}
                                     >
-                                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${completed ? 'bg-custom-green border-custom-green' : 'border-gray-300'}`}>
+                                        <input
+                                            id={`provider-check-${item.id}`}
+                                            type="checkbox"
+                                            checked={!!completed}
+                                            disabled={!canToggle}
+                                            onChange={() => {
+                                                if (canToggle) {
+                                                    checklistMutation.mutate({ itemId: item.id, val: !completed });
+                                                }
+                                            }}
+                                            className="sr-only"
+                                        />
+                                        <span
+                                            aria-hidden="true"
+                                            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${completed ? 'bg-custom-green border-custom-green' : 'border-gray-300 bg-white'}`}
+                                        >
                                             {completed && <Check size={12} className="text-white" strokeWidth={3} />}
-                                        </div>
+                                        </span>
                                         <span className={`text-[13px] flex-1 ${completed ? 'text-[#166534]' : 'text-gray-600'}`}>{item.text}</span>
                                         {item.customerConfirmed && (
                                             <span className="text-[10px] text-custom-green font-medium">✓ Bekreftet</span>
                                         )}
-                                    </div>
+                                    </label>
                                 );
                             })}
                         </div>
                     </div>
                 )}
 
-                {/* Evidence images */}
-                {(order.afterImages?.length > 0 || order.beforeImages?.length > 0) && (
+                {/* ── Proof of work / Arbeidsbevis (Step 3 — PERMANENT section) ────── */}
+                {showEvidenceSection && (
+                    <div className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-black/5">
+                        <div className="flex items-center justify-between mb-3">
+                            <h2 className="font-semibold text-[14px] text-gray-800 flex items-center gap-2">
+                                <Camera size={15} className="text-custom-green" /> Arbeidsbevis / Proof of work
+                            </h2>
+                            {evidenceLocked && (
+                                <span className="text-[11px] text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full font-medium">
+                                    Låst for gjennomgang
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Before / After selector */}
+                        <div className="flex gap-2 mb-3">
+                            {(['after', 'before'] as EvidenceTab[]).map((tab) => {
+                                const count = (tab === 'before' ? beforeImgs : afterImgs).length
+                                    + (evidenceTab === tab ? pendingFiles.length : 0);
+                                const active = evidenceTab === tab;
+                                return (
+                                    <button
+                                        key={tab}
+                                        type="button"
+                                        onClick={() => setEvidenceTab(tab)}
+                                        className={`flex-1 py-2 px-3 rounded-xl text-[13px] font-medium transition-colors ${active
+                                            ? 'bg-custom-green text-white shadow-sm'
+                                            : 'bg-[#f9f9f7] text-gray-600 hover:bg-gray-100'
+                                            }`}
+                                    >
+                                        {tab === 'before' ? 'Før arbeid' : 'Etter arbeid'}
+                                        <span className={`ml-1.5 text-[11px] ${active ? 'text-white/80' : 'text-gray-400'}`}>
+                                            ({count})
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Completion note — only on "after" tab, as it's final completion text */}
+                        {evidenceTab === 'after' && !evidenceLocked && (
+                            <textarea
+                                value={completionNote}
+                                onChange={(e) => setCompletionNote(e.target.value)}
+                                placeholder="Ferdigstillingsnotat (valgfritt) — beskriv hva som ble gjort..."
+                                className="w-full border border-black/10 rounded-xl p-3 text-[13px] min-h-[70px] outline-none focus:border-custom-green mb-3 resize-none"
+                            />
+                        )}
+                        {evidenceTab === 'after' && order.completionNote && (
+                            <p className="mb-3 text-[13px] text-gray-600 bg-[#f9f9f7] p-3 rounded-xl border border-black/5">
+                                <span className="font-medium text-gray-700">Notat: </span>
+                                {order.completionNote}
+                            </p>
+                        )}
+
+                        {/* Already-uploaded images for active tab */}
+                        {tabUploadedUrls.length > 0 && (
+                            <div className="mb-3">
+                                <p className="text-[11px] text-gray-400 uppercase font-bold tracking-wider mb-2">
+                                    Lastet opp ({tabUploadedUrls.length}/{MAX_IMAGES_PER_TYPE})
+                                </p>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {tabUploadedUrls.map((url, i) => (
+                                        <div
+                                            key={url}
+                                            className="relative aspect-square rounded-xl overflow-hidden bg-[#f9f9f7] group"
+                                        >
+                                            {url.toLowerCase().endsWith('.pdf') ? (
+                                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
+                                                    <FileText size={28} />
+                                                    <span className="text-[10px] mt-1 truncate px-1">PDF</span>
+                                                </div>
+                                            ) : (
+                                                <img
+                                                    src={url}
+                                                    alt={`${evidenceTab} ${i + 1}`}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            )}
+                                            <button
+                                                onClick={() => setLightboxUrl(url)}
+                                                className="absolute top-1.5 left-1.5 w-7 h-7 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                                aria-label="Forstørr"
+                                            >
+                                                <ZoomIn size={14} />
+                                            </button>
+                                            {!evidenceLocked && (
+                                                <button
+                                                    onClick={() => removeUploadedMutation.mutate({ url, evidenceType: evidenceTab })}
+                                                    disabled={removeUploadedMutation.isPending}
+                                                    className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-red-500/90 text-white hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center disabled:opacity-50"
+                                                    aria-label="Fjern bilde"
+                                                >
+                                                    {removeUploadedMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Pending / not-yet-uploaded previews */}
+                        {pendingFiles.length > 0 && (
+                            <div className="mb-3">
+                                <p className="text-[11px] text-gray-400 uppercase font-bold tracking-wider mb-2">
+                                    Klare for opplasting ({pendingFiles.length})
+                                </p>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {pendingFiles.map((pf) => (
+                                        <div
+                                            key={pf.id}
+                                            className="relative aspect-square rounded-xl overflow-hidden bg-[#f0faf0] border border-dashed border-[#c6f0d8]"
+                                        >
+                                            {pf.preview ? (
+                                                <img src={pf.preview} alt="Forhåndsvisning" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
+                                                    <FileText size={24} />
+                                                    <span className="text-[10px] mt-1 truncate px-2">{pf.file.name}</span>
+                                                </div>
+                                            )}
+                                            <button
+                                                onClick={() => removePendingFile(pf.id)}
+                                                className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-red-500/90 text-white hover:bg-red-600 flex items-center justify-center"
+                                                aria-label="Fjern"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Empty state (when upload is allowed but nothing in tab yet) */}
+                        {!evidenceLocked && tabUploadedUrls.length === 0 && pendingFiles.length === 0 && (
+                            <div className="mb-3 border-2 border-dashed border-gray-200 rounded-xl p-6 text-center bg-[#fafaf8]">
+                                <ImageIcon size={32} className="mx-auto text-gray-300 mb-2" />
+                                <p className="text-[13px] text-gray-500">Ingen bilder lastet opp i denne kategorien enda.</p>
+                            </div>
+                        )}
+
+                        {/* Upload controls — only when not locked */}
+                        {!evidenceLocked && (
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-[11px] text-gray-400">
+                                        Tillatt: JPEG / PNG / WebP / PDF — maks {MAX_FILE_MB} MB, {MAX_IMAGES_PER_TYPE} bilder per kategori.
+                                        {tabTotalUsed > 0 && <span className="ml-1">({tabTotalUsed}/{MAX_IMAGES_PER_TYPE} brukt)</span>}
+                                    </p>
+                                </div>
+                                <label
+                                    className={`block w-full border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${tabTotalUsed >= MAX_IMAGES_PER_TYPE
+                                        ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+                                        : 'border-gray-200 hover:border-custom-green bg-[#fafaf8] hover:bg-[#f0faf0]/40'
+                                        }`}
+                                >
+                                    <input
+                                        type="file"
+                                        multiple
+                                        accept={ALLOWED_MIME}
+                                        disabled={tabTotalUsed >= MAX_IMAGES_PER_TYPE || evidenceMutation.isPending}
+                                        onChange={(e) => e.target.files && addPendingFiles(e.target.files)}
+                                        className="hidden"
+                                    />
+                                    <Upload size={18} className="mx-auto mb-1.5 text-custom-green" />
+                                    <p className="text-[13px] text-gray-600 font-medium">
+                                        {tabTotalUsed >= MAX_IMAGES_PER_TYPE
+                                            ? `Maks ${MAX_IMAGES_PER_TYPE} nådd`
+                                            : 'Klikk for å velge filer, eller dra-slipp (støtter bilder + PDF)'}
+                                    </p>
+                                </label>
+                                <div className="flex gap-2">
+                                    <Button
+                                        onClick={() => evidenceMutation.mutate()}
+                                        loading={evidenceMutation.isPending}
+                                        disabled={pendingFiles.length === 0 && evidenceTab === 'after' ? !completionNote : pendingFiles.length === 0}
+                                        label={evidenceMutation.isPending ? 'Laster opp...' : `Last opp (${pendingFiles.length})${evidenceTab === 'after' && completionNote ? ' + notat' : ''}`}
+                                        className="bg-custom-green text-white rounded-full px-5 py-2.5 text-[13px] font-medium flex-1"
+                                    />
+                                    {pendingFiles.length > 0 && (
+                                        <button
+                                            onClick={() => {
+                                                pendingFiles.forEach((pf) => pf.preview && URL.revokeObjectURL(pf.preview));
+                                                setPendingFiles([]);
+                                            }}
+                                            className="rounded-full px-5 py-2.5 text-[13px] border border-gray-200 text-gray-600 hover:bg-gray-50"
+                                        >
+                                            Tøm
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {evidenceLocked && (
+                            <p className="text-[12px] text-purple-700 bg-purple-50 rounded-xl p-3 mt-1">
+                                Bilder er låst. Jobben har blitt sendt til gjennomgang. Hvis du trenger å endre noe, vennligst kontakt oppdragsgiver.
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {/* Evidence images (legacy compact view — summary of both types if any exist) */}
+                {((beforeImgs.length > 0 || afterImgs.length > 0) && !showEvidenceSection) && (
                     <div className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-black/5">
                         <h2 className="font-semibold text-[14px] text-gray-800 mb-3 flex items-center gap-2">
-                            <Camera size={15} className="text-custom-green" /> Bevis
+                            <Camera size={15} className="text-custom-green" /> Arbeidsbevis
                         </h2>
-                        <div className="grid grid-cols-3 gap-2">
-                            {[...(order.beforeImages || []), ...(order.afterImages || [])].map((url: string, i: number) => (
-                                <img key={i} src={url} alt="bevis" className="w-full aspect-square object-cover rounded-xl" />
-                            ))}
-                        </div>
-                        {order.completionNote && (
-                            <p className="mt-3 text-[13px] text-gray-600 bg-[#f9f9f7] p-3 rounded-xl">{order.completionNote}</p>
+                        {beforeImgs.length > 0 && (
+                            <>
+                                <p className="text-[11px] text-gray-400 uppercase font-bold tracking-wider mb-2">Før arbeid ({beforeImgs.length})</p>
+                                <div className="grid grid-cols-3 gap-2 mb-3">
+                                    {beforeImgs.map((url, i) => (
+                                        <img key={`b-${i}`} src={url} alt={`før ${i + 1}`} className="w-full aspect-square object-cover rounded-xl cursor-pointer" onClick={() => setLightboxUrl(url)} />
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                        {afterImgs.length > 0 && (
+                            <>
+                                <p className="text-[11px] text-gray-400 uppercase font-bold tracking-wider mb-2">Etter arbeid ({afterImgs.length})</p>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {afterImgs.map((url, i) => (
+                                        <img key={`a-${i}`} src={url} alt={`etter ${i + 1}`} className="w-full aspect-square object-cover rounded-xl cursor-pointer" onClick={() => setLightboxUrl(url)} />
+                                    ))}
+                                </div>
+                            </>
                         )}
                     </div>
                 )}
@@ -326,39 +762,6 @@ const ProviderOrderDetailPage: React.FC = () => {
                                     </div>
                                 </div>
                             ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Evidence upload panel */}
-                {showEvidence && canUpload && (
-                    <div className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-black/5">
-                        <h2 className="font-semibold text-[14px] text-gray-800 mb-3">Last opp bevis</h2>
-                        <input
-                            type="file"
-                            multiple
-                            accept="image/jpeg,image/png,image/webp,application/pdf"
-                            onChange={(e) => setEvidenceFiles(Array.from(e.target.files || []))}
-                            className="block w-full text-[13px] mb-3"
-                        />
-                        {evidenceFiles.length > 0 && (
-                            <p className="text-[12px] text-gray-500 mb-2">{evidenceFiles.length} fil(er) valgt</p>
-                        )}
-                        <textarea
-                            value={completionNote}
-                            onChange={(e) => setCompletionNote(e.target.value)}
-                            placeholder="Ferdigstillingsnotat (valgfritt)..."
-                            className="w-full border border-black/10 rounded-xl p-3 text-[13px] min-h-[80px] outline-none focus:border-custom-green mb-3"
-                        />
-                        <div className="flex gap-2">
-                            <Button
-                                onClick={() => evidenceMutation.mutate()}
-                                loading={evidenceMutation.isPending}
-                                disabled={!evidenceFiles.length && !completionNote}
-                                label="Last opp"
-                                className="bg-custom-green text-white rounded-full px-6 py-2.5 text-[13px] font-medium"
-                            />
-                            <Button onClick={() => setShowEvidence(false)} label="Avbryt" variant="outline" className="rounded-full px-6 py-2.5 text-[13px]" />
                         </div>
                     </div>
                 )}
@@ -393,21 +796,8 @@ const ProviderOrderDetailPage: React.FC = () => {
                     {status === 'in_progress' && isProvider && (
                         <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex items-center gap-3">
                             <TrendingUp size={18} className="text-indigo-600" />
-                            <p className="text-[13px] text-indigo-700 font-medium">Jobb pågår — last opp bevis eller meld ferdig</p>
+                            <p className="text-[13px] text-indigo-700 font-medium">Jobb pågår — last opp arbeidsbevis over, eller meld ferdig nedenfor.</p>
                         </div>
-                    )}
-
-                    {/* Upload evidence */}
-                    {canUpload && !showEvidence && (
-                        <button
-                            onClick={() => setShowEvidence(true)}
-                            className="w-full flex items-center justify-between bg-white border border-black/10 rounded-xl p-4 hover:bg-gray-50 transition"
-                        >
-                            <span className="flex items-center gap-2 text-[14px] font-medium">
-                                <Upload size={17} className="text-custom-green" /> Last opp bevis / bilder
-                            </span>
-                            <ChevronRight size={15} className="text-gray-400" />
-                        </button>
                     )}
 
                     {/* Mark ready for review */}
@@ -500,17 +890,177 @@ const ProviderOrderDetailPage: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Dispute */}
-                    {['paid', 'in_progress', 'ready_for_review'].includes(status) && !activeDispute && (
-                        <button
-                            onClick={() => navigate(`/safepay/approval/${orderId}`)}
-                            className="w-full text-center text-[12px] text-gray-400 hover:text-red-500 py-2 flex items-center justify-center gap-1 transition-colors"
-                        >
-                            <AlertTriangle size={13} /> Opprett tvist
-                        </button>
+                    {/* Dispute — applicant side */}
+                    {canRaiseDispute && (
+                        <div className="pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowDisputeDialog(true)}
+                                className="w-full text-center text-[12px] text-gray-400 hover:text-red-500 py-2 flex items-center justify-center gap-1.5 transition-colors"
+                            >
+                                <AlertTriangle size={13} /> Noe gikk galt? Opprett en tvist
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Active dispute notice */}
+                    {activeDispute && (
+                        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center text-[13px] text-red-700 font-medium">
+                            ⚠️ Tvist pågår — admin gjennomgår saken
+                        </div>
                     )}
                 </div>
             </div>
+
+            {/* Lightbox */}
+            {lightboxUrl && <ImageLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
+
+            {/* Dispute dialog */}
+            {showDisputeDialog && (
+                <div
+                    className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="provider-dispute-dialog-title"
+                >
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between">
+                            <h3
+                                id="provider-dispute-dialog-title"
+                                className="text-lg font-bold text-gray-900"
+                            >
+                                Opprett en tvist
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setShowDisputeDialog(false)}
+                                className="text-gray-400 hover:text-gray-700"
+                                aria-label="Lukk"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                            Fyll ut alle feltene. Admin vil gjennomgå saken og kontakte begge parter.
+                        </p>
+
+                        {/* Reason */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Årsak <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                value={disputeForm.reasonCategory}
+                                onChange={(e) => {
+                                    setDisputeForm((f) => ({ ...f, reasonCategory: e.target.value }));
+                                    setDisputeTouched((t) => ({ ...t, reasonCategory: true }));
+                                }}
+                                onBlur={() => setDisputeTouched((t) => ({ ...t, reasonCategory: true }))}
+                                className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${disputeTouched.reasonCategory && disputeErrors.reasonCategory
+                                    ? 'border-red-400 bg-red-50'
+                                    : 'border-gray-300'
+                                    }`}
+                            >
+                                <option value="">Velg årsak…</option>
+                                {DISPUTE_REASON_OPTIONS.map((o) => (
+                                    <option key={o.value} value={o.value}>
+                                        {o.label}
+                                    </option>
+                                ))}
+                            </select>
+                            {disputeTouched.reasonCategory && disputeErrors.reasonCategory && (
+                                <p className="mt-1 text-xs text-red-500">{disputeErrors.reasonCategory}</p>
+                            )}
+                        </div>
+
+                        {/* Title */}
+                        <div>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="text-sm font-medium text-gray-700">
+                                    Tittel <span className="text-red-500">*</span>
+                                </label>
+                                <span
+                                    className={`text-xs ${disputeForm.title.length > 200 ? 'text-red-500' : 'text-gray-400'}`}
+                                >
+                                    {disputeForm.title.length}/200
+                                </span>
+                            </div>
+                            <input
+                                type="text"
+                                maxLength={200}
+                                placeholder="Kort beskrivelse av problemet (min. 5 tegn)"
+                                value={disputeForm.title}
+                                onChange={(e) => {
+                                    setDisputeForm((f) => ({ ...f, title: e.target.value }));
+                                    setDisputeTouched((t) => ({ ...t, title: true }));
+                                }}
+                                onBlur={() => setDisputeTouched((t) => ({ ...t, title: true }))}
+                                className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${disputeTouched.title && disputeErrors.title
+                                    ? 'border-red-400 bg-red-50'
+                                    : 'border-gray-300'
+                                    }`}
+                            />
+                            {disputeTouched.title && disputeErrors.title && (
+                                <p className="mt-1 text-xs text-red-500">{disputeErrors.title}</p>
+                            )}
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="text-sm font-medium text-gray-700">
+                                    Beskrivelse <span className="text-red-500">*</span>
+                                </label>
+                                <span
+                                    className={`text-xs ${disputeForm.description.length > 2000 ? 'text-red-500' : 'text-gray-400'}`}
+                                >
+                                    {disputeForm.description.length}/2000
+                                </span>
+                            </div>
+                            <textarea
+                                rows={4}
+                                maxLength={2000}
+                                placeholder="Beskriv problemet i detalj (min. 20 tegn)…"
+                                value={disputeForm.description}
+                                onChange={(e) => {
+                                    setDisputeForm((f) => ({ ...f, description: e.target.value }));
+                                    setDisputeTouched((t) => ({ ...t, description: true }));
+                                }}
+                                onBlur={() => setDisputeTouched((t) => ({ ...t, description: true }))}
+                                className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 resize-none ${disputeTouched.description && disputeErrors.description
+                                    ? 'border-red-400 bg-red-50'
+                                    : 'border-gray-300'
+                                    }`}
+                            />
+                            {disputeTouched.description && disputeErrors.description && (
+                                <p className="mt-1 text-xs text-red-500">{disputeErrors.description}</p>
+                            )}
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowDisputeDialog(false);
+                                    setDisputeTouched({ reasonCategory: false, title: false, description: false });
+                                }}
+                                className="flex-1 py-2.5 border border-gray-300 rounded-full text-gray-700 font-bold hover:bg-gray-50 transition-colors"
+                            >
+                                Avbryt
+                            </button>
+                            <button
+                                type="button"
+                                onClick={openDispute}
+                                disabled={disputeMutation.isPending}
+                                className="flex-1 py-2.5 bg-red-500 text-white rounded-full font-bold hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                            >
+                                {disputeMutation.isPending && <Loader2 size={14} className="animate-spin" />}
+                                Send tvist
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

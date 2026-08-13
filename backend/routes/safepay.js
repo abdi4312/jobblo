@@ -27,6 +27,7 @@ router.get('/orders/:orderId', authenticate, providerWorkController.getOrderDeta
 router.post('/orders/:orderId/start', authenticate, providerWorkController.startJob);
 router.post('/orders/:orderId/ready-for-review', authenticate, providerWorkController.markReadyForReview);
 router.post('/orders/:orderId/evidence', authenticate, upload.array('files', 10), providerWorkController.uploadEvidence);
+router.delete('/orders/:orderId/evidence', authenticate, providerWorkController.deleteEvidence);
 router.patch('/orders/:orderId/provider-checklist/:itemId', authenticate, providerWorkController.updateProviderChecklist);
 
 // ── Customer actions ──────────────────────────────────────────────────────────

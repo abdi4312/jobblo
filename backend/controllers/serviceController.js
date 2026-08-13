@@ -325,6 +325,23 @@ exports.createService = async (req, res) => {
       serviceData.location.city = city || '';
     }
 
+    // Validate paymentType & price (especially Anbud estimated budget)
+    const priceNum = Number(serviceData.price);
+    if (serviceData.paymentType === 'Anbud') {
+      if (serviceData.price === undefined || serviceData.price === null || isNaN(priceNum) || priceNum <= 0) {
+        return res.status(400).json({ error: 'Anbud oppdrag må ha et antatt budsjett større enn 0 kr' });
+      }
+    } else if (serviceData.paymentType === 'Fastpris') {
+      if (serviceData.price === undefined || serviceData.price === null || isNaN(priceNum) || priceNum <= 0) {
+        return res.status(400).json({ error: 'Fastpris oppdrag må ha en pris større enn 0 kr' });
+      }
+    } else if (serviceData.paymentType === 'Timepris') {
+      const hourlyNum = Number(serviceData.hourlyRate || serviceData.price);
+      if (isNaN(hourlyNum) || hourlyNum <= 0) {
+        return res.status(400).json({ error: 'Timepris oppdrag må ha en timepris større enn 0 kr' });
+      }
+    }
+
     // defaults
     serviceData.status = serviceData.status || 'open';
     serviceData.equipment = serviceData.equipment || 'utstyrfri';
@@ -396,6 +413,24 @@ exports.updateService = async (req, res) => {
 
     if (service.userId.toString() !== req.userId) {
       return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Validate paymentType & price if being updated
+    const updatedPaymentType = req.body.paymentType || service.paymentType;
+    const updatedPrice = req.body.price !== undefined ? Number(req.body.price) : service.price;
+    if (updatedPaymentType === 'Anbud') {
+      if (!updatedPrice || isNaN(updatedPrice) || updatedPrice <= 0) {
+        return res.status(400).json({ error: 'Anbud oppdrag må ha et antatt budsjett større enn 0 kr' });
+      }
+    } else if (updatedPaymentType === 'Fastpris') {
+      if (!updatedPrice || isNaN(updatedPrice) || updatedPrice <= 0) {
+        return res.status(400).json({ error: 'Fastpris oppdrag må ha en pris større enn 0 kr' });
+      }
+    } else if (updatedPaymentType === 'Timepris') {
+      const updatedHourly = req.body.hourlyRate !== undefined ? Number(req.body.hourlyRate) : service.hourlyRate;
+      if (!updatedHourly || isNaN(updatedHourly) || updatedHourly <= 0) {
+        return res.status(400).json({ error: 'Timepris oppdrag må ha en timepris større enn 0 kr' });
+      }
     }
 
     // Split "address, city"
@@ -703,7 +738,6 @@ exports.updateChecklistItem = async (req, res) => {
 exports.getMyPostedServices = async (req, res) => {
   try {
     const services = await Service.find({ userId: req.userId })
-      .populate('categories')
       .populate('userId', 'name email avatarUrl verified role orgNumber companyName')
       .sort({ _id: -1 });
 

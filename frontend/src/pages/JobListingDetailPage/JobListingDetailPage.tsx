@@ -46,6 +46,8 @@ const JobListingDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
@@ -287,6 +289,30 @@ const JobListingDetailPage = () => {
     setSelectedImageIndex((prev) => (prev - 1 + job.images.length) % job.images.length);
   };
 
+  // Touch handlers for mobile swipe
+  const minSwipeDistance = 50;
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd || !job?.images) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      handleNextImage();
+    } else if (isRightSwipe) {
+      handlePrevImage();
+    }
+  };
+
   const formatDate = (dateString: string) => {
     if (!dateString) return '-';
     return dateFormatter.toShortDate(dateString);
@@ -322,7 +348,13 @@ const JobListingDetailPage = () => {
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Left - Image */}
           <div className="relative lg:sticky lg:top-20 lg:h-fit">
-            <div className="group relative rounded-xl overflow-hidden shadow-sm max-h-125 bg-gray-50">
+            <div
+              className="group relative rounded-xl overflow-hidden shadow-sm max-h-125 bg-gray-50"
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+              style={{ touchAction: 'pan-y' }}
+            >
               {job.images && job.images.length > 0 ? (
                 <>
                   <img
@@ -339,7 +371,7 @@ const JobListingDetailPage = () => {
                           e.stopPropagation();
                           handlePrevImage();
                         }}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-md transition-all opacity-0 group-hover:opacity-100 z-20"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-md transition-all z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100"
                         aria-label="Previous image"
                       >
                         <ChevronLeft size={24} className="text-gray-700" />
@@ -349,12 +381,19 @@ const JobListingDetailPage = () => {
                           e.stopPropagation();
                           handleNextImage();
                         }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-md transition-all opacity-0 group-hover:opacity-100 z-20"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-md transition-all z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100"
                         aria-label="Next image"
                       >
                         <ChevronRight size={24} className="text-gray-700" />
                       </button>
                     </>
+                  )}
+
+                  {/* Counter badge */}
+                  {job.images.length > 1 && (
+                    <div className="absolute top-3 right-3 z-10 px-2.5 py-0.5 rounded-full bg-black/35 backdrop-blur-sm text-[10px] sm:text-[11px] font-semibold text-white">
+                      {selectedImageIndex + 1} / {job.images.length}
+                    </div>
                   )}
                 </>
               ) : (
@@ -683,10 +722,11 @@ const JobListingDetailPage = () => {
         </div>
       </div>
 
+      {/* For reliable social previews, share the backend preview endpoint which returns server-rendered OG tags */}
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
-        url={window.location.href}
+        url={`${(import.meta.env.VITE_MAIN_URL || '').replace(/\/$/, '')}/job-listing/${job._id}`}
         title={job.title || 'Jobblo Oppdrag'}
       />
 
