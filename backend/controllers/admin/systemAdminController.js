@@ -106,7 +106,8 @@ const getSystemMetrics = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/admin/system/errors
- * Returns recent admin activity log with pagination as a simple error/activity log.
+ * Returns application errors (runtime exceptions, failed requests, 5xx errors).
+ * Does not include audit/activity events.
  */
 const getSystemErrors = asyncHandler(async (req, res) => {
   const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
@@ -117,23 +118,37 @@ const getSystemErrors = asyncHandler(async (req, res) => {
   let logs = [];
 
   try {
+    // Be defensive: select only documents that are clearly application errors.
+    // Some systems previously mixed audit and error events; require both type='error'
+    // and at least one error-like indicator (errorName, httpStatus >=500, action prefix, or severity).
+    const errorQuery = {
+      type: 'error',
+      $or: [
+        { errorName: { $exists: true, $ne: null } },
+        { httpStatus: { $gte: 500 } },
+        { action: { $regex: /^error_/i } },
+        { severity: { $in: ['error', 'critical'] } },
+      ],
+    };
+
     [total, logs] = await Promise.all([
-      AdminActivity.countDocuments(),
-      AdminActivity.find()
+      AdminActivity.countDocuments(errorQuery),
+      AdminActivity.find(errorQuery)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .populate('adminId', 'name email')
         .lean(),
     ]);
-  } catch {
-    return sendError(res, 'Failed to retrieve system activity log.', 500);
+  } catch (err) {
+    console.error('[SystemAdmin] getSystemErrors failed:', err.message);
+    return sendError(res, 'Failed to retrieve system errors.', 500);
   }
 
   return sendSuccess(
     res,
     { errors: logs },
-    'System activity log retrieved.',
+    'System errors retrieved.',
     {
       page,
       limit,

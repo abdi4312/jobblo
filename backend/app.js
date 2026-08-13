@@ -136,8 +136,35 @@ app.use(function (req, res, next) {
   next(createError(404));
 });
 
-app.use(function (err, req, res, next) {
-  res.status(err.status || 500);
+const { logApplicationError } = require('./utils/errorLogger');
+
+app.use(async function (err, req, res, next) {
+  const status = err.status || 500;
+
+  // Log 5xx server errors
+  if (status >= 500) {
+    try {
+      const userId = req.user?._id || null;
+      const ip = req.ip || req.connection.remoteAddress || 'unknown';
+      const userAgent = req.get('user-agent') || 'unknown';
+      const correlationId = req.get('x-correlation-id') || req.get('x-request-id') || null;
+
+      await logApplicationError({
+        error: err,
+        requestPath: req.path,
+        httpMethod: req.method,
+        httpStatus: status,
+        ip,
+        userAgent,
+        userId,
+        correlationId,
+      });
+    } catch (logErr) {
+      console.error('Failed to log error:', logErr.message);
+    }
+  }
+
+  res.status(status);
   res.json({ error: err.message });
 });
 
