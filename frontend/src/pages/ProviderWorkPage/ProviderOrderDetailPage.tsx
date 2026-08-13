@@ -10,6 +10,7 @@ import mainLink from '../../api/mainURLs';
 import { toast } from 'react-hot-toast';
 import { useUserStore } from '../../stores/userStore';
 import { Button } from '../../components/Ui/button/Button';
+import { ContractViewModal } from '../../components/SafePay/ContractViewModal';
 
 // ── Status config ──────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -276,10 +277,20 @@ const ProviderOrderDetailPage: React.FC = () => {
         <div className="min-h-screen bg-[#f5f0e8] pb-16">
             <div className="max-w-3xl mx-auto px-4 py-8">
 
-                {/* Back */}
-                <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-800 mb-6">
-                    <ArrowLeft size={15} /> Tilbake
-                </button>
+                {/* Back + contract view */}
+                <div className="flex items-center justify-between mb-6">
+                    <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-800">
+                        <ArrowLeft size={15} /> Tilbake
+                    </button>
+                    <ContractViewModal
+                        orderId={orderId!}
+                        trigger={
+                            <span className="flex items-center gap-1.5 text-[13px] text-[#1a3a1a] font-semibold hover:underline cursor-pointer">
+                                <FileText size={14} /> Se kontrakt
+                            </span>
+                        }
+                    />
+                </div>
 
                 {/* Header card */}
                 <div className="bg-[#1a3a1a] rounded-2xl p-5 mb-4 text-white">
@@ -683,8 +694,8 @@ const ProviderOrderDetailPage: React.FC = () => {
                                 }}
                                 onBlur={() => setDisputeTouched((t) => ({ ...t, reasonCategory: true }))}
                                 className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${disputeTouched.reasonCategory && disputeErrors.reasonCategory
-                                        ? 'border-red-400 bg-red-50'
-                                        : 'border-gray-300'
+                                    ? 'border-red-400 bg-red-50'
+                                    : 'border-gray-300'
                                     }`}
                             >
                                 <option value="">Velg årsak…</option>
@@ -722,8 +733,8 @@ const ProviderOrderDetailPage: React.FC = () => {
                                 }}
                                 onBlur={() => setDisputeTouched((t) => ({ ...t, title: true }))}
                                 className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 ${disputeTouched.title && disputeErrors.title
-                                        ? 'border-red-400 bg-red-50'
-                                        : 'border-gray-300'
+                                    ? 'border-red-400 bg-red-50'
+                                    : 'border-gray-300'
                                     }`}
                             />
                             {disputeTouched.title && disputeErrors.title && (
@@ -754,8 +765,8 @@ const ProviderOrderDetailPage: React.FC = () => {
                                 }}
                                 onBlur={() => setDisputeTouched((t) => ({ ...t, description: true }))}
                                 className={`w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50 resize-none ${disputeTouched.description && disputeErrors.description
-                                        ? 'border-red-400 bg-red-50'
-                                        : 'border-gray-300'
+                                    ? 'border-red-400 bg-red-50'
+                                    : 'border-gray-300'
                                     }`}
                             />
                             {disputeTouched.description && disputeErrors.description && (
