@@ -3,6 +3,15 @@ const cookie = require('cookie');
 
 const onlineUsers = new Map(); // userId -> Set of socketIds
 
+/**
+ * (F-50) The handshake is authenticated, but the event handlers below were not:
+ * `join-chat` would put any authenticated socket into any chat room, and
+ * `send-message` would write into any conversation. Every chat event must therefore
+ * check membership against the authenticated `socket.userId` — never a client payload.
+ */
+const isChatParticipant = (chat, userId) =>
+  String(chat.clientId) === String(userId) || String(chat.providerId) === String(userId);
+
 module.exports = (io) => {
   io.use(async (socket, next) => {
     try {
@@ -58,35 +67,48 @@ module.exports = (io) => {
     // =========================
     // 💬 SETUP USER
     // =========================
-    socket.on('setup', (userData) => {
-      const userId = typeof userData === 'string' ? userData : userData?._id;
-      if (userId) {
-        socket.join(userId);
-        if (!onlineUsers.has(userId)) {
-          onlineUsers.set(userId, new Set());
-        }
-        onlineUsers.get(userId).add(socket.id);
-        io.emit('get-online-users', Array.from(onlineUsers.keys()));
-        console.log(`👤 User ${userId} setup completed`);
+    // The client used to pass its own id here, which let a socket join any user's
+    // private room and fake their presence. The authenticated id is the only source.
+    socket.on('setup', () => {
+      const userId = socket.userId;
+      if (!userId) return;
+      socket.join(userId);
+      if (!onlineUsers.has(userId)) {
+        onlineUsers.set(userId, new Set());
       }
+      onlineUsers.get(userId).add(socket.id);
+      io.emit('get-online-users', Array.from(onlineUsers.keys()));
     });
 
     // =========================
     // 💬 JOIN CHAT ROOM
     // =========================
-    socket.on('join-chat', (chatId) => {
-      socket.join(`chat-${chatId}`);
-      console.log(`👥 ${socket.userId} joined chat-${chatId}`);
+    socket.on('join-chat', async (chatId) => {
+      try {
+        const Chat = require('../models/ChatMessage');
+        const chat = await Chat.findById(chatId).select('clientId providerId');
+        if (!chat || !isChatParticipant(chat, socket.userId)) {
+          // Without this, any authenticated user could join any chat room by id and
+          // receive every `receive-message` broadcast in that conversation.
+          return socket.emit('chat-error', { chatId, error: 'Ikke tilgang til denne samtalen.' });
+        }
+        socket.join(`chat-${chatId}`);
+      } catch (err) {
+        console.error('join-chat error:', err.message);
+      }
     });
 
     // =========================
     // 👁️ MARK AS READ (Real-time read status)
     // =========================
-    socket.on('mark-as-read', async ({ chatId, userId }) => {
+    socket.on('mark-as-read', async ({ chatId }) => {
       try {
+        // `userId` used to come from the client payload, making read receipts
+        // spoofable for any user. Use the authenticated id only.
+        const userId = socket.userId;
         const Chat = require('../models/ChatMessage');
         const chat = await Chat.findById(chatId);
-        if (!chat) return;
+        if (!chat || !isChatParticipant(chat, userId)) return;
 
         let modified = false;
         chat.messages.forEach((m) => {
@@ -121,6 +143,11 @@ module.exports = (io) => {
 
         const chat = await Chat.findById(chatId);
         if (!chat) return;
+        if (!isChatParticipant(chat, socket.userId)) {
+          // Without this, any authenticated user could inject messages into any
+          // conversation they are not part of.
+          return socket.emit('chat-error', { chatId, error: 'Ikke tilgang til denne samtalen.' });
+        }
 
         const newMessage = {
           senderId: socket.userId,

@@ -115,7 +115,7 @@ export const InfiniteResults = ({
                   subtitle={item.description?.substring(0, 50) + '...' || 'Se jobbdetaljer'}
                   price={item.price}
                   onClick={() => {
-                    onNavigate(`/service/${item._id}`);
+                    onNavigate(`/job-listing/${item._id}`);
                     onCloseDropdown();
                   }}
                 />

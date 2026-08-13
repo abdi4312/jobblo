@@ -67,6 +67,14 @@ exports.markAsRead = async (req, res) => {
       return res.status(404).json({ error: 'Notification not found' });
     }
 
+    // (F-53) Ownership. This previously did findById then findByIdAndUpdate with no
+    // comparison at all, so any authenticated user could mark any other user's
+    // notification as read. `userId` is null on system broadcasts, which are addressed
+    // to everyone and stay allowed.
+    if (notification.userId && String(notification.userId) !== String(req.userId)) {
+      return res.status(403).json({ error: 'Ikke tilgang til dette varselet.' });
+    }
+
     // Update notification to be read
     const updatedNotification = await Notification.findByIdAndUpdate(
       notificationId,
@@ -110,11 +118,25 @@ exports.deleteNotification = async (req, res) => {
       return res.status(400).json({ error: 'Invalid notification ID' });
     }
 
-    const deleted = await Notification.findByIdAndDelete(id);
-
-    if (!deleted) {
+    // (F-53) Ownership. This previously deleted by id with no check, so any
+    // authenticated user could delete any other user's notifications.
+    const notification = await Notification.findById(id);
+    if (!notification) {
       return res.status(404).json({ error: 'Notification not found' });
     }
+
+    if (!notification.userId) {
+      // A system broadcast is one shared document; deleting it would remove the
+      // admin's announcement for every user. Per-user dismissal would need a
+      // `deletedFor` array on the model — tracked separately, see B2C-FIXLOG.
+      return res.status(403).json({ error: 'Systemvarsler kan ikke slettes.' });
+    }
+
+    if (String(notification.userId) !== String(req.userId)) {
+      return res.status(403).json({ error: 'Ikke tilgang til dette varselet.' });
+    }
+
+    await Notification.findByIdAndDelete(id);
 
     res.json({ success: true, message: 'Notification deleted' });
   } catch (error) {
@@ -183,13 +205,14 @@ exports.createAndEmitNotification = async (io, data) => {
 // POST /api/notifications/test - Create test notification
 exports.createTestNotification = async (req, res) => {
   try {
-    const { userId, type, content } = req.body;
+    const { type, content } = req.body;
     const io = req.app.get('io');
 
-    // Validate required fields
-    if (!userId) {
-      return res.status(400).json({ error: 'userId is required' });
-    }
+    // (F-53) The route was unauthenticated and took the recipient from the body, so
+    // anyone on the internet could inject notifications into any user's tray — a ready
+    // phishing surface inside the product's own UI. It is now authenticated and can
+    // only ever target the caller.
+    const userId = req.userId;
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(userId)) {

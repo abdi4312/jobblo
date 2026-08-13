@@ -124,8 +124,9 @@ router.post('/services/:id/reviews', authenticate, reviewController.createReview
 router.post('/reviews', authenticate, reviewController.createReview);
 router.put('/reviews/:id', authenticate, reviewController.updateReview);
 router.get('/users/:userId/reviews', authenticate, reviewController.getUserReviews);
-router.get('/orders/:orderId/review', reviewController.getReviewByOrderId);
-router.get('/reviews', reviewController.getAllReviews);
+// (F-34) Both of these were missing `authenticate`, unlike every neighbouring route.
+router.get('/orders/:orderId/review', authenticate, reviewController.getReviewByOrderId);
+router.get('/reviews', authenticate, reviewController.getAllReviews);
 
 /**
  * @swagger

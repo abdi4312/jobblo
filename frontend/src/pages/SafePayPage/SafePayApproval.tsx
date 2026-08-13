@@ -176,6 +176,11 @@ const SafePayApproval: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useUserStore();
   const [isSuccess, setIsSuccess] = useState(false);
+  // Set when the approval succeeded but the Stripe transfer to the provider did not.
+  // The backend returns HTTP 200 in that case (the approval itself is valid), so this
+  // must be read from the response body — otherwise we tell the customer the provider
+  // was paid when no money moved.
+  const [payoutWarning, setPayoutWarning] = useState<string | null>(null);
   const [showSkipDialog, setShowSkipDialog] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
@@ -324,9 +329,16 @@ const SafePayApproval: React.FC = () => {
       });
       return res.data;
     },
-    onSuccess: () => {
+    onSuccess: (data: { payoutWarning?: string; payoutErrorCode?: string } | undefined) => {
       setIsSuccess(true);
-      toast.success('Jobb godkjent!');
+      if (data?.payoutWarning) {
+        setPayoutWarning(data.payoutWarning);
+        // Not a success toast: the money did not reach the provider.
+        toast('Jobb godkjent, men utbetalingen er ikke fullført.', { icon: '⚠️' });
+      } else {
+        setPayoutWarning(null);
+        toast.success('Jobb godkjent!');
+      }
     },
     onError: (err: any) => {
       const status = err.response?.status;
@@ -433,20 +445,29 @@ const SafePayApproval: React.FC = () => {
     return (
       <div className="min-h-screen bg-[#f5f0e8] flex items-center justify-center px-6">
         <div className="max-w-[500px] w-full bg-[#1a3a1a] rounded-3xl p-10 text-center shadow-2xl">
-          <div className="w-16 h-16 bg-[#4ade80] rounded-full flex items-center justify-center mx-auto mb-6">
-            <Check size={32} className="text-[#1a3a1a]" />
+          <div
+            className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ${
+              payoutWarning ? 'bg-amber-400' : 'bg-[#4ade80]'
+            }`}
+          >
+            {payoutWarning ? (
+              <AlertTriangle size={32} className="text-[#1a3a1a]" />
+            ) : (
+              <Check size={32} className="text-[#1a3a1a]" />
+            )}
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Jobb godkjent!</h1>
           <p className="text-white/60 mb-8">
-            Pengene er lagt til {orderData.providerId.name} {orderData.providerId.lastName} sin
-            saldo.
+            {payoutWarning
+              ? payoutWarning
+              : `Pengene er lagt til ${orderData.providerId.name} ${orderData.providerId.lastName} sin saldo.`}
           </p>
 
           <div className="text-[42px] font-bold text-[#4ade80] mb-1">
             {calculation.providerNet} kr
           </div>
           <div className="text-[12px] text-white/40 uppercase tracking-widest mb-10">
-            Tilgjenelig innen 1–2 virkedager
+            {payoutWarning ? 'Utbetaling ikke fullført' : 'Tilgjengelig innen 1–2 virkedager'}
           </div>
 
           <div className="flex flex-col gap-3">

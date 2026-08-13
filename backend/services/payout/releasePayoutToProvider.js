@@ -1,10 +1,12 @@
 /**
  * releasePayoutToProvider — single shared payout service.
  *
- * ALL three release paths must call this and ONLY this to release funds:
+ * ALL release paths must call this and ONLY this to release funds:
  *  - SafePayCheckoutController.approveAndPayout   (customer approves)
- *  - safepayController.completeJobAndPayout       (legacy complete path)
  *  - disputesAdminController resolveDispute       (dispute release_to_provider)
+ *
+ * (safepayController.completeJobAndPayout was the legacy complete path. Removed in
+ * F-32: it released funds without checking paymentStatus, order state or disputes.)
  *
  * Contract:
  *  - Returns { payout, transfer } on success.

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -10,7 +10,6 @@ import {
   Info,
   Lock,
   CreditCard,
-  Apple,
 } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import mainLink from '../../api/mainURLs';
@@ -18,12 +17,13 @@ import { toast } from 'react-hot-toast';
 import { Button } from '../../components/Ui/button/Button';
 import SafePaySteps from '../../components/SafePay/SafePaySteps';
 import { useUserStore } from '../../stores/userStore';
+import { dateFormatter } from '../../utils/dateFormatter';
+import { timeFormatter } from '../../utils/timeFormatter';
 
 const SafePayCheckout: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { user } = useUserStore();
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'vipps' | 'apple'>('card');
 
   // Fetch Checkout Details from new backend
   const { data, isLoading, error } = useQuery({
@@ -127,6 +127,16 @@ const SafePayCheckout: React.FC = () => {
 
   const isPaid = ['paid', 'in_progress', 'completed'].includes(order.status);
 
+  // (F-38) Contract facts derived from the real job, or null so the row is omitted.
+  // Nothing on this panel may be invented — it is presented as a binding contract.
+  const { fromDate, toDate, duration } = order.serviceId;
+  const contractDate = fromDate
+    ? toDate && new Date(toDate).toDateString() !== new Date(fromDate).toDateString()
+      ? `${dateFormatter.toLongDate(fromDate)} – ${dateFormatter.toLongDate(toDate)}`
+      : dateFormatter.toLongDate(fromDate)
+    : null;
+  const contractDuration = timeFormatter.toJobDuration(duration);
+
   return (
     <div className="min-h-screen bg-[#f5f0e8] font-sans pb-12">
       <div className="max-w-[1024px] mx-auto px-6 py-8">
@@ -197,8 +207,14 @@ const SafePayCheckout: React.FC = () => {
               <div className="text-[13px] font-medium text-gray-900 line-clamp-1">
                 {order.providerId.name} {order.providerId.lastName}
               </div>
+              {/* (F-38) Was `averageRating || '4.9'` — an invented rating for every
+                  provider who had none, on the screen where the customer commits money. */}
               <div className="text-[11px] text-[#ca8a04] mt-0.5">
-                ★★★★★ {order.providerId.averageRating || '4.9'}
+                {order.providerId.averageRating > 0 ? (
+                  <>★ {order.providerId.averageRating}</>
+                ) : (
+                  <span className="text-gray-400">Ingen vurderinger ennå</span>
+                )}
               </div>
             </div>
           </div>
@@ -215,20 +231,29 @@ const SafePayCheckout: React.FC = () => {
               <span className="text-gray-400">Oppdrag</span>
               <span className="text-gray-900 font-medium">{order.serviceId.title}</span>
             </div>
-            <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
-              <span className="text-gray-400">Sted</span>
-              <span className="text-gray-900 font-medium">
-                {order.serviceId.location?.city || 'Frogner, Oslo'}
-              </span>
-            </div>
-            <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
-              <span className="text-gray-400">Dato</span>
-              <span className="text-gray-900 font-medium">Lørdag 24. mai 2026</span>
-            </div>
-            <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
-              <span className="text-gray-400">Estimert tid</span>
-              <span className="text-gray-900 font-medium">Ca. 2 timer</span>
-            </div>
+            {/* (F-38) Every row below now renders real order data or is omitted.
+                These previously showed a hardcoded city, date and duration on a panel
+                that calls itself "juridisk bindende". */}
+            {order.serviceId.location?.city && (
+              <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
+                <span className="text-gray-400">Sted</span>
+                <span className="text-gray-900 font-medium">
+                  {order.serviceId.location.city}
+                </span>
+              </div>
+            )}
+            {contractDate && (
+              <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
+                <span className="text-gray-400">Dato</span>
+                <span className="text-gray-900 font-medium">{contractDate}</span>
+              </div>
+            )}
+            {contractDuration && (
+              <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
+                <span className="text-gray-400">Estimert tid</span>
+                <span className="text-gray-900 font-medium">{contractDuration}</span>
+              </div>
+            )}
             <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
               <span className="text-gray-400">Oppdragsbeløp</span>
               <span className="text-gray-900 font-medium">{calculation.basePrice} kr</span>
@@ -284,67 +309,23 @@ const SafePayCheckout: React.FC = () => {
             </div>
           </div>
 
+          {/* (F-38) The saved "Visa •••• 4242 / Utløper 09/28" was a hardcoded Stripe
+              test card presented as the user's own, and the Vipps and Apple Pay options
+              only set local state — createSafePaySession is unconditionally
+              payment_method_types: ['card']. Offering Vipps to Norwegian customers and
+              then silently charging a card is a trust problem, so the panel now states
+              plainly what the next step actually does. Re-add options here only once
+              the backend passes the chosen method through to Stripe. */}
           <div className="space-y-2.5 mb-4">
-                {/* Card Method */}
-                <div
-                  onClick={() => setPaymentMethod('card')}
-                  className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'card' ? 'border-2 border-custom-green bg-[#f0faf0]' : 'border-black/10 hover:bg-gray-50'}`}
-                >
-                  <div className="w-9 h-6 bg-[#1a1f71] text-white flex items-center justify-center text-[10px] font-bold rounded">
-                    VISA
+                <div className="flex items-center gap-3 p-3 border border-black/10 rounded-xl">
+                  <div className="w-9 h-6 bg-gray-900 text-white flex items-center justify-center rounded">
+                    <CreditCard size={14} />
                   </div>
                   <div className="flex-1">
-                    <div className="text-[13px] font-medium text-gray-900">Visa •••• 4242</div>
-                    <div className="text-[11px] text-gray-400">Utløper 09/28</div>
-                  </div>
-                  <div
-                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'card' ? 'border-custom-green' : 'border-gray-200'}`}
-                  >
-                    {paymentMethod === 'card' && (
-                      <div className="w-2 h-2 rounded-full bg-custom-green"></div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Vipps Method */}
-                <div
-                  onClick={() => setPaymentMethod('vipps')}
-                  className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'vipps' ? 'border-2 border-custom-green bg-[#f0faf0]' : 'border-black/10 hover:bg-gray-50'}`}
-                >
-                  <div className="w-9 h-6 bg-[#ff5b24] text-white flex items-center justify-center text-[10px] font-bold rounded">
-                    V
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-[13px] font-medium text-gray-900">Vipps</div>
-                    <div className="text-[11px] text-gray-400">Betal med Vipps-appen</div>
-                  </div>
-                  <div
-                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'vipps' ? 'border-custom-green' : 'border-gray-200'}`}
-                  >
-                    {paymentMethod === 'vipps' && (
-                      <div className="w-2 h-2 rounded-full bg-custom-green"></div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Apple Pay Method */}
-                <div
-                  onClick={() => setPaymentMethod('apple')}
-                  className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'apple' ? 'border-2 border-custom-green bg-[#f0faf0]' : 'border-black/10 hover:bg-gray-50'}`}
-                >
-                  <div className="w-9 h-6 bg-black text-white flex items-center justify-center rounded">
-                    <Apple size={14} fill="white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-[13px] font-medium text-gray-900">Apple Pay</div>
-                    <div className="text-[11px] text-gray-400">Rask og sikker betaling</div>
-                  </div>
-                  <div
-                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'apple' ? 'border-custom-green' : 'border-gray-200'}`}
-                  >
-                    {paymentMethod === 'apple' && (
-                      <div className="w-2 h-2 rounded-full bg-custom-green"></div>
-                    )}
+                    <div className="text-[13px] font-medium text-gray-900">Kort</div>
+                    <div className="text-[11px] text-gray-400">
+                      Du fullfører betalingen sikkert hos Stripe i neste steg.
+                    </div>
                   </div>
                 </div>
               </div>

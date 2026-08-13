@@ -66,6 +66,17 @@ const { apiLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
 
+// ── Stripe webhook ────────────────────────────────────────────────────────────
+// MUST be registered before express.json(): signature verification needs the raw
+// request body, and any JSON parser that runs first would consume it. Registered
+// before apiLimiter too, so Stripe's retry storms are never rate-limited away —
+// dropping one of these means a captured payment is never recorded.
+app.post(
+  '/api/safepay-checkout/webhook',
+  express.raw({ type: 'application/json' }),
+  require('./controllers/SafePayCheckoutController').stripeWebhook
+);
+
 app.use(cors(corsOptions));
 app.use(apiLimiter); // Apply general API rate limiting
 app.use(useragent.express());

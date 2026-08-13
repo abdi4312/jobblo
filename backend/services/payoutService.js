@@ -191,7 +191,6 @@ async function refreshPayoutStatus(userId) {
  * ── THE release → payout call. ──
  * Shared helper used by:
  *   - approveAndPayout
- *   - completeJobAndPayout (legacy)
  *   - dispute release_to_provider
  *   - future admin override button
  *

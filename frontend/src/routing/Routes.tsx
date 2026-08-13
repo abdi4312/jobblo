@@ -5,6 +5,7 @@ import { ProtectedRoute } from '../components/shared/ProtectedRoute.tsx';
 import { PublicRoute } from '../components/shared/PublicRoute.tsx';
 import { AdminProtectedRoute } from '../components/shared/AdminProtectedRoute.tsx';
 import { SettingsLayout } from '../components/layout/SettingsLayout/SettingsLayout.tsx';
+import { RouteErrorElement } from '../components/ErrorBoundary.tsx';
 import Lottie from 'lottie-react';
 import Loging from '../assets/animations/loading.json';
 
@@ -71,7 +72,7 @@ const Alert = lazy(() => import('../pages/AlertPage/Alert.tsx'));
 const LoginPage = lazy(() => import('../pages/LoginPage/LoginPage.tsx'));
 const RegisterPage = lazy(() => import('../pages/RegisterPage/RegisterPage.tsx'));
 const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage/ForgotPasswordPage.tsx'));
-const AnmeldelserPage = lazy(() => import('../pages/AnmeldelserPage/AnmeldelserPage.tsx'));
+// AnmeldelserPage intentionally not imported — see the F-36 note on the removed route.
 const ListDetailPage = lazy(() =>
   import('../pages/FavoritesPage/ListDetail/ListDetailPage.tsx').then((m) => ({
     default: m.ListDetailPage,
@@ -111,6 +112,11 @@ const UpcomingFeatures = lazy(() => import('../pages/UpcomingFeaturesPage/Upcomi
 const MembershipPage = lazy(() => import('../pages/MembershipPage/MembershipPage.tsx'));
 const PricingPage = lazy(() => import('../pages/PricingPage/PricingPage.tsx'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage/NotFoundPage.tsx'));
+const FavoritesPage = lazy(() =>
+  import('../pages/FavoritesPage/FavoritesPage.tsx').then((m) => ({
+    default: m.FavoritesPage,
+  }))
+);
 const CompletedJobPage = lazy(() => import('../pages/CompletedJobPage.tsx'));
 
 // =======================
@@ -179,6 +185,7 @@ export const routes: RouteObject[] = [
   {
     path: '/',
     element: <App />,
+    errorElement: <RouteErrorElement />,
     children: [
       { index: true, element: withSuspense(LandingPage) },
       { path: 'oauth-success', element: <OAuthSuccess /> },
@@ -275,7 +282,17 @@ export const routes: RouteObject[] = [
         ],
       },
 
-      { path: 'Anmeldelser', element: withSuspense(AnmeldelserPage) },
+      // (F-36) 'Anmeldelser' route removed for launch. AnmeldelserPage renders two
+      // hardcoded invented reviews ("Illyas", "Dulahi", dated 04.01.2002) with a
+      // hardcoded 4.5 average and makes no API call. It was a public route that
+      // nothing in the live app linked to — only the dead ProfileMenuSection — so it
+      // was reachable by direct URL and indexable. Re-enable only once the page reads
+      // GET /api/users/:userId/reviews; it will also need a ProtectedRoute, since it
+      // shows "your" received/given reviews.
+      {
+        path: 'favorites',
+        element: <ProtectedRoute>{withSuspense(FavoritesPage)}</ProtectedRoute>,
+      },
       {
         path: 'favorites/list/:listId',
         element: <ProtectedRoute>{withSuspense(ListDetailPage)}</ProtectedRoute>,
@@ -301,6 +318,8 @@ export const routes: RouteObject[] = [
         path: 'membership',
         element: <ProtectedRoute>{withSuspense(MembershipPage)}</ProtectedRoute>,
       },
+      // Public: reachable from the job-detail upsell CTA by logged-out visitors too.
+      { path: 'pricing', element: withSuspense(PricingPage) },
       { path: 'upcoming', element: withSuspense(UpcomingFeatures) },
       { path: '*', element: withSuspense(NotFoundPage) },
     ],
@@ -309,16 +328,19 @@ export const routes: RouteObject[] = [
   {
     path: 'login',
     element: <PublicRoute>{withSuspense(LoginPage)}</PublicRoute>,
+    errorElement: <RouteErrorElement />,
   },
 
   {
     path: 'register',
     element: <PublicRoute>{withSuspense(RegisterPage)}</PublicRoute>,
+    errorElement: <RouteErrorElement />,
   },
 
   {
     path: 'forgot-password',
     element: <PublicRoute>{withSuspense(ForgotPasswordPage)}</PublicRoute>,
+    errorElement: <RouteErrorElement />,
   },
 
   {

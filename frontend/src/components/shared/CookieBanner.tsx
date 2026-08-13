@@ -48,7 +48,7 @@ export const CookieBanner: React.FC = () => {
             based on your interests. You can manage your settings below. If you want to know more
             about the cookies we use on our website, you can read our{' '}
             <a
-              href="/cookie-policy"
+              href="/cookies"
               className="text-custom-black! font-semibold underline! underline-offset-4"
             >
               Cookie Policy

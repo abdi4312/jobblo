@@ -18,7 +18,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }, [isAuth]);
 
   function handleOk() {
-    setModalText('Beep boop later som jeg logger inn om 2 sek');
+    setModalText('Sender deg til innloggingssiden ...');
     setConfirmLoading(true);
 
     setOpen(false);
@@ -48,5 +48,5 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
       </>
     );
   }
-  return <>{children};</>;
+  return <>{children}</>;
 }

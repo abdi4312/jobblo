@@ -32,7 +32,7 @@ exports.createOrGetChat = async (req, res) => {
     })
       .populate('clientId', 'name')
       .populate('providerId', 'name')
-      .populate('serviceId', 'title description images price categories')
+      .populate('serviceId', 'title description images price categories userId')
       .populate('orderId');
 
     if (chat) {
@@ -56,7 +56,7 @@ exports.createOrGetChat = async (req, res) => {
     chat = await Chat.findById(chat._id)
       .populate('clientId', 'name')
       .populate('providerId', 'name')
-      .populate('serviceId', 'title description images price categories')
+      .populate('serviceId', 'title description images price categories userId')
       .populate('orderId');
 
     res.status(201).json(chat);
@@ -76,7 +76,7 @@ exports.getMyChats = async (req, res) => {
     })
       .populate('clientId', 'name role avatarUrl')
       .populate('providerId', 'name role avatarUrl')
-      .populate('serviceId', 'title description images price categories')
+      .populate('serviceId', 'title description images price categories userId')
       .populate('orderId')
       .sort({ updatedAt: -1 });
 
@@ -96,7 +96,7 @@ exports.getChatById = async (req, res) => {
     const chat = await Chat.findById(chatId)
       .populate('clientId', 'name avatarUrl')
       .populate('providerId', 'name avatarUrl')
-      .populate('serviceId', 'title description images price categories')
+      .populate('serviceId', 'title description images price categories userId')
       .populate('orderId')
       .populate('messages.senderId', 'name avatarUrl');
 
@@ -325,7 +325,7 @@ exports.createContract = async (req, res) => {
     const updatedChat = await Chat.findById(chatId)
       .populate('clientId', 'name avatarUrl')
       .populate('providerId', 'name avatarUrl')
-      .populate('serviceId', 'title description images price categories')
+      .populate('serviceId', 'title description images price categories userId')
       .populate('orderId')
       .populate('messages.senderId', 'name avatarUrl');
 
@@ -372,7 +372,7 @@ exports.updateAgreedPrice = async (req, res) => {
     const updatedChat = await Chat.findById(chatId)
       .populate('clientId', 'name avatarUrl')
       .populate('providerId', 'name avatarUrl')
-      .populate('serviceId', 'title description images price categories')
+      .populate('serviceId', 'title description images price categories userId')
       .populate('orderId')
       .populate('messages.senderId', 'name avatarUrl');
 

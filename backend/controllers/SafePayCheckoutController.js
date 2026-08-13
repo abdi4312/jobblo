@@ -7,7 +7,122 @@ const Notification = require('../models/Notification');
 const SafePayHistory = require('../models/SafePayHistory');
 const Review = require('../models/Review');
 const Chat = require('../models/ChatMessage');
-const { getStripe } = require('../config/stripe');
+const { getStripe, getStripeWebhookSecret } = require('../config/stripe');
+
+const PAID_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed'];
+
+/**
+ * Idempotently move an order to "paid" for a Stripe Checkout session that Stripe
+ * reports as paid, create the Payment record, notify both parties and emit sockets.
+ *
+ * Shared by two callers so they cannot drift:
+ *   - checkoutSessionStatus  (browser returned from Stripe — best effort)
+ *   - stripeWebhook          (Stripe told us directly — the source of truth)
+ *
+ * Returns { ok, alreadyConfirmed, order } or { ok: false, reason }.
+ */
+async function confirmPaidSession(session, io) {
+  const orderId = session?.metadata?.orderId;
+  if (!orderId) return { ok: false, reason: 'missing_order_metadata' };
+
+  const order = await Order.findById(orderId);
+  if (!order) return { ok: false, reason: 'order_not_found' };
+
+  if (PAID_STATUSES.includes(order.status)) {
+    return { ok: true, alreadyConfirmed: true, order };
+  }
+
+  const updatedOrder = await Order.findOneAndUpdate(
+    { _id: orderId, status: { $in: ['awaiting_payment', 'pending', 'accepted'] } },
+    {
+      $set: {
+        status: 'paid',
+        paymentStatus: 'paid',
+        paymentConfirmedAt: new Date(),
+        checkoutSessionId: session.id,
+        checkoutSessionStatus: 'complete',
+        paymentIntentId: session.payment_intent,
+      },
+      $push: {
+        history: {
+          action: 'payment_confirmed',
+          userId: null,
+          timestamp: new Date(),
+          data: { stripeSessionId: session.id, message: 'Betaling bekreftet' },
+        },
+      },
+    },
+    { new: true }
+  );
+
+  // Another caller won the race between our read and our write.
+  if (!updatedOrder) {
+    return { ok: true, alreadyConfirmed: true, order: await Order.findById(orderId) };
+  }
+
+  if (updatedOrder.chatId) {
+    const chat = await Chat.findById(updatedOrder.chatId);
+    if (chat && !['paid', 'completed'].includes(chat.status)) {
+      chat.status = 'paid';
+      chat.messages.push({
+        type: 'system_payment',
+        systemData: { orderId: updatedOrder._id, amount: updatedOrder.agreedPrice },
+        text: `Betaling på ${updatedOrder.agreedPrice} kr er bekreftet og holdes i SafePay`,
+        createdAt: new Date(),
+      });
+      await chat.save();
+    }
+  }
+
+  // Payment record — the unique index on orderId is the real idempotency guard.
+  const existingPayment = await Payment.findOne({ orderId });
+  if (!existingPayment) {
+    try {
+      await Payment.create({
+        orderId,
+        chatId: updatedOrder.chatId,
+        status: 'completed',
+        amount: updatedOrder.agreedPrice || 0,
+        stripeSessionId: session.id,
+        stripePaymentIntentId: session.payment_intent,
+      });
+
+      await User.updateMany(
+        {
+          _id: { $in: [order.customerId, order.providerId].filter(Boolean) },
+          isSafePayUser: { $ne: true },
+        },
+        { $set: { isSafePayUser: true, safePayActivatedAt: new Date() } }
+      );
+
+      await Promise.all([
+        Notification.create({
+          userId: order.providerId,
+          type: 'order',
+          content: 'Betaling mottatt! Du kan nå starte jobben.',
+          orderId: order._id,
+          senderId: order.customerId,
+        }),
+        Notification.create({
+          userId: order.customerId,
+          type: 'order',
+          content: 'Betalingen er bekreftet.',
+          orderId: order._id,
+          senderId: order.customerId,
+        }),
+      ]);
+    } catch (dupErr) {
+      if (dupErr.code !== 11000) throw dupErr;
+    }
+  }
+
+  if (io) {
+    io.to(`user_${order.providerId}`).emit('payment_confirmed', { orderId: order._id });
+    io.to(`user_${order.customerId}`).emit('payment_confirmed', { orderId: order._id });
+  }
+
+  return { ok: true, alreadyConfirmed: false, order: updatedOrder };
+}
 
 exports.getCheckoutDetails = async (req, res) => {
   try {
@@ -20,7 +135,9 @@ exports.getCheckoutDetails = async (req, res) => {
     const order = await Order.findById(orderId)
       .populate({
         path: 'serviceId',
-        select: 'title location price equipment userId checklist', // duration hidden for now
+        // (F-38) fromDate/toDate/duration added: the contract panel used to print a
+        // hardcoded date and "Ca. 2 timer" because these were never sent.
+        select: 'title location price equipment userId checklist fromDate toDate duration',
       })
       .populate('customerId', 'name lastName avatarUrl')
       .populate('providerId', 'name lastName avatarUrl averageRating')
@@ -196,104 +313,72 @@ exports.checkoutSessionStatus = async (req, res) => {
       return res.json({ payment_status: session.payment_status });
     }
 
-    // Already paid — return current state
-    if (['paid', 'in_progress', 'ready_for_review', 'completed'].includes(order.status)) {
-      return res.json({ payment_status: 'paid', orderId: order._id, chatId: order.chatId, alreadyConfirmed: true });
+    const result = await confirmPaidSession(session, req.app?.get('io'));
+    if (!result.ok) {
+      return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Update order status atomically
-    const updatedOrder = await Order.findOneAndUpdate(
-      { _id: metadata.orderId, status: { $in: ['awaiting_payment', 'pending', 'accepted'] } },
-      {
-        $set: {
-          status: 'paid',
-          paymentStatus: 'paid',
-          paymentConfirmedAt: new Date(),
-          checkoutSessionId: session.id,
-          checkoutSessionStatus: 'complete',
-          paymentIntentId: session.payment_intent,
-        },
-        $push: {
-          history: {
-            action: 'payment_confirmed',
-            userId: null,
-            timestamp: new Date(),
-            data: { stripeSessionId: session.id, message: 'Betaling bekreftet' },
-          },
-        },
-      },
-      { new: true }
-    );
-
-    if (updatedOrder?.chatId) {
-      const chat = await Chat.findById(updatedOrder.chatId);
-      if (chat && !['paid', 'completed'].includes(chat.status)) {
-        chat.status = 'paid';
-        chat.messages.push({
-          type: 'system_payment',
-          systemData: { orderId: updatedOrder._id, amount: updatedOrder.agreedPrice },
-          text: `Betaling på ${updatedOrder.agreedPrice} kr er bekreftet og holdes i SafePay`,
-          createdAt: new Date(),
-        });
-        await chat.save();
-      }
-    }
-
-    // Create Payment record (prevent duplicates)
-    const existingPayment = await Payment.findOne({ orderId: metadata.orderId });
-    if (!existingPayment) {
-      try {
-        await Payment.create({
-          orderId: metadata.orderId,
-          chatId: updatedOrder?.chatId,
-          status: 'completed',
-          amount: updatedOrder?.agreedPrice || 0,
-          stripeSessionId: session.id,
-          stripePaymentIntentId: session.payment_intent,
-        });
-
-        // Mark both users as SafePay users
-        await User.updateMany(
-          { _id: { $in: [order.customerId, order.providerId].filter(Boolean) }, isSafePayUser: { $ne: true } },
-          { $set: { isSafePayUser: true, safePayActivatedAt: new Date() } }
-        );
-
-        await Promise.all([
-          Notification.create({
-            userId: order.providerId,
-            type: 'order',
-            content: 'Betaling mottatt! Du kan nå starte jobben.',
-            orderId: order._id,
-            senderId: order.customerId,
-          }),
-          Notification.create({
-            userId: order.customerId,
-            type: 'order',
-            content: 'Betalingen er bekreftet.',
-            orderId: order._id,
-            senderId: order.customerId,
-          }),
-        ]);
-      } catch (dupErr) {
-        if (dupErr.code !== 11000) throw dupErr;
-      }
-    }
-
-    // Emit socket events
-    const io = req.app?.get('io');
-    if (io) {
-      io.to(`user_${order.providerId}`).emit('payment_confirmed', { orderId: order._id });
-      io.to(`user_${order.customerId}`).emit('payment_confirmed', { orderId: order._id });
-    }
-
-    res.json({
+    return res.json({
       payment_status: 'paid',
-      orderId: order._id,
-      chatId: order.chatId,
-      alreadyConfirmed: false,
+      orderId: result.order._id,
+      chatId: result.order.chatId,
+      alreadyConfirmed: result.alreadyConfirmed,
     });
   } catch (err) {
+    console.error('checkoutSessionStatus error:', err.message);
     res.status(500).json({ error: 'Serverfeil ved sjekking av betaling' });
+  }
+};
+
+/**
+ * POST /api/safepay-checkout/webhook  (raw body, no auth — Stripe calls this)
+ *
+ * The authoritative payment confirmation. The browser redirect to /safepay/success
+ * is best-effort only: if the tab closes or the network drops on the way back, the
+ * money is captured by Stripe and nothing else would ever mark the order paid.
+ */
+exports.stripeWebhook = async (req, res) => {
+  let event;
+  try {
+    const stripe = await getStripe();
+    const webhookSecret = await getStripeWebhookSecret();
+    if (!webhookSecret) {
+      console.error('Stripe webhook secret is not configured — rejecting event.');
+      return res.status(500).send('Webhook secret not configured');
+    }
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      req.headers['stripe-signature'],
+      webhookSecret
+    );
+  } catch (err) {
+    // Signature mismatch or malformed payload — never process it.
+    console.error('Stripe webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  try {
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      if (session.payment_status === 'paid') {
+        const result = await confirmPaidSession(session, req.app?.get('io'));
+        if (!result.ok) {
+          // Ack anyway: retrying will not make an unknown order appear.
+          console.error('Stripe webhook could not confirm session:', result.reason, session.id);
+        }
+      }
+    } else if (event.type === 'checkout.session.expired') {
+      // Clear the stale session so createSafePaySession stops trying to reuse it.
+      await Order.updateOne(
+        { checkoutSessionId: event.data.object.id },
+        { $set: { checkoutSessionStatus: 'expired' } }
+      );
+    }
+    return res.json({ received: true });
+  } catch (err) {
+    // 500 tells Stripe to retry — correct for transient DB failures.
+    console.error('Stripe webhook handler error:', err.message);
+    return res.status(500).send('Webhook handler failed');
   }
 };
 

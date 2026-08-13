@@ -28,6 +28,7 @@ import { Button } from '../../components/Ui/button/Button';
 import SafePaySteps from '../../components/SafePay/SafePaySteps';
 import { createOrGetChat } from '../../api/chatAPI';
 import EmptyState from '../../components/Ui/EmptyState';
+import { timeFormatter } from '../../utils/timeFormatter';
 
 const ApplicantsPage: React.FC = () => {
   const { serviceId } = useParams<{ serviceId: string }>();
@@ -190,9 +191,12 @@ const ApplicantsPage: React.FC = () => {
                   month: 'long',
                 })}
               </span>
-              <span className="flex items-center gap-1">
-                <Clock size={12} /> Ca. 2 timer
-              </span>
+              {/* (F-38) Was a hardcoded "Ca. 2 timer" for every job. */}
+              {timeFormatter.toJobDuration(service.duration) && (
+                <span className="flex items-center gap-1">
+                  <Clock size={12} /> {timeFormatter.toJobDuration(service.duration)}
+                </span>
+              )}
             </div>
           </div>
           <div className="text-right">
@@ -460,15 +464,11 @@ const ApplicantsPage: React.FC = () => {
                         icon={<Check size={16} />}
                         className={`bg-custom-green text-white rounded-full py-2.5 text-[13px] font-medium h-auto shadow-sm hover:bg-[#266b3c] ${activeOrder ? 'opacity-70' : ''}`}
                       />
-                      <Button
-                        variant="outline"
-                        label="Velg uten SafePay"
-                        disabled={!!activeOrder}
-                        className="px-4 border-black/20 rounded-full py-2.5 text-[13px] font-medium h-auto hover:bg-gray-50"
-                        onClick={() => {
-                          toast.success('Bruker valgt uten SafePay');
-                        }}
-                      />
+                      {/* (F-35) "Velg uten SafePay" removed: it only fired
+                          toast.success('Bruker valgt uten SafePay') — no API call, no
+                          contract, no applicant selected and nobody notified, while the
+                          poster believed they had hired someone. Hiring outside escrow
+                          is not an implemented flow. */}
                       <Button
                         variant="outline"
                         label="Send melding"

@@ -119,6 +119,9 @@ exports.getApplicantsForService = async (req, res) => {
         location: service.location,
         status: service.status,
         date: service.fromDate || service.createdAt,
+        // (F-38) Sent so the page can show the real estimate instead of a hardcoded
+        // "Ca. 2 timer".
+        duration: service.duration,
       },
       applicants: sortedApplicants,
       activeOrder: await Order.findOne({

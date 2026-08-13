@@ -38,7 +38,11 @@ router.post('/orders/:orderId/reconcile-payment', authenticate, providerWorkCont
 
 // ── Legacy routes (backward compat) ──────────────────────────────────────────
 router.post('/contract/:orderId/start', authenticate, providerWorkController.startJob);
-router.post('/contract/:orderId/complete', authenticate, safePayController.completeJobAndPayout);
+// REMOVED (F-32): POST /contract/:orderId/complete -> safePayController.completeJobAndPayout.
+// It released a Stripe Connect payout after checking only customer ownership — no
+// paymentStatus check, no lifecycle-state check, no dispute check — so a customer could
+// trigger a transfer for money the platform never collected. It had no callers.
+// The hardened replacement is POST /api/safepay-checkout/approve (approveAndPayout).
 router.get('/history/:userId', authenticate, safePayController.getSafePayHistory);
 router.put('/contract/:orderId/checklist/:itemId', authenticate, safePayController.updateChecklistItem);
 

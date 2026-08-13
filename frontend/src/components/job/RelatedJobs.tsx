@@ -42,7 +42,7 @@ const RelatedJobs: React.FC<RelatedJobsProps> = ({ coordinates, categories, curr
             Vi fant ingen anbefalte jobber akkurat nå.
           </p>
           <button
-            onClick={() => navigate('/job-listing')}
+            onClick={() => navigate('/home')}
             className="mt-5 text-sm font-semibold text-custom-green hover:underline"
           >
             Se alle tilgjengelige jobber →

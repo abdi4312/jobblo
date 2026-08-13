@@ -42,11 +42,16 @@ io.on('connection', (socket) => {
     console.log(`Socket ${socket.id} joined room service_${serviceId}`);
   });
 
-  // Join user room for private notifications
-  socket.on('join', (userId) => {
-    if (userId) {
-      socket.join(`user_${userId}`);
-      console.log(`Socket ${socket.id} joined room user_${userId}`);
+  // Join user room for private notifications.
+  // (F-50) The room used to be named by a client-supplied userId, so an authenticated
+  // attacker could emit `join` with a victim's id and receive their entire order,
+  // payment and notification event stream (orderController, providerWorkController and
+  // SafePayCheckoutController all emit to `user_<id>`). The authenticated id set by the
+  // chatSocket handshake middleware — which runs for every connection on this io
+  // instance — is the only source. The payload is ignored, so older clients still work.
+  socket.on('join', () => {
+    if (socket.userId) {
+      socket.join(`user_${socket.userId}`);
     }
   });
 

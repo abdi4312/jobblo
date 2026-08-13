@@ -29,6 +29,10 @@ const orderSchema = new mongoose.Schema(
         'cancelled',
         'awaiting_payment',
         'paid',
+        // Written by providerWorkController.markReadyForReview. Was missing from this
+        // enum, so the value only persisted because findOneAndUpdate skips validators —
+        // any later order.save() on such a document threw a ValidationError.
+        'ready_for_review',
         'disputed',
       ],
       default: 'pending',
@@ -37,6 +41,7 @@ const orderSchema = new mongoose.Schema(
     // Pris og forhandling
     initialPrice: Number,
     agreedPrice: Number,
+    price: Number,
     priceNegotiation: [
       {
         userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -69,6 +74,23 @@ const orderSchema = new mongoose.Schema(
     },
     paymentId: String,
 
+    // Stripe Checkout / payment reconciliation.
+    // These are written by SafePayCheckoutController and read by
+    // providerWorkController.reconcilePayment and the Stripe webhook. Without them
+    // in the schema, strict mode silently dropped every write and reconciliation
+    // could never recover a payment whose redirect never came back.
+    checkoutSessionId: String,
+    checkoutSessionStatus: String,
+    checkoutSessionCreatedAt: Date,
+    paymentIntentId: String,
+    paymentConfirmedAt: Date,
+
+    // Lifecycle timestamps
+    startedAt: Date,
+    readyForReviewAt: Date,
+    completedAt: Date,
+    completionNote: String,
+
     // Checklist completion status (per order)
     checklist: [
       {
@@ -77,6 +99,13 @@ const orderSchema = new mongoose.Schema(
         checked: { type: Boolean, default: false },
         checkedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         checkedAt: Date,
+        // Two-sided confirmation: provider ticks off work, customer confirms it.
+        providerCompleted: { type: Boolean, default: false },
+        providerCompletedAt: Date,
+        providerCompletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        customerConfirmed: { type: Boolean, default: false },
+        customerConfirmedAt: Date,
+        customerConfirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       },
     ],
 

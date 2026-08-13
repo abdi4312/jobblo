@@ -165,8 +165,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     updateAgreedPriceMutation.mutate(price);
   };
 
-  // Check if current user is service owner (customer)
-  const isServiceOwner = activeChat?.serviceId?.userId === userId;
+  // Check if current user is service owner (customer).
+  // (F-52) `serviceId.userId` was never selected by any of chatController's populate
+  // projections, so this was permanently false: the customer never saw the "Opprett
+  // kontrakt" / "Start fiks ferdig-betaling" action bar, and navigateToOrder routed
+  // *everyone* — customers included — to the provider work page. The projections now
+  // include userId; String() guards against an ObjectId/string mismatch.
+  const serviceOwnerId = activeChat?.serviceId?.userId;
+  const isServiceOwner = !!serviceOwnerId && String(serviceOwnerId) === String(userId);
 
   // ponytail: shared helper for order-based navigation (BUG-005 fix).
   // Customer (service owner) → /safepay/* pages (payment / approval / checkout)
