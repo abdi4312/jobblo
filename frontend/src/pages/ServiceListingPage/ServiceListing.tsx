@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, lazy, Suspense } from 'react';
-import { useParams, useSearchParams, useLocation } from 'react-router-dom';
+import { useParams, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import {
   SlidersHorizontal,
   ArrowUpDown,
@@ -164,15 +164,33 @@ const ServiceListing = () => {
 
   // Norwegian county/municipality center coordinates [lng, lat]
   const NORWAY_CENTERS: Record<string, [number, number]> = {
-    '03': [10.7522, 59.9139], '11': [5.7331, 58.9700], '15': [6.3648, 62.4720],
-    '18': [14.3747, 67.2804], '31': [11.3950, 59.5200], '32': [10.2052, 60.7945],
-    '33': [9.0568, 60.2729], '34': [10.8080, 61.1155], '39': [10.2323, 59.2816],
-    '40': [8.7277, 59.4358], '42': [7.9964, 58.1599], '46': [5.3329, 60.3913],
-    '50': [10.3951, 63.4305], '55': [18.9551, 69.6492], '56': [23.2594, 70.0712],
-    '0301': [10.7522, 59.9139], '1103': [5.7331, 58.9700], '1201': [5.3220, 60.3913],
-    '1601': [10.3951, 63.4305], '0101': [11.3883, 59.2836], '0106': [11.0670, 59.1286],
-    '4204': [7.9964, 58.1599], '1001': [7.9964, 58.1599], '1004': [7.5945, 58.0788],
-    '1014': [7.1699, 58.1000], '4601': [5.3220, 60.3913], '5001': [10.3951, 63.4305],
+    '03': [10.7522, 59.9139],
+    '11': [5.7331, 58.97],
+    '15': [6.3648, 62.472],
+    '18': [14.3747, 67.2804],
+    '31': [11.395, 59.52],
+    '32': [10.2052, 60.7945],
+    '33': [9.0568, 60.2729],
+    '34': [10.808, 61.1155],
+    '39': [10.2323, 59.2816],
+    '40': [8.7277, 59.4358],
+    '42': [7.9964, 58.1599],
+    '46': [5.3329, 60.3913],
+    '50': [10.3951, 63.4305],
+    '55': [18.9551, 69.6492],
+    '56': [23.2594, 70.0712],
+    '0301': [10.7522, 59.9139],
+    '1103': [5.7331, 58.97],
+    '1201': [5.322, 60.3913],
+    '1601': [10.3951, 63.4305],
+    '0101': [11.3883, 59.2836],
+    '0106': [11.067, 59.1286],
+    '4204': [7.9964, 58.1599],
+    '1001': [7.9964, 58.1599],
+    '1004': [7.5945, 58.0788],
+    '1014': [7.1699, 58.1],
+    '4601': [5.322, 60.3913],
+    '5001': [10.3951, 63.4305],
     '0401': [11.0688, 60.7945],
   };
 
@@ -194,15 +212,20 @@ const ServiceListing = () => {
     }
     // Fall back to first job with coordinates
     const firstJob = jobs.find((j) => (j as any).location?.coordinates);
-    if ((firstJob as any)?.location?.coordinates) return (firstJob as any).location.coordinates as [number, number];
+    if ((firstJob as any)?.location?.coordinates)
+      return (firstJob as any).location.coordinates as [number, number];
     return [10.7522, 59.9139]; // Oslo
   }, [activeLocation, selectedAreaCodes, selectedMunicipalityCodes, selectedCountyCodes, jobs]);
 
   // Zoom radius: tighter when a specific area/municipality is selected
-  const mapRadius = activeLocation ? 5000
-    : selectedAreaCodes.length > 0 ? 2000
-      : selectedMunicipalityCodes.length > 0 ? 5000
-        : selectedCountyCodes.length > 0 ? 20000
+  const mapRadius = activeLocation
+    ? 5000
+    : selectedAreaCodes.length > 0
+      ? 2000
+      : selectedMunicipalityCodes.length > 0
+        ? 5000
+        : selectedCountyCodes.length > 0
+          ? 20000
           : 5000;
 
   const handleUseCurrentLocation = () => {
@@ -252,10 +275,58 @@ const ServiceListing = () => {
     });
   };
 
+  const navigate = useNavigate();
+
+  // Common "Alle / All categories" aliases — if the filter-options API ever
+  // ships a synthetic Alle/Alle kategorier/All placeholder, strip it so we
+  // don't render two Alle rows. Deduped via const below, reused in render.
+  const ALL_CATEGORY_ALIASES = new Set([
+    'alle',
+    'all',
+    'alle kategorier',
+    'all categories',
+    'ingen',
+  ]);
+  const filterCategories = useMemo(() => {
+    const cats = filterOptions?.categories || [];
+    return cats.filter(
+      (c: any) =>
+        !ALL_CATEGORY_ALIASES.has(
+          String(c?.name || '')
+            .toLowerCase()
+            .trim()
+        )
+    );
+  }, [filterOptions?.categories]);
+
+  // Total count shown next to "Alle" = sum of all top-level category counts
+  // (matches the existing cat.count shown on each row; falls back to 0 when loading)
+  const allCategoryCount = useMemo(() => {
+    if (!filterOptions?.categories?.length) return 0;
+    return filterOptions.categories.reduce(
+      (sum: number, c: any) => sum + (Number(c?.count) || 0),
+      0
+    );
+  }, [filterOptions?.categories]);
+
   const toggleCategory = (catName: string) => {
     setSelectedCategories((prev) =>
       prev.includes(catName) ? prev.filter((c) => c !== catName) : [...prev, catName]
     );
+  };
+
+  // Clear category selection + URL path param; preserve every other filter
+  // (price range, sort, location, urgent) and every existing search param.
+  const clearCategoryFilter = () => {
+    setSelectedCategories([]);
+    // If we are on a named-category route (/search/job/Rengjøring etc.), move
+    // to /search/job/all (the app's canonical "no filter" path). Otherwise we
+    // already have no path param, so nothing to change.
+    if (decodedCategoryName && decodedCategoryName !== 'all') {
+      const qs = searchParams.toString();
+      const target = qs.length ? `/search/job/all?${qs}` : `/search/job/all`;
+      navigate(target, { replace: true });
+    }
   };
 
   const toggleLocation = (locName: string) => {
@@ -290,7 +361,7 @@ const ServiceListing = () => {
       // Select county (shows all jobs in that county) — but DON'T auto-select sub-municipalities
       setSelectedCountyCodes((prev) => [...prev, countyCode]);
       // Just expand to show sub-items (user can optionally drill down)
-      setExpandedCounties((prev) => prev.includes(countyCode) ? prev : [...prev, countyCode]);
+      setExpandedCounties((prev) => (prev.includes(countyCode) ? prev : [...prev, countyCode]));
     }
   };
 
@@ -320,7 +391,9 @@ const ServiceListing = () => {
       );
       const municipality = parentCounty?.children?.find((m) => m.code === municipalityCode);
       if (municipality?.children && municipality.children.length > 0) {
-        setExpandedMunicipalities((prev) => prev.includes(municipalityCode) ? prev : [...prev, municipalityCode]);
+        setExpandedMunicipalities((prev) =>
+          prev.includes(municipalityCode) ? prev : [...prev, municipalityCode]
+        );
       }
     }
   };
@@ -366,23 +439,26 @@ const ServiceListing = () => {
     <div className="space-y-8">
       {/* 0. Urgent Filter Toggle */}
       <section
-        className={`p-6 rounded-3xl border-2 transition-all duration-300 flex items-center justify-between cursor-pointer shadow-sm ${isUrgent ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-white'
-          }`}
+        className={`p-6 rounded-3xl border-2 transition-all duration-300 flex items-center justify-between cursor-pointer shadow-sm ${
+          isUrgent ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-white'
+        }`}
         onClick={() => setIsUrgent(!isUrgent)}
       >
         <div className="flex items-center gap-4">
           <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${isUrgent
-              ? 'bg-red-500 text-white shadow-lg shadow-red-200'
-              : 'bg-gray-100 text-gray-400'
-              }`}
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
+              isUrgent
+                ? 'bg-red-500 text-white shadow-lg shadow-red-200'
+                : 'bg-gray-100 text-gray-400'
+            }`}
           >
             <AlertCircle size={24} className={isUrgent ? 'animate-pulse' : ''} />
           </div>
           <div>
             <p
-              className={`text-base font-bold transition-colors ${isUrgent ? 'text-red-700' : 'text-gray-700'
-                }`}
+              className={`text-base font-bold transition-colors ${
+                isUrgent ? 'text-red-700' : 'text-gray-700'
+              }`}
             >
               Haster
             </p>
@@ -390,12 +466,14 @@ const ServiceListing = () => {
           </div>
         </div>
         <div
-          className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 shrink-0 ${isUrgent ? 'bg-red-500' : 'bg-gray-200'
-            }`}
+          className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 shrink-0 ${
+            isUrgent ? 'bg-red-500' : 'bg-gray-200'
+          }`}
         >
           <div
-            className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${isUrgent ? 'translate-x-5' : 'translate-x-0'
-              }`}
+            className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
+              isUrgent ? 'translate-x-5' : 'translate-x-0'
+            }`}
           />
         </div>
       </section>
@@ -409,75 +487,113 @@ const ServiceListing = () => {
               <Loader2 size={16} className="animate-spin" />
               <span className="text-sm">Laster...</span>
             </div>
-          ) : filterOptions?.categories.length === 0 ? (
-            <p className="text-sm text-gray-400">Ingen kategorier funnet</p>
           ) : (
-            filterOptions?.categories.map((cat) => (
-              <div key={cat._id} className="space-y-1">
+            <>
+              {/* Alle (All categories) — first option, default when none selected */}
+              <div className="space-y-1">
                 <div className="flex items-center justify-between group">
                   <button
-                    onClick={() => toggleCategory(cat.name)}
-                    className={`flex-1 text-left font-medium py-2 px-3 rounded-xl transition-all duration-200 ${selectedCategories.includes(cat.name)
-                      ? 'bg-[#2F7E4711] text-custom-green'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-custom-green'
-                      }`}
+                    onClick={clearCategoryFilter}
+                    className={`flex-1 text-left font-medium py-2 px-3 rounded-xl transition-all duration-200 ${
+                      selectedCategories.length === 0
+                        ? 'bg-[#2F7E4711] text-custom-green'
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-custom-green'
+                    }`}
                   >
                     <span className="flex items-center gap-2">
-                      {cat.name}
+                      Alle
                       <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${selectedCategories.includes(cat.name)
-                          ? 'bg-[#2F7E4722] text-custom-green'
-                          : 'bg-gray-100 text-gray-400'
-                          }`}
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          selectedCategories.length === 0
+                            ? 'bg-[#2F7E4722] text-custom-green'
+                            : 'bg-gray-100 text-gray-400'
+                        }`}
                       >
-                        {cat.count || 0}
+                        {allCategoryCount || 0}
                       </span>
                     </span>
                   </button>
-                  {cat.subcategories && cat.subcategories.length > 0 && (
-                    <button
-                      onClick={() => toggleExpand(cat._id)}
-                      className={`p-2 rounded-lg transition-all duration-200 ${expandedCategories.includes(cat._id)
-                        ? 'bg-[#2F7E4711] text-custom-green'
-                        : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
-                        }`}
-                    >
-                      {expandedCategories.includes(cat._id) ? (
-                        <ChevronDown size={18} />
-                      ) : (
-                        <ChevronRight size={18} />
-                      )}
-                    </button>
-                  )}
+                  {/* Alle has no subcategories — keep layout balanced with a spacer */}
+                  <div className="w-[40px] shrink-0" />
                 </div>
-                {expandedCategories.includes(cat._id) && (
-                  <div className="pl-3 space-y-1 ml-3 border-l-2 border-[#2F7E4722]">
-                    {cat.subcategories.map((sub) => (
+              </div>
+
+              {filterCategories.length === 0 ? (
+                <p className="text-sm text-gray-400 pt-2">Ingen kategorier funnet</p>
+              ) : (
+                filterCategories.map((cat) => (
+                  <div key={cat._id} className="space-y-1">
+                    <div className="flex items-center justify-between group">
                       <button
-                        key={sub._id}
-                        onClick={() => toggleCategory(sub.name)}
-                        className={`w-full text-left py-2 px-3 rounded-xl text-sm transition-all duration-200 ${selectedCategories.includes(sub.name)
-                          ? 'bg-[#2F7E4711] text-custom-green font-semibold'
-                          : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
-                          }`}
+                        onClick={() => toggleCategory(cat.name)}
+                        className={`flex-1 text-left font-medium py-2 px-3 rounded-xl transition-all duration-200 ${
+                          selectedCategories.includes(cat.name)
+                            ? 'bg-[#2F7E4711] text-custom-green'
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-custom-green'
+                        }`}
                       >
                         <span className="flex items-center gap-2">
-                          {sub.name}
+                          {cat.name}
                           <span
-                            className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${selectedCategories.includes(sub.name)
-                              ? 'bg-[#2F7E4722] text-custom-green'
-                              : 'bg-gray-100 text-gray-300'
-                              }`}
+                            className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                              selectedCategories.includes(cat.name)
+                                ? 'bg-[#2F7E4722] text-custom-green'
+                                : 'bg-gray-100 text-gray-400'
+                            }`}
                           >
-                            {sub.count || 0}
+                            {cat.count || 0}
                           </span>
                         </span>
                       </button>
-                    ))}
+                      {cat.subcategories && cat.subcategories.length > 0 && (
+                        <button
+                          onClick={() => toggleExpand(cat._id)}
+                          className={`p-2 rounded-lg transition-all duration-200 ${
+                            expandedCategories.includes(cat._id)
+                              ? 'bg-[#2F7E4711] text-custom-green'
+                              : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                          }`}
+                        >
+                          {expandedCategories.includes(cat._id) ? (
+                            <ChevronDown size={18} />
+                          ) : (
+                            <ChevronRight size={18} />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    {expandedCategories.includes(cat._id) && (
+                      <div className="pl-3 space-y-1 ml-3 border-l-2 border-[#2F7E4722]">
+                        {cat.subcategories.map((sub) => (
+                          <button
+                            key={sub._id}
+                            onClick={() => toggleCategory(sub.name)}
+                            className={`w-full text-left py-2 px-3 rounded-xl text-sm transition-all duration-200 ${
+                              selectedCategories.includes(sub.name)
+                                ? 'bg-[#2F7E4711] text-custom-green font-semibold'
+                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              {sub.name}
+                              <span
+                                className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                                  selectedCategories.includes(sub.name)
+                                    ? 'bg-[#2F7E4722] text-custom-green'
+                                    : 'bg-gray-100 text-gray-300'
+                                }`}
+                              >
+                                {sub.count || 0}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))
+                ))
+              )}
+            </>
           )}
         </div>
       </section>
@@ -504,10 +620,7 @@ const ServiceListing = () => {
                 </div>
               }
             >
-              <MapComponent
-                coordinates={mapCoordinates}
-                circleRadius={mapRadius}
-              />
+              <MapComponent coordinates={mapCoordinates} circleRadius={mapRadius} />
             </Suspense>
 
             {/* Current location button */}
@@ -847,10 +960,11 @@ const ServiceListing = () => {
                         setSelectedSort(option);
                         setIsSortOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-4 py-3 md:px-6 md:py-4 rounded-[18px] md:rounded-[24px] text-left font-bold text-sm md:text-[17px] transition-colors ${selectedSort.value === option.value
-                        ? 'bg-[#2F7E4711] text-custom-green'
-                        : 'text-custom-black hover:bg-gray-50'
-                        }`}
+                      className={`w-full flex items-center justify-between px-4 py-3 md:px-6 md:py-4 rounded-[18px] md:rounded-[24px] text-left font-bold text-sm md:text-[17px] transition-colors ${
+                        selectedSort.value === option.value
+                          ? 'bg-[#2F7E4711] text-custom-green'
+                          : 'text-custom-black hover:bg-gray-50'
+                      }`}
                     >
                       <span>{option.label}</span>
                       {selectedSort.value === option.value && (
@@ -874,9 +988,13 @@ const ServiceListing = () => {
               <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertCircle size={32} />
               </div>
-              <p className="text-red-700 font-bold text-xl mb-2">Kunne ikke laste søkeresultater.</p>
+              <p className="text-red-700 font-bold text-xl mb-2">
+                Kunne ikke laste søkeresultater.
+              </p>
               <p className="text-red-500/80 text-sm mb-6">
-                {error instanceof Error ? error.message : 'Det oppstod en feil under henting av oppdrag.'}
+                {error instanceof Error
+                  ? error.message
+                  : 'Det oppstod en feil under henting av oppdrag.'}
               </p>
               <button
                 onClick={() => refetch()}
