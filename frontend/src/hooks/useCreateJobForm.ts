@@ -120,6 +120,14 @@ export const useCreateJobForm = (
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [isGeneratingFullListing, setIsGeneratingFullListing] = useState(false);
+  const [smartFillSuggestionFlags, setSmartFillSuggestionFlags] = useState<{
+    title?: boolean;
+    description?: boolean;
+    price?: boolean;
+    duration?: boolean;
+    hourlyRate?: boolean;
+    categories?: boolean;
+  }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [smartFillPrompt, setSmartFillPrompt] = useState('');
   const [showSmartFillInput, setShowSmartFillInput] = useState(false);
@@ -181,9 +189,41 @@ export const useCreateJobForm = (
       return;
     }
 
+    // Sniff which fields the user has already edited with non-trivial values
+    // BEFORE running AI. We refuse to overwrite fields that are already
+    // meaningfully populated, unless the AI suggestion is clearly "better".
+    const userAlreadyHas = {
+      title: values.title.trim().length >= 5,
+      description: values.description.trim().length >= 20,
+      categories:
+        (Array.isArray(values.categories) && values.categories.length > 0) ||
+        (typeof values.categories === 'string' && values.categories.trim().length > 0),
+      price: !!values.price && String(values.price).length > 0 && Number(values.price) > 0,
+      hourlyRate: !!hourlyRate && String(hourlyRate).length > 0 && Number(hourlyRate) > 0,
+      duration: !!durationValue && String(durationValue).length > 0 && Number(durationValue) > 0,
+    };
+
     setIsGeneratingFullListing(true);
+    const newFlags: typeof smartFillSuggestionFlags = { ...smartFillSuggestionFlags };
     try {
-      const response = await generateFullJobListing(smartFillPrompt);
+      const response = await generateFullJobListing(smartFillPrompt, {
+        existingTitle: values.title || undefined,
+        existingDescription: values.description || undefined,
+        existingCategory:
+          (typeof values.categories === 'string'
+            ? values.categories
+            : Array.isArray(values.categories)
+              ? values.categories[0]
+              : undefined) || undefined,
+        existingPaymentType: paymentType as 'Timepris' | 'Fastpris' | 'Anbud',
+        existingDuration: durationValue
+          ? { value: durationValue, unit: (durationUnit as any) || 'minutes' }
+          : undefined,
+        existingCity: values.city || undefined,
+        existingCounty: countyCode || undefined,
+        existingEquipment: equipment || undefined,
+        existingUrgent: urgent,
+      });
 
       if (response.success) {
         const {
@@ -196,40 +236,89 @@ export const useCreateJobForm = (
           skills: aiSkills,
           hourlyRate: aiHourlyRate,
           estimatedPrice: aiEstimatedPrice,
+          suggestedPrice: aiSuggestedPrice,
+          pricingReasoning,
+          paymentType: aiPaymentType,
         } = response.data;
 
-        setMultipleValues({
-          title: aiTitle,
-          description: aiDesc,
-          categories: aiCategory ? aiCategory.trim() : values.categories,
-          durationValue: aiDuration?.value || values.durationValue,
-          price: aiEstimatedPrice || values.price,
-        });
+        // Title — only overwrite if user didn't write a meaningful one already.
+        if (!userAlreadyHas.title && aiTitle) {
+          setTitle(aiTitle);
+          newFlags.title = true;
+        } else if (aiTitle && aiTitle !== values.title) {
+          // User already had a title — mention it in toast, don't clobber.
+        }
 
-        setTags(aiSkills);
+        if (!userAlreadyHas.description && aiDesc) {
+          setDescription(aiDesc);
+          newFlags.description = true;
+        }
+
+        if (!userAlreadyHas.categories && aiCategory) {
+          setCategories(aiCategory.trim());
+          newFlags.categories = true;
+        } else {
+          setMultipleValues({
+            categories: values.categories,
+          });
+        }
+
+        if (!userAlreadyHas.duration && aiDuration && aiDuration.value) {
+          setDurationValue(aiDuration.value.toString());
+          setDurationUnit(aiDuration.unit || 'minutes');
+          newFlags.duration = true;
+        }
 
         if (aiHourlyRate) {
           setHourlyRate(aiHourlyRate.toString());
+          newFlags.hourlyRate = true;
         }
 
-        if (priceRange) {
-          setPrice(priceRange.min.toString());
-        } else if (aiEstimatedPrice) {
-          setPrice(aiEstimatedPrice.toString());
+        // Price: prefer priceRange.min for Anbud (budget floor), prefer
+        // suggestedPrice for Fastpris. For Timepris the computed auto-price
+        // comes from usePaymentCalculation anyway, so still write the est.
+        const finalPrice = priceRange ? priceRange.min : (aiSuggestedPrice ?? aiEstimatedPrice);
+        if (!userAlreadyHas.price && typeof finalPrice === 'number' && finalPrice > 0) {
+          setPrice(finalPrice.toString());
+          newFlags.price = true;
         }
 
-        if (aiDuration && aiDuration.value) {
-          setDurationValue(aiDuration.value.toString());
-          setDurationUnit(aiDuration.unit || 'minutes');
+        if (aiSkills && Array.isArray(aiSkills)) {
+          setTags(aiSkills);
+        }
+
+        // If AI returned a payment type and user hasn't consciously chosen
+        // one yet (still 'Fastpris' default), switch to AI's suggestion if
+        // it differs AND AI picked Timepris/Anbud which fit category better.
+        if (
+          aiPaymentType &&
+          paymentType === 'Fastpris' &&
+          initialData?.paymentType == null &&
+          aiPaymentType !== 'Fastpris'
+        ) {
+          setPaymentType(aiPaymentType);
         }
 
         if (locationRelevance === 'remote') {
-          setCity('Fjernarbeid / Remote');
+          setCity((prev) => prev || 'Fjernarbeid / Remote');
         }
 
         setShowSmartFillInput(false);
         setSmartFillPrompt('');
-        toast.success('Skjemaet er fylt ut med AI!');
+        const hints: string[] = [];
+        if (newFlags.title) hints.push('tittel');
+        if (newFlags.description) hints.push('beskrivelse');
+        if (newFlags.categories) hints.push('kategori');
+        if (newFlags.price) hints.push('pris');
+        if (newFlags.duration) hints.push('varighet');
+        toast.success(
+          hints.length > 0
+            ? `AI fylte ut: ${hints.join(', ')}. Priser er estimater — rediger fritt.${
+                pricingReasoning ? ` (${pricingReasoning})` : ''
+              }`
+            : `AI ga forslag. Rediger fritt.${pricingReasoning ? ` (${pricingReasoning})` : ''}`,
+          { duration: 6000 }
+        );
       }
     } catch (err: any) {
       console.error('SMART FILL ERROR:', err);
@@ -237,8 +326,12 @@ export const useCreateJobForm = (
         err.response?.data?.error ||
         err.response?.data?.message ||
         'Kunne ikke generere jobbinformasjon.';
-      toast.error(errorMessage);
+      const details = err.response?.data?.validationErrors?.length
+        ? ` (${err.response.data.validationErrors.slice(0, 2).join(', ')})`
+        : '';
+      toast.error(errorMessage + details);
     } finally {
+      setSmartFillSuggestionFlags(newFlags);
       setIsGeneratingFullListing(false);
     }
   };
@@ -482,14 +575,12 @@ export const useCreateJobForm = (
     // Re-check fields with their validation rules to know exactly which ones failed.
     if (currentStep === 1) {
       if (!values.title || values.title.length < 5) missing.push(labels.title);
-      if (!values.description || values.description.length < 20)
-        missing.push(labels.description);
+      if (!values.description || values.description.length < 20) missing.push(labels.description);
       const catOk = Array.isArray(values.categories)
         ? values.categories.length > 0
         : !!values.categories && String(values.categories).trim() !== '';
       if (!catOk) missing.push(labels.categories);
-      if (selectedImages.length === 0 && currentImages.length === 0)
-        missing.push(labels.images);
+      if (selectedImages.length === 0 && currentImages.length === 0) missing.push(labels.images);
     } else if (currentStep === 2) {
       if (!values.address) missing.push(labels.address);
       if (!values.city) missing.push(labels.city);
@@ -504,23 +595,18 @@ export const useCreateJobForm = (
         }
       }
       const durVal = values.durationValue;
-      if (!durVal || durVal === '0' || Number(durVal) <= 0)
-        missing.push(labels.durationValue);
+      if (!durVal || durVal === '0' || Number(durVal) <= 0) missing.push(labels.durationValue);
       if (!values.fromDate) missing.push(labels.fromDate);
       if (!values.toDate) {
         missing.push(labels.toDate);
-      } else if (
-        values.fromDate &&
-        new Date(values.toDate) < new Date(values.fromDate)
-      ) {
+      } else if (values.fromDate && new Date(values.toDate) < new Date(values.fromDate)) {
         missing.push('gyldig sluttdato (kan ikke være før startdato)');
       }
       if (!coordinates) missing.push('lokasjon på kartet');
     } else if (currentStep === 4) {
       if (values.email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(String(values.email).trim()))
-          missing.push(labels.email);
+        if (!emailRegex.test(String(values.email).trim())) missing.push(labels.email);
       }
       if (!values.phone) missing.push(labels.phone);
     }
@@ -661,11 +747,10 @@ export const useCreateJobForm = (
       location: {
         address: values.address,
         city: values.city,
-        coordinates: (
-          coordinates
-            ? [coordinates[1], coordinates[0]]
-            : [10.7461, 59.9127]
-        ) as [number, number],
+        coordinates: (coordinates ? [coordinates[1], coordinates[0]] : [10.7461, 59.9127]) as [
+          number,
+          number,
+        ],
       },
       duration: {
         value: durationValue ? parseInt(durationValue.toString()) : 0,

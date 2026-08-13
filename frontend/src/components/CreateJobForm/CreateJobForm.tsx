@@ -80,6 +80,8 @@ export default function CreateJobForm({
     setUrgent,
     maxApplicants,
     setMaxApplicants,
+    equipment,
+    setEquipment,
     fromDate,
     setFromDate,
     toDate,
@@ -142,10 +144,11 @@ export default function CreateJobForm({
               {!isAiPanelHidden && (
                 <div className="px-4 pt-4">
                   <div
-                    className={`relative overflow-hidden transition-all duration-500 rounded-3xl shadow-lg ${showSmartFillInput
-                      ? 'bg-linear-to-br from-[#1b4b2f] to-[#143924]'
-                      : 'bg-[#1b4b2f]'
-                      }`}
+                    className={`relative overflow-hidden transition-all duration-500 rounded-3xl shadow-lg ${
+                      showSmartFillInput
+                        ? 'bg-linear-to-br from-[#1b4b2f] to-[#143924]'
+                        : 'bg-[#1b4b2f]'
+                    }`}
                   >
                     {/* Minimize and close buttons (only when not minimized) */}
                     {!isAiPanelMinimized && (
@@ -185,7 +188,8 @@ export default function CreateJobForm({
                                 : 'Fyll ut automatisk med AI'}
                             </h2>
                             <p className="text-white/60 text-[11px] md:text-xs font-medium max-w-sm">
-                              Fortell kort hva som skal gjøres – ta gjerne med størrelse, tilstand og tidspunkt.
+                              Fortell kort hva som skal gjøres – ta gjerne med størrelse, tilstand
+                              og tidspunkt.
                             </p>
                           </div>
                         </div>
@@ -339,6 +343,13 @@ export default function CreateJobForm({
                 maxApplicants={maxApplicants}
                 setMaxApplicants={setMaxApplicants}
                 errors={errors}
+                durationValue={durationValue}
+                durationUnit={durationUnit}
+                city={city}
+                countyCode={countyCode}
+                paymentType={paymentType}
+                equipment={equipment}
+                urgent={urgent}
               />
             </div>
           )}
