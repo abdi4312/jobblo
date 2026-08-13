@@ -720,10 +720,11 @@ const JobListingDetailPage = () => {
         </div>
       </div>
 
+      {/* For reliable social previews, share the backend preview endpoint which returns server-rendered OG tags */}
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
-        url={window.location.href}
+        url={`${(import.meta.env.VITE_MAIN_URL || '').replace(/\/$/, '')}/job-listing/${job._id}`}
         title={job.title || 'Jobblo Oppdrag'}
       />
 

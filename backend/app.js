@@ -12,6 +12,7 @@ const cors = require('cors');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const indexRouter = require('./routes/index');
+const previewRouter = require('./routes/preview');
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
 const servicesRouter = require('./routes/service');
@@ -92,6 +93,8 @@ app.use(passport.session());
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
+// Preview route for social crawlers — must be registered before default 404
+app.use('/', previewRouter);
 app.use('/', indexRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
