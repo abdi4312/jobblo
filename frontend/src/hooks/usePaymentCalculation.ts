@@ -14,8 +14,10 @@ export const usePaymentCalculation = (
   const [paymentType, setPaymentType] = useState(initialData?.paymentType || 'Fastpris');
   const [urgent, setUrgent] = useState(initialData?.urgent || false);
 
-  // Auto-calculate price based on duration and hourly rate
+  // Auto-calculate price ONLY for Timepris — Fastpris and Anbud are entered manually
   useEffect(() => {
+    if (paymentType !== 'Timepris') return;
+
     const hRate = parseFloat(hourlyRate);
     const dValue = parseFloat(durationValue);
 
@@ -25,7 +27,7 @@ export const usePaymentCalculation = (
       if (durationUnit === 'hours') {
         calculatedPrice = hRate * dValue;
       } else if (durationUnit === 'days') {
-        calculatedPrice = hRate * 8 * dValue; // Assuming 8 hours per day
+        calculatedPrice = hRate * 8 * dValue;
       } else if (durationUnit === 'minutes') {
         calculatedPrice = (hRate / 60) * dValue;
       }
@@ -36,7 +38,7 @@ export const usePaymentCalculation = (
         setPrice('0');
       }
     }
-  }, [hourlyRate, durationValue, durationUnit, setPrice]);
+  }, [paymentType, hourlyRate, durationValue, durationUnit, setPrice]);
 
   return {
     price,

@@ -9,7 +9,13 @@ import { JobDetailCardSkeleton } from '../../components/Loading/JobDetailCardSke
 import mainLink from '../../api/mainURLs';
 import { useQuery } from '@tanstack/react-query';
 import EmptyState from '../../components/Ui/EmptyState';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/Ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/Ui/select';
 import ConfirmDialog from '../../components/Ui/ConfirmDialog';
 
 // Define the tabs configuration
@@ -22,14 +28,20 @@ type TabConfig = {
 const tabs: TabConfig[] = [
   { id: 'active', label: 'Aktive oppdrag', statuses: ['open'] },
   { id: 'pending', label: 'Ventende søknader', statuses: ['pending'] },
-  { id: 'in_progress', label: 'Pågående', statuses: ['in_progress'] },
+  {
+    id: 'awaiting_payment',
+    label: 'Kontrakt – venter på betaling',
+    statuses: ['awaiting_payment'],
+  },
+  { id: 'paid', label: 'Betalt – venter på start', statuses: ['paid'] },
+  { id: 'in_progress', label: 'Pågående', statuses: ['in_progress', 'ready_for_review'] },
   {
     id: 'waiting_for_approval',
     label: 'Venter på godkjenning',
     statuses: ['waiting_for_approval'],
   },
   { id: 'completed', label: 'Fullførte oppdrag', statuses: ['completed'] },
-  { id: 'cancelled', label: 'Kansellerte oppdrag', statuses: ['cancelled'] },
+  { id: 'cancelled', label: 'Kansellerte oppdrag', statuses: ['cancelled', 'closed'] },
   { id: 'expired', label: 'Utløpte oppdrag', statuses: ['expired'] },
   { id: 'draft', label: 'Utkast', statuses: ['draft'] },
 ];
@@ -39,7 +51,9 @@ export default function MineAnnonser() {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [activeTab, setActiveTab] = useState<string>('active');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'price_high' | 'price_low'>('newest');
+  const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'price_high' | 'price_low'>(
+    'newest'
+  );
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   // Tanstack Hooks (called first, no conditionals before!)
@@ -177,7 +191,9 @@ export default function MineAnnonser() {
             </SelectTrigger>
             <SelectContent className="rounded-xl">
               {tabs.map((tab) => (
-                <SelectItem key={tab.id} value={tab.id}>{tab.label}</SelectItem>
+                <SelectItem key={tab.id} value={tab.id}>
+                  {tab.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -348,7 +364,9 @@ export default function MineAnnonser() {
         variant="destructive"
         onConfirm={confirmDelete}
         isOpen={!!deleteTargetId}
-        onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTargetId(null);
+        }}
       />
     </div>
   );

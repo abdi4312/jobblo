@@ -11,6 +11,7 @@ import {
   useWithdrawApplicationMutation,
 } from '../../features/applicants/hooks';
 import EmptyState from '../../components/Ui/EmptyState';
+import { ContractViewModal } from '../../components/SafePay/ContractViewModal';
 import { toast } from 'react-hot-toast';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -409,12 +410,22 @@ const MyApplicantsOverview: React.FC = () => {
 
                       {/* View contract — provider goes to work page, not checkout */}
                       {app.order?._id && (
-                        <button
-                          onClick={() => navigate(`/provider/orders/${app.order._id}`)}
-                          className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-2 bg-white border border-black/10 rounded-full hover:bg-gray-50 transition-colors"
-                        >
-                          <FileText size={13} /> Oppdrag
-                        </button>
+                        <>
+                          <button
+                            onClick={() => navigate(`/provider/orders/${app.order._id}`)}
+                            className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-2 bg-white border border-black/10 rounded-full hover:bg-gray-50 transition-colors"
+                          >
+                            <FileText size={13} /> Oppdrag
+                          </button>
+                          <ContractViewModal
+                            orderId={app.order._id}
+                            trigger={
+                              <span className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-2 bg-white border border-black/10 rounded-full hover:bg-gray-50 transition-colors cursor-pointer">
+                                <FileText size={13} /> Se kontrakt
+                              </span>
+                            }
+                          />
+                        </>
                       )}
 
                       {/* Start job CTA */}

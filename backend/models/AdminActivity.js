@@ -6,10 +6,15 @@ const mongoose = require('mongoose');
  */
 const adminActivitySchema = new mongoose.Schema(
   {
+    type: {
+      type: String,
+      enum: ['audit', 'error'],
+      default: 'audit',
+      index: true,
+    },
     adminId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
       index: true,
     },
     action: {
@@ -40,8 +45,17 @@ const adminActivitySchema = new mongoose.Schema(
         'plan_updated',
         'settings_updated',
         'session_revoked',
+        'error_500',
+        'error_database',
+        'error_integration',
         'other',
       ],
+    },
+    severity: {
+      type: String,
+      enum: ['info', 'warning', 'error', 'critical'],
+      default: 'info',
+      index: true,
     },
     targetModel: {
       type: String,
@@ -70,10 +84,35 @@ const adminActivitySchema = new mongoose.Schema(
       required: true,
       maxlength: 500,
     },
-    // Safe metadata — must not contain sensitive values
+    // Safe metadata — must not contain sensitive values (no passwords, tokens, secrets)
     metadata: {
       type: mongoose.Schema.Types.Mixed,
       default: {},
+    },
+    httpMethod: {
+      type: String,
+      enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'other'],
+      default: 'other',
+    },
+    httpStatus: {
+      type: Number,
+      default: null,
+    },
+    requestPath: {
+      type: String,
+      default: null,
+    },
+    errorName: {
+      type: String,
+      default: null,
+    },
+    errorMessage: {
+      type: String,
+      default: null,
+    },
+    stack: {
+      type: String,
+      default: null,
     },
     ip: {
       type: String,

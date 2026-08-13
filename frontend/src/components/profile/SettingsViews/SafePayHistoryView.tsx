@@ -1,12 +1,15 @@
 import {
   ShieldCheck,
-  ArrowLeft,
   CheckCircle2,
   ArrowRight,
   Wallet,
   Receipt,
   TrendingUp,
   TrendingDown,
+  AlertTriangle,
+  Banknote,
+  Clock,
+  XCircle,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useSafePayHistory } from '../../../features/profile/hooks';
@@ -14,11 +17,95 @@ import { Spinner } from '../../Ui/Spinner';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../../../stores/userStore';
 
+const PayoutStatusBanner = () => {
+  const user = useUserStore((state) => state.user);
+  const navigate = useNavigate();
+
+  const isEnabled = Boolean((user as any)?.payoutEnabled);
+  const hasAccount = Boolean((user as any)?.stripeConnectAccountId);
+
+  if (isEnabled) {
+    return (
+      <button
+        type="button"
+        onClick={() => navigate('/settings/payout')}
+        className="w-full flex items-start gap-3 bg-green-50 border border-green-200 rounded-2xl p-4 hover:bg-green-100 transition-colors text-left"
+      >
+        <CheckCircle2 size={20} className="text-green-600 shrink-0 mt-0.5" />
+        <div className="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[14px] font-semibold text-green-900">
+              Stripe Connect utbetalingskonto er aktiv
+            </span>
+            <span className="text-[13px] text-green-800">
+              Utbetalinger overføres automatisk til din verifiserte Stripe-konto.
+            </span>
+          </div>
+          <span className="text-[12px] font-semibold text-green-700 flex items-center gap-1">
+            Se Stripe-innstillinger
+            <ArrowRight size={13} />
+          </span>
+        </div>
+      </button>
+    );
+  }
+
+  if (hasAccount) {
+    return (
+      <button
+        type="button"
+        onClick={() => navigate('/settings/payout')}
+        className="w-full flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 hover:bg-amber-100 transition-colors text-left"
+      >
+        <Clock size={20} className="text-amber-600 shrink-0 mt-0.5" />
+        <div className="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[14px] font-semibold text-amber-900">
+              Verifisering kreves for utbetalinger
+            </span>
+            <span className="text-[13px] text-amber-800">
+              Din Stripe Connect-konto krever fullføring før utbetalinger kan frigis.
+            </span>
+          </div>
+          <span className="text-[12px] font-semibold text-amber-700 flex items-center gap-1 bg-white/70 px-3 py-1.5 rounded-xl shrink-0 w-fit">
+            Fullfør verifisering
+            <ArrowRight size={13} />
+          </span>
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => navigate('/settings/payout')}
+      className="w-full flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 hover:bg-amber-100 transition-colors text-left"
+    >
+      <AlertTriangle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+      <div className="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[14px] font-semibold text-amber-900">
+            Ingen utbetalingskonto er satt opp
+          </span>
+          <span className="text-[13px] text-amber-800">
+            Før du kan motta penger for jobber, må du koble til Stripe Connect.
+          </span>
+        </div>
+        <span className="text-[12px] font-semibold text-amber-700 flex items-center gap-1 bg-white/70 px-3 py-1.5 rounded-xl shrink-0 w-fit">
+          <Banknote size={14} />
+          Sett opp Stripe-utbetaling
+          <ArrowRight size={13} />
+        </span>
+      </div>
+    </button>
+  );
+};
+
 export const SafePayHistoryView = () => {
   const user = useUserStore((state) => state.user);
   const { data, isLoading } = useSafePayHistory(user?._id);
   const [expandedTransaction, setExpandedTransaction] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -49,10 +136,47 @@ export const SafePayHistoryView = () => {
   };
 
   const toggleExpand = (id: string) => {
-    if (expandedTransaction === id) {
-      setExpandedTransaction(null);
-    } else {
-      setExpandedTransaction(id);
+    setExpandedTransaction(expandedTransaction === id ? null : id);
+  };
+
+  const renderStatusBadge = (status: string) => {
+    switch (status) {
+      case 'transferred':
+      case 'completed':
+        return (
+          <div className="flex items-center justify-end gap-1 text-[12px] text-green-600 font-medium">
+            <CheckCircle2 size={14} />
+            <span>Overført / Utbetalt</span>
+          </div>
+        );
+      case 'processing':
+        return (
+          <div className="flex items-center justify-end gap-1 text-[12px] text-blue-600 font-medium">
+            <Clock size={14} className="animate-spin" />
+            <span>Behandles</span>
+          </div>
+        );
+      case 'failed':
+        return (
+          <div className="flex items-center justify-end gap-1 text-[12px] text-red-600 font-medium">
+            <XCircle size={14} />
+            <span>Mislyktes (Kan prøves på nytt)</span>
+          </div>
+        );
+      case 'pending':
+      case 'released_internal':
+        return (
+          <div className="flex items-center justify-end gap-1 text-[12px] text-amber-600 font-medium">
+            <Clock size={14} />
+            <span>Venter på verifisering</span>
+          </div>
+        );
+      default:
+        return (
+          <div className="flex items-center justify-end gap-1 text-[12px] text-gray-500 font-medium">
+            <span>{status || 'Fullført'}</span>
+          </div>
+        );
     }
   };
 
@@ -64,6 +188,9 @@ export const SafePayHistoryView = () => {
           Oversikt over alle utbetalinger og betalinger gjennom SafePay.
         </p>
       </div>
+
+      {/* Payout setup warning for providers / earners */}
+      <PayoutStatusBanner />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -143,10 +270,7 @@ export const SafePayHistoryView = () => {
                           : transaction.amounts.totalCustomer}{' '}
                         kr
                       </p>
-                      <div className="flex items-center justify-end gap-1 text-[12px] text-green-600">
-                        <CheckCircle2 size={14} />
-                        <span>Utbetalt</span>
-                      </div>
+                      {renderStatusBadge(transaction.status)}
                     </div>
                     <ArrowRight
                       size={18}

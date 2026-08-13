@@ -40,6 +40,8 @@ const logActivity = async ({
     );
 
     await AdminActivity.create({
+      type: 'audit',
+      severity: 'info',
       adminId,
       action,
       targetModel,

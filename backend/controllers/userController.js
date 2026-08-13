@@ -7,6 +7,12 @@ const Category = require('../models/Category');
 const List = require('../models/List');
 const Notification = require('../models/Notification');
 const notificationController = require('./notificationController');
+const {
+  PUBLIC_USER_SELECT,
+  OWN_USER_SELECT,
+  sanitizeUserPublic,
+  sanitizeUserOwner,
+} = require('../utils/userProjections');
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -86,7 +92,6 @@ exports.createUser = async (req, res) => {
 exports.searchUsers = async (req, res) => {
   try {
     const query = req.query.query || req.query.q;
-    console.log('Search query:', query);
     if (!query || query.length < 2) {
       return res.status(200).json([]);
     }
@@ -98,9 +103,11 @@ exports.searchUsers = async (req, res) => {
         { email: { $regex: query, $options: 'i' } },
       ],
       _id: { $ne: req.userId }, // Exclude current user
-    }).limit(10);
+    })
+      .select(PUBLIC_USER_SELECT)
+      .limit(10);
 
-    res.status(200).json(users);
+    res.status(200).json(users.map(sanitizeUserPublic));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -142,19 +149,39 @@ exports.getTopUsers = async (req, res) => {
       const fuzzyRegex = (c, anchored) => {
         const normalized = c.toLowerCase().replace(/[^a-zæøå0-9]/g, '');
         if (!normalized) return null;
-        const pattern =
-          normalized.split('').map((ch) => `${escapeRegex(ch)}\\s*`).join('');
+        const pattern = normalized
+          .split('')
+          .map((ch) => `${escapeRegex(ch)}\\s*`)
+          .join('');
         return new RegExp(`${anchored ? '^' : ''}${pattern}${anchored ? '$' : ''}`, 'i');
       };
 
       const STOP_WORDS = new Set([
-        'road', 'street', 'gate', 'gata', 'veg', 'vei', 'veien', 'rd', 'st', 'no', 'nr',
-        'norge', 'norway', 'pakistan', 'punjab', 'highway', 'motorway',
+        'road',
+        'street',
+        'gate',
+        'gata',
+        'veg',
+        'vei',
+        'veien',
+        'rd',
+        'st',
+        'no',
+        'nr',
+        'norge',
+        'norway',
+        'pakistan',
+        'punjab',
+        'highway',
+        'motorway',
       ]);
       const extractTokens = (...strings) => {
         const set = new Set();
         for (const s of strings) {
-          const normalized = (s || '').toLowerCase().replace(/[^a-zæøå0-9]+/g, ' ').trim();
+          const normalized = (s || '')
+            .toLowerCase()
+            .replace(/[^a-zæøå0-9]+/g, ' ')
+            .trim();
           for (const tok of normalized.split(' ')) {
             if (tok.length >= 4 && !STOP_WORDS.has(tok)) set.add(tok);
           }
@@ -231,7 +258,7 @@ exports.getTopUsers = async (req, res) => {
         others.forEach((u) => pushUnique(ordered, u, false));
       }
 
-      const paginated = ordered.slice(skip, skip + limit);
+      const paginated = ordered.slice(skip, skip + limit).map(sanitizeUserPublic);
       const [total] = await Promise.all([User.countDocuments(filter)]);
 
       return res.status(200).json({
@@ -242,16 +269,12 @@ exports.getTopUsers = async (req, res) => {
     }
 
     const [topUsers, total] = await Promise.all([
-      User.find(filter)
-        .select(baseSelect)
-        .sort(sort)
-        .skip(skip)
-        .limit(limit),
+      User.find(filter).select(baseSelect).sort(sort).skip(skip).limit(limit),
       User.countDocuments(filter),
     ]);
 
     res.status(200).json({
-      data: topUsers,
+      data: topUsers.map(sanitizeUserPublic),
       pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {
@@ -294,10 +317,12 @@ exports.searchAll = async (req, res) => {
           _id: { $ne: req.userId },
         };
         total = await User.countDocuments(queryObj);
-        results = await User.find(queryObj)
-          .select('name lastName avatarUrl email averageRating reviewCount')
-          .skip(skip)
-          .limit(numericLimit);
+        results = (
+          await User.find(queryObj)
+            .select('name lastName avatarUrl email averageRating reviewCount')
+            .skip(skip)
+            .limit(numericLimit)
+        ).map(sanitizeUserPublic);
       } else if (type === 'jobs') {
         total = await Service.countDocuments({
           $or: [{ title: regex }, { description: regex }],
@@ -352,12 +377,14 @@ exports.searchAll = async (req, res) => {
       $or: [{ name: regex }, { lastName: regex }, { email: regex }],
       _id: { $ne: req.userId },
     });
-    const people = await User.find({
-      $or: [{ name: regex }, { lastName: regex }, { email: regex }],
-      _id: { $ne: req.userId },
-    })
-      .select('name lastName avatarUrl email averageRating reviewCount')
-      .limit(3);
+    const people = (
+      await User.find({
+        $or: [{ name: regex }, { lastName: regex }, { email: regex }],
+        _id: { $ne: req.userId },
+      })
+        .select('name lastName avatarUrl email averageRating reviewCount')
+        .limit(3)
+    ).map(sanitizeUserPublic);
 
     // 4. Search Public Lists
     const listsCount = await List.countDocuments({
@@ -391,9 +418,15 @@ exports.getUserById = async (req, res) => {
       return res.status(400).json({ error: 'Invalid user ID format' });
     }
 
-    const user = await User.findById(id).select('-password');
+    const isSelf = String(req.userId) === String(id);
+
+    const user = isSelf
+      ? await User.findById(id).select(OWN_USER_SELECT)
+      : await User.findById(id).select(PUBLIC_USER_SELECT);
 
     if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const sanitized = isSelf ? sanitizeUserOwner(user) : sanitizeUserPublic(user);
 
     // Calculate posted jobs count (as poster)
     const postedJobsCount = await Service.countDocuments({ userId: id });
@@ -489,8 +522,8 @@ exports.getUserById = async (req, res) => {
       .populate('serviceId', 'title')
       .sort({ createdAt: -1 });
 
-    // Convert user to object and add the stats
-    const userObj = user.toObject();
+    // Convert user to object and add the stats (merge sanitized doc + computed keys)
+    const userObj = { ...sanitized };
     userObj.postedJobsCount = postedJobsCount;
     userObj.completedJobs = completedJobs;
     userObj.responseRate = responseRate;
@@ -600,8 +633,9 @@ exports.updateUser = async (req, res) => {
 
     const updatedUser = await User.findByIdAndUpdate(id, updates, {
       new: true,
+      select: OWN_USER_SELECT,
     });
-    res.json(updatedUser);
+    res.json(sanitizeUserOwner(updatedUser));
   } catch (err) {
     console.error('updateUser Error:', err);
     res.status(400).json({ error: err.message });

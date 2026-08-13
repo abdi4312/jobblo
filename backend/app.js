@@ -12,6 +12,7 @@ const cors = require('cors');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const indexRouter = require('./routes/index');
+const previewRouter = require('./routes/preview');
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
 const servicesRouter = require('./routes/service');
@@ -43,6 +44,7 @@ const safePayRouter = require('./routes/safepay');
 const safePayCheckoutRouter = require('./routes/safePayCheckout');
 const locationFilterRouter = require('./routes/locationFilter');
 const myApplicationsRouter = require('./routes/myApplications');
+const errorsRouter = require('./routes/errors');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 
@@ -58,6 +60,7 @@ const corsOptions = {
 const passport = require('./config/passport');
 const session = require('express-session');
 const useragent = require('express-useragent');
+const requestId = require('./middleware/requestId');
 
 const { apiLimiter } = require('./middleware/rateLimiter');
 
@@ -70,6 +73,9 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+// Attach a request ID to every request for tracing
+app.use(requestId);
 
 // Session configuration
 app.use(
@@ -92,6 +98,8 @@ app.use(passport.session());
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
+// Preview route for social crawlers — must be registered before default 404
+app.use('/', previewRouter);
 app.use('/', indexRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
@@ -124,17 +132,59 @@ app.use('/api/explore', exploreRouter);
 app.use('/api/applicants', applicantsRouter);
 app.use('/api/safepay', safePayRouter);
 app.use('/api/safepay-checkout', safePayCheckoutRouter);
+app.use('/api/connect', require('./routes/connect'));
 app.use('/api/my-applications', myApplicationsRouter);
 app.use('/api/upcomingFeatures', upcomingFeatureRouter);
 app.use('/api/location-filter', locationFilterRouter);
+app.use('/api/errors', errorsRouter);
 // Error handler
 app.use(function (req, res, next) {
   next(createError(404));
 });
 
-app.use(function (err, req, res, next) {
-  res.status(err.status || 500);
-  res.json({ error: err.message });
+const { logApplicationError } = require('./utils/errorLogger');
+const AppError = require('./utils/AppError');
+
+app.use(async function (err, req, res, next) {
+  const status = err.status || err.statusCode || 500;
+  const isAppErr = err instanceof AppError;
+
+  const errorCode = isAppErr ? err.code : 'INTERNAL_SERVER_ERROR';
+  const safeMessage = isAppErr ? err.message : 'Internal server error.';
+
+  // Best-effort logging for >=500 (and explicit AppError cases)
+  try {
+    const userId = req.user?._id || null;
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    const userAgent = req.get('user-agent') || 'unknown';
+    const requestId = req.requestId || req.get('x-request-id') || null;
+
+    await logApplicationError({
+      error: err,
+      requestPath: req.path,
+      httpMethod: req.method,
+      httpStatus: status,
+      ip,
+      userAgent,
+      userId,
+      correlationId: requestId,
+      errorCode,
+      metadata: err.details || null,
+    });
+  } catch (logErr) {
+    console.error('Failed to log error:', logErr.message);
+  }
+
+  // Standardized API response
+  res.status(isAppErr ? err.statusCode : status);
+  return res.json({
+    success: false,
+    error: {
+      code: errorCode,
+      referenceId: res.getHeader('X-Request-ID') || req.requestId || undefined,
+      message: safeMessage,
+    },
+  });
 });
 
 module.exports = app;

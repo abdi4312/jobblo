@@ -5,11 +5,12 @@ const { parsePagination, parseDate } = require('../../utils/pagination');
 /**
  * GET /api/admin/activity
  * Paginated, filterable admin activity log.
+ * Returns only audit events (type='audit'), excludes application errors.
  */
 const getActivityLog = asyncHandler(async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
 
-  const query = {};
+  const query = { type: 'audit' };
 
   if (req.query.action) query.action = req.query.action;
   if (req.query.targetModel) query.targetModel = req.query.targetModel;

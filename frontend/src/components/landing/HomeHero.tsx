@@ -1,7 +1,44 @@
 import { useHomeHero } from '../../features/homeHero/hooks';
+import { useQuery } from '@tanstack/react-query';
+import { getPublicStats } from '../../api/publicAPI';
 import Search from './search';
 import HeroDefaultImage from '../../assets/images/Hero/hero_img.png';
 import { MapPin, UserCircle } from 'lucide-react';
+
+const formatCount = (n: number) => {
+  if (n >= 1000) {
+    const rounded = Math.floor(n / 1000) * 1000;
+    return `${rounded}+`;
+  }
+  return String(n);
+};
+
+const PublicStatCard: React.FC<{ label: string; statKey: 'jobs' | 'users' }> = ({ label, statKey }) => {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['public-stats'],
+    queryFn: getPublicStats,
+    staleTime: 30 * 1000,
+    cacheTime: 60 * 1000,
+  });
+
+  let content: React.ReactNode = null;
+  if (isLoading) {
+    content = <div className="h-5 w-16 bg-gray-100 rounded animate-pulse" />;
+  } else if (isError || !data) {
+    // On error do not show fake numbers — show neutral label only
+    content = null;
+  } else {
+    const val = data[statKey];
+    content = <strong className="block text-[18px] font-medium text-custom-green">{formatCount(val)}</strong>;
+  }
+
+  return (
+    <div className="bg-white border border-black/10 rounded-xl p-2.5 px-4 min-w-30">
+      {content}
+      <span className="text-[11px] text-custom-black/50">{label}</span>
+    </div>
+  );
+};
 
 export function HomeHero() {
   const { data: hero, isLoading } = useHomeHero();
@@ -50,14 +87,10 @@ export function HomeHero() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="bg-white border border-black/10 rounded-xl p-2.5 px-4 min-w-30">
-              <strong className="block text-[18px] font-medium text-custom-green">5 000+</strong>
-              <span className="text-[11px] text-custom-black/50">Aktive oppdrag</span>
-            </div>
-            <div className="bg-white border border-black/10 rounded-xl p-2.5 px-4 min-w-30">
-              <strong className="block text-[18px] font-medium text-custom-green">15 000+</strong>
-              <span className="text-[11px] text-custom-black/50">Brukere</span>
-            </div>
+            {/** Fetch public stats and display safe counts. If loading or error, hide numbers. */}
+            {/** Use subtle skeletons while loading. */}
+            <PublicStatCard label="Aktive oppdrag" statKey="jobs" />
+            <PublicStatCard label="Brukere" statKey="users" />
             <div className="bg-white border border-black/10 rounded-xl p-2.5 px-4 min-w-30">
               <strong className="block text-[18px] font-medium text-custom-green">4.8 ★</strong>
               <span className="text-[11px] text-custom-black/50">Snittrating</span>

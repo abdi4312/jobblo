@@ -55,11 +55,11 @@ export const jobValidationSchema = {
     {
       test: (values: JobFormValues) => {
         const val = values.price;
-        if (!val || val === '0') return false; // Budsjett is mandatory based on user request
+        if (val === undefined || val === null || val === '' || val === '0') return false;
         const num = typeof val === 'string' ? Number(val) : val;
         return !Number.isNaN(num) && num > 0;
       },
-      message: 'Vennligst oppgi et anslått budsjett',
+      message: 'Vennligst oppgi et beløp/budsjett større enn 0 kr',
     },
   ],
   durationValue: [

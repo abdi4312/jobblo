@@ -52,15 +52,21 @@ const getSystemHealth = asyncHandler(async (req, res) => {
  * Returns safe operational metrics for server, database, and application.
  */
 const getSystemMetrics = asyncHandler(async (req, res) => {
-  const [totalUsers, activeSessions, openDisputes, openChatReports, totalChatMessages, totalSafePayHistory] =
-    await Promise.all([
-      User.countDocuments({ isDeleted: { $ne: true } }),
-      Session.countDocuments(),
-      Dispute.countDocuments({ status: { $nin: ['resolved', 'closed'] } }),
-      ChatReport.countDocuments({ status: { $nin: ['resolved', 'dismissed', 'closed'] } }),
-      ChatMessage.countDocuments(),
-      SafePayHistory.countDocuments(),
-    ]);
+  const [
+    totalUsers,
+    activeSessions,
+    openDisputes,
+    openChatReports,
+    totalChatMessages,
+    totalSafePayHistory,
+  ] = await Promise.all([
+    User.countDocuments({ isDeleted: { $ne: true } }),
+    Session.countDocuments(),
+    Dispute.countDocuments({ status: { $nin: ['resolved', 'closed'] } }),
+    ChatReport.countDocuments({ status: { $nin: ['resolved', 'dismissed', 'closed'] } }),
+    ChatMessage.countDocuments(),
+    SafePayHistory.countDocuments(),
+  ]);
 
   let dbResponseTime = 'N/A';
   try {
@@ -106,7 +112,8 @@ const getSystemMetrics = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/admin/system/errors
- * Returns recent admin activity log with pagination as a simple error/activity log.
+ * Returns application errors (runtime exceptions, failed requests, 5xx errors).
+ * Does not include audit/activity events.
  */
 const getSystemErrors = asyncHandler(async (req, res) => {
   const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
@@ -117,32 +124,58 @@ const getSystemErrors = asyncHandler(async (req, res) => {
   let logs = [];
 
   try {
+    // Read from ErrorLog (structured error events) instead of AdminActivity.
+    // Filter by optional query params: severity, code, route, date range.
+    const ErrorLog = require('../../models/ErrorLog');
+    const query = {};
+    if (req.query.severity) query.severity = req.query.severity;
+    if (req.query.code) query.errorCode = req.query.code;
+    if (req.query.route) query.route = { $regex: req.query.route, $options: 'i' };
+
+    if (req.query.dateFrom || req.query.dateTo) {
+      query.createdAt = {};
+      if (req.query.dateFrom) query.createdAt.$gte = new Date(req.query.dateFrom);
+      if (req.query.dateTo)
+        query.createdAt.$lte = new Date(new Date(req.query.dateTo).setHours(23, 59, 59, 999));
+    }
+
     [total, logs] = await Promise.all([
-      AdminActivity.countDocuments(),
-      AdminActivity.find()
+      ErrorLog.countDocuments(query),
+      ErrorLog.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('adminId', 'name email')
+        .populate('userId', 'name email')
+        .populate('resolvedBy', 'name email')
         .lean(),
     ]);
-  } catch {
-    return sendError(res, 'Failed to retrieve system activity log.', 500);
+  } catch (err) {
+    console.error('[SystemAdmin] getSystemErrors failed:', err.message);
+    return sendError(res, 'Failed to retrieve system errors.', 500);
   }
 
-  return sendSuccess(
-    res,
-    { errors: logs },
-    'System activity log retrieved.',
-    {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-      hasNextPage: page < Math.ceil(total / limit),
-      hasPreviousPage: page > 1,
-    }
-  );
+  // Map ErrorLog documents to the system error response shape expected by frontend
+  const mapped = logs.map((l) => ({
+    _id: l._id,
+    action: l.errorCode || 'INTERNAL_SERVER_ERROR',
+    description: l.message || l.technicalMessage || '',
+    createdAt: l.createdAt,
+    adminId: l.resolvedBy || null,
+    userId: l.userId || null,
+    httpMethod: l.httpMethod || null,
+    httpStatus: l.statusCode || null,
+    requestPath: l.route || null,
+    referenceId: l.referenceId || null,
+  }));
+
+  return sendSuccess(res, { errors: mapped }, 'System errors retrieved.', {
+    page,
+    limit,
+    total,
+    totalPages: Math.ceil(total / limit),
+    hasNextPage: page < Math.ceil(total / limit),
+    hasPreviousPage: page > 1,
+  });
 });
 
 /**

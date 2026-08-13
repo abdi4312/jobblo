@@ -127,10 +127,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const handleStartSafePay = () => {
     if (activeChat?.orderId?._id || activeChat?.orderId) {
       const orderId = activeChat.orderId._id || activeChat.orderId;
-      if (activeChat.orderId.paymentStatus === 'paid') {
-        navigate(`/safepay/approval/${orderId}`);
+      // ponytail BUG-005: customer goes to approval/checkout pages (or starts payment session); provider always goes to their work page
+      if (isServiceOwner) {
+        if (activeChat.orderId.paymentStatus === 'paid') {
+          navigateToOrder(orderId, { preferApprovalWhenPaid: true });
+        } else {
+          createPaymentSessionMutation.mutate();
+        }
       } else {
-        createPaymentSessionMutation.mutate();
+        // Provider always goes to their work page
+        navigateToOrder(orderId);
       }
     } else {
       toast('Du må opprette kontrakt først!');
@@ -159,13 +165,44 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     updateAgreedPriceMutation.mutate(price);
   };
 
+  // Check if current user is service owner (customer)
+  const isServiceOwner = activeChat?.serviceId?.userId === userId;
+
+  // ponytail: shared helper for order-based navigation (BUG-005 fix).
+  // Customer (service owner) → /safepay/* pages (payment / approval / checkout)
+  // Provider (applicant) → /provider/orders/:orderId (their active work page)
+  // Without this, providers land on the customer-side payment/approval screens
+  // and get stuck (no link back to their checklist / progress).
+  const navigateToOrder = (
+    orderIdInput: string,
+    opts: { preferApprovalWhenPaid?: boolean } = {}
+  ) => {
+    const id = orderIdInput;
+    if (!id) return;
+    const order = activeChat?.orderId;
+    // Default to provider work page when viewer is NOT customer (aka provider)
+    const viewerIsProvider = !isServiceOwner;
+    if (viewerIsProvider) {
+      navigate(`/provider/orders/${id}`);
+      return;
+    }
+    // Customer side routing
+    const paymentStatus = typeof order === 'object' ? order.paymentStatus : undefined;
+    if (opts.preferApprovalWhenPaid && paymentStatus === 'paid') {
+      navigate(`/safepay/approval/${id}`);
+    } else {
+      navigate(`/safepay/checkout/${id}`);
+    }
+  };
+
   // Check if chat is ready for action bar
   const isChatReady =
     activeChat?.status === 'agreed' || activeChat?.agreedPrice !== undefined || activeChat?.orderId;
 
   const handleSystemMessageClick = (msg: any) => {
     if (msg.systemData?.orderId) {
-      navigate(`/safepay/checkout/${msg.systemData.orderId}`);
+      // ponytail BUG-005: route to correct viewer's page (provider → work page)
+      navigateToOrder(msg.systemData.orderId);
     }
   };
 
@@ -312,8 +349,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 </div>
               </div>
 
-              {/* In-thread Action Bar (only show if chat is ready) */}
-              {isChatReady && (
+              {/* In-thread Action Bar */}
+              {isServiceOwner && isChatReady && (
                 <div className="bg-white border-b border-gray-100 px-4 py-3 shrink-0">
                   <div className="flex gap-3">
                     {!activeChat.orderId ? (
@@ -334,24 +371,44 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                             Start fiks ferdig-betaling
                           </button>
                         )}
-                        {/* Always show view contract button unless order is canceled/declined? */}
-                        {activeChat.orderId.status !== 'canceled' &&
-                          activeChat.orderId.status !== 'declined' && (
-                            <button
-                              onClick={() => {
-                                const orderId = activeChat.orderId._id || activeChat.orderId;
-                                navigate(`/safepay/checkout/${orderId}`);
-                              }}
-                              className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#16a34a] text-[#16a34a] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
-                            >
-                              Se kontrakt
-                            </button>
-                          )}
+                        {/* Always show view contract button unless order is canceled/declined */}
+                        {activeChat.orderId.status !== 'canceled' && activeChat.orderId.status !== 'declined' && (
+                          <button
+                            onClick={() => {
+                              const orderId = activeChat.orderId._id || activeChat.orderId;
+                              // ponytail BUG-005: customer → checkout; provider → /provider/orders (navigateToOrder resolves role)
+                              navigateToOrder(orderId);
+                            }}
+                            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#16a34a] text-[#16a34a] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
+                          >
+                            Se kontrakt
+                          </button>
+                        )}
                       </>
                     )}
                   </div>
                 </div>
               )}
+              {/* If not service owner, maybe show view contract button (always (if order exists) */}
+              {!isServiceOwner &&
+                activeChat.orderId &&
+                activeChat.orderId.status !== 'canceled' &&
+                activeChat.orderId.status !== 'declined' && (
+                  <div className="bg-white border-b border-gray-100 px-4 py-3 shrink-0">
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          const orderId = activeChat.orderId._id || activeChat.orderId;
+                          // ponytail BUG-005: provider (viewer is NOT service owner) must always go to /provider/orders/:orderId
+                          navigateToOrder(orderId);
+                        }}
+                        className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#16a34a] text-[#16a34a] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
+                      >
+                        Se oppdrag
+                      </button>
+                    </div>
+                  </div>
+                )}
             </>
           )}
 

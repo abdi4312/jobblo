@@ -120,6 +120,14 @@ export const useCreateJobForm = (
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [isGeneratingFullListing, setIsGeneratingFullListing] = useState(false);
+  const [smartFillSuggestionFlags, setSmartFillSuggestionFlags] = useState<{
+    title?: boolean;
+    description?: boolean;
+    price?: boolean;
+    duration?: boolean;
+    hourlyRate?: boolean;
+    categories?: boolean;
+  }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [smartFillPrompt, setSmartFillPrompt] = useState('');
   const [showSmartFillInput, setShowSmartFillInput] = useState(false);
@@ -181,9 +189,41 @@ export const useCreateJobForm = (
       return;
     }
 
+    // Sniff which fields the user has already edited with non-trivial values
+    // BEFORE running AI. We refuse to overwrite fields that are already
+    // meaningfully populated, unless the AI suggestion is clearly "better".
+    const userAlreadyHas = {
+      title: values.title.trim().length >= 5,
+      description: values.description.trim().length >= 20,
+      categories:
+        (Array.isArray(values.categories) && values.categories.length > 0) ||
+        (typeof values.categories === 'string' && values.categories.trim().length > 0),
+      price: !!values.price && String(values.price).length > 0 && Number(values.price) > 0,
+      hourlyRate: !!hourlyRate && String(hourlyRate).length > 0 && Number(hourlyRate) > 0,
+      duration: !!durationValue && String(durationValue).length > 0 && Number(durationValue) > 0,
+    };
+
     setIsGeneratingFullListing(true);
+    const newFlags: typeof smartFillSuggestionFlags = { ...smartFillSuggestionFlags };
     try {
-      const response = await generateFullJobListing(smartFillPrompt);
+      const response = await generateFullJobListing(smartFillPrompt, {
+        existingTitle: values.title || undefined,
+        existingDescription: values.description || undefined,
+        existingCategory:
+          (typeof values.categories === 'string'
+            ? values.categories
+            : Array.isArray(values.categories)
+              ? values.categories[0]
+              : undefined) || undefined,
+        existingPaymentType: paymentType as 'Timepris' | 'Fastpris' | 'Anbud',
+        existingDuration: durationValue
+          ? { value: durationValue, unit: (durationUnit as any) || 'minutes' }
+          : undefined,
+        existingCity: values.city || undefined,
+        existingCounty: countyCode || undefined,
+        existingEquipment: equipment || undefined,
+        existingUrgent: urgent,
+      });
 
       if (response.success) {
         const {
@@ -196,40 +236,89 @@ export const useCreateJobForm = (
           skills: aiSkills,
           hourlyRate: aiHourlyRate,
           estimatedPrice: aiEstimatedPrice,
+          suggestedPrice: aiSuggestedPrice,
+          pricingReasoning,
+          paymentType: aiPaymentType,
         } = response.data;
 
-        setMultipleValues({
-          title: aiTitle,
-          description: aiDesc,
-          categories: aiCategory ? aiCategory.trim() : values.categories,
-          durationValue: aiDuration?.value || values.durationValue,
-          price: aiEstimatedPrice || values.price,
-        });
+        // Title — only overwrite if user didn't write a meaningful one already.
+        if (!userAlreadyHas.title && aiTitle) {
+          setTitle(aiTitle);
+          newFlags.title = true;
+        } else if (aiTitle && aiTitle !== values.title) {
+          // User already had a title — mention it in toast, don't clobber.
+        }
 
-        setTags(aiSkills);
+        if (!userAlreadyHas.description && aiDesc) {
+          setDescription(aiDesc);
+          newFlags.description = true;
+        }
+
+        if (!userAlreadyHas.categories && aiCategory) {
+          setCategories(aiCategory.trim());
+          newFlags.categories = true;
+        } else {
+          setMultipleValues({
+            categories: values.categories,
+          });
+        }
+
+        if (!userAlreadyHas.duration && aiDuration && aiDuration.value) {
+          setDurationValue(aiDuration.value.toString());
+          setDurationUnit(aiDuration.unit || 'minutes');
+          newFlags.duration = true;
+        }
 
         if (aiHourlyRate) {
           setHourlyRate(aiHourlyRate.toString());
+          newFlags.hourlyRate = true;
         }
 
-        if (priceRange) {
-          setPrice(priceRange.min.toString());
-        } else if (aiEstimatedPrice) {
-          setPrice(aiEstimatedPrice.toString());
+        // Price: prefer priceRange.min for Anbud (budget floor), prefer
+        // suggestedPrice for Fastpris. For Timepris the computed auto-price
+        // comes from usePaymentCalculation anyway, so still write the est.
+        const finalPrice = priceRange ? priceRange.min : (aiSuggestedPrice ?? aiEstimatedPrice);
+        if (!userAlreadyHas.price && typeof finalPrice === 'number' && finalPrice > 0) {
+          setPrice(finalPrice.toString());
+          newFlags.price = true;
         }
 
-        if (aiDuration && aiDuration.value) {
-          setDurationValue(aiDuration.value.toString());
-          setDurationUnit(aiDuration.unit || 'minutes');
+        if (aiSkills && Array.isArray(aiSkills)) {
+          setTags(aiSkills);
+        }
+
+        // If AI returned a payment type and user hasn't consciously chosen
+        // one yet (still 'Fastpris' default), switch to AI's suggestion if
+        // it differs AND AI picked Timepris/Anbud which fit category better.
+        if (
+          aiPaymentType &&
+          paymentType === 'Fastpris' &&
+          initialData?.paymentType == null &&
+          aiPaymentType !== 'Fastpris'
+        ) {
+          setPaymentType(aiPaymentType);
         }
 
         if (locationRelevance === 'remote') {
-          setCity('Fjernarbeid / Remote');
+          setCity((prev) => prev || 'Fjernarbeid / Remote');
         }
 
         setShowSmartFillInput(false);
         setSmartFillPrompt('');
-        toast.success('Skjemaet er fylt ut med AI!');
+        const hints: string[] = [];
+        if (newFlags.title) hints.push('tittel');
+        if (newFlags.description) hints.push('beskrivelse');
+        if (newFlags.categories) hints.push('kategori');
+        if (newFlags.price) hints.push('pris');
+        if (newFlags.duration) hints.push('varighet');
+        toast.success(
+          hints.length > 0
+            ? `AI fylte ut: ${hints.join(', ')}. Priser er estimater — rediger fritt.${
+                pricingReasoning ? ` (${pricingReasoning})` : ''
+              }`
+            : `AI ga forslag. Rediger fritt.${pricingReasoning ? ` (${pricingReasoning})` : ''}`,
+          { duration: 6000 }
+        );
       }
     } catch (err: any) {
       console.error('SMART FILL ERROR:', err);
@@ -237,8 +326,12 @@ export const useCreateJobForm = (
         err.response?.data?.error ||
         err.response?.data?.message ||
         'Kunne ikke generere jobbinformasjon.';
-      toast.error(errorMessage);
+      const details = err.response?.data?.validationErrors?.length
+        ? ` (${err.response.data.validationErrors.slice(0, 2).join(', ')})`
+        : '';
+      toast.error(errorMessage + details);
     } finally {
+      setSmartFillSuggestionFlags(newFlags);
       setIsGeneratingFullListing(false);
     }
   };
@@ -404,13 +497,32 @@ export const useCreateJobForm = (
         if (rules) {
           for (const rule of rules) {
             if (!rule.test(values)) {
-              currentErrors[field] = rule.message;
+              if (field === 'price') {
+                if (paymentType === 'Anbud') {
+                  currentErrors[field] =
+                    'Vennligst oppgi et antatt budsjett større enn 0 kr for anbudet';
+                } else if (paymentType === 'Timepris') {
+                  currentErrors[field] = 'Vennligst oppgi en timepris større enn 0 kr';
+                } else {
+                  currentErrors[field] = 'Vennligst oppgi en fastpris større enn 0 kr';
+                }
+              } else {
+                currentErrors[field] = rule.message;
+              }
               isValid = false;
               break;
             }
           }
         }
       });
+
+      // A typed address alone is not enough — the location must be confirmed
+      // on the map (click pin / drag marker / geolocation), otherwise the job
+      // silently posts with default coordinates. Coordinates live outside the
+      // validation schema, so enforce the requirement here.
+      if (!coordinates) {
+        isValid = false;
+      }
     } else if (step === 4) {
       // Validate Step 4 fields (Contact Information)
       const fieldsToValidate: (keyof JobFormValues)[] = ['email', 'phone'];
@@ -435,6 +547,78 @@ export const useCreateJobForm = (
   const handleNext = () => {
     if (validateStep(currentStep)) {
       setCurrentStep((prev) => Math.min(prev + 1, 4));
+      return;
+    }
+
+    // Build a friendlier error message that names the missing/invalid fields
+    // so the user knows what to fix instead of just "please fill in everything".
+    // We re-run a quick check directly against the current state because
+    // `setErrors` inside validateStep is async and the closure here still
+    // holds the previous error snapshot.
+    const labels: Record<string, string> = {
+      title: 'tittel',
+      description: 'beskrivelse',
+      categories: 'kategori',
+      address: 'adresse',
+      city: 'by/sted',
+      price: 'budsjett',
+      durationValue: 'forventet varighet',
+      fromDate: 'startdato',
+      toDate: 'sluttdato',
+      email: 'e-post',
+      phone: 'telefon',
+      images: 'bilde',
+    };
+
+    const missing: string[] = [];
+
+    // Re-check fields with their validation rules to know exactly which ones failed.
+    if (currentStep === 1) {
+      if (!values.title || values.title.length < 5) missing.push(labels.title);
+      if (!values.description || values.description.length < 20) missing.push(labels.description);
+      const catOk = Array.isArray(values.categories)
+        ? values.categories.length > 0
+        : !!values.categories && String(values.categories).trim() !== '';
+      if (!catOk) missing.push(labels.categories);
+      if (selectedImages.length === 0 && currentImages.length === 0) missing.push(labels.images);
+    } else if (currentStep === 2) {
+      if (!values.address) missing.push(labels.address);
+      if (!values.city) missing.push(labels.city);
+      const priceVal = values.price;
+      if (!priceVal || priceVal === '0' || Number(priceVal) <= 0 || isNaN(Number(priceVal))) {
+        if (paymentType === 'Anbud') {
+          missing.push('antatt budsjett for anbud');
+        } else if (paymentType === 'Timepris') {
+          missing.push('timepris');
+        } else {
+          missing.push('fastpris');
+        }
+      }
+      const durVal = values.durationValue;
+      if (!durVal || durVal === '0' || Number(durVal) <= 0) missing.push(labels.durationValue);
+      if (!values.fromDate) missing.push(labels.fromDate);
+      if (!values.toDate) {
+        missing.push(labels.toDate);
+      } else if (values.fromDate && new Date(values.toDate) < new Date(values.fromDate)) {
+        missing.push('gyldig sluttdato (kan ikke være før startdato)');
+      }
+      if (!coordinates) missing.push('lokasjon på kartet');
+    } else if (currentStep === 4) {
+      if (values.email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(String(values.email).trim())) missing.push(labels.email);
+      }
+      if (!values.phone) missing.push(labels.phone);
+    }
+
+    if (missing.length > 0) {
+      const list =
+        missing.length === 1
+          ? missing[0]
+          : missing.length === 2
+            ? `${missing[0]} og ${missing[1]}`
+            : `${missing.slice(0, -1).join(', ')} og ${missing[missing.length - 1]}`;
+      toast.error(`Vennligst fyll ut: ${list}.`);
     } else {
       toast.error('Vennligst fyll ut alle påkrevde felt riktig.');
     }
@@ -445,12 +629,21 @@ export const useCreateJobForm = (
   };
 
   const handleFinalSubmit = async () => {
+    // Defensive guard: if we're somehow already submitting, ignore the click
+    // (prevents double-submission and any "stuck loading" state from a previous
+    // failed run that didn't reach `finally`).
+    if (isSubmitting) return;
+
     if (!validateStep(4)) {
       toast.error('Vennligst fyll ut alle påkrevde felt riktig.');
       return;
     }
 
-    if (!onSubmit) return;
+    if (!onSubmit) {
+      toast.error('Kunne ikke sende skjemaet. Prøv igjen.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const formData = new FormData();
@@ -506,11 +699,17 @@ export const useCreateJobForm = (
         formData.append('userId', userId);
       }
 
-      await clearFormData();
       await onSubmit(formData);
+      // Clear the draft only after a successful POST, best-effort. Awaiting it
+      // first would let an IndexedDB hang/failure block the request and leave
+      // the Publish button stuck in a loading state forever.
+      clearFormData().catch(() => {});
     } catch (error) {
       console.error('Submission error:', error);
+      toast.error('Det oppstod en feil ved sending av oppdraget. Prøv igjen.');
     } finally {
+      // Always reset — even if the onSubmit promise never resolves or a
+      // previous run crashed before reaching its own finally.
       setIsSubmitting(false);
     }
   };
@@ -548,11 +747,10 @@ export const useCreateJobForm = (
       location: {
         address: values.address,
         city: values.city,
-        coordinates: (
-          coordinates
-            ? [coordinates[1], coordinates[0]]
-            : [10.7461, 59.9127]
-        ) as [number, number],
+        coordinates: (coordinates ? [coordinates[1], coordinates[0]] : [10.7461, 59.9127]) as [
+          number,
+          number,
+        ],
       },
       duration: {
         value: durationValue ? parseInt(durationValue.toString()) : 0,

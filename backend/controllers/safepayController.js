@@ -143,8 +143,8 @@ exports.createContract = async (req, res) => {
       await chat.save();
     }
 
-    // Update service status to in_progress
-    await Service.findByIdAndUpdate(serviceId, { status: 'in_progress' });
+    // Update service status to awaiting_payment (contract created, waiting for payment)
+    await Service.findByIdAndUpdate(serviceId, { status: 'awaiting_payment' });
 
     // 3. Update JobRequest status if provided (Bug 4)
     if (requestId) {
@@ -327,17 +327,14 @@ exports.completeJobAndPayout = async (req, res) => {
       return res.status(400).json({ error: 'Ugyldig orderId' });
     }
 
-    // Validate ratings are present and each at least 1 star
-    if (!ratings) {
-      return res.status(400).json({ error: 'Vurderinger er påkrevd' });
+    // Validate ratings: overall required; others optional but must be 1-5 if provided
+    if (!ratings || typeof ratings.overall !== 'number' || ratings.overall < 1 || ratings.overall > 5) {
+      return res.status(400).json({ error: 'Overall rating (overall) must be provided and between 1 and 5' });
     }
-
-    const requiredRatingFields = ['overall', 'punctuality', 'quality', 'communication', 'tidiness'];
-    for (const field of requiredRatingFields) {
-      if (typeof ratings[field] !== 'number' || ratings[field] < 1 || ratings[field] > 5) {
-        return res.status(400).json({
-          error: `Alle vurderingsfelt (${field}) må være mellom 1 og 5 stjerner`,
-        });
+    const optionalFields = ['punctuality', 'quality', 'communication', 'tidiness'];
+    for (const field of optionalFields) {
+      if (ratings[field] !== undefined && (typeof ratings[field] !== 'number' || ratings[field] < 1 || ratings[field] > 5)) {
+        return res.status(400).json({ error: `Optional rating ${field} must be a number between 1 and 5 if provided` });
       }
     }
 
@@ -363,19 +360,21 @@ exports.completeJobAndPayout = async (req, res) => {
     }
 
     // Then do atomic update
+    const reviewSet = {
+      status: 'completed',
+      paymentStatus: 'paid',
+      'review.overall': ratings.overall,
+      'review.comment': comment || '',
+    };
+    if (ratings.punctuality !== undefined) reviewSet['review.punctuality'] = ratings.punctuality;
+    if (ratings.quality !== undefined) reviewSet['review.quality'] = ratings.quality;
+    if (ratings.communication !== undefined) reviewSet['review.communication'] = ratings.communication;
+    if (ratings.tidiness !== undefined) reviewSet['review.tidiness'] = ratings.tidiness;
+
     order = await Order.findOneAndUpdate(
       { _id: orderId, status: { $ne: 'completed' } },
       {
-        $set: {
-          status: 'completed',
-          paymentStatus: 'paid',
-          'review.overall': ratings.overall,
-          'review.punctuality': ratings.punctuality,
-          'review.quality': ratings.quality,
-          'review.communication': ratings.communication,
-          'review.tidiness': ratings.tidiness,
-          'review.comment': comment || '',
-        },
+        $set: reviewSet,
         $push: {
           history: {
             action: 'job_completed',
@@ -409,7 +408,6 @@ exports.completeJobAndPayout = async (req, res) => {
       status: 'released',
       amount: order.agreedPrice,
     });
-    await payment.save();
 
     // If order has chatId, update chat to completed status and add system message
     if (order.chatId) {
@@ -504,18 +502,60 @@ exports.completeJobAndPayout = async (req, res) => {
         averageRating,
       });
 
-      // Update provider's stats
+      // Update provider's stats (excluding earnings, which is updated only after confirmed transfer)
       reviewee.completedJobs = (reviewee.completedJobs || 0) + 1;
       reviewee.averageRating = Math.round(averageRating * 10) / 10;
       reviewee.reviewCount = reviewCount;
-      reviewee.earnings = (reviewee.earnings || 0) + netProvider;
       await reviewee.save();
-      console.log('completeJobAndPayout: Saved reviewee:', reviewee);
+      console.log('completeJobAndPayout: Saved reviewee stats:', reviewee);
     }
 
-    // Bug 6: Add TODO comment about real payout
-    // TODO: Integrate with actual payment gateway to release funds to provider
-    // For now this is an internal wallet transfer only
+    // ── Actual Stripe Connect transfer to provider ─────────────────────────────
+    const releasePayoutToProvider = require('../services/payout/releasePayoutToProvider');
+    let payoutResult;
+    try {
+      const sourcePayment = await Payment.findOne({ orderId: order._id });
+      payoutResult = await releasePayoutToProvider({
+        orderId:                 order._id,
+        providerId:              order.providerId,
+        customerId:              order.customerId,
+        serviceId:               service._id,
+        grossAmount:             order.agreedPrice,
+        platformFee:             fee,
+        releaseSource:           'legacy_complete',
+        releasedBy:              userId,
+        stripePaymentIntentId:   sourcePayment?.stripePaymentIntentId,
+        stripeCheckoutSessionId: sourcePayment?.stripeSessionId,
+        safePayHistoryId:        safePayHistory._id,
+      });
+
+      if (!payoutResult.alreadyPaid) {
+        await User.findByIdAndUpdate(order.providerId, { $inc: { earnings: netProvider } });
+      }
+    } catch (payoutErr) {
+      console.error('completeJobAndPayout: Stripe transfer failed:', payoutErr.message);
+      const isSetupRequired = ['PAYOUT_SETUP_REQUIRED', 'PAYOUT_NOT_ENABLED'].includes(payoutErr.code);
+      const userMessage = isSetupRequired
+        ? 'Jobben er fullført, men utbetalingen krever at oppdragstaker fullfører Stripe Connect-oppsett.'
+        : 'Jobben er fullført, men utbetalingen mislyktes midlertidig og vil bli forsøkt igjen.';
+
+      await Notification.create({
+        userId: order.providerId,
+        type: 'order',
+        content: isSetupRequired
+          ? 'Jobben er fullført! Fullfør Stripe Connect-oppsett under Innstillinger → Utbetaling for å motta pengene.'
+          : `Overføring mislyktes: ${payoutErr.message}. Kontakt support.`,
+        orderId: order._id,
+        senderId: userId,
+      }).catch(() => {});
+
+      return res.status(200).json({
+        message: 'Oppdraget fullført',
+        order,
+        payoutWarning: userMessage,
+        payoutErrorCode: payoutErr.code || 'TRANSFER_FAILED',
+      });
+    }
 
     // 5. Create notifications for both parties
     const providerNotification = new Notification({
@@ -537,7 +577,7 @@ exports.completeJobAndPayout = async (req, res) => {
     res.json({
       message: 'Oppdraget fullført og beløp utbetalt',
       order,
-      payment,
+      payoutResult,
     });
   } catch (err) {
     console.error('Error completing job:', err);

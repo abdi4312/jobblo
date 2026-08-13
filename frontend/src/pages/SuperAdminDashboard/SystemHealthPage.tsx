@@ -155,12 +155,19 @@ export default function SystemHealthPage() {
                     {diskInfo ? (
                         <div className="text-xs text-gray-600 space-y-1">
                             {typeof diskInfo === 'object' ? (
-                                Object.entries(diskInfo).map(([key, val]) => (
-                                    <div key={key} className="flex justify-between">
-                                        <span className="text-gray-500">{key}</span>
-                                        <span className="text-gray-800 font-medium">{String(val)}</span>
-                                    </div>
-                                ))
+                                    Object.entries(diskInfo).map(([key, val]) => (
+                                        <div key={key} className="flex justify-between text-xs">
+                                            <span className="text-gray-500">{key}</span>
+                                            <span className="text-gray-800 font-medium">
+                                                {val && typeof val === 'object' ? (
+                                                    // Prefer a readable subfield if present
+                                                    (val as any).status ? String((val as any).status) : (val as any).provider ? String((val as any).provider) : JSON.stringify(val)
+                                                ) : (
+                                                    String(val)
+                                                )}
+                                            </span>
+                                        </div>
+                                    ))
                             ) : (
                                 <p>{String(diskInfo)}</p>
                             )}

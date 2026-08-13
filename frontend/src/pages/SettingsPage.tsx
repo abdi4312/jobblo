@@ -55,6 +55,11 @@ export default function SettingsPage() {
     orgType: '',
     locations: [],
     website: '',
+    payoutMethod: null,
+    bankAccountNumber: '',
+    iban: '',
+    bicSwift: '',
+    vippsHandle: '',
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -78,6 +83,11 @@ export default function SettingsPage() {
       orgType: user.orgType || '',
       locations: user.locations || [],
       website: user.website || '',
+      payoutMethod: (user as any).payoutMethod || null,
+      bankAccountNumber: (user as any).bankAccountNumber || '',
+      iban: (user as any).iban || '',
+      bicSwift: (user as any).bicSwift || '',
+      vippsHandle: (user as any).vippsHandle || '',
     });
   }, [user]);
 
@@ -106,6 +116,11 @@ export default function SettingsPage() {
         orgType: form.orgType,
         locations: form.locations,
         website: form.website,
+        payoutMethod: form.payoutMethod,
+        bankAccountNumber: form.bankAccountNumber,
+        iban: form.iban,
+        bicSwift: form.bicSwift,
+        vippsHandle: form.vippsHandle,
       },
     });
   };
