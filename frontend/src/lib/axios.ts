@@ -116,9 +116,21 @@ export const setupInterceptors = (instance: AxiosInstance) => {
         }
       }
 
+      // Normalize structured API errors from the backend
+      const data = error.response?.data as any;
+      if (data && data.error && typeof data.error === 'object') {
+        // Attach parsed API error for downstream UI handling
+        (error as any).apiError = {
+          code: data.error.code,
+          referenceId: data.error.referenceId,
+          message: data.error.message,
+          fields: data.error.fields,
+        };
+      }
+
       if (process.env.NODE_ENV === 'development') {
         const status = error.response?.status;
-        const message = (error.response?.data as any)?.message || error.message;
+        const message = (error as any).apiError?.message || (error.response?.data as any)?.message || error.message;
         console.error(`[API Error] ${status || 'Network'}: ${message}`);
       }
 

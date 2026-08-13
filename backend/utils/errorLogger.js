@@ -1,4 +1,7 @@
 const AdminActivity = require('../models/AdminActivity');
+const ErrorLog = require('../models/ErrorLog');
+const { generateReference } = require('./generateReferenceId');
+const { redactSensitive } = require('./sanitizer');
 
 /**
  * Logs an application error to AdminActivity with type='error'.
@@ -23,21 +26,21 @@ async function logApplicationError({
   userAgent,
   userId,
   correlationId,
+  metadata = {},
+  errorCode = null,
+  source = null,
 }) {
   try {
-    const errorName = error.name || 'UnknownError';
-    const errorMessage = error.message || String(error);
+    const errorName = error?.name || 'UnknownError';
+    const errorMessage = error?.message || String(error || 'Unknown');
 
-    // Determine action and severity based on status code
-    let action = 'error_500';
-    let severity = 'error';
+    // Map severity default
+    let action = errorCode || 'error_500';
+    let severity = httpStatus >= 500 ? 'critical' : 'error';
 
-    if (httpStatus >= 500) {
-      action = 'error_500';
-      severity = 'critical';
-    } else if (httpStatus >= 400) {
-      // Only log 400/500 range server errors, not normal validation failures
-      return; // Skip logging 4xx client errors
+    // Skip 4xx client errors unless explicitly flagged
+    if (httpStatus >= 400 && httpStatus < 500 && !errorCode) {
+      return;
     }
 
     // Extract safe stack trace (first 10 lines for admin debugging)
@@ -48,12 +51,34 @@ async function logApplicationError({
         .join('\n') || null;
 
     // Build safe metadata — sanitize request context
-    const metadata = {};
-    if (correlationId) metadata.correlationId = correlationId;
-    if (userId) metadata.userId = userId;
+    const safeMeta = { correlationId, userId, ...metadata };
+    const sanitized = redactSensitive(safeMeta);
 
     const description = `${httpMethod} ${requestPath} → ${httpStatus}: ${errorMessage}`;
 
+    // Create an ErrorLog record (best-effort)
+    const referenceId = generateReference({ prefix: 'ERR' });
+    try {
+      await ErrorLog.create({
+        referenceId,
+        errorCode: errorCode || 'INTERNAL_SERVER_ERROR',
+        severity,
+        message: errorMessage.substring(0, 500),
+        technicalMessage: errorMessage,
+        stack: safeStack,
+        source,
+        httpMethod: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(httpMethod) ? httpMethod : 'other',
+        route: requestPath,
+        statusCode: httpStatus,
+        userId: userId || null,
+        requestId: correlationId || null,
+        metadata: sanitized,
+      });
+    } catch (err) {
+      console.error('[ErrorLogger] Failed to persist ErrorLog:', err.message);
+    }
+
+    // Also create an AdminActivity audit entry for visibility in legacy systems
     await AdminActivity.create({
       type: 'error',
       action,
@@ -70,7 +95,7 @@ async function logApplicationError({
       ip,
       userAgent,
       adminId: userId || null,
-      metadata,
+      metadata: sanitized,
     });
   } catch (logError) {
     // Fail silently to avoid cascading errors

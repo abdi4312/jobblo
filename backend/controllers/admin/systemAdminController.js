@@ -145,9 +145,23 @@ const getSystemErrors = asyncHandler(async (req, res) => {
     return sendError(res, 'Failed to retrieve system errors.', 500);
   }
 
+  // Map AdminActivity error docs to the system error response shape
+  const mapped = logs.map((l) => ({
+    _id: l._id,
+    action: l.action,
+    description: l.description,
+    createdAt: l.createdAt,
+    adminId: l.adminId || null,
+    httpMethod: l.httpMethod || null,
+    httpStatus: l.httpStatus || null,
+    requestPath: l.requestPath || null,
+    errorName: l.errorName || null,
+    errorMessage: l.errorMessage || null,
+  }));
+
   return sendSuccess(
     res,
-    { errors: logs },
+    { errors: mapped },
     'System errors retrieved.',
     {
       page,
