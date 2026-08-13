@@ -52,15 +52,21 @@ const getSystemHealth = asyncHandler(async (req, res) => {
  * Returns safe operational metrics for server, database, and application.
  */
 const getSystemMetrics = asyncHandler(async (req, res) => {
-  const [totalUsers, activeSessions, openDisputes, openChatReports, totalChatMessages, totalSafePayHistory] =
-    await Promise.all([
-      User.countDocuments({ isDeleted: { $ne: true } }),
-      Session.countDocuments(),
-      Dispute.countDocuments({ status: { $nin: ['resolved', 'closed'] } }),
-      ChatReport.countDocuments({ status: { $nin: ['resolved', 'dismissed', 'closed'] } }),
-      ChatMessage.countDocuments(),
-      SafePayHistory.countDocuments(),
-    ]);
+  const [
+    totalUsers,
+    activeSessions,
+    openDisputes,
+    openChatReports,
+    totalChatMessages,
+    totalSafePayHistory,
+  ] = await Promise.all([
+    User.countDocuments({ isDeleted: { $ne: true } }),
+    Session.countDocuments(),
+    Dispute.countDocuments({ status: { $nin: ['resolved', 'closed'] } }),
+    ChatReport.countDocuments({ status: { $nin: ['resolved', 'dismissed', 'closed'] } }),
+    ChatMessage.countDocuments(),
+    SafePayHistory.countDocuments(),
+  ]);
 
   let dbResponseTime = 'N/A';
   try {
@@ -118,26 +124,29 @@ const getSystemErrors = asyncHandler(async (req, res) => {
   let logs = [];
 
   try {
-    // Be defensive: select only documents that are clearly application errors.
-    // Some systems previously mixed audit and error events; require both type='error'
-    // and at least one error-like indicator (errorName, httpStatus >=500, action prefix, or severity).
-    const errorQuery = {
-      type: 'error',
-      $or: [
-        { errorName: { $exists: true, $ne: null } },
-        { httpStatus: { $gte: 500 } },
-        { action: { $regex: /^error_/i } },
-        { severity: { $in: ['error', 'critical'] } },
-      ],
-    };
+    // Read from ErrorLog (structured error events) instead of AdminActivity.
+    // Filter by optional query params: severity, code, route, date range.
+    const ErrorLog = require('../../models/ErrorLog');
+    const query = {};
+    if (req.query.severity) query.severity = req.query.severity;
+    if (req.query.code) query.errorCode = req.query.code;
+    if (req.query.route) query.route = { $regex: req.query.route, $options: 'i' };
+
+    if (req.query.dateFrom || req.query.dateTo) {
+      query.createdAt = {};
+      if (req.query.dateFrom) query.createdAt.$gte = new Date(req.query.dateFrom);
+      if (req.query.dateTo)
+        query.createdAt.$lte = new Date(new Date(req.query.dateTo).setHours(23, 59, 59, 999));
+    }
 
     [total, logs] = await Promise.all([
-      AdminActivity.countDocuments(errorQuery),
-      AdminActivity.find(errorQuery)
+      ErrorLog.countDocuments(query),
+      ErrorLog.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('adminId', 'name email')
+        .populate('userId', 'name email')
+        .populate('resolvedBy', 'name email')
         .lean(),
     ]);
   } catch (err) {
@@ -145,33 +154,28 @@ const getSystemErrors = asyncHandler(async (req, res) => {
     return sendError(res, 'Failed to retrieve system errors.', 500);
   }
 
-  // Map AdminActivity error docs to the system error response shape
+  // Map ErrorLog documents to the system error response shape expected by frontend
   const mapped = logs.map((l) => ({
     _id: l._id,
-    action: l.action,
-    description: l.description,
+    action: l.errorCode || 'INTERNAL_SERVER_ERROR',
+    description: l.message || l.technicalMessage || '',
     createdAt: l.createdAt,
-    adminId: l.adminId || null,
+    adminId: l.resolvedBy || null,
+    userId: l.userId || null,
     httpMethod: l.httpMethod || null,
-    httpStatus: l.httpStatus || null,
-    requestPath: l.requestPath || null,
-    errorName: l.errorName || null,
-    errorMessage: l.errorMessage || null,
+    httpStatus: l.statusCode || null,
+    requestPath: l.route || null,
+    referenceId: l.referenceId || null,
   }));
 
-  return sendSuccess(
-    res,
-    { errors: mapped },
-    'System errors retrieved.',
-    {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-      hasNextPage: page < Math.ceil(total / limit),
-      hasPreviousPage: page > 1,
-    }
-  );
+  return sendSuccess(res, { errors: mapped }, 'System errors retrieved.', {
+    page,
+    limit,
+    total,
+    totalPages: Math.ceil(total / limit),
+    hasNextPage: page < Math.ceil(total / limit),
+    hasPreviousPage: page > 1,
+  });
 });
 
 /**
