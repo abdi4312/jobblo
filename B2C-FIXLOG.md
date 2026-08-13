@@ -8,6 +8,7 @@ Severity scale: **P0** launch blocker · **P1** critical · **P2** important · 
 
 | # | Issue | Severity | Status |
 |---|---|---|---|
+| 13 | Job creation: map pinned jobs to the poster, edit corrupted jobs, draft wiped on failure | P1 | ✅ Done |
 | 12 | Chat payment funnel dead; everyone routed as provider | P0 | ✅ Done |
 | 11 | SafePay contract showed hardcoded date/duration/city, fake card, dead Vipps/Apple Pay | P0 | ✅ Done |
 | 10 | `/Anmeldelser` served hardcoded fake customer reviews | P0 | ✅ Done |
@@ -20,6 +21,126 @@ Severity scale: **P0** launch blocker · **P1** critical · **P2** important · 
 | 3 | Legacy payout endpoint released funds without payment/state/dispute checks | P0 | ✅ Done |
 | 2 | SafePay payment confirmation had no Stripe webhook | P0 | ✅ Done, needs deploy config |
 | 1 | Dead routes, no error boundary, placeholder text | P0 | ✅ Done |
+
+---
+
+## Fix #13 — Job creation correctness: location, validation, drafts, edit mode, error messages
+
+**Severity:** P1 · **Flow:** Legg ut oppdrag (create + both edit entry points)
+**Audit ref:** F-42, F-11, F-12
+
+### Re-verified against current code first
+
+Two of the audit's claims had already been fixed and are **not** part of this change:
+
+- F-11's "publishes silently pinned to Oslo" — `useCreateJobForm.validateStep(2)` already blocked on
+  `!coordinates` (line 523), and `StepIndicator` only allows jumping *backwards*
+  (`isClickable = stepNumber <= currentStep`), so step 4 is unreachable without a pin. The Oslo fallback was
+  still in the payload, though, and is reachable one way: `loadFormData()` restores `currentStep` from
+  IndexedDB, so a draft saved at step 4 *before* that rule existed restores past the check.
+- F-42's "step 4 is a required step whose data is thrown away" — the step is labelled
+  **"Kontaktinformasjon (Valgfritt)"** and `jobValidationSchema` has no `phone` rule at all. Nobody is forced
+  through it. The data was still being discarded, which is the part that needed fixing.
+
+Everything else in F-42 reproduced exactly as described.
+
+### The problems
+
+**1. The map pinned every job to wherever the poster was sitting.**
+`LocationPickerMap.tsx:75-78` called `getCurrentLocation({ pan: true })` in a mount effect. That ran
+`setLocation` → `onCoordinatesChange` → `TimeAndPlace.handleCoordinatesChange` → `setLocationConfirmed(true)`,
+plus a reverse-geocode that overwrote the city. Posting a job for a flat in Trondheim from your sofa in Oslo
+produced Oslo coordinates, "Oslo" as the city, and a green **"bekreftet"** badge — without a single click.
+It also published the poster's **home coordinates** on a public listing.
+
+**2. Fylke and Kommune were marked required but never validated.** Both carry a red `*` in
+`TimeAndPlace.tsx:136,163`, and neither was checked anywhere. A job saved without them never matches
+`getAllServices`' location filter, so it is invisible to everyone searching that area.
+
+**3. Everything typed in the contact step was dropped.** The form sent `phone` and `email`;
+`models/Service.js` had neither path, so Mongoose strict mode discarded both on every save.
+
+**4. A failed publish destroyed the user's work.** `LeggUtOppdrag.handleFormSubmit` caught the error,
+toasted, and did **not** re-throw — so `await onSubmit(formData)` resolved normally and
+`handleFinalSubmit` ran `clearFormData()`. A 500 or a dropped connection wiped the entire IndexedDB draft.
+The code comment ("Clear the draft only after a successful POST") described the opposite of the behaviour.
+
+**5. Editing a job corrupted it.** Both entry points built `initialData` with fields missing:
+
+| Missing | Consequence |
+|---|---|
+| `paymentType`, `hourlyRate` *(MineAnnonser)* | a **Timepris** job silently reopened as **Fastpris** with the rate blanked |
+| `latitude`/`longitude` *(both)* | coordinates started null → step 2 blocked → the map auto-located → **the job moved to the editor's position** |
+| `countyCode`/`municipalityCode`/`areaCode` *(both)* | location codes cleared on save → job disappeared from area search |
+| `maxApplicants` *(both)* | reset to 0 |
+| `categories` | `MineAnnonser` did `.join(', ')` → `["Hage","Maling"]` became one category `"Hage, Maling"`; `LeggUtOppdrag` took `[0]` and dropped the rest |
+
+**6. Every publish failure said the same thing.** `toast.error('Det oppstod en feil ved sending av
+oppdraget. Prøv igjen.')` for 400, 403, 413 and 500 alike, so nothing was actionable and users just retried.
+
+### What changed
+
+| File | Change |
+|---|---|
+| `frontend/src/utils/getErrorMessage.ts` | **new** — normalises both backend error shapes (legacy `{error:'text'}` and the `{error:{code,message}}` envelope) into one Norwegian string, with status-specific fallbacks |
+| `frontend/src/components/CreateJobForm/LocationPickerMap.tsx` | removed the auto-geolocate mount effect; the "Bruk min nåværende posisjon" button is unchanged |
+| `frontend/src/components/CreateJobForm/TimeAndPlace.tsx` | reverse-geocode no longer overwrites `city` when a kommune is selected (that field is locked to the kommune name) |
+| `frontend/src/hooks/useCreateJobForm.ts` | require fylke + kommune in `validateStep(2)` and name them in the toast; hard coordinates guard in `handleFinalSubmit` that returns the user to step 2; removed the Oslo fallbacks; send `contactPhone`/`contactEmail`; only clear the draft when `!isEditMode`; use `getErrorMessage`; dropped the bogus "telefon mangler" from the step-4 message |
+| `frontend/src/components/CreateJobForm/CreateJobForm.tsx` | widened its duplicate `InitialData` interface so the new fields aren't rejected as excess properties |
+| `frontend/src/pages/LeggUtOppdragPage/LeggUtOppdrag.tsx` | re-throws on failure (preserving the draft) and drops its duplicate toast; passes coordinates, location codes, all categories, `hourlyRate`, `maxApplicants` |
+| `frontend/src/pages/MyJobsPage/MineAnnonser.tsx` | same `initialData` completion incl. `paymentType`; `mutateAsync` so a failed save actually rejects |
+| `frontend/src/features/{services,jobDetail}/types.ts` | declared the fields the edit forms read |
+| `backend/models/Service.js` | added `contactPhone`/`contactEmail` with **`select: false`** |
+| `backend/controllers/serviceController.js` | `pickContactUpdates()` helper; `getMyPostedServices` opts into the contact fields |
+
+### Judgment calls
+
+**Contact fields are `select: false`, not plain fields.** The job listing is served to unauthenticated
+visitors (`GET /api/services/:id` has no `authenticate`), so storing the poster's phone number as an ordinary
+path would have published it to every anonymous visitor — trading a data-loss bug for a PII-leak bug.
+`select: false` keeps them out of every read by default; the owner-scoped `/api/services/my-posted` opts back
+in explicitly. That needed no new middleware and no endpoint sweep.
+
+**Blank contact values are ignored on update.** There are two edit entry points, and `/Publish-job/:id` reads
+the *public* endpoint, which will never return these fields — so it always submits empty strings. Assigning
+those would erase a saved phone number just because the user edited from a screen that couldn't see it.
+`pickContactUpdates` trims and drops blanks, so an empty field is a no-op.
+
+**Auto-geolocation was removed, not made smarter.** The map is the *confirmation* step for where the job
+happens. Prefilling it with the poster's position is wrong by default and defeats the purpose of asking.
+
+### Verification
+- New `backend/__tests__/serviceContactFields.test.js` — **5 tests, all passing**: fields persist, both are
+  `select: false`, the old `phone`/`email` names are still dropped, a blank update does not erase a saved
+  value, and a real value still applies.
+- Full backend suite: **167 passed, 9 failed** — the same pre-existing `chatReport.test.js` failures as every
+  previous fix (162 + my 5 new).
+- Frontend typecheck: **354 → 353**, verified by diffing the sorted error *sets* across a `git stash`. All 11
+  apparent "new" errors are pre-existing ones at shifted line numbers; the one real change is
+  `useCreateJobForm.ts(98,18) maxApplicants does not exist on InitialData`, now fixed.
+- ESLint on all changed files: no new violations (`getErrorMessage.ts` and `LocationPickerMap.tsx` clean).
+
+### Still to test manually
+1. **Create a job from a different city than you are in.** The map must open *empty* with "Klikk på kartet for
+   å sette lokasjon" — no pin, no green badge, no city auto-filled.
+2. Try "Neste" on step 2 without a fylke/kommune → toast must name them.
+3. **Edit a Timepris job from "Mine annonser"** → payment type stays Timepris, hourly rate intact, all
+   categories still separate, map still on the original location.
+4. **Fail a publish on purpose** (offline, or stop the backend) → the error must be specific, and reloading
+   `/Publish-job` must restore the draft.
+5. Enter a phone/e-mail in step 4, publish, then reopen from "Mine annonser" → both should come back.
+6. Confirm `GET /api/services/:id` as a logged-out visitor does **not** contain `contactPhone`/`contactEmail`.
+
+### Known follow-ups (not touched)
+- `/Publish-job/:id` cannot prefill the contact fields (public endpoint). Harmless today because blanks are
+  ignored, but it also means the form cannot *clear* a saved value. Fixing properly needs optional auth on
+  `getServiceById`, which does not exist in the codebase yet.
+- `previewJobData` still falls back to Oslo coordinates for the preview map. Display-only, and the publish
+  guard now stops that value ever being saved.
+- `usePaymentCalculation` only understands `hours`/`days`/`minutes`; `Service.duration.unit` also allows the
+  Norwegian `timer`/`dager`/`minutter`. The UI select only offers the English values, but an AI-filled or
+  legacy job with a Norwegian unit will not auto-recalculate its Timepris total. Pre-existing (F-41 family).
+- `updateService`'s mass-assignment (`Object.assign(service, otherFields)`) is untouched — that is F-39.
 
 ---
 

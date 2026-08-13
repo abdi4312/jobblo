@@ -17,6 +17,11 @@ interface InitialData {
   price?: string | number;
   address?: string;
   city?: string;
+  countyCode?: string;
+  municipalityCode?: string;
+  areaCode?: string;
+  latitude?: number;
+  longitude?: number;
   categories?: string | string[];
   urgent?: boolean;
   equipment?: string;
@@ -25,13 +30,15 @@ interface InitialData {
   durationValue?: string | number;
   durationUnit?: string;
   paymentType?: string;
+  hourlyRate?: string | number;
+  maxApplicants?: string | number;
   phone?: string;
   email?: string;
   images?: string[];
 }
 
 interface CreateJobFormProps {
-  onSubmit: (formData: FormData) => void;
+  onSubmit: (formData: FormData) => void | Promise<unknown>;
   userId: string;
   initialData?: InitialData;
   isEditMode?: boolean;

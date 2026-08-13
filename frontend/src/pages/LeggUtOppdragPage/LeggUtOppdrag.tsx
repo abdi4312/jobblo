@@ -50,19 +50,26 @@ export default function LeggUtOppdrag() {
             },
           });
 
-      if (response.data) {
-        console.log(isEditMode ? 'Job updated' : 'Job created');
-        toast.success(isEditMode ? 'Oppdrag oppdatert!' : 'Oppdrag publisert!');
-        navigate('/');
-      } else {
-        console.error('Failed. Status:', response.status);
-        toast.error(`Kunne ikke lagre oppdrag. Status: ${response.status}`);
+      if (!response.data) {
+        // Treat "no body" as a failure like any other, so the caller keeps the
+        // draft instead of clearing it on a response we can't confirm.
+        throw new Error(`Uventet svar fra serveren (status ${response.status})`);
       }
+
+      toast.success(isEditMode ? 'Oppdrag oppdatert!' : 'Oppdrag publisert!');
+      navigate('/');
     } catch (error) {
+      // Re-thrown on purpose: useCreateJobForm only preserves the IndexedDB
+      // draft if this promise rejects. Swallowing the error here made every
+      // failed publish look like a success to the caller, which then wiped
+      // everything the user had typed. It also owns the error toast, so we
+      // deliberately don't show one too.
       console.error('Error saving job:', error);
-      toast.error('Det oppstod en feil ved kommunikasjon med serveren');
+      throw error;
     }
   };
+
+  const coordinates = job?.location?.coordinates; // GeoJSON order: [lng, lat]
 
   const initialData = job
     ? {
@@ -71,7 +78,12 @@ export default function LeggUtOppdrag() {
         price: job.price,
         address: job.location?.address,
         city: job.location?.city,
-        categories: job.categories?.[0] || job.categories, // Component expects single category string usually
+        countyCode: job.countyCode,
+        municipalityCode: job.municipalityCode,
+        areaCode: job.areaCode,
+        latitude: coordinates?.[1],
+        longitude: coordinates?.[0],
+        categories: job.categories,
         urgent: job.urgent,
         equipment: job.equipment,
         fromDate: job.fromDate,
@@ -79,8 +91,8 @@ export default function LeggUtOppdrag() {
         durationValue: job.duration?.value,
         durationUnit: job.duration?.unit,
         paymentType: job.paymentType,
-        phone: job.phone,
-        email: job.email,
+        hourlyRate: job.hourlyRate,
+        maxApplicants: job.maxApplicants,
         images: job.images,
       }
     : undefined;

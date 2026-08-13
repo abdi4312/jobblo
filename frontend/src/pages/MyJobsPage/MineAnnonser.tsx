@@ -133,13 +133,15 @@ export default function MineAnnonser() {
     }
   };
 
-  const handleFormSubmit = (jobData: FormData) => {
-    if (editingService) {
-      updateMutation.mutate(
-        { id: editingService._id, data: jobData as unknown as Service },
-        { onSuccess: () => setEditingService(null) }
-      );
-    }
+  const handleFormSubmit = async (jobData: FormData) => {
+    if (!editingService) return;
+    // mutateAsync (not mutate) so a failed save actually rejects: the form keeps
+    // its submitting state until the request finishes, and reports the real error.
+    await updateMutation.mutateAsync({
+      id: editingService._id,
+      data: jobData as unknown as Service,
+    });
+    setEditingService(null);
   };
 
   if (isLoading) return <JobDetailCardSkeleton />;
@@ -158,9 +160,17 @@ export default function MineAnnonser() {
               title: editingService.title,
               description: editingService.description,
               price: editingService.price.toString(),
-              address: editingService.location.address,
-              city: editingService.location.city,
-              categories: editingService.categories.join(', '),
+              address: editingService.location?.address,
+              city: editingService.location?.city,
+              countyCode: editingService.countyCode,
+              municipalityCode: editingService.municipalityCode,
+              areaCode: editingService.areaCode,
+              // location.coordinates is GeoJSON [lng, lat]; the form holds [lat, lng].
+              latitude: editingService.location?.coordinates?.[1],
+              longitude: editingService.location?.coordinates?.[0],
+              // Pass the array through. Joining it produced one bogus category
+              // named "Hage, Maling" that matched nothing in search.
+              categories: editingService.categories,
               urgent: editingService.urgent,
               equipment: editingService.equipment || '',
               fromDate: editingService.fromDate
@@ -171,6 +181,13 @@ export default function MineAnnonser() {
                 : '',
               durationValue: editingService.duration?.value?.toString() || '',
               durationUnit: editingService.duration?.unit || 'hours',
+              // Without these an hourly job silently reopened as a fixed-price
+              // one with the rate blanked.
+              paymentType: editingService.paymentType,
+              hourlyRate: editingService.hourlyRate,
+              maxApplicants: editingService.maxApplicants,
+              phone: editingService.contactPhone,
+              email: editingService.contactEmail,
               images: editingService.images || [],
             }}
           />

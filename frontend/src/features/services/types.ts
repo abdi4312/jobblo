@@ -64,6 +64,15 @@ export interface Service {
   duration: Duration;
   fromDate?: string;
   toDate?: string;
+  paymentType?: string;
+  hourlyRate?: number;
+  maxApplicants?: number;
+  countyCode?: string;
+  municipalityCode?: string;
+  areaCode?: string;
+  /** Owner-only: `select: false` on the model, returned by /api/services/my-posted. */
+  contactPhone?: string;
+  contactEmail?: string;
   createdAt: string;
   updatedAt: string;
   __v: number;

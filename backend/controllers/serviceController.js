@@ -2,6 +2,23 @@ const Service = require('../models/Service');
 const JobRequest = require('../models/JobRequest');
 const mongoose = require('mongoose');
 
+/**
+ * Trims the optional contact fields and drops the blanks.
+ *
+ * Both edit entry points post the whole form, but only /api/services/my-posted
+ * can read these back (they are `select: false`), so the other one always sends
+ * empty strings. Assigning those would silently erase a saved phone number just
+ * because the user edited the job from a screen that couldn't see it.
+ */
+const pickContactUpdates = (body) => {
+  const updates = {};
+  for (const field of ['contactPhone', 'contactEmail']) {
+    const value = body[field];
+    if (typeof value === 'string' && value.trim()) updates[field] = value.trim();
+  }
+  return updates;
+};
+
 // ------------------- Get All Services -------------------
 
 exports.getAllServices = async (req, res) => {
@@ -308,6 +325,8 @@ exports.createService = async (req, res) => {
       municipalityCode,
       areaCode,
       checklist,
+      contactPhone,
+      contactEmail,
       ...serviceData
     } = req.body;
 
@@ -385,6 +404,7 @@ exports.createService = async (req, res) => {
 
     const service = await Service.create({
       ...serviceData,
+      ...pickContactUpdates(req.body),
       userId,
       countyCode,
       municipalityCode,
@@ -507,8 +527,16 @@ exports.updateService = async (req, res) => {
     }
 
     // Update other fields (including location codes)
-    const { countyCode, municipalityCode, areaCode, checklist, ...otherFields } = req.body;
-    Object.assign(service, otherFields);
+    const {
+      countyCode,
+      municipalityCode,
+      areaCode,
+      checklist,
+      contactPhone,
+      contactEmail,
+      ...otherFields
+    } = req.body;
+    Object.assign(service, otherFields, pickContactUpdates(req.body));
     if (countyCode !== undefined) service.countyCode = countyCode;
     if (municipalityCode !== undefined) service.municipalityCode = municipalityCode;
     if (areaCode !== undefined) service.areaCode = areaCode;
@@ -737,7 +765,10 @@ exports.updateChecklistItem = async (req, res) => {
 
 exports.getMyPostedServices = async (req, res) => {
   try {
+    // Only place the select:false contact fields are returned — this route is
+    // owner-scoped, and the edit form needs them to avoid saving blanks back.
     const services = await Service.find({ userId: req.userId })
+      .select('+contactPhone +contactEmail')
       .populate('userId', 'name email avatarUrl verified role orgNumber companyName')
       .sort({ _id: -1 });
 

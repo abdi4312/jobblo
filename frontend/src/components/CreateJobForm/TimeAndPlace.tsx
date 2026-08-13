@@ -280,7 +280,9 @@ export const TimeAndPlace: React.FC<TimeAndPlaceProps> = ({
           onCoordinatesChange={handleCoordinatesChange}
           onReverseGeocode={({ address: geoAddress, city: geoCity, manual }) => {
             if (geoAddress && (manual || !address)) setAddress(geoAddress);
-            if (geoCity) setCity(geoCity);
+            // When a kommune is selected the city field is locked to its name, so
+            // letting the geocoder write over it would put the two out of sync.
+            if (geoCity && !municipalityCode) setCity(geoCity);
           }}
         />
 

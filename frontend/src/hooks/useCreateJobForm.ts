@@ -6,6 +6,7 @@ import { usePaymentCalculation } from './usePaymentCalculation';
 import { useForm } from './useForm';
 import { jobValidationSchema, type JobFormValues } from '../validations/jobValidations';
 import { saveFormData, loadFormData, clearFormData } from '../utils/indexedDB';
+import { getErrorMessage } from '../utils/getErrorMessage';
 
 interface InitialData {
   title?: string;
@@ -24,6 +25,8 @@ interface InitialData {
   durationValue?: string | number;
   durationUnit?: string;
   paymentType?: string;
+  hourlyRate?: string | number;
+  maxApplicants?: string | number;
   phone?: string;
   email?: string;
   images?: string[];
@@ -35,7 +38,7 @@ export const useCreateJobForm = (
   userId: string,
   initialData?: InitialData,
   isEditMode = false,
-  onSubmit?: (formData: FormData) => void
+  onSubmit?: (formData: FormData) => void | Promise<unknown>
 ) => {
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -523,6 +526,14 @@ export const useCreateJobForm = (
       if (!coordinates) {
         isValid = false;
       }
+
+      // Fylke and Kommune are marked required in the UI but sit outside the
+      // schema too. Without them the job never matches the location filter
+      // (serviceController.getAllServices), so it is invisible to the people
+      // searching in that area.
+      if (!countyCode || !municipalityCode) {
+        isValid = false;
+      }
     } else if (step === 4) {
       // Validate Step 4 fields (Contact Information)
       const fieldsToValidate: (keyof JobFormValues)[] = ['email', 'phone'];
@@ -568,6 +579,8 @@ export const useCreateJobForm = (
       email: 'e-post',
       phone: 'telefon',
       images: 'bilde',
+      countyCode: 'fylke',
+      municipalityCode: 'kommune',
     };
 
     const missing: string[] = [];
@@ -602,13 +615,16 @@ export const useCreateJobForm = (
       } else if (values.fromDate && new Date(values.toDate) < new Date(values.fromDate)) {
         missing.push('gyldig sluttdato (kan ikke være før startdato)');
       }
+      if (!countyCode) missing.push(labels.countyCode);
+      if (!municipalityCode) missing.push(labels.municipalityCode);
       if (!coordinates) missing.push('lokasjon på kartet');
     } else if (currentStep === 4) {
+      // Phone and e-mail are optional here (the step is labelled "Valgfritt" and
+      // neither has a required-rule), so only a malformed e-mail can block.
       if (values.email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(String(values.email).trim())) missing.push(labels.email);
       }
-      if (!values.phone) missing.push(labels.phone);
     }
 
     if (missing.length > 0) {
@@ -639,6 +655,16 @@ export const useCreateJobForm = (
       return;
     }
 
+    // Last line of defence before we build the payload. Step 2 already blocks on
+    // this, but a draft saved before that rule existed can restore straight to
+    // step 4 with no pin — and publishing then used to fall back to Oslo city
+    // centre, putting the job in the wrong place with no warning at all.
+    if (!coordinates) {
+      setCurrentStep(2);
+      toast.error('Bekreft hvor oppdraget skal utføres på kartet før du publiserer.');
+      return;
+    }
+
     if (!onSubmit) {
       toast.error('Kunne ikke sende skjemaet. Prøv igjen.');
       return;
@@ -656,8 +682,11 @@ export const useCreateJobForm = (
       formData.append('maxApplicants', maxApplicants.toString());
       formData.append('equipment', equipment);
       formData.append('paymentType', paymentType);
-      formData.append('phone', values.phone);
-      formData.append('email', values.email);
+      // Stored as contactPhone/contactEmail — the Service schema has no `phone`
+      // or `email` path, so the old names were dropped by Mongoose strict mode
+      // and everything typed in the contact step was thrown away.
+      formData.append('contactPhone', values.phone ?? '');
+      formData.append('contactEmail', values.email ?? '');
 
       if (fromDate) formData.append('fromDate', fromDate);
       if (toDate) formData.append('toDate', toDate);
@@ -665,8 +694,8 @@ export const useCreateJobForm = (
       formData.append('location[address]', values.address);
       formData.append('location[city]', values.city);
       formData.append('location[type]', 'Point');
-      formData.append('location[coordinates][0]', (coordinates?.[1] ?? 10.7461).toString()); // lng
-      formData.append('location[coordinates][1]', (coordinates?.[0] ?? 59.9127).toString()); // lat
+      formData.append('location[coordinates][0]', coordinates[1].toString()); // lng
+      formData.append('location[coordinates][1]', coordinates[0].toString()); // lat
       if (countyCode) formData.append('countyCode', countyCode);
       if (municipalityCode) formData.append('municipalityCode', municipalityCode);
       if (areaCode) formData.append('areaCode', areaCode);
@@ -703,10 +732,16 @@ export const useCreateJobForm = (
       // Clear the draft only after a successful POST, best-effort. Awaiting it
       // first would let an IndexedDB hang/failure block the request and leave
       // the Publish button stuck in a loading state forever.
-      clearFormData().catch(() => {});
+      // Edit mode never loads the draft, so clearing it here would throw away an
+      // unrelated half-written job the user has in progress.
+      if (!isEditMode) clearFormData().catch(() => {});
     } catch (error) {
+      // The draft is deliberately left intact here — this catch is the failed
+      // publish path, and it is the only copy of what the user typed.
       console.error('Submission error:', error);
-      toast.error('Det oppstod en feil ved sending av oppdraget. Prøv igjen.');
+      toast.error(
+        getErrorMessage(error, 'Det oppstod en feil ved sending av oppdraget. Prøv igjen.')
+      );
     } finally {
       // Always reset — even if the onSubmit promise never resolves or a
       // previous run crashed before reaching its own finally.

@@ -72,10 +72,12 @@ export function LocationPickerMap({
     [setLocation]
   );
 
-  useEffect(() => {
-    getCurrentLocation({ pan: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Deliberately NOT auto-locating on mount. This map is the *confirmation* step
+  // for where the job takes place, which is rarely where the poster is sitting.
+  // Auto-filling it pinned the job to the poster's own address, flipped the green
+  // "bekreftet" badge, overwrote the city, and published their home coordinates on
+  // a public listing — all without a single click. The button below still exists
+  // for the case where the poster really is at the job location.
 
   // Sync marker + center when coordinates change from outside (e.g. address autocomplete)
   useEffect(() => {
