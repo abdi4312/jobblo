@@ -306,16 +306,14 @@ exports.approveAndPayout = async (req, res) => {
       return res.status(400).json({ error: 'Ugyldig orderId' });
     }
 
-    // Validate ratings
-    if (!ratings) {
-      return res.status(400).json({ error: 'Vurderinger er påkrevd' });
+    // Validate ratings: overall is required; other fields optional but if present must be 1-5
+    if (!ratings || typeof ratings.overall !== 'number' || ratings.overall < 1 || ratings.overall > 5) {
+      return res.status(400).json({ error: 'Overall rating (overall) must be provided and between 1 and 5' });
     }
-    const requiredRatingFields = ['overall', 'punctuality', 'quality', 'communication', 'tidiness'];
-    for (const field of requiredRatingFields) {
-      if (typeof ratings[field] !== 'number' || ratings[field] < 1 || ratings[field] > 5) {
-        return res.status(400).json({
-          error: `Alle vurderingsfelt (${field}) må være mellom 1 og 5 stjerner`,
-        });
+    const optionalFields = ['punctuality', 'quality', 'communication', 'tidiness'];
+    for (const field of optionalFields) {
+      if (ratings[field] !== undefined && (typeof ratings[field] !== 'number' || ratings[field] < 1 || ratings[field] > 5)) {
+        return res.status(400).json({ error: `Optional rating ${field} must be a number between 1 and 5 if provided` });
       }
     }
     if (comment && comment.length > 1000) {
@@ -358,20 +356,23 @@ exports.approveAndPayout = async (req, res) => {
     }
 
     // ── Atomic update: complete the order ─────────────────────────────────────
+    // Build $set for review fields, only include optional fields if present
+    const reviewSet = {
+      status: 'completed',
+      paymentStatus: 'paid',
+      completedAt: new Date(),
+      'review.overall': ratings.overall,
+      'review.comment': comment || '',
+    };
+    if (ratings.punctuality !== undefined) reviewSet['review.punctuality'] = ratings.punctuality;
+    if (ratings.quality !== undefined) reviewSet['review.quality'] = ratings.quality;
+    if (ratings.communication !== undefined) reviewSet['review.communication'] = ratings.communication;
+    if (ratings.tidiness !== undefined) reviewSet['review.tidiness'] = ratings.tidiness;
+
     order = await Order.findOneAndUpdate(
       { _id: orderId, status: 'ready_for_review' },
       {
-        $set: {
-          status: 'completed',
-          paymentStatus: 'paid',
-          completedAt: new Date(),
-          'review.overall': ratings.overall,
-          'review.punctuality': ratings.punctuality,
-          'review.quality': ratings.quality,
-          'review.communication': ratings.communication,
-          'review.tidiness': ratings.tidiness,
-          'review.comment': comment || '',
-        },
+        $set: reviewSet,
         $push: {
           history: {
             action: 'work_approved',
@@ -414,22 +415,29 @@ exports.approveAndPayout = async (req, res) => {
     // ── SafePayHistory (idempotent) ────────────────────────────────────────────
     const existingHistory = await SafePayHistory.findOne({ orderId: order._id });
     if (!existingHistory) {
-      try {
-        await SafePayHistory.create({
-          orderId: order._id,
-          serviceId: order.serviceId._id,
-          customerId: order.customerId,
-          providerId: order.providerId,
-          serviceTitle: order.serviceId.title || 'Uten navn',
-          amounts: { agreedPrice: order.agreedPrice, fee, tax, totalCustomer, netProvider },
-          status: 'completed',
-          paymentDate: new Date(),
-          ratings,
-          reviewComment: comment,
-        });
-      } catch (e) {
-        if (e.code !== 11000) throw e;
-      }
+        try {
+          // sanitize ratings for history (only include provided fields)
+          const sanitizedRatings = { overall: ratings.overall };
+          if (ratings.punctuality !== undefined) sanitizedRatings.punctuality = ratings.punctuality;
+          if (ratings.quality !== undefined) sanitizedRatings.quality = ratings.quality;
+          if (ratings.communication !== undefined) sanitizedRatings.communication = ratings.communication;
+          if (ratings.tidiness !== undefined) sanitizedRatings.tidiness = ratings.tidiness;
+
+          await SafePayHistory.create({
+            orderId: order._id,
+            serviceId: order.serviceId._id,
+            customerId: order.customerId,
+            providerId: order.providerId,
+            serviceTitle: order.serviceId.title || 'Uten navn',
+            amounts: { agreedPrice: order.agreedPrice, fee, tax, totalCustomer, netProvider },
+            status: 'completed',
+            paymentDate: new Date(),
+            ratings: sanitizedRatings,
+            reviewComment: comment,
+          });
+        } catch (e) {
+          if (e.code !== 11000) throw e;
+        }
     }
 
     // ── Review: customer reviews provider ─────────────────────────────────────

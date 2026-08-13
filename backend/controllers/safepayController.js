@@ -327,17 +327,14 @@ exports.completeJobAndPayout = async (req, res) => {
       return res.status(400).json({ error: 'Ugyldig orderId' });
     }
 
-    // Validate ratings are present and each at least 1 star
-    if (!ratings) {
-      return res.status(400).json({ error: 'Vurderinger er påkrevd' });
+    // Validate ratings: overall required; others optional but must be 1-5 if provided
+    if (!ratings || typeof ratings.overall !== 'number' || ratings.overall < 1 || ratings.overall > 5) {
+      return res.status(400).json({ error: 'Overall rating (overall) must be provided and between 1 and 5' });
     }
-
-    const requiredRatingFields = ['overall', 'punctuality', 'quality', 'communication', 'tidiness'];
-    for (const field of requiredRatingFields) {
-      if (typeof ratings[field] !== 'number' || ratings[field] < 1 || ratings[field] > 5) {
-        return res.status(400).json({
-          error: `Alle vurderingsfelt (${field}) må være mellom 1 og 5 stjerner`,
-        });
+    const optionalFields = ['punctuality', 'quality', 'communication', 'tidiness'];
+    for (const field of optionalFields) {
+      if (ratings[field] !== undefined && (typeof ratings[field] !== 'number' || ratings[field] < 1 || ratings[field] > 5)) {
+        return res.status(400).json({ error: `Optional rating ${field} must be a number between 1 and 5 if provided` });
       }
     }
 
@@ -363,19 +360,21 @@ exports.completeJobAndPayout = async (req, res) => {
     }
 
     // Then do atomic update
+    const reviewSet = {
+      status: 'completed',
+      paymentStatus: 'paid',
+      'review.overall': ratings.overall,
+      'review.comment': comment || '',
+    };
+    if (ratings.punctuality !== undefined) reviewSet['review.punctuality'] = ratings.punctuality;
+    if (ratings.quality !== undefined) reviewSet['review.quality'] = ratings.quality;
+    if (ratings.communication !== undefined) reviewSet['review.communication'] = ratings.communication;
+    if (ratings.tidiness !== undefined) reviewSet['review.tidiness'] = ratings.tidiness;
+
     order = await Order.findOneAndUpdate(
       { _id: orderId, status: { $ne: 'completed' } },
       {
-        $set: {
-          status: 'completed',
-          paymentStatus: 'paid',
-          'review.overall': ratings.overall,
-          'review.punctuality': ratings.punctuality,
-          'review.quality': ratings.quality,
-          'review.communication': ratings.communication,
-          'review.tidiness': ratings.tidiness,
-          'review.comment': comment || '',
-        },
+        $set: reviewSet,
         $push: {
           history: {
             action: 'job_completed',

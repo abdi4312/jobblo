@@ -262,6 +262,7 @@ const SafePayApproval: React.FC = () => {
   const [comment, setComment] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [recommendWorker, setRecommendWorker] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   // Fetch Order Details
   const {
@@ -302,9 +303,21 @@ const SafePayApproval: React.FC = () => {
   // Approval Mutation
   const approveMutation = useMutation({
     mutationFn: async () => {
+      // client-side validation: overall must be present
+      if (!ratings || typeof ratings.overall !== 'number' || ratings.overall < 1) {
+        throw new Error('Vennligst gi en helhetlig vurdering (1-5 stjerner)');
+      }
+
+      // construct payload ratings with only provided optional fields
+      const payloadRatings: any = { overall: ratings.overall };
+      if (ratings.punctuality && ratings.punctuality > 0) payloadRatings.punctuality = ratings.punctuality;
+      if (ratings.quality && ratings.quality > 0) payloadRatings.quality = ratings.quality;
+      if (ratings.communication && ratings.communication > 0) payloadRatings.communication = ratings.communication;
+      if (ratings.tidiness && ratings.tidiness > 0) payloadRatings.tidiness = ratings.tidiness;
+
       const res = await mainLink.post('/api/safepay-checkout/approve', {
         orderId,
-        ratings,
+        ratings: payloadRatings,
         comment,
         photos,
         recommendWorker,
@@ -346,6 +359,11 @@ const SafePayApproval: React.FC = () => {
     const allChecked = checklist.every((item) => item.checked);
     if (!allChecked && !showSkipDialog) {
       toast.error('Merk av alle sjekklistepunktene, eller hopp over sjekklisten.');
+      return;
+    }
+    // Ensure overall rating exists
+    if (!ratings || typeof ratings.overall !== 'number' || ratings.overall < 1) {
+      toast.error('Vennligst gi en helhetlig vurdering (1-5 stjerner)');
       return;
     }
     approveMutation.mutate();
@@ -745,26 +763,43 @@ const SafePayApproval: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                {[
-                  { id: 'punctuality', label: 'Punktlighet' },
-                  { id: 'quality', label: 'Kvalitet' },
-                  { id: 'communication', label: 'Kommunikasjon' },
-                  { id: 'tidiness', label: 'Ryddighet' },
-                ].map((cat) => (
-                  <div key={cat.id} className="bg-[#f9f9f7] rounded-xl p-3">
-                    <div className="text-[11px] text-gray-400 uppercase font-bold mb-2 tracking-wider">
-                      {cat.label}
+              <div className="mb-4">
+                {!showDetails ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowDetails(true)}
+                    className="text-sm text-gray-600 underline"
+                  >
+                    Gi mer detaljert vurdering (valgfritt)
+                  </button>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                      {[
+                        { id: 'punctuality', label: 'Punktlighet' },
+                        { id: 'quality', label: 'Kvalitet' },
+                        { id: 'communication', label: 'Kommunikasjon' },
+                        { id: 'tidiness', label: 'Ryddighet' },
+                      ].map((cat) => (
+                        <div key={cat.id} className="bg-[#f9f9f7] rounded-xl p-3">
+                          <div className="text-[11px] text-gray-400 uppercase font-bold mb-2 tracking-wider">
+                            {cat.label}
+                          </div>
+                          <StarRating
+                            value={(ratings as any)[cat.id]}
+                            onChange={(val) => setRatings((prev) => ({ ...prev, [cat.id]: val }))}
+                            disabled={isOrderCompleted}
+                            size={14}
+                            showLabel={false}
+                          />
+                        </div>
+                      ))}
                     </div>
-                    <StarRating
-                      value={(ratings as any)[cat.id]}
-                      onChange={(val) => setRatings((prev) => ({ ...prev, [cat.id]: val }))}
-                      disabled={isOrderCompleted}
-                      size={14}
-                      showLabel={false}
-                    />
-                  </div>
-                ))}
+                    <button type="button" onClick={() => setShowDetails(false)} className="text-sm text-gray-500 underline">
+                      Skjul detaljert vurdering
+                    </button>
+                  </>
+                )}
               </div>
 
               <textarea
