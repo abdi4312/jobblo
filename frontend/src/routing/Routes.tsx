@@ -6,8 +6,7 @@ import { PublicRoute } from '../components/shared/PublicRoute.tsx';
 import { AdminProtectedRoute } from '../components/shared/AdminProtectedRoute.tsx';
 import { SettingsLayout } from '../components/layout/SettingsLayout/SettingsLayout.tsx';
 import { RouteErrorElement } from '../components/ErrorBoundary.tsx';
-import Lottie from 'lottie-react';
-import Loging from '../assets/animations/loading.json';
+import { PageLoader } from '../components/Loading/PageLoader.tsx';
 
 import {
   UsernameView,
@@ -38,21 +37,14 @@ import OAuthSuccess from '../pages/OAuthSuccess.tsx';
 import SettingsPage from '../pages/SettingsPage.tsx';
 
 // =======================
-// Loading
-// =======================
-
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <Lottie animationData={Loging} loop autoplay />
-  </div>
-);
-
-// =======================
 // Helpers
 // =======================
 
+// `PageLoader` is used directly rather than through a local wrapper component: this file
+// also exports the `routes` table, and a component declared alongside a non-component
+// export breaks fast refresh for the whole module.
 const withSuspense = (Component: React.ComponentType) => (
-  <Suspense fallback={<LoadingFallback />}>
+  <Suspense fallback={<PageLoader />}>
     <Component />
   </Suspense>
 );

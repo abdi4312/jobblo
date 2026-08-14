@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../Ui/button/Button';
 import { Bookmark, MessageCircle, AlertCircle } from 'lucide-react';
-import { TailSpin } from 'react-loader-spinner';
+import { Spinner } from '../Ui/Spinner';
 import { useUserStore } from '../../stores/userStore';
 import AddToListModal from '../Explore/jobs/AddToListModal';
 import { useNavigate } from 'react-router-dom';
@@ -87,18 +87,13 @@ const JobButton: React.FC<JobButtonProps> = ({
                       ? 'Cooldown'
                       : 'Send forespørsel'
           }
-          icon={
-            isMsgLoading ? (
-              <TailSpin height={18} width={18} color="#ffffff" />
-            ) : (
-              <MessageCircle size={18} />
-            )
-          }
+          icon={isMsgLoading ? <Spinner size={18} label={null} /> : <MessageCircle size={18} />}
           className={`flex-1 h-12 text-[14px]! rounded-xl font-semibold! transition-all! whitespace-nowrap
-                        ${!isOwnJob && (hasRequested || isLimitReached || isTimerActive)
-              ? 'bg-gray-100! text-gray-400! cursor-not-allowed!'
-              : 'bg-custom-green! text-white! hover:bg-[#266b3c]!'
-            } 
+                        ${
+                          !isOwnJob && (hasRequested || isLimitReached || isTimerActive)
+                            ? 'bg-gray-100! text-gray-400! cursor-not-allowed!'
+                            : 'bg-custom-green! text-white! hover:bg-[#266b3c]!'
+                        } 
                     `}
         />
 

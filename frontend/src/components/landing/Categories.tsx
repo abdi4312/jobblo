@@ -46,7 +46,7 @@ export function Categories() {
           {isLoading
             ? Array.from({ length: 6 }).map((_, i) => (
                 <li key={i} className="border-b border-[#E6E7E1] px-2 py-6.5">
-                  <div className="h-8 w-2/3 animate-pulse rounded-lg bg-[#E6E7E1]" />
+                  <div className="jb-skeleton h-8 w-2/3 rounded-lg" />
                 </li>
               ))
             : categories.map((cat, i) => {

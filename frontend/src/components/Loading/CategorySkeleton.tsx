@@ -1,18 +1,22 @@
-import { Spinner } from '../Ui/Spinner';
+/**
+ * The placeholder row for the category tiles.
+ *
+ * Was eight boxes each holding a 145 px lime spinner — the spinners were larger than the
+ * tiles they stood in and overflowed them. Now each tile is the shape of the tile it is
+ * standing in for.
+ */
+export const CategorySkeleton = () => (
+  <div className="mx-auto grid max-w-300 grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+    {Array.from({ length: 8 }).map((_, index) => (
+      <div
+        key={index}
+        className="flex flex-col items-center gap-2.5 rounded-2xl border border-[#E6E7E1] bg-white p-4"
+      >
+        <div className="jb-skeleton size-5.5 rounded-md" />
+        <div className="jb-skeleton h-3 w-14 rounded" />
+      </div>
+    ))}
+  </div>
+);
 
-export const CategorySkeleton = () => {
-  return (
-    <div className="flex gap-2 max-w-282.5 mx-auto">
-      {[...Array(8)].map((_, index) => (
-        <div
-          key={index}
-          className="box-card-custom min-w-30.75 p-6.5 flex items-center animate-pulse"
-        >
-          <div className="flex flex-col gap-2 w-full py-2 items-center">
-            <Spinner size={145} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
+export default CategorySkeleton;

@@ -203,6 +203,60 @@ body {
   }
 }
 
+/* ── Loading motion ──────────────────────────────────────────────────────────
+   Three primitives, all on the brand palette and all deliberately quiet: nothing
+   bounces, nothing changes hue, nothing draws a character. What replaced the green
+   InfinitySpin and the 382 KB hourglass Lottie is a sweep, a shimmer and an arc.
+
+   Each one stops completely under prefers-reduced-motion rather than slowing down —
+   an indeterminate loader has nothing to say once it is not moving, so it simply
+   holds its resting state. */
+
+/* The hairline progress bar on the full-page loader. The segment is 40 % of the track
+   and travels past both ends, so there is no visible start or stop. */
+@keyframes jb-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+/* The sweep across a skeleton block. `translateX` only — animating a gradient's
+   position repaints the whole element on every frame. */
+@keyframes jb-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Skeletons: one class, so a placeholder cannot drift from the palette the way the
+   `bg-gray-200 animate-pulse` blocks did. */
+.jb-skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: #e5e7df;
+}
+
+.jb-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  animation: jb-shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jb-skeleton::after {
+    animation: none;
+  }
+}
+
 /* The rotating word in the landing hero. Measured in `em` so the rise scales with the
    headline's own clamp() size rather than drifting as the viewport changes. */
 @keyframes jb-word-in {

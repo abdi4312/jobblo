@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Send, X } from 'lucide-react';
-import { TailSpin } from 'react-loader-spinner';
+import { Spinner } from '../Ui/Spinner';
 
 interface OrderRequestModalProps {
   isOpen: boolean;
@@ -42,10 +42,7 @@ const OrderRequestModal: React.FC<OrderRequestModalProps> = ({
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Send forespørsel</h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
-          >
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
             <X size={20} className="text-gray-500" />
           </button>
         </div>
@@ -58,8 +55,7 @@ const OrderRequestModal: React.FC<OrderRequestModalProps> = ({
 
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Melding til leverandøren{' '}
-            <span className="text-gray-400 font-normal">(valgfritt)</span>
+            Melding til leverandøren <span className="text-gray-400 font-normal">(valgfritt)</span>
           </label>
           <textarea
             value={message}
@@ -87,7 +83,7 @@ const OrderRequestModal: React.FC<OrderRequestModalProps> = ({
             className="flex-1 px-4 py-3 bg-[#2F7E47] text-white rounded-xl text-sm font-semibold hover:bg-[#266b3c] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isLoading ? (
-              <TailSpin height={18} width={18} color="#ffffff" />
+              <Spinner size={18} label={null} />
             ) : (
               <>
                 <Send size={16} />

@@ -452,10 +452,10 @@ export default function JobListingPage() {
             {jobsLoading ? (
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className={`${CARD} p-4`}>
-                  <div className="h-45 animate-pulse rounded-2xl bg-[#F0F1EB]" />
+                  <div className="jb-skeleton h-45 rounded-2xl" />
                   <div className="mt-5 space-y-2.5 px-1">
-                    <div className="h-5 w-3/4 animate-pulse rounded bg-[#F0F1EB]" />
-                    <div className="h-3.5 w-1/2 animate-pulse rounded bg-[#F0F1EB]" />
+                    <div className="jb-skeleton h-5 w-3/4 rounded" />
+                    <div className="jb-skeleton h-3.5 w-1/2 rounded" />
                   </div>
                 </div>
               ))

@@ -10,9 +10,7 @@ import { useAuth } from './features/auth/hook/useAuth.ts';
 import { useOrderApprovalSocket } from './features/notifications/hooks';
 import { useUserStore } from './stores/userStore';
 import { Toaster } from 'react-hot-toast';
-import MainLoading from './assets/loading/main-loading.gif';
-import Lottie from 'lottie-react';
-import Loging from './assets/animations/loading.json';
+import { PageLoader } from './components/Loading/PageLoader.tsx';
 
 export default function App() {
   const { isLoadingUser } = useAuth();
@@ -23,12 +21,7 @@ export default function App() {
   useOrderApprovalSocket(user?._id);
 
   if (isLoadingUser) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        {/* <img src={MainLoading} alt="Loading..." className="w-36 h-36" /> */}
-        <Lottie animationData={Loging} loop autoplay />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   const isMessagesPage = location.pathname.startsWith('/messages');

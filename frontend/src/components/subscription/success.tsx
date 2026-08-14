@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import mainLink from '../../api/mainURLs';
-import { RevolvingDot } from 'react-loader-spinner'; // Loading spinner
+import { Spinner } from '../Ui/Spinner';
 
 const SuccessPage = () => {
   const [status, setStatus] = useState('loading'); // loading | success | failed | error
@@ -53,13 +53,15 @@ const SuccessPage = () => {
     <div className="flex flex-col items-center justify-center min-h-screen">
       {status === 'loading' && (
         <div className="flex flex-col items-center">
-          <RevolvingDot height="80" width="80" color="#4fa94d" ariaLabel="loading" />
+          <Spinner size={40} className="text-[#2E6641]" />
           <p className="mt-4 text-gray-700">Sjekker betalingen din ...</p>
         </div>
       )}
 
       {status === 'success' && (
-        <h1 className="text-green-600 text-2xl font-semibold">Betalingen er gjennomført! Sender deg videre ...</h1>
+        <h1 className="text-green-600 text-2xl font-semibold">
+          Betalingen er gjennomført! Sender deg videre ...
+        </h1>
       )}
 
       {status === 'failed' && (
@@ -67,7 +69,9 @@ const SuccessPage = () => {
       )}
 
       {status === 'error' && (
-        <h1 className="text-red-600 text-2xl font-semibold">Vi fikk ikke bekreftet betalingen. Kontakt kundeservice hvis beløpet er trukket.</h1>
+        <h1 className="text-red-600 text-2xl font-semibold">
+          Vi fikk ikke bekreftet betalingen. Kontakt kundeservice hvis beløpet er trukket.
+        </h1>
       )}
 
       {status === 'no-session' && (
