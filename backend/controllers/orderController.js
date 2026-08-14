@@ -12,11 +12,28 @@ const { calculatePointsFromService } = require('../utils/points');
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
+/**
+ * The id behind an order reference, whether or not it has been populated.
+ *
+ * `getOrderById` populates `customerId` and `providerId` before authorising, so the ref
+ * is a Mongoose document by the time it is checked and `.toString()` returns the whole
+ * document rendered as a string — never an id. The comparison could not match, so the
+ * endpoint answered 403 to the customer and the provider alike on every order.
+ */
+const refId = (ref) => {
+  if (!ref) return null;
+  if (typeof ref === 'string') return ref;
+  return String(ref._id ?? ref);
+};
+
 // Helper to authorize order actions
 function authorizeOrderAction(req, order) {
-  if (!order.customerId || !order.providerId) return false;
+  const customerId = refId(order.customerId);
+  const providerId = refId(order.providerId);
+  if (!customerId || !providerId) return false;
 
-  return order.customerId.toString() === req.userId || order.providerId.toString() === req.userId;
+  const userId = String(req.userId);
+  return customerId === userId || providerId === userId;
 }
 
 /**

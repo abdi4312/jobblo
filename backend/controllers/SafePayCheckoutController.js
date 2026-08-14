@@ -174,10 +174,28 @@ exports.getCheckoutDetails = async (req, res) => {
   }
 };
 
+/**
+ * Everything that must be true before Stripe is called, checked one at a time.
+ *
+ * This used to be a bare `catch` that returned "Kunne ikke starte betalingen" and threw
+ * the real error away — so a missing env var, a deleted service and a Stripe outage were
+ * indistinguishable from each other and from the outside, and there was nothing in the
+ * logs to tell them apart. Each failure now names itself, in the log and in a `code` on
+ * the response. The customer-facing `error` string is unchanged.
+ */
+function resolveFrontendUrl() {
+  const raw = process.env.FRONTEND_URL?.trim().replace(/\/$/, '');
+  if (!raw) return { error: 'FRONTEND_URL is not set — Stripe needs absolute return URLs' };
+  if (!/^https?:\/\//i.test(raw)) {
+    return { error: `FRONTEND_URL must start with http(s)://, got "${raw}"` };
+  }
+  return { url: raw };
+}
+
 exports.createSafePaySession = async (req, res) => {
+  const { orderId } = req.body || {};
   try {
     const stripe = await getStripe();
-    const { orderId } = req.body;
     const userId = req.userId;
 
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
@@ -188,6 +206,25 @@ exports.createSafePaySession = async (req, res) => {
 
     if (!order) {
       return res.status(404).json({ error: 'Kontrakten ble ikke funnet' });
+    }
+
+    // `serviceId` is populated above; if the underlying service was deleted it comes back
+    // null and the line-item name below (`order.serviceId.title`) threw a TypeError that
+    // surfaced as a bare 500.
+    if (!order.serviceId) {
+      console.error('createSafePaySession: order %s references a missing service', orderId);
+      return res.status(409).json({
+        error: 'Oppdraget finnes ikke lenger, så betalingen kan ikke startes.',
+        code: 'service_missing',
+      });
+    }
+
+    if (!(order.agreedPrice > 0)) {
+      console.error('createSafePaySession: order %s has agreedPrice %o', orderId, order.agreedPrice);
+      return res.status(409).json({
+        error: 'Kontrakten mangler en avtalt pris.',
+        code: 'missing_agreed_price',
+      });
     }
 
     // ── SECURITY: Only customer (job poster/payer) may create checkout ─────────
@@ -240,7 +277,18 @@ exports.createSafePaySession = async (req, res) => {
       });
     }
 
-    const frontendUrl = process.env.FRONTEND_URL?.replace(/\/$/, '');
+    // Checked before the Stripe call rather than after: an unset FRONTEND_URL produced
+    // `success_url: "undefined/safepay/success?..."`, which Stripe rejects as an invalid
+    // URL — a config mistake that arrived looking like a payment-provider failure.
+    const frontend = resolveFrontendUrl();
+    if (frontend.error) {
+      console.error('createSafePaySession: %s', frontend.error);
+      return res.status(500).json({
+        error: 'Betaling er ikke konfigurert riktig. Kontakt support.',
+        code: 'frontend_url_misconfigured',
+      });
+    }
+    const frontendUrl = frontend.url;
 
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
@@ -277,7 +325,25 @@ exports.createSafePaySession = async (req, res) => {
 
     res.json({ url: session.url });
   } catch (err) {
-    res.status(500).json({ error: 'Kunne ikke starte betalingen' });
+    // A missing Stripe key throws out of getStripe() with a precise message; Stripe's own
+    // errors carry `type` and `code`. Both were being discarded, which is why a 500 here
+    // was unactionable in production.
+    const isConfig = /secret key is missing/i.test(err?.message || '');
+    console.error(
+      'createSafePaySession failed [order=%s] %s%s: %s',
+      orderId,
+      err?.type ? `${err.type}` : err?.name || 'Error',
+      err?.code ? `/${err.code}` : '',
+      err?.message,
+      err?.stack
+    );
+
+    res.status(500).json({
+      error: isConfig
+        ? 'Betaling er ikke konfigurert riktig. Kontakt support.'
+        : 'Kunne ikke starte betalingen',
+      code: isConfig ? 'stripe_key_missing' : err?.code || 'stripe_session_failed',
+    });
   }
 };
 
@@ -662,6 +728,15 @@ exports.approveAndPayout = async (req, res) => {
 
     res.json({ message: 'Jobb godkjent og beløp lagt til saldo', orderId });
   } catch (err) {
+    // The payout path already logs Stripe transfer failures in its own catch above. This
+    // one covers everything before that — and logged nothing at all, on the single most
+    // consequential endpoint in the product.
+    console.error(
+      'approveAndPayout failed [order=%s]: %s',
+      req.body?.orderId || req.params?.orderId,
+      err?.message,
+      err?.stack
+    );
     res.status(500).json({ error: 'Serverfeil ved godkjenning av utbetaling' });
   }
 };
