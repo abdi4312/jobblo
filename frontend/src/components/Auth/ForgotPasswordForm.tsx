@@ -120,8 +120,9 @@ export const ForgotPasswordForm = () => {
 
     // ── Render ─────────────────────────────────────────────────────────────────
     return (
-        <div className="w-full lg:w-[50%] flex items-center justify-center p-4">
-            <div className="w-full max-w-120 p-8">
+        // Sizing and centring now belong to AuthLayout, which all three auth pages share.
+        <div className="flex flex-col gap-6">
+            <div>
 
                 {step === 'email' && (
                     <ForgotPasswordStepEmail

@@ -125,7 +125,7 @@ function SearchComponent() {
 
       {/* Search Dropdown Overlay */}
       {isDropdownOpen && (
-        <div className="absolute top-22 left-0 right-0 bg-white border border-gray-100 rounded-4xl shadow-2xl z-50 p-2 sm:p-6 pt-2 max-h-120 overflow-auto transition-all duration-300 ease-in-out">
+        <div className="absolute top-16 left-0 right-0 z-50 max-h-120 overflow-auto rounded-2xl border border-[#E6E7E1] bg-white p-2 pt-2 shadow-[0_24px_60px_-24px_rgba(11,11,11,0.28)] sm:p-6">
           {/* Tab Navigation */}
           <SearchTabs activeTab={activeTab} setActiveTab={setActiveTab} tabs={tabs} />
 

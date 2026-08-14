@@ -33,6 +33,11 @@ export default function App() {
 
   const isMessagesPage = location.pathname.startsWith('/messages');
 
+  // The auth screens are their own full-viewport layout with their own branding.
+  // Rendering the site header and footer around them stacked three full-height
+  // regions on top of each other, which is what forced the login page to scroll.
+  const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
+
   return (
     <>
       <Toaster
@@ -49,9 +54,9 @@ export default function App() {
       <AntApp>
         <ScrollToTop />
         <CookieBanner />
-        <Header />
+        {!isAuthPage && <Header />}
         <Outlet />
-        {!isMessagesPage && <Footer />}
+        {!isMessagesPage && !isAuthPage && <Footer />}
       </AntApp>
     </>
   );

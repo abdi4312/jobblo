@@ -1,13 +1,12 @@
-import * as Icons from '../../../assets/icons';
-import { Button } from '../../Ui/button/Button';
+import jobbloWordmark from '../../../assets/images/Login/jobblo-wordmark.png';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUserStore } from '../../../stores/userStore';
 import { toast } from 'react-hot-toast';
 import { useState, useEffect } from 'react';
 import { getMyChats } from '../../../api/chatAPI';
 import { initSocket } from '../../../socket/socket';
-import { NavLink } from 'react-router-dom';
-import { Bell, FileText, Home, MessageCircle, Plus, User, Users, Crown } from 'lucide-react';
+import { Link, NavLink } from 'react-router-dom';
+import { Bell, Home, Menu, MessageCircle, Plus, User, Users, Crown, X } from 'lucide-react';
 import { useUnreadCount } from '../../../features/notifications/hooks';
 import { useNotificationSound } from '../../../hooks/useNotificationSound';
 
@@ -210,10 +209,20 @@ export default function Header() {
     badgeCount?: number;
   }
 
+  /**
+   * Navigation for signed-out visitors. This array existed but was never rendered, so
+   * the marketing header offered a home icon and a login button and nothing else — no
+   * way into the product from the page most first-time visitors land on. Its old targets
+   * (/slik-fungerer-det, /priser) were not routes either; these point at the landing
+   * page section, the real browse route, and the pricing page.
+   *
+   * "Priser" pointed at `/#priser` — a landing section that no longer exists, since
+   * pricing is now answered in full by its own page. It goes straight there.
+   */
   const navLinks: NavLinkItem[] = [
-    { name: 'Slik fungerer det', path: '/slik-fungerer-det' },
-    { name: 'Tjenester', path: '/job-listing' },
-    { name: 'Priser', path: '/priser' },
+    { name: 'Finn oppdrag', path: '/search/job/all' },
+    { name: 'Slik fungerer det', path: '/#slik-fungerer-det' },
+    { name: 'Priser', path: '/pricing' },
   ];
 
   const navLinkUse: NavLinkItem[] = [
@@ -246,17 +255,64 @@ export default function Header() {
 
   const isMessagesPage = location.pathname.startsWith('/messages');
 
+  /**
+   * Which signed-out nav link is the current page.
+   *
+   * `NavLink` cannot do this on its own here: it matches on pathname only, so
+   * "/#slik-fungerer-det" would count as active for the whole landing page and light up
+   * next to whatever else lives at "/". A link carrying a hash is only current when that
+   * hash is the one in the URL.
+   */
+  const isCurrent = (path: string) => {
+    const [pathname, hash] = path.split('#');
+    if (hash) return location.pathname === (pathname || '/') && location.hash === `#${hash}`;
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  };
+
   return (
     <>
-      <header className={`bg-[#F6F1E8] relative ${isMessagesPage ? 'mb-0' : 'mb-6'}`}>
-        <div className="h-14 md:h-22.75 max-w-300 mx-auto flex justify-between items-center px-4 lg:px-0">
-          {/* LOGO */}
-          <div className="h-10.75 w-40 sm:w-40.5 cursor-pointer" onClick={() => navigate('/')}>
-            <Icons.JobbloIcon />
-          </div>
+      <header
+        className={`sticky top-0 z-40 border-b border-[#E6E7E1] bg-white/85 backdrop-blur-md ${isMessagesPage ? 'mb-0' : ''}`}
+      >
+        <div className="mx-auto flex h-18 max-w-300 items-center justify-between gap-6 px-5 sm:px-8 lg:px-12">
+          {/* LOGO — the trimmed full-colour wordmark, not the 93 KB base64 raster the
+              icon barrel exports. */}
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            aria-label="Jobblo — til forsiden"
+            className="shrink-0 rounded focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/20"
+          >
+            <img
+              src={jobbloWordmark}
+              alt="Jobblo"
+              width={340}
+              height={128}
+              className="h-7 w-auto"
+            />
+          </button>
 
-          {/* DESKTOP NAV */}
-          {!Auth && <div className="hidden md:flex flex-1"></div>}
+          {/* DESKTOP NAV — signed out. These were plain <a href> tags, so every click on
+              "Finn oppdrag" or "Priser" tore down the SPA and reloaded the whole bundle.
+              They are router links now, and the current one is marked. */}
+          {!Auth && (
+            <nav className="hidden flex-1 items-center gap-1 md:flex">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  aria-current={isCurrent(link.path) ? 'page' : undefined}
+                  className={`rounded-full px-3.5 py-2 text-[0.875rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2E6641]/25 ${
+                    isCurrent(link.path)
+                      ? 'bg-[#F0F1EB] text-[#0B0B0B]!'
+                      : 'text-[#63665F]! hover:bg-[#F0F1EB] hover:text-[#0B0B0B]!'
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              ))}
+            </nav>
+          )}
 
           {Auth && (
             <div className="hidden md:flex items-center gap-6 px-4 py-3">
@@ -294,7 +350,8 @@ export default function Header() {
                     key={index}
                     to={link.path}
                     className={({ isActive }) =>
-                      `relative flex items-center gap-2 cursor-pointer group py-2 ${isActive ? 'border-b-2 border-[#2F7E47]' : ''
+                      `relative flex items-center gap-2 cursor-pointer group py-2 ${
+                        isActive ? 'border-b-2 border-[#2F7E47]' : ''
                       }`
                     }
                   >
@@ -315,29 +372,33 @@ export default function Header() {
             </div>
           )}
 
-          {/* RIGHT SIDE (MOBILE TOGGLE) */}
-          <div className="md:hidden">
-            <button className="text-2xl" onClick={() => setMenuOpen(true)}>
-              ☰
-            </button>
-          </div>
-          {!Auth && (
-            <div className="md:flex items-center gap-6 hidden">
-              <NavLink
-                to="/home"
-                className={({ isActive }) =>
-                  `transition-all cursor-pointer ${isActive ? 'text-custom-green!' : 'text-custom-green!'
-                  }`
-                }
-              >
-                <Home size={30} strokeWidth={1.5} />
-              </NavLink>
+          {/* RIGHT SIDE (MOBILE TOGGLE) — was the literal character "☰" */}
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Åpne meny"
+            className="rounded-lg p-1.5 text-[#0B0B0B] transition-colors hover:bg-[#F0F1EB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2E6641]/25 md:hidden"
+          >
+            <Menu size={22} strokeWidth={2} />
+          </button>
 
+          {/* The landing page runs entirely on pills; a squared-off pair of buttons in the
+              bar directly above it read as a different product. Same shape, same heights. */}
+          {!Auth && (
+            <div className="hidden shrink-0 items-center gap-2.5 md:flex">
               <button
+                type="button"
                 onClick={() => navigate('/login')}
-                className="bg-custom-green text-white px-8 py-3 rounded-[20px] font-semibold transition-all hover:bg-[#25633a] active:scale-95 shadow-sm"
+                className="flex h-11 items-center rounded-full border border-[#E6E7E1] bg-white px-5 text-[0.875rem] font-medium text-[#0B0B0B] transition-colors hover:border-[#2E6641]/45 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 active:scale-[0.99]"
               >
-                Register/Log in
+                Logg inn
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/Publish-job')}
+                className="flex h-11 items-center rounded-full bg-[#2E6641] px-5 text-[0.875rem] font-semibold text-white transition duration-150 hover:bg-[#255335] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/20 active:scale-[0.99]"
+              >
+                Legg ut oppdrag
               </button>
             </div>
           )}
@@ -351,40 +412,47 @@ export default function Header() {
           />
         )}
         <div
-          className={`fixed top-0 left-0 h-full w-64 bg-white z-50 transform transition-transform duration-300 md:hidden ${menuOpen ? 'translate-x-0' : '-translate-x-full'
-            }`}
+          className={`fixed left-0 top-0 z-50 h-full w-72 transform bg-white transition-transform duration-300 md:hidden ${
+            menuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
         >
-          <div className="flex justify-between items-center p-4 border-b">
-            <span className="font-semibold">Meny</span>
-            <button onClick={() => setMenuOpen(false)}>✕</button>
+          <div className="flex items-center justify-between border-b border-[#E6E7E1] px-5 py-4">
+            <img
+              src={jobbloWordmark}
+              alt="Jobblo"
+              width={340}
+              height={128}
+              className="h-6 w-auto"
+            />
+            <button
+              type="button"
+              onClick={() => setMenuOpen(false)}
+              aria-label="Lukk meny"
+              className="rounded-lg p-1.5 text-[#63665F] transition-colors hover:bg-[#F0F1EB] hover:text-[#0B0B0B]"
+            >
+              <X size={20} strokeWidth={2} />
+            </button>
           </div>
 
-          <ul className="flex flex-col gap-2 p-4">
+          <ul className="flex flex-col gap-1 p-4">
             {!Auth ? (
               <>
-                <li>
-                  <NavLink
-                    to="/home"
-                    onClick={() => setMenuOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-green-50 text-custom-green! font-bold' : 'text-gray-700!'
-                      }`
-                    }
-                  >
-                    <Home size={20} />
-                    <span className="text-sm font-medium">Hjem</span>
-                  </NavLink>
-                </li>
-                {/* <li>
-                  <NavLink
-                    to="/login"
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-green-50 hover:text-custom-green"
-                  >
-                    <User size={20} />
-                    <span className="text-sm font-medium">Register/Log in</span>
-                  </NavLink>
-                </li> */}
+                {navLinks.map((link) => (
+                  <li key={link.path}>
+                    <Link
+                      to={link.path}
+                      onClick={() => setMenuOpen(false)}
+                      aria-current={isCurrent(link.path) ? 'page' : undefined}
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.9375rem] font-medium transition-colors ${
+                        isCurrent(link.path)
+                          ? 'bg-[#F0F1EB] text-[#0B0B0B]!'
+                          : 'text-[#0B0B0B]! hover:bg-[#F0F1EB]'
+                      }`}
+                    >
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
               </>
             ) : (
               navLinkUse.map((link, index) => (
@@ -393,7 +461,8 @@ export default function Header() {
                     to={link.path}
                     onClick={() => setMenuOpen(false)}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 p-3 rounded-lg ${isActive ? 'bg-green-50 text-custom-green! font-bold' : 'text-gray-700!'
+                      `flex items-center gap-3 p-3 rounded-lg ${
+                        isActive ? 'bg-green-50 text-custom-green! font-bold' : 'text-gray-700!'
                       }`
                     }
                   >
@@ -416,14 +485,28 @@ export default function Header() {
             )}
           </ul>
 
-          {/* Vipps Button in Sidebar for mobile logout users */}
           {!Auth && (
-            <div className="px-4">
-              <Button
-                label="Register/Log in"
-                className="rounded-lg"
-                onClick={() => navigate('/login')}
-              />
+            <div className="flex flex-col gap-2 px-4 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate('/Publish-job');
+                }}
+                className="flex h-12 items-center justify-center rounded-full bg-[#2E6641] px-5 text-[0.9375rem] font-semibold text-white transition hover:bg-[#255335]"
+              >
+                Legg ut oppdrag
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate('/login');
+                }}
+                className="flex h-12 items-center justify-center rounded-full border border-[#E6E7E1] px-5 text-[0.9375rem] font-medium text-[#0B0B0B] transition hover:border-[#2E6641]/45"
+              >
+                Logg inn
+              </button>
             </div>
           )}
         </div>

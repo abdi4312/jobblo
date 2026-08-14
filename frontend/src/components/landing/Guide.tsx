@@ -1,73 +1,65 @@
+import { Target, Users, TrendingUp, ShieldCheck } from 'lucide-react';
 import ChooseImage from '../../assets/images/Hero/choose_img.png';
-import { Target, Users, TrendingUp, ShieldCheck, UserCircle } from 'lucide-react';
+import { CARD, CONTAINER, HEADING, ICON_PLATE, SECTION, SUBHEADING } from '../../theme/brand';
 
-const features = [
+const FEATURES = [
   {
     title: 'Presisjon',
     description:
-      'Vår smarte matching-algoritme sikrer at du finner de mest relevante oppdragene for dine ferdigheter.',
+      'Smart matching sørger for at du ser de oppdragene som faktisk passer ferdighetene dine.',
     icon: Target,
   },
   {
     title: 'Fellesskap',
-    description: 'Bli en del av et voksende nettverk av dyktige fagfolk og innovative bedrifter.',
+    description: 'Bli en del av et voksende nettverk av dyktige fagfolk og bedrifter.',
     icon: Users,
   },
   {
     title: 'Vekst',
-    description: 'Utvikle karrieren din med varierte prosjekter som utfordrer og inspirerer.',
+    description: 'Bygg erfaringen din med varierte oppdrag som utfordrer og inspirerer.',
     icon: TrendingUp,
   },
   {
     title: 'Trygghet',
     description:
-      'Alle oppdrag er kvalitetssikret, og vi garanterer trygg betaling for utført arbeid via SafePay.',
+      'Betalingen holdes hos SafePay og frigis først når oppdragsgiver har godkjent jobben.',
     icon: ShieldCheck,
   },
 ];
 
 export function Guide() {
   return (
-    <section className="py-5 px-5 sm:px-12 max-w-275 mx-auto">
-      <div className="text-center mb-9">
-        <h2 className="text-[28px] font-normal text-custom-black">
-          Hvorfor velge <em className="text-custom-green not-italic">Jobblo</em>?
+    <section className={`${CONTAINER} ${SECTION}`}>
+      <div className="mb-9 max-w-136">
+        <h2 className={HEADING}>
+          Hvorfor velge <span className="text-[#2E6641]">Jobblo</span>?
         </h2>
-        <p className="text-[14px] text-custom-black/50 mt-1.5">
-          Vi gjør det enkelt, trygt og lønnsomt
-        </p>
+        <p className={`mt-3 ${SUBHEADING}`}>Vi gjør det enkelt, trygt og lønnsomt.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-        {/* Left: Image Side */}
-        <div className="bg-[#e8e0d0] rounded-[50%_50%_50%_50%/55%_55%_45%_45%] h-95 flex items-center justify-center relative overflow-hidden">
-          {ChooseImage ? (
-            <img src={ChooseImage} alt="Worker" className="w-full h-full object-cover" />
-          ) : (
-            <UserCircle size={80} className="text-black/20" />
-          )}
-          <div className="absolute bottom-7.5 left-7.5 bg-custom-green text-white rounded-xl p-2.5 px-4 shadow-lg">
-            <strong className="block text-[22px] font-medium">250+</strong>
-            <span className="text-[11px] opacity-85">Jobber per dag</span>
-          </div>
+      <div className="grid items-stretch gap-6 lg:grid-cols-2 lg:gap-10">
+        {/* The old version overlaid this image with a "250+ Jobber per dag" badge that
+            nothing measured — the same fabricated-stat problem as the hero's 4.8 ★. It is
+            gone rather than replaced; the real counts are in the hero and come from the API. */}
+        <div className="overflow-hidden rounded-[24px] bg-[#F4F6F0]">
+          <img
+            src={ChooseImage}
+            alt=""
+            className="h-full min-h-72 w-full object-cover"
+            loading="lazy"
+          />
         </div>
 
-        {/* Right: Feature Cards Side */}
         <div className="flex flex-col gap-3">
-          {features.map((feature, idx) => (
-            <div
-              key={idx}
-              className="bg-white border border-black/10 rounded-[14px] p-4 flex items-start gap-3.5 hover:border-custom-green transition-colors"
-            >
-              <div className="w-9.5 h-9.5 rounded-lg bg-[#f0faf0] flex items-center justify-center shrink-0">
-                <feature.icon className="text-custom-green" size={20} />
-              </div>
+          {FEATURES.map(({ title, description, icon: Icon }) => (
+            <div key={title} className={`${CARD} flex flex-1 items-start gap-3.5 p-4`}>
+              <span className={ICON_PLATE} aria-hidden="true">
+                <Icon size={19} strokeWidth={1.9} />
+              </span>
               <div>
-                <h3 className="text-[14px] font-medium text-custom-black mb-0.5">
-                  {feature.title}
-                </h3>
-                <p className="text-[12px] text-custom-black/50 leading-relaxed">
-                  {feature.description}
+                <h3 className="text-[0.9375rem] font-semibold text-[#0B0B0B]">{title}</h3>
+                <p className="mt-1 text-[0.8125rem] leading-relaxed text-[#63665F]">
+                  {description}
                 </p>
               </div>
             </div>

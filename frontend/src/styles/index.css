@@ -39,8 +39,11 @@ body {
 @theme {
   --color-orange-custom: #e08835;
   --color-custom-black: #0a0a0a;
-  --color-custom-green: #2f7e47;
-  --color-custom-green-light: #2f7e4733;
+  /* The logo's own sprout-stem green. Was #2f7e47, which was close to the mark but not
+     taken from it — so the ~90 places using `custom-green` sat a shade off the wordmark
+     they appeared next to. Sampled from the logo artwork; see src/theme/brand.ts. */
+  --color-custom-green: #2e6641;
+  --color-custom-green-light: #2e664133;
 }
 
 @theme inline {
@@ -187,4 +190,28 @@ body {
 
 .animate-float {
   animation: float 5s ease-in-out infinite;
+}
+
+/* The landing page's trust strip. The track holds the item list twice, so shifting it
+   half its width lands exactly on the start of the second copy and the loop is seamless. */
+@keyframes jb-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* The rotating word in the landing hero. Measured in `em` so the rise scales with the
+   headline's own clamp() size rather than drifting as the viewport changes. */
+@keyframes jb-word-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.55em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

@@ -8,6 +8,8 @@ Severity scale: **P0** launch blocker · **P1** critical · **P2** important · 
 
 | # | Issue | Severity | Status |
 |---|---|---|---|
+| 17 | Login rate limit locked out ten honest users per IP per hour | P1 | ✅ Done |
+| 16 | Support tickets rejected for signed-in users (found by running the app) | P1 | ✅ Done |
 | 15 | Disputes, account deletion, support tickets, settings overwrites, dead code | P1–P3 | ✅ Done |
 | 14 | Phase 2–4 sweep: auth redirects, statuses, crashes, security, consent, prod hardening | P0–P2 | ✅ Done |
 | 13 | Job creation: map pinned jobs to the poster, edit corrupted jobs, draft wiped on failure | P1 | ✅ Done |
@@ -23,6 +25,83 @@ Severity scale: **P0** launch blocker · **P1** critical · **P2** important · 
 | 3 | Legacy payout endpoint released funds without payment/state/dispute checks | P0 | ✅ Done |
 | 2 | SafePay payment confirmation had no Stripe webhook | P0 | ✅ Done, needs deploy config |
 | 1 | Dead routes, no error boundary, placeholder text | P0 | ✅ Done |
+
+---
+
+## Fix #17 — The login rate limit was aimed at the wrong people
+
+**Severity:** P1 · **Audit ref:** F-19 (rate-limiting half) · **Found by:** hitting it while testing
+
+`authLimiter` allowed **10 requests per IP per hour** across login *and* register, and counted
+successes. Ten ordinary sign-ins locked out everyone behind that address for an hour. A household, an
+office or a café shares one public IP; behind a CDN or load balancer the entire user base does —
+which is what the audit meant by "this will look like a total outage on launch day". I hit it myself
+after a dozen scripted logins, which is how it surfaced.
+
+The failure mode is worse than it sounds: the control did nothing extra against an attacker (who
+fails, and would be caught either way) while reliably locking out legitimate users (who succeed, and
+were spending the same budget).
+
+| File | Change |
+|---|---|
+| `backend/middleware/rateLimiter.js` | `skipSuccessfulRequests: true`; window 1 h → 15 min; max 10 → 20 **failed** attempts; message translated |
+| `backend/__tests__/authRateLimit.test.js` | **new** — 2 tests |
+
+`skipSuccessfulRequests` is the whole fix: the budget is now spent by whoever is guessing passwords,
+never by whoever knows theirs. Twenty wrong guesses per 15 minutes per IP still stops credential
+stuffing; it just no longer stops customers. The old copy — *"Too many login/register attempts,
+please try again after an hour"* — was also English and promised an hour-long lockout, which the
+audit's message inventory lists as unexplained; it is now
+*"For mange mislykkede forsøk. Prøv igjen om 15 minutter."*
+
+### Verification
+
+- Test file: **2 passed**. Full backend suite **185 passed, 9 failed** — the same pre-existing
+  `chatReport.test.js` failures.
+- Against the running server: **25 consecutive successful logins all returned 200** (the old limiter
+  blocked from the 11th). Then 22 wrong passwords → 20 allowed through, the rest **429** with the
+  Norwegian message.
+
+---
+
+## Fix #16 — Support tickets were rejected for the users we can already identify
+
+**Severity:** P1 · **Audit ref:** F-09 (regression in Fix #15) · **Found by:** running the app locally
+
+`POST /api/support/tickets` is open to logged-out visitors by design — someone who cannot log in is
+the person most likely to need help — so it carried **no auth middleware at all**. But
+`createTicket` reads `req.userId` to look up the account address, and `SupportPage` hides the e-mail
+field for members and sends only `{subject, message}`. With nothing populating `req.userId`, the
+"prefer the account's own address" branch was dead code and every signed-in submission came back
+**400 `Oppgi en gyldig e-postadresse vi kan svare på.`** Support worked for anonymous visitors and
+failed for logged-in customers — the exact inverse of the intent. The route's own comment claimed
+the middleware set `req.userId`; it did not.
+
+| File | Change |
+|---|---|
+| `backend/middleware/auth.js` | **new** `optionalAuthenticate` — recognises a caller when it can, continues anonymously when it cannot |
+| `backend/routes/support.js` | `POST /tickets` now runs `optionalAuthenticate` |
+| `backend/__tests__/optionalAuthenticate.test.js` | **new** — 4 tests |
+
+`optionalAuthenticate` delegates to `authenticate` verbatim rather than re-implementing token
+handling, and passes it a response stub that swallows the rejection. The contract that matters is
+that **`next()` runs exactly once on every path** — valid token, no token, malformed token, revoked
+session — and that a bad token degrades to "anonymous" instead of "denied". The real `res` is never
+touched on the failure path, so a revoked token does not clear a visitor's cookies on a route that
+also serves logged-out users.
+
+Only the support route uses it. It is deliberately not applied anywhere else: every other route
+either requires a user or does not want one, and silently downgrading auth on those would turn a
+401 into a wrong-data 200.
+
+### Verification
+
+- New test file: **4 passed**. Full backend suite **183 passed, 9 failed** — up from 179 passed, the
+  same pre-existing `chatReport.test.js` failures.
+- Exercised against the running server, all four paths: signed-in with no e-mail field → **201**,
+  stored against the account address and `userId`; logged-out with no address → **400**; logged-out
+  with an address → **201**, `userId: null`; garbage bearer token with an address → **201**,
+  anonymous. Test rows removed from the dev database afterwards.
 
 ---
 
@@ -1090,3 +1169,70 @@ Two consequences worth knowing:
   untouched by any fix so far.
 
 Anyone setting up a fresh checkout still needs `npm install` in `frontend/`.
+
+---
+
+## Local run configuration (14 Aug 2026)
+
+The app was stood up end-to-end locally to verify the fixes against real data rather than only in
+tests. Backend on **:5001**, frontend on **:5174**, MongoDB on the default local instance.
+
+Three values in the supplied env files needed changing to make the system actually run, each
+recorded as a comment in the file next to the change:
+
+| Var | Was | Now | Why |
+|---|---|---|---|
+| `MONGO_URI` | `…/jobblo-dev` | `…/jobblo_dev` | The hyphenated database is empty (0 users, 0 services). The seeded data — 18 users, 41 services, 15 orders — is in the underscored one. |
+| `FRONTEND_URL` | `http://localhost:5173/` | `http://localhost:5174/` | Port 5173 is held by an unrelated Vite server. OAuth callbacks are built from this value, so it must match the port actually served. Started with `--port 5174 --strictPort` so it cannot drift. |
+| `VITE_GOOGLE_MAPS_API_KEY` | *(unset)* | *(supplied)* | Without it step 2 of "Legg ut oppdrag" cannot set coordinates, which Fix #13 made mandatory — posting a job was impossible. Verified against the Geocoding, Maps JS and Places APIs. |
+
+`STRIPE_SECRET_KEY` is the **test** key; the live key is commented out on the line above it. Verified
+against Stripe: account `acct_1SpDsl…`, country NO, `livemode: false`.
+
+`STRIPE_WEBHOOK_SECRET` is still empty, so the Fix #2 webhook rejects every call and a payment is
+only recorded if the browser returns to `/safepay/success` — the exact failure Fix #2 exists to
+prevent. Locally this needs `stripe listen --forward-to localhost:5001/api/safepay-checkout/webhook`
+(the Stripe CLI is not installed on this machine). **This is the one launch-blocking piece of
+configuration that remains unset.**
+
+Seeded logins are `user1@jobblo.no` … `user12@jobblo.no` / `password123`
+(`backend/seeds/users.seed.js`): 1 is admin, 2–5 providers, 6–12 customers.
+
+### Data gap: no subscription plans → nobody can apply to a job
+
+`POST /api/orders/request` — applying to a job, the core B2C action — runs `checkSubscription`,
+which answers **403 `Invalid subscription plan`** when no `SubscriptionPlan` document matches the
+caller's plan type. The `subscriptionplans` collection was **empty**, so every application from every
+user failed. Fixed locally with `node seeds/run-plan.js` (6 plans).
+
+Worth carrying into the launch checklist: this is not only a local gap. If that collection is empty
+in production, or the last active plan of a type is deactivated from the admin panel, the entire
+marketplace stops accepting applications and the only signal is a raw English 403. Nothing warns
+before that happens. Not fixed here — it is a deploy/ops concern rather than a code defect, and
+seeding plans is already an explicit step.
+
+### The money path, verified end to end
+
+Driven over HTTP with the test key, on data created for the purpose:
+
+1. `user7` applies to a job posted by `user2` → **201**
+2. `user2` selects the applicant → `POST /api/safepay/create-contract` → **`Kontrakt opprettet`**,
+   order `6a7edc4d821fb1365adb4436`, status `awaiting_payment`, `agreedPrice` 542
+3. `POST /api/safepay-checkout/create-session` → a real Stripe Checkout URL (`cs_test_a1lkhy…`)
+
+The order document then carried `checkoutSessionId` and `checkoutSessionStatus: 'open'` — **the F-31
+schema fix confirmed live**. Those writes were silently dropped before, which is what left
+`reconcilePayment` permanently returning `no_session` and let a customer be charged twice.
+
+That order is left in place deliberately: open `/safepay/checkout/6a7edc4d821fb1365adb4436` as
+`user2` to exercise the payment screen with test card `4242 4242 4242 4242`.
+
+Verified live against the running stack: the CORS allowlist admits `localhost:5174` and returns no
+allow-origin header for `evil.example.com` (F-19); `GET /api/reviews` and `POST
+/api/notifications/test` both answer 401 unauthenticated (F-34, F-53); the Stripe webhook refuses an
+unsigned payload (Fix #2); the public listing, categories, chat, notifications, lists and
+my-applications endpoints all answer 200 for a logged-in customer. The one failure found in this
+pass was the support-ticket gap above, now Fix #16.
+
+`backend/.env.backup-20260814-124942` holds the previous backend env — it carried a different Google
+client ID, so keep it if that one matters.

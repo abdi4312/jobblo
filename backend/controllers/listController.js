@@ -122,7 +122,10 @@ exports.removeServiceFromList = async (req, res) => {
 exports.updateList = async (req, res) => {
   try {
     const { listId } = req.params;
-    const { name, description, public } = req.body;
+    // `public` is a reserved word in strict mode and cannot be bound as an identifier,
+    // so it is renamed on the way out of the body. The field on the document keeps its
+    // name — only the local binding changes.
+    const { name, description, public: isPublic } = req.body;
     // Allow finding the list if user is owner OR contributor
     const list = await List.findOne({
       _id: listId,
@@ -135,7 +138,7 @@ exports.updateList = async (req, res) => {
 
     if (name) list.name = name;
     if (description !== undefined) list.description = description;
-    if (public !== undefined) list.public = public;
+    if (isPublic !== undefined) list.public = isPublic;
 
     await list.save();
     res.status(200).json(list);
