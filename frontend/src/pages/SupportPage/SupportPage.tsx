@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import mainLink from '../../api/mainURLs';
+import { useUserStore } from '../../stores/userStore';
+import { getErrorMessage } from '../../utils/getErrorMessage';
 import {
   ArrowLeft, Search, Mail, Send, ChevronDown, CheckCircle2, ShieldCheck,
 } from 'lucide-react';
@@ -16,7 +19,7 @@ const FAQ_ITEMS: FAQ[] = [
   { id: 6, question: 'Hvordan sier jeg opp abonnementet?', answer: 'Gå til Innstillinger → Abonnementer, og velg «Si opp». Tilgangen varer ut inneværende periode.', search: 'si opp abonnement kansellere' },
 ];
 
-type FormState = { subject: string; message: string };
+type FormState = { subject: string; message: string; email: string };
 
 const SUPPORT_EMAIL = 'support@jobblo.no';
 
@@ -24,7 +27,9 @@ export default function SupportPage() {
   const navigate = useNavigate();
   const [openId, setOpenId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
-  const [form, setForm] = useState<FormState>({ subject: '', message: '' });
+  const [form, setForm] = useState<FormState>({ subject: '', message: '', email: '' });
+  const [sending, setSending] = useState(false);
+  const currentUser = useUserStore((state) => state.user);
   const [sent, setSent] = useState(false);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }, []);
@@ -37,23 +42,35 @@ export default function SupportPage() {
     );
   }, [search]);
 
-  // There is no support-ticket endpoint in the API. This form previously called
-  // nothing at all and then reported "Saken din er sendt", so customers with a
-  // payment or dispute problem believed they had contacted support and waited.
-  // Handing the message to the user's mail client actually delivers it.
-  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  // This form used to call nothing at all and then report "Saken din er sendt",
+  // so customers with a payment or dispute problem believed they had reached
+  // support and waited. It now posts to POST /api/support/tickets.
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!form.subject.trim() || !form.message.trim()) {
-      toast.error('Fyll ut alle feltene.');
+      toast.error('Fyll ut emne og melding.');
       return;
     }
-    const mailto =
-      `mailto:${SUPPORT_EMAIL}` +
-      `?subject=${encodeURIComponent(form.subject.trim())}` +
-      `&body=${encodeURIComponent(form.message.trim())}`;
-    window.location.href = mailto;
-    setSent(true);
-    setForm({ subject: '', message: '' });
+    // Signed-in users are answered on their account address; visitors must give one.
+    if (!currentUser && !form.email.trim()) {
+      toast.error('Oppgi en e-postadresse vi kan svare på.');
+      return;
+    }
+
+    setSending(true);
+    try {
+      await mainLink.post('/api/support/tickets', {
+        subject: form.subject.trim(),
+        message: form.message.trim(),
+        ...(currentUser ? {} : { email: form.email.trim() }),
+      });
+      setSent(true);
+      setForm({ subject: '', message: '', email: '' });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Kunne ikke sende saken. Prøv igjen.'));
+    } finally {
+      setSending(false);
+    }
   };
 
   const inputCls = 'w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#1a3a1a] focus:ring-2 focus:ring-[#1a3a1a]/10 transition-all disabled:bg-gray-50 disabled:text-gray-400 placeholder:text-gray-400';
@@ -168,12 +185,9 @@ export default function SupportPage() {
               {sent ? (
                 <div className="text-center py-8">
                   <CheckCircle2 size={36} className="text-[#1a3a1a] mx-auto mb-3" />
-                  {/* Only claim what actually happened: we handed the message to
-                      the user's mail client. Whether they pressed send is up to them. */}
-                  <p className="font-bold text-gray-900 text-sm mb-1">E-posten er klargjort</p>
+                  <p className="font-bold text-gray-900 text-sm mb-1">Saken din er registrert</p>
                   <p className="text-xs text-gray-400 mb-5">
-                    Vi har åpnet e-postprogrammet ditt med meldingen. Send den, så svarer vi
-                    normalt innen 24 timer. Fungerer det ikke, skriv til {SUPPORT_EMAIL}.
+                    Vi svarer normalt innen 24 timer på hverdager.
                   </p>
                   <button type="button" onClick={() => setSent(false)} className="text-xs font-bold text-[#1a3a1a] hover:underline">
                     Send en ny sak
@@ -191,6 +205,20 @@ export default function SupportPage() {
                       className={inputCls}
                     />
                   </div>
+                  {!currentUser && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                        Din e-post
+                      </label>
+                      <input
+                        type="email"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        placeholder="din@epost.no"
+                        className={inputCls}
+                      />
+                    </div>
+                  )}
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1.5">Melding</label>
                     <textarea
@@ -204,13 +232,16 @@ export default function SupportPage() {
                   </div>
                   <button
                     type="submit"
-                    className="w-full flex items-center justify-center gap-2 bg-[#1a3a1a] text-white font-bold py-3.5 rounded-xl hover:bg-[#254d25] transition-colors text-sm"
+                    disabled={sending}
+                    className="w-full flex items-center justify-center gap-2 bg-[#1a3a1a] text-white font-bold py-3.5 rounded-xl hover:bg-[#254d25] transition-colors text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <Send size={15} /> Send sak
+                    <Send size={15} /> {sending ? 'Sender ...' : 'Send sak'}
                   </button>
+                  {/* Was "Gjennomsnittlig svartid: 2–4 timer" — a number nothing
+                      measures. The page already promises 24 timer elsewhere. */}
                   <p className="text-[11px] text-gray-400 text-center mt-1 flex items-center justify-center gap-1.5">
                     <ShieldCheck size={12} className="text-[#1a3a1a]" />
-                    Gjennomsnittlig svartid: 2–4 timer
+                    Vi svarer normalt innen 24 timer på hverdager
                   </p>
                 </form>
               )}

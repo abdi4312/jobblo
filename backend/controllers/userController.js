@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const User = require('../models/User');
 const Service = require('../models/Service');
 const JobRequest = require('../models/JobRequest');
@@ -657,12 +658,78 @@ exports.deleteUser = async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const user = await User.findByIdAndDelete(id);
+    const user = await User.findById(id).select('isDeleted email');
+    if (!user || user.isDeleted) return res.status(404).json({ error: 'Fant ikke brukeren.' });
 
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ message: 'User deleted' });
+    // Refuse while the user is still party to live money or live work. Deleting
+    // here would orphan an order mid-escrow — the counterparty would be left with
+    // a contract against a user that no longer exists, and any pending Stripe
+    // payout would have nowhere to go.
+    const blockingOrders = await Order.countDocuments({
+      $or: [{ customerId: id }, { providerId: id }],
+      status: {
+        $in: ['awaiting_payment', 'paid', 'in_progress', 'ready_for_review', 'disputed'],
+      },
+    });
+
+    if (blockingOrders > 0) {
+      return res.status(409).json({
+        error:
+          'Du har pågående oppdrag eller betalinger. Fullfør eller avslutt disse først, ' +
+          'eller kontakt kundeservice, så hjelper vi deg med slettingen.',
+      });
+    }
+
+    // Anonymise rather than remove the row. The model's own note says never to
+    // hard-delete a user with financial history, and Norwegian bookkeeping rules
+    // require transaction records to be retained — but every piece of personal
+    // data is overwritten, which is what erasure actually asks for.
+    // The e-mail is nulled through a unique index, so a placeholder keyed on the
+    // id keeps it unique without being identifying.
+    const anonymised = {
+      isDeleted: true,
+      deletedAt: new Date(),
+      accountStatus: 'deactivated',
+      name: 'Slettet bruker',
+      lastName: '',
+      email: `slettet+${id}@jobblo.invalid`,
+      phone: null,
+      avatarUrl: null,
+      avatarPublicId: null,
+      bannerUrl: null,
+      bannerPublicId: null,
+      bio: null,
+      about: null,
+      address: null,
+      postNumber: null,
+      postSted: null,
+      website: null,
+      companyName: null,
+      orgNumber: null,
+      skills: [],
+      locations: [],
+      portfolio: [],
+      previousProjects: [],
+      // Ends every existing login immediately.
+      password: crypto.randomBytes(32).toString('hex'),
+      refreshTokens: [],
+      passwordResetToken: null,
+      passwordResetExpires: null,
+    };
+
+    await User.findByIdAndUpdate(id, anonymised, { runValidators: false });
+
+    // Drop active sessions so the account cannot keep being used.
+    try {
+      await require('../models/Session').deleteMany({ userId: id });
+    } catch (sessionErr) {
+      console.error('Session cleanup on delete failed:', sessionErr.message);
+    }
+
+    res.json({ message: 'Profilen din er slettet.' });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    console.error('deleteUser Error:', err);
+    res.status(500).json({ error: 'Kunne ikke slette profilen. Prøv igjen.' });
   }
 };
 

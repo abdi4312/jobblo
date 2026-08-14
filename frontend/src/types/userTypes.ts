@@ -11,6 +11,13 @@ export type User = {
   bannerPublicId?: string;
   companyName?: string;
   orgNumber?: string;
+  // Present on the backend User model and edited in Settings, but missing here,
+  // so every read of them was a type error.
+  orgType?: string;
+  locations?: string[];
+  website?: string;
+  availabilityText?: string;
+  skills?: string[];
   bio?: string;
   role?: string;
   subscription?: string;

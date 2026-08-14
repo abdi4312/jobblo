@@ -4,6 +4,7 @@ import { useBlockedUsers, useBlockUser } from '../../../features/profile/hooks';
 import { Spinner } from '../../Ui/Spinner';
 import { useNavigate } from 'react-router-dom';
 import type { User } from '../../../types/userTypes';
+import { DEFAULT_AVATAR } from '../../../constants/assets';
 
 export const BlockedUsersView = () => {
   const [page, setPage] = useState(1);
@@ -66,7 +67,7 @@ export const BlockedUsersView = () => {
                         <img
                           src={
                             user.avatarUrl ||
-                            'https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332'
+                            DEFAULT_AVATAR
                           }
                           alt={user.name}
                           className="w-full h-full object-cover"
@@ -145,7 +146,7 @@ export const BlockedUsersView = () => {
                   <img
                     src={
                       userToUnblock?.avatarUrl ||
-                      'https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332'
+                      DEFAULT_AVATAR
                     }
                     alt="Profil"
                     className="w-full h-full object-cover"

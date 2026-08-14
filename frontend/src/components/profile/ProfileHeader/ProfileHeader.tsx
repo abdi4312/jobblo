@@ -16,6 +16,7 @@ import { BlockModal } from './BlockModal';
 import type { User } from '../../../types/userTypes';
 import { Button } from '../../Ui/button/Button';
 import ConfirmDialog from '../../Ui/ConfirmDialog';
+import { DEFAULT_AVATAR, DEFAULT_BANNER } from '../../../constants/assets';
 
 export function ProfileHeader({
   user,
@@ -75,7 +76,7 @@ export function ProfileHeader({
         {/* Banner */}
         <div className="relative h-28 sm:h-36 md:h-44 bg-gray-100">
           <img
-            src={user?.bannerUrl || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200'}
+            src={user?.bannerUrl || DEFAULT_BANNER}
             alt="Banner"
             className="w-full h-full object-cover"
           />
@@ -97,7 +98,7 @@ export function ProfileHeader({
             <div className="relative group shrink-0">
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-[3px] border-white bg-white shadow-md">
                 <img
-                  src={user?.avatarUrl || 'https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332'}
+                  src={user?.avatarUrl || DEFAULT_AVATAR}
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />

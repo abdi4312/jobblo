@@ -1,4 +1,5 @@
 import type { User } from '../../../types/userTypes';
+import { DEFAULT_AVATAR } from '../../../constants/assets';
 
 interface BlockModalProps {
   user: User | null;
@@ -22,7 +23,7 @@ export function BlockModal({ user, isOpen, onClose, onConfirm, isPending, type }
               <img
                 src={
                   user?.avatarUrl ||
-                  'https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332'
+                  DEFAULT_AVATAR
                 }
                 alt="Profile"
                 className="w-full h-full object-cover"

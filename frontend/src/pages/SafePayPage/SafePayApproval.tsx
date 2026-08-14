@@ -28,6 +28,9 @@ import { Button } from '../../components/Ui/button/Button';
 import SafePaySteps from '../../components/SafePay/SafePaySteps';
 import { ContractViewModal } from '../../components/SafePay/ContractViewModal';
 import { useUserStore } from '../../stores/userStore';
+import { DisputePanel } from '../../components/SafePay/DisputePanel';
+import { useDispute } from '../../features/disputes/hooks';
+import { disputeReasonOptions } from '../../constants/disputes';
 
 // Reusable Star Rating Component
 interface StarRatingProps {
@@ -185,6 +188,8 @@ const SafePayApproval: React.FC = () => {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   // ── Dispute state ────────────────────────────────────────────────────────
+  // Read path (F-47): opening a dispute used to produce a toast and nothing else.
+  const { data: dispute, refetch: refetchDispute } = useDispute(orderId);
   const [showDisputeDialog, setShowDisputeDialog] = useState(false);
   const [disputeForm, setDisputeForm] = useState({
     reasonCategory: '',
@@ -219,18 +224,10 @@ const SafePayApproval: React.FC = () => {
   const disputeIsValid =
     !disputeErrors.reasonCategory && !disputeErrors.title && !disputeErrors.description;
 
-  const DISPUTE_REASON_OPTIONS = [
-    { value: 'work_not_completed', label: 'Jobb ikke fullført' },
-    { value: 'poor_quality', label: 'Dårlig kvalitet' },
-    { value: 'different_from_agreement', label: 'Avviker fra avtalen' },
-    { value: 'customer_not_cooperating', label: 'Kunde samarbeider ikke' },
-    { value: 'provider_not_cooperating', label: 'Tilbyder samarbeider ikke' },
-    { value: 'payment_issue', label: 'Betalingsproblem' },
-    { value: 'unauthorized_payment', label: 'Uautorisert betaling' },
-    { value: 'fraud_or_scam', label: 'Svindel eller bedrageri' },
-    { value: 'damaged_property', label: 'Skadet eiendom' },
-    { value: 'other', label: 'Annet' },
-  ];
+  // Scoped to the customer's side. The list used to offer both
+  // "Kunde samarbeider ikke" and "Tilbyder samarbeider ikke" to everyone, so each
+  // party could file a dispute accusing themselves.
+  const DISPUTE_REASON_OPTIONS = disputeReasonOptions('customer');
 
   const handleOpenDispute = async () => {
     setDisputeTouched({ reasonCategory: true, title: true, description: true });
@@ -242,7 +239,8 @@ const SafePayApproval: React.FC = () => {
         title: disputeForm.title.trim(),
         description: disputeForm.description.trim(),
       });
-      toast.success('Tvist opprettet. Admin vil gjennomgå saken.');
+      toast.success('Tvisten er opprettet. Du finner status og meldinger på denne siden.');
+      refetchDispute();
       setShowDisputeDialog(false);
       setDisputeForm({ reasonCategory: '', title: '', description: '' });
       setDisputeTouched({ reasonCategory: false, title: false, description: false });
@@ -499,6 +497,8 @@ const SafePayApproval: React.FC = () => {
         </button>
 
         <SafePaySteps currentStep={4} orderId={orderId} serviceId={orderData.serviceId._id} />
+
+        <DisputePanel orderId={orderId} dispute={dispute} viewerRole="customer" />
 
         {/* Contract view link */}
         <div className="flex justify-end mb-2">
@@ -1097,15 +1097,17 @@ const SafePayApproval: React.FC = () => {
             </div>
           )}
 
-          <div className="text-center mt-5">
-            <button
-              type="button"
-              onClick={() => setShowDisputeDialog(true)}
-              className="inline-flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-red-500 transition-colors"
-            >
-              <AlertTriangle size={14} /> Ikke fornøyd? Opprett en tvist
-            </button>
-          </div>
+          {!dispute && (
+            <div className="text-center mt-5">
+              <button
+                type="button"
+                onClick={() => setShowDisputeDialog(true)}
+                className="inline-flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <AlertTriangle size={14} /> Ikke fornøyd? Opprett en tvist
+              </button>
+            </div>
+          )}
 
           {/* ── Dispute dialog ──────────────────────────────────────────── */}
           {showDisputeDialog && (

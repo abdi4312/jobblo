@@ -15,6 +15,7 @@ import {
 import { useUserStore } from '../../../stores/userStore';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { getErrorMessage } from '../../../utils/getErrorMessage';
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
@@ -46,18 +47,10 @@ export const useAuth = () => {
       navigate(redirectAfterAuth(), { replace: true });
     },
     onError: (error: unknown) => {
-      const err = error as {
-        response?: { data?: { error?: string; message?: string } };
-        message?: string;
-      };
-      console.error('Login Error Details:', err.response?.data || err.message);
-      const errorMessage =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        'Innlogging mislyktes. Vennligst sjekk legitimasjonen din.';
-      console.log('errorMessage', errorMessage);
-
-      toast.error(errorMessage);
+      // getErrorMessage also handles the object-shaped envelope from the Express
+      // error handler, which the old `data?.error` read would have passed to
+      // toast.error as an object.
+      toast.error(getErrorMessage(error, 'Innlogging mislyktes. Sjekk e-post og passord.'));
     },
   });
 
@@ -71,14 +64,7 @@ export const useAuth = () => {
       navigate(redirectAfterAuth(), { replace: true });
     },
     onError: (error: unknown) => {
-      const err = error as {
-        response?: { data?: { error?: string; message?: string } };
-        message?: string;
-      };
-      console.error('Registration Error Details:', err.response?.data || err.message);
-      const errorMessage =
-        err.response?.data?.error || err.response?.data?.message || 'Registrering mislyktes.';
-      toast.error(errorMessage);
+      toast.error(getErrorMessage(error, 'Registreringen mislyktes. Prøv igjen.'));
     },
   });
 
@@ -120,11 +106,10 @@ export const useAuth = () => {
     mutationFn: revokeSession,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
-      toast.success('Session revoked');
+      toast.success('Økten er logget ut.');
     },
     onError: (error: unknown) => {
-      const err = error as { response?: { data?: { error?: string } } };
-      toast.error(err.response?.data?.error || 'Failed to revoke session');
+      toast.error(getErrorMessage(error, 'Kunne ikke logge ut økten.'));
     },
   });
 
@@ -132,27 +117,24 @@ export const useAuth = () => {
     mutationFn: revokeAllOtherSessions,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
-      toast.success('All other sessions revoked');
+      toast.success('Alle andre økter er logget ut.');
     },
     onError: (error: unknown) => {
-      const err = error as { response?: { data?: { error?: string } } };
-      toast.error(err.response?.data?.error || 'Failed to revoke other sessions');
+      toast.error(getErrorMessage(error, 'Kunne ikke logge ut de andre øktene.'));
     },
   });
 
   const forgotPasswordMutation = useMutation({
     mutationFn: (email: string) => forgotPassword(email),
     onError: (error: unknown) => {
-      const err = error as { response?: { data?: { error?: string } } };
-      toast.error(err.response?.data?.error || 'Noe gikk galt. Prøv igjen.');
+      toast.error(getErrorMessage(error, 'Kunne ikke sende koden. Prøv igjen.'));
     },
   });
 
   const verifyOtpMutation = useMutation({
     mutationFn: ({ email, otp }: { email: string; otp: string }) => verifyOtp(email, otp),
     onError: (error: unknown) => {
-      const err = error as { response?: { data?: { error?: string } } };
-      toast.error(err.response?.data?.error || 'Ugyldig eller utløpt kode.');
+      toast.error(getErrorMessage(error, 'Ugyldig eller utløpt kode.'));
     },
   });
 
@@ -164,8 +146,7 @@ export const useAuth = () => {
       navigate('/login');
     },
     onError: (error: unknown) => {
-      const err = error as { response?: { data?: { error?: string } } };
-      toast.error(err.response?.data?.error || 'Noe gikk galt. Start på nytt.');
+      toast.error(getErrorMessage(error, 'Noe gikk galt. Start på nytt.'));
     },
   });
 

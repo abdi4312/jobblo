@@ -8,6 +8,7 @@ Severity scale: **P0** launch blocker · **P1** critical · **P2** important · 
 
 | # | Issue | Severity | Status |
 |---|---|---|---|
+| 15 | Disputes, account deletion, support tickets, settings overwrites, dead code | P1–P3 | ✅ Done |
 | 14 | Phase 2–4 sweep: auth redirects, statuses, crashes, security, consent, prod hardening | P0–P2 | ✅ Done |
 | 13 | Job creation: map pinned jobs to the poster, edit corrupted jobs, draft wiped on failure | P1 | ✅ Done |
 | 12 | Chat payment funnel dead; everyone routed as provider | P0 | ✅ Done |
@@ -22,6 +23,164 @@ Severity scale: **P0** launch blocker · **P1** critical · **P2** important · 
 | 3 | Legacy payout endpoint released funds without payment/state/dispute checks | P0 | ✅ Done |
 | 2 | SafePay payment confirmation had no Stripe webhook | P0 | ✅ Done, needs deploy config |
 | 1 | Dead routes, no error boundary, placeholder text | P0 | ✅ Done |
+
+---
+
+## Fix #15 — The rest of the backlog
+
+**Severity:** P1–P3 · **Audit ref:** F-08, F-09, F-15, F-16, F-47, F-61, F-63 + message inventory
+
+The three items I had previously declined to do unattended, plus the remaining P2/P3 cleanup.
+
+### F-47 — Disputes were write-only
+
+The backend was already complete and correctly guarded: `GET /contract/:orderId/dispute` and
+`POST /disputes/:disputeId/message` are both routed, both check participation, and both strip
+internal admin notes. **Neither was called from anywhere in the B2C frontend.** A customer who
+escalated a payment problem got a toast and then nothing — no status, no thread, no way to add
+evidence.
+
+| File | Change |
+|---|---|
+| `frontend/src/features/disputes/hooks.ts` | **new** — `useDispute`; treats 404 as "no dispute", which is the ordinary answer, not a failure |
+| `frontend/src/components/SafePay/DisputePanel.tsx` | **new** — status, reason, description, admin resolution, full message thread, and a reply box that closes when the dispute does |
+| `frontend/src/constants/disputes.ts` | **new** — reason options **scoped by role**, status labels, active-status list mirroring the controller |
+| `SafePayApproval.tsx` / `ProviderOrderDetailPage.tsx` | render the panel; hide "opprett en tvist" once one exists |
+
+**Self-accusing reason lists.** Both sides offered the identical full list, so the customer could
+file "Kunde samarbeider ikke" and the provider "Tilbyder samarbeider ikke" — each party able to open
+a dispute accusing themselves. `disputeReasonOptions(role)` now returns only what that side can
+legitimately claim.
+
+**`revieweeRole` — deliberately NOT flipped.** The audit calls the values inverted, and they are:
+`'poster'` is written when the *provider* is reviewed and `'seeker'` when the *customer* is. But
+every write and the single live read (`CompletedJobPage`) agree with each other, so the labels users
+see are correct — `reviewsAPI.ts`, the only thing that could filter by role, has no callers.
+Flipping the values means migrating every existing Review document *and* changing three call sites
+in one commit; getting it half-right inverts the labels in production. The inversion is now
+documented on the model and at the write site so nobody fixes one half. **This is naming debt, not
+a user-visible bug.**
+
+### F-08 — Account deletion is now real
+
+The button ran `toast.success('Kommer snart')`. The endpoint it should have called,
+`DELETE /api/users/:id`, did `User.findByIdAndDelete` — a hard delete with **no checks at all**,
+directly contradicting the comment on the model's own `isDeleted` field: *"Soft delete — admin
+action only. Never hard-delete users with financial history."*
+
+Two guards, then anonymisation:
+
+1. **Refuses outright** (409, with a message that says what to do) when the user is party to an
+   order in `awaiting_payment`, `paid`, `in_progress`, `ready_for_review` or `disputed`. Deleting
+   there would orphan a contract mid-escrow and leave a pending Stripe payout with nowhere to go.
+2. **Anonymises rather than drops the row.** Every personal field is overwritten, the password is
+   replaced with random bytes, refresh tokens are emptied and all `Session` rows are deleted, so
+   every existing login dies immediately. The e-mail becomes `slettet+<id>@jobblo.invalid` to stay
+   unique without being identifying. Order and review rows survive for bookkeeping — Norwegian
+   bokføringslov requires transaction records to be retained, so a hard delete would have been
+   legally wrong as well as technically unsafe.
+
+The UI now requires typing **SLETT**, calls the endpoint, then logs out and clears the query cache.
+
+### F-09 — Support tickets land somewhere
+
+New `SupportTicket` model, `supportController` and `POST /api/support/tickets`
+(+ `GET /tickets/mine`). `createTicket` is deliberately unauthenticated — someone who cannot log in
+is the person most likely to need support — but it prefers the account's own e-mail when the caller
+is signed in, and requires one from visitors. The form now posts there instead of reporting success
+for an operation that never happened. Also removed "Gjennomsnittlig svartid: 2–4 timer", a number
+nothing measures.
+
+### F-15 — Settings no longer overwrite fields you didn't touch
+
+Every save POSTed all 21 fields, so editing your bio re-submitted email, phone, address and
+orgNumber — anything stale in that tab silently overwrote the server's newer value
+(last-write-wins across tabs and devices). `handleUpdate` now diffs against the loaded user and
+sends only what changed, and says "Ingen endringer å lagre" when nothing did.
+
+Also deleted the five payout fields (`payoutMethod`, `bankAccountNumber`, `iban`, `bicSwift`,
+`vippsHandle`) from the payload. No settings view edits them, the backend strips them from
+`allowedUpdates`, and real payouts go through Stripe Connect — they were pure dead payload.
+
+### F-61 — Third-party placeholder assets
+
+New `constants/assets.ts` with inline-SVG data URIs. The default avatar was an
+`api.builder.io/.../TEMP/...` URL — a design-tool CDN serving a placeholder that was never meant to
+ship — used in **six** places as a hard production dependency for anyone without a profile picture.
+Same for the Unsplash banner default (2 places), the Stripe logo hotlinked from Wikimedia on the
+checkout screen, and the send sound hotlinked from mixkit while every other sound was bundled.
+
+Not touched: `src/data/banners.ts`, which is live on the homepage promo carousel. Replacing those
+images is a content decision, not a fix.
+
+### F-16 — Typecheck in CI
+
+New `.github/workflows/frontend-checks.yml`. `continue-on-error: true` is deliberate — the audit
+says not to chase the ~346-error backlog before launch. It writes the count and first 50 errors to
+the job summary, so the number stops growing unnoticed without blocking merges. Remove the flag once
+the backlog is cleared.
+
+### Message inventory
+
+`useAuth` now routes all seven error handlers through `getErrorMessage`, which also fixes a latent
+F-04: `err.response?.data?.error` would have handed the object-shaped envelope straight to
+`toast.error`. Translated the remaining English session toasts and the payment-failure string, and
+removed a `console.log` of the login error message.
+
+### Verification
+
+- Backend suite **179 passed, 9 failed** — the same pre-existing `chatReport.test.js` failures.
+  New modules load; every edited file passes `node --check`.
+- Frontend typecheck **349 → 346**, diffed as error sets. Three errors I introduced were caught and
+  fixed: `never[]` inference on the settings form, and two duplicated reads of `orgType`/`locations`/
+  `website` — fields that exist on the backend model but were missing from the `User` type, which is
+  why reading them was an error in the first place.
+- ESLint clean on all new files (the hook was split into `features/disputes/hooks.ts` so
+  `DisputePanel.tsx` only exports a component).
+
+### Not done — needs you to run it
+
+**F-63 (dead code).** I verified by exact import path that these are unreferenced, transitively —
+`pages/index.ts` and `components/profile/index.ts` are barrels nothing imports, and
+`ProfileSettingsPage` is not routed:
+
+```
+frontend/src/components/notifications/NotificationItem.tsx
+frontend/src/api/userAPI.ts
+frontend/src/api/reviewsAPI.ts
+frontend/src/features/auth/hook/useLogin.ts
+frontend/src/features/auth/hook/useRegister.ts
+frontend/src/components/chat/ConversationView.tsx
+frontend/src/components/chat/ChatView.tsx
+frontend/src/pages/MessagesPage/MessagesPage.tsx
+frontend/src/pages/EditJobPage.tsx
+frontend/src/pages/ProfileSettingsPage.tsx
+frontend/src/pages/index.ts
+frontend/src/components/profile/index.ts
+frontend/src/components/profile/ProfileSettings/
+frontend/src/components/profile/ProfileMenuSection/
+```
+
+The `git rm` was blocked by a safety classifier — removing 14 source paths in one command is exactly
+the kind of thing that should get a human look. Run it yourself and re-run the typecheck; the count
+should drop, not rise. `ProfileSettings` is the one worth removing: it renders hardcoded fake PII
+(`olanormannen@theman.com`, `645 23 452`).
+
+### New deploy configuration
+
+Nothing new beyond Fix #14. The `SupportTicket` collection is created on first write.
+
+### Still to test manually
+
+1. Open a dispute as a customer → the panel appears with status and your description; post a
+   message and confirm it shows as "Deg".
+2. Open the same order as the provider → same panel, and the reason dropdown must **not** offer
+   "Tilbyder samarbeider ikke".
+3. Try deleting an account that has a paid, in-progress order → refused with the 409 explanation.
+4. Delete an account with no live orders → logged out, and logging back in with the old password
+   must fail.
+5. Send a support ticket logged out (e-mail field required) and logged in (no e-mail field).
+6. Change only your bio in Settings → the request body should contain **only** `bio`.
 
 ---
 

@@ -199,6 +199,7 @@ app.use('/api/my-applications', myApplicationsRouter);
 app.use('/api/upcomingFeatures', upcomingFeatureRouter);
 app.use('/api/location-filter', locationFilterRouter);
 app.use('/api/errors', errorsRouter);
+app.use('/api/support', require('./routes/support'));
 // Error handler
 app.use(function (req, res, next) {
   next(createError(404));

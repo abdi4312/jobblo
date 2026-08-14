@@ -536,7 +536,9 @@ exports.approveAndPayout = async (req, res) => {
           serviceId: order.serviceId._id,
           reviewerId: userId,               // customer writes the review
           revieweeId: order.providerId,     // review is ABOUT the provider
-          revieweeRole: 'poster',           // provider is being reviewed
+          // 'poster' means the PROVIDER here — the enum values are named
+          // backwards. See the note on Review.revieweeRole before changing this.
+          revieweeRole: 'poster',
           rating: ratings.overall,
           comment: comment || '',
           photos: photos || [],

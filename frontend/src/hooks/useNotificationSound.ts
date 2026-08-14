@@ -4,7 +4,9 @@ import MessageSound from '../assets/sound/msg_notification.mp3';
 
 const SOUND_CONFIG = {
   message: MessageSound,
-  send: 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3',
+  // Was hotlinked from assets.mixkit.co while every other sound was bundled, so
+  // the send tone depended on a third-party CDN being up.
+  send: MessageSound,
   alert: MessageSound,
 } as const;
 

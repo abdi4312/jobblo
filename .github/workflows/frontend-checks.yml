@@ -1,0 +1,53 @@
+name: Frontend checks
+
+# The build runs `vite build`, which strips types without checking them, so real
+# type errors have always shipped. This surfaces them on every PR.
+#
+# `continue-on-error` on the typecheck is deliberate: there is a large pre-existing
+# backlog (~350 errors) and the audit's explicit guidance was not to chase it
+# before launch. The job records the count so the trend is visible, and it stops
+# the number growing unnoticed — it does not block merges yet. Remove the flag
+# once the backlog is cleared.
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'jobblo/frontend/**'
+      - '.github/workflows/frontend-checks.yml'
+  workflow_dispatch:
+
+jobs:
+  typecheck-and-lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: jobblo/frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: jobblo/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (non-blocking)
+        continue-on-error: true
+        run: |
+          set +e
+          npx tsc --noEmit -p tsconfig.app.json > typecheck.log 2>&1
+          COUNT=$(grep -c "error TS" typecheck.log || true)
+          echo "### TypeScript: ${COUNT} errors" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          head -50 typecheck.log >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Lint (non-blocking)
+        continue-on-error: true
+        run: npx eslint . --max-warnings=-1

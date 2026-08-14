@@ -11,6 +11,9 @@ import { toast } from 'react-hot-toast';
 import { useUserStore } from '../../stores/userStore';
 import { Button } from '../../components/Ui/button/Button';
 import { ContractViewModal } from '../../components/SafePay/ContractViewModal';
+import { DisputePanel } from '../../components/SafePay/DisputePanel';
+import { useDispute } from '../../features/disputes/hooks';
+import { disputeReasonOptions } from '../../constants/disputes';
 
 // ── Status config ──────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -37,18 +40,9 @@ const ACTION_LABELS: Record<string, string> = {
     payout_approved: 'Utbetaling godkjent',
 };
 
-const DISPUTE_REASON_OPTIONS = [
-    { value: 'work_not_completed', label: 'Jobb ikke fullført' },
-    { value: 'poor_quality', label: 'Dårlig kvalitet' },
-    { value: 'different_from_agreement', label: 'Avviker fra avtalen' },
-    { value: 'customer_not_cooperating', label: 'Kunde samarbeider ikke' },
-    { value: 'provider_not_cooperating', label: 'Tilbyder samarbeider ikke' },
-    { value: 'payment_issue', label: 'Betalingsproblem' },
-    { value: 'unauthorized_payment', label: 'Uautorisert betaling' },
-    { value: 'fraud_or_scam', label: 'Svindel eller bedrageri' },
-    { value: 'damaged_property', label: 'Skadet eiendom' },
-    { value: 'other', label: 'Annet' },
-];
+// Scoped to the provider's side — the shared list let the provider file
+// "Tilbyder samarbeider ikke", i.e. a dispute accusing themselves.
+const DISPUTE_REASON_OPTIONS = disputeReasonOptions('provider');
 
 const MAX_IMAGES_PER_TYPE = 10;
 const ALLOWED_MIME = 'image/jpeg,image/png,image/webp,application/pdf';
@@ -126,7 +120,8 @@ const ProviderOrderDetailPage: React.FC = () => {
     const [reviewRating, setReviewRating] = useState(0);
     const [reviewComment, setReviewComment] = useState('');
 
-    // Dispute state
+    // Dispute state — read path added with F-47; opening one used to be write-only.
+    const { data: dispute, refetch: refetchDispute } = useDispute(orderId);
     const [showDisputeDialog, setShowDisputeDialog] = useState(false);
     const [disputeForm, setDisputeForm] = useState({
         reasonCategory: '',
@@ -212,7 +207,8 @@ const ProviderOrderDetailPage: React.FC = () => {
             return res.data;
         },
         onSuccess: () => {
-            toast.success('Tvist opprettet. Admin vil gjennomgå saken.');
+            toast.success('Tvisten er opprettet. Du finner status og meldinger på denne siden.');
+            refetchDispute();
             setShowDisputeDialog(false);
             setDisputeForm({ reasonCategory: '', title: '', description: '' });
             setDisputeTouched({ reasonCategory: false, title: false, description: false });
@@ -383,6 +379,8 @@ const ProviderOrderDetailPage: React.FC = () => {
                         }
                     />
                 </div>
+
+                <DisputePanel orderId={orderId} dispute={dispute} viewerRole="provider" />
 
                 {/* Header card */}
                 <div className="bg-[#1a3a1a] rounded-2xl p-5 mb-4 text-white">

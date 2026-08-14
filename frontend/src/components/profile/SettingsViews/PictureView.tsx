@@ -1,6 +1,7 @@
 import { useOutletContext } from 'react-router-dom';
 import type { SettingsContextType } from '../../../pages/SettingsPage';
 import { Camera } from 'lucide-react';
+import { DEFAULT_AVATAR } from '../../../constants/assets';
 
 export const PictureView = () => {
   const {
@@ -18,7 +19,7 @@ export const PictureView = () => {
         <img
           src={
             user?.avatarUrl ||
-            'https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332'
+            DEFAULT_AVATAR
           }
           alt="Profile"
           className="w-48 h-48 rounded-full object-cover border-4 border-white shadow-md"
