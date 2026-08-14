@@ -3,10 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, ChevronLeft, ChevronRight, Search, ShieldCheck } from 'lucide-react';
 import { useCategories } from '../../features/categories/hooks';
-import { useJobs } from '../../features/jobsList/hooks';
 import { getPublicStats } from '../../api/publicAPI';
 import { CHIP, CONTAINER, DISPLAY, MICRO_LABEL, TEXT_LINK } from '../../theme/brand';
-import { jobImage } from '../../assets/images/categories';
+import { SERVICE_SHOWCASE } from '../../assets/images/categories';
 
 /**
  * The hero: one sentence that finishes itself, and one field that runs the search.
@@ -21,37 +20,32 @@ import { jobImage } from '../../assets/images/categories';
  * through its own sidebar state and accepts no county in the URL, so a picker here would
  * look like it worked and quietly do nothing.
  *
- * All three frames of the collage are the live feed, not decoration: the arch cycles the
- * four newest open jobs and the circle and square hold two more, and every one of them
- * opens that job. A job's own photo is always what shows; `jobImage` only fills the frame
- * when the poster uploaded none, and it picks by category so the stand-in illustrates the
- * kind of work rather than posing as a picture of that particular job.
+ * The collage is a fixed showcase of the services Jobblo covers — `SERVICE_SHOWCASE` —
+ * not a view of the database. It was the six newest open jobs, which meant it vanished
+ * entirely on an empty database and showed whatever art the records happened to carry.
+ * Now it is always there and always the same, each frame labelled with the service it
+ * shows so picture and caption cannot disagree, and each one a link into that category's
+ * listing. Real job photos still lead the job cards further down the page.
  */
 
 /** Shown until the categories land, so the rotating line never starts empty. */
 const FALLBACK_WORDS = ['maling', 'flytting', 'hagearbeid', 'rørlegger', 'rengjøring'];
 
-/**
- * The two still frames: which job each takes, and the shape it is cut to. `at` indexes
- * past the four the arch cycles, so on a healthy feed all six frames are different jobs.
- */
+/** The arch cycles the first four of the showcase; the plates hold the next two. */
+const CAROUSEL = SERVICE_SHOWCASE.slice(0, 4);
+
+/** The two still frames: which showcase entry each takes, and the shape it is cut to. */
 const PLATES = [
-  { slot: 'circle', at: 4, frame: 'left-0 top-24 size-47.5 rounded-full bg-[#EAF1E9]' },
-  { slot: 'square', at: 5, frame: 'bottom-24 left-9 h-45 w-62.5 rounded-3xl bg-white' },
-];
+  { at: 4, frame: 'left-0 top-24 size-47.5 rounded-full bg-[#EAF1E9]' },
+  { at: 5, frame: 'bottom-24 left-9 h-45 w-62.5 rounded-3xl bg-white' },
+].map(({ at, frame }) => ({ ...SERVICE_SHOWCASE[at], frame }));
 
 const WORD_MS = 2400;
 const SLIDE_MS = 4600;
 
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-type RecentJob = {
-  _id: string;
-  title: string;
-  images?: string[];
-  categories?: string[];
-  location?: { city?: string };
-};
+const listingHref = (name: string) => `/search/job/${encodeURIComponent(name)}`;
 
 export function HomeHero() {
   const navigate = useNavigate();
@@ -67,32 +61,15 @@ export function HomeHero() {
     gcTime: 60_000,
   });
 
-  // Six, so the arch has four to cycle and the two plates get jobs of their own.
-  const { data: jobsData } = useJobs({ limit: 6, tab: 'Discover' });
-  const recent: RecentJob[] = jobsData?.pages.flatMap((page) => page.data)?.slice(0, 6) ?? [];
-
   // The words in the headline are the categories the platform actually has, lowercased —
   // not an invented list that might name something nobody can be hired for.
   const words = categories.length
     ? categories.slice(0, 6).map((cat) => cat.name.toLowerCase())
     : FALLBACK_WORDS;
 
-  const frames = recent.map((job, i) => ({
-    id: job._id,
-    src: jobImage(job, i),
-    title: job.title,
-    city: job.location?.city || 'Norge',
-  }));
-
-  const slides = frames.slice(0, 4);
-
-  // The plates take the jobs the arch is not cycling. With fewer than six open jobs they
-  // wrap back into the carousel's own rather than leaving a hole in the composition.
-  const plates = PLATES.map(({ slot, at, frame }) => ({
-    ...frames[at % (frames.length || 1)],
-    slot,
-    frame,
-  })).filter((plate) => plate.id);
+  // Both counters run unbounded and are read modulo their own list, so neither has to
+  // know how long that list is — `words` in particular changes length as the API answers.
+  const current = slide % CAROUSEL.length;
 
   // Both rotators, unless the visitor has asked for less motion.
   useEffect(() => {
@@ -105,10 +82,6 @@ export function HomeHero() {
       clearInterval(slideTimer);
     };
   }, []);
-
-  // The counters run unbounded so they never need to know the list length; the lists are
-  // indexed modulo their own size, which stays correct as the data arrives and changes it.
-  const current = slides.length ? slide % slides.length : 0;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -229,93 +202,92 @@ export function HomeHero() {
           </div>
 
           {/* ── The collage ───────────────────────────────────────────────── */}
-          {slides.length > 0 && (
-            <div className="relative hidden h-140 lg:block">
-              {/* The arch — the current job. */}
+          <div className="relative hidden h-140 lg:block">
+            {/* The arch — the service currently on show. */}
+            <button
+              type="button"
+              onClick={() => navigate(listingHref(CAROUSEL[current].name))}
+              aria-label={`Se oppdrag i ${CAROUSEL[current].name}`}
+              className="absolute right-0 top-0 block h-130 w-[min(420px,86%)] cursor-pointer overflow-hidden rounded-t-[220px] rounded-b-3xl border border-[#E6E7E1] bg-[#F4F6F0] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25"
+            >
+              {CAROUSEL.map((service, i) => (
+                <img
+                  key={service.name}
+                  src={service.src}
+                  alt=""
+                  // The first slide is the hero's own LCP candidate; the rest can wait.
+                  loading={i === 0 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  className={`absolute inset-0 size-full object-cover transition-opacity duration-700 ${
+                    i === current ? 'opacity-100' : 'opacity-0'
+                  }`}
+                />
+              ))}
+            </button>
+
+            {/* Two more services, held still so only the arch animates. They are links
+                like the arch is — every frame in the collage goes somewhere. */}
+            {PLATES.map((plate) => (
               <button
+                key={plate.name}
                 type="button"
-                onClick={() => navigate(`/job-listing/${slides[current].id}`)}
-                aria-label={`Åpne oppdraget ${slides[current].title}`}
-                className="absolute right-0 top-0 block h-130 w-[min(420px,86%)] cursor-pointer overflow-hidden rounded-t-[220px] rounded-b-3xl border border-[#E6E7E1] bg-[#F4F6F0] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25"
+                onClick={() => navigate(listingHref(plate.name))}
+                aria-label={`Se oppdrag i ${plate.name}`}
+                className={`absolute cursor-pointer overflow-hidden border border-[#E6E7E1] shadow-[0_22px_48px_rgba(11,11,11,0.10)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 ${plate.frame}`}
               >
-                {slides.map((s, i) => (
-                  <img
-                    key={s.id}
-                    src={s.src}
-                    alt=""
-                    // The first slide is the hero's own LCP candidate; the rest can wait.
-                    loading={i === 0 ? 'eager' : 'lazy'}
-                    decoding="async"
-                    className={`absolute inset-0 size-full object-cover transition-opacity duration-700 ${
-                      i === current ? 'opacity-100' : 'opacity-0'
+                <img
+                  src={plate.src}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="size-full object-cover"
+                />
+              </button>
+            ))}
+
+            {/* Caption and controls. The label is the service in the picture, so the two
+                can never drift apart the way a job title over a stock photo could. */}
+            <div className="absolute bottom-0 left-0 flex items-center gap-3.5 rounded-full border border-[#E6E7E1] bg-white py-3 pl-5 pr-3 shadow-[0_18px_40px_rgba(11,11,11,0.10)]">
+              <span className="text-[0.8125rem] font-semibold text-[#0B0B0B]">
+                {CAROUSEL[current].name}
+              </span>
+              <span className="text-[0.8125rem] text-[#9B9E96]">Se oppdrag</span>
+
+              <span className="flex gap-1.5">
+                {CAROUSEL.map((service, i) => (
+                  <button
+                    key={service.name}
+                    type="button"
+                    onClick={() => setSlide(i)}
+                    aria-label={`Vis ${service.name}`}
+                    aria-current={i === current}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      i === current ? 'w-5.5 bg-[#2E6641]' : 'w-2 bg-[#E6E7E1]'
                     }`}
                   />
                 ))}
-              </button>
+              </span>
 
-              {/* Two more open jobs, held still so only the arch animates. They are
-                  links like the arch is — every frame in the collage opens something. */}
-              {plates.map((plate) => (
+              <span className="flex gap-1.5">
                 <button
-                  key={plate.slot}
                   type="button"
-                  onClick={() => navigate(`/job-listing/${plate.id}`)}
-                  aria-label={`Åpne oppdraget ${plate.title}`}
-                  className={`absolute cursor-pointer overflow-hidden border border-[#E6E7E1] shadow-[0_22px_48px_rgba(11,11,11,0.10)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 ${plate.frame}`}
+                  onClick={() => setSlide((i) => i + CAROUSEL.length - 1)}
+                  aria-label="Forrige tjeneste"
+                  className="flex size-9 items-center justify-center rounded-full border border-[#E6E7E1] text-[#0B0B0B] transition-colors hover:border-[#2E6641]/45 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
                 >
-                  <img
-                    src={plate.src}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    className="size-full object-cover"
-                  />
+                  <ChevronLeft size={16} strokeWidth={2.2} />
                 </button>
-              ))}
-
-              {/* Caption and controls. */}
-              <div className="absolute bottom-0 left-0 flex items-center gap-3.5 rounded-full border border-[#E6E7E1] bg-white py-3 pl-5 pr-3 shadow-[0_18px_40px_rgba(11,11,11,0.10)]">
-                <span className="max-w-[18ch] truncate text-[0.8125rem] font-semibold text-[#0B0B0B]">
-                  {slides[current].title}
-                </span>
-                <span className="text-[0.8125rem] text-[#9B9E96]">{slides[current].city}</span>
-
-                <span className="flex gap-1.5">
-                  {slides.map((s, i) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setSlide(i)}
-                      aria-label={`Vis ${s.title}`}
-                      aria-current={i === current}
-                      className={`h-2 rounded-full transition-all duration-300 ${
-                        i === current ? 'w-5.5 bg-[#2E6641]' : 'w-2 bg-[#E6E7E1]'
-                      }`}
-                    />
-                  ))}
-                </span>
-
-                <span className="flex gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setSlide((i) => i + slides.length - 1)}
-                    aria-label="Forrige oppdrag"
-                    className="flex size-9 items-center justify-center rounded-full border border-[#E6E7E1] text-[#0B0B0B] transition-colors hover:border-[#2E6641]/45 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
-                  >
-                    <ChevronLeft size={16} strokeWidth={2.2} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSlide((i) => i + 1)}
-                    aria-label="Neste oppdrag"
-                    className="flex size-9 items-center justify-center rounded-full bg-[#2E6641] text-white transition-colors hover:bg-[#255335] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25"
-                  >
-                    <ChevronRight size={16} strokeWidth={2.2} />
-                  </button>
-                </span>
-              </div>
+                <button
+                  type="button"
+                  onClick={() => setSlide((i) => i + 1)}
+                  aria-label="Neste tjeneste"
+                  className="flex size-9 items-center justify-center rounded-full bg-[#2E6641] text-white transition-colors hover:bg-[#255335] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25"
+                >
+                  <ChevronRight size={16} strokeWidth={2.2} />
+                </button>
+              </span>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </section>

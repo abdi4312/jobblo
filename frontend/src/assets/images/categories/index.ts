@@ -70,6 +70,27 @@ const BY_CATEGORY: Record<string, string> = {
   handyman: montering,
 };
 
+/**
+ * The showcase the landing hero is built from — fixed, and deliberately not derived from
+ * anything in the database.
+ *
+ * The collage used to be the six newest open jobs, which meant it vanished entirely on an
+ * empty database and rendered whatever placeholder art the seed data happened to carry.
+ * These eight are always there, always the same, and each is labelled with the service it
+ * shows, so the picture and its caption can never disagree. `href` points at the real
+ * listing route, so the frames are still a way into the product.
+ */
+export const SERVICE_SHOWCASE = [
+  { name: 'Maling', src: maling },
+  { name: 'Rengjøring', src: rengjoring },
+  { name: 'Rørlegger', src: rorlegger },
+  { name: 'Flytting', src: flytting },
+  { name: 'Hagearbeid', src: hagearbeid },
+  { name: 'Montering', src: montering },
+  { name: 'Oppussing', src: oppussing },
+  { name: 'Transport', src: transport },
+] as const;
+
 /** The order used when a job carries no category we recognise. */
 export const CATEGORY_FALLBACKS = [
   maling,
