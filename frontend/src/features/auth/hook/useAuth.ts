@@ -13,13 +13,26 @@ import {
   resetPassword,
 } from '../Api';
 import { useUserStore } from '../../../stores/userStore';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
   const { login: setStoreLogin, logout: setStoreLogout, isAuthenticated } = useUserStore();
+
+  // Where the user was heading before ProtectedRoute bounced them here. Without
+  // this, anyone following a shared job link, a notification or a checkout link
+  // was sent to /home after logging in and lost what they were trying to do.
+  // Only same-origin paths are honoured so a crafted state can't redirect off-site.
+  const redirectAfterAuth = (): string => {
+    const from = (location.state as { from?: unknown } | null)?.from;
+    if (typeof from === 'string' && from.startsWith('/') && !from.startsWith('//')) {
+      return from;
+    }
+    return '/home';
+  };
 
   // Note: Don't auto-logout here during rehydration - let the interceptor handle token issues
 
@@ -30,7 +43,7 @@ export const useAuth = () => {
       queryClient.setQueryData(['profile'], data.user);
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
       toast.success(`Velkommen tilbake, ${data.user.name}!`);
-      navigate('/home');
+      navigate(redirectAfterAuth(), { replace: true });
     },
     onError: (error: unknown) => {
       const err = error as {
@@ -54,8 +67,8 @@ export const useAuth = () => {
       setStoreLogin(data.user, { accessToken: data.accessToken });
       queryClient.setQueryData(['profile'], data.user);
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
-      toast.success('Registration Successful!');
-      navigate('/home');
+      toast.success('Registreringen er fullført!');
+      navigate(redirectAfterAuth(), { replace: true });
     },
     onError: (error: unknown) => {
       const err = error as {
@@ -75,7 +88,7 @@ export const useAuth = () => {
     },
     onSuccess: () => {
       queryClient.clear();
-      toast.success('Logged out successfully');
+      toast.success('Du er nå logget ut.');
       navigate('/login');
     },
     onError: () => {

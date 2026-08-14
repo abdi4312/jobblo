@@ -71,7 +71,7 @@ function ChatHeader({ isMobile, otherUser, isOnline, hasService, chatId }: ChatH
           {otherUser?.name || 'Chat'}
         </h3>
         <p className="text-[13px] font-medium m-0 text-[#888]">
-          {isOnline ? 'Online' : 'Offline'} · 4.9 ★ · 38 oppdrag
+          {isOnline ? 'Pålogget' : 'Frakoblet'}
         </p>
       </div>
 
@@ -109,15 +109,6 @@ function ChatHeader({ isMobile, otherUser, isOnline, hasService, chatId }: ChatH
                   View Profile
                 </button>
               )}
-              <button
-                className="w-full text-left px-6 py-4 text-[16px] font-bold text-custom-black hover:bg-[#f9f9f7] transition-colors"
-                onClick={() => {
-                  setShowMenu(false);
-                  toast('Archive feature coming soon!');
-                }}
-              >
-                Archive this thread
-              </button>
               <button
                 className="w-full text-left px-6 py-4 text-[16px] font-bold text-custom-black hover:bg-[#f9f9f7] transition-colors flex items-center gap-2"
                 onClick={() => {

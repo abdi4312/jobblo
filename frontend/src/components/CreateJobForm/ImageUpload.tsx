@@ -1,4 +1,5 @@
 import { Upload, Camera } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import React, { useState, useRef, useEffect } from 'react';
 
 interface ImageUploadProps {
@@ -46,7 +47,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     }
 
     if (rejected.length > 0) {
-      alert(`Følgende bilder overskrider 2 MB og ble ikke lagt til:\n${rejected.join('\n')}`);
+      toast.error(`Disse bildene er over 2 MB og ble ikke lagt til: ${rejected.join(', ')}`);
     }
 
     if (validFiles.length === 0) return;

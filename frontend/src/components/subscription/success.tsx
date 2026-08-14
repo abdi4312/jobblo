@@ -40,7 +40,10 @@ const SuccessPage = () => {
   useEffect(() => {
     if (status === 'success') {
       const timer = setTimeout(() => {
-        navigate('/dashboard'); // redirect to dashboard after 3 sec
+        // Was '/dashboard' — an admin route. AdminProtectedRoute bounced every
+        // ordinary user to /profile, or to /login if auth was lost during the
+        // Stripe round-trip, so the paid funnel ended in a redirect bounce.
+        navigate('/membership', { replace: true });
       }, 3000);
       return () => clearTimeout(timer);
     }
@@ -51,24 +54,24 @@ const SuccessPage = () => {
       {status === 'loading' && (
         <div className="flex flex-col items-center">
           <RevolvingDot height="80" width="80" color="#4fa94d" ariaLabel="loading" />
-          <p className="mt-4 text-gray-700">Checking your payment...</p>
+          <p className="mt-4 text-gray-700">Sjekker betalingen din ...</p>
         </div>
       )}
 
       {status === 'success' && (
-        <h1 className="text-green-600 text-2xl font-semibold">Payment succeeded! Redirecting...</h1>
+        <h1 className="text-green-600 text-2xl font-semibold">Betalingen er gjennomført! Sender deg videre ...</h1>
       )}
 
       {status === 'failed' && (
-        <h1 className="text-red-600 text-2xl font-semibold">Payment not completed.</h1>
+        <h1 className="text-red-600 text-2xl font-semibold">Betalingen ble ikke fullført.</h1>
       )}
 
       {status === 'error' && (
-        <h1 className="text-red-600 text-2xl font-semibold">Error fetching payment status.</h1>
+        <h1 className="text-red-600 text-2xl font-semibold">Vi fikk ikke bekreftet betalingen. Kontakt kundeservice hvis beløpet er trukket.</h1>
       )}
 
       {status === 'no-session' && (
-        <h1 className="text-red-600 text-2xl font-semibold">No session ID provided.</h1>
+        <h1 className="text-red-600 text-2xl font-semibold">Mangler betalingsreferanse.</h1>
       )}
     </div>
   );

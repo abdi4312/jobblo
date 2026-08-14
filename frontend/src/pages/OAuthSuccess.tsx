@@ -17,6 +17,20 @@ export default function OAuthSuccess() {
         if (token) {
           // Store token first so fetchProfile interceptor can use it if needed
           setTokens({ accessToken: token });
+          // Scrub it from the URL immediately. The backend already sets the auth
+          // cookies on this same redirect, so the query param is redundant — and
+          // leaving it there persists a live JWT in browser history and in
+          // document.referrer for anything the page loads.
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        // Vipps/Google failure redirects carry ?error=... and were never read, so
+        // a failed login landed on a blank form with no explanation.
+        const oauthError = urlParams.get('error');
+        if (oauthError) {
+          setStatus('error');
+          setTimeout(() => navigate('/login'), 3000);
+          return;
         }
 
         await fetchProfile();
@@ -69,15 +83,15 @@ export default function OAuthSuccess() {
             )}
 
             <h2 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">
-              {status === 'loading' && 'Authenticating...'}
-              {status === 'success' && 'Welcome Back!'}
-              {status === 'error' && 'Authentication Failed'}
+              {status === 'loading' && 'Logger deg inn ...'}
+              {status === 'success' && 'Velkommen tilbake!'}
+              {status === 'error' && 'Innloggingen mislyktes'}
             </h2>
 
             <p className="text-gray-500 text-sm leading-relaxed">
-              {status === 'loading' && 'Setting up your workspace and syncing your data.'}
-              {status === 'success' && 'Account verified successfully. Redirecting you to home.'}
-              {status === 'error' && "We couldn't verify your account. Taking you back to login."}
+              {status === 'loading' && 'Vi henter profilen din.'}
+              {status === 'success' && 'Kontoen er bekreftet. Sender deg videre.'}
+              {status === 'error' && 'Vi fikk ikke bekreftet kontoen din. Sender deg tilbake til innlogging.'}
             </p>
 
             {/* Progress indicator */}

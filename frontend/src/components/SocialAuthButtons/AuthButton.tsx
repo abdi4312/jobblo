@@ -1,12 +1,15 @@
-import { Button } from '../../components/Ui/button/Button';
 import vippsLogo from '../../assets/icons/vipps.png';
+import { apiUrl } from '../../config/env';
+
 export default function SocialAuthButtons() {
+  // Was built by interpolating import.meta.env directly, which produced
+  // "undefined/api/auth/google" whenever the var was unset.
   const handleGoogle = () => {
-    window.location.href = `${import.meta.env.VITE_MAIN_URL}/api/auth/google`;
+    window.location.href = apiUrl('/api/auth/google');
   };
 
   const handleVipps = () => {
-    window.location.href = `${import.meta.env.VITE_MAIN_URL}/api/auth/vipps`;
+    window.location.href = apiUrl('/api/auth/vipps');
   };
 
   return (

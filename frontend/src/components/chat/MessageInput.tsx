@@ -1,6 +1,5 @@
-import { Paperclip, Image, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import React, { useRef, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
 
 interface MessageInputProps {
   newMessage: string;
@@ -16,7 +15,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
   sending,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Focus input on mount and whenever sending finishes
   useEffect(() => {
@@ -25,28 +23,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
     }
   }, [sending]);
 
-  const handleAttachClick = () => {
-    toast('Attachment feature coming soon!');
-  };
-
-  const handleImageClick = () => {
-    toast('Image upload feature coming soon!');
-  };
-
   return (
     <div className="bg-white border-t border-black/[0.08] px-[14px] py-[10px] flex items-center gap-[8px] shrink-0">
-      <button
-        onClick={handleAttachClick}
-        className="w-[30px] h-[30px] rounded-[7px] border-none bg-transparent flex items-center justify-center cursor-pointer text-[#888] hover:bg-[#f5f0e8] transition-colors"
-      >
-        <Paperclip size={17} />
-      </button>
-      <button
-        onClick={handleImageClick}
-        className="w-[30px] h-[30px] rounded-[7px] border-none bg-transparent flex items-center justify-center cursor-pointer text-[#888] hover:bg-[#f5f0e8] transition-colors"
-      >
-        <Image size={17} />
-      </button>
+      {/* The paperclip and image buttons only ever fired
+          toast('Attachment feature coming soon!') — in English, in a live
+          composer. Removed until there is an upload path behind them. */}
       <input
         ref={inputRef}
         type="text"

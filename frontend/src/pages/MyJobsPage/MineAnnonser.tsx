@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '../../components/Ui/select';
 import ConfirmDialog from '../../components/Ui/ConfirmDialog';
+import { timeFormatter } from '../../utils/timeFormatter';
 
 // Define the tabs configuration
 type TabConfig = {
@@ -309,7 +310,12 @@ export default function MineAnnonser() {
                     {/* Venstre side: Lokasjonsmerke */}
                     <div className="bg-[#D9D9D9]/80 px-3 py-1.5 rounded-[20px] flex items-center justify-center gap-1.5 backdrop-blur-sm">
                       <MapPin size={13} />
-                      <span className="text-[12px] font-normal">{job.location.city}</span>
+                      {/* location and duration are both optional on the Service
+                          model — one job saved without them used to throw here and
+                          take down the whole listing grid. */}
+                      <span className="text-[12px] font-normal">
+                        {job.location?.city || 'Ikke angitt'}
+                      </span>
                     </div>
 
                     {/* Høyre side: Redigeringsikon */}
@@ -342,9 +348,7 @@ export default function MineAnnonser() {
                     <div className="flex items-center gap-1">
                       <Clock4 size={13} />
                       <h3 className="m-0 whitespace-nowrap overflow-hidden text-ellipsis text-[12px] font-normal">
-                        {job.duration.value
-                          ? `${job.duration.value} ${job.duration.unit}`
-                          : 'Ikke angitt'}
+                        {timeFormatter.toJobDuration(job.duration) || 'Ikke angitt'}
                       </h3>
                     </div>
                     <div className="text-[11px] text-gray-500">

@@ -75,7 +75,6 @@ exports.getApplicantsForService = async (req, res) => {
         const responseRatePercent =
           totalRequests > 0 ? Math.round((respondedRequests / totalRequests) * 100) : 100;
         const responseRate = `${responseRatePercent}%`;
-        const responseTime = '< 1t';
 
         return {
           _id: reqDoc._id,
@@ -95,9 +94,12 @@ exports.getApplicantsForService = async (req, res) => {
             reviewCount: applicant.reviewCount || 0,
             completedJobs: completedJobsCount,
             responseRate,
-            responseTime,
-            isSafePayUser: true, // Mocked badge
-            isFastResponder: true, // Mocked badge
+            // `responseTime: '< 1t'`, `isSafePayUser: true` and
+            // `isFastResponder: true` used to be sent here, hardcoded, for every
+            // applicant. They were rendered to the poster as fact, which made all
+            // applicants look identically verified and identically fast — the
+            // opposite of what a badge is for. Removed rather than guessed;
+            // completedJobs, responseRate, rating and reviewCount above are real.
           },
         };
       })
@@ -124,10 +126,22 @@ exports.getApplicantsForService = async (req, res) => {
         duration: service.duration,
       },
       applicants: sortedApplicants,
+      // ready_for_review and disputed were missing. The moment a provider marked
+      // work ready, activeOrder went null, the page re-armed "Velg og start
+      // SafePay" for every applicant and reset the timeline — and clicking it
+      // returned "Kontrakt finnes allerede" with no way forward.
       activeOrder: await Order.findOne({
         serviceId: service._id,
         status: {
-          $in: ['awaiting_payment', 'paid', 'in_progress', 'completed'],
+          $in: [
+            'awaiting_payment',
+            'paid',
+            'in_progress',
+            'ready_for_review',
+            'waiting_for_approval',
+            'completed',
+            'disputed',
+          ],
         },
       }).select('_id status'),
     });

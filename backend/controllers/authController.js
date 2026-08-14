@@ -8,6 +8,23 @@ const { generateTokens, createSession } = require('../utils/tokenUtils');
 const { sendOtpEmail } = require('../utils/emailService');
 const { OWN_USER_SELECT, sanitizeUserOwner, SENSITIVE_STRIP } = require('../utils/userProjections');
 
+/**
+ * Mirrors the client-side rule in frontend/src/utils/validationLogic.ts.
+ *
+ * The backend only ever checked length >= 8, so anything that wasn't the browser
+ * form — curl, a script, a mobile client — could create "aaaaaaaa" accounts. The
+ * strength requirement is only real if the server enforces it too.
+ */
+const validatePasswordStrength = (password) => {
+  if (typeof password !== 'string' || password.length < 8) {
+    return 'Passordet må være minst 8 tegn.';
+  }
+  if (!/[a-zæøå]/.test(password)) return 'Passordet må inneholde minst én liten bokstav.';
+  if (!/[A-ZÆØÅ]/.test(password)) return 'Passordet må inneholde minst én stor bokstav.';
+  if (!/\d/.test(password)) return 'Passordet må inneholde minst ett tall.';
+  return null;
+};
+
 const isProduction = process.env.NODE_ENV === 'production';
 
 const accessCookieOptions = {
@@ -76,9 +93,8 @@ const validateRegisterInput = ({ name, email, password, role, companyName, orgNu
     return 'Valid email is required';
   }
 
-  if (typeof password !== 'string' || password.length < 8) {
-    return 'Password must be at least 8 characters';
-  }
+  const passwordError = validatePasswordStrength(password);
+  if (passwordError) return passwordError;
 
   if (role && !allowedRoles.includes(role)) {
     return 'Invalid role';
@@ -499,8 +515,9 @@ exports.changePasswordVerifyOtp = async (req, res) => {
       return res.status(400).json({ error: 'Kode og nytt passord er påkrevd' });
     }
 
-    if (typeof newPassword !== 'string' || newPassword.length < 8) {
-      return res.status(400).json({ error: 'Passordet må være minst 8 tegn' });
+    const newPasswordError = validatePasswordStrength(newPassword);
+    if (newPasswordError) {
+      return res.status(400).json({ error: newPasswordError });
     }
 
     const hashedOtp = crypto.createHash('sha256').update(String(otp)).digest('hex');
@@ -637,8 +654,9 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ error: 'Token og passord er påkrevd' });
     }
 
-    if (typeof password !== 'string' || password.length < 8) {
-      return res.status(400).json({ error: 'Passordet må være minst 8 tegn' });
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) {
+      return res.status(400).json({ error: passwordError });
     }
 
     const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');

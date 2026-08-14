@@ -17,12 +17,6 @@ exports.createContract = async (req, res) => {
     const { serviceId, applicantId, requestId } = req.body;
     const userId = req.userId;
 
-    console.log('createContract: req.body:', {
-      serviceId,
-      applicantId,
-      requestId,
-    });
-    console.log('createContract: userId:', userId);
 
     // Validate input IDs (Bug 9)
     if (!mongoose.Types.ObjectId.isValid(serviceId)) {
@@ -37,7 +31,6 @@ exports.createContract = async (req, res) => {
 
     // 1. Verify service ownership (userId should be provider/owner of service)
     const service = await Service.findById(serviceId);
-    console.log('createContract: service:', service);
     if (!service) {
       return res.status(404).json({ error: 'Oppdraget ble ikke funnet' });
     }
@@ -49,7 +42,6 @@ exports.createContract = async (req, res) => {
     }
 
     // Bug 11: Check service/order status
-    console.log('createContract: service.status:', service.status);
     if (service.status === 'completed' || service.status === 'closed') {
       return res.status(400).json({ error: 'Denne tjenesten er ikke lenger tilgjengelig' });
     }
@@ -58,7 +50,6 @@ exports.createContract = async (req, res) => {
     // In JobRequest: customerId is the applicant (person who wants to do the work), providerId is service owner (person who posted the job)
     // First, let's log all JobRequests for this serviceId to debug
     const allJobRequests = await JobRequest.find({ serviceId });
-    console.log('createContract: allJobRequests:', allJobRequests);
 
     if (requestId) {
       const jobRequest = await JobRequest.findOne({
@@ -67,7 +58,6 @@ exports.createContract = async (req, res) => {
         customerId: applicantId,
         providerId: userId,
       });
-      console.log('createContract: found jobRequest with requestId:', jobRequest);
       if (!jobRequest) {
         return res.status(400).json({ error: 'Ugyldig søknad' });
       }
@@ -77,7 +67,6 @@ exports.createContract = async (req, res) => {
         customerId: applicantId,
         providerId: userId,
       });
-      console.log('createContract: found jobRequest without requestId:', jobRequest);
       if (!jobRequest) {
         return res.status(400).json({ error: 'Søker har ikke søkt på denne tjenesten' });
       }
@@ -86,7 +75,6 @@ exports.createContract = async (req, res) => {
     // Bug 3: Prevent duplicate contract
     // Check if there's ANY existing order for this service (regardless of provider)
     const existingOrder = await Order.findOne({ serviceId });
-    console.log('createContract: existingOrder:', existingOrder);
     if (existingOrder) {
       return res.status(400).json({ error: 'Kontrakt finnes allerede' });
     }

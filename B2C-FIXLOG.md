@@ -8,6 +8,7 @@ Severity scale: **P0** launch blocker · **P1** critical · **P2** important · 
 
 | # | Issue | Severity | Status |
 |---|---|---|---|
+| 14 | Phase 2–4 sweep: auth redirects, statuses, crashes, security, consent, prod hardening | P0–P2 | ✅ Done |
 | 13 | Job creation: map pinned jobs to the poster, edit corrupted jobs, draft wiped on failure | P1 | ✅ Done |
 | 12 | Chat payment funnel dead; everyone routed as provider | P0 | ✅ Done |
 | 11 | SafePay contract showed hardcoded date/duration/city, fake card, dead Vipps/Apple Pay | P0 | ✅ Done |
@@ -21,6 +22,175 @@ Severity scale: **P0** launch blocker · **P1** critical · **P2** important · 
 | 3 | Legacy payout endpoint released funds without payment/state/dispute checks | P0 | ✅ Done |
 | 2 | SafePay payment confirmation had no Stripe webhook | P0 | ✅ Done, needs deploy config |
 | 1 | Dead routes, no error boundary, placeholder text | P0 | ✅ Done |
+
+---
+
+## Fix #14 — Phase 2–4 sweep
+
+**Severity:** P0–P2 · **Audit ref:** F-01, F-04, F-06, F-07, F-08, F-09, F-10, F-13, F-14, F-18,
+F-19, F-20, F-21, F-22, F-39, F-40, F-41, F-43, F-44, F-45, F-46, F-48, F-49, F-54, F-55, F-56,
+F-57, F-58, F-59, F-60, F-62
+
+Everything left in the launch plan except the items listed under **Deliberately not done** at the
+end. 47 files changed, +702/−416, plus 3 new backend files and 6 new frontend ones.
+
+### Auth & navigation
+
+| Ref | What was wrong | Fix |
+|---|---|---|
+| F-06 | `ProtectedRoute`'s modal called `navigate(-1)` on cancel. On a cold deep link there is no history entry, so the user sat on a page with only a header and footer and no way out. | Replaced the modal with `<Navigate to="/login" state={{ from }} replace />`. |
+| F-07 | `ProtectedRoute` wrote `state.from` and **nothing read it**; `useAuth` hardcoded `/home`. Anyone following a shared job, notification or checkout link lost their destination. | `redirectAfterAuth()` in `useAuth`, also honoured by `PublicRoute`. Only same-origin paths are accepted, so a crafted state can't redirect off-site. |
+| F-13 | `/subscription/success` navigated to `/dashboard`; `AdminProtectedRoute` bounced every ordinary user to `/profile`, or `/login` if auth was lost during the Stripe round-trip. The paid funnel ended in a redirect bounce. | Now `/membership`. Page translated. |
+| F-20 | The OAuth JWT stayed in the URL, so it persisted in history and `document.referrer`. Vipps/Google `?error=` redirects were never read — a failed login landed on a blank form. | `history.replaceState` scrubs the token (cookies are already set by the same handler); `?error=` now shows the failure state. |
+
+### Status vocabulary (F-41)
+
+New `src/constants/statuses.ts`. The three checks that leaked to users:
+
+- `JobListingDetailPage` — `CLOSED_STATUSES` omitted `awaiting_payment`, `paid` and
+  `waiting_for_approval`, all written by the backend. Those jobs kept an enabled "Send forespørsel"
+  and printed the raw string `awaiting_payment` as the status chip. Fixed, plus `statusLabel()` as
+  the fallback so no snake_case can reach the UI.
+- `applicantController.activeOrder` — omitted `ready_for_review` and `disputed`, so the moment a
+  provider marked work ready the applicants page re-armed "Velg og start SafePay" for every
+  applicant; clicking gave `400 Kontrakt finnes allerede` with no way forward.
+- `features/services/types.ts` — `ready_for_review` was missing from the `Service['status']` union.
+
+### Applicants & fees
+
+- **F-44** — `hasRequested` had no status filter while the backend only blocks re-application while
+  a request is `pending`. Applicants mass-declined when someone else won stayed permanently stuck on
+  a disabled "Forespørsel sendt", with no notification. Now filtered to `pending`, and a declined
+  applicant gets an explicit "Forespørselen din ble ikke valgt denne gangen. Du kan søke på nytt."
+- The apply cooldown was computed from **all** of `/orders/requests/my`, which returns received
+  requests too — so a job poster saw a bogus "Åpner for deg om 4:32" on unrelated jobs. Now only
+  requests the user sent, and the timer is cleared when it expires (it was only ever set).
+- **F-43** — `Math.round(price * 0.97)` vs the backend's `price - Math.round(price * 0.03)`. At
+  350 kr the sidebar printed 350 / 11 / 340 — three numbers that don't add up — while the provider
+  got 339. New `utils/safePayFee.ts` mirrors the backend exactly.
+- **F-48** — `isSafePayUser: true`, `isFastResponder: true` and `responseTime: '< 1t'` were
+  hardcoded for every applicant and rendered to the poster as fact. Removed; `completedJobs`,
+  `responseRate`, `rating` and `reviewCount` are real and stay.
+
+### Crashes and silent failures
+
+- **F-45** — guarded `job.location.city` and `job.duration.value` in `MineAnnonser` (one bad job
+  killed the entire listing grid), `order.customerId.name[0]` / `providerId.name[0]` in
+  `SafePayCheckout` (`providerId` is not `required` on the model), and `CompletedJobPage`'s
+  `if (!data) return null` — a blank white page whenever the Service had been deleted. The `/home`
+  browse grid now distinguishes a failed fetch from "no jobs"; it rendered `null` for both.
+- **F-55** — `useChatSocket` registered three listeners and never removed them. The socket is a
+  module-level singleton, so after N conversation opens one inbound message ran the handler N times,
+  each firing two `invalidateQueries` — 2N duplicate refetches on the busiest screen in the app.
+- **F-56** — a failed message send produced nothing: no toast, no retry, no failed state. (The input
+  is only cleared on success, so the text itself was never lost.)
+- **F-57** — `Alert.tsx`'s delete handlers awaited with no catch, so on failure the promise rejected
+  unhandled and **the confirm dialog never closed**. Four of eight favourite-list mutations had no
+  `onError` at all; all eight now share one handler.
+- **F-54** — "Se" sent *everyone* to `/provider/orders/:id`, so a customer told "Din forespørsel er
+  godkjent" landed on the provider's work page, and a deleted order produced
+  `/provider/orders/null`. New `utils/orderRoute.ts`; it also marks the notification read, which it
+  never did.
+
+### Fake controls removed (F-58)
+
+Hardcoded `4.9 ★ · 38 oppdrag` in the chat header (shown for every user) · "Archive this thread" ·
+the paperclip and image buttons in the live composer · `alert('Invoice download coming soon!')` on a
+completed paid job · the "Søk i samtaler..." box with no `value`, `onChange` or consumer · the
+search-engine visibility checkbox with no state and no API — a privacy promise that did nothing.
+
+### Backend security
+
+| Ref | Fix |
+|---|---|
+| F-19 | `origin: true` reflected **any** origin while sending credentials, so any website could make authenticated calls for a logged-in user. Now an allowlist from `ALLOWED_ORIGINS`/`FRONTEND_URL` (localhost still allowed in dev). Added `app.set('trust proxy')` — without it every request behind a load balancer shares one IP, so `authLimiter`'s 10/hour became **10 logins per hour for the entire user base**. Session cookie now `secure`+`httpOnly` in production, with its own `SESSION_SECRET` instead of reusing `JWT_SECRET`. |
+| F-39 | `updateService` ended with `Object.assign(service, otherFields)` carrying `status`, `userId`, `promoted`, `urgent` and `views` — free promotion, re-opening a job that already had a paid contract, or reassigning the listing. Replaced with a whitelist; `urgent` now re-checks the subscription on update as it already did on create. |
+| F-40 | `multer({ storage })` had no `limits` and no `fileFilter`; the 2 MB cap was client-only, and `multer-storage-cloudinary` uploads *before* the controller runs. Added 8 MB / 6 files / MIME allowlist, and a translating error handler (a too-large file used to become a bare 500). `upload.array('images', 5)` also disagreed with the UI's "inntil 6 bilder" — a 6th file produced an unhandled error. |
+| F-46 | Review photos are posted base64 inside JSON against `express.json()`'s default **100 KB** limit, so every real phone photo died in the body parser. Raised to 12 MB. |
+| F-14 | New `utils/mongoErrors.js`. `updateUser` returned `err.message`, so changing your e-mail to one in use surfaced `E11000 duplicate key error collection: jobblo.users index: email_1 dup key: { email: "x@y.no" }` in a toast — leaking schema internals and confirming which addresses are registered. |
+| F-18 | The backend checked length ≥ 8 only, while the client required upper+lower+digit — so any non-browser client could create `aaaaaaaa` accounts. `validatePasswordStrength` now enforces it at all three sites and reports the actual reason. |
+| F-49 | Removed 13 `console.log` calls that dumped whole applicant, review and user documents — names, e-mails, ids — into container logs on every contract creation and every review. |
+| F-59 | Swagger UI was mounted unauthenticated in production; now dev-only unless `ENABLE_API_DOCS=true`. `logger('dev')` no longer runs in production. |
+
+### Consent, config and production build
+
+- **F-10** — the banner was entirely in English on a Norwegian-first product, had **no reject
+  option** (only "Accept" and a "Customise" that silently accepted), and linked to `/cookie-policy`,
+  which is not a route. Rewritten in Norwegian with a real "Bare nødvendige". More importantly,
+  `index.html` loaded **Google AdSense unconditionally, before any consent** — consent after the
+  fact under GDPR/ePrivacy. New `utils/cookieConsent.ts` injects it only after an explicit accept,
+  gated on `VITE_ADSENSE_CLIENT`.
+- **F-01/F-60** — new `src/config/env.ts` is the single source for the API URL. A production build
+  without `VITE_MAIN_URL` used to bake in `http://localhost:5000`, so every request was blocked as
+  mixed content with no diagnostic; callers with no fallback produced literal
+  `undefined/api/auth/google`. New `scripts/check-env.mjs` **fails the build** when it's missing
+  (wired into `npm run build`), with a same-origin runtime fallback as a net. Socket transports now
+  include `polling` — `['websocket']` alone meant corporate proxies got no real-time at all, and
+  `reconnectionAttempts: Infinity` retried forever.
+- **F-59** — `<ReactQueryDevtools>` shipped to production unguarded, letting any visitor inspect the
+  whole query cache (profile, orders, chats). Now `import.meta.env.DEV`. Added
+  `esbuild.drop: ['console','debugger']` for production — 105 console statements shipped, including
+  `ChatWindow` logging the entire chat object on every render.
+- **F-21** — the logout the UI actually calls never cleared the React Query cache, so on a shared
+  browser the previous user's profile and chats stayed rendered. `disconnectSocket()` also sat
+  *after* the awaited network call, so an offline or 500 logout left the socket connected as the old
+  user.
+- **F-22/F-62** — `lang="en"` → `nb`, added `viewport-fit=cover`, removed the duplicate Leaflet CSS
+  CDN link (already imported from npm, and a third-party hard render dependency), fixed the
+  unconditional `px-12` on `Categories`/`TrustBar` (96px of padding on a 360px phone), and replaced
+  the native `alert()` calls — worst was `alert('Notification error: ' + JSON.stringify(err))`.
+
+### Honest instead of fake (F-08, F-09)
+
+Neither could be *implemented* unattended; both were made truthful.
+
+- **F-08** — "Slett profil" ran `toast.success('Kommer snart')`: a green success toast, on a page
+  promising irreversible deletion, for a GDPR Art. 17 right. `DELETE /api/users/:id` exists, but
+  self-serve erasure needs a confirmation flow and a decision about live orders and escrowed funds.
+  The page now says deletion is handled by support and sends the request there.
+- **F-09** — the support form called nothing and then said "Saken din er sendt". There is no
+  ticket endpoint, but `support@jobblo.no` is real, so the form now hands the message to the user's
+  mail client and only claims that. Removed the "Live Chat" that toasted "kommer snart" and the
+  placeholder phone number `+47 123 45 678`.
+
+### Verification
+
+- New tests: `serviceUpdateWhitelist.test.js` (5) and `mongoErrors.test.js` (7). Full backend suite
+  **179 passed, 9 failed** — the same pre-existing `chatReport.test.js` failures as every previous
+  fix.
+- Frontend typecheck **353 → 349**, verified by diffing sorted error *sets* at four checkpoints. The
+  three errors I introduced along the way (unused imports left by deletions) were caught and fixed;
+  everything else is line-shift.
+- ESLint clean on all new and rewritten files.
+
+### Deliberately not done
+
+- **F-16** (379 type errors) and **F-17** (B2C i18n) — the audit explicitly rules both out before
+  launch. Strings were translated in place where touched.
+- **F-47** (disputes are write-only) — needs a status view, a message thread and evidence upload.
+  Feature work, not a fix.
+- **F-63** (dead duplicate chat implementations) and **F-61** (builder.io placeholder assets) — P3,
+  and touching them risks more than it fixes this close to launch.
+- **F-15** (settings posts all 21 fields) — P2 cleanup; the fields it drops are dead payload, not
+  lost bank details (payouts go through Stripe Connect).
+
+### New deploy configuration required
+
+`ALLOWED_ORIGINS` (or `FRONTEND_URL`) — **without this, production browser requests are refused.**
+Optional: `SESSION_SECRET`, `TRUST_PROXY`, `ENABLE_API_DOCS`, `VITE_ADSENSE_CLIENT`.
+`npm run build` now fails without `VITE_MAIN_URL` and `VITE_GOOGLE_MAPS_API_KEY`.
+
+### Still to test manually
+
+1. Open a protected page in a fresh tab while logged out → redirected to login, and after logging in
+   you land on **that page**, not `/home`.
+2. Log in as a job poster, open a notification about an order → your checkout/approval page, not the
+   provider work page.
+3. Open five conversations, then receive a message → the chat should refetch **once**, not five times.
+4. First visit → Norwegian cookie banner with "Bare nødvendige"; choose it and confirm no AdSense
+   script is in the Network tab.
+5. Log out on a shared browser, log in as someone else → no trace of the first user's data.
+6. Deploy check: set `ALLOWED_ORIGINS` and confirm the app can still talk to the API.
 
 ---
 

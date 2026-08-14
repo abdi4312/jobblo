@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import {
-  ArrowLeft, Search, Mail, Phone, MessageCircle, Send, ChevronDown, CheckCircle2, ShieldCheck,
+  ArrowLeft, Search, Mail, Send, ChevronDown, CheckCircle2, ShieldCheck,
 } from 'lucide-react';
 
 type FAQ = { id: number; question: string; answer: string; search: string };
@@ -17,6 +17,8 @@ const FAQ_ITEMS: FAQ[] = [
 ];
 
 type FormState = { subject: string; message: string };
+
+const SUPPORT_EMAIL = 'support@jobblo.no';
 
 export default function SupportPage() {
   const navigate = useNavigate();
@@ -35,12 +37,23 @@ export default function SupportPage() {
     );
   }, [search]);
 
+  // There is no support-ticket endpoint in the API. This form previously called
+  // nothing at all and then reported "Saken din er sendt", so customers with a
+  // payment or dispute problem believed they had contacted support and waited.
+  // Handing the message to the user's mail client actually delivers it.
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!form.subject.trim() || !form.message.trim()) { toast.error('Fyll ut alle feltene.'); return; }
+    if (!form.subject.trim() || !form.message.trim()) {
+      toast.error('Fyll ut alle feltene.');
+      return;
+    }
+    const mailto =
+      `mailto:${SUPPORT_EMAIL}` +
+      `?subject=${encodeURIComponent(form.subject.trim())}` +
+      `&body=${encodeURIComponent(form.message.trim())}`;
+    window.location.href = mailto;
     setSent(true);
     setForm({ subject: '', message: '' });
-    toast.success('Saken din er sendt. Vi svarer innen 24 timer.');
   };
 
   const inputCls = 'w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#1a3a1a] focus:ring-2 focus:ring-[#1a3a1a]/10 transition-all disabled:bg-gray-50 disabled:text-gray-400 placeholder:text-gray-400';
@@ -73,10 +86,11 @@ export default function SupportPage() {
 
               {/* Contact cards */}
               <div className="space-y-3">
+                {/* "Live Chat" opened a toast saying it doesn't exist, and the
+                    phone number was the placeholder +47 123 45 678. Both removed:
+                    e-mail is the only channel that actually reaches anyone. */}
                 {[
-                  { icon: MessageCircle, label: 'Live Chat', sub: 'Vanligvis svar med en gang', action: 'Start chat', href: null as string | null },
-                  { icon: Mail, label: 'E-post', sub: 'support@jobblo.no', action: 'Send e-post', href: 'mailto:support@jobblo.no' },
-                  { icon: Phone, label: 'Telefon', sub: '+47 123 45 678 · Man–fre 08–17', action: 'Ring nå', href: 'tel:+4712345678' },
+                  { icon: Mail, label: 'E-post', sub: SUPPORT_EMAIL, action: 'Send e-post', href: `mailto:${SUPPORT_EMAIL}` },
                 ].map(({ icon: Icon, label, sub, action, href }) => (
                   <div
                     key={label}
@@ -89,22 +103,12 @@ export default function SupportPage() {
                       <p className="font-black text-gray-900 text-sm">{label}</p>
                       <p className="text-xs text-gray-400">{sub}</p>
                     </div>
-                    {href ? (
-                      <a
-                        href={href}
-                        className="shrink-0 px-4 py-2 rounded-xl border-2 border-gray-200 text-xs font-bold hover:border-[#1a3a1a] hover:text-[#1a3a1a] transition-all"
-                      >
-                        {action}
-                      </a>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => toast('Live chat kommer snart.')}
-                        className="shrink-0 px-4 py-2 rounded-xl border-2 border-gray-200 text-xs font-bold hover:border-[#1a3a1a] hover:text-[#1a3a1a] transition-all"
-                      >
-                        {action}
-                      </button>
-                    )}
+                    <a
+                      href={href}
+                      className="shrink-0 px-4 py-2 rounded-xl border-2 border-gray-200 text-xs font-bold hover:border-[#1a3a1a] hover:text-[#1a3a1a] transition-all"
+                    >
+                      {action}
+                    </a>
                   </div>
                 ))}
               </div>
@@ -164,8 +168,13 @@ export default function SupportPage() {
               {sent ? (
                 <div className="text-center py-8">
                   <CheckCircle2 size={36} className="text-[#1a3a1a] mx-auto mb-3" />
-                  <p className="font-bold text-gray-900 text-sm mb-1">Saken din er sendt!</p>
-                  <p className="text-xs text-gray-400 mb-5">Vi tar kontakt innen 24 timer.</p>
+                  {/* Only claim what actually happened: we handed the message to
+                      the user's mail client. Whether they pressed send is up to them. */}
+                  <p className="font-bold text-gray-900 text-sm mb-1">E-posten er klargjort</p>
+                  <p className="text-xs text-gray-400 mb-5">
+                    Vi har åpnet e-postprogrammet ditt med meldingen. Send den, så svarer vi
+                    normalt innen 24 timer. Fungerer det ikke, skriv til {SUPPORT_EMAIL}.
+                  </p>
                   <button type="button" onClick={() => setSent(false)} className="text-xs font-bold text-[#1a3a1a] hover:underline">
                     Send en ny sak
                   </button>

@@ -61,6 +61,16 @@ export const useChatSocket = (conversationId?: string) => {
 
     return () => {
       if (conversationId) socket.emit('leave-chat', conversationId);
+      // The socket is a module-level singleton, so handlers registered here
+      // outlive the component unless they are removed. Without these three
+      // socket.off calls, every conversation you opened added another copy: after
+      // N opens a single inbound message ran the handler N times, each firing two
+      // invalidateQueries — 2N duplicate refetches on the busiest screen in the
+      // app. This effect also re-runs when serviceId resolves, so it registered
+      // at least twice per conversation.
+      socket.off('receive-message', handleReceiveMessage);
+      socket.off('messages-read', handleMessagesRead);
+      socket.off('get-online-users', handleUserOnline);
     };
   }, [conversationId, userId, queryClient, activeChatQuery.data?.serviceId?._id]);
 

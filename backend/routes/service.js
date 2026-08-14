@@ -266,7 +266,7 @@ router.put('/:id/location', authenticate, serviceController.updateLocation);
  *       401:
  *         description: Ikke autorisert
  */
-router.post('/', authenticate, upload.array('images', 5), serviceController.createService);
+router.post('/', authenticate, upload.array('images', 6), serviceController.createService);
 
 /**
  * -------------------------------------------------------
@@ -296,7 +296,7 @@ router.get('/:id', serviceController.getServiceById);
  *     summary: Update a service
  *     tags: [Tjenester]
  */
-router.put('/:id', authenticate, upload.array('images', 5), serviceController.updateService);
+router.put('/:id', authenticate, upload.array('images', 6), serviceController.updateService);
 
 /**
  * -------------------------------------------------------

@@ -7,7 +7,7 @@ export function Categories() {
   const navigate = useNavigate();
 
   return (
-    <section className="py-15 px-12 max-w-[1100px] mx-auto">
+    <section className="py-15 px-4 sm:px-12 max-w-[1100px] mx-auto">
       <div className="text-center mb-9">
         <h2 className="text-[28px] font-normal text-custom-black">
           Populære <em className="text-custom-green not-italic">kategorier</em>

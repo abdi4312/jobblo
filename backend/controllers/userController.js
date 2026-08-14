@@ -7,6 +7,7 @@ const Category = require('../models/Category');
 const List = require('../models/List');
 const Notification = require('../models/Notification');
 const notificationController = require('./notificationController');
+const { sendMongoError } = require('../utils/mongoErrors');
 const {
   PUBLIC_USER_SELECT,
   OWN_USER_SELECT,
@@ -637,8 +638,10 @@ exports.updateUser = async (req, res) => {
     });
     res.json(sanitizeUserOwner(updatedUser));
   } catch (err) {
+    // Was `res.status(400).json({ error: err.message })`, which forwarded the raw
+    // driver string (E11000 duplicate key ... index: email_1 ...) to a toast.
     console.error('updateUser Error:', err);
-    res.status(400).json({ error: err.message });
+    sendMongoError(res, err, 'Kunne ikke lagre endringene. Prøv igjen.');
   }
 };
 

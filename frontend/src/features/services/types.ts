@@ -51,6 +51,7 @@ export interface Service {
     | 'awaiting_payment'
     | 'paid'
     | 'in_progress'
+    | 'ready_for_review'
     | 'completed'
     | 'pending'
     | 'waiting_for_approval'

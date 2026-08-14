@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useUserStore } from '../../stores/userStore';
 import { useUserProfile } from './hooks';
 import { toast } from 'react-hot-toast';
@@ -9,6 +10,7 @@ export const useProfileLogic = () => {
   const currentUser = useUserStore((state) => state.user);
   const logout = useUserStore((state) => state.logout);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('Om meg');
   const [profileType, setProfileType] = useState<'seeker' | 'poster'>('seeker');
 
@@ -30,10 +32,19 @@ export const useProfileLogic = () => {
     setActiveTab(type === 'seeker' ? 'Om meg' : 'Aktive');
   };
 
-  const handleLogout = () => {
-    logout();
-    toast.success('Du har blitt logget ut');
-    navigate('/');
+  // This is the logout the UI actually calls. It used to fire the raw store
+  // action without awaiting it and without clearing the React Query cache, so on
+  // a shared browser the previous user's profile and chats stayed rendered until
+  // each query happened to refetch. It also reported success before the server
+  // call had finished.
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      queryClient.clear();
+      toast.success('Du er nå logget ut.');
+      navigate('/');
+    }
   };
 
   const isBlockedByMe =

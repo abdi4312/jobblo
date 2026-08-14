@@ -48,9 +48,41 @@ const errorsRouter = require('./routes/errors');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 
-// CORS configuration
+// ── CORS ──────────────────────────────────────────────────────────────────────
+// `origin: true` reflected ANY origin while also sending credentials, which means
+// any website could make authenticated API calls on behalf of a logged-in Jobblo
+// user. Allowed origins now come from ALLOWED_ORIGINS (comma-separated); in dev
+// the usual localhost ports are permitted so nothing changes locally.
+const DEV_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+];
+
+const allowedOrigins = [
+  ...(process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((o) => o.trim().replace(/\/$/, ''))
+    .filter(Boolean),
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL.trim().replace(/\/$/, '')] : []),
+  ...(process.env.NODE_ENV === 'production' ? [] : DEV_ORIGINS),
+];
+
+if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
+  console.error(
+    '[jobblo] No ALLOWED_ORIGINS or FRONTEND_URL set. Browser requests with credentials will be refused.'
+  );
+}
+
 const corsOptions = {
-  origin: true, // Reflect request origin, or use an array of allowed origins
+  origin(origin, callback) {
+    // No Origin header: same-origin, curl, server-to-server, Stripe webhooks.
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin.replace(/\/$/, ''))) return callback(null, true);
+    return callback(null, false);
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
   credentials: true,
@@ -66,6 +98,13 @@ const { apiLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
 
+// Behind a load balancer / CDN every request arrives from the proxy's IP. Without
+// this, express-rate-limit counted the WHOLE user base as one client, so
+// authLimiter's 10 requests/hour became 10 logins per hour for everyone —
+// indistinguishable from a total outage. It also makes req.secure correct so the
+// session cookie below can be secure in production.
+app.set('trust proxy', process.env.TRUST_PROXY ? Number(process.env.TRUST_PROXY) : 1);
+
 // ── Stripe webhook ────────────────────────────────────────────────────────────
 // MUST be registered before express.json(): signature verification needs the raw
 // request body, and any JSON parser that runs first would consume it. Registered
@@ -80,9 +119,14 @@ app.post(
 app.use(cors(corsOptions));
 app.use(apiLimiter); // Apply general API rate limiting
 app.use(useragent.express());
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// 'dev' logging writes a line per request to stdout in production too.
+if (process.env.NODE_ENV !== 'production') app.use(logger('dev'));
+// Review photos are posted as base64 data URLs inside the JSON body
+// (SafePayApproval). The default 100kb limit killed every real phone photo in the
+// body parser, and the failure surfaced as the object-shaped error envelope that
+// the UI then tried to render as a React child.
+app.use(express.json({ limit: '12mb' }));
+app.use(express.urlencoded({ extended: false, limit: '12mb' }));
 app.use(cookieParser());
 
 // Attach a request ID to every request for tracing
@@ -91,11 +135,15 @@ app.use(requestId);
 // Session configuration
 app.use(
   session({
-    secret: process.env.JWT_SECRET,
+    // Was reusing JWT_SECRET; a separate secret means leaking one does not
+    // compromise the other. Falls back so existing deployments keep working.
+    secret: process.env.SESSION_SECRET || process.env.JWT_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false, // Set to true in production with HTTPS
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
   })
@@ -105,8 +153,11 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Swagger UI
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Swagger UI — was mounted unauthenticated in production, publishing the entire
+// API surface to anyone. Off in production unless ENABLE_API_DOCS is set.
+if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_API_DOCS === 'true') {
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+}
 
 // Routes
 // Preview route for social crawlers — must be registered before default 404
@@ -155,6 +206,27 @@ app.use(function (req, res, next) {
 
 const { logApplicationError } = require('./utils/errorLogger');
 const AppError = require('./utils/AppError');
+const multer = require('multer');
+
+// Upload and payload failures, translated. Without this a too-large image became
+// a generic 500 and the user was told "Noe gikk galt" with nothing to act on.
+app.use(function (err, req, res, next) {
+  if (err instanceof multer.MulterError) {
+    const messages = {
+      LIMIT_FILE_SIZE: 'Bildet er for stort. Maks 8 MB per fil.',
+      LIMIT_FILE_COUNT: 'For mange filer. Du kan laste opp inntil 6 bilder.',
+      LIMIT_UNEXPECTED_FILE: 'Uventet fil i opplastingen.',
+    };
+    return res.status(413).json({ error: messages[err.code] || 'Kunne ikke laste opp filen.' });
+  }
+  if (err && err.code === 'INVALID_FILE_TYPE') {
+    return res.status(400).json({ error: err.message });
+  }
+  if (err && err.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'Innholdet er for stort. Prøv med færre eller mindre bilder.' });
+  }
+  return next(err);
+});
 
 app.use(async function (err, req, res, next) {
   const status = err.status || err.statusCode || 500;

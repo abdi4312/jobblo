@@ -30,6 +30,8 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { dateFormatter } from '../../utils/dateFormatter';
+import { isClosedService, statusLabel } from '../../constants/statuses';
+import { apiUrl } from '../../config/env';
 import { ShareModal } from '../../components/shared/ShareModal/ShareModal';
 import { UpgradeModal } from '../../components/shared/UpgradeModal';
 import { BuyContactModal } from '../../components/shared/BuyContactModal';
@@ -131,8 +133,13 @@ const JobListingDetailPage = () => {
       if (currentPlan && usage >= freeLimit) {
         const cooldownMinutes = currentPlan.entitlements.ContactUnlock || 0;
         if (cooldownMinutes > 0) {
-          // Get the most recent request
-          const lastRequest = [...jobRequests].sort(
+          // Only requests this user *sent*. /orders/requests/my returns received
+          // ones too, so a job poster whose listing had just been applied to was
+          // shown a bogus "Åpner for deg om 4:32" on completely unrelated jobs.
+          const sentRequests = jobRequests.filter(
+            (req) => req.customerId?._id === currentUser._id
+          );
+          const lastRequest = [...sentRequests].sort(
             (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           )[0];
 
@@ -140,31 +147,57 @@ const JobListingDetailPage = () => {
             const unlockAt = new Date(
               new Date(lastRequest.createdAt).getTime() + cooldownMinutes * 60 * 1000
             );
-            const now = new Date();
 
-            if (now < unlockAt) {
+            if (new Date() < unlockAt) {
               setUnlockTime(unlockAt.toISOString());
               setIsTimerActive(true);
+              return;
             }
           }
         }
       }
+
+      // Nothing above applied — clear any cooldown left over from a previous
+      // render, otherwise the button stays disabled after the wait has expired.
+      setIsTimerActive(false);
+      setUnlockTime(null);
     }
   }, [isAuth, currentUser, plans, jobRequests, job, freeJobsToggle]);
 
+  // Only a *pending* request blocks re-applying — that is exactly what the
+  // backend enforces (orderController: findOne({..., status: 'pending'})).
+  // Without the status filter, applicants who were mass-declined when someone
+  // else won the contract stayed stuck on a disabled "Forespørsel sendt"
+  // forever, with no notification and no way to apply again.
   const hasRequested = jobRequests?.some(
-    (req) => req.serviceId?._id === id && req.customerId?._id === currentUser?._id
+    (req) =>
+      req.serviceId?._id === id &&
+      req.customerId?._id === currentUser?._id &&
+      req.status === 'pending'
+  );
+
+  const wasDeclined = jobRequests?.some(
+    (req) =>
+      req.serviceId?._id === id &&
+      req.customerId?._id === currentUser?._id &&
+      req.status === 'declined'
   );
 
   // ── Service status guard ───────────────────────────────────────────────────
-  const CLOSED_STATUSES = ['completed', 'in_progress', 'closed', 'cancelled', 'expired'];
-  const isServiceClosed = job && CLOSED_STATUSES.includes(job.status);
+  // The list lives in constants/statuses.ts. The local copy was missing
+  // awaiting_payment, paid and waiting_for_approval — all three are written by
+  // the backend — so a job in any of them kept an enabled "Send forespørsel"
+  // and printed its raw status string as the chip.
+  const isServiceClosed = !!job && isClosedService(job.status);
   const SERVICE_STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
     completed: { label: 'Oppdrag fullført', color: 'text-gray-600', bg: 'bg-gray-100 border-gray-200' },
     in_progress: { label: 'Utfører er valgt — pågår', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
     closed: { label: 'Oppdrag er lukket', color: 'text-gray-600', bg: 'bg-gray-100 border-gray-200' },
     cancelled: { label: 'Oppdrag er kansellert', color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
     expired: { label: 'Oppdrag har utløpt', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
+    awaiting_payment: { label: 'Utfører er valgt — venter på betaling', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
+    paid: { label: 'Betalt — arbeidet starter snart', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
+    waiting_for_approval: { label: 'Venter på godkjenning', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
   };
 
   const [lng, lat] = job?.location?.coordinates || [0, 0];
@@ -458,7 +491,7 @@ const JobListingDetailPage = () => {
                           job.status === 'in_progress' ? '🔨 Under arbeid' :
                             job.status === 'cancelled' ? '❌ Kansellert' :
                               job.status === 'expired' ? '⏰ Utløpt' :
-                                job.status === 'closed' ? '🔒 Lukket' : job.status}
+                                job.status === 'closed' ? '🔒 Lukket' : statusLabel(job.status)}
                       </span>
                     )}
                     {job.favCount !== undefined && job.favCount > 0 && (
@@ -507,6 +540,7 @@ const JobListingDetailPage = () => {
                     isOwnJob={isOwnJob}
                     isMsgLoading={isMessageLoading}
                     hasRequested={hasRequested}
+                    wasDeclined={wasDeclined}
                     isTimerActive={isTimerActive}
                   />
                 </div>
@@ -726,7 +760,7 @@ const JobListingDetailPage = () => {
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
-        url={`${(import.meta.env.VITE_MAIN_URL || '').replace(/\/$/, '')}/job-listing/${job._id}`}
+        url={apiUrl(`/job-listing/${job._id}`)}
         title={job.title || 'Jobblo Oppdrag'}
       />
 

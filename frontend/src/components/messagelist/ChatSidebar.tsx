@@ -1,5 +1,4 @@
 import React from 'react';
-import { Search } from 'lucide-react';
 import ConversationList from '../../components/chat/ConversationList';
 import type { FilterType } from '../../features/chat/useChatLogic';
 
@@ -41,14 +40,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
     >
       <div className="p-[14px] pb-[10px]">
         <h1 className="text-[15px] font-medium text-custom-black mb-[10px]">Meldinger</h1>
-        <div className="flex items-center gap-[7px] bg-[#f9f9f7] border border-black/[0.08] rounded-full px-[12px] py-[7px]">
-          <Search size={14} className="text-[#bbb]" />
-          <input
-            type="text"
-            placeholder="Søk i samtaler..."
-            className="flex-1 border-none bg-transparent text-[12px] text-custom-black outline-none placeholder:text-[#bbb]"
-          />
-        </div>
+        {/* The "Søk i samtaler..." box had no value, no onChange and no
+            consumer — typing in it did nothing at all. Removed rather than left
+            as a control that looks functional. */}
       </div>
 
       <div className="flex border-b border-black/[0.07] px-[10px]">

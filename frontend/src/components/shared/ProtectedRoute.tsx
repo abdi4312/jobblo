@@ -1,52 +1,23 @@
 import { useUserStore } from '../../stores/userStore.ts';
-import { type ReactNode, useEffect, useState } from 'react';
-import { Modal } from 'antd';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { type ReactNode } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const [confirmLoading, setConfirmLoading] = useState(false);
-  const [modalText, setModalText] = useState('Du må logge inn først.');
   const isAuth = useUserStore((state) => state.isAuthenticated);
-  const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    if (!isAuth) {
-      setOpen(true);
-    }
-  }, [isAuth]);
-
-  function handleOk() {
-    setModalText('Sender deg til innloggingssiden ...');
-    setConfirmLoading(true);
-
-    setOpen(false);
-    setConfirmLoading(false);
-    navigate('/login', { state: { from: location } });
-  }
-
-  function handleCancel() {
-    setOpen(false);
-    navigate(-1);
-  }
-
   if (!isAuth) {
+    // Redirect rather than open a modal. The modal's "Avbryt" called navigate(-1),
+    // which does nothing on a cold deep link (email link, pasted URL, new tab)
+    // because there is no history entry — the user was left staring at a page with
+    // only a header and a footer and no way forward.
+    //
+    // `from` is read back by useAuth after login so the user lands where they were
+    // actually going. Send the full path so query strings (?session_id=...) survive.
     return (
-      <>
-        <Modal
-          title={'Oops'}
-          open={open}
-          onOk={handleOk}
-          confirmLoading={confirmLoading}
-          onCancel={handleCancel}
-          okText={'Logg inn'}
-          cancelText={'Avbryt'}
-        >
-          <p>{modalText}</p>
-        </Modal>
-      </>
+      <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
     );
   }
+
   return <>{children}</>;
 }

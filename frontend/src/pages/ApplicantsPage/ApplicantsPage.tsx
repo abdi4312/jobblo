@@ -29,6 +29,7 @@ import SafePaySteps from '../../components/SafePay/SafePaySteps';
 import { createOrGetChat } from '../../api/chatAPI';
 import EmptyState from '../../components/Ui/EmptyState';
 import { timeFormatter } from '../../utils/timeFormatter';
+import { safePayFee, safePayNetToProvider } from '../../utils/safePayFee';
 
 const ApplicantsPage: React.FC = () => {
   const { serviceId } = useParams<{ serviceId: string }>();
@@ -261,10 +262,8 @@ const ApplicantsPage: React.FC = () => {
                       <div className="font-bold">{app.applicant.responseRate}</div>
                       <div className="text-[10px] text-gray-500 uppercase">Svar%</div>
                     </div>
-                    <div className="bg-gray-50 p-2 rounded-lg text-center">
-                      <div className="font-bold">{app.applicant.responseTime}</div>
-                      <div className="text-[10px] text-gray-500 uppercase">Svartid</div>
-                    </div>
+                    {/* "Svartid" removed — the backend hardcoded "< 1t" for every
+                        applicant, so it ranked nobody and misled the hire. */}
                   </div>
                 </div>
               ))}
@@ -433,12 +432,7 @@ const ApplicantsPage: React.FC = () => {
                           </div>
                           <div className="text-[10px] text-gray-400 uppercase">Svar%</div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-[15px] font-medium text-gray-900">
-                            {app.applicant.responseTime}
-                          </div>
-                          <div className="text-[10px] text-gray-400 uppercase">Svartid</div>
-                        </div>
+                        {/* "Svartid" removed — see the sidebar card above. */}
                       </div>
                     </div>
 
@@ -513,7 +507,7 @@ const ApplicantsPage: React.FC = () => {
                   },
                   {
                     label: 'Godkjenn og utbetal',
-                    desc: `${Math.round(service.price * 0.97)} kr til oppdragstaker`,
+                    desc: `${safePayNetToProvider(service.price)} kr til oppdragstaker`,
                     stepNumber: 4,
                   },
                 ].map((step) => {
@@ -581,12 +575,12 @@ const ApplicantsPage: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span>SafePay-gebyr (3%):</span>
-                  <strong className="text-gray-900">{Math.round(service.price * 0.03)} kr</strong>
+                  <strong className="text-gray-900">{safePayFee(service.price)} kr</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Utbetalt til søker:</span>
                   <strong className="text-custom-green">
-                    {Math.round(service.price * 0.97)} kr
+                    {safePayNetToProvider(service.price)} kr
                   </strong>
                 </div>
               </div>

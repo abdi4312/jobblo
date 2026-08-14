@@ -526,17 +526,43 @@ exports.updateService = async (req, res) => {
       }
     }
 
-    // Update other fields (including location codes)
-    const {
-      countyCode,
-      municipalityCode,
-      areaCode,
-      checklist,
-      contactPhone,
-      contactEmail,
-      ...otherFields
-    } = req.body;
-    Object.assign(service, otherFields, pickContactUpdates(req.body));
+    // Whitelist, mirroring the allowedUpdates pattern in userController.
+    //
+    // This used to be `Object.assign(service, otherFields)` with everything the
+    // client sent. `otherFields` still carried `status`, `userId`, `promoted`,
+    // `urgent` and `views`, so the owner could PUT {"promoted":true,"urgent":true}
+    // for free promotion, re-open a job that already had a paid contract with
+    // {"status":"open"}, or hand the listing to someone else with a new userId.
+    const SERVICE_UPDATABLE_FIELDS = [
+      'title',
+      'description',
+      'price',
+      'hourlyRate',
+      'paymentType',
+      'location',
+      'categories',
+      'tags',
+      'duration',
+      'fromDate',
+      'toDate',
+      'equipment',
+      'maxApplicants',
+    ];
+
+    for (const field of SERVICE_UPDATABLE_FIELDS) {
+      if (req.body[field] !== undefined) service[field] = req.body[field];
+    }
+    Object.assign(service, pickContactUpdates(req.body));
+
+    // `urgent` is a paid-tier feature, enforced on create but previously not on
+    // update — which made the restriction free to bypass by editing.
+    if (req.body.urgent !== undefined) {
+      const owner = await require('../models/User').findById(req.userId).select('subscription');
+      const wantsUrgent = req.body.urgent === true || req.body.urgent === 'true';
+      service.urgent = wantsUrgent && owner?.subscription !== 'Standard';
+    }
+
+    const { countyCode, municipalityCode, areaCode } = req.body;
     if (countyCode !== undefined) service.countyCode = countyCode;
     if (municipalityCode !== undefined) service.municipalityCode = municipalityCode;
     if (areaCode !== undefined) service.areaCode = areaCode;

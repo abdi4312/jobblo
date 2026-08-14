@@ -8,6 +8,9 @@ import { NotificationSkeleton } from '../../components/Loading/NotificationSkele
 import EmptyState from '../../components/Ui/EmptyState';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/Ui/select';
 import ConfirmDialog from '../../components/Ui/ConfirmDialog';
+import { resolveOrderRoute } from '../../utils/orderRoute';
+import { getErrorMessage } from '../../utils/getErrorMessage';
+import { useUserStore } from '../../stores/userStore';
 
 const categories = [
   { key: 'all', label: 'Alle' },
@@ -24,6 +27,7 @@ export default function Alert() {
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const navigate = useNavigate();
+  const userId = useUserStore((state) => state.user?._id);
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useNotifications(activeCategory === 'all' ? undefined : activeCategory);
   const { data: unreadCountData } = useUnreadCount();
@@ -39,9 +43,68 @@ export default function Alert() {
   const filtered = useMemo(() => showUnreadOnly ? all.filter((a) => !a.read) : all, [all, showUnreadOnly]);
   const unreadCount = (unreadCountData as any)?.count || 0;
 
-  const handleMarkAll = () => markAllMutation.mutateAsync().then(() => toast.success('Alle lest')).catch(() => toast.error('Feil'));
-  const handleDeleteAll = async () => { await deleteAllMutation.mutateAsync(); toast.success('Alle slettet'); setShowDeleteAllConfirm(false); };
-  const handleDeleteSingle = async () => { if (!deleteTargetId) return; await deleteMutation.mutateAsync(deleteTargetId); toast.success('Slettet'); setDeleteTargetId(null); };
+  const handleMarkAll = () =>
+    markAllMutation
+      .mutateAsync()
+      .then(() => toast.success('Alle varsler er merket som lest.'))
+      .catch((err) => toast.error(getErrorMessage(err, 'Kunne ikke merke varslene som lest.')));
+
+  // These two used to await with no catch: on failure the promise rejected
+  // unhandled, the confirm dialog never closed, and the user saw nothing at all.
+  const handleDeleteAll = async () => {
+    try {
+      await deleteAllMutation.mutateAsync();
+      toast.success('Alle varsler er slettet.');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Kunne ikke slette varslene.'));
+    } finally {
+      setShowDeleteAllConfirm(false);
+    }
+  };
+
+  const handleDeleteSingle = async () => {
+    if (!deleteTargetId) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTargetId);
+      toast.success('Varselet er slettet.');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Kunne ikke slette varselet.'));
+    } finally {
+      setDeleteTargetId(null);
+    }
+  };
+
+  /**
+   * "Se" used to navigate to /provider/orders/:id for *every* notification with
+   * an orderId, so a customer told "Din forespørsel er godkjent" landed on the
+   * provider's work page. It also never marked the notification as read.
+   */
+  const handleOpen = (n: AlertType) => {
+    if (!n.read) {
+      markAsReadMutation
+        .mutateAsync(n._id)
+        .catch(() => {/* navigation matters more than the read flag */});
+    }
+
+    if (n.orderId) {
+      const route = resolveOrderRoute(n.orderId, userId);
+      // Null when the order was deleted (populate returns null) or when we can't
+      // tell which side the viewer is on — previously this produced a literal
+      // navigate('/provider/orders/null').
+      if (route) navigate(route);
+      else toast.error('Denne ordren er ikke tilgjengelig lenger.');
+      return;
+    }
+
+    if (n.requestId) {
+      const r = n.requestId as { serviceId?: string | { _id?: string } };
+      const sid = typeof r.serviceId === 'object' ? r.serviceId?._id : r.serviceId;
+      if (sid) navigate(`/job-applicants/${sid}`);
+      return;
+    }
+
+    if (n.senderId?._id) navigate(`/profile/${n.senderId._id}`);
+  };
 
   const getIcon = (t: string) => {
     if (['ordre', 'order', 'payment'].includes(t)) return <DollarSign size={16} className="text-custom-green" />;
@@ -130,11 +193,7 @@ export default function Alert() {
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-[11px] text-gray-400 flex items-center gap-1"><Clock size={10} />{fmtTime(n.createdAt)}</span>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => {
-                          if (n.orderId) navigate(`/provider/orders/${(n.orderId as any)?._id || n.orderId}`);
-                          else if (n.requestId) { const r = n.requestId as any; const sid = typeof r.serviceId === 'object' ? r.serviceId._id : r.serviceId; if (sid) navigate(`/job-applicants/${sid}`); }
-                          else if (n.senderId?._id) navigate(`/profile/${n.senderId._id}`);
-                        }} className="px-3 py-1.5 bg-custom-green text-white rounded-full text-[11px] font-medium hover:bg-[#14532d]">Se</button>
+                        <button onClick={() => handleOpen(n)} className="px-3 py-1.5 bg-custom-green text-white rounded-full text-[11px] font-medium hover:bg-[#14532d]">Se</button>
                         {!n.read && <button onClick={() => markAsReadMutation.mutateAsync(n._id)} className="w-7 h-7 rounded-full hover:bg-[#f0faf0] flex items-center justify-center text-gray-400 hover:text-custom-green" title="Lest"><Check size={12} /></button>}
                         <button onClick={() => setDeleteTargetId(n._id)} className="w-7 h-7 rounded-full hover:bg-red-50 flex items-center justify-center text-gray-400 hover:text-red-500" title="Slett"><Trash2 size={12} /></button>
                       </div>

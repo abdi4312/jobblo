@@ -72,17 +72,6 @@ exports.createReview = async (req, res) => {
         .json({ error: 'Du kan bare vurdere den andre parten i oppdraget.' });
     }
 
-    console.log('createReview: Creating review with data:', {
-      orderId,
-      serviceId,
-      reviewerId,
-      revieweeId,
-      revieweeRole,
-      rating,
-      comment,
-      photos,
-      recommendWorker,
-    });
     const review = await Review.create({
       orderId,
       // Derived from the order, not the request body — the client must not be able to
@@ -96,17 +85,11 @@ exports.createReview = async (req, res) => {
       photos: photos || [],
       recommendWorker: recommendWorker || false,
     });
-    console.log('createReview: Review created:', review);
 
     // Update reviewee stats
     const allReviews = await Review.find({ revieweeId });
-    console.log('createReview: All reviews for reviewee:', allReviews);
     const reviewCount = allReviews.length;
     const averageRating = reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
-    console.log('createReview: Calculated stats:', {
-      reviewCount,
-      averageRating,
-    });
 
     // Update the main user stats
     const updatedUser = await User.findByIdAndUpdate(
@@ -117,7 +100,6 @@ exports.createReview = async (req, res) => {
       },
       { new: true }
     );
-    console.log('createReview: Updated user:', updatedUser);
 
     const populatedReview = await Review.findById(review._id)
       .populate('reviewerId', 'name lastName username avatarUrl')

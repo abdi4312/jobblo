@@ -9,7 +9,7 @@ export function TrustBar() {
   ];
 
   return (
-    <div className="bg-white border-y border-black/5 py-4 px-12 flex flex-wrap items-center justify-center gap-10">
+    <div className="bg-white border-y border-black/5 py-4 px-4 sm:px-12 flex flex-wrap items-center justify-center gap-10">
       {trustItems.map((item, index) => (
         <div key={index} className="flex items-center gap-2 text-[13px] text-custom-black/70">
           <item.icon className="w-[18px] h-[18px] text-custom-green" />

@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { setupInterceptors } from '../lib/axios';
+import { API_BASE_URL } from '../config/env';
 
-// Define your API base URL here
-const BASE_URL = import.meta.env.VITE_MAIN_URL || 'http://localhost:5000';
+const BASE_URL = API_BASE_URL;
 
 /**
  * Main Axios instance for the application.

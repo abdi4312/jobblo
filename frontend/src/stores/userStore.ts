@@ -50,9 +50,13 @@ export const useUserStore = create<UserState>()(
           isAuthenticated: false,
         });
 
+        // Disconnect BEFORE the network call. This used to sit inside the try
+        // after `await logoutUser()`, so if the server 500'd or the user was
+        // offline the socket stayed connected as the old user.
+        disconnectSocket();
+
         try {
           await logoutUser();
-          disconnectSocket(); // 🔌 Disconnect socket on logout
         } catch (error) {
           console.error('Logout error:', error);
         }

@@ -100,7 +100,7 @@ export default function JobListingPage() {
     }
   }, [location.state]);
 
-  const { data: jobsData, isLoading: jobsLoading } = useJobs({
+  const { data: jobsData, isLoading: jobsLoading, isError: jobsError } = useJobs({
     categories: selectedCategories,
     search: searchQuery,
     urgent: isUrgentOnly,
@@ -358,7 +358,23 @@ export default function JobListingPage() {
                     </div>
                   </div>
                 ))
-              : null}
+              : jobsError ? (
+                  // Previously `null` for both failure and genuinely-empty, so a
+                  // failed fetch on the main browse page looked identical to
+                  // "there are no jobs" and the user had nothing to act on.
+                  <div className="col-span-full bg-white border border-black/8 rounded-[14px] p-6 text-center">
+                    <p className="text-sm font-medium text-[#1a1a1a] mb-1">
+                      Kunne ikke laste oppdrag
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Sjekk internettforbindelsen din og prøv igjen.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="col-span-full bg-white border border-black/8 rounded-[14px] p-6 text-center">
+                    <p className="text-sm text-gray-500">Ingen oppdrag å vise akkurat nå.</p>
+                  </div>
+                )}
         </div>
 
         {/* Recommended Workers Section - Only shows paid subscription users */}

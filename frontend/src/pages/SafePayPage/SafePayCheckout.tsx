@@ -80,7 +80,7 @@ const SafePayCheckout: React.FC = () => {
   const { order, calculation } = data;
 
   // Check roles
-  const isCustomer = String(order.customerId._id) === String(user?._id);
+  const isCustomer = String(order.customerId?._id) === String(user?._id);
   const isProvider = String(order.providerId?._id) === String(user?._id);
 
   // Provider should not see the checkout/payment page — redirect to their work page
@@ -142,7 +142,7 @@ const SafePayCheckout: React.FC = () => {
       <div className="max-w-[1024px] mx-auto px-6 py-8">
         <button
           onClick={() =>
-            navigate(`/job-applicants/${order.serviceId._id}`, {
+            navigate(`/job-applicants/${order.serviceId?._id}`, {
               state: { fromSteps: true },
             })
           }
@@ -155,7 +155,7 @@ const SafePayCheckout: React.FC = () => {
         <SafePaySteps
           currentStep={2}
           orderId={orderId}
-          serviceId={order.serviceId._id}
+          serviceId={order.serviceId?._id}
         />
 
         {/* Parties Panel */}
@@ -166,21 +166,21 @@ const SafePayCheckout: React.FC = () => {
           <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
             <div className="bg-[#f9f9f7] rounded-xl p-3.5 text-center">
               <div className="w-11 h-11 rounded-full bg-[#c8d8c8] text-[#1a3a1a] font-medium flex items-center justify-center text-[15px] mx-auto mb-2 overflow-hidden">
-                {order.customerId.avatarUrl ? (
+                {order.customerId?.avatarUrl ? (
                   <img
-                    src={order.customerId.avatarUrl}
+                    src={order.customerId?.avatarUrl}
                     alt=""
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  order.customerId.name[0]
+                  order.customerId?.name?.[0] || '?'
                 )}
               </div>
               <div className="text-[10px] text-gray-400 mb-0.5 uppercase tracking-wider">
                 Oppdragsgiver
               </div>
               <div className="text-[13px] font-medium text-gray-900 line-clamp-1">
-                {order.customerId.name} {order.customerId.lastName}
+                {order.customerId?.name || 'Ukjent'} {order.customerId?.lastName || ''}
               </div>
             </div>
             <div className="flex flex-col items-center gap-1">
@@ -191,27 +191,27 @@ const SafePayCheckout: React.FC = () => {
             </div>
             <div className="bg-[#f9f9f7] rounded-xl p-3.5 text-center">
               <div className="w-11 h-11 rounded-full bg-[#c8d8c8] text-[#1a3a1a] font-medium flex items-center justify-center text-[15px] mx-auto mb-2 overflow-hidden">
-                {order.providerId.avatarUrl ? (
+                {order.providerId?.avatarUrl ? (
                   <img
-                    src={order.providerId.avatarUrl}
+                    src={order.providerId?.avatarUrl}
                     alt=""
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  order.providerId.name[0]
+                  order.providerId?.name?.[0] || '?'
                 )}
               </div>
               <div className="text-[10px] text-gray-400 mb-0.5 uppercase tracking-wider">
                 Oppdragstaker
               </div>
               <div className="text-[13px] font-medium text-gray-900 line-clamp-1">
-                {order.providerId.name} {order.providerId.lastName}
+                {order.providerId?.name || 'Ukjent'} {order.providerId?.lastName || ''}
               </div>
               {/* (F-38) Was `averageRating || '4.9'` — an invented rating for every
                   provider who had none, on the screen where the customer commits money. */}
               <div className="text-[11px] text-[#ca8a04] mt-0.5">
-                {order.providerId.averageRating > 0 ? (
-                  <>★ {order.providerId.averageRating}</>
+                {order.providerId?.averageRating > 0 ? (
+                  <>★ {order.providerId?.averageRating}</>
                 ) : (
                   <span className="text-gray-400">Ingen vurderinger ennå</span>
                 )}
@@ -337,7 +337,7 @@ const SafePayCheckout: React.FC = () => {
                   <strong className="block mb-0.5 text-[13px]">
                     Pengene holdes trygt av Jobblo
                   </strong>
-                  {calculation.total} kr trekkes fra kortet ditt nå, men {order.providerId.name}{' '}
+                  {calculation.total} kr trekkes fra kortet ditt nå, men {order.providerId?.name || 'oppdragstakeren'}{' '}
                   mottar kun {calculation.providerNet} kr etter at du godkjenner jobben. Ikke
                   fornøyd? Du kan opprette en tvist.
                 </div>

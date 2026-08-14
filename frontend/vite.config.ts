@@ -7,6 +7,11 @@ import path from 'path';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), svgr(), tailwindcss()],
+  // 105 console statements shipped to production, including ChatWindow logging the
+  // entire chat object — full message history, names and avatars — on every render.
+  esbuild: {
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

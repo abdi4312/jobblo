@@ -18,6 +18,7 @@ interface JobButtonProps {
   job?: Jobs; // Added job prop to pass to modal
   hasRequested?: boolean;
   isTimerActive?: boolean; // Added for cooldown state
+  wasDeclined?: boolean;
 }
 
 const JobButton: React.FC<JobButtonProps> = ({
@@ -28,6 +29,7 @@ const JobButton: React.FC<JobButtonProps> = ({
   job,
   hasRequested,
   isTimerActive,
+  wasDeclined,
 }) => {
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const navigate = useNavigate();
@@ -56,6 +58,15 @@ const JobButton: React.FC<JobButtonProps> = ({
         <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-center gap-2 text-red-600 text-xs font-bold">
           <AlertCircle size={14} />
           <span>Søknadsfristen er nådd. Dette oppdraget tar ikke imot flere søknader.</span>
+        </div>
+      )}
+
+      {/* Applicants are mass-declined when someone else wins the contract, and
+          were never told. The button just stayed greyed out forever. */}
+      {wasDeclined && !hasRequested && !isOwnJob && !isLimitReached && (
+        <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-center gap-2 text-amber-700 text-xs font-medium">
+          <AlertCircle size={14} className="shrink-0" />
+          <span>Forespørselen din ble ikke valgt denne gangen. Du kan søke på nytt.</span>
         </div>
       )}
       <div className="flex gap-3">
