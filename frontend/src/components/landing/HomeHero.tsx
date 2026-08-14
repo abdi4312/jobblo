@@ -97,11 +97,11 @@ export function HomeHero() {
         className="pointer-events-none absolute -right-40 -top-55 size-180 rounded-full bg-[radial-gradient(circle,rgba(46,102,65,0.10),rgba(46,102,65,0)_68%)]"
       />
 
-      <div className={`${CONTAINER} relative pt-10 pb-14 sm:pt-14 sm:pb-20 lg:pb-24`}>
+      <div className={`${CONTAINER} relative pt-6 pb-12 sm:pt-14 sm:pb-20 lg:pb-24`}>
         {/* ── Rail: who we are, and what is live right now ─────────────────── */}
-        {/* The rule only draws where there is room for it; on a phone the two labels
-            simply stack rather than being squeezed against a 20 px line. */}
-        <div className="mb-10 flex flex-wrap items-baseline gap-x-4 gap-y-2 sm:mb-14">
+        {/* Phones skip the rail entirely — on a 360 px screen it was two lines of
+            uppercase micro-type standing between the visitor and the search box. */}
+        <div className="mb-10 hidden flex-wrap items-baseline gap-x-4 gap-y-2 sm:mb-14 sm:flex">
           <span className={`${MICRO_LABEL} shrink-0`}>Norges lokale jobbplattform</span>
           <span aria-hidden="true" className="hidden h-px flex-1 bg-[#E6E7E1] sm:block" />
           {stats && (
@@ -111,11 +111,20 @@ export function HomeHero() {
           )}
         </div>
 
-        <div className="grid items-center gap-14 lg:grid-cols-[1.02fr_0.98fr] lg:gap-16">
+        {/* `min-w-0` is load-bearing on both the grid and the column inside it. A grid
+            item defaults to `min-width: auto`, which refuses to shrink below its content's
+            intrinsic minimum — so the edge-bled scroller rows below widened the column
+            past the viewport, `w-full` on the search pill resolved against that wider
+            column, and the section's `overflow-hidden` sliced the result off. */}
+        <div className="grid min-w-0 grid-cols-1 items-center gap-10 lg:grid-cols-[1.02fr_0.98fr] lg:gap-16">
           {/* ── The sentence ──────────────────────────────────────────────── */}
-          <div>
+          <div className="min-w-0">
             <form onSubmit={handleSubmit}>
-              <h1 className={`${DISPLAY} text-[#0B0B0B]`}>
+              {/* The display headline is for desktop. On a phone it cost most of the
+                  first screen before anything could be done, so it is carried as an
+                  accessible heading only — the page still has an <h1> for screen
+                  readers and search engines, it just is not painted. */}
+              <h1 className={`sr-only lg:not-sr-only ${DISPLAY} lg:text-[#0B0B0B]`}>
                 Jeg trenger hjelp til
                 {/* The line clips its own overflow so each word rises into place from
                     below; the padding keeps that clip clear of the descenders. */}
@@ -131,7 +140,7 @@ export function HomeHero() {
                 </span>
               </h1>
 
-              <p className="mt-7 max-w-[46ch] text-[1.0625rem] leading-relaxed text-[#63665F]">
+              <p className="mt-7 hidden max-w-[46ch] text-[1.0625rem] leading-relaxed text-[#63665F] lg:block">
                 Beskriv oppdraget, få tilbud fra folk i nærheten, og betal først når jobben er
                 godkjent.{' '}
                 <button
@@ -149,29 +158,34 @@ export function HomeHero() {
               </p>
 
               {/* One control, not two: the icon, the field and the action share a single
-                  56 px pill that lights up as a whole on focus. The 6 px inset on the
-                  right is what seats the 44 px button inside it. On a narrow phone the
-                  button drops to its arrow so the field keeps a usable width — the label
-                  survives as the accessible name either way. */}
-              <div className="mt-8 flex h-14 max-w-150 items-center rounded-full border border-[#E6E7E1] bg-white pl-5 pr-1.5 transition focus-within:border-[#2E6641]/35 focus-within:ring-4 focus-within:ring-[#2E6641]/12">
+                  pill that lights up as a whole on focus, with the button seated inside
+                  it. Every part shrinks on a phone — the pill loses 8 px of height and
+                  padding, the icon drops out under 400 px, and the button keeps only its
+                  arrow. `min-w-0` on the input is what actually lets it shrink; without
+                  it the field holds its intrinsic size and pushes the button off the
+                  edge, which is what was cutting the control off on a narrow screen. */}
+              <div className="mt-7 flex h-13 w-full max-w-150 items-center rounded-full border border-[#E6E7E1] bg-white pl-4 pr-1.5 transition focus-within:border-[#2E6641]/35 focus-within:ring-4 focus-within:ring-[#2E6641]/12 sm:mt-8 sm:h-14 sm:pl-5">
                 <Search
                   size={18}
                   strokeWidth={2.1}
                   aria-hidden="true"
-                  className="shrink-0 text-[#9B9E96]"
+                  className="hidden shrink-0 text-[#9B9E96] min-[400px]:block"
                 />
+                {/* Short enough to fit a 360 px screen whole. The long example that used
+                    to live here was clipped mid-word on every phone; the category chips
+                    below give the same steer without competing for the width. */}
                 <input
                   type="text"
                   value={detail}
                   onChange={(e) => setDetail(e.target.value)}
-                  placeholder="Hva gjelder det? F.eks. male stue, 24 m²"
+                  placeholder="Hva gjelder det?"
                   aria-label="Beskriv oppdraget"
-                  className="ml-3 min-w-0 flex-1 bg-transparent text-[0.9375rem] text-[#0B0B0B] outline-none placeholder:truncate placeholder:text-[#9B9E96]"
+                  className="min-w-0 flex-1 bg-transparent px-1 text-[0.9375rem] text-[#0B0B0B] outline-none placeholder:text-[#9B9E96] min-[400px]:ml-2"
                 />
                 <button
                   type="submit"
                   aria-label="Finn hjelp"
-                  className="ml-2 flex h-11 shrink-0 items-center gap-2 rounded-full bg-[#0B0B0B] px-4 text-[0.9375rem] font-semibold text-white transition duration-150 hover:bg-[#2E6641] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 active:scale-[0.98] sm:px-6"
+                  className="ml-1.5 flex h-10.5 shrink-0 items-center gap-2 rounded-full bg-[#122A1C] px-4 text-[0.9375rem] font-semibold text-white transition duration-150 hover:bg-[#2E6641] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 active:scale-[0.98] sm:ml-2 sm:h-11 sm:px-6"
                 >
                   <span className="hidden sm:inline">Finn hjelp</span>
                   <ArrowRight size={17} strokeWidth={2.4} aria-hidden="true" />
@@ -179,15 +193,16 @@ export function HomeHero() {
               </div>
             </form>
 
-            {/* Shortcuts straight into the listing, one per real category. */}
+            {/* Shortcuts straight into the listing, one per real category. On a phone
+                they scroll sideways rather than wrapping onto three stacked rows. */}
             {categories.length > 0 && (
-              <div className="mt-6 flex flex-wrap gap-2">
-                {categories.slice(0, 4).map((cat) => (
+              <div className="no-scrollbar -mx-5 mt-5 flex gap-2 overflow-x-auto px-5 sm:mx-0 sm:mt-6 sm:flex-wrap sm:px-0">
+                {categories.slice(0, 6).map((cat) => (
                   <button
                     key={cat._id}
                     type="button"
-                    onClick={() => navigate(`/search/job/${encodeURIComponent(cat.name)}`)}
-                    className={CHIP}
+                    onClick={() => navigate(listingHref(cat.name))}
+                    className={`${CHIP} shrink-0`}
                   >
                     {cat.name}
                   </button>
@@ -195,7 +210,35 @@ export function HomeHero() {
               </div>
             )}
 
-            <p className="mt-7 flex items-center gap-1.5 text-[0.875rem] font-medium text-[#2E6641]">
+            {/* ── The showcase, phone edition ───────────────────────────────
+                The collage is three absolutely-positioned frames 560 px tall — it
+                cannot survive a 360 px screen. The same eight services become a
+                swipeable row instead, bled to the screen edges so the next card
+                peeks in and the gesture is discoverable. */}
+            <div className="no-scrollbar -mx-5 mt-8 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2 sm:-mx-8 sm:px-8 lg:hidden">
+              {SERVICE_SHOWCASE.map((service) => (
+                <button
+                  key={service.name}
+                  type="button"
+                  onClick={() => navigate(listingHref(service.name))}
+                  aria-label={`Se oppdrag i ${service.name}`}
+                  className="relative h-44 w-36 shrink-0 snap-start overflow-hidden rounded-3xl border border-[#E6E7E1] bg-[#EAF1E9] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25"
+                >
+                  <img
+                    src={service.src}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="size-full object-cover"
+                  />
+                  <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-[#0B0B0B]/80 via-[#0B0B0B]/40 to-transparent px-3.5 pb-3 pt-8 text-left text-[0.8125rem] font-semibold text-white">
+                    {service.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <p className="mt-6 flex items-center gap-1.5 text-[0.875rem] font-medium text-[#2E6641] sm:mt-7">
               <ShieldCheck size={15} strokeWidth={2.3} className="shrink-0" />
               Betaling holdes trygt til du har godkjent
             </p>

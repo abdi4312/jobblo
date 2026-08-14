@@ -7,6 +7,11 @@ import { CONTAINER, DISPLAY, MICRO_LABEL, SECTION } from '../../theme/brand';
  * and it is the one thing Jobblo does that a classifieds site does not — so it gets the
  * one inverted section on the page and the only headline sized like the hero's.
  *
+ * That section is `GREEN_DEEP`, not black. Pure #0B0B0B was the only neutral surface on
+ * a site whose every other colour comes from the logo, and it read as a slab from some
+ * other brand; the stem green pulled down to 11 % lightness reads as Jobblo turning the
+ * lights off rather than as a different palette.
+ *
  * Every claim here is the actual behaviour of the SafePay controllers.
  */
 const STAGES = [
@@ -32,7 +37,7 @@ const STAGES = [
 
 export function SafePayExplainer() {
   return (
-    <section id="trygghet" className="bg-[#0B0B0B] text-[#EFF0EA] scroll-mt-20">
+    <section id="trygghet" className="scroll-mt-20 bg-[#122A1C] text-[#EFF0EA]">
       <div className={`${CONTAINER} ${SECTION}`}>
         <p className={MICRO_LABEL}>02 — SafePay</p>
         <h2 className={`mt-6 max-w-[18ch] ${DISPLAY}`}>
@@ -44,7 +49,7 @@ export function SafePayExplainer() {
           {STAGES.map(({ step, tag, title, body }) => (
             <div
               key={step}
-              className="flex min-h-70 flex-col justify-between gap-8 bg-[#0B0B0B] p-8 sm:p-10"
+              className="flex min-h-70 flex-col justify-between gap-8 bg-[#122A1C] p-8 sm:p-10"
             >
               <div className="flex items-start justify-between gap-4">
                 <span className="text-[0.6875rem] font-semibold tabular-nums tracking-[0.16em] text-[#8FBF9A]">

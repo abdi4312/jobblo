@@ -22,7 +22,19 @@ export const INK_FAINT = '#9B9E96';
 export const GREEN = '#2E6641';
 export const GREEN_DARK = '#255335';
 export const LEAF = '#347028';
-/** The stem green lifted for legibility on the ink-black SafePay section. */
+/**
+ * The stem green taken down to near-black — the darkest surface on the site.
+ *
+ * The SafePay section and the two solid dark controls used to be #0B0B0B, the wordmark
+ * black. It read as a different brand dropped into the middle of the page: nothing else
+ * on a Jobblo screen is neutral. This is the same hue and saturation as GREEN (141°, 38 %)
+ * pulled to 11 % lightness, so it belongs to the logo rather than sitting beside it, and
+ * it is dark enough to keep every foreground token well clear of AA — #EFF0EA lands at
+ * 13.3:1, GREEN_ON_INK at 7.4:1 and INK_FAINT at 5.6:1.
+ */
+export const GREEN_DEEP = '#122A1C';
+
+/** The stem green lifted for legibility on the GREEN_DEEP section. */
 export const GREEN_ON_INK = '#8FBF9A';
 /** The stem green at 12 % — the tint behind icon plates and SafePay badges. */
 export const GREEN_MIST = '#EAF1E9';

@@ -6,7 +6,18 @@ import { useState, useEffect } from 'react';
 import { getMyChats } from '../../../api/chatAPI';
 import { initSocket } from '../../../socket/socket';
 import { Link, NavLink } from 'react-router-dom';
-import { Bell, Home, Menu, MessageCircle, Plus, User, Users, Crown, X } from 'lucide-react';
+import {
+  Bell,
+  Crown,
+  Home,
+  Menu,
+  MessageCircle,
+  Plus,
+  ShieldCheck,
+  User,
+  Users,
+  X,
+} from 'lucide-react';
 import { useUnreadCount } from '../../../features/notifications/hooks';
 import { useNotificationSound } from '../../../hooks/useNotificationSound';
 
@@ -255,6 +266,52 @@ export default function Header() {
 
   const isMessagesPage = location.pathname.startsWith('/messages');
 
+  // While the drawer is open it owns the screen: Escape closes it, and the page behind
+  // stops scrolling so a swipe over the overlay does not move the feed underneath.
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [menuOpen]);
+
+  // Any navigation closes it — otherwise it stays open over the page just navigated to.
+  useEffect(() => setMenuOpen(false), [location.pathname]);
+
+  /**
+   * Two flags, because a panel cannot animate out of a tree it has already left.
+   *
+   * `drawerMounted` keeps it in the DOM; `drawerShown` is what the transform reads. On
+   * open it mounts off-screen and slides in a frame later — without that frame the
+   * browser coalesces both styles into one paint and the panel simply appears. On close
+   * it slides out first and unmounts when the transition ends, so the exit is visible.
+   */
+  const [drawerMounted, setDrawerMounted] = useState(false);
+  const [drawerShown, setDrawerShown] = useState(false);
+
+  useEffect(() => {
+    if (menuOpen) {
+      setDrawerMounted(true);
+      const frame = requestAnimationFrame(() => setDrawerShown(true));
+      return () => cancelAnimationFrame(frame);
+    }
+
+    setDrawerShown(false);
+    // Matches the 300 ms transition below. A timer rather than onTransitionEnd because
+    // that event never fires if the panel is unmounted or the tab is backgrounded first.
+    const timer = setTimeout(() => setDrawerMounted(false), 300);
+    return () => clearTimeout(timer);
+  }, [menuOpen]);
+
   /**
    * Which signed-out nav link is the current page.
    *
@@ -403,114 +460,155 @@ export default function Header() {
             </div>
           )}
         </div>
+      </header>
 
-        {/* SIDEBAR MOBILE */}
-        {menuOpen && (
+      {/* ── MOBILE DRAWER ──────────────────────────────────────────────────────
+          This lives OUTSIDE <header> on purpose, and that is the whole bug fix.
+          The header carries `backdrop-blur-md`, and an element with a backdrop-filter
+          becomes the containing block for any `position: fixed` descendant — so the
+          drawer's `inset-0` and `h-full` resolved against a 72 px tall bar instead of
+          the viewport. It rendered as a sliver clipped to the header, with the overlay
+          covering only that strip. As a sibling it positions against the viewport again.
+
+          It is also mounted only while open, so its links are not in the tab order of
+          every page when it is closed. */}
+      {drawerMounted && (
+        <div className="md:hidden">
+          {/* The scrim fades; the panel slides. Both on the same 300 ms curve so they
+              read as one movement, and both held still under reduced-motion. */}
           <div
-            className="fixed inset-0 bg-black/40 z-40 md:hidden"
+            role="presentation"
             onClick={() => setMenuOpen(false)}
+            className={`fixed inset-0 z-50 bg-[#0B0B0B]/45 backdrop-blur-[2px] transition-opacity duration-300 ease-out motion-reduce:transition-none ${
+              drawerShown ? 'opacity-100' : 'opacity-0'
+            }`}
           />
-        )}
-        <div
-          className={`fixed left-0 top-0 z-50 h-full w-72 transform bg-white transition-transform duration-300 md:hidden ${
-            menuOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
-        >
-          <div className="flex items-center justify-between border-b border-[#E6E7E1] px-5 py-4">
-            <img
-              src={jobbloWordmark}
-              alt="Jobblo"
-              width={340}
-              height={128}
-              className="h-6 w-auto"
-            />
-            <button
-              type="button"
-              onClick={() => setMenuOpen(false)}
-              aria-label="Lukk meny"
-              className="rounded-lg p-1.5 text-[#63665F] transition-colors hover:bg-[#F0F1EB] hover:text-[#0B0B0B]"
-            >
-              <X size={20} strokeWidth={2} />
-            </button>
-          </div>
 
-          <ul className="flex flex-col gap-1 p-4">
-            {!Auth ? (
-              <>
-                {navLinks.map((link) => (
-                  <li key={link.path}>
-                    <Link
-                      to={link.path}
-                      onClick={() => setMenuOpen(false)}
-                      aria-current={isCurrent(link.path) ? 'page' : undefined}
-                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.9375rem] font-medium transition-colors ${
-                        isCurrent(link.path)
-                          ? 'bg-[#F0F1EB] text-[#0B0B0B]!'
-                          : 'text-[#0B0B0B]! hover:bg-[#F0F1EB]'
-                      }`}
-                    >
-                      {link.name}
-                    </Link>
-                  </li>
-                ))}
-              </>
-            ) : (
-              navLinkUse.map((link, index) => (
-                <li key={index}>
-                  <NavLink
-                    to={link.path}
-                    onClick={() => setMenuOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 p-3 rounded-lg ${
-                        isActive ? 'bg-green-50 text-custom-green! font-bold' : 'text-gray-700!'
-                      }`
-                    }
-                  >
-                    {link.icon && (
-                      <div className="relative text-[#0A0A0A9E]! group-hover:text-black">
-                        {link.icon}
-                        {link.badgeCount !== undefined && link.badgeCount > 0 && (
-                          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
-                            {link.badgeCount}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Meny"
+            className={`fixed inset-y-0 left-0 z-50 flex w-[min(20rem,86vw)] flex-col bg-[#EFF0EA] shadow-[0_24px_60px_rgba(11,11,11,0.25)] transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform motion-reduce:transition-none ${
+              drawerShown ? 'translate-x-0' : '-translate-x-full'
+            }`}
+          >
+            <div className="flex items-center justify-between border-b border-[#E6E7E1] px-5 py-4">
+              <img
+                src={jobbloWordmark}
+                alt="Jobblo"
+                width={340}
+                height={128}
+                className="h-6 w-auto"
+              />
+              <button
+                type="button"
+                onClick={() => setMenuOpen(false)}
+                aria-label="Lukk meny"
+                className="flex size-10 items-center justify-center rounded-full border border-[#E6E7E1] bg-white text-[#63665F] transition-colors hover:text-[#0B0B0B] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/20"
+              >
+                <X size={18} strokeWidth={2.2} />
+              </button>
+            </div>
+
+            {/* Signed in: who you are, at the top, so the menu has an owner. */}
+            {Auth && (
+              <div className="flex items-center gap-3 border-b border-[#E6E7E1] px-5 py-4">
+                <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9] text-[0.9375rem] font-semibold text-[#2E6641]">
+                  {user?.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="" className="size-full object-cover" />
+                  ) : (
+                    (user?.name?.[0] || 'J').toUpperCase()
+                  )}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-[0.9375rem] font-semibold text-[#0B0B0B]">
+                    {user?.name || 'Min konto'}
+                  </span>
+                  <span className="block text-[0.8125rem] text-[#63665F]">Logget inn</span>
+                </span>
+              </div>
+            )}
+
+            <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+              <ul className="flex flex-col gap-1">
+                {(Auth ? navLinkUse : navLinks).map((link) => {
+                  const active = Auth ? location.pathname === link.path : isCurrent(link.path);
+                  return (
+                    <li key={link.path}>
+                      <Link
+                        to={link.path}
+                        onClick={(e) => {
+                          setMenuOpen(false);
+                          // Protected destinations bounce anonymous users to /login with
+                          // a toast; the drawer must not silently do nothing instead.
+                          if (Auth && !user) {
+                            e.preventDefault();
+                            handleProtectedNavigation(link.path);
+                          }
+                        }}
+                        aria-current={active ? 'page' : undefined}
+                        className={`flex items-center gap-3.5 rounded-2xl px-3.5 py-3 text-[0.9375rem] font-medium transition-colors ${
+                          active
+                            ? 'bg-white text-[#0B0B0B]! shadow-[0_1px_2px_rgba(11,11,11,0.04)]'
+                            : 'text-[#63665F]! hover:bg-white/70 hover:text-[#0B0B0B]!'
+                        }`}
+                      >
+                        {link.icon && (
+                          <span
+                            className={`relative flex size-9 shrink-0 items-center justify-center rounded-xl ${
+                              active ? 'bg-[#EAF1E9] text-[#2E6641]' : 'bg-white text-[#63665F]'
+                            }`}
+                          >
+                            {link.icon}
+                            {link.badgeCount !== undefined && link.badgeCount > 0 && (
+                              <span className="absolute -right-1 -top-1 flex min-w-4.5 items-center justify-center rounded-full border-2 border-[#EFF0EA] bg-[#2E6641] px-1 text-[0.625rem] font-bold text-white">
+                                {link.badgeCount}
+                              </span>
+                            )}
                           </span>
                         )}
-                      </div>
-                    )}
-                    <span className="text-sm font-medium text-[#0A0A0A9E]! group-hover:text-black">
-                      {link.name}
-                    </span>
-                  </NavLink>
-                </li>
-              ))
-            )}
-          </ul>
+                        <span className="truncate">{link.name}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
 
-          {!Auth && (
-            <div className="flex flex-col gap-2 px-4 pt-2">
+            <div className="flex flex-col gap-2.5 border-t border-[#E6E7E1] bg-white px-5 py-5">
               <button
                 type="button"
                 onClick={() => {
                   setMenuOpen(false);
                   navigate('/Publish-job');
                 }}
-                className="flex h-12 items-center justify-center rounded-full bg-[#2E6641] px-5 text-[0.9375rem] font-semibold text-white transition hover:bg-[#255335]"
+                className="flex h-12 items-center justify-center gap-2 rounded-full bg-[#2E6641] px-5 text-[0.9375rem] font-semibold text-white transition hover:bg-[#255335] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/20"
               >
+                <Plus size={18} strokeWidth={2.4} />
                 Legg ut oppdrag
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  navigate('/login');
-                }}
-                className="flex h-12 items-center justify-center rounded-full border border-[#E6E7E1] px-5 text-[0.9375rem] font-medium text-[#0B0B0B] transition hover:border-[#2E6641]/45"
-              >
-                Logg inn
-              </button>
+
+              {!Auth && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    navigate('/login');
+                  }}
+                  className="flex h-12 items-center justify-center rounded-full border border-[#E6E7E1] px-5 text-[0.9375rem] font-medium text-[#0B0B0B] transition hover:border-[#2E6641]/45 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
+                >
+                  Logg inn
+                </button>
+              )}
+
+              <p className="mt-1 flex items-center justify-center gap-1.5 text-[0.75rem] font-medium text-[#2E6641]">
+                <ShieldCheck size={13} strokeWidth={2.3} />
+                Betaling holdes trygt til du har godkjent
+              </p>
             </div>
-          )}
+          </div>
         </div>
-      </header>
+      )}
     </>
   );
 }
