@@ -84,10 +84,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   refetchActiveChat,
 }) => {
   const navigate = useNavigate();
-  // Debug: Log activeChat and serviceId
-  console.log('ChatWindow - activeChat:', activeChat);
-  console.log('ChatWindow - serviceId:', activeChat?.serviceId);
-  console.log('ChatWindow - serviceId.images:', activeChat?.serviceId?.images);
+  // Three `console.log`s used to run here on every render, dumping the whole chat object
+  // — both parties, the order, the agreed price — into the browser console of every
+  // production user. Removed.
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isEditingPrice, setIsEditingPrice] = useState(false);
   const [newAgreedPrice, setNewAgreedPrice] = useState<string>('');
@@ -234,7 +233,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <>
               {/* Sticky Job Header */}
               <div
-                className="bg-white border-b border-black/[0.06] px-[18px] py-[12px] shrink-0 cursor-pointer hover:bg-[#f9f9f7] transition-colors sticky top-0 z-10"
+                className="bg-white border-b border-[#E6E7E1] px-[18px] py-[12px] shrink-0 cursor-pointer hover:bg-[#F4F6F0] transition-colors sticky top-0 z-10"
                 onClick={() => setSheetOpen(true)}
               >
                 <div className="flex items-start gap-[12px]">
@@ -256,13 +255,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                           const parent = e.currentTarget.parentElement;
                           if (parent) {
                             parent.innerHTML =
-                              '<div class="w-full h-full flex items-center justify-center bg-[#f0faf0]"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></div>';
+                              '<div class="w-full h-full flex items-center justify-center bg-[#EAF1E9]"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2E6641" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></div>';
                           }
                         }}
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-[#f0faf0]">
-                        <Briefcase size={24} className="text-[#16a34a]" />
+                      <div className="w-full h-full flex items-center justify-center bg-[#EAF1E9]">
+                        <Briefcase size={24} className="text-[#2E6641]" />
                       </div>
                     )}
                   </div>
@@ -319,7 +318,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                               </button>
                             </div>
                           ) : (
-                            <p className="text-[12px] font-bold text-[#16a34a]">
+                            <p className="text-[12px] font-bold text-[#2E6641]">
                               {activeChat.agreedPrice ?? activeChat.serviceId.price} kr
                             </p>
                           )}
@@ -362,7 +361,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     {!activeChat.orderId ? (
                       <button
                         onClick={handleCreateContract}
-                        className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none bg-gradient-to-r from-[#16a34a] to-[#15803d] text-white shadow-sm hover:shadow-md hover:from-[#15803d] hover:to-[#14532d] transition-all duration-200 transform hover:-translate-y-0.5"
+                        className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none bg-linear-to-r from-[#2E6641] to-[#15803d] text-white shadow-sm hover:shadow-md hover:from-[#15803d] hover:to-[#14532d] transition-all duration-200 transform hover:-translate-y-0.5"
                       >
                         Opprett kontrakt
                       </button>
@@ -372,7 +371,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         {activeChat.orderId.paymentStatus !== 'paid' && (
                           <button
                             onClick={handleStartSafePay}
-                            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none bg-gradient-to-r from-[#16a34a] to-[#15803d] text-white shadow-sm hover:shadow-md hover:from-[#15803d] hover:to-[#14532d] transition-all duration-200 transform hover:-translate-y-0.5"
+                            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none bg-linear-to-r from-[#2E6641] to-[#15803d] text-white shadow-sm hover:shadow-md hover:from-[#15803d] hover:to-[#14532d] transition-all duration-200 transform hover:-translate-y-0.5"
                           >
                             Start fiks ferdig-betaling
                           </button>
@@ -385,7 +384,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                               // ponytail BUG-005: customer → checkout; provider → /provider/orders (navigateToOrder resolves role)
                               navigateToOrder(orderId);
                             }}
-                            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#16a34a] text-[#16a34a] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
+                            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#2E6641] text-[#2E6641] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
                           >
                             Se kontrakt
                           </button>
@@ -408,7 +407,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                           // ponytail BUG-005: provider (viewer is NOT service owner) must always go to /provider/orders/:orderId
                           navigateToOrder(orderId);
                         }}
-                        className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#16a34a] text-[#16a34a] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
+                        className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#2E6641] text-[#2E6641] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
                       >
                         Se oppdrag
                       </button>
@@ -468,7 +467,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         ))}
                       </div>
                     )}
-                  <p className="text-2xl font-bold text-[#16a34a] mb-4">
+                  <p className="text-2xl font-bold text-[#2E6641] mb-4">
                     {activeChat.agreedPrice ?? activeChat.serviceId.price} kr
                   </p>
                   {activeChat.serviceId.description && (

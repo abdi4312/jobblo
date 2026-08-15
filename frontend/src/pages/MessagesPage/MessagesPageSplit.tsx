@@ -32,7 +32,7 @@ export function MessagesPageSplit() {
   } = useChatLogic();
 
   return (
-    <div className="flex h-[calc(100vh-56px)] md:h-[calc(100vh-91px)] w-full bg-[#f5f0e8]">
+    <div className="flex h-[calc(100vh-56px)] w-full bg-[#EFF0EA] md:h-[calc(100vh-91px)]">
       <ChatSidebar
         conversationId={conversationId}
         isMobile={isMobile}
