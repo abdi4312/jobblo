@@ -24,6 +24,7 @@ import {
 import { ContractViewModal } from '../../components/SafePay/ContractViewModal';
 import { toast } from 'react-hot-toast';
 import { CARD, CARD_INTERACTIVE, MICRO_LABEL, PILL_PRIMARY } from '../../theme/brand';
+import { BackLink } from '../../components/Ui/BackLink';
 
 /**
  * Søkeroversikt — both sides of an application in one place.
@@ -303,7 +304,9 @@ const MyApplicantsOverview: React.FC = () => {
     <div className="min-h-screen bg-[#EFF0EA]">
       <div className="mx-auto w-full max-w-4xl px-4 pb-16 pt-8 sm:px-6 lg:pt-12">
         {/* ── Header ───────────────────────────────────────────────────────── */}
-        <header className="mb-7">
+        <BackLink fallback="/home" />
+
+        <header className="mb-7 mt-6">
           <p className={MICRO_LABEL}>Oversikt</p>
           <h1 className="mt-2 text-[clamp(1.75rem,4vw,2.5rem)] font-bold leading-tight tracking-[-0.04em] text-[#0B0B0B]">
             Søkere og søknader

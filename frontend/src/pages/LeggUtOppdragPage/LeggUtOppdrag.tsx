@@ -3,9 +3,10 @@ import mainLink from '../../api/mainURLs';
 import { useUserStore } from '../../stores/userStore';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { BriefcaseBusiness } from 'lucide-react';
 import { useJobDetailQuery } from '../../features/jobDetail/hook.ts';
 import { Spinner } from '../../components/Ui/Spinner';
+import { BackLink } from '../../components/Ui/BackLink';
+import { MICRO_LABEL } from '../../theme/brand';
 
 export default function LeggUtOppdrag() {
   const { id } = useParams();
@@ -98,35 +99,29 @@ export default function LeggUtOppdrag() {
     : undefined;
 
   return (
-    <>
-      <div className="max-w-300 mx-auto">
-        <div className="flex flex-col gap-4 px-4 md:px-6">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <span className="p-4.5 shadow-md text-custom-green bg-[#FFFFFF1A] rounded-[14px] inline-flex items-center justify-center">
-              <BriefcaseBusiness size={20} />
-            </span>
+    <div className="min-h-screen bg-[#EFF0EA]">
+      <div className="mx-auto w-full max-w-3xl px-4 pt-8 sm:px-6">
+        <BackLink fallback="/home" />
 
-            <h2 className="text-[28px] md:text-[42px] font-bold leading-tight">
-              {isEditMode ? 'Rediger oppdrag' : 'Legg ut oppdrag'}
-            </h2>
-          </div>
-
-          <p className="text-[#4A5565] text-[16px] md:text-[18px] font-normal leading-relaxed">
+        <header className="mt-6 mb-8">
+          <p className={MICRO_LABEL}>{isEditMode ? 'Rediger' : 'Nytt oppdrag'}</p>
+          <h1 className="mt-2 text-[clamp(1.75rem,4vw,2.5rem)] font-bold leading-tight tracking-[-0.04em] text-[#0B0B0B]">
+            {isEditMode ? 'Rediger oppdraget' : 'Legg ut et oppdrag'}
+          </h1>
+          <p className="mt-2 max-w-lg text-[0.9375rem] leading-relaxed text-[#63665F]">
             {isEditMode
-              ? 'Oppdater informasjonen under for å endre ditt oppdrag'
-              : 'Fyll ut informasjonen under for å legge ut ditt oppdrag'}
+              ? 'Endringene blir synlige for alle som ser oppdraget.'
+              : 'Fire korte steg. Du kan forhåndsvise underveis, og utkastet lagres automatisk.'}
           </p>
-        </div>
-
-        <div>
-          <CreateJobForm
-            onSubmit={handleFormSubmit}
-            userId={userId}
-            initialData={initialData}
-            isEditMode={isEditMode}
-          />
-        </div>
+        </header>
       </div>
-    </>
+
+      <CreateJobForm
+        onSubmit={handleFormSubmit}
+        userId={userId}
+        initialData={initialData}
+        isEditMode={isEditMode}
+      />
+    </div>
   );
 }

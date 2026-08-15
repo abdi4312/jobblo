@@ -1,6 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Eye, CheckCircle2 } from 'lucide-react';
-import { Button } from '../Ui/button/Button';
+import { ChevronLeft, ChevronRight, Eye, Loader2 } from 'lucide-react';
 
 interface FormActionsProps {
   currentStep: number;
@@ -12,6 +11,27 @@ interface FormActionsProps {
   isSubmitting?: boolean;
 }
 
+const GHOST =
+  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full px-4 text-[0.9375rem] font-medium text-[#63665F] transition-colors hover:text-[#0B0B0B] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 disabled:opacity-50';
+
+const OUTLINE =
+  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-[#E6E7E1] bg-white px-5 text-[0.9375rem] font-medium text-[#0B0B0B] transition-colors hover:border-[#2E6641]/45 hover:text-[#2E6641] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 disabled:opacity-50';
+
+const SOLID =
+  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-[#2E6641] px-6 text-[0.9375rem] font-semibold text-white transition-colors hover:bg-[#255335] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 active:scale-[0.995] disabled:cursor-not-allowed disabled:opacity-60';
+
+/**
+ * The step controls, pinned to the bottom of the viewport.
+ *
+ * They used to sit in a card at the end of the page, which on a phone meant scrolling
+ * past the whole step to reach "Neste" — and back up again after a validation toast
+ * pointed at a field near the top. Sticky costs nothing here and removes that round trip.
+ *
+ * Three buttons, three weights: leaving is a bare label, previewing is outlined, and the
+ * one that moves you forward is the only filled thing on screen. Previously all three
+ * were the same component at the same size, so the primary action had to be found by
+ * reading rather than seen.
+ */
 export const FormActions: React.FC<FormActionsProps> = ({
   currentStep,
   handleBack,
@@ -20,51 +40,47 @@ export const FormActions: React.FC<FormActionsProps> = ({
   handleFinalSubmit,
   setShowPreview,
   isSubmitting = false,
-}) => {
-  return (
-    <div className="box-card-custom p-4 md:p-6 flex flex-col rounded-[14px] md:flex-row items-center justify-between gap-4 mt-4">
-      <Button
+}) => (
+  <div className="sticky bottom-0 z-20 -mx-4 mt-8 border-t border-[#E6E7E1] bg-[#EFF0EA]/92 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6">
+    <div className="flex items-center gap-2">
+      <button
         type="button"
         onClick={currentStep === 1 ? handleCancel : handleBack}
-        label={currentStep === 1 ? 'Avbryt' : 'Tilbake'}
-        icon={<ChevronLeft size={20} />}
-        className="px-8 py-3 md:w-32"
-      />
+        disabled={isSubmitting}
+        className={GHOST}
+      >
+        <ChevronLeft size={17} strokeWidth={2.2} />
+        {currentStep === 1 ? 'Avbryt' : 'Tilbake'}
+      </button>
 
-      <div className="w-full md:w-auto flex flex-col md:flex-row gap-3 md:gap-4 order-1 md:order-2">
-        <Button
+      <div className="ml-auto flex items-center gap-2">
+        <button
           type="button"
-          label="Forhåndsvis"
-          icon={<Eye size={20} />}
-          iconPosition="left"
           onClick={() => setShowPreview(true)}
-          className="px-8 py-3"
-        />
+          disabled={isSubmitting}
+          className={OUTLINE}
+        >
+          <Eye size={16} strokeWidth={2} />
+          <span className="hidden min-[420px]:inline">Forhåndsvis</span>
+        </button>
+
         {currentStep < 4 ? (
-          <Button
-            type="button"
-            label="Neste"
-            variant="default"
-            size="default"
-            icon={<ChevronRight size={20} />}
-            iconPosition="right"
-            onClick={handleNext}
-            className="px-8 py-3"
-          />
+          <button type="button" onClick={handleNext} className={SOLID}>
+            Neste
+            <ChevronRight size={17} strokeWidth={2.4} />
+          </button>
         ) : (
-          <Button
+          <button
             type="button"
-            label={isSubmitting ? 'Publiserer...' : 'Publiser'}
-            variant="default"
-            icon={<CheckCircle2 size={20} />}
-            iconPosition="right"
             onClick={handleFinalSubmit}
-            loading={isSubmitting}
             disabled={isSubmitting}
-            className="px-8 py-3"
-          />
+            className={SOLID}
+          >
+            {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+            {isSubmitting ? 'Publiserer…' : 'Publiser oppdrag'}
+          </button>
         )}
       </div>
     </div>
-  );
-};
+  </div>
+);

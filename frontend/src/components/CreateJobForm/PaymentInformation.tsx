@@ -1,6 +1,7 @@
 import React from 'react';
-import { Banknote, AlertCircle, CreditCard, Wallet, Clock, Info, Lock } from 'lucide-react';
+import { Banknote, AlertCircle, Gavel, Clock, Zap, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { MICRO_LABEL } from '../../theme/brand';
 
 interface PaymentInformationProps {
   paymentType: string;
@@ -15,6 +16,27 @@ interface PaymentInformationProps {
   errors?: any;
 }
 
+const PAYMENT_METHODS = [
+  {
+    id: 'Fastpris',
+    label: 'Fastpris',
+    icon: Banknote,
+    desc: 'Én avtalt sum for hele jobben',
+  },
+  {
+    id: 'Timepris',
+    label: 'Timepris',
+    icon: Clock,
+    desc: 'Betal per time som brukes',
+  },
+  {
+    id: 'Anbud',
+    label: 'Anbud',
+    icon: Gavel,
+    desc: 'La flere gi deg tilbud',
+  },
+];
+
 export const PaymentInformation: React.FC<PaymentInformationProps> = ({
   paymentType,
   setPaymentType,
@@ -28,184 +50,194 @@ export const PaymentInformation: React.FC<PaymentInformationProps> = ({
   errors,
 }) => {
   const isPaidSubscriber = subscription !== 'Standard';
+  const isHourly = paymentType === 'Timepris';
 
-  const paymentMethods = [
-    {
-      id: 'Fastpris',
-      label: 'Fastpris',
-      icon: <Banknote size={20} />,
-      desc: 'Bli enig om en fast sum',
-    },
-    {
-      id: 'Timepris',
-      label: 'Timepris',
-      icon: <Clock size={20} />,
-      desc: 'Betal per time brukt',
-    },
-    {
-      id: 'Anbud',
-      label: 'Anbud',
-      icon: <CreditCard size={20} />,
-      desc: 'Motta tilbud fra flere',
-    },
-  ];
+  const amountLabel = isHourly
+    ? 'Timepris'
+    : paymentType === 'Anbud'
+      ? 'Antatt budsjett'
+      : 'Fastpris';
+
+  // On Timepris the field edits `hourlyRate` while validation runs against the derived
+  // `price`. The error was rendered under this input regardless, so "budsjett må være
+  // over 0" appeared beneath a box the user had just typed a valid hourly rate into.
+  // The total is what is actually wrong, so on Timepris the message belongs there.
+  const priceError = errors?.price;
+  const showErrorOnField = priceError && !isHourly;
+  const showErrorOnTotal = priceError && isHourly;
+
+  const total = Number(price) || 0;
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-      {/* 1. Payment Type Section */}
-      <div className="box-card-custom p-4 md:p-6 rounded-[14px]">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-[#2D7A4D]/10 rounded-full flex items-center justify-center text-[#2D7A4D] shrink-0">
-            <Wallet size={22} />
-          </div>
-          <div>
-            <h2 className="font-bold text-lg md:text-xl text-custom-black">Betalingsmetode</h2>
-            <p className="text-gray-500 text-xs md:text-sm">Hvordan ønsker du å betale?</p>
-          </div>
-        </div>
+    <div className="animate-in fade-in slide-in-from-right-2 space-y-5 duration-300">
+      {/* ── Betalingsmetode ─────────────────────────────────────────────── */}
+      <div className="box-card-custom p-5 md:p-6">
+        <h2 className="text-[0.9375rem] font-semibold tracking-[-0.02em] text-[#0B0B0B]">
+          Betaling
+        </h2>
+        <p className="mt-0.5 text-[0.8125rem] text-[#63665F]">Hvordan vil du avtale prisen?</p>
 
-        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4">
-          {paymentMethods.map((method) => (
-            <button
-              key={method.id}
-              type="button"
-              onClick={() => setPaymentType(method.id)}
-              className={`p-3 md:p-4 rounded-2xl border-2 text-left transition-all duration-300 ${
-                paymentType === method.id
-                  ? 'border-[#2D7A4D] bg-[#2D7A4D]/5 shadow-md'
-                  : 'border-gray-100 bg-white hover:border-gray-200'
-              }`}
-            >
-              <div
-                className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center mb-2 md:mb-3 ${
-                  paymentType === method.id
-                    ? 'bg-[#2D7A4D] text-white'
-                    : 'bg-gray-100 text-gray-400'
+        <div
+          role="radiogroup"
+          aria-label="Betalingsmetode"
+          className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3"
+        >
+          {PAYMENT_METHODS.map((method) => {
+            const active = paymentType === method.id;
+            const Icon = method.icon;
+            return (
+              <button
+                key={method.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setPaymentType(method.id)}
+                className={`rounded-2xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${
+                  active
+                    ? 'border-[#2E6641] bg-[#EAF1E9]'
+                    : 'border-[#E6E7E1] bg-white hover:border-[#2E6641]/45'
                 }`}
               >
-                {method.id === 'Fastpris' ? (
-                  <Banknote size={18} />
-                ) : method.id === 'Timepris' ? (
-                  <Clock size={18} />
-                ) : (
-                  <CreditCard size={18} />
-                )}
-              </div>
-              <p
-                className={`text-sm md:text-base font-bold ${paymentType === method.id ? 'text-[#2D7A4D]' : 'text-gray-700'}`}
-              >
-                {method.label}
-              </p>
-              <p className="text-[10px] md:text-xs text-gray-400 mt-0.5 md:mt-1">{method.desc}</p>
-            </button>
-          ))}
+                <span
+                  className={`mb-2.5 flex size-9 items-center justify-center rounded-xl transition-colors ${
+                    active ? 'bg-[#2E6641] text-white' : 'bg-[#F4F6F0] text-[#63665F]'
+                  }`}
+                >
+                  <Icon size={16} strokeWidth={2} />
+                </span>
+                <p
+                  className={`text-[0.9375rem] font-semibold ${
+                    active ? 'text-[#2E6641]' : 'text-[#0B0B0B]'
+                  }`}
+                >
+                  {method.label}
+                </p>
+                <p className="mt-0.5 text-[0.75rem] leading-snug text-[#63665F]">{method.desc}</p>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* 2. Price Section */}
-      <div className="box-card-custom p-4 md:p-6 rounded-[14px]">
-        <div className="flex items-center justify-between mb-4 md:mb-6">
-          <label className="text-[11px] md:text-sm font-bold text-gray-700 uppercase tracking-wider">
-            {paymentType === 'Timepris'
-              ? 'Timepris (NOK) *'
-              : paymentType === 'Anbud'
-                ? 'Antatt budsjett (NOK) *'
-                : 'Fastpris (NOK) *'}
-          </label>
-        </div>
-        <div className="relative">
-          <span className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm md:text-lg">
-            NOK
+      {/* ── Beløp ───────────────────────────────────────────────────────── */}
+      <div className="box-card-custom p-5 md:p-6">
+        <label htmlFor="job-amount" className={MICRO_LABEL}>
+          {amountLabel} · påkrevd
+        </label>
+
+        <div className="relative mt-3">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[0.9375rem] font-medium text-[#9B9E96]">
+            kr
           </span>
           <input
+            id="job-amount"
             type="number"
             min="1"
-            value={paymentType === 'Timepris' ? hourlyRate : price}
-            onChange={(e) => {
-              if (paymentType === 'Timepris') {
-                setHourlyRate(e.target.value);
-              } else {
-                setPrice(e.target.value);
-              }
-            }}
-            placeholder={paymentType === 'Anbud' ? 'f.eks. 5000' : '0'}
-            className={`w-full pl-16 md:pl-20 pr-4 md:pr-6 py-3 md:py-4 rounded-xl border bg-white text-lg md:text-xl font-bold text-custom-black outline-none transition-all
-              ${errors?.price ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5' : 'border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5'}`}
+            inputMode="numeric"
+            value={isHourly ? hourlyRate : price}
+            onChange={(e) => (isHourly ? setHourlyRate(e.target.value) : setPrice(e.target.value))}
+            placeholder={paymentType === 'Anbud' ? '5000' : '0'}
+            aria-invalid={showErrorOnField ? true : undefined}
+            className={`h-13 w-full rounded-xl border bg-white pl-11 pr-4 text-[1.125rem] font-semibold tabular-nums text-[#0B0B0B] outline-none transition-colors placeholder:font-normal placeholder:text-[#9B9E96] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${
+              showErrorOnField
+                ? 'border-[#B4453A] focus:ring-4 focus:ring-[#B4453A]/10'
+                : 'border-[#E6E7E1] focus:border-[#2E6641]/45 focus:ring-4 focus:ring-[#2E6641]/10'
+            }`}
           />
+          {isHourly && (
+            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[0.8125rem] text-[#9B9E96]">
+              per time
+            </span>
+          )}
         </div>
-        {errors?.price && (
-          <p className="mt-2 text-red-500 text-[10px] md:text-xs font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
-            <AlertCircle size={12} /> {errors.price}
+
+        {showErrorOnField && (
+          <p className="mt-2 flex items-center gap-1.5 text-[0.8125rem] font-medium text-[#B4453A]">
+            <AlertCircle size={13} /> {priceError}
           </p>
         )}
-        {paymentType === 'Anbud' && (
-          <div className="mt-4 p-3 bg-green-50 rounded-xl border border-green-100 flex items-center gap-3">
-            <Info size={16} className="text-[#2D7A4D] shrink-0" />
-            <p className="text-xs text-green-800 font-medium">
-              Oppgi et antatt budsjett for at oppdragstakere skal ha en økonomisk referanse når de gir anbud.
-            </p>
+
+        {isHourly && (
+          <div
+            className={`mt-3 flex items-baseline justify-between gap-3 rounded-xl px-4 py-3 ${
+              showErrorOnTotal ? 'bg-[#B4453A]/8' : 'bg-[#F4F6F0]'
+            }`}
+          >
+            <span className="text-[0.8125rem] text-[#63665F]">
+              Beregnet totalpris for oppgitt varighet
+            </span>
+            <span className="shrink-0 text-[1rem] font-bold tabular-nums text-[#0B0B0B]">
+              {total.toLocaleString('nb-NO')} kr
+            </span>
           </div>
         )}
-        {paymentType === 'Timepris' && (
-          <div className="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100 flex items-center gap-3">
-            <Info size={16} className="text-blue-500 shrink-0" />
-            <p className="text-xs text-blue-700">
-              Totalpris vil bli beregnet automatisk basert på antall timer:{' '}
-              <strong>{price || 0} NOK</strong>
-            </p>
-          </div>
+        {showErrorOnTotal && (
+          <p className="mt-2 flex items-center gap-1.5 text-[0.8125rem] font-medium text-[#B4453A]">
+            <AlertCircle size={13} /> {priceError} Sjekk timepris og varighet.
+          </p>
+        )}
+
+        {paymentType === 'Anbud' && (
+          <p className="mt-3 text-[0.8125rem] leading-relaxed text-[#63665F]">
+            Budsjettet vises til de som gir tilbud, så de har en økonomisk ramme å forholde seg
+            til. Du binder deg ikke til beløpet.
+          </p>
         )}
       </div>
 
-      {/* 3. Urgent Section */}
-      <div
-        className={`p-4 md:p-6 rounded-2xl border-2 transition-all duration-300 flex items-center justify-between cursor-pointer relative ${
-          !isPaidSubscriber
-            ? 'box-card-custom'
-            : urgent
-              ? 'border-custom-green-light bg-custom-green-light'
-              : 'border-gray-100 bg-white/60'
-        }`}
-        onClick={() => {
-          if (!isPaidSubscriber) {
-            toast.error('Haster-valget er kun tilgjengelig for betalte abonnementer', {
-              icon: '🔒',
-            });
-            return;
-          }
-          setUrgent(!urgent);
-        }}
-      >
-        {!isPaidSubscriber && (
-          <div className="absolute top-2 right-4 flex items-center gap-1.5 bg-gray-900/10 px-2 py-0.5 rounded-full">
-            <Lock size={10} className="text-gray-600" />
-            <span className="text-[9px] font-bold text-gray-600 uppercase">PRO</span>
-          </div>
-        )}
-        <div className="flex items-center gap-3 md:gap-4">
-          <div
-            className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 ${urgent && isPaidSubscriber ? 'bg-custom-green text-white' : 'bg-gray-100 text-gray-400'}`}
-          >
-            <AlertCircle size={20} className="md:w-6 md:h-6" />
-          </div>
-          <div>
-            <p
-              className={`text-sm md:text-base font-bold ${urgent && isPaidSubscriber ? 'text-custom-green' : 'text-custom-black'}`}
-            >
-              Haster oppdraget?
-            </p>
-            <p className="text-[10px] md:text-sm text-custom-black">
-              Gjør det mer synlig for potensielle hjelpere
-            </p>
-          </div>
-        </div>
-        <div
-          className={`w-10 h-6 md:w-14 md:h-8 rounded-full p-1 transition-colors duration-300 shrink-0 ${urgent && isPaidSubscriber ? 'bg-custom-green' : 'bg-gray-200'}`}
+      {/* ── Haster ──────────────────────────────────────────────────────── */}
+      <div className="box-card-custom p-5 md:p-6">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={urgent && isPaidSubscriber}
+          onClick={() => {
+            if (!isPaidSubscriber) {
+              toast.error('Haster er kun tilgjengelig for betalte abonnementer');
+              return;
+            }
+            setUrgent(!urgent);
+          }}
+          className="flex w-full items-center justify-between gap-3 text-left focus-visible:outline-none"
         >
-          <div
-            className={`w-4 h-4 md:w-6 md:h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${urgent && isPaidSubscriber ? 'translate-x-4 md:translate-x-6' : 'translate-x-0'}`}
-          />
-        </div>
+          <span className="flex min-w-0 items-center gap-3">
+            <span
+              className={`flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                urgent && isPaidSubscriber
+                  ? 'bg-[#122A1C] text-white'
+                  : 'bg-[#F4F6F0] text-[#63665F]'
+              }`}
+            >
+              <Zap size={16} strokeWidth={2.2} />
+            </span>
+            <span className="min-w-0">
+              <span className="flex items-center gap-2 text-[0.9375rem] font-semibold text-[#0B0B0B]">
+                Haster oppdraget?
+                {!isPaidSubscriber && (
+                  <span className="inline-flex h-5 items-center gap-1 rounded-full bg-[#F4F6F0] px-2 text-[0.625rem] font-bold uppercase tracking-wider text-[#63665F]">
+                    <Lock size={9} strokeWidth={2.6} />
+                    Betalt
+                  </span>
+                )}
+              </span>
+              <span className="mt-0.5 block text-[0.8125rem] leading-relaxed text-[#63665F]">
+                Merkes med «Haster» og løftes høyere i søket.
+              </span>
+            </span>
+          </span>
+
+          <span
+            className={`h-6 w-11 shrink-0 rounded-full p-0.75 transition-colors duration-200 ${
+              urgent && isPaidSubscriber ? 'bg-[#2E6641]' : 'bg-[#E6E7E1]'
+            }`}
+          >
+            <span
+              className={`block size-4.5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                urgent && isPaidSubscriber ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </span>
+        </button>
       </div>
     </div>
   );

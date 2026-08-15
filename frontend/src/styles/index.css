@@ -174,8 +174,18 @@ body {
   }
 }
 
+/* The panel every step of the job form is built out of, and a handful of switchers.
+ *
+ * It used to be a translucent `bg-white/60` box with a white border and a 30 px drop
+ * shadow — which on the form's own tinted background rendered as a grey haze with no
+ * discernible edge, and stacked five deep down a step it read as fog rather than
+ * structure. It is the same card as everywhere else on the site now: white, one hairline,
+ * one radius, no shadow.
+ *
+ * `cursor: pointer` is gone with it. It was on the utility, so every non-interactive
+ * section of the form — image upload, price, dates — told the user it could be clicked. */
 @utility box-card-custom {
-  @apply rounded-[20px] bg-white/60 shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white cursor-pointer;
+  @apply rounded-3xl border border-[#E6E7E1] bg-white;
 }
 
 @keyframes float {

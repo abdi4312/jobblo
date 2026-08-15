@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Check,
-  ArrowLeft,
   ShieldCheck,
   Loader2,
   Tag,
@@ -18,6 +17,7 @@ import { useUserStore } from '../../stores/userStore';
 import mainLink from '../../api/mainURLs';
 import type { Plan } from '../../features/plans/types';
 import { CARD, MICRO_LABEL } from '../../theme/brand';
+import { BackLink } from '../../components/Ui/BackLink';
 
 type MySubscription = {
   plan: string;
@@ -193,30 +193,10 @@ export default function MembershipPage() {
 
   return (
     <div className="min-h-screen bg-[#EFF0EA]">
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="border-b border-[#E6E7E1] bg-white/85 backdrop-blur-md">
-        <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-3 px-4 sm:px-6">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            aria-label="Tilbake"
-            className="flex size-9 items-center justify-center rounded-full text-[#63665F] transition-colors hover:bg-[#F4F6F0] hover:text-[#0B0B0B] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <span className="text-[0.9375rem] font-semibold tracking-[-0.02em] text-[#0B0B0B]">
-            Jobblo medlemskap
-          </span>
-          {user?.subscription && (
-            <span className="ml-auto hidden rounded-full bg-[#EAF1E9] px-3 py-1 text-[0.75rem] font-semibold text-[#2E6641] sm:inline">
-              Nå: {user.subscription}
-            </span>
-          )}
-        </div>
-      </div>
+      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:py-12">
+        <BackLink fallback="/home" />
 
-      <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 lg:py-14">
-        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[1.5fr_1fr] lg:gap-10">
+        <div className="mt-6 grid grid-cols-1 items-start gap-8 lg:grid-cols-[1.5fr_1fr] lg:gap-10">
           {/* ══ LEFT — plan selector ═══════════════════════════════════════ */}
           <div className="space-y-6">
             <div>

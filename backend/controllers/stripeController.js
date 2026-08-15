@@ -260,16 +260,18 @@ exports.createExtraContactPayment = async (req, res) => {
     const service = await Service.findById(serviceId);
     if (!service) return res.status(404).json({ message: 'Service not found' });
 
-    let stripeCustomerId = user.stripeCustomerId;
-    if (!stripeCustomerId) {
-      const customer = await stripe.customers.create({
-        email: user.email,
-        name: user.name,
-        metadata: { userId: String(user._id) },
+    // Same trailing-slash trap as the subscription checkout above: without this,
+    // `FRONTEND_URL=https://jobblo.no` produced `https://jobblo.nocontact/success`.
+    const frontend = resolveFrontendUrl();
+    if (frontend.error) {
+      console.error('createExtraContactPayment: %s', frontend.error);
+      return res.status(500).json({
+        message: 'Betaling er ikke konfigurert riktig. Kontakt support.',
+        code: 'frontend_url_invalid',
       });
-      stripeCustomerId = customer.id;
-      await User.findByIdAndUpdate(user._id, { stripeCustomerId });
     }
+
+    const stripeCustomerId = await resolveStripeCustomer(stripe, user);
 
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
@@ -289,8 +291,8 @@ exports.createExtraContactPayment = async (req, res) => {
         },
       ],
 
-      success_url: `${process.env.FRONTEND_URL}contact/success?session_id={CHECKOUT_SESSION_ID}&serviceId=${serviceId}`,
-      cancel_url: `${process.env.FRONTEND_URL}services/${serviceId}`,
+      success_url: `${frontend.url}/contact/success?session_id={CHECKOUT_SESSION_ID}&serviceId=${serviceId}`,
+      cancel_url: `${frontend.url}/services/${serviceId}`,
       metadata: {
         userId: String(user._id),
         type: 'extra_contact',
