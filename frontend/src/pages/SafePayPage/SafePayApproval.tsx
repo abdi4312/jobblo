@@ -12,9 +12,6 @@ import {
   AlertTriangle,
   FileText,
   ShieldCheck,
-  Home,
-  MessageCircle,
-  Bell,
   Wallet,
   Camera,
   X,
@@ -123,16 +120,16 @@ const StarRating: React.FC<StarRatingProps> = ({
                 transition-all duration-200
                 ${!disabled ? 'cursor-pointer' : 'cursor-default'}
                 ${!disabled ? 'hover:scale-115' : ''}
-                ${focusedIndex === star ? 'outline-none ring-2 ring-[#F59E0B] rounded-full' : ''}
+                ${focusedIndex === star ? 'outline-none ring-2 ring-[#2E6641] rounded-full' : ''}
               `}
             >
               <Star
                 size={size}
                 className={`
                   transition-all duration-200
-                  ${isFilled ? 'text-[#F59E0B] fill-[#F59E0B]' : ''}
-                  ${isHovered && !disabled ? 'text-[#F59E0B] fill-[#F59E0B]/50' : ''}
-                  ${isEmpty ? 'text-[#d1d5db] stroke-[#d1d5db] fill-none' : ''}
+                  ${isFilled ? 'text-[#2E6641] fill-[#2E6641]' : ''}
+                  ${isHovered && !disabled ? 'text-[#2E6641] fill-[#2E6641]/50' : ''}
+                  ${isEmpty ? 'text-[#D4D6CD] stroke-[#D4D6CD] fill-none' : ''}
                 `}
               />
             </button>
@@ -171,6 +168,35 @@ const ImageLightbox: React.FC<{ url: string; onClose: () => void }> = ({ url, on
       className="max-w-full max-h-[90vh] object-contain rounded-lg"
       onClick={(e) => e.stopPropagation()}
     />
+  </div>
+);
+
+/** The full-page states this screen falls back to: load failure, wrong viewer. */
+const ApprovalNotice = ({
+  title,
+  body,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  body: string;
+  actionLabel: string;
+  onAction: () => void;
+}) => (
+  <div className="flex min-h-screen items-center justify-center bg-[#EFF0EA] p-4">
+    <div className="w-full max-w-md rounded-3xl border border-[#E6E7E1] bg-white p-10 text-center">
+      <span className="mx-auto mb-4 flex size-11 items-center justify-center rounded-full bg-[#EAF1E9] text-[#2E6641]">
+        <ShieldCheck size={20} strokeWidth={2} />
+      </span>
+      <p className="text-[1.0625rem] font-semibold text-[#0B0B0B]">{title}</p>
+      <p className="mx-auto mt-2 max-w-sm text-[0.875rem] leading-relaxed text-[#63665F]">{body}</p>
+      <button
+        onClick={onAction}
+        className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-[#2E6641] px-6 text-[0.9375rem] font-semibold text-white transition-colors hover:bg-[#255335]"
+      >
+        {actionLabel}
+      </button>
+    </div>
   </div>
 );
 
@@ -340,7 +366,13 @@ const SafePayApproval: React.FC = () => {
     },
     onError: (err: any) => {
       const status = err.response?.status;
-      const message = err.response?.data?.error || 'Kunne ikke godkjenne jobben';
+      // `mutationFn` throws a plain Error for the missing-rating case, which has no
+      // `response` at all. Reading only `response.data.error` turned that specific,
+      // actionable message into the generic "Kunne ikke godkjenne jobben" — and the
+      // skip-checklist path calls `mutate()` directly, so it was the message that path
+      // actually produced.
+      const message =
+        err?.response?.data?.error || err?.message || 'Kunne ikke godkjenne jobben';
       if (status === 403) {
         toast.error('Ikke tilgang. Kun oppdragsgiver kan godkjenne jobben.');
       } else if (status === 400 && message.includes('ready_for_review')) {
@@ -396,38 +428,41 @@ const SafePayApproval: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#f5f0e8]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-custom-green"></div>
+      <div className="min-h-screen bg-[#EFF0EA]">
+        <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+          <div className="jb-skeleton h-4 w-24 rounded" />
+          <div className="jb-skeleton mt-8 h-14 w-full rounded-2xl" />
+          <div className="jb-skeleton mt-4 h-64 w-full rounded-3xl" />
+          <div className="jb-skeleton mt-4 h-80 w-full rounded-3xl" />
+        </div>
       </div>
     );
   }
 
-  if (error || !checkoutData) {
+  if (error || !checkoutData?.order || !checkoutData?.calculation) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#f5f0e8] p-4">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Kunne ikke laste oppdraget</h2>
-        <Button onClick={() => navigate(-1)} label="Gå tilbake" />
-      </div>
+      <ApprovalNotice
+        title="Kunne ikke laste oppdraget"
+        body="Sjekk internettforbindelsen din og prøv igjen."
+        actionLabel="Prøv igjen"
+        onAction={() => refetch()}
+      />
     );
   }
 
   const { order: orderData, calculation } = checkoutData;
 
   // Check if current user is the customer (order owner)
-  const isCustomer = String(orderData.customerId._id) === String(user?._id);
+  const isCustomer = String(orderData.customerId?._id) === String(user?._id);
 
   if (!isCustomer) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#f5f0e8] p-4">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Ikke tilgang</h2>
-        <p className="text-gray-600 mb-4">Kun oppdragsgiver kan godkjenne jobber.</p>
-        <button
-          onClick={() => navigate(-1)}
-          className="text-custom-green font-medium flex items-center gap-2"
-        >
-          <ArrowLeft size={18} /> Gå tilbake
-        </button>
-      </div>
+      <ApprovalNotice
+        title="Ikke tilgang"
+        body="Kun oppdragsgiver kan godkjenne en jobb og frigi betalingen."
+        actionLabel="Tilbake til forsiden"
+        onAction={() => navigate('/home')}
+      />
     );
   }
 
@@ -440,46 +475,96 @@ const SafePayApproval: React.FC = () => {
   const hasAnyEvidence = beforeImages.length > 0 || afterImages.length > 0 || !!completionNote;
 
   if (isSuccess) {
+    // Two genuinely different outcomes, so they are not dressed the same. When the
+    // transfer failed the headline said "Jobb godkjent!" over the payout amount set in
+    // big green type — the one number on screen, rendered as if it had been paid.
+    const paidOut = !payoutWarning;
     return (
-      <div className="min-h-screen bg-[#f5f0e8] flex items-center justify-center px-6">
-        <div className="max-w-[500px] w-full bg-[#1a3a1a] rounded-3xl p-10 text-center shadow-2xl">
-          <div
-            className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ${
-              payoutWarning ? 'bg-amber-400' : 'bg-[#4ade80]'
+      <div className="flex min-h-screen items-center justify-center bg-[#EFF0EA] px-4 py-12">
+        <div
+          className={`w-full max-w-125 rounded-3xl p-8 text-center sm:p-10 ${
+            paidOut ? 'bg-[#122A1C]' : 'border border-[#E6E7E1] bg-white'
+          }`}
+        >
+          <span
+            className={`mx-auto mb-6 flex size-14 items-center justify-center rounded-full ${
+              paidOut ? 'bg-[#8FBF9A] text-[#122A1C]' : 'bg-[#F4F6F0] text-[#63665F]'
             }`}
           >
-            {payoutWarning ? (
-              <AlertTriangle size={32} className="text-[#1a3a1a]" />
+            {paidOut ? (
+              <Check size={26} strokeWidth={2.6} />
             ) : (
-              <Check size={32} className="text-[#1a3a1a]" />
+              <AlertTriangle size={24} strokeWidth={2} />
             )}
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Jobb godkjent!</h1>
-          <p className="text-white/60 mb-8">
-            {payoutWarning
-              ? payoutWarning
-              : `Pengene er lagt til ${orderData.providerId.name} ${orderData.providerId.lastName} sin saldo.`}
+          </span>
+
+          <h1
+            className={`text-[1.5rem] font-bold tracking-[-0.035em] ${
+              paidOut ? 'text-white' : 'text-[#0B0B0B]'
+            }`}
+          >
+            {paidOut ? 'Jobben er godkjent' : 'Godkjent — men utbetalingen stoppet'}
+          </h1>
+          <p
+            className={`mx-auto mt-2.5 max-w-sm text-[0.875rem] leading-relaxed ${
+              paidOut ? 'text-white/65' : 'text-[#63665F]'
+            }`}
+          >
+            {paidOut
+              ? `Beløpet er lagt til saldoen til ${orderData.providerId?.name || 'utføreren'} ${
+                  orderData.providerId?.lastName || ''
+                }.`.trim()
+              : payoutWarning}
           </p>
 
-          <div className="text-[42px] font-bold text-[#4ade80] mb-1">
-            {calculation.providerNet} kr
-          </div>
-          <div className="text-[12px] text-white/40 uppercase tracking-widest mb-10">
-            {payoutWarning ? 'Utbetaling ikke fullført' : 'Tilgjengelig innen 1–2 virkedager'}
+          <div
+            className={`mt-8 rounded-2xl px-4 py-5 ${paidOut ? 'bg-white/8' : 'bg-[#F4F6F0]'}`}
+          >
+            <p
+              className={`text-[2rem] font-bold tabular-nums tracking-[-0.04em] ${
+                paidOut ? 'text-[#8FBF9A]' : 'text-[#63665F]'
+              }`}
+            >
+              {Number(calculation.providerNet).toLocaleString('nb-NO')} kr
+            </p>
+            <p
+              className={`mt-1 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] ${
+                paidOut ? 'text-white/40' : 'text-[#9B9E96]'
+              }`}
+            >
+              {paidOut ? 'Tilgjengelig innen 1–2 virkedager' : 'Ikke utbetalt ennå'}
+            </p>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <Button
-              onClick={() => navigate('/profile')}
-              label="Se kontrakt"
-              className="w-full bg-[#4ade80] text-[#1a3a1a] rounded-full py-3.5 font-bold"
-            />
-            <Button
-              variant="outline"
+          <div className="mt-8 flex flex-col gap-2.5">
+            {!paidOut && (
+              <button
+                onClick={() => navigate('/support')}
+                className="flex h-12 w-full items-center justify-center rounded-full bg-[#2E6641] text-[0.9375rem] font-semibold text-white transition-colors hover:bg-[#255335]"
+              >
+                Kontakt support
+              </button>
+            )}
+            <button
+              onClick={() => navigate('/my-applicants')}
+              className={`flex h-12 w-full items-center justify-center rounded-full text-[0.9375rem] font-semibold transition-colors ${
+                paidOut
+                  ? 'bg-[#8FBF9A] text-[#122A1C] hover:bg-[#a3cbac]'
+                  : 'border border-[#E6E7E1] bg-white text-[#0B0B0B] hover:border-[#2E6641]/45'
+              }`}
+            >
+              Mine oppdrag
+            </button>
+            <button
               onClick={() => navigate('/home')}
-              label="Tilbake til hjem"
-              className="w-full border-white/20 text-white rounded-full py-3.5 font-bold"
-            />
+              className={`flex h-12 w-full items-center justify-center rounded-full text-[0.9375rem] font-medium transition-colors ${
+                paidOut
+                  ? 'border border-white/20 text-white hover:bg-white/10'
+                  : 'text-[#63665F] hover:text-[#0B0B0B]'
+              }`}
+            >
+              Tilbake til forsiden
+            </button>
           </div>
         </div>
       </div>
@@ -487,11 +572,11 @@ const SafePayApproval: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f0e8] font-sans pb-12">
-      <div className="max-w-[1024px] mx-auto px-6 py-8">
+    <div className="min-h-screen bg-[#EFF0EA] pb-16">
+      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-800 transition-colors mb-6"
+          className="group -ml-1 mb-6 inline-flex items-center gap-1.5 rounded-full py-1 pl-1 pr-2 text-[0.875rem] font-medium text-[#63665F] transition-colors hover:text-[#0B0B0B]"
         >
           <ArrowLeft size={16} /> Tilbake
         </button>
@@ -505,7 +590,7 @@ const SafePayApproval: React.FC = () => {
           <ContractViewModal
             orderId={orderId!}
             trigger={
-              <span className="flex items-center gap-1.5 text-[13px] text-[#1a3a1a] font-semibold hover:underline cursor-pointer">
+              <span className="flex items-center gap-1.5 text-[13px] text-[#122A1C] font-semibold hover:underline cursor-pointer">
                 <FileText size={14} /> Se kontrakt
               </span>
             }
@@ -517,12 +602,12 @@ const SafePayApproval: React.FC = () => {
           <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
             <CircleCheck size={18} className="text-custom-green" /> Jobbstatus
           </div>
-          <div className="bg-[#f0faf0] border border-[#c6f0d8] rounded-xl p-4 flex items-center gap-4">
+          <div className="bg-[#EAF1E9] border border-[#EAF1E9] rounded-xl p-4 flex items-center gap-4">
             <div className="w-12 h-12 bg-custom-green rounded-full flex items-center justify-center shrink-0">
               <Wrench size={24} className="text-white" />
             </div>
             <div>
-              <h3 className="text-[15px] font-bold text-[#166534] mb-0.5">
+              <h3 className="text-[15px] font-bold text-[#2E6641] mb-0.5">
                 {orderData.providerId.name} melder jobben som ferdig
               </h3>
               <p className="text-[12px] text-custom-green/80">
@@ -538,8 +623,8 @@ const SafePayApproval: React.FC = () => {
           <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
             <User size={18} className="text-custom-green" /> Oppdragstaker
           </div>
-          <div className="bg-[#f9f9f7] rounded-xl p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#c8d8c8] text-[#1a3a1a] font-bold flex items-center justify-center text-lg overflow-hidden">
+          <div className="bg-[#F4F6F0] rounded-xl p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-[#EAF1E9] text-[#122A1C] font-bold flex items-center justify-center text-lg overflow-hidden">
               {orderData.providerId.avatarUrl ? (
                 <img
                   src={orderData.providerId.avatarUrl}
@@ -574,7 +659,7 @@ const SafePayApproval: React.FC = () => {
             <div className="space-y-4">
               {/* Completion note first */}
               {completionNote && (
-                <div className="bg-[#f9f9f7] rounded-xl p-4 border border-black/5">
+                <div className="bg-[#F4F6F0] rounded-xl p-4 border border-black/5">
                   <p className="text-[11px] text-gray-400 uppercase font-bold tracking-wider mb-1.5">
                     Ferdigstillingsnotat fra utfører
                   </p>
@@ -592,7 +677,7 @@ const SafePayApproval: React.FC = () => {
                     {beforeImages.map((url, i) => (
                       <div
                         key={`b-${i}`}
-                        className="relative aspect-square rounded-xl overflow-hidden bg-[#f9f9f7] group cursor-zoom-in"
+                        className="relative aspect-square rounded-xl overflow-hidden bg-[#F4F6F0] group cursor-zoom-in"
                         onClick={() => setLightboxUrl(url)}
                       >
                         {url.toLowerCase().endsWith('.pdf') ? (
@@ -633,7 +718,7 @@ const SafePayApproval: React.FC = () => {
                     {afterImages.map((url, i) => (
                       <div
                         key={`a-${i}`}
-                        className="relative aspect-square rounded-xl overflow-hidden bg-[#f9f9f7] group cursor-zoom-in"
+                        className="relative aspect-square rounded-xl overflow-hidden bg-[#F4F6F0] group cursor-zoom-in"
                         onClick={() => setLightboxUrl(url)}
                       >
                         {url.toLowerCase().endsWith('.pdf') ? (
@@ -716,9 +801,9 @@ const SafePayApproval: React.FC = () => {
                     }}
                     className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all select-none ${
                       item.checked
-                        ? 'bg-[#f0faf0] border-[#c6f0d8]'
-                        : 'bg-[#f9f9f7] border-transparent'
-                    } ${canToggle ? 'cursor-pointer hover:border-black/10 hover:bg-[#f0faf0]/50' : 'cursor-not-allowed opacity-90'}`}
+                        ? 'bg-[#EAF1E9] border-[#EAF1E9]'
+                        : 'bg-[#F4F6F0] border-transparent'
+                    } ${canToggle ? 'cursor-pointer hover:border-black/10 hover:bg-[#EAF1E9]/50' : 'cursor-not-allowed opacity-90'}`}
                   >
                     <input
                       id={`checklist-${item.id}`}
@@ -735,14 +820,14 @@ const SafePayApproval: React.FC = () => {
                       className={`w-5.5 h-5.5 rounded-md border-2 flex items-center justify-center transition-all ${
                         item.checked
                           ? 'bg-custom-green border-custom-green'
-                          : 'bg-white border-[#c8d8c8]'
+                          : 'bg-white border-[#EAF1E9]'
                       }`}
                     >
                       {item.checked && <Check size={14} className="text-white" strokeWidth={3} />}
                     </span>
                     <span
                       className={`text-[13px] font-medium ${
-                        item.checked ? 'text-[#166534]' : 'text-gray-600'
+                        item.checked ? 'text-[#2E6641]' : 'text-gray-600'
                       }`}
                     >
                       {item.text}
@@ -802,7 +887,7 @@ const SafePayApproval: React.FC = () => {
                         { id: 'communication', label: 'Kommunikasjon' },
                         { id: 'tidiness', label: 'Ryddighet' },
                       ].map((cat) => (
-                        <div key={cat.id} className="bg-[#f9f9f7] rounded-xl p-3">
+                        <div key={cat.id} className="bg-[#F4F6F0] rounded-xl p-3">
                           <div className="text-[11px] text-gray-400 uppercase font-bold mb-2 tracking-wider">
                             {cat.label}
                           </div>
@@ -900,8 +985,8 @@ const SafePayApproval: React.FC = () => {
                 <div
                   className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${
                     recommendWorker
-                      ? 'bg-[#f0faf0] border-[#c6f0d8]'
-                      : 'bg-[#f9f9f7] border-transparent hover:border-black/10'
+                      ? 'bg-[#EAF1E9] border-[#EAF1E9]'
+                      : 'bg-[#F4F6F0] border-transparent hover:border-black/10'
                   } ${isOrderCompleted ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                   onClick={() => !isOrderCompleted && setRecommendWorker(!recommendWorker)}
                 >
@@ -909,7 +994,7 @@ const SafePayApproval: React.FC = () => {
                     className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
                       recommendWorker
                         ? 'bg-custom-green border-custom-green'
-                        : 'bg-white border-[#c8d8c8]'
+                        : 'bg-white border-[#EAF1E9]'
                     }`}
                   >
                     {recommendWorker && <Check size={16} className="text-white" strokeWidth={3} />}
@@ -928,14 +1013,14 @@ const SafePayApproval: React.FC = () => {
           ) : (
             <>
               <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
-                <Star size={18} className="text-[#F59E0B]" /> Vurderinger for{' '}
+                <Star size={18} className="text-[#2E6641]" /> Vurderinger for{' '}
                 {orderData.providerId.name}
               </div>
 
               {/* Average Rating Summary */}
-              <div className="bg-[#f9f9f7] rounded-xl p-4 mb-6 flex items-center gap-4">
+              <div className="bg-[#F4F6F0] rounded-xl p-4 mb-6 flex items-center gap-4">
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-[#F59E0B]">
+                  <div className="text-4xl font-bold text-[#2E6641]">
                     {orderData.providerId.averageRating
                       ? orderData.providerId.averageRating.toFixed(1)
                       : '4.7'}
@@ -953,8 +1038,8 @@ const SafePayApproval: React.FC = () => {
                           (orderData.providerId.averageRating
                             ? Math.round(orderData.providerId.averageRating)
                             : 5)
-                            ? 'text-[#F59E0B] fill-[#F59E0B]'
-                            : 'text-[#d1d5db]'
+                            ? 'text-[#2E6641] fill-[#2E6641]'
+                            : 'text-[#D4D6CD]'
                         }
                       />
                     ))}
@@ -980,7 +1065,7 @@ const SafePayApproval: React.FC = () => {
 
           <div className="space-y-4">
             {/* Transaction Info */}
-            <div className="bg-[#f9f9f7] rounded-xl p-4">
+            <div className="bg-[#F4F6F0] rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                   Transaksjons-ID
@@ -1020,7 +1105,7 @@ const SafePayApproval: React.FC = () => {
             </div>
 
             {/* Payout Breakdown */}
-            <div className="bg-[#f0faf0] border border-[#c6f0d8] rounded-2xl p-6">
+            <div className="bg-[#EAF1E9] border border-[#EAF1E9] rounded-2xl p-6">
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
                   <span className="text-gray-500">Oppdragsbeløp</span>
@@ -1040,7 +1125,7 @@ const SafePayApproval: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex gap-2 text-[11px] text-[#166534] leading-relaxed">
+              <div className="flex gap-2 text-[11px] text-[#2E6641] leading-relaxed">
                 <Clock size={14} className="shrink-0 mt-0.5" />
                 <p>
                   Pengene utbetales til {orderData.providerId.name} innen 1–2 virkedager etter
@@ -1059,7 +1144,7 @@ const SafePayApproval: React.FC = () => {
             className={
               isOrderCompleted
                 ? 'w-full bg-gray-300 text-gray-500 rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 shadow-lg mt-6 cursor-not-allowed'
-                : 'w-full bg-custom-green text-white rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#14532d] transition-all shadow-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed'
+                : 'w-full bg-custom-green text-white rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#255335] transition-all shadow-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed'
             }
           >
             {isOrderCompleted ? (

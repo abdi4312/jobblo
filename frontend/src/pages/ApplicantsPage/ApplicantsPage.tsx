@@ -37,7 +37,7 @@ const ApplicantsPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [filterBy, setFilterBy] = useState<string>('notArchived');
   const [comparedApplicants, setComparedApplicants] = useState<string[]>([]);
-  const { data, isLoading, error } = useApplicantsQuery(serviceId!, sortBy, filterBy);
+  const { data, isLoading, error, refetch } = useApplicantsQuery(serviceId!, sortBy, filterBy);
   const createContractMutation = useCreateSafePayContractMutation();
   const toggleFavoriteMutation = useToggleApplicantFavoriteMutation(serviceId!);
   const toggleArchiveMutation = useToggleApplicantArchiveMutation(serviceId!);
@@ -47,22 +47,38 @@ const ApplicantsPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-custom-green"></div>
+      <div className="min-h-screen bg-[#EFF0EA]">
+        <div className="mx-auto w-full max-w-300 px-4 py-10 sm:px-6">
+          <div className="jb-skeleton h-4 w-24 rounded" />
+          <div className="jb-skeleton mt-8 h-14 w-full rounded-2xl" />
+          <div className="mt-6 space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="jb-skeleton h-36 w-full rounded-3xl" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (error || !data) {
+  if (error || !data?.service) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Kunne ikke laste søkere</h2>
-        <button
-          onClick={() => navigate(-1)}
-          className="text-custom-green font-medium flex items-center gap-2"
-        >
-          <ArrowLeft size={18} /> Gå tilbake
-        </button>
+      <div className="flex min-h-screen items-center justify-center bg-[#EFF0EA] p-4">
+        <div className="w-full max-w-md rounded-3xl border border-[#E6E7E1] bg-white p-10 text-center">
+          <span className="mx-auto mb-4 flex size-11 items-center justify-center rounded-full bg-[#EAF1E9] text-[#2E6641]">
+            <Users size={20} strokeWidth={2} />
+          </span>
+          <p className="text-[1.0625rem] font-semibold text-[#0B0B0B]">Kunne ikke laste søkere</p>
+          <p className="mx-auto mt-2 max-w-sm text-[0.875rem] leading-relaxed text-[#63665F]">
+            Sjekk internettforbindelsen din og prøv igjen.
+          </p>
+          <button
+            onClick={() => refetch()}
+            className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-[#2E6641] px-6 text-[0.9375rem] font-semibold text-white transition-colors hover:bg-[#255335]"
+          >
+            Prøv igjen
+          </button>
+        </div>
       </div>
     );
   }
@@ -74,17 +90,24 @@ const ApplicantsPage: React.FC = () => {
   const currentStep = 1;
 
   // The order's real progress is used to mark steps as fullført in the sidebar.
+  //
+  // `ready_for_review` was missing from all three of these. An order sitting at
+  // ready-for-review — paid, worked, waiting on the customer — fell through every branch:
+  // the steps bar reset to step 1 as though no one had been chosen, the page stopped
+  // treating the job as paid, and the "already has a contract" redirect below had no
+  // case for it, so pressing a worker produced a toast and went nowhere.
   const progressStep =
     activeOrder?.status === 'awaiting_payment'
       ? 2
-      : activeOrder?.status === 'paid' || activeOrder?.status === 'in_progress'
+      : ['paid', 'in_progress'].includes(activeOrder?.status)
         ? 3
-        : activeOrder?.status === 'completed'
+        : ['ready_for_review', 'completed'].includes(activeOrder?.status)
           ? 4
           : 1;
 
   const isJobAlreadyPaid =
-    activeOrder && ['paid', 'in_progress', 'completed'].includes(activeOrder.status);
+    activeOrder &&
+    ['paid', 'in_progress', 'ready_for_review', 'completed'].includes(activeOrder.status);
   const hasAwaitingPayment = activeOrder && activeOrder.status === 'awaiting_payment';
 
   const jobDateLabel = service.date
@@ -111,8 +134,12 @@ const ApplicantsPage: React.FC = () => {
         navigate(`/safepay/checkout/${activeOrder._id}`);
       } else if (['paid', 'in_progress'].includes(activeOrder.status)) {
         navigate(`/safepay/success?orderId=${activeOrder._id}`);
-      } else if (activeOrder.status === 'completed') {
+      } else if (['ready_for_review', 'completed'].includes(activeOrder.status)) {
         navigate(`/safepay/approval/${activeOrder._id}`);
+      } else {
+        // disputed, refunded, or a status added later — send them somewhere real rather
+        // than leaving the click with nothing but a toast.
+        navigate(`/safepay/success?orderId=${activeOrder._id}`);
       }
       return;
     }
@@ -159,7 +186,7 @@ const ApplicantsPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#f5f0e8] font-sans">
+    <div className="min-h-screen bg-[#EFF0EA] font-sans">
       {/* Main Content */}
       <div className="max-w-[1200px] mx-auto px-6 py-8">
         <button
@@ -177,7 +204,7 @@ const ApplicantsPage: React.FC = () => {
         />
 
         {/* Oppdrag Summary */}
-        <div className="bg-[#1a3a1a] rounded-2xl p-5 md:p-6 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-[#122A1C] rounded-2xl p-5 md:p-6 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="text-white">
             <h2 className="text-lg font-medium mb-1">{service.title}</h2>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/60">
@@ -201,9 +228,9 @@ const ApplicantsPage: React.FC = () => {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-medium text-[#4ade80]">{service.price} kr</div>
+            <div className="text-2xl font-medium text-[#8FBF9A]">{service.price} kr</div>
             <div className="text-[11px] text-white/50 uppercase tracking-wider">Oppdragsbeløp</div>
-            <div className="bg-[#4ade80] text-[#1a3a1a] rounded-full px-3 py-1 text-[11px] font-medium inline-block mt-2">
+            <div className="bg-[#8FBF9A] text-[#122A1C] rounded-full px-3 py-1 text-[11px] font-medium inline-block mt-2">
               Aktiv
             </div>
           </div>
@@ -226,7 +253,7 @@ const ApplicantsPage: React.FC = () => {
               {comparedList.map((app: any) => (
                 <div key={app._id} className="border border-gray-200 rounded-xl p-4">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-[#c8d8c8] flex items-center justify-center overflow-hidden">
+                    <div className="w-10 h-10 rounded-full bg-[#EAF1E9] flex items-center justify-center overflow-hidden">
                       {app.applicant.avatarUrl ? (
                         <img
                           src={app.applicant.avatarUrl}
@@ -359,7 +386,7 @@ const ApplicantsPage: React.FC = () => {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-10 md:pt-0">
                       <div className="flex items-start gap-4">
                         <div className="relative flex-shrink-0">
-                          <div className="w-12 h-12 rounded-full bg-[#c8d8c8] text-[#1a3a1a] font-medium flex items-center justify-center text-lg overflow-hidden">
+                          <div className="w-12 h-12 rounded-full bg-[#EAF1E9] text-[#122A1C] font-medium flex items-center justify-center text-lg overflow-hidden">
                             {app.applicant.avatarUrl ? (
                               <img
                                 src={app.applicant.avatarUrl}
@@ -395,7 +422,7 @@ const ApplicantsPage: React.FC = () => {
                             {app.applicant.skills?.join(' · ') || 'Generell hjelp'}
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <div className="flex text-[#ca8a04]">
+                            <div className="flex text-[#63665F]">
                               {[...Array(5)].map((_, i) => (
                                 <Star
                                   key={i}
@@ -436,7 +463,7 @@ const ApplicantsPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="bg-[#f9f9f7] rounded-xl p-3 my-4 border-l-[3px] border-custom-green">
+                    <div className="bg-[#F4F6F0] rounded-xl p-3 my-4 border-l-[3px] border-custom-green">
                       <div className="flex items-center gap-1 text-[11px] text-gray-400 mb-1">
                         <MessageCircle size={12} /> Melding fra søker
                       </div>
@@ -521,7 +548,7 @@ const ApplicantsPage: React.FC = () => {
                         <div
                           className={`w-2.5 h-2.5 rounded-full mt-1 ${
                             isCurrent
-                              ? 'bg-[#1a3a1a] ring-4 ring-[#1a3a1a]/15'
+                              ? 'bg-[#122A1C] ring-4 ring-[#122A1C]/15'
                               : isDone
                                 ? 'bg-custom-green'
                                 : 'bg-gray-200'
@@ -562,8 +589,8 @@ const ApplicantsPage: React.FC = () => {
               <div className="flex items-center gap-2 text-[13px] font-medium text-gray-900 mb-4">
                 <ShieldCheck size={16} className="text-custom-green" /> SafePay beskytter deg
               </div>
-              <div className="bg-[#f0faf0] rounded-xl p-3 mb-3">
-                <p className="text-[12px] text-[#166534] leading-relaxed">
+              <div className="bg-[#EAF1E9] rounded-xl p-3 mb-3">
+                <p className="text-[12px] text-[#2E6641] leading-relaxed">
                   <strong className="block mb-1 text-[13px]">Slik fungerer det</strong>
                   Pengene holdes trygt til du godkjenner jobben. Ingen betaling før du er fornøyd.
                 </p>
