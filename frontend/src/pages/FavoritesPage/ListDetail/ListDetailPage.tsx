@@ -267,7 +267,7 @@ export const ListDetailPage: React.FC = () => {
         </div>
 
         {/* List Items Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-5 md:grid-cols-3 lg:grid-cols-4">
           {sortedServices?.map((job) => (
             <JobCard key={job._id} job={job} />
           ))}

@@ -8,6 +8,7 @@ import { useDashboardStats } from '../../features/explore/hooks';
 import { useTopUsers } from '../../features/profile/hooks';
 import { useUserStore } from '../../stores/userStore';
 import { JobCard } from '../../components/component/jobCard/JobCard';
+import { JobCardSkeleton } from '../../components/Loading/JobCardSkeleton';
 import { SERVICE_SHOWCASE } from '../../assets/images/categories';
 import {
   CARD,
@@ -448,21 +449,14 @@ export default function JobListingPage() {
             onAction={() => navigate('/search/job/all')}
           />
 
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Two columns from the narrowest phone up — the cards carry no panel, so a
+              pair fits side by side without either feeling squeezed, and a thumb sees
+              four listings per screen instead of two. */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-5 lg:grid-cols-4">
             {jobsLoading ? (
-              Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className={`${CARD} p-4`}>
-                  <div className="jb-skeleton h-45 rounded-2xl" />
-                  <div className="mt-5 space-y-2.5 px-1">
-                    <div className="jb-skeleton h-5 w-3/4 rounded" />
-                    <div className="jb-skeleton h-3.5 w-1/2 rounded" />
-                  </div>
-                </div>
-              ))
+              Array.from({ length: 8 }).map((_, index) => <JobCardSkeleton key={index} />)
             ) : jobs.length > 0 ? (
-              jobs
-                .slice(0, 6)
-                .map((job: any) => <JobCard key={job._id} job={job} showDescription />)
+              jobs.slice(0, 8).map((job: any) => <JobCard key={job._id} job={job} />)
             ) : (
               // Previously `null` for both failure and genuinely-empty, so a failed fetch
               // on the main browse page looked identical to "there are no jobs".

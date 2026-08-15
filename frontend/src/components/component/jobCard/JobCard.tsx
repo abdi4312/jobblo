@@ -1,14 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
-import { Bookmark, CheckCircle2, MapPin, Pencil, ShieldCheck, Trash2, Zap } from 'lucide-react';
+import { Bookmark, MapPin, Pencil, ShieldCheck, Trash2, Zap } from 'lucide-react';
 import type { Jobs } from '../../../types/Jobs.ts';
 import { useUserStore } from '../../../stores/userStore.ts';
 import AddToListModal from '../../Explore/jobs/AddToListModal';
 import { useFavoriteLists } from '../../../features/favoriteLists/hooks';
 import { useServiceActions } from '../../../features/services/hooks';
 import { jobImage } from '../../../assets/images/categories';
-import { dateFormatter } from '../../../utils/dateFormatter';
-import { CARD_INTERACTIVE } from '../../../theme/brand';
 
 /**
  * The job card — one implementation, used everywhere a job is listed.
@@ -20,6 +18,11 @@ import { CARD_INTERACTIVE } from '../../../theme/brand';
  * "Sponset" badge. The palette is now `theme/brand.ts` and nothing else, so a job looks
  * the same on the landing page, the home feed, search, a profile grid and a saved list.
  *
+ * The card carries no surface of its own — no panel, no border, no padding. The photo is
+ * the card, and the two lines under it sit directly on the page. Marketplace grids read
+ * as one continuous wall of work that way instead of a field of floating boxes, and on a
+ * phone it is what lets two columns fit without either one feeling cramped.
+ *
  * Only the *presentation* was consolidated. Everything this card already did — saving to
  * a list, the owner's edit and delete actions, promoted/urgent/closed states — is intact.
  */
@@ -30,7 +33,12 @@ interface JobCardProps {
   showDescription?: boolean;
 }
 
-const BADGE = 'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-[0.75rem] font-semibold';
+const BADGE =
+  'inline-flex h-6.5 items-center gap-1 rounded-full px-2.5 text-[0.6875rem] font-semibold';
+
+/** Round action on the photo — same geometry for save, edit and delete. */
+const PHOTO_ACTION =
+  'flex size-8 items-center justify-center rounded-full bg-white/95 shadow-sm backdrop-blur-sm transition hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 active:scale-95';
 
 export const JobCard = ({ job, isOwner, showDescription = false }: JobCardProps) => {
   const navigate = useNavigate();
@@ -78,6 +86,8 @@ export const JobCard = ({ job, isOwner, showDescription = false }: JobCardProps)
 
   const price =
     typeof job?.price === 'number' ? job.price.toLocaleString('nb-NO') : job?.price || '0';
+  const place = job?.location?.city || job?.location?.address || 'Norge';
+  const isClosed = job.status === 'closed';
 
   return (
     // The card holds its own buttons (save, edit, delete), so it cannot itself be a
@@ -94,30 +104,39 @@ export const JobCard = ({ job, isOwner, showDescription = false }: JobCardProps)
         }
       }}
       aria-label={job?.title || 'Uten tittel'}
-      className={`${CARD_INTERACTIVE} group flex cursor-pointer flex-col gap-4 p-4 pb-5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15`}
+      className="group flex cursor-pointer flex-col focus-visible:outline-none"
     >
-      <div className="relative h-45 overflow-hidden rounded-2xl bg-[#EAF1E9]">
+      {/* One ratio at every breakpoint, so a row of cards has one baseline and the grid
+          never goes ragged when a photo arrives in an unexpected shape. */}
+      <div className="relative aspect-4/5 overflow-hidden rounded-2xl bg-[#EAF1E9] transition-[border-radius] duration-200 group-focus-visible:ring-4 group-focus-visible:ring-[#2E6641]/25">
         <img
           src={jobImage(job)}
           alt=""
           loading="lazy"
           decoding="async"
-          className="size-full object-cover"
+          className={`size-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100 ${
+            isClosed ? 'opacity-55' : ''
+          }`}
         />
 
-        {/* Promoted / urgent, top left. Both use the brand's own greens rather than the
-            amber and coral they used to, which appeared nowhere else. */}
-        <div className="absolute left-3 top-3 z-10 flex flex-col items-start gap-1.5">
+        {/* Promoted / urgent, bottom left over the photo. Both use the brand's own greens
+            rather than the amber and coral they used to, which appeared nowhere else. */}
+        <div className="absolute bottom-2.5 left-2.5 z-10 flex flex-wrap items-center gap-1.5">
           {job.promoted && (
             <span className={`${BADGE} bg-white/95 text-[#63665F] shadow-sm backdrop-blur-sm`}>
-              <Zap size={12} strokeWidth={2.4} />
+              <Zap size={11} strokeWidth={2.4} />
               Sponset
             </span>
           )}
           {job.urgent && (
             <span className={`${BADGE} bg-[#122A1C] text-white shadow-sm`}>
-              <Zap size={12} strokeWidth={2.4} />
+              <Zap size={11} strokeWidth={2.4} />
               Haster
+            </span>
+          )}
+          {isClosed && (
+            <span className={`${BADGE} bg-white/95 text-[#63665F] shadow-sm backdrop-blur-sm`}>
+              Fullført
             </span>
           )}
         </div>
@@ -125,15 +144,15 @@ export const JobCard = ({ job, isOwner, showDescription = false }: JobCardProps)
         {/* Owner actions on hover — also shown on keyboard focus, which the
             opacity-only version hid from anyone not using a mouse. */}
         {isOwnJob ? (
-          <div className="absolute bottom-3 right-3 z-10 flex gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
+          <div className="absolute right-2.5 top-2.5 z-10 flex gap-1.5 opacity-0 transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100 max-sm:opacity-100">
             <button
               type="button"
               title="Rediger"
               aria-label="Rediger annonsen"
               onClick={handleEditClick}
-              className="flex size-9 items-center justify-center rounded-full bg-white text-[#2E6641] shadow-md transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 active:scale-95"
+              className={`${PHOTO_ACTION} text-[#2E6641]`}
             >
-              <Pencil size={16} strokeWidth={2} />
+              <Pencil size={15} strokeWidth={2} />
             </button>
             <button
               type="button"
@@ -141,12 +160,12 @@ export const JobCard = ({ job, isOwner, showDescription = false }: JobCardProps)
               aria-label="Slett annonsen"
               onClick={handleDeleteClick}
               disabled={deleteMutation.isPending}
-              className="flex size-9 items-center justify-center rounded-full bg-white text-[#0B0B0B] shadow-md transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 active:scale-95 disabled:opacity-50"
+              className={`${PHOTO_ACTION} text-[#0B0B0B] disabled:opacity-50`}
             >
               {deleteMutation.isPending ? (
-                <span className="size-4 animate-spin rounded-full border-[1.5px] border-[#E6E7E1] border-t-[#0B0B0B]" />
+                <span className="size-3.5 animate-spin rounded-full border-[1.5px] border-[#E6E7E1] border-t-[#0B0B0B]" />
               ) : (
-                <Trash2 size={16} strokeWidth={2} />
+                <Trash2 size={15} strokeWidth={2} />
               )}
             </button>
           </div>
@@ -155,12 +174,14 @@ export const JobCard = ({ job, isOwner, showDescription = false }: JobCardProps)
             type="button"
             aria-label={isInAnyList ? 'Endre lagring' : 'Lagre oppdraget'}
             onClick={handleFavClick}
-            className="absolute bottom-3 right-3 z-10 flex size-9 items-center justify-center rounded-full bg-white/90 text-[#0B0B0B] shadow-sm backdrop-blur-sm transition-opacity duration-200 hover:bg-white focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 group-hover:opacity-100 sm:opacity-0"
+            className={`${PHOTO_ACTION} absolute right-2.5 top-2.5 z-10 ${
+              isInAnyList ? 'text-[#2E6641]' : 'text-[#0B0B0B]'
+            }`}
           >
             {listsLoading ? (
               <span className="size-3.5 animate-spin rounded-full border-[1.5px] border-[#E6E7E1] border-t-[#2E6641]" />
             ) : (
-              <Bookmark size={16} strokeWidth={2} className={isInAnyList ? 'fill-current' : ''} />
+              <Bookmark size={15} strokeWidth={2} className={isInAnyList ? 'fill-current' : ''} />
             )}
           </button>
         )}
@@ -168,46 +189,35 @@ export const JobCard = ({ job, isOwner, showDescription = false }: JobCardProps)
 
       <AddToListModal job={job} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
 
-      <div className="flex items-center justify-between gap-3 px-1">
-        <span className={`${BADGE} bg-[#EAF1E9] text-[#2E6641]`}>
-          <ShieldCheck size={12} strokeWidth={2.4} />
-          SafePay
-        </span>
-        {job.createdAt && (
-          <span className="truncate text-[0.75rem] text-[#9B9E96]">
-            {dateFormatter.toRelative(job.createdAt)}
-          </span>
-        )}
-      </div>
-
-      <h3 className="line-clamp-2 px-1 text-[1.125rem] font-semibold leading-tight tracking-[-0.03em] text-[#0B0B0B]">
+      <h3 className="mt-3 line-clamp-2 text-[0.9375rem] font-semibold leading-snug tracking-[-0.02em] text-[#0B0B0B]">
         {job?.title || 'Uten tittel'}
       </h3>
 
       {showDescription && job.description && (
-        <p className="line-clamp-2 px-1 text-[0.875rem] leading-relaxed text-[#63665F]">
+        <p className="mt-1 line-clamp-2 text-[0.8125rem] leading-relaxed text-[#63665F]">
           {job.description}
         </p>
       )}
 
-      {job.status === 'closed' && (
-        <span className={`${BADGE} mx-1 w-fit bg-[#F4F6F0] text-[#63665F]`}>
-          <CheckCircle2 size={12} strokeWidth={2.4} />
-          Fullført
+      {/* Price · place · SafePay, on one line the way a marketplace listing reads. The
+          separators are decorative, so they are hidden from screen readers. */}
+      <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[0.8125rem] leading-5 text-[#63665F]">
+        <span className="font-semibold text-[#0B0B0B] tabular-nums">{price} kr</span>
+        <span aria-hidden="true" className="text-[#9B9E96]">
+          ·
         </span>
-      )}
-
-      <div className="mx-1 mt-auto flex items-center justify-between gap-3 border-t border-[#E6E7E1] pt-4">
-        <span className="flex min-w-0 items-center gap-1.5 text-[0.8125rem] text-[#63665F]">
-          <MapPin size={14} strokeWidth={1.9} className="shrink-0 text-[#9B9E96]" />
-          <span className="truncate">
-            {job?.location?.city || job?.location?.address || 'Norge'}
-          </span>
+        <span className="inline-flex min-w-0 items-center gap-1">
+          <MapPin size={12} strokeWidth={2} className="shrink-0 text-[#9B9E96]" />
+          <span className="truncate">{place}</span>
         </span>
-        <span className="shrink-0 text-[1.0625rem] font-bold tabular-nums tracking-[-0.02em] text-[#0B0B0B]">
-          {price} kr
+        <span aria-hidden="true" className="text-[#9B9E96]">
+          ·
         </span>
-      </div>
+        <span className="inline-flex items-center gap-1 font-medium text-[#2E6641]">
+          <ShieldCheck size={12} strokeWidth={2.2} />
+          SafePay
+        </span>
+      </p>
     </article>
   );
 };
