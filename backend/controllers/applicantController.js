@@ -180,13 +180,19 @@ exports.getMyServicesWithApplicants = async (req, res) => {
           .populate('customerId', 'avatarUrl name lastName')
           .sort({ createdAt: -1 });
 
-        // Find active order to get selected worker
+        // Find active order to get selected worker.
+        //
+        // `providerId`, not `customerId`. On an Order the two mean the opposite of what
+        // they mean on a JobRequest: here `customerId` is the person who pays — the job
+        // owner, i.e. whoever is looking at this page — and `providerId` is the worker
+        // they picked. Populating `customerId` made "Valgt utfører" show the viewer their
+        // own name on every awarded job.
         const activeOrder = await Order.findOne({
           serviceId: service._id,
           status: {
-            $in: ['awaiting_payment', 'paid', 'in_progress', 'completed'],
+            $in: ['awaiting_payment', 'paid', 'in_progress', 'ready_for_review', 'completed'],
           },
-        }).populate('customerId', 'name lastName avatarUrl');
+        }).populate('providerId', 'name lastName avatarUrl');
 
         // Last activity: use latest between service updatedAt, last request createdAt, last order updatedAt
         let lastActivity = service.updatedAt;
@@ -214,11 +220,21 @@ exports.getMyServicesWithApplicants = async (req, res) => {
           categories: service.categories,
           fromDate: service.fromDate,
           toDate: service.toDate,
-          selectedWorker: activeOrder?.customerId
+          selectedWorker: activeOrder?.providerId
             ? {
-                _id: activeOrder.customerId._id,
-                name: `${activeOrder.customerId.name} ${activeOrder.customerId.lastName || ''}`.trim(),
-                avatarUrl: activeOrder.customerId.avatarUrl,
+                _id: activeOrder.providerId._id,
+                name: `${activeOrder.providerId.name} ${activeOrder.providerId.lastName || ''}`.trim(),
+                avatarUrl: activeOrder.providerId.avatarUrl,
+              }
+            : null,
+          // The order's own state, so the list can say "betalt" or "venter på godkjenning"
+          // rather than only ever "utfører valgt".
+          order: activeOrder
+            ? {
+                _id: activeOrder._id,
+                status: activeOrder.status,
+                paymentStatus: activeOrder.paymentStatus,
+                agreedPrice: activeOrder.agreedPrice,
               }
             : null,
         };

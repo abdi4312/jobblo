@@ -16,7 +16,7 @@ const FAQ_ITEMS: FAQ[] = [
   { id: 3, question: 'Er det trygt å betale gjennom Jobblo?', answer: 'Ja. Betalinger håndteres via SafePay og Stripe. Pengene holdes i escrow til jobben er godkjent — du betaler aldri for noe du ikke er fornøyd med.', search: 'betaling trygt sikker safepay stripe' },
   { id: 4, question: 'Hvordan fungerer vurderingssystemet?', answer: 'Etter et fullført oppdrag kan begge parter legge igjen en vurdering. Dette bidrar til trygghet og bedre valg for hele Jobblo-fellesskapet.', search: 'anmeldelser vurderinger review' },
   { id: 5, question: 'Hva koster det å bruke Jobblo?', answer: 'Det er gratis å komme i gang. Du kan oppgradere til et medlemskap for flere kontakter, bedre synlighet og ekstra funksjoner.', search: 'pris koste medlemskap planer' },
-  { id: 6, question: 'Hvordan sier jeg opp abonnementet?', answer: 'Gå til Innstillinger → Abonnementer, og velg «Si opp». Tilgangen varer ut inneværende periode.', search: 'si opp abonnement kansellere' },
+  { id: 6, question: 'Hvordan sier jeg opp abonnementet?', answer: 'Gå til Jobblo medlemskap og velg «Si opp abonnementet». Tilgangen varer ut perioden du allerede har betalt for, og du blir ikke belastet igjen.', search: 'si opp abonnement kansellere' },
 ];
 
 type FormState = { subject: string; message: string; email: string };

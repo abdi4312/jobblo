@@ -1,82 +1,222 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ChevronRight, Users, Search, Briefcase, ClipboardList,
-  MessageCircle, FileText, Eye, ArrowRight, X, Loader2,
-  CheckCircle2, Clock, AlertTriangle, Play, TrendingUp,
+  ChevronRight,
+  Users,
+  Search,
+  ClipboardList,
+  MessageCircle,
+  FileText,
+  Eye,
+  ArrowRight,
+  X,
+  AlertCircle,
+  CheckCircle2,
+  Play,
+  MapPin,
+  Briefcase,
 } from 'lucide-react';
 import {
   useMyApplicantsOverviewQuery,
   useMyApplicationsOverviewQuery,
   useWithdrawApplicationMutation,
 } from '../../features/applicants/hooks';
-import EmptyState from '../../components/Ui/EmptyState';
 import { ContractViewModal } from '../../components/SafePay/ContractViewModal';
 import { toast } from 'react-hot-toast';
+import { CARD, CARD_INTERACTIVE, MICRO_LABEL, PILL_PRIMARY } from '../../theme/brand';
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
-const SERVICE_STATUS: Record<string, { label: string; cls: string }> = {
-  in_progress: { label: 'I gang', cls: 'bg-blue-100 text-blue-700' },
-  open: { label: 'Aktiv', cls: 'bg-green-100 text-green-700' },
-  completed: { label: 'Fullført', cls: 'bg-gray-100 text-gray-600' },
-  awaiting_payment: { label: 'Venter på betaling', cls: 'bg-amber-100 text-amber-700' },
-  waiting_for_approval: { label: 'Venter godkjenning', cls: 'bg-purple-100 text-purple-700' },
-  cancelled: { label: 'Kansellert', cls: 'bg-red-100 text-red-600' },
-  closed: { label: 'Lukket', cls: 'bg-gray-100 text-gray-500' },
+/**
+ * Søkeroversikt — both sides of an application in one place.
+ *
+ * Tab one is the job owner's: their own postings, how many people applied, who they picked.
+ * Tab two is the worker's: everything they applied to and what it is waiting on.
+ *
+ * The page used to run on a palette of its own — amber, blue, indigo, purple, red and
+ * green badges, eleven background tints across three components — so a status meant
+ * nothing until you read it. There are four tones now, and they mean the same thing on
+ * every card: quiet grey is "nothing to do", green is "moving", the dark pill is "you are
+ * the one holding this up", and a hairline outline is "closed". Everything else is ink on
+ * paper.
+ */
+
+// ── Status vocabulary ──────────────────────────────────────────────────────────
+type Tone = 'quiet' | 'moving' | 'action' | 'closed';
+
+const TONE: Record<Tone, string> = {
+  quiet: 'bg-[#F4F6F0] text-[#63665F]',
+  moving: 'bg-[#EAF1E9] text-[#2E6641]',
+  action: 'bg-[#122A1C] text-white',
+  closed: 'border border-[#E6E7E1] bg-white text-[#9B9E96]',
 };
 
-const ORDER_STATUS: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
-  awaiting_payment: { label: 'Venter på betaling', cls: 'bg-amber-50 border-amber-200 text-amber-700', icon: <Clock size={12} /> },
-  paid: { label: 'Betalt – start nå', cls: 'bg-blue-50 border-blue-200 text-blue-700', icon: <Play size={12} /> },
-  in_progress: { label: 'Jobb pågår', cls: 'bg-indigo-50 border-indigo-200 text-indigo-700', icon: <TrendingUp size={12} /> },
-  ready_for_review: { label: 'Venter på godkjenning', cls: 'bg-purple-50 border-purple-200 text-purple-700', icon: <CheckCircle2 size={12} /> },
-  completed: { label: 'Fullført', cls: 'bg-green-50 border-green-200 text-green-700', icon: <CheckCircle2 size={12} /> },
-  disputed: { label: 'Tvist', cls: 'bg-red-50 border-red-200 text-red-600', icon: <AlertTriangle size={12} /> },
+const BADGE =
+  'inline-flex h-6.5 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[0.6875rem] font-semibold';
+
+const Badge = ({ tone, children }: { tone: Tone; children: React.ReactNode }) => (
+  <span className={`${BADGE} ${TONE[tone]}`}>{children}</span>
+);
+
+const SERVICE_STATUS: Record<string, { label: string; tone: Tone }> = {
+  open: { label: 'Aktiv', tone: 'moving' },
+  in_progress: { label: 'I gang', tone: 'moving' },
+  awaiting_payment: { label: 'Venter på betaling', tone: 'action' },
+  waiting_for_approval: { label: 'Venter godkjenning', tone: 'action' },
+  completed: { label: 'Fullført', tone: 'closed' },
+  cancelled: { label: 'Kansellert', tone: 'closed' },
+  closed: { label: 'Lukket', tone: 'closed' },
 };
 
-const APP_STATUS: Record<string, { label: string; cls: string }> = {
-  pending: { label: 'Venter', cls: 'bg-amber-100 text-amber-700' },
-  accepted: { label: 'Valgt', cls: 'bg-blue-100 text-blue-700' },
-  declined: { label: 'Avslått', cls: 'bg-red-100 text-red-600' },
+/**
+ * Order states, read from the *worker's* seat — which is whose screen this is on tab two.
+ * "Venter på betaling" is the customer's move, so it is quiet here; "Betalt" is the
+ * worker's move, so it is the dark pill.
+ */
+const ORDER_STATUS: Record<string, { label: string; tone: Tone }> = {
+  awaiting_payment: { label: 'Venter på betaling', tone: 'quiet' },
+  paid: { label: 'Klar til å starte', tone: 'action' },
+  in_progress: { label: 'Under arbeid', tone: 'moving' },
+  ready_for_review: { label: 'Til godkjenning', tone: 'quiet' },
+  completed: { label: 'Fullført', tone: 'closed' },
+  disputed: { label: 'Tvist', tone: 'action' },
+  refunded: { label: 'Refundert', tone: 'closed' },
+  cancelled: { label: 'Kansellert', tone: 'closed' },
 };
 
-// ── Flow steps for "Mine søknader" view ────────────────────────────────────────
-function FlowSteps({ app }: { app: any }) {
+const APP_STATUS: Record<string, { label: string; tone: Tone }> = {
+  pending: { label: 'Venter på svar', tone: 'quiet' },
+  accepted: { label: 'Du ble valgt', tone: 'moving' },
+  declined: { label: 'Avslått', tone: 'closed' },
+};
+
+const dateShort = (value?: string) =>
+  value ? new Date(value).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }) : '';
+
+const dateLong = (value?: string) =>
+  value
+    ? new Date(value).toLocaleDateString('nb-NO', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : '';
+
+const kr = (value?: number) =>
+  typeof value === 'number' ? `${value.toLocaleString('nb-NO')} kr` : null;
+
+// ── Small pieces ───────────────────────────────────────────────────────────────
+const Avatar = ({
+  src,
+  name,
+  size = 'sm',
+}: {
+  src?: string;
+  name?: string;
+  size?: 'sm' | 'md';
+}) => {
+  const dim = size === 'md' ? 'size-8 text-[0.75rem]' : 'size-6 text-[0.625rem]';
+  return (
+    <span
+      className={`${dim} flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9] font-semibold text-[#2E6641]`}
+    >
+      {src ? (
+        <img src={src} alt="" className="size-full object-cover" loading="lazy" />
+      ) : (
+        (name?.[0] || '?').toUpperCase()
+      )}
+    </span>
+  );
+};
+
+/**
+ * The five stages of a job, as a rail.
+ *
+ * It was five numbered circles with the label under each, which at 9 px collided on a
+ * phone. It is one line now: a filled bar for what is done, and the current stage named
+ * once beneath it.
+ */
+function FlowRail({ app }: { app: any }) {
   const steps = [
     { key: 'applied', label: 'Søkt', done: true },
     { key: 'selected', label: 'Valgt', done: app.status === 'accepted' || !!app.order },
     { key: 'paid', label: 'Betalt', done: app.order?.paymentStatus === 'paid' },
-    { key: 'working', label: 'Under arbeid', done: ['in_progress', 'ready_for_review', 'completed'].includes(app.order?.status) },
+    {
+      key: 'working',
+      label: 'Under arbeid',
+      done: ['in_progress', 'ready_for_review', 'completed'].includes(app.order?.status),
+    },
     { key: 'done', label: 'Fullført', done: app.order?.status === 'completed' },
   ];
 
-  const currentIdx = steps.reduce((last, s, i) => (s.done ? i : last), 0);
+  const doneCount = steps.filter((s) => s.done).length;
+  const current = steps[Math.min(doneCount, steps.length - 1)];
 
   return (
-    <div className="flex items-center gap-0 mt-3">
-      {steps.map((step, i) => (
-        <React.Fragment key={step.key}>
-          <div className="flex flex-col items-center">
-            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold transition-all ${step.done
-              ? 'bg-custom-green border-custom-green text-white'
-              : i === currentIdx + 1
-                ? 'bg-white border-custom-green text-custom-green'
-                : 'bg-white border-gray-200 text-gray-300'
-              }`}>
-              {step.done ? '✓' : i + 1}
-            </div>
-            <span className={`text-[9px] mt-0.5 font-medium ${step.done ? 'text-custom-green' : 'text-gray-300'}`}>
-              {step.label}
-            </span>
-          </div>
-          {i < steps.length - 1 && (
-            <div className={`flex-1 h-0.5 mb-4 mx-0.5 ${step.done && steps[i + 1].done ? 'bg-custom-green' : 'bg-gray-200'}`} />
-          )}
-        </React.Fragment>
-      ))}
+    <div className="mt-4">
+      <div className="flex items-center gap-1" aria-hidden="true">
+        {steps.map((step) => (
+          <span
+            key={step.key}
+            className={`h-1 flex-1 rounded-full transition-colors ${
+              step.done ? 'bg-[#2E6641]' : 'bg-[#E6E7E1]'
+            }`}
+          />
+        ))}
+      </div>
+      <p className="mt-2 text-[0.75rem] text-[#63665F]">
+        <span className="font-semibold text-[#0B0B0B]">
+          Steg {Math.min(doneCount, steps.length)} av {steps.length}
+        </span>
+        {' · '}
+        {doneCount === steps.length ? 'Fullført' : current.label}
+      </p>
     </div>
   );
 }
+
+const RowSkeleton = () => (
+  <div className={`${CARD} flex items-center gap-4 p-5`}>
+    <div className="jb-skeleton size-11 shrink-0 rounded-xl" />
+    <div className="min-w-0 flex-1 space-y-2">
+      <div className="jb-skeleton h-3 w-24 rounded" />
+      <div className="jb-skeleton h-4 w-2/3 rounded" />
+      <div className="jb-skeleton h-3 w-1/3 rounded" />
+    </div>
+    <div className="jb-skeleton hidden h-4 w-20 rounded sm:block" />
+  </div>
+);
+
+const Notice = ({
+  icon,
+  title,
+  body,
+  actionLabel,
+  onAction,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) => (
+  <div className={`${CARD} p-12 text-center`}>
+    <span className="mx-auto mb-4 flex size-11 items-center justify-center rounded-full bg-[#EAF1E9] text-[#2E6641]">
+      {icon}
+    </span>
+    <p className="text-[1.0625rem] font-semibold text-[#0B0B0B]">{title}</p>
+    <p className="mx-auto mt-2 max-w-sm text-[0.875rem] leading-relaxed text-[#63665F]">{body}</p>
+    {actionLabel && onAction && (
+      <button onClick={onAction} className={`${PILL_PRIMARY} mt-6`}>
+        {actionLabel}
+      </button>
+    )}
+  </div>
+);
+
+const ACTION_BUTTON =
+  'inline-flex h-9 items-center gap-1.5 rounded-full border border-[#E6E7E1] bg-white px-3.5 text-[0.8125rem] font-medium text-[#0B0B0B] transition-colors hover:border-[#2E6641]/45 hover:text-[#2E6641] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15';
+
+const ACTION_PRIMARY =
+  'inline-flex h-9 items-center gap-1.5 rounded-full bg-[#2E6641] px-4 text-[0.8125rem] font-semibold text-white transition-colors hover:bg-[#255335] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 active:scale-[0.98]';
 
 // ── Main component ─────────────────────────────────────────────────────────────
 const MyApplicantsOverview: React.FC = () => {
@@ -86,7 +226,12 @@ const MyApplicantsOverview: React.FC = () => {
   const [appStatusFilter, setAppStatusFilter] = useState('');
 
   // ── Tab 1 data ───────────────────────────────────────────────────────────────
-  const { data: services, isLoading: servicesLoading } = useMyApplicantsOverviewQuery();
+  const {
+    data: services,
+    isLoading: servicesLoading,
+    isError: servicesError,
+    refetch: refetchServices,
+  } = useMyApplicantsOverviewQuery();
 
   const filteredServices = useMemo(() => {
     if (!services) return [];
@@ -104,7 +249,12 @@ const MyApplicantsOverview: React.FC = () => {
   }, [services, searchQuery]);
 
   // ── Tab 2 data ───────────────────────────────────────────────────────────────
-  const { data: appData, isLoading: appsLoading } = useMyApplicationsOverviewQuery(appStatusFilter || undefined);
+  const {
+    data: appData,
+    isLoading: appsLoading,
+    isError: appsError,
+    refetch: refetchApps,
+  } = useMyApplicationsOverviewQuery(appStatusFilter || undefined);
   const withdrawMutation = useWithdrawApplicationMutation();
 
   const applications = appData?.applications || [];
@@ -119,60 +269,124 @@ const MyApplicantsOverview: React.FC = () => {
     );
   }, [applications, searchQuery]);
 
-  const isLoading = activeTab === 'mine-sokere' ? servicesLoading : appsLoading;
+  const onOwnerTab = activeTab === 'mine-sokere';
+  const isLoading = onOwnerTab ? servicesLoading : appsLoading;
+  const isError = onOwnerTab ? servicesError : appsError;
+
+  // Waiting on the owner: postings with applicants but nobody chosen yet.
+  const needsAttention = useMemo(
+    () => (services || []).filter((s: any) => s.applicantCount > 0 && !s.selectedWorker).length,
+    [services]
+  );
+
+  const totalApplicants = useMemo(
+    () => (services || []).reduce((sum: number, s: any) => sum + (s.applicantCount || 0), 0),
+    [services]
+  );
+
+  const TABS = [
+    {
+      key: 'mine-sokere' as const,
+      label: 'Mine søkere',
+      icon: <Users size={15} strokeWidth={2} />,
+      count: services?.length,
+    },
+    {
+      key: 'mine-soknader' as const,
+      label: 'Mine søknader',
+      icon: <ClipboardList size={15} strokeWidth={2} />,
+      count: appData?.pagination?.total,
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#f5f0e8] py-8 px-4 md:px-6">
-      <div className="max-w-[1024px] mx-auto">
+    <div className="min-h-screen bg-[#EFF0EA]">
+      <div className="mx-auto w-full max-w-4xl px-4 pb-16 pt-8 sm:px-6 lg:pt-12">
+        {/* ── Header ───────────────────────────────────────────────────────── */}
+        <header className="mb-7">
+          <p className={MICRO_LABEL}>Oversikt</p>
+          <h1 className="mt-2 text-[clamp(1.75rem,4vw,2.5rem)] font-bold leading-tight tracking-[-0.04em] text-[#0B0B0B]">
+            Søkere og søknader
+          </h1>
+          <p className="mt-2 max-w-xl text-[0.9375rem] leading-relaxed text-[#63665F]">
+            Oppdragene du har lagt ut, og oppdragene du selv har søkt på — samlet på ett sted.
+          </p>
 
-        {/* Page header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Søkeroversikt</h1>
-          <p className="text-[13px] text-gray-500">Administrer dine søkere og egne søknader</p>
-        </div>
-
-        {/* ── Two tabs ─────────────────────────────────────────────────────────── */}
-        <div className="flex bg-white border border-black/5 rounded-xl p-1 w-fit mb-6 shadow-sm">
-          {[
-            { key: 'mine-sokere', label: 'Mine søkere', icon: <Users size={15} />, count: services?.length },
-            { key: 'mine-soknader', label: 'Mine søknader', icon: <ClipboardList size={15} />, count: appData?.pagination?.total },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key as typeof activeTab)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all ${activeTab === tab.key
-                ? 'bg-custom-green text-white shadow-sm'
-                : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-                }`}
-            >
-              {tab.icon}
-              {tab.label}
-              {tab.count !== undefined && tab.count > 0 && (
-                <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
-                  }`}>
-                  {tab.count}
+          {/* One line of numbers, only when there is something to count. */}
+          {!servicesLoading && !servicesError && (services?.length || 0) > 0 && (
+            <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.875rem]">
+              <span className="text-[#63665F]">
+                <span className="font-semibold tabular-nums text-[#0B0B0B]">{totalApplicants}</span>{' '}
+                søkere totalt
+              </span>
+              {needsAttention > 0 && (
+                <span className="inline-flex items-center gap-1.5 font-semibold text-[#2E6641]">
+                  <span className="size-1.5 rounded-full bg-[#2E6641]" />
+                  {needsAttention} venter på at du velger utfører
                 </span>
               )}
-            </button>
-          ))}
+            </div>
+          )}
+        </header>
+
+        {/* ── Tabs ─────────────────────────────────────────────────────────── */}
+        <div
+          role="tablist"
+          aria-label="Søkere og søknader"
+          className="mb-5 flex w-fit gap-1 rounded-full border border-[#E6E7E1] bg-white p-1"
+        >
+          {TABS.map((tab) => {
+            const active = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex h-10 items-center gap-2 rounded-full px-4 text-[0.875rem] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${
+                  active ? 'bg-[#2E6641] text-white' : 'text-[#63665F] hover:text-[#0B0B0B]'
+                }`}
+              >
+                {tab.icon}
+                <span className="hidden min-[420px]:inline">{tab.label}</span>
+                {tab.count !== undefined && tab.count > 0 && (
+                  <span
+                    className={`rounded-full px-1.5 text-[0.6875rem] font-bold tabular-nums ${
+                      active ? 'bg-white/20 text-white' : 'bg-[#F4F6F0] text-[#63665F]'
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        {/* ── Search + filters ─────────────────────────────────────────────────── */}
-        <div className="flex flex-wrap gap-3 mb-5">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        {/* ── Search + status filter ───────────────────────────────────────── */}
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div className="relative min-w-50 flex-1">
+            <Search
+              size={16}
+              strokeWidth={2.2}
+              aria-hidden="true"
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#9B9E96]"
+            />
             <input
-              type="text"
-              placeholder={activeTab === 'mine-sokere' ? 'Søk etter jobbnavn...' : 'Søk etter jobb eller oppdragsgiver...'}
+              type="search"
+              aria-label="Søk"
+              placeholder={
+                onOwnerTab ? 'Søk i dine oppdrag' : 'Søk etter oppdrag eller oppdragsgiver'
+              }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-custom-green/30"
+              className="h-11 w-full rounded-full border border-[#E6E7E1] bg-white pl-11 pr-4 text-[0.9375rem] text-[#0B0B0B] outline-none transition-colors placeholder:text-[#9B9E96] focus:border-[#2E6641]/45 focus:ring-4 focus:ring-[#2E6641]/10 [&::-webkit-search-cancel-button]:appearance-none"
             />
           </div>
 
           {/* Status filter — only for Mine søknader tab */}
-          {activeTab === 'mine-soknader' && (
-            <div className="flex gap-2 flex-wrap">
+          {!onOwnerTab && (
+            <div className="flex flex-wrap gap-1.5">
               {[
                 { value: '', label: 'Alle' },
                 { value: 'pending', label: 'Venter' },
@@ -182,10 +396,11 @@ const MyApplicantsOverview: React.FC = () => {
                 <button
                   key={f.value}
                   onClick={() => setAppStatusFilter(f.value)}
-                  className={`text-[12px] font-medium px-3.5 py-2 rounded-full border transition-all ${appStatusFilter === f.value
-                    ? 'bg-custom-green text-white border-custom-green'
-                    : 'bg-white border-gray-200 text-gray-600 hover:border-custom-green/40'
-                    }`}
+                  className={`h-9 rounded-full border px-3.5 text-[0.8125rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${
+                    appStatusFilter === f.value
+                      ? 'border-[#2E6641] bg-[#2E6641] text-white'
+                      : 'border-[#E6E7E1] bg-white text-[#63665F] hover:border-[#2E6641]/45 hover:text-[#2E6641]'
+                  }`}
                 >
                   {f.label}
                 </button>
@@ -194,294 +409,349 @@ const MyApplicantsOverview: React.FC = () => {
           )}
         </div>
 
-        {/* ── Loading ──────────────────────────────────────────────────────────── */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 size={28} className="animate-spin text-custom-green" />
+        {/* ── States ───────────────────────────────────────────────────────── */}
+        {isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <RowSkeleton key={i} />
+            ))}
           </div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════════════ */}
-        {/* TAB 1 — Mine søkere (job owner view)                                  */}
-        {/* ══════════════════════════════════════════════════════════════════════ */}
-        {!isLoading && activeTab === 'mine-sokere' && (
+        ) : isError ? (
+          // Previously a failed request rendered the same empty state as "you have
+          // nothing" — so an outage read as an empty account.
+          <Notice
+            icon={<AlertCircle size={20} strokeWidth={2} />}
+            title="Kunne ikke laste"
+            body="Vi fikk ikke kontakt med serveren. Sjekk internettforbindelsen din og prøv igjen."
+            actionLabel="Prøv igjen"
+            onAction={() => (onOwnerTab ? refetchServices() : refetchApps())}
+          />
+        ) : onOwnerTab ? (
+          /* ══ TAB 1 — Mine søkere (job owner) ═══════════════════════════════ */
           <div className="space-y-3">
             {filteredServices.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-black/5">
-                <EmptyState type="applicants" title="Ingen oppdrag" description="Du har ingen oppdrag med søkere ennå." />
-              </div>
+              <Notice
+                icon={<Users size={20} strokeWidth={2} />}
+                title={searchQuery ? 'Ingen treff' : 'Ingen søkere ennå'}
+                body={
+                  searchQuery
+                    ? 'Prøv et annet søkeord.'
+                    : 'Når noen søker på et av oppdragene dine, dukker det opp her.'
+                }
+                actionLabel={searchQuery ? undefined : 'Legg ut et oppdrag'}
+                onAction={searchQuery ? undefined : () => navigate('/Publish-job')}
+              />
             ) : (
               filteredServices.map((service: any) => {
-                const statusInfo = SERVICE_STATUS[service.status] || { label: service.status, cls: 'bg-gray-100 text-gray-600' };
+                const status = SERVICE_STATUS[service.status] || {
+                  label: service.status,
+                  tone: 'quiet' as Tone,
+                };
+                const awaitingChoice = service.applicantCount > 0 && !service.selectedWorker;
+
                 return (
-                  <div
+                  <article
                     key={service._id}
+                    role="link"
+                    tabIndex={0}
                     onClick={() => navigate(`/job-applicants/${service._id}`)}
-                    className="bg-white rounded-2xl p-4 md:p-5 cursor-pointer hover:shadow-md transition-all border border-black/5 group"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        navigate(`/job-applicants/${service._id}`);
+                      }
+                    }}
+                    className={`${CARD_INTERACTIVE} group cursor-pointer p-5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15`}
                   >
-                    <div className="flex items-center justify-between gap-4">
-                      {/* Left */}
-                      <div className="flex items-center gap-4 flex-1 min-w-0">
-                        {/* Icon */}
-                        <div className="w-11 h-11 rounded-xl bg-[#f0faf0] border border-[#c6f0d8] flex items-center justify-center shrink-0">
-                          <Briefcase size={18} className="text-custom-green" />
+                    <div className="flex items-start gap-4">
+                      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#EAF1E9] text-[#2E6641]">
+                        <Briefcase size={18} strokeWidth={2} />
+                      </span>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                          <Badge tone={status.tone}>{status.label}</Badge>
+                          {awaitingChoice && <Badge tone="action">Velg utfører</Badge>}
                         </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${statusInfo.cls}`}>
-                              {statusInfo.label}
-                            </span>
-                            {service.selectedWorker && (
-                              <span className="text-[10px] font-medium text-custom-green bg-[#f0faf0] border border-[#c6f0d8] px-2 py-0.5 rounded-full">
-                                ✓ Utfører valgt
+
+                        <h3 className="line-clamp-1 text-[1rem] font-semibold tracking-[-0.02em] text-[#0B0B0B]">
+                          {service.title}
+                        </h3>
+
+                        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.8125rem] text-[#63665F]">
+                          <span>{dateLong(service.createdAt)}</span>
+                          {service.location?.city && (
+                            <>
+                              <span aria-hidden="true" className="text-[#9B9E96]">
+                                ·
                               </span>
-                            )}
-                          </div>
-                          <h3 className="text-[15px] font-semibold text-gray-900 line-clamp-1">{service.title}</h3>
-                          <p className="text-[12px] text-gray-400 mt-0.5">
-                            {new Date(service.createdAt).toLocaleDateString('no-NO', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            {service.location?.city ? ` · ${service.location.city}` : ''}
-                          </p>
-                        </div>
+                              <span className="inline-flex items-center gap-1">
+                                <MapPin size={12} strokeWidth={2} className="text-[#9B9E96]" />
+                                {service.location.city}
+                              </span>
+                            </>
+                          )}
+                          {kr(service.price) && (
+                            <>
+                              <span aria-hidden="true" className="text-[#9B9E96]">
+                                ·
+                              </span>
+                              <span className="font-semibold tabular-nums text-[#0B0B0B]">
+                                {kr(service.price)}
+                              </span>
+                            </>
+                          )}
+                        </p>
                       </div>
 
-                      {/* Right */}
-                      <div className="flex items-center gap-5 shrink-0">
-                        {/* Applicant avatars + count */}
-                        <div className="flex flex-col items-end">
-                          <div className="flex -space-x-2 mb-1">
+                      <div className="flex shrink-0 items-center gap-3">
+                        <div className="text-right">
+                          <div className="mb-1 flex justify-end -space-x-1.5">
                             {service.applicantAvatars?.slice(0, 3).map((avatar: string, i: number) => (
-                              <img key={i} src={avatar} alt="" className="w-7 h-7 rounded-full border-2 border-white object-cover" />
+                              <img
+                                key={i}
+                                src={avatar}
+                                alt=""
+                                loading="lazy"
+                                className="size-6 rounded-full border-2 border-white object-cover"
+                              />
                             ))}
-                            {service.applicantCount > 0 && !service.applicantAvatars?.length && (
-                              <div className="w-7 h-7 rounded-full border-2 border-white bg-custom-green flex items-center justify-center">
-                                <Users size={12} className="text-white" />
-                              </div>
-                            )}
                           </div>
-                          <span className="text-[12px] font-bold text-gray-700">
-                            {service.applicantCount} <span className="text-gray-400 font-normal">søkere</span>
+                          <span className="whitespace-nowrap text-[0.75rem] text-[#63665F]">
+                            <span className="font-semibold tabular-nums text-[#0B0B0B]">
+                              {service.applicantCount}
+                            </span>{' '}
+                            {service.applicantCount === 1 ? 'søker' : 'søkere'}
                           </span>
                         </div>
-
-                        {/* Price */}
-                        <div className="text-right hidden sm:block">
-                          <p className="text-[15px] font-bold text-gray-900">{service.price?.toLocaleString('no-NO')} kr</p>
-                        </div>
-
-                        <ChevronRight size={20} className="text-gray-300 group-hover:text-custom-green transition-colors" />
+                        <ChevronRight
+                          size={18}
+                          className="text-[#9B9E96] transition-colors group-hover:text-[#2E6641]"
+                        />
                       </div>
                     </div>
 
-                    {/* Selected worker row */}
                     {service.selectedWorker && (
-                      <div className="mt-3 pt-3 border-t border-black/5 flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-[#c8d8c8] overflow-hidden">
-                          {service.selectedWorker.avatarUrl
-                            ? <img src={service.selectedWorker.avatarUrl} alt="" className="w-full h-full object-cover" />
-                            : <span className="w-full h-full flex items-center justify-center text-[10px] font-bold text-[#1a3a1a]">{service.selectedWorker.name?.[0]}</span>
-                          }
-                        </div>
-                        <p className="text-[12px] text-gray-500">
-                          Valgt utfører: <span className="font-semibold text-gray-700">{service.selectedWorker.name}</span>
+                      <div className="mt-4 flex items-center gap-2 border-t border-[#E6E7E1] pt-3.5">
+                        <Avatar
+                          src={service.selectedWorker.avatarUrl}
+                          name={service.selectedWorker.name}
+                        />
+                        <p className="text-[0.8125rem] text-[#63665F]">
+                          Valgt utfører:{' '}
+                          <span className="font-semibold text-[#0B0B0B]">
+                            {service.selectedWorker.name}
+                          </span>
                         </p>
                       </div>
                     )}
-                  </div>
+                  </article>
                 );
               })
             )}
           </div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════════════ */}
-        {/* TAB 2 — Mine søknader (provider/applicant view)                       */}
-        {/* ══════════════════════════════════════════════════════════════════════ */}
-        {!isLoading && activeTab === 'mine-soknader' && (
+        ) : (
+          /* ══ TAB 2 — Mine søknader (applicant) ═════════════════════════════ */
           <div className="space-y-3">
             {filteredApps.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-black/5">
-                <EmptyState type="applications" title="Ingen søknader" description="Du har ikke søkt på noen oppdrag ennå." onActionClick={() => navigate('/home')} actionLabel="Utforsk oppdrag" />
-              </div>
+              <Notice
+                icon={<ClipboardList size={20} strokeWidth={2} />}
+                title={
+                  searchQuery || appStatusFilter ? 'Ingen treff' : 'Du har ikke søkt på noe ennå'
+                }
+                body={
+                  searchQuery || appStatusFilter
+                    ? 'Prøv et annet søkeord eller filter.'
+                    : 'Finn et oppdrag som passer deg, og send en søknad — det tar under ett minutt.'
+                }
+                actionLabel={searchQuery || appStatusFilter ? undefined : 'Utforsk oppdrag'}
+                onAction={searchQuery || appStatusFilter ? undefined : () => navigate('/home')}
+              />
             ) : (
               filteredApps.map((app: any) => {
-                const appStatus = APP_STATUS[app.status] || { label: app.status, cls: 'bg-gray-100 text-gray-600' };
+                const appStatus = APP_STATUS[app.status] || {
+                  label: app.status,
+                  tone: 'quiet' as Tone,
+                };
                 const orderStatus = app.order?.status ? ORDER_STATUS[app.order.status] : null;
+                const orderId = app.order?._id;
                 const canStart = app.order?.status === 'paid';
                 const inProgress = app.order?.status === 'in_progress';
                 const readyReview = app.order?.status === 'ready_for_review';
+                const canWithdraw = app.status === 'pending' && !app.order;
 
                 return (
-                  <div key={app._id} className="bg-white rounded-2xl border border-black/5 overflow-hidden">
-                    {/* Card header */}
-                    <div className="p-4 md:p-5">
+                  <article key={app._id} className={`${CARD} overflow-hidden`}>
+                    <div className="p-5">
                       <div className="flex items-start gap-4">
-                        {/* Icon */}
-                        <div className="w-11 h-11 rounded-xl bg-[#1a3a1a] flex items-center justify-center shrink-0">
-                          <Briefcase size={18} className="text-[#4ade80]" />
-                        </div>
+                        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#EAF1E9] text-[#2E6641]">
+                          <Briefcase size={18} strokeWidth={2} />
+                        </span>
 
-                        <div className="flex-1 min-w-0">
-                          {/* Status badges */}
-                          <div className="flex flex-wrap gap-1.5 mb-1.5">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${appStatus.cls}`}>
-                              {appStatus.label}
-                            </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                            <Badge tone={appStatus.tone}>{appStatus.label}</Badge>
                             {orderStatus && (
-                              <span className={`flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border ${orderStatus.cls}`}>
-                                {orderStatus.icon} {orderStatus.label}
-                              </span>
+                              <Badge tone={orderStatus.tone}>{orderStatus.label}</Badge>
                             )}
                           </div>
 
-                          {/* Title */}
-                          <h3 className="text-[15px] font-semibold text-gray-900 line-clamp-1">{app.service?.title || 'Oppdrag'}</h3>
+                          <h3 className="line-clamp-1 text-[1rem] font-semibold tracking-[-0.02em] text-[#0B0B0B]">
+                            {app.service?.title || 'Oppdrag'}
+                          </h3>
 
-                          {/* Meta */}
-                          <div className="flex flex-wrap items-center gap-3 mt-1 text-[12px] text-gray-400">
-                            {app.service?.location?.city && <span>📍 {app.service.location.city}</span>}
-                            {app.service?.price && <span className="font-semibold text-custom-green">{app.service.price.toLocaleString('no-NO')} kr</span>}
-                            <span>Søkt {new Date(app.appliedAt).toLocaleDateString('no-NO', { day: 'numeric', month: 'short' })}</span>
-                          </div>
+                          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.8125rem] text-[#63665F]">
+                            <span>Søkt {dateShort(app.appliedAt)}</span>
+                            {app.service?.location?.city && (
+                              <>
+                                <span aria-hidden="true" className="text-[#9B9E96]">
+                                  ·
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <MapPin size={12} strokeWidth={2} className="text-[#9B9E96]" />
+                                  {app.service.location.city}
+                                </span>
+                              </>
+                            )}
+                          </p>
 
-                          {/* Customer info */}
                           {app.service?.customer && (
-                            <div className="flex items-center gap-2 mt-2">
-                              <div className="w-5 h-5 rounded-full bg-[#c8d8c8] overflow-hidden shrink-0">
-                                {app.service.customer.avatarUrl
-                                  ? <img src={app.service.customer.avatarUrl} alt="" className="w-full h-full object-cover" />
-                                  : <span className="w-full h-full flex items-center justify-center text-[9px] font-bold text-[#1a3a1a]">{app.service.customer.name?.[0]}</span>
-                                }
-                              </div>
-                              <span className="text-[12px] text-gray-500">
-                                Oppdragsgiver: <span className="font-medium text-gray-700">{app.service.customer.name} {app.service.customer.lastName || ''}</span>
+                            <div className="mt-2.5 flex items-center gap-2">
+                              <Avatar
+                                src={app.service.customer.avatarUrl}
+                                name={app.service.customer.name}
+                              />
+                              <span className="text-[0.8125rem] text-[#63665F]">
+                                Oppdragsgiver:{' '}
+                                <span className="font-medium text-[#0B0B0B]">
+                                  {app.service.customer.name}{' '}
+                                  {app.service.customer.lastName || ''}
+                                </span>
                               </span>
                             </div>
                           )}
                         </div>
 
-                        {/* Price (desktop) */}
-                        <div className="hidden sm:block text-right shrink-0">
-                          <p className="text-[15px] font-bold text-custom-green">{app.service?.price?.toLocaleString('no-NO')} kr</p>
-                          {app.order?.agreedPrice && app.order.agreedPrice !== app.service?.price && (
-                            <p className="text-[11px] text-gray-400">Avtalt: {app.order.agreedPrice} kr</p>
-                          )}
+                        <div className="shrink-0 text-right">
+                          <p className="text-[1rem] font-bold tabular-nums tracking-[-0.02em] text-[#0B0B0B]">
+                            {kr(app.order?.agreedPrice ?? app.service?.price) || '—'}
+                          </p>
+                          {app.order?.agreedPrice != null &&
+                            app.order.agreedPrice !== app.service?.price && (
+                              <p className="mt-0.5 text-[0.6875rem] text-[#9B9E96]">Avtalt pris</p>
+                            )}
                         </div>
                       </div>
 
-                      {/* ── Flow steps ─────────────────────────────────────────── */}
-                      <FlowSteps app={app} />
+                      <FlowRail app={app} />
 
-                      {/* ── Application message ────────────────────────────────── */}
                       {app.message && (
-                        <div className="mt-3 bg-[#f9f9f7] border-l-[3px] border-custom-green rounded-r-xl px-3 py-2">
-                          <p className="text-[11px] text-gray-400 mb-0.5">Din melding</p>
-                          <p className="text-[13px] text-gray-700 line-clamp-2">{app.message}</p>
+                        <div className="mt-4 rounded-xl border-l-2 border-[#2E6641] bg-[#F4F6F0] px-3.5 py-2.5">
+                          <p className={MICRO_LABEL}>Din melding</p>
+                          <p className="mt-1 line-clamp-2 text-[0.875rem] leading-relaxed text-[#0B0B0B]">
+                            {app.message}
+                          </p>
                         </div>
                       )}
 
-                      {/* ── Next action hint ───────────────────────────────────── */}
                       {app.nextAction && (
-                        <div className="mt-2.5 flex items-center gap-1.5 text-[12px] text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
-                          <span className="text-custom-green">→</span> {app.nextAction}
-                        </div>
+                        <p className="mt-3 flex items-center gap-2 text-[0.8125rem] text-[#63665F]">
+                          <ArrowRight size={13} strokeWidth={2.4} className="text-[#2E6641]" />
+                          {app.nextAction}
+                        </p>
                       )}
                     </div>
 
-                    {/* ── Action buttons ──────────────────────────────────────── */}
-                    <div className="px-4 md:px-5 pb-4 flex flex-wrap gap-2 border-t border-black/5 pt-3 bg-[#fafafa]">
-                      {/* View job */}
-                      <button
-                        onClick={() => navigate(`/job-listing/${app.service?._id}`)}
-                        className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-2 bg-white border border-black/10 rounded-full hover:bg-gray-50 transition-colors"
-                      >
-                        <Eye size={13} /> Vis jobb
-                      </button>
-
-                      {/* Open chat */}
-                      {app.chat?._id && (
+                    {/* ── Actions ──────────────────────────────────────────── */}
+                    <div className="flex flex-wrap items-center gap-2 border-t border-[#E6E7E1] bg-[#F4F6F0] px-5 py-3.5">
+                      {canStart && orderId && (
                         <button
-                          onClick={() => navigate(`/messages/${app.chat._id}`)}
-                          className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-2 bg-white border border-black/10 rounded-full hover:bg-gray-50 transition-colors"
+                          onClick={() => navigate(`/provider/orders/${orderId}`)}
+                          className={ACTION_PRIMARY}
                         >
-                          <MessageCircle size={13} /> Chat
+                          <Play size={13} strokeWidth={2.4} /> Start jobben
+                        </button>
+                      )}
+                      {inProgress && orderId && (
+                        <button
+                          onClick={() => navigate(`/provider/orders/${orderId}`)}
+                          className={ACTION_PRIMARY}
+                        >
+                          Fortsett arbeidet <ArrowRight size={13} strokeWidth={2.4} />
+                        </button>
+                      )}
+                      {readyReview && orderId && (
+                        <button
+                          onClick={() => navigate(`/provider/orders/${orderId}`)}
+                          className={ACTION_PRIMARY}
+                        >
+                          <CheckCircle2 size={13} strokeWidth={2.4} /> Se detaljer
                         </button>
                       )}
 
-                      {/* View contract — provider goes to work page, not checkout */}
-                      {app.order?._id && (
+                      <button
+                        onClick={() => navigate(`/job-listing/${app.service?._id}`)}
+                        className={ACTION_BUTTON}
+                      >
+                        <Eye size={13} strokeWidth={2} /> Vis oppdrag
+                      </button>
+
+                      {app.chat?._id && (
+                        <button
+                          onClick={() => navigate(`/messages/${app.chat._id}`)}
+                          className={ACTION_BUTTON}
+                        >
+                          <MessageCircle size={13} strokeWidth={2} /> Chat
+                        </button>
+                      )}
+
+                      {orderId && (
                         <>
-                          <button
-                            onClick={() => navigate(`/provider/orders/${app.order._id}`)}
-                            className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-2 bg-white border border-black/10 rounded-full hover:bg-gray-50 transition-colors"
-                          >
-                            <FileText size={13} /> Oppdrag
-                          </button>
+                          {!canStart && !inProgress && !readyReview && (
+                            <button
+                              onClick={() => navigate(`/provider/orders/${orderId}`)}
+                              className={ACTION_BUTTON}
+                            >
+                              <FileText size={13} strokeWidth={2} /> Oppdrag
+                            </button>
+                          )}
                           <ContractViewModal
-                            orderId={app.order._id}
+                            orderId={orderId}
                             trigger={
-                              <span className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-2 bg-white border border-black/10 rounded-full hover:bg-gray-50 transition-colors cursor-pointer">
-                                <FileText size={13} /> Se kontrakt
+                              <span className={`${ACTION_BUTTON} cursor-pointer`}>
+                                <FileText size={13} strokeWidth={2} /> Se kontrakt
                               </span>
                             }
                           />
                         </>
                       )}
 
-                      {/* Start job CTA */}
-                      {canStart && app.order?._id && (
+                      {canWithdraw && (
                         <button
-                          onClick={() => navigate(`/provider/orders/${app.order._id}`)}
-                          className="flex items-center gap-1.5 text-[12px] font-semibold px-4 py-2 bg-custom-green text-white rounded-full hover:bg-[#14532d] transition-colors"
-                        >
-                          <Play size={13} /> Start jobb <ArrowRight size={13} />
-                        </button>
-                      )}
-
-                      {/* Continue work */}
-                      {inProgress && app.order?._id && (
-                        <button
-                          onClick={() => navigate(`/provider/orders/${app.order._id}`)}
-                          className="flex items-center gap-1.5 text-[12px] font-semibold px-4 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors"
-                        >
-                          <TrendingUp size={13} /> Fortsett arbeid
-                        </button>
-                      )}
-
-                      {/* Ready for review */}
-                      {readyReview && app.order?._id && (
-                        <button
-                          onClick={() => navigate(`/provider/orders/${app.order._id}`)}
-                          className="flex items-center gap-1.5 text-[12px] font-semibold px-4 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors"
-                        >
-                          <CheckCircle2 size={13} /> Se detaljer
-                        </button>
-                      )}
-
-                      {/* Withdraw — only if pending and no order yet */}
-                      {app.status === 'pending' && !app.order && (
-                        <button
+                          disabled={withdrawMutation.isPending}
                           onClick={() => {
-                            if (confirm('Trekke tilbake søknaden?')) {
-                              withdrawMutation.mutate(app._id, {
-                                onSuccess: () => toast.success('Søknad trukket tilbake'),
-                                onError: (e: any) => toast.error(e.response?.data?.error || 'Feil'),
-                              });
-                            }
+                            if (!window.confirm('Vil du trekke tilbake søknaden?')) return;
+                            withdrawMutation.mutate(app._id, {
+                              onSuccess: () => toast.success('Søknaden er trukket tilbake'),
+                              onError: (e: any) =>
+                                toast.error(
+                                  e?.response?.data?.error || 'Kunne ikke trekke tilbake søknaden'
+                                ),
+                            });
                           }}
-                          className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-2 border border-red-200 text-red-500 rounded-full hover:bg-red-50 transition-colors ml-auto"
+                          className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[0.8125rem] font-medium text-[#63665F] transition-colors hover:text-[#0B0B0B] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 disabled:opacity-50"
                         >
-                          <X size={13} /> Trekk tilbake
+                          <X size={13} strokeWidth={2.4} />
+                          {withdrawMutation.isPending ? 'Trekker…' : 'Trekk tilbake'}
                         </button>
                       )}
                     </div>
-                  </div>
+                  </article>
                 );
               })
             )}
           </div>
         )}
-
       </div>
     </div>
   );
