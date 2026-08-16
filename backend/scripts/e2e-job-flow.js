@@ -172,14 +172,27 @@ async function register(role, label) {
   // on completion is constructed and signed with the real secret. Everything downstream
   // of the signature check — confirmPaidSession, the Payment record, the chat message,
   // the notifications — runs exactly as it does in production.
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  // Must sign with the same secret the running server will verify against. The server
+  // picks by STRIPE_TEST_MODE and does NOT fall back across modes, so signing with the
+  // wrong one produces a signature mismatch that reads like a code bug rather than the
+  // config problem it is.
+  //
+  // This script cannot read that flag (it does not connect to Mongo until step 12), and
+  // it only ever runs against an sk_test_ key, so it accepts either variable and says
+  // which one it used.
+  const webhookSecretVar = process.env.STRIPE_TEST_WEBHOOK_SECRET
+    ? 'STRIPE_TEST_WEBHOOK_SECRET'
+    : 'STRIPE_WEBHOOK_SECRET';
+  const webhookSecret = process.env[webhookSecretVar];
   if (!webhookSecret) {
     fail(
-      'STRIPE_WEBHOOK_SECRET is not set',
+      'Neither STRIPE_TEST_WEBHOOK_SECRET nor STRIPE_WEBHOOK_SECRET is set',
       'Without it the webhook rejects every event, so a paid order is only ever confirmed\n' +
-        '     if the buyer returns to the success page. Set it and re-run.'
+        '     if the buyer returns to the success page. Set the one matching the mode the\n' +
+        '     server is running in (STRIPE_TEST_MODE) and re-run.'
     );
   }
+  log(`signing with ${webhookSecretVar}`);
 
   const payload = JSON.stringify({
     id: `evt_e2e_${stamp}`,

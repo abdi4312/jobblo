@@ -69,13 +69,18 @@ exports.getDisputeByOrder = async (req, res) => {
     const isParticipant = String(order.customerId) === String(userId) || String(order.providerId) === String(userId);
     if (!isParticipant) return res.status(403).json({ success: false, message: 'Ikke autorisert.' });
 
-    const dispute = await Dispute.findOne({ orderId })
-      .select('-messages.isInternal') // Never expose internal notes to users
-      .lean();
+    // The projection that used to sit here (`.select('-messages.isInternal')`)
+    // stripped the very flag the filter below tests. With the field gone,
+    // `!m.isInternal` was `!undefined` — true for every message — so the filter kept
+    // ALL of them and admin-only notes were served to the people being adjudicated.
+    // Read the flag, then filter on it.
+    //
+    // Also scoped to the newest dispute: on a re-disputed order this returned
+    // whichever one Mongo found first, which could be the older resolved one.
+    const dispute = await Dispute.findOne({ orderId }).sort({ createdAt: -1 }).lean();
 
     if (!dispute) return res.status(404).json({ success: false, message: 'Ingen tvist funnet.' });
 
-    // Filter out internal messages
     if (dispute.messages) {
       dispute.messages = dispute.messages.filter((m) => !m.isInternal);
     }

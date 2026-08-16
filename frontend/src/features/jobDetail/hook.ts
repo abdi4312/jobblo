@@ -3,7 +3,6 @@ import { getJobDetail, createChat, createStripeSession, getNearbyJobs } from './
 import { fetchJobs } from '../jobsList/jobListingAPI';
 import {
   createOrder,
-  updateOrderStatus,
   getAllOrders,
   createJobRequest,
   getMyJobRequests,
@@ -67,17 +66,9 @@ export const useCreateOrderMutation = () => {
   });
 };
 
-export const useUpdateOrderStatusMutation = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ orderId, status }: { orderId: string; status: string }) =>
-      updateOrderStatus(orderId, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    },
-  });
-};
+// useUpdateOrderStatusMutation removed alongside PATCH /api/orders/:id. No component
+// used it, and the endpoint it called let either party drive an order into a terminal
+// state without settling the money. Order status changes go through the SafePay flow.
 
 export const useRecommendedJobsQuery = (
   coordinates: [number, number] | undefined,

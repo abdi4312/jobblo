@@ -72,9 +72,27 @@ exports.createContract = async (req, res) => {
       }
     }
 
-    // Bug 3: Prevent duplicate contract
-    // Check if there's ANY existing order for this service (regardless of provider)
-    const existingOrder = await Order.findOne({ serviceId });
+    // Prevent duplicate contract.
+    //
+    // This used to match ANY order for the service in ANY status, which made it a
+    // denial-of-service on every listing: POST /api/orders creates a `pending` order
+    // against someone else's service, and from then on the real owner could never
+    // create their contract — permanently, with no path that cleared it. It also
+    // meant that cancelling a contract before payment bricked the job for good.
+    //
+    // Only an order that actually holds the service should block a new one.
+    const BLOCKING_ORDER_STATUSES = [
+      'awaiting_payment',
+      'paid',
+      'in_progress',
+      'ready_for_review',
+      'disputed',
+      'completed',
+    ];
+    const existingOrder = await Order.findOne({
+      serviceId,
+      status: { $in: BLOCKING_ORDER_STATUSES },
+    });
     if (existingOrder) {
       return res.status(400).json({ error: 'Kontrakt finnes allerede' });
     }

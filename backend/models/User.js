@@ -159,7 +159,15 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    // Live-mode Stripe customer. `cus_…` ids are NOT portable between Stripe's test
+    // and live modes, so a single field meant that flipping mode handed every stored
+    // id to the wrong account and Stripe answered resource_missing on the next
+    // purchase. The test-mode id lives in its own field below; nothing needs
+    // backfilling, because existing live ids stay exactly where they were.
     stripeCustomerId: {
+      type: String,
+    },
+    stripeCustomerIdTest: {
       type: String,
     },
 

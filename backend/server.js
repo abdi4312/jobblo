@@ -147,4 +147,9 @@ server.listen(port, () => {
   console.log(`🚀  Jobblo API listening on http://localhost:${port}`);
   console.log(`Swagger-docs på http://localhost:${port}/api/docs`);
   console.log(`WebSocket server running on ws://localhost:${port}`);
+
+  // Lifecycle automation: escrow auto-release, payout retries, abandoned-order
+  // cleanup and money reconciliation. Set ENABLE_SCHEDULER=false to keep a second
+  // instance from duplicating the work (the jobs are idempotent, so it is only noise).
+  require('./services/scheduler').startScheduler();
 });

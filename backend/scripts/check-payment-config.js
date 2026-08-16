@@ -10,6 +10,7 @@
 require('dotenv').config({ path: __dirname + '/../.env' });
 
 const mongoose = require('mongoose');
+const { parseBool, STRIPE_API_VERSION } = require('../config/stripe');
 
 let problems = 0;
 const ok = (m) => console.log(`  ok    ${m}`);
@@ -28,8 +29,13 @@ const note = (m) => console.log(`        ${m}`);
   try {
     await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 15000 });
     const cfg = await require('../models/GlobalConfig').findOne({ key: 'STRIPE_TEST_MODE' });
-    testMode = cfg ? Boolean(cfg.value) : false;
+    // Must use the SAME parser as config/stripe.js. Boolean('false') is true, so a
+    // mismatch here would green-light a config that behaves differently at runtime.
+    testMode = cfg ? parseBool(cfg.value) : false;
     ok(`STRIPE_TEST_MODE = ${testMode}${cfg ? '' : '  (no row — defaults to production)'}`);
+    if (cfg && typeof cfg.value === 'string') {
+      note(`stored as the string "${cfg.value}" — parsed as ${testMode}`);
+    }
   } catch (err) {
     bad(`could not read STRIPE_TEST_MODE from Mongo: ${err.message}`);
   }
@@ -49,7 +55,7 @@ const note = (m) => console.log(`        ${m}`);
       note('production mode is using a TEST key — real payments will not be taken');
     }
     try {
-      const stripe = require('stripe')(key);
+      const stripe = require('stripe')(key, { apiVersion: STRIPE_API_VERSION });
       const balance = await stripe.balance.retrieve();
       ok(`Stripe reachable — balance currencies: ${balance.available.map((b) => b.currency).join(', ')}`);
     } catch (err) {
@@ -72,14 +78,38 @@ const note = (m) => console.log(`        ${m}`);
   // ── 4. Webhook ─────────────────────────────────────────────────────────────
   console.log('\nWebhook');
   const hookName = testMode ? 'STRIPE_TEST_WEBHOOK_SECRET' : 'STRIPE_WEBHOOK_SECRET';
-  const hook = process.env[hookName] || process.env.STRIPE_WEBHOOK_SECRET;
+  // No cross-mode fallback here either — config/stripe.js does not fall back, so
+  // reading STRIPE_WEBHOOK_SECRET when the test secret is missing would report a
+  // working webhook for a config that rejects every event at runtime.
+  const hook = process.env[hookName];
   if (!hook) {
-    bad(`${hookName} is NOT SET — every webhook fails signature checks`);
-    note('Payments still confirm when the buyer returns to the success page, but an order');
-    note('is left unpaid if they close the tab at Stripe. Set this.');
+    bad(`${hookName} is NOT SET — the webhook handler returns 500 for every event`);
+    note('Payments then only confirm when the buyer returns to the success page, and an');
+    note('order is left unpaid if they close the tab at Stripe. Set this.');
+  } else if (!hook.startsWith('whsec_')) {
+    bad(`${hookName} does not look like a signing secret (expected a whsec_ prefix)`);
   } else {
-    ok(`${hookName} present (${hook.slice(0, 8)}…)`);
+    ok(`${hookName} present (${hook.slice(0, 10)}…)`);
   }
+
+  // ── 5. Does the toggle agree with the key it selected ──────────────────────
+  console.log('\nMode consistency');
+  if (!key) {
+    note('skipped — no key to compare against');
+  } else {
+    const keyIsTest = !key.startsWith('sk_live_');
+    if (testMode === keyIsTest) {
+      ok(`toggle says ${testMode ? 'TEST' : 'LIVE'} and the key is a ${keyIsTest ? 'test' : 'live'} key`);
+    } else {
+      bad(
+        `STRIPE_TEST_MODE says ${testMode ? 'TEST' : 'LIVE'} but ${keyName} is a ${keyIsTest ? 'TEST' : 'LIVE'} key`
+      );
+      note('The admin badge derives from the key, so it will show the real mode — but');
+      note('the toggle and the environment disagree and one of them is wrong.');
+    }
+  }
+  note(`pinned Stripe API version: ${STRIPE_API_VERSION}`);
+  note('the dashboard webhook endpoint must be set to this same version');
 
   console.log('\n' + '─'.repeat(58));
   console.log(problems === 0 ? 'No configuration problems found.\n' : `${problems} problem(s) found.\n`);

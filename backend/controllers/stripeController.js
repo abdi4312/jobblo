@@ -8,6 +8,11 @@ const calculateDiscount = require('../utils/calculateDiscount');
 const { validateCouponLogic } = require('../utils/couponValidation');
 const { upsertTransaction } = require('../utils/transaction');
 const { upsertSubscription } = require('../utils/subscription');
+const {
+  provisionSubscriptionFromSession,
+  provisionExtraContactFromSession,
+  subscriptionPeriodEnd,
+} = require('../services/stripe/provisioning');
 
 const now = new Date();
 const nextMonth = new Date();
@@ -39,18 +44,12 @@ function resolveFrontendUrl() {
  * abonnement" twice — or came back a month later — left a fresh Stripe customer behind
  * each time, and their subscriptions ended up scattered across several customer records
  * with no single place to see or cancel them.
+ *
+ * Now shared with the SafePay and chat checkout paths, and mode-aware: the stored id
+ * is verified against Stripe before reuse, so a `cus_…` left over from the other mode
+ * is replaced instead of producing a `resource_missing` 500.
  */
-async function resolveStripeCustomer(stripe, user) {
-  if (user.stripeCustomerId) return user.stripeCustomerId;
-
-  const customer = await stripe.customers.create({
-    email: user.email,
-    name: user.name,
-    metadata: { userId: String(user._id) },
-  });
-  await User.findByIdAndUpdate(user._id, { stripeCustomerId: customer.id });
-  return customer.id;
-}
+const { resolveStripeCustomer } = require('../services/stripe/customers');
 
 exports.createCheckoutSession = async (req, res) => {
   try {
@@ -171,69 +170,14 @@ exports.checkoutSessionStatus = async (req, res) => {
       return res.json({ payment_status: session.payment_status });
     }
 
-    const metadata = session.metadata || {};
-    const stripeSub = session.subscription;
-
-    const userId = metadata.userId;
-    const planId = metadata.planId;
-    const planName = metadata.planName;
-    const planType = metadata.planType;
-
-    const discountAmount = Number(metadata.discountAmount || 0);
-    const discountCoupon = metadata.coupon || null;
-    const couponId = metadata.couponId || null;
-    const autoRenew = metadata.autoRenew === 'true';
-
-    const amount = session.amount_total ? session.amount_total / 100 : 0;
-
-    // ===============================
-    // 🔹 TRANSACTION (UTIL)
-    // ===============================
-    await upsertTransaction({
-      userId,
-      planId,
-      planName,
-      planType,
-      stripeSessionId: sessionId,
-      amount,
-      currency: session.currency || 'nok',
-      status: 'succeeded',
-      type: 'subscription',
-      discountAmount,
-      discountCoupon,
-      coupon: couponId,
-    });
-
-    // ===============================
-    // 🔹 SUBSCRIPTION (UTIL)
-    // ===============================
-    const subscription = await upsertSubscription({
-      userId,
-      planId,
-      planName,
-      planType,
-      stripeSubscriptionId: stripeSub.id,
-      autoRenew,
-      discountAmount,
-      discountCoupon,
-      couponId,
-    });
-
-    // ===============================
-    // 🔹 USER UPDATE
-    // ===============================
-    await User.findByIdAndUpdate(userId, {
-      subscription: planName,
-      planType,
-    });
-
-    // ===============================
-    // 🔹 COUPON USAGE (SAFE)
-    // ===============================
-    if (couponId) {
-      await Coupon.findByIdAndUpdate(couponId, {
-        $addToSet: { usedBy: userId },
-      });
+    // Provisioning lives in services/stripe/provisioning.js so this page and the
+    // webhook run the same code. This call is now a convenience — the webhook is
+    // the source of truth and will have done (or will do) the same work — but
+    // keeping it makes the success page instant instead of waiting on delivery.
+    const result = await provisionSubscriptionFromSession(session);
+    if (!result.ok) {
+      console.error('checkoutSessionStatus: could not provision %s: %s', sessionId, result.reason);
+      return res.status(400).json({ message: 'Kunne ikke aktivere abonnementet', code: result.reason });
     }
 
     // The success page showed one line of green text and nothing about the purchase.
@@ -242,12 +186,12 @@ exports.checkoutSessionStatus = async (req, res) => {
     // between a receipt and an assurance.
     res.json({
       payment_status: 'paid',
-      plan: subscription.currentPlan.plan,
-      planType,
-      amount,
+      plan: result.subscription.currentPlan.plan,
+      planType: result.planType,
+      amount: result.amount,
       currency: session.currency || 'nok',
-      discountAmount,
-      coupon: discountCoupon,
+      discountAmount: result.discountAmount,
+      coupon: result.discountCoupon,
     });
   } catch (error) {
     console.error('Status Error:', error);
@@ -326,27 +270,22 @@ exports.extraContactPaymentStatus = async (req, res) => {
       return res.json({ payment_status: session.payment_status });
     }
 
-    const { userId, serviceId, type } = session.metadata;
-
-    if (type !== 'extra_contact') {
-      return res.status(400).json({ message: 'Invalid payment type' });
+    // Same session-ownership check the subscription status endpoint makes: without
+    // it, any signed-in user holding someone else's session id could drive that
+    // person's entitlement.
+    if (session.metadata?.userId && String(session.metadata.userId) !== String(req.userId)) {
+      return res.status(403).json({ message: 'Denne betalingen tilhører en annen bruker' });
     }
 
-    // 1. Log Transaction
-    await upsertTransaction({
-      userId,
-      serviceId,
-      stripeSessionId: sessionId,
-      amount: session.amount_total / 100,
-      currency: session.currency,
-      status: 'succeeded',
-      type: 'extra_contact',
-    });
+    const result = await provisionExtraContactFromSession(session);
+    if (!result.ok) {
+      return res.status(400).json({ message: 'Invalid payment type', code: result.reason });
+    }
 
-    // 2. We don't increment monthlyContactUsage here because this was a PAID contact.
-    // The checkSubscription middleware will bypass the limit check if a transaction for this serviceId exists.
-
-    res.json({ payment_status: 'paid', serviceId });
+    // monthlyContactUsage is deliberately not incremented — this was a paid contact.
+    // The entitlement itself is the Transaction row, which checkSubscription consumes
+    // exactly once.
+    res.json({ payment_status: 'paid', serviceId: result.serviceId });
   } catch (error) {
     console.error('Extra Contact Status Error:', error);
     res.status(500).json({ message: error.message });
@@ -397,8 +336,12 @@ exports.getMySubscription = async (req, res) => {
         const live = await stripe.subscriptions.retrieve(current.stripeSubscriptionId);
         payload.cancelAtPeriodEnd = Boolean(live.cancel_at_period_end);
         payload.stripeStatus = live.status;
-        if (live.current_period_end) {
-          payload.currentPeriodEnd = new Date(live.current_period_end * 1000);
+        // On the pinned API version this moved onto the subscription ITEM, so the
+        // old `live.current_period_end` read was always undefined and this branch
+        // never ran. subscriptionPeriodEnd() reads both shapes.
+        const periodEnd = subscriptionPeriodEnd(live);
+        if (periodEnd) {
+          payload.currentPeriodEnd = periodEnd;
         }
       } catch (err) {
         // A subscription Stripe no longer knows about is worth reporting as unknown rather
@@ -439,18 +382,20 @@ exports.cancelMySubscription = async (req, res) => {
     // `status` stays 'active': they keep the plan until the period ends. What changes is
     // that it will not renew — recorded as autoRenew, which is the field that means that.
     subscription.currentPlan.autoRenew = false;
-    if (updated.current_period_end) {
-      subscription.currentPlan.renewalDate = new Date(updated.current_period_end * 1000);
-      subscription.currentPlan.endDate = new Date(updated.current_period_end * 1000);
+    // Same clover-era move as in getMySubscription: reading `current_period_end` off
+    // the subscription always yielded undefined, so the date shown to the user was a
+    // locally guessed "now + 1 month" rather than the period they actually paid for.
+    const periodEnd = subscriptionPeriodEnd(updated);
+    if (periodEnd) {
+      subscription.currentPlan.renewalDate = periodEnd;
+      subscription.currentPlan.endDate = periodEnd;
     }
     await subscription.save();
 
     res.json({
       message: 'Abonnementet avsluttes ved periodens slutt',
       cancelAtPeriodEnd: true,
-      currentPeriodEnd: updated.current_period_end
-        ? new Date(updated.current_period_end * 1000)
-        : subscription.currentPlan.renewalDate,
+      currentPeriodEnd: periodEnd || subscription.currentPlan.renewalDate,
     });
   } catch (error) {
     console.error('cancelMySubscription failed [user=%s]: %s', req.userId, error.message);

@@ -91,6 +91,12 @@ const orderSchema = new mongoose.Schema(
     completedAt: Date,
     completionNote: String,
 
+    // Set once, by the scheduler, when the customer has been told the review window
+    // is about to close. Acts as the compare-and-swap marker that stops a second run
+    // sending a second warning. `readyForReviewAt` was already recorded but nothing
+    // ever read it — this is what makes the auto-release window observable.
+    autoReleaseWarnedAt: { type: Date, default: null },
+
     // Checklist completion status (per order)
     checklist: [
       {

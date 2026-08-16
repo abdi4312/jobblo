@@ -2,7 +2,9 @@ const User = require('../models/User');
 const Chat = require('../models/ChatMessage');
 const Order = require('../models/Order');
 const Service = require('../models/Service');
+const Dispute = require('../models/Dispute');
 const { getStripe } = require('../config/stripe');
+const { resolveStripeCustomer } = require('../services/stripe/customers');
 const mongoose = require('mongoose');
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -219,8 +221,13 @@ exports.createPaymentSession = async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL?.replace(/\/$/, '') || 'http://localhost:5174';
     const user = await User.findById(id);
 
+    // Was passing user.stripeCustomerId straight through — undefined for anyone who
+    // had never bought before, and a foreign-mode id for anyone who had. Both reach
+    // Stripe as an error rather than a checkout page.
+    const stripeCustomerId = await resolveStripeCustomer(stripe, user);
+
     const session = await stripe.checkout.sessions.create({
-      customer: user.stripeCustomerId,
+      customer: stripeCustomerId,
       payment_method_types: ['card'],
       line_items: [
         {
@@ -264,13 +271,39 @@ exports.createContract = async (req, res) => {
     const chat = await Chat.findById(chatId).populate('serviceId');
     if (!chat) return res.status(404).json({ error: 'Chat not found' });
 
-    // 🔒 Authorization check
+    // 🔒 Authorization check — participant in the conversation.
     if (chat.clientId._id.toString() !== id && chat.providerId._id.toString() !== id)
       return res.status(403).json({ error: 'Not allowed' });
+
+    // 🔒 Awarding the job is the SERVICE OWNER's decision, not any participant's.
+    //
+    // Participation was the only check here. In an owner-initiated chat the applicant
+    // occupies chat.providerId, so the applicant could award themselves the contract —
+    // at a price of their own choosing, taken from the request body below — and the
+    // owner would then find a contract they never created, unable to make the real
+    // one. The web UI already gates this button behind isServiceOwner; the server did
+    // not, which is the half that matters.
+    if (!chat.serviceId?.userId || String(chat.serviceId.userId) !== String(id)) {
+      return res.status(403).json({
+        error: 'Bare oppdragsgiveren kan opprette kontrakten',
+      });
+    }
 
     // Check if contract/order already exists
     if (chat.orderId) {
       return res.status(400).json({ error: 'Contract already exists for this chat' });
+    }
+
+    // The same "any order at all" check safepayController makes, for the same reason:
+    // without it the two contract paths can both produce an order for one service.
+    const blockingOrder = await Order.findOne({
+      serviceId: chat.serviceId._id,
+      status: {
+        $in: ['awaiting_payment', 'paid', 'in_progress', 'ready_for_review', 'disputed', 'completed'],
+      },
+    });
+    if (blockingOrder) {
+      return res.status(400).json({ error: 'Kontrakt finnes allerede for dette oppdraget' });
     }
 
     // Create order (contract)
@@ -280,7 +313,10 @@ exports.createContract = async (req, res) => {
       checked: false,
     }));
 
-    const price = agreedPrice || chat.agreedPrice || chat.serviceId.price;
+    // Price comes from the negotiated value on the chat or the listing — never
+    // straight from this request body. `agreedPrice` was accepted verbatim, so
+    // whoever called this endpoint set the contract price unilaterally.
+    const price = chat.agreedPrice || chat.serviceId.price;
 
     const order = new Order({
       chatId: chat._id,
@@ -397,6 +433,40 @@ exports.deleteChat = async (req, res) => {
 
     if (chat.clientId.toString() !== id && chat.providerId.toString() !== id)
       return res.status(403).json({ error: 'Not allowed' });
+
+    // A conversation attached to money — or to an open dispute — is the record an
+    // adjudication rests on. This was a hard delete available to EITHER party at any
+    // order state, which meant the accused could destroy the evidence, along with the
+    // contract and payment system messages. `deleteForMe` still hides it from their
+    // own list without removing it for anyone else.
+    if (chat.orderId) {
+      const order = await Order.findById(chat.orderId).select('status paymentStatus').lean();
+      const PROTECTED_ORDER_STATUSES = [
+        'awaiting_payment',
+        'paid',
+        'in_progress',
+        'ready_for_review',
+        'disputed',
+      ];
+      if (order && (PROTECTED_ORDER_STATUSES.includes(order.status) || order.paymentStatus === 'paid')) {
+        return res.status(409).json({
+          error:
+            'Samtalen er knyttet til et aktivt oppdrag med betaling og kan ikke slettes. Du kan skjule den for deg selv i stedet.',
+          code: 'chat_locked_by_order',
+        });
+      }
+
+      const activeDispute = await Dispute.findOne({
+        orderId: chat.orderId,
+        status: { $nin: ['resolved', 'closed', 'cancelled'] },
+      }).select('_id');
+      if (activeDispute) {
+        return res.status(409).json({
+          error: 'Samtalen er bevis i en aktiv tvist og kan ikke slettes.',
+          code: 'chat_locked_by_dispute',
+        });
+      }
+    }
 
     await Chat.findByIdAndDelete(chatId);
 

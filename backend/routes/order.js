@@ -136,70 +136,25 @@ router.get('/:id/completed-details', authenticate, orderController.getCompletedJ
  */
 router.post('/', authenticate, orderController.createOrder);
 
-/**
- * @swagger
- * /api/orders/{id}:
- *   patch:
- *     summary: Oppdater en ordre (bare status og pris)
- *     tags: [Orders]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               status:
- *                 type: string
- *                 enum: [pending, accepted, declined, in_progress, completed, cancelled, awaiting_payment, paid]
- *                 description: Oppdatert ordrestatus
- *               price:
- *                 type: number
- *                 description: Oppdatert pris
- *     responses:
- *       200:
- *         description: Ordre oppdatert
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Order'
- *       403:
- *         description: Ikke autorisert til å oppdatere ordren
- *       404:
- *         description: Ordre ikke funnet
- */
-router.patch('/:id', authenticate, orderController.updateOrder);
-
-/**
- * @swagger
- * /api/orders/{id}:
- *   delete:
- *     summary: Kanseller en ordre
- *     tags: [Orders]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       204:
- *         description: Ordre kansellert
- *       403:
- *         description: Ikke autorisert
- *       404:
- *         description: Ordre ikke funnet
- */
-router.delete('/:id', authenticate, orderController.deleteOrder);
+// ── Removed: PATCH /api/orders/:id and DELETE /api/orders/:id ────────────────
+//
+// Both were generic, either-party endpoints with their own private idea of which
+// order transitions were legal, and both could move money-bearing orders:
+//
+//   PATCH  declared `paid → completed` legal and authorised EITHER party, so a
+//          provider could complete their own paid order — skipping review, skipping
+//          evidence, and skipping releasePayoutToProvider entirely. The customer's
+//          approval was then refused as "already completed" and the escrowed money
+//          became unreachable by any code path.
+//
+//   DELETE set `cancelled` from ANY state including paid/in_progress/
+//          ready_for_review, with no refund, no payout and no dispute check.
+//
+// Neither was called by the web frontend (the `useUpdateOrderStatusMutation` hook
+// existed but no component used it) or by the mobile app. The supported lifecycle
+// is the SafePay flow in providerWorkController + SafePayCheckoutController, which
+// already guards every transition properly, plus the admin routes under
+// /api/admin/orders. Deleting them was preferred over adding guards, because
+// keeping them would have meant maintaining a fifth competing state machine.
 
 module.exports = router;

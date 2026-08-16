@@ -58,6 +58,23 @@ const resolutionSchema = new mongoose.Schema(
     resolvedAt: { type: Date },
     stripeRefundId: { type: String },
     stripeRefundStatus: { type: String },
+    /**
+     * Written BEFORE the Stripe calls, cleared once they finish.
+     *
+     * Stripe and MongoDB cannot share a transaction, so the refund used to run
+     * inside `session.startTransaction()` and a later abort left the customer
+     * refunded with the database insisting it never happened. Recording the intent
+     * first means a crash mid-resolution leaves a row a reconciliation sweep can
+     * find, instead of silence.
+     */
+    moneyState: {
+      type: String,
+      enum: ['pending', 'settled', 'failed'],
+      default: null,
+    },
+    /** Set when a payout was part of the outcome, for reconciliation. */
+    stripeTransferId: { type: String },
+    moneyError: { type: String },
   },
   { _id: false }
 );
@@ -155,6 +172,14 @@ const disputeSchema = new mongoose.Schema(
 
     // Whether payout is frozen due to this dispute
     payoutFrozen: { type: Boolean, default: true },
+    /**
+     * The order's status immediately before the dispute froze it.
+     *
+     * Needed so a `no_action` resolution can put the order back where it was. Without
+     * it, "no action" had nowhere to return the order to and the code cancelled it —
+     * the opposite of what the outcome name promises.
+     */
+    previousOrderStatus: { type: String, default: null },
 
     openedAt: { type: Date, default: Date.now },
     closedAt: { type: Date, default: null },

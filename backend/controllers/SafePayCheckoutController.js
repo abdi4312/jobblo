@@ -7,7 +7,8 @@ const Notification = require('../models/Notification');
 const SafePayHistory = require('../models/SafePayHistory');
 const Review = require('../models/Review');
 const Chat = require('../models/ChatMessage');
-const { getStripe, getStripeWebhookSecret } = require('../config/stripe');
+const { getStripe } = require('../config/stripe');
+const { resolveStripeCustomer } = require('../services/stripe/customers');
 
 const PAID_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed'];
 
@@ -27,6 +28,15 @@ async function confirmPaidSession(session, io) {
 
   const order = await Order.findById(orderId);
   if (!order) return { ok: false, reason: 'order_not_found' };
+
+  // The session must be the one this order was created for. Stripe set this
+  // metadata when we created the session, so it is trusted — but an order whose
+  // metadata points elsewhere means we are about to mark the wrong order paid,
+  // which is worth refusing rather than guessing about.
+  const sessionUserId = session?.metadata?.userId;
+  if (sessionUserId && String(sessionUserId) !== String(order.customerId)) {
+    return { ok: false, reason: 'session_customer_mismatch' };
+  }
 
   if (PAID_STATUSES.includes(order.status)) {
     return { ok: true, alreadyConfirmed: true, order };
@@ -74,46 +84,56 @@ async function confirmPaidSession(session, io) {
     }
   }
 
-  // Payment record — the unique index on orderId is the real idempotency guard.
-  const existingPayment = await Payment.findOne({ orderId });
-  if (!existingPayment) {
-    try {
-      await Payment.create({
+  // Payment record.
+  //
+  // This was a find-then-create guarded by a `catch (11000)` that claimed a unique
+  // index on orderId was doing the real work — but the schema declared orderId as
+  // indexed and NOT unique, so the catch never fired and the redirect racing the
+  // webhook could write two Payment documents plus two sets of notifications.
+  //
+  // A single upsert closes the window: `upsertedCount === 1` is true for exactly
+  // one caller, so the side effects below run exactly once even under a race, and
+  // it does not depend on the index existing to be correct.
+  const paymentResult = await Payment.updateOne(
+    { orderId },
+    {
+      $setOnInsert: {
         orderId,
         chatId: updatedOrder.chatId,
         status: 'completed',
         amount: updatedOrder.agreedPrice || 0,
         stripeSessionId: session.id,
         stripePaymentIntentId: session.payment_intent,
-      });
+      },
+    },
+    { upsert: true }
+  );
 
-      await User.updateMany(
-        {
-          _id: { $in: [order.customerId, order.providerId].filter(Boolean) },
-          isSafePayUser: { $ne: true },
-        },
-        { $set: { isSafePayUser: true, safePayActivatedAt: new Date() } }
-      );
+  if (paymentResult?.upsertedCount === 1) {
+    await User.updateMany(
+      {
+        _id: { $in: [order.customerId, order.providerId].filter(Boolean) },
+        isSafePayUser: { $ne: true },
+      },
+      { $set: { isSafePayUser: true, safePayActivatedAt: new Date() } }
+    );
 
-      await Promise.all([
-        Notification.create({
-          userId: order.providerId,
-          type: 'order',
-          content: 'Betaling mottatt! Du kan nå starte jobben.',
-          orderId: order._id,
-          senderId: order.customerId,
-        }),
-        Notification.create({
-          userId: order.customerId,
-          type: 'order',
-          content: 'Betalingen er bekreftet.',
-          orderId: order._id,
-          senderId: order.customerId,
-        }),
-      ]);
-    } catch (dupErr) {
-      if (dupErr.code !== 11000) throw dupErr;
-    }
+    await Promise.all([
+      Notification.create({
+        userId: order.providerId,
+        type: 'order',
+        content: 'Betaling mottatt! Du kan nå starte jobben.',
+        orderId: order._id,
+        senderId: order.customerId,
+      }),
+      Notification.create({
+        userId: order.customerId,
+        type: 'order',
+        content: 'Betalingen er bekreftet.',
+        orderId: order._id,
+        senderId: order.customerId,
+      }),
+    ]);
   }
 
   if (io) {
@@ -257,16 +277,10 @@ exports.createSafePaySession = async (req, res) => {
       return res.status(404).json({ error: 'Bruker ble ikke funnet' });
     }
 
-    let stripeCustomerId = user.stripeCustomerId;
-    if (!stripeCustomerId) {
-      const customer = await stripe.customers.create({
-        email: user.email,
-        name: user.name,
-        metadata: { userId: String(user._id) },
-      });
-      stripeCustomerId = customer.id;
-      await User.findByIdAndUpdate(user._id, { stripeCustomerId });
-    }
+    // Verifies the stored id against Stripe before reusing it, so a customer left
+    // over from the other Stripe mode is replaced rather than producing a
+    // resource_missing 500 on the way into checkout.
+    const stripeCustomerId = await resolveStripeCustomer(stripe, user);
 
     const fee = Math.round(order.agreedPrice * 0.03);
     const total = order.agreedPrice + fee;
@@ -399,54 +413,20 @@ exports.checkoutSessionStatus = async (req, res) => {
 /**
  * POST /api/safepay-checkout/webhook  (raw body, no auth — Stripe calls this)
  *
- * The authoritative payment confirmation. The browser redirect to /safepay/success
- * is best-effort only: if the tab closes or the network drops on the way back, the
- * money is captured by Stripe and nothing else would ever mark the order paid.
+ * Kept as an alias so an endpoint already registered at this URL in the Stripe
+ * dashboard keeps working. The verification, event-level idempotency and routing
+ * now live in one dispatcher shared with /api/stripe/webhook — this used to handle
+ * only SafePay sessions, which is why subscriptions and extra-contact purchases had
+ * no server-side confirmation at all.
  */
-exports.stripeWebhook = async (req, res) => {
-  let event;
-  try {
-    const stripe = await getStripe();
-    const webhookSecret = await getStripeWebhookSecret();
-    if (!webhookSecret) {
-      console.error('Stripe webhook secret is not configured — rejecting event.');
-      return res.status(500).send('Webhook secret not configured');
-    }
-    event = stripe.webhooks.constructEvent(
-      req.body,
-      req.headers['stripe-signature'],
-      webhookSecret
-    );
-  } catch (err) {
-    // Signature mismatch or malformed payload — never process it.
-    console.error('Stripe webhook signature verification failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
+exports.stripeWebhook = (req, res) =>
+  require('../services/stripe/webhookDispatcher').stripeWebhook(req, res);
 
-  try {
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      if (session.payment_status === 'paid') {
-        const result = await confirmPaidSession(session, req.app?.get('io'));
-        if (!result.ok) {
-          // Ack anyway: retrying will not make an unknown order appear.
-          console.error('Stripe webhook could not confirm session:', result.reason, session.id);
-        }
-      }
-    } else if (event.type === 'checkout.session.expired') {
-      // Clear the stale session so createSafePaySession stops trying to reuse it.
-      await Order.updateOne(
-        { checkoutSessionId: event.data.object.id },
-        { $set: { checkoutSessionStatus: 'expired' } }
-      );
-    }
-    return res.json({ received: true });
-  } catch (err) {
-    // 500 tells Stripe to retry — correct for transient DB failures.
-    console.error('Stripe webhook handler error:', err.message);
-    return res.status(500).send('Webhook handler failed');
-  }
-};
+/**
+ * Exported so the webhook dispatcher can reuse the one confirmation path rather
+ * than growing a parallel copy of it.
+ */
+exports.confirmPaidSession = confirmPaidSession;
 
 exports.approveAndPayout = async (req, res) => {
   try {

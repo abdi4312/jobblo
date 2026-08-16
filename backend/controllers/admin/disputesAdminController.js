@@ -1,10 +1,11 @@
-const mongoose = require('mongoose');
 const Dispute = require('../../models/Dispute');
 const Order = require('../../models/Order');
 const Payment = require('../../models/Payment');
 const SafePayHistory = require('../../models/SafePayHistory');
 const Chat = require('../../models/ChatMessage');
 const Notification = require('../../models/Notification');
+const User = require('../../models/User');
+const { logApplicationError } = require('../../utils/errorLogger');
 const { asyncHandler, sendSuccess, sendError, buildPagination } = require('../../utils/apiResponse');
 const { parsePagination, parseObjectId, parseSort, parseDate } = require('../../utils/pagination');
 const { logActivity } = require('../../services/admin/activityService');
@@ -305,8 +306,10 @@ const resolveDispute = asyncHandler(async (req, res) => {
     return sendError(res, 'Tvisten er ikke aktiv og kan ikke løses.', 400);
   }
 
-  // Prevent duplicate resolution
-  if (dispute.resolution?.outcome) {
+  // Prevent duplicate resolution. A resolution whose money movement FAILED is the
+  // one case worth retrying — the Stripe calls below are all idempotent, so a retry
+  // re-attempts the transfer/refund without duplicating it.
+  if (dispute.resolution?.outcome && dispute.resolution?.moneyState !== 'failed') {
     return sendError(res, 'Tvisten er allerede løst.', 409);
   }
 
@@ -332,174 +335,246 @@ const resolveDispute = asyncHandler(async (req, res) => {
     );
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  // ── Decide where the money goes, for every outcome ──────────────────────────
+  //
+  // Three outcomes previously recorded amounts that nothing ever moved:
+  //   partial_refund          refunded the customer but never paid the provider's share
+  //   split_payment           made NO Stripe call at all, yet cancelled the order
+  //   cancel_without_payment  refunded nobody, so the platform simply kept the money
+  // and `no_action` — documented as "no action" — cancelled the order.
+  //
+  // Every branch below names both a refund and a payout amount, and the order status
+  // follows from what actually moved.
+  const plan = (() => {
+    switch (outcome) {
+      case 'release_to_provider':
+        return { refund: 0, payout: securedAmount, payoutFee: fee, payment: 'released', order: 'completed' };
+      case 'full_refund_to_customer':
+        return { refund: securedAmount, payout: 0, payoutFee: 0, payment: 'refunded', order: 'cancelled' };
+      case 'partial_refund':
+      case 'split_payment':
+        return {
+          refund: cust,
+          payout: prov,
+          payoutFee: 0, // `prov` is already the provider's net share
+          payment: 'refunded',
+          order: prov > 0 ? 'completed' : 'cancelled',
+        };
+      case 'cancel_without_payment':
+        // The customer's money must come back. This used to move nothing at all.
+        return { refund: securedAmount, payout: 0, payoutFee: 0, payment: 'refunded', order: 'cancelled' };
+      case 'no_action':
+      default:
+        // Genuinely no action: the order returns to where the dispute found it.
+        return {
+          refund: 0,
+          payout: 0,
+          payoutFee: 0,
+          payment: 'completed',
+          order: dispute.previousOrderStatus || 'ready_for_review',
+        };
+    }
+  })();
+
+  if (plan.refund > 0 && !payment?.stripePaymentIntentId) {
+    return sendError(
+      res,
+      'Ingen Stripe Payment Intent ID funnet. Manuell handling i Stripe-dashboard kreves.',
+      400
+    );
+  }
+
+  const movesMoney = plan.refund > 0 || plan.payout > 0;
+
+  // ── Record the intent BEFORE calling Stripe ─────────────────────────────────
+  //
+  // The refund used to run inside a MongoDB transaction. Stripe is not part of that
+  // transaction, so an abort after a successful refund left the customer refunded and
+  // the database certain it had never happened — irreversible and invisible. MongoDB
+  // and Stripe cannot be made atomic, so instead: write the intent, act, write the
+  // result. A crash in between leaves `moneyState: 'pending'` for a reconciliation
+  // sweep to find, and every Stripe call below is idempotent.
+  dispute.resolution = {
+    outcome,
+    reason: reason.trim(),
+    customerAmount: cust,
+    providerAmount: prov,
+    platformFee: fee,
+    resolvedBy: req.user._id,
+    resolvedAt: new Date(),
+    moneyState: movesMoney ? 'pending' : 'settled',
+  };
+  await dispute.save();
 
   let stripeRefundId = null;
   let stripeRefundStatus = null;
+  let payoutResult = null;
+  let stripeTransferId = null;
 
   try {
-    // For full/partial refund — call Stripe API
-    if (['full_refund_to_customer', 'partial_refund'].includes(outcome) && payment?.stripePaymentIntentId) {
+    if (plan.refund > 0) {
       const { getStripe } = require('../../config/stripe');
       const stripe = await getStripe();
-      const refundAmount = outcome === 'full_refund_to_customer'
-        ? Math.round(securedAmount * 100) // Stripe uses øre/cents
-        : Math.round(cust * 100);
-
-      try {
-        const refund = await stripe.refunds.create(
-          { payment_intent: payment.stripePaymentIntentId, amount: refundAmount },
-          { idempotencyKey: `dispute_refund_${id.toString()}` }
-        );
-        stripeRefundId = refund.id;
-        stripeRefundStatus = refund.status;
-
-        if (refund.status !== 'succeeded' && refund.status !== 'pending') {
-          throw new Error(`Stripe refusjon mislyktes: ${refund.status}`);
-        }
-      } catch (stripeErr) {
-        await session.abortTransaction();
-        return sendError(res, `Stripe-refusjon mislyktes: ${stripeErr.message}. Behandle manuelt.`, 502);
-      }
-    } else if (['full_refund_to_customer', 'partial_refund'].includes(outcome) && !payment?.stripePaymentIntentId) {
-      await session.abortTransaction();
-      return sendError(res, 'Ingen Stripe Payment Intent ID funnet. Manuell handling i Stripe-dashboard kreves.', 400);
-    }
-
-    // Update dispute resolution
-    dispute.status = 'resolved';
-    dispute.payoutFrozen = false;
-    dispute.closedAt = new Date();
-    dispute.resolution = {
-      outcome,
-      reason: reason.trim(),
-      customerAmount: cust,
-      providerAmount: prov,
-      platformFee: fee,
-      resolvedBy: req.user._id,
-      resolvedAt: new Date(),
-      stripeRefundId,
-      stripeRefundStatus,
-    };
-    dispute.timeline.push({
-      action: 'dispute_resolved',
-      actorId: req.user._id,
-      note: `Tvist løst: ${outcome}. ${reason.trim()}`,
-      metadata: { customerAmount: cust, providerAmount: prov, stripeRefundId },
-    });
-    await dispute.save({ session });
-
-    // Update payment status
-    if (payment) {
-      const paymentStatus = ['full_refund_to_customer', 'partial_refund'].includes(outcome)
-        ? 'refunded'
-        : outcome === 'release_to_provider'
-        ? 'released'
-        : 'completed';
-      payment.status = paymentStatus;
-      await payment.save({ session });
-    }
-
-    // Update order status
-    const orderStatus = ['full_refund_to_customer', 'partial_refund'].includes(outcome)
-      ? 'cancelled'
-      : outcome === 'release_to_provider'
-      ? 'completed'
-      : 'cancelled';
-    order.status = orderStatus;
-    order.history.push({
-      action: 'dispute_resolved',
-      userId: req.user._id,
-      timestamp: new Date(),
-      data: { outcome, reason: reason.trim() },
-    });
-    await order.save({ session });
-
-    // Update chat
-    if (order.chatId) {
-      await Chat.findByIdAndUpdate(
-        order.chatId,
-        { status: orderStatus === 'completed' ? 'completed' : 'cancelled' },
-        { session }
+      const refund = await stripe.refunds.create(
+        {
+          payment_intent: payment.stripePaymentIntentId,
+          amount: Math.round(plan.refund * 100), // Stripe works in øre
+        },
+        // Same key on every retry, so re-resolving a failed dispute cannot refund twice.
+        { idempotencyKey: `dispute_refund_${id.toString()}` }
       );
-    }
-
-    // Update SafePayHistory
-    await SafePayHistory.findOneAndUpdate(
-      { orderId: order._id },
-      { status: orderStatus === 'completed' ? 'completed' : 'refunded' },
-      { session }
-    );
-
-    await session.commitTransaction();
-
-    let payoutResult = null;
-    let payoutError = null;
-    if (outcome === 'release_to_provider') {
-      const releasePayoutToProvider = require('../../services/payout/releasePayoutToProvider');
-      const User = require('../../models/User');
-      try {
-        payoutResult = await releasePayoutToProvider({
-          orderId: order._id,
-          providerId: order.providerId,
-          customerId: order.customerId,
-          serviceId: order.serviceId,
-          grossAmount: securedAmount,
-          platformFee: fee,
-          releaseSource: 'dispute_release',
-          releasedBy: req.user._id,
-          stripePaymentIntentId: payment?.stripePaymentIntentId,
-          stripeCheckoutSessionId: payment?.stripeSessionId,
-          disputeId: dispute._id,
-        });
-
-        if (!payoutResult.alreadyPaid) {
-          await User.findByIdAndUpdate(order.providerId, { $inc: { earnings: securedAmount - fee } });
-        }
-      } catch (pErr) {
-        console.error('resolveDispute: Stripe transfer failed for provider:', pErr.message);
-        payoutError = pErr.message;
+      stripeRefundId = refund.id;
+      stripeRefundStatus = refund.status;
+      if (!['succeeded', 'pending'].includes(refund.status)) {
+        throw new Error(`Stripe refusjon mislyktes: ${refund.status}`);
       }
     }
 
-    // Notifications outside transaction
-    try {
-      await Promise.all([
-        Notification.create({
-          userId: order.customerId,
-          type: 'system',
-          content: `Din tvist er løst. Utfall: ${outcome}.`,
-          orderId: order._id,
-        }),
-        Notification.create({
-          userId: order.providerId,
-          type: 'system',
-          content: `Tvisten tilknyttet ditt oppdrag er løst. Utfall: ${outcome}.`,
-          orderId: order._id,
-        }),
-      ]);
-    } catch {
-      // Notification failure is non-critical
-    }
+    if (plan.payout > 0) {
+      const releasePayoutToProvider = require('../../services/payout/releasePayoutToProvider');
+      payoutResult = await releasePayoutToProvider({
+        orderId: order._id,
+        providerId: order.providerId,
+        customerId: order.customerId,
+        serviceId: order.serviceId,
+        grossAmount: plan.payout,
+        platformFee: plan.payoutFee,
+        releaseSource: 'dispute_release',
+        releasedBy: req.user._id,
+        stripePaymentIntentId: payment?.stripePaymentIntentId,
+        stripeCheckoutSessionId: payment?.stripeSessionId,
+        disputeId: dispute._id,
+      });
+      stripeTransferId = payoutResult?.payout?.stripeTransferId || null;
 
-    await logActivity({
-      adminId: req.user._id,
-      action: 'other',
-      targetModel: 'Order',
-      targetId: order._id,
-      description: `Tvist løst: ${outcome}. Stripe refusjon: ${stripeRefundId ?? 'N/A'}`,
+      if (!payoutResult.alreadyPaid) {
+        await User.findByIdAndUpdate(order.providerId, {
+          $inc: { earnings: plan.payout - plan.payoutFee },
+        });
+      }
+    }
+  } catch (moneyErr) {
+    // Leave the dispute unresolved and retryable, and say so loudly. The previous code
+    // returned 502 for a refund failure and merely console.error'd a failed transfer,
+    // so a provider could be left unpaid with the dispute marked resolved.
+    dispute.resolution.moneyState = 'failed';
+    dispute.resolution.moneyError = moneyErr.message?.slice(0, 500);
+    dispute.resolution.stripeRefundId = stripeRefundId;
+    dispute.resolution.stripeRefundStatus = stripeRefundStatus;
+    await dispute.save();
+
+    await logApplicationError({
+      error: moneyErr,
+      requestPath: req.originalUrl,
+      httpMethod: 'POST',
+      httpStatus: 502,
       ip: req.ip,
       userAgent: req.headers['user-agent'],
+      userId: req.user?._id,
+      errorCode: 'DISPUTE_RESOLUTION_MONEY_FAILED',
+      source: 'dispute_resolution',
+      metadata: {
+        disputeId: String(dispute._id),
+        orderId: String(order._id),
+        outcome,
+        refundPlanned: plan.refund,
+        payoutPlanned: plan.payout,
+        stripeRefundId,
+      },
     });
 
-    return sendSuccess(res, { dispute, stripeRefundId, stripeRefundStatus }, 'Tvist løst.');
-  } catch (err) {
-    await session.abortTransaction();
-    throw err;
-  } finally {
-    session.endSession();
+    return sendError(
+      res,
+      `Pengeoverføringen mislyktes: ${moneyErr.message}. Tvisten er ikke lukket — prøv igjen.`,
+      502
+    );
   }
+
+  // ── Money has moved. Now record the outcome. ────────────────────────────────
+  dispute.status = 'resolved';
+  dispute.payoutFrozen = false;
+  dispute.closedAt = new Date();
+  dispute.resolution.stripeRefundId = stripeRefundId;
+  dispute.resolution.stripeRefundStatus = stripeRefundStatus;
+  dispute.resolution.stripeTransferId = stripeTransferId;
+  dispute.resolution.moneyState = 'settled';
+  dispute.timeline.push({
+    action: 'dispute_resolved',
+    actorId: req.user._id,
+    note: `Tvist løst: ${outcome}. ${reason.trim()}`,
+    metadata: { customerAmount: cust, providerAmount: prov, stripeRefundId, stripeTransferId },
+  });
+  await dispute.save();
+
+  if (payment) {
+    payment.status = plan.payment;
+    await payment.save();
+  }
+
+  const orderStatus = plan.order;
+  order.status = orderStatus;
+  order.history.push({
+    action: 'dispute_resolved',
+    userId: req.user._id,
+    timestamp: new Date(),
+    data: { outcome, reason: reason.trim(), refunded: plan.refund, paidOut: plan.payout },
+  });
+  await order.save();
+
+  if (order.chatId) {
+    await Chat.findByIdAndUpdate(order.chatId, {
+      status:
+        orderStatus === 'completed' ? 'completed' : orderStatus === 'cancelled' ? 'cancelled' : 'paid',
+    });
+  }
+
+  await SafePayHistory.findOneAndUpdate(
+    { orderId: order._id },
+    {
+      status:
+        orderStatus === 'completed'
+          ? 'completed'
+          : orderStatus === 'cancelled'
+            ? 'refunded'
+            : 'in_progress',
+    }
+  );
+
+  // Notifications are best-effort and must never fail the resolution.
+  try {
+    await Promise.all([
+      Notification.create({
+        userId: order.customerId,
+        type: 'system',
+        content: `Din tvist er løst. Utfall: ${outcome}.`,
+        orderId: order._id,
+      }),
+      Notification.create({
+        userId: order.providerId,
+        type: 'system',
+        content: `Tvisten tilknyttet ditt oppdrag er løst. Utfall: ${outcome}.`,
+        orderId: order._id,
+      }),
+    ]);
+  } catch {
+    // Notification failure is non-critical
+  }
+
+  await logActivity({
+    adminId: req.user._id,
+    action: 'other',
+    targetModel: 'Order',
+    targetId: order._id,
+    description: `Tvist løst: ${outcome}. Refundert: ${plan.refund}. Utbetalt: ${plan.payout}. Stripe refusjon: ${stripeRefundId ?? 'N/A'}`,
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+
+  return sendSuccess(
+    res,
+    { dispute, stripeRefundId, stripeRefundStatus, stripeTransferId },
+    'Tvist løst.'
+  );
 });
 
 // ── Reopen dispute ────────────────────────────────────────────────────────────

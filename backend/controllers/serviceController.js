@@ -2,6 +2,12 @@ const Service = require('../models/Service');
 const JobRequest = require('../models/JobRequest');
 const mongoose = require('mongoose');
 
+/** A user-supplied string is not a regex. Same escape the admin search already uses. */
+const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Guards against Mongo operator injection from query strings (`?userId[$ne]=null`). */
+const isValidId = (id) => typeof id === 'string' && mongoose.Types.ObjectId.isValid(id);
+
 /**
  * Trims the optional contact fields and drops the blanks.
  *
@@ -43,29 +49,39 @@ exports.getAllServices = async (req, res) => {
 
     const query = {};
 
-    // Always filter for public-facing statuses (not draft/completed/cancelled)
-    if (!userId) {
-      query.status = { $in: ['open', 'active'] };
-    }
+    // Express parses `?userId[$ne]=null` into an OBJECT, and this value went straight
+    // into the query. That skipped the public-status filter below and returned drafts,
+    // cancelled and completed listings to anonymous callers. Only accept a real id.
+    const ownerId = isValidId(userId) ? userId : null;
 
-    if (userId) {
-      query.userId = userId;
+    // The public status filter is now unconditional. Passing ANY `userId` used to
+    // remove it, so one user could enumerate another's drafts, cancelled and
+    // completed jobs. This route is unauthenticated; owners read their own listings
+    // (including non-public ones) through GET /api/services/my-posted, which is
+    // authenticated and scoped to the caller.
+    query.status = { $in: ['open', 'active'] };
+
+    if (ownerId) {
+      query.userId = ownerId;
     }
 
     if (urgent === 'true') {
       query.urgent = true;
     }
 
-    if (category) {
+    if (category && typeof category === 'string') {
       const categoriesArray = category.split(',').map((c) => c.trim());
       query.categories = { $in: categoriesArray };
     }
 
     const searchConditions = [];
-    if (search) {
+    if (search && typeof search === 'string') {
+      // Unescaped, a search term is a regex: `(a+)+$` is a ReDoS and `.*` forces a
+      // full collection scan. The admin controller already escapes; this did not.
+      const safeSearch = escapeRegex(search).slice(0, 200);
       searchConditions.push(
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+        { title: { $regex: safeSearch, $options: 'i' } },
+        { description: { $regex: safeSearch, $options: 'i' } }
       );
     }
 
@@ -132,31 +148,43 @@ exports.getAllServices = async (req, res) => {
       query.$and = andConditions;
     }
 
-    // Construct sort object
+    // Sort field came straight from the query string, so any unindexed field could be
+    // forced into an in-memory sort. Whitelist to fields that are actually indexed or
+    // cheap to sort.
+    const SORTABLE_FIELDS = ['createdAt', 'price', 'views', 'updatedAt'];
     let sortOption = { createdAt: -1 };
-    if (sort) {
-      if (sort.startsWith('-')) {
-        sortOption = { [sort.substring(1)]: -1 };
-      } else {
-        sortOption = { [sort]: 1 };
+    if (sort && typeof sort === 'string') {
+      const desc = sort.startsWith('-');
+      const field = desc ? sort.substring(1) : sort;
+      if (SORTABLE_FIELDS.includes(field)) {
+        sortOption = { [field]: desc ? -1 : 1 };
       }
     }
 
-    const services = await Service.find(query)
-      .populate('userId', 'name avatarUrl verified role orgNumber companyName')
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit))
-      .sort(sortOption);
+    // `limit` was parsed with no ceiling, so `?limit=1000000` returned the whole
+    // collection in one response. MAX_LIMIT matches utils/pagination.js, which the
+    // admin routes already use.
+    const MAX_LIMIT = 100;
+    const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 25, 1), MAX_LIMIT);
+    const safePage = Math.max(parseInt(page, 10) || 1, 1);
 
-    const total = await Service.countDocuments(query);
+    // find() and countDocuments() ran sequentially for no reason.
+    const [services, total] = await Promise.all([
+      Service.find(query)
+        .populate('userId', 'name avatarUrl verified role orgNumber companyName')
+        .skip((safePage - 1) * safeLimit)
+        .limit(safeLimit)
+        .sort(sortOption),
+      Service.countDocuments(query),
+    ]);
 
     res.json({
       data: services,
       pagination: {
         total,
-        page: Number(page),
-        limit: Number(limit),
-        totalPages: Math.ceil(total / limit),
+        page: safePage,
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
       },
     });
   } catch (err) {

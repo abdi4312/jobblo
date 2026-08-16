@@ -89,13 +89,9 @@ export const createOrder = async (payload: CreateOrderPayload): Promise<Order> =
   return response.data;
 };
 
-/**
- * Update order status
- */
-export const updateOrderStatus = async (orderId: string, status: string): Promise<Order> => {
-  const response = await mainLink.patch(`/api/orders/${orderId}`, { status });
-  return response.data;
-};
+// updateOrderStatus removed: PATCH /api/orders/:id no longer exists. It allowed either
+// party to move a paid order to a terminal state without a payout or refund. Order
+// status is driven by the SafePay endpoints (/api/safepay/*, /api/safepay-checkout/*).
 
 /**
  * Create a new job request (Application)

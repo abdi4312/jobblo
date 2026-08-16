@@ -110,11 +110,17 @@ app.set('trust proxy', process.env.TRUST_PROXY ? Number(process.env.TRUST_PROXY)
 // request body, and any JSON parser that runs first would consume it. Registered
 // before apiLimiter too, so Stripe's retry storms are never rate-limited away —
 // dropping one of these means a captured payment is never recorded.
-app.post(
-  '/api/safepay-checkout/webhook',
-  express.raw({ type: 'application/json' }),
-  require('./controllers/SafePayCheckoutController').stripeWebhook
-);
+//
+// One dispatcher, mounted at two paths. /api/stripe/webhook is the canonical URL
+// and the one to register for new deployments; the safepay-checkout path is kept
+// so an endpoint already configured in the Stripe dashboard does not break. Both
+// routes reach the same verification, the same event-level idempotency ledger and
+// the same routing by session mode/metadata.
+const stripeWebhookHandler = require('./services/stripe/webhookDispatcher').stripeWebhook;
+const stripeRawBody = express.raw({ type: 'application/json' });
+
+app.post('/api/stripe/webhook', stripeRawBody, stripeWebhookHandler);
+app.post('/api/safepay-checkout/webhook', stripeRawBody, stripeWebhookHandler);
 
 app.use(cors(corsOptions));
 app.use(apiLimiter); // Apply general API rate limiting
