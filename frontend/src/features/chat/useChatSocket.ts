@@ -2,14 +2,12 @@ import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { initSocket } from '../../socket/socket';
 import { useUserStore } from '../../stores/userStore';
-import { useNotificationSound } from '../../hooks/useNotificationSound';
 import { useChatQueries } from '../../features/chat/hook';
 
 export const useChatSocket = (conversationId?: string) => {
   const queryClient = useQueryClient();
   const { user } = useUserStore();
   const userId = user?._id;
-  const { playSendSound } = useNotificationSound();
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
   const { chatsQuery, activeChatQuery, sendMutation } = useChatQueries(conversationId);
@@ -81,6 +79,5 @@ export const useChatSocket = (conversationId?: string) => {
     chatsQuery,
     activeChatQuery,
     sendMutation,
-    playSendSound,
   };
 };
