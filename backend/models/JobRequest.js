@@ -33,6 +33,17 @@ const jobRequestSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    /**
+     * Set when the applicant withdraws.
+     *
+     * Withdrawing used to hard-delete the row, erasing who had applied and orphaning
+     * the chat created at application time. The record is kept and marked instead, so
+     * "declined by the owner" and "withdrawn by the applicant" stay distinguishable.
+     */
+    withdrawnAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

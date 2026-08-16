@@ -233,7 +233,7 @@ async function cleanupAbandonedOrders() {
     paymentStatus: { $ne: 'paid' },
     createdAt: { $lte: cutoff },
   })
-    .select('_id serviceId providerId')
+    .select('_id serviceId providerId chatId')
     .limit(100)
     .lean();
 
@@ -258,6 +258,15 @@ async function cleanupAbandonedOrders() {
     );
     if (!moved) continue;
     cancelled += 1;
+
+    // Keep the conversation's badge honest. `cancelled` is in the Chat status enum but
+    // nothing ever set it, so a chat for a dead contract kept reading "Kontrakt signert".
+    if (moved.chatId) {
+      const Chat = require('../../models/ChatMessage');
+      await Chat.updateOne({ _id: moved.chatId }, { $set: { status: 'cancelled' } }).catch(
+        (err) => console.error('cleanupAbandonedOrders: chat status sync failed: %s', err.message)
+      );
+    }
 
     // Put the listing back on the market.
     //

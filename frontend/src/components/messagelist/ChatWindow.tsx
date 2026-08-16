@@ -45,6 +45,14 @@ const getChatStatusLabel = (chatStatus?: string) => {
       return 'Betalt';
     case 'contracted':
       return 'Kontrakt signert';
+    // `in_progress` and `disputed` are both real values in the schema and are both set
+    // by the backend, but neither had a case here — so the moment a provider started
+    // work, a paid job's badge fell through to the default and read "Forespørsel",
+    // which is the label for a job nobody has even been chosen for yet.
+    case 'in_progress':
+      return 'Under arbeid';
+    case 'disputed':
+      return 'Tvist';
     case 'completed':
       return 'Fullført';
     case 'cancelled':

@@ -40,6 +40,7 @@ jest.mock('../models/Order', () => {
 jest.mock('../models/User', () => ({ findById: jest.fn() }));
 jest.mock('../models/Service', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
 jest.mock('../models/Dispute', () => ({ findOne: jest.fn() }));
+jest.mock('../models/JobRequest', () => ({ findOne: jest.fn() }));
 jest.mock('../config/stripe', () => ({ getStripe: jest.fn() }));
 jest.mock('../services/stripe/customers', () => ({ resolveStripeCustomer: jest.fn() }));
 
@@ -48,7 +49,11 @@ const Chat = require('../models/ChatMessage');
 const Order = require('../models/Order');
 const User = require('../models/User');
 const Service = require('../models/Service');
+const JobRequest = require('../models/JobRequest');
 const chatController = require('../controllers/chatController');
+
+/** `Model.findX(...).select(...)` resolving to `value`. */
+const selectChain = (value) => ({ select: jest.fn().mockResolvedValue(value) });
 
 const OWNER = new mongoose.Types.ObjectId();
 const APPLICANT = new mongoose.Types.ObjectId();
@@ -82,6 +87,9 @@ function populateChain(value) {
 beforeEach(() => {
   jest.clearAllMocks();
   User.findById.mockReturnValue({ select: jest.fn().mockResolvedValue({ _id: APPLICANT, name: 'Applicant' }) });
+  // Default: a legitimate pair — OWNER owns the job, APPLICANT applied to it.
+  Service.findById.mockReturnValue(selectChain({ _id: SERVICE, userId: OWNER }));
+  JobRequest.findOne.mockReturnValue(selectChain({ _id: 'application_1' }));
 });
 
 describe('createOrGetChat finds an existing conversation in either orientation', () => {
@@ -180,6 +188,60 @@ describe('createOrGetChat finds an existing conversation in either orientation',
     // It used to take a second round trip, and only when the first query happened to
     // return a document whose deletedFor had already been populated.
     expect(Chat.findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Chat creation used to check only "not yourself" and "the other user exists".
+   * Nothing tied either party to the job, so any authenticated user could open a
+   * conversation with any other user by supplying a scraped user id and any service
+   * id — arriving in the victim's inbox looking like a real job conversation.
+   */
+  it('refuses a stranger who neither owns the job nor applied to it', async () => {
+    const stranger = new mongoose.Types.ObjectId();
+    // Neither the caller nor the target owns this service.
+    Service.findById.mockReturnValue(
+      selectChain({ _id: SERVICE, userId: new mongoose.Types.ObjectId() })
+    );
+
+    const res = makeRes();
+    await chatController.createOrGetChat(
+      {
+        user: { id: String(stranger) },
+        body: { providerId: String(APPLICANT), serviceId: String(SERVICE) },
+      },
+      res
+    );
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBe('not_related_to_service');
+    expect(Chat.findOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('refuses the owner messaging someone who never applied', async () => {
+    JobRequest.findOne.mockReturnValue(selectChain(null));
+
+    const res = makeRes();
+    await chatController.createOrGetChat(
+      {
+        user: { id: String(OWNER) },
+        body: { providerId: String(APPLICANT), serviceId: String(SERVICE) },
+      },
+      res
+    );
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBe('no_application_between_parties');
+    expect(Chat.findOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('rejects a malformed id with 400 rather than a CastError 500', async () => {
+    const res = makeRes();
+    await chatController.createOrGetChat(
+      { user: { id: String(OWNER) }, body: { providerId: 'not-an-id', serviceId: String(SERVICE) } },
+      res
+    );
+
+    expect(res.statusCode).toBe(400);
   });
 
   it('refuses a chat with yourself', async () => {

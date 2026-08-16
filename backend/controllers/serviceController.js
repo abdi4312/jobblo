@@ -6,6 +6,73 @@ const mongoose = require('mongoose');
 /** A user-supplied string is not a regex. Same escape the admin search already uses. */
 const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/** Bounds for a job posting. The schema only had `price: { min: 0 }`. */
+const SERVICE_LIMITS = {
+  TITLE_MIN: 5,
+  TITLE_MAX: 200,
+  DESCRIPTION_MIN: 20,
+  DESCRIPTION_MAX: 5000,
+  PRICE_MAX: 1000000,
+  DURATION_MAX: 1000,
+  MAX_CHECKLIST_ITEMS: 50,
+  CHECKLIST_TEXT_MAX: 300,
+};
+
+/**
+ * Shared field validation for creating and editing a job.
+ *
+ * None of this existed: title and description had no length caps, `price` had no
+ * ceiling (so 1e308 was accepted and then overflowed Stripe at checkout), and
+ * `fromDate`/`toDate` were never compared — a job could end before it started, which
+ * nothing downstream would ever question.
+ *
+ * Returns an error string, or null when the payload is acceptable.
+ */
+function validateServiceFields(body, { partial = false } = {}) {
+  const has = (field) => body[field] !== undefined && body[field] !== null;
+
+  if (!partial || has('title')) {
+    const title = String(body.title ?? '').trim();
+    if (title.length < SERVICE_LIMITS.TITLE_MIN)
+      return `Tittelen må være minst ${SERVICE_LIMITS.TITLE_MIN} tegn.`;
+    if (title.length > SERVICE_LIMITS.TITLE_MAX)
+      return `Tittelen kan være maks ${SERVICE_LIMITS.TITLE_MAX} tegn.`;
+  }
+
+  if (!partial || has('description')) {
+    const description = String(body.description ?? '').trim();
+    if (description.length < SERVICE_LIMITS.DESCRIPTION_MIN)
+      return `Beskrivelsen må være minst ${SERVICE_LIMITS.DESCRIPTION_MIN} tegn.`;
+    if (description.length > SERVICE_LIMITS.DESCRIPTION_MAX)
+      return `Beskrivelsen kan være maks ${SERVICE_LIMITS.DESCRIPTION_MAX} tegn.`;
+  }
+
+  for (const field of ['price', 'hourlyRate']) {
+    if (!has(field)) continue;
+    const value = Number(body[field]);
+    if (!Number.isFinite(value) || value < 0) return `${field} må være et positivt tall.`;
+    if (value > SERVICE_LIMITS.PRICE_MAX)
+      return `${field} kan ikke overstige ${SERVICE_LIMITS.PRICE_MAX} kr.`;
+  }
+
+  if (has('duration')) {
+    const value = Number(body.duration?.value);
+    if (body.duration?.value !== undefined) {
+      if (!Number.isFinite(value) || value <= 0) return 'Varighet må være større enn 0.';
+      if (value > SERVICE_LIMITS.DURATION_MAX)
+        return `Varighet kan ikke overstige ${SERVICE_LIMITS.DURATION_MAX}.`;
+    }
+  }
+
+  const from = has('fromDate') ? new Date(body.fromDate) : null;
+  const to = has('toDate') ? new Date(body.toDate) : null;
+  if (from && Number.isNaN(from.getTime())) return 'Ugyldig fra-dato.';
+  if (to && Number.isNaN(to.getTime())) return 'Ugyldig til-dato.';
+  if (from && to && from > to) return 'Sluttdato kan ikke være før startdato.';
+
+  return null;
+}
+
 /** Guards against Mongo operator injection from query strings (`?userId[$ne]=null`). */
 const isValidId = (id) => typeof id === 'string' && mongoose.Types.ObjectId.isValid(id);
 
@@ -196,15 +263,53 @@ exports.getAllServices = async (req, res) => {
 
 // ------------------- Get Service By ID -------------------
 
+/** Statuses a listing may be read at by anyone. Mirrors the public list filter. */
+const PUBLIC_SERVICE_STATUSES = ['open', 'active'];
+
 exports.getServiceById = async (req, res) => {
   try {
-    const service = await Service.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { views: 1 } },
-      { new: true }
-    ).populate('userId', 'name avatarUrl averageRating verified role orgNumber companyName');
+    const { id } = req.params;
+
+    // A malformed id used to reach findByIdAndUpdate and throw a CastError → 500.
+    if (!isValidId(id)) return res.status(400).json({ error: 'Invalid service ID' });
+
+    // Read BEFORE deciding whether to count the view. This used to be a single
+    // findByIdAndUpdate with `$inc: { views: 1 }` and no status filter at all, so
+    // drafts, cancelled, completed and awaiting_payment listings were all readable by
+    // id — exactly the set the list endpoint was hardened to hide — and the counter
+    // rose on the owner's own refreshes and on every crawler hit, while `views` is a
+    // sortable public field.
+    const service = await Service.findById(id).populate(
+      'userId',
+      'name avatarUrl averageRating verified role orgNumber companyName'
+    );
 
     if (!service) return res.status(404).json({ error: 'Service not found' });
+
+    const viewerId = req.userId ? String(req.userId) : null;
+    const ownerId = String(service.userId?._id || service.userId);
+    const isOwner = Boolean(viewerId) && viewerId === ownerId;
+
+    if (!PUBLIC_SERVICE_STATUSES.includes(service.status) && !isOwner) {
+      // A party to the contract still needs to open the job they are working on.
+      const involved = viewerId
+        ? await Order.findOne({
+            serviceId: service._id,
+            $or: [{ customerId: viewerId }, { providerId: viewerId }],
+          }).select('_id')
+        : null;
+
+      if (!involved) {
+        // 404 rather than 403 — a non-public listing should not confirm it exists.
+        return res.status(404).json({ error: 'Service not found' });
+      }
+    }
+
+    // Count a view only when a visitor other than the owner reads a live listing.
+    if (!isOwner && PUBLIC_SERVICE_STATUSES.includes(service.status)) {
+      await Service.updateOne({ _id: service._id }, { $inc: { views: 1 } });
+      service.views = (service.views || 0) + 1;
+    }
 
     // Fetch applicant count if maxApplicants is set (HIDDEN FOR NOW)
     // let applicantCount = 0;
@@ -373,6 +478,9 @@ exports.createService = async (req, res) => {
       serviceData.location.city = city || '';
     }
 
+    const fieldError = validateServiceFields(req.body);
+    if (fieldError) return res.status(400).json({ error: fieldError });
+
     // Validate paymentType & price (especially Anbud estimated budget)
     const priceNum = Number(serviceData.price);
     if (serviceData.paymentType === 'Anbud') {
@@ -418,27 +526,56 @@ exports.createService = async (req, res) => {
     if (checklist) {
       try {
         parsedChecklist = typeof checklist === 'string' ? JSON.parse(checklist) : checklist;
+        if (!Array.isArray(parsedChecklist)) throw new Error('checklist must be an array');
+        if (parsedChecklist.length > SERVICE_LIMITS.MAX_CHECKLIST_ITEMS) {
+          return res.status(400).json({
+            error: `Sjekklisten kan ha maks ${SERVICE_LIMITS.MAX_CHECKLIST_ITEMS} punkter.`,
+          });
+        }
         // Format checklist items with default values
         parsedChecklist = parsedChecklist.map((item) => ({
           id: item.id,
-          text: item.text,
+          text: String(item.text ?? '').slice(0, SERVICE_LIMITS.CHECKLIST_TEXT_MAX),
           checked: false,
           checkedBy: null,
           checkedAt: null,
         }));
       } catch (err) {
-        console.error('Failed to parse checklist:', err);
+        // Swallowing this created the job with an EMPTY checklist and returned 201, so
+        // the poster believed their checklist was saved. The contract made from it
+        // later then had nothing to tick off, and nobody was ever told why.
+        console.error('Failed to parse checklist:', err.message);
+        return res.status(400).json({ error: 'Sjekklisten kunne ikke leses.' });
       }
     }
 
+    // Whitelist what a client may set.
+    //
+    // This used to spread the un-filtered rest of req.body straight into create, so a
+    // client could set `promoted: true` (a paid placement), inflate `views`, or choose
+    // its own `status`. The UPDATE path was hardened with a whitelist; create was not.
+    const SERVICE_CREATABLE_FIELDS = [
+      'title', 'description', 'price', 'hourlyRate', 'paymentType', 'location',
+      'categories', 'tags', 'duration', 'fromDate', 'toDate', 'equipment',
+      'maxApplicants', 'images', 'imageMetadata', 'urgent',
+    ];
+    const safeServiceData = {};
+    for (const field of SERVICE_CREATABLE_FIELDS) {
+      if (serviceData[field] !== undefined) safeServiceData[field] = serviceData[field];
+    }
+
     const service = await Service.create({
-      ...serviceData,
+      ...safeServiceData,
       ...pickContactUpdates(req.body),
       userId,
       countyCode,
       municipalityCode,
       areaCode,
       checklist: parsedChecklist,
+      // Never client-supplied.
+      status: 'open',
+      promoted: false,
+      views: 0,
     });
 
     res.status(201).json(service);
@@ -577,6 +714,10 @@ exports.updateService = async (req, res) => {
       'equipment',
       'maxApplicants',
     ];
+
+    // Same bounds as create, applied to whichever fields this edit actually sends.
+    const editError = validateServiceFields(req.body, { partial: true });
+    if (editError) return res.status(400).json({ error: editError });
 
     for (const field of SERVICE_UPDATABLE_FIELDS) {
       if (req.body[field] !== undefined) service[field] = req.body[field];

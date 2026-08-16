@@ -16,6 +16,9 @@ const MAX_AGREED_PRICE = 1000000;
 /** Longest single chat message. Guards the 16 MB per-document limit — see sendMessage. */
 const MAX_MESSAGE_LENGTH = 5000;
 
+/** Ceiling on how many messages one request may pull from a thread. */
+const MAX_MESSAGE_PAGE = 200;
+
 exports.createOrGetChat = async (req, res) => {
   try {
     const { providerId, serviceId } = req.body;
@@ -141,11 +144,18 @@ exports.getMyChats = async (req, res) => {
   try {
     const { id } = req.user;
 
-    // Get ALL chats where user is either client or provider, and not deleted by them
+    // The inbox needs the last message, not every message ever sent.
+    //
+    // This returned each chat's FULL history, and the client invalidates the chats
+    // query on every inbound message and every read receipt — so a user with a few
+    // long-running conversations re-downloaded the entire corpus on each event. The
+    // unread indicator only ever inspects the most recent message, so `$slice: -1`
+    // gives the UI exactly what it reads.
     const chats = await Chat.find({
       $or: [{ clientId: id }, { providerId: id }],
       deletedFor: { $ne: id },
     })
+      .select({ messages: { $slice: -1 } })
       .populate('clientId', 'name role avatarUrl')
       .populate('providerId', 'name role avatarUrl')
       .populate('serviceId', 'title description images price categories userId')
@@ -165,23 +175,45 @@ exports.getChatById = async (req, res) => {
 
     if (!isValidId(chatId)) return res.status(400).json({ error: 'Invalid chat ID format' });
 
+    // Paginate the thread. It used to return every message with each sender populated,
+    // so a long-running job's conversation grew into a large response on every open —
+    // and the client refetches this whenever a message or read receipt arrives.
+    //
+    // `offset` counts backwards from the newest message, so offset=0 is the most recent
+    // page and the client raises it to walk further back. Messages stay in chronological
+    // order within the page, which is how the thread renders.
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), MAX_MESSAGE_PAGE);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+
+    // Authorize before reading the messages at all.
+    const meta = await Chat.findById(chatId).select('clientId providerId messages');
+    if (!meta) {
+      return res.status(404).json({ message: 'Chat not found' });
+    }
+    if (String(meta.clientId) !== String(id) && String(meta.providerId) !== String(id)) {
+      return res.status(403).json({ message: 'Unauthorized: You are not part of this chat.' });
+    }
+
+    const totalMessages = meta.messages?.length || 0;
+
     const chat = await Chat.findById(chatId)
+      .select({ messages: { $slice: [-(offset + limit), limit] } })
       .populate('clientId', 'name avatarUrl')
       .populate('providerId', 'name avatarUrl')
       .populate('serviceId', 'title description images price categories userId')
       .populate('orderId')
       .populate('messages.senderId', 'name avatarUrl');
 
-    if (!chat) {
-      return res.status(404).json({ message: 'Chat not found' });
-    }
+    const payload = chat.toObject();
+    payload.messagePage = {
+      total: totalMessages,
+      limit,
+      offset,
+      // True when older messages remain to be fetched.
+      hasMore: offset + limit < totalMessages,
+    };
 
-    // 🔒 Authorization check: user must be either client or provider of this chat
-    if (chat.clientId._id.toString() !== id && chat.providerId._id.toString() !== id) {
-      return res.status(403).json({ message: 'Unauthorized: You are not part of this chat.' });
-    }
-
-    res.json(chat);
+    res.json(payload);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

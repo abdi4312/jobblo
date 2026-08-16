@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const serviceController = require('../controllers/serviceController');
 const jobReportController = require('../controllers/jobReportController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
 /**
@@ -281,7 +281,7 @@ router.post('/', authenticate, upload.array('images', 6), serviceController.crea
  *     summary: Get service by ID
  *     tags: [Tjenester]
  */
-router.get('/:id', serviceController.getServiceById);
+router.get('/:id', optionalAuthenticate, serviceController.getServiceById);
 
 /**
  * -------------------------------------------------------
