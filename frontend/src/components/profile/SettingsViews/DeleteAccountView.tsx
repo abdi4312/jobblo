@@ -82,7 +82,7 @@ export const DeleteAccountView = () => {
           id="feedback"
           rows={5}
           placeholder="Tilbakemelding (valgfritt)"
-          className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-gray-100 outline-none rounded-2xl px-5 py-4 text-gray-900 font-medium transition-colors resize-none"
+          className="w-full border border-[#E6E7E1] bg-white outline-none focus:border-[#2E6641] focus:ring-4 focus:ring-[#2E6641]/12 rounded-2xl px-5 py-4 text-gray-900 font-medium transition-colors resize-none"
           value={form.feedback || ''}
           onChange={(event) => handleChange('feedback', event.target.value)}
         />

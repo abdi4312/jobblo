@@ -23,7 +23,10 @@ export const useProfileLogic = () => {
   useEffect(() => {
     if (userToDisplay?.role === 'company') {
       setProfileType('poster');
-      setActiveTab('Aktive');
+      // 'Om oss' carries the company's description, services, areas and contact details.
+      // Landing on 'Aktive' meant a visitor's first view of a company was whatever jobs
+      // happened to be open, with no way to reach who the company actually is.
+      setActiveTab('Om oss');
     }
   }, [userToDisplay?.role]);
 

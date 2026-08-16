@@ -199,7 +199,7 @@ export function NotificationBell() {
           <Link
             to="/alerts"
             onClick={() => setOpen(false)}
-            className="flex items-center justify-center gap-1.5 border-t border-[#E6E7E1] bg-[#F4F6F0] px-4 py-3.5 text-[0.875rem] font-semibold text-[#2E6641] transition-colors hover:bg-[#EAF1E9] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
+            className="flex items-center justify-center gap-1.5 border-t border-[#E6E7E1] bg-[#F4F6F0]! px-4 py-3.5 text-[0.875rem] font-semibold text-[#2E6641]! transition-colors hover:bg-[#EAF1E9]! focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
           >
             Se alle varsler
             <ArrowRight size={14} strokeWidth={2.4} />

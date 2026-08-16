@@ -24,13 +24,13 @@ export const UsernameView = () => {
         <div className="relative group">
           <label
             htmlFor="username"
-            className="absolute left-4 top-2 text-[11px] font-bold text-gray-500 uppercase tracking-tight"
+            className="absolute left-4 top-2 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]"
           >
             Brukernavn
           </label>
           <input
             id="username"
-            className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-gray-100 outline-none rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors"
+            className="w-full border border-[#E6E7E1] bg-white outline-none focus:border-[#2E6641] focus:ring-4 focus:ring-[#2E6641]/12 rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors"
             value={form.name}
             onChange={(event) => handleChange('name', event.target.value)}
           />

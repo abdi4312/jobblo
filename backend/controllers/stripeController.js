@@ -236,9 +236,18 @@ exports.checkoutSessionStatus = async (req, res) => {
       });
     }
 
+    // The success page showed one line of green text and nothing about the purchase.
+    // These are already computed above, so returning them costs nothing and lets the
+    // page confirm *what* was bought and *what* was charged — which is the difference
+    // between a receipt and an assurance.
     res.json({
       payment_status: 'paid',
       plan: subscription.currentPlan.plan,
+      planType,
+      amount,
+      currency: session.currency || 'nok',
+      discountAmount,
+      coupon: discountCoupon,
     });
   } catch (error) {
     console.error('Status Error:', error);

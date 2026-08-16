@@ -29,7 +29,7 @@ function PasswordField({
     <div className="flex flex-col gap-1.5">
       <label
         htmlFor={id}
-        className="text-[11px] font-bold text-gray-500 uppercase tracking-tight"
+        className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]"
       >
         {label}
       </label>

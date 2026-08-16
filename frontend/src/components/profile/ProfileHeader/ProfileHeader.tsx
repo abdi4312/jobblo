@@ -1,358 +1,416 @@
-import { useUserStore } from '../../../stores/userStore';
-import {
-  Star,
-  Settings,
-  MapPin,
-  Pencil,
-  ShieldCheck,
-  FileText,
-  Users,
-} from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useBlockUser } from '../../../features/profile/hooks';
+import {
+  Ban,
+  Briefcase,
+  Camera,
+  CheckCircle2,
+  Clock,
+  FileText,
+  LogOut,
+  MapPin,
+  MoreHorizontal,
+  Pencil,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Users,
+  Zap,
+} from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useUserStore } from '../../../stores/userStore';
+import { useBlockUser, useUpdateUser } from '../../../features/profile/hooks';
 import { BlockModal } from './BlockModal';
-import type { User } from '../../../types/userTypes';
-import { Button } from '../../Ui/button/Button';
 import ConfirmDialog from '../../Ui/ConfirmDialog';
-import { DEFAULT_AVATAR, DEFAULT_BANNER } from '../../../constants/assets';
+import { DEFAULT_AVATAR } from '../../../constants/assets';
+import type { User } from '../../../types/userTypes';
+import type { EditSection } from '../EditProfileSheet';
+
+/**
+ * The identity card at the top of a profile.
+ *
+ * There were two of these — a 150-line company branch and a 155-line person branch that
+ * had drifted apart: different avatar sizes, different edit targets, a "Rediger" button
+ * that went to `/settings` on one and `/settings/bio` on the other, and a block modal
+ * mounted in the person branch that nothing could open. They are one component now, with
+ * the company-only fields behind a flag.
+ *
+ * The stat rail is the substantive change. The API already computes `responseRate`,
+ * `averageResponseTimeMinutes`, `completionRate` and `hireRate` on every profile fetch
+ * (`getUserById`) and the page threw all of it away to show three numbers, one of which
+ * was a rating printed as a bare "0.0". On a marketplace those four are the only things a
+ * stranger actually wants to know before hiring you.
+ */
+
+/** `postSted` is a string on the model but arrives as an object on some payloads. */
+const text = (value: unknown): string => {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') {
+    const city = (value as { city?: string; address?: string }).city;
+    if (typeof city === 'string') return city;
+  }
+  return '';
+};
+
+/** 0–59 → "under 1 t", 60–1439 → "3 t", beyond → "2 d". */
+const formatResponseTime = (minutes: number): string => {
+  if (minutes < 60) return 'under 1 t';
+  if (minutes < 1440) return `${Math.round(minutes / 60)} t`;
+  return `${Math.round(minutes / 1440)} d`;
+};
+
+interface Fact {
+  label: string;
+  value: string;
+  icon: typeof Star;
+  /** The rating is the one figure people look for; it gets the green. */
+  accent?: boolean;
+}
 
 export function ProfileHeader({
   user,
   handlelogout,
   isOwnProfile = true,
   profileType = 'seeker',
+  onEdit,
 }: {
-  user: User | null;
+  user: (User & Record<string, any>) | null;
   handlelogout: () => void;
   isOwnProfile?: boolean;
   profileType?: 'seeker' | 'poster';
+  onEdit?: (section?: EditSection) => void;
 }) {
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [isUnblockModalOpen, setIsUnblockModalOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  const navigate = useNavigate();
   const blockMutation = useBlockUser();
+  const updateUser = useUpdateUser();
   const currentUser = useUserStore((state) => state.user);
 
+  const isCompany = user?.role === 'company';
   const isBlockedByMe = currentUser?.blockedUsers?.some(
     (id) => (typeof id === 'string' ? id : id._id)?.toString() === user?._id
   );
 
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setIsMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [isMenuOpen]);
+
   const handleUnblock = () => {
-    if (user?._id) {
-      blockMutation.mutate(user._id, {
-        onSuccess: () => {
-          setIsUnblockModalOpen(false);
-          toast.success(`Bruker opphevet blokkering`);
-        },
-      });
-    }
+    if (!user?._id) return;
+    blockMutation.mutate(user._id, {
+      onSuccess: () => {
+        setIsUnblockModalOpen(false);
+        toast.success('Bruker opphevet blokkering');
+      },
+    });
   };
 
-  const fullName =
-    user?.role === 'company' ? user?.companyName : `${user?.name} ${user?.lastName || ''}`.trim();
+  /** Changing your picture is a file picker, not a trip to `/settings/picture`. */
+  const uploadAvatar = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !user?._id) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Velg en bildefil.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Bildet er større enn 5 MB.');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('avatar', file);
+    updateUser.mutate({ userId: user._id, data: formData });
+  };
 
-  // Company Profile
-  if (user?.role === 'company') {
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-black/5 overflow-hidden -mt-6 sm:-mt-8 relative z-10">
-        {isBlockedByMe && (
-          <div className="bg-red-50 py-3 text-center border-b border-red-100">
-            <p className="text-[13px] sm:text-[14px] font-medium text-gray-900">Du har blokkert denne brukeren.</p>
-            <button
-              onClick={() => setIsUnblockModalOpen(true)}
-              disabled={blockMutation.isPending}
-              className="text-[13px] sm:text-[14px] font-bold text-red-500 hover:underline mt-0.5 disabled:opacity-50"
-            >
-              {blockMutation.isPending ? 'Opphever...' : 'Opphev blokkering'}
-            </button>
-          </div>
-        )}
+  const fullName = isCompany
+    ? user?.companyName || user?.name
+    : `${user?.name || ''} ${user?.lastName || ''}`.trim();
 
-        {/* Banner */}
-        <div className="relative h-28 sm:h-36 md:h-44 bg-gray-100">
-          <img
-            src={user?.bannerUrl || DEFAULT_BANNER}
-            alt="Banner"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-          {isOwnProfile && (
-            <button
-              onClick={() => navigate('/settings/banner')}
-              className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 bg-white/90 backdrop-blur-sm p-1.5 sm:p-2 rounded-lg shadow-sm hover:bg-white transition-colors"
-            >
-              <Pencil size={13} className="text-gray-600" />
-            </button>
-          )}
+  const place = text(user?.postSted) || text(user?.address);
+  const memberSince = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('nb-NO', { month: 'long', year: 'numeric' })
+    : null;
+
+  /**
+   * The fact row.
+   *
+   * This was a four-column grid with hairline dividers, and it was almost always wrong.
+   * A profile with one figure to its name drew that figure and three empty white cells —
+   * a grey-ruled strip with nothing in it, which is what it looked like. And the one
+   * figure a new account *did* have was "Svarprosent 100 %", because the API returns 100
+   * when nobody has ever sent you a request.
+   *
+   * Chips instead of cells: the row is as wide as it has things to say, so one fact looks
+   * deliberate and five wrap cleanly. Every entry is gated on the data that would make it
+   * true, and when there is genuinely nothing yet it says so rather than drawing a frame
+   * around the absence.
+   */
+  const facts: Fact[] = [];
+
+  if (user?.reviewCount) {
+    facts.push({
+      icon: Star,
+      value: Number(user.averageRating ?? 0).toFixed(1),
+      label: `${user.reviewCount} ${user.reviewCount === 1 ? 'vurdering' : 'vurderinger'}`,
+      accent: true,
+    });
+  }
+  if (profileType === 'seeker' && user?.completedJobs) {
+    facts.push({ icon: CheckCircle2, value: String(user.completedJobs), label: 'fullførte' });
+  }
+  if (profileType === 'poster' && user?.postedJobsCount) {
+    facts.push({ icon: Briefcase, value: String(user.postedJobsCount), label: 'lagt ut' });
+  }
+  // Gated on the denominator, not the rate: "answers everyone" and "has never been asked"
+  // both come back as 100.
+  if (user?.totalJobRequests > 0 && typeof user?.responseRate === 'number') {
+    facts.push({ icon: Zap, value: `${user.responseRate} %`, label: 'svarer' });
+  }
+  if (typeof user?.averageResponseTimeMinutes === 'number' && user.averageResponseTimeMinutes > 0) {
+    facts.push({
+      icon: Clock,
+      value: formatResponseTime(user.averageResponseTimeMinutes),
+      label: 'svartid',
+    });
+  }
+  if (user?.verified) {
+    facts.push({ icon: ShieldCheck, value: 'Verifisert', label: '', accent: true });
+  }
+  if (facts.length === 0) {
+    facts.push({
+      icon: Sparkles,
+      value: 'Ny på Jobblo',
+      label: memberSince ? `siden ${memberSince}` : '',
+    });
+  }
+
+  return (
+    <div className="relative z-10 -mt-14 rounded-3xl border border-[#E6E7E1] bg-white shadow-[0_18px_48px_rgba(11,11,11,0.08)] sm:-mt-18">
+      {isBlockedByMe && (
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-t-3xl border-b border-[#E6E7E1] bg-[#FBF4F2] px-5 py-3 text-center">
+          <p className="text-[0.875rem] font-medium text-[#0B0B0B]">Du har blokkert denne brukeren.</p>
+          <button
+            type="button"
+            onClick={() => setIsUnblockModalOpen(true)}
+            disabled={blockMutation.isPending}
+            className="text-[0.875rem] font-semibold text-[#B4544A] underline-offset-2 hover:underline disabled:opacity-50"
+          >
+            {blockMutation.isPending ? 'Opphever …' : 'Opphev blokkering'}
+          </button>
         </div>
+      )}
 
-        {/* Profile Info */}
-        <div className="px-4 sm:px-6 pb-4 sm:pb-5 -mt-8 sm:-mt-10 relative z-10">
-          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-3 sm:gap-4">
-            {/* Avatar */}
-            <div className="relative group shrink-0">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-[3px] border-white bg-white shadow-md">
-                <img
-                  src={user?.avatarUrl || DEFAULT_AVATAR}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              {isOwnProfile && (
+      <div className="p-5 sm:p-7">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-6">
+          {/* Avatar. On your own profile the whole thing is the upload button. */}
+          <div className="relative shrink-0 self-center sm:self-start">
+            <div className="size-22 overflow-hidden rounded-full border-4 border-white bg-[#EAF1E9] shadow-[0_6px_20px_rgba(11,11,11,0.12)] sm:size-27">
+              <img
+                src={user?.avatarUrl || DEFAULT_AVATAR}
+                alt=""
+                className="size-full object-cover"
+              />
+            </div>
+
+            {user?.verified && (
+              <span
+                title="Verifisert bruker"
+                className="absolute bottom-0.5 right-0.5 flex size-7 items-center justify-center rounded-full border-2 border-white bg-[#2E6641] text-white"
+              >
+                <ShieldCheck size={13} strokeWidth={2.4} />
+              </span>
+            )}
+
+            {isOwnProfile && (
+              <>
                 <button
-                  onClick={() => navigate('/settings/picture')}
-                  className="absolute inset-0 bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={updateUser.isPending}
+                  aria-label="Bytt profilbilde"
+                  className="absolute inset-0 flex items-center justify-center rounded-full bg-[#0B0B0B]/45 text-white opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none disabled:opacity-100"
                 >
-                  <Pencil size={14} className="text-white" />
+                  <Camera size={20} strokeWidth={2} />
                 </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={uploadAvatar}
+                  className="hidden"
+                />
+              </>
+            )}
+          </div>
+
+          {/* Identity */}
+          <div className="min-w-0 flex-1 text-center sm:text-left">
+            <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 sm:justify-start">
+              <h1 className="text-[1.5rem] font-bold leading-tight tracking-[-0.03em] text-[#0B0B0B] sm:text-[1.75rem]">
+                {fullName || 'Bruker'}
+              </h1>
+              {user?.isTrusted && (
+                <span className="inline-flex h-6 items-center gap-1 rounded-full bg-[#EAF1E9] px-2.5 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-[#2E6641]">
+                  <ShieldCheck size={11} strokeWidth={2.6} />
+                  Betrodd
+                </span>
               )}
             </div>
 
-            {/* Info */}
-            <div className="flex-1 text-center sm:text-left pb-1 min-w-0">
-              <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
-                <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate">{fullName}</h1>
-                {(user as any)?.isTrusted && (
-                  <span className="flex items-center gap-0.5 bg-[#e8f5e9] text-[#2e7d32] text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded">
-                    <ShieldCheck size={10} /> TRUSTED
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center justify-center sm:justify-start gap-2 sm:gap-3 mt-0.5 sm:mt-1 text-[11px] sm:text-[13px] text-gray-500 flex-wrap">
-                <span className="flex items-center gap-1">
-                  <MapPin size={12} /> {user?.postSted || 'Oslo'}
+            <div className="mt-1.5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[0.875rem] text-[#63665F] sm:justify-start">
+              {place && (
+                <span className="flex items-center gap-1.5">
+                  <MapPin size={13} strokeWidth={2} className="text-[#9B9E96]" />
+                  {place}
                 </span>
-                <span className="text-gray-300 hidden sm:inline">·</span>
-                <span>{user?.averageRating != null ? user.averageRating.toFixed(1) : '0.0'} <Star size={10} className="inline text-amber-500" fill="currentColor" /></span>
-                <span className="text-gray-300 hidden sm:inline">·</span>
-                <span>{user?.reviewCount || 0} vurderinger</span>
-              </div>
+              )}
+              {place && memberSince && <span className="text-[#D4D6CD]">·</span>}
+              {memberSince && <span>Medlem siden {memberSince}</span>}
             </div>
 
-            {/* Actions */}
-            {isOwnProfile && (
-              <div className="flex gap-1.5 sm:gap-2 pb-1">
-                <Button
-                  label="Rediger"
-                  onClick={() => navigate('/settings')}
-                  icon={<Pencil size={13} />}
-                  className="w-auto rounded-lg font-medium px-3 sm:px-5 text-[11px] sm:text-[13px] cursor-pointer shrink-0"
-                />
-                <ConfirmDialog
-                  title="Logg ut?"
-                  description="Vil du logge ut?"
-                  confirmText="Ja, logg ut"
-                  cancelText="Avbryt"
-                  isOpen={showLogoutConfirm}
-                  onOpenChange={setShowLogoutConfirm}
-                  onConfirm={handlelogout}
-                  trigger={
-                    <button className="shrink-0 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-black/5 text-red-500 rounded-lg text-[11px] sm:text-[12px] font-medium hover:bg-red-50 transition-colors">
-                      Logg Ut
-                    </button>
-                  }
-                />
-                <div className="relative shrink-0">
+            {isCompany && user?.orgNumber && (
+              <p className="mt-1 text-[0.8125rem] text-[#9B9E96]">Org.nr {user.orgNumber}</p>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex shrink-0 items-center justify-center gap-2 sm:justify-end">
+            {isOwnProfile ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onEdit?.('identity')}
+                  className="flex h-10.5 items-center gap-2 rounded-full bg-[#2E6641] px-5 text-[0.875rem] font-semibold text-white transition-colors hover:bg-[#255335] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/20"
+                >
+                  <Pencil size={15} strokeWidth={2.4} />
+                  Rediger profil
+                </button>
+
+                <div className="relative" ref={menuRef}>
                   <button
-                    onClick={() => setIsMenuOpen(!isMenuOpen)}
-                    className="bg-gray-100 hover:bg-gray-200 p-1.5 sm:p-2 rounded-lg transition-colors"
+                    type="button"
+                    onClick={() => setIsMenuOpen((v) => !v)}
+                    aria-haspopup="menu"
+                    aria-expanded={isMenuOpen}
+                    aria-label="Flere valg"
+                    className="flex size-10.5 items-center justify-center rounded-full border border-[#E6E7E1] bg-white text-[#63665F] transition-colors hover:border-[#D4D6CD] hover:text-[#0B0B0B] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
                   >
-                    <Settings size={14} className="text-gray-500" />
+                    <MoreHorizontal size={18} strokeWidth={2.2} />
                   </button>
+
                   {isMenuOpen && (
-                    <div className="absolute top-full right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-xl py-1 min-w-44 z-50">
-                      <button
-                        onClick={() => navigate('/settings/seeker')}
-                        className="flex items-center w-full px-4 py-2 text-[13px] hover:bg-gray-50 text-gray-700"
-                      >
-                        <Settings size={13} className="mr-2" /> Innstillinger
-                      </button>
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-[#E6E7E1] bg-white p-1.5 shadow-[0_20px_50px_rgba(11,11,11,0.14)]"
+                    >
+                      {[
+                        { label: 'Mine annonser', icon: FileText, to: '/mine-annonser' },
+                        { label: 'Mine søkere', icon: Users, to: '/my-applicants' },
+                        { label: 'SafePay', icon: ShieldCheck, to: '/settings/safepay' },
+                        { label: 'Innstillinger', icon: Settings, to: '/settings' },
+                      ].map((item) => (
+                        <button
+                          key={item.to}
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            navigate(item.to);
+                          }}
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[0.875rem] font-medium text-[#0B0B0B] transition-colors hover:bg-[#F4F6F0]"
+                        >
+                          <item.icon size={15} strokeWidth={2} className="text-[#63665F]" />
+                          {item.label}
+                        </button>
+                      ))}
+
+                      <div className="my-1.5 h-px bg-[#E6E7E1]" />
+
+                      <ConfirmDialog
+                        title="Logg ut?"
+                        description="Vil du logge ut av Jobblo?"
+                        confirmText="Ja, logg ut"
+                        cancelText="Avbryt"
+                        isOpen={showLogoutConfirm}
+                        onOpenChange={setShowLogoutConfirm}
+                        onConfirm={handlelogout}
+                        trigger={
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[0.875rem] font-medium text-[#B4544A] transition-colors hover:bg-[#FBF4F2]"
+                          >
+                            <LogOut size={15} strokeWidth={2} />
+                            Logg ut
+                          </button>
+                        }
+                      />
                     </div>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <BlockModal
-          user={user}
-          isOpen={isBlockModalOpen}
-          onClose={() => setIsBlockModalOpen(false)}
-          onConfirm={() => {
-            if (user?._id) {
-              blockMutation.mutate(user._id, {
-                onSuccess: (data) => {
-                  setIsBlockModalOpen(false);
-                  toast.success(data.message || `${user?.name} blocked`);
-                },
-              });
-            }
-          }}
-          isPending={blockMutation.isPending}
-          type="block"
-        />
-
-        <BlockModal
-          user={user}
-          isOpen={isUnblockModalOpen}
-          onClose={() => setIsUnblockModalOpen(false)}
-          onConfirm={handleUnblock}
-          isPending={blockMutation.isPending}
-          type="unblock"
-        />
-      </div>
-    );
-  }
-
-  // Normal User Profile
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-black/5 p-4 sm:p-5 -mt-6 sm:-mt-8 relative z-10">
-      {isBlockedByMe && (
-        <div className="bg-red-50 py-3 text-center border-b border-red-100 mb-4 sm:mb-5 -mx-4 sm:-mx-5 -mt-4 sm:-mt-5 rounded-t-xl">
-          <p className="text-[13px] sm:text-[14px] font-medium text-gray-900">Du har blokkert denne brukeren.</p>
-          <button
-            onClick={() => setIsUnblockModalOpen(true)}
-            disabled={blockMutation.isPending}
-            className="text-[13px] sm:text-[14px] font-bold text-red-500 hover:underline mt-0.5 disabled:opacity-50"
-          >
-            {blockMutation.isPending ? 'Opphever...' : 'Opphev blokkering'}
-          </button>
-        </div>
-      )}
-
-      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4">
-        {/* Avatar */}
-        <div className="relative group shrink-0">
-          <div className="w-[60px] h-[60px] sm:w-[72px] sm:h-[72px] rounded-full bg-[#c8d8c8] overflow-hidden flex items-center justify-center text-lg sm:text-xl font-medium text-[#1a3a1a]">
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt={fullName} className="w-full h-full object-cover" />
+              </>
             ) : (
-              user?.name?.[0] || 'U'
+              !isBlockedByMe && (
+                <button
+                  type="button"
+                  onClick={() => setIsBlockModalOpen(true)}
+                  className="flex h-10.5 items-center gap-2 rounded-full border border-[#E6E7E1] bg-white px-4 text-[0.875rem] font-medium text-[#63665F] transition-colors hover:border-[#B4544A]/40 hover:text-[#B4544A] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
+                >
+                  <Ban size={15} strokeWidth={2} />
+                  Blokker
+                </button>
+              )
             )}
           </div>
-          {user?.verified && (
-            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 sm:w-5 sm:h-5 bg-[#1a3a1a] rounded-full border-2 border-white flex items-center justify-center">
-              <ShieldCheck size={8} className="text-white sm:hidden" />
-              <ShieldCheck size={10} className="text-white hidden sm:block" />
+        </div>
+
+        <dl className="mt-5 flex flex-wrap justify-center gap-2 border-t border-[#E6E7E1] pt-5 sm:justify-start">
+          {facts.map((fact) => (
+            <div
+              key={fact.value + fact.label}
+              className={`inline-flex h-9 items-center gap-2 rounded-full px-3.5 ${
+                fact.accent ? 'bg-[#EAF1E9]' : 'bg-[#F4F6F0]'
+              }`}
+            >
+              <fact.icon
+                size={14}
+                strokeWidth={2.2}
+                className={fact.accent ? 'text-[#2E6641]' : 'text-[#9B9E96]'}
+              />
+              <dd className="text-[0.875rem] font-semibold tabular-nums text-[#0B0B0B]">
+                {fact.value}
+              </dd>
+              {fact.label && <dt className="text-[0.8125rem] text-[#63665F]">{fact.label}</dt>}
             </div>
-          )}
-          {isOwnProfile && (
-            <button
-              onClick={() => navigate('/settings/picture')}
-              className="absolute inset-0 bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-            >
-              <Pencil size={12} className="text-white sm:hidden" />
-              <Pencil size={14} className="text-white hidden sm:block" />
-            </button>
-          )}
-        </div>
-
-        {/* Info */}
-        <div className="flex-1 text-center sm:text-left min-w-0">
-          <div className="text-[10px] sm:text-[11px] text-[#1a3a1a] font-medium mb-0.5 tracking-wide">
-            @{user?.name?.toLowerCase().replace(/\s+/g, '') || 'guest'}
-          </div>
-          <h1 className="text-base sm:text-lg font-bold text-gray-900 mb-0.5 truncate">{fullName}</h1>
-          <div className="flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 text-[11px] sm:text-[12px] text-gray-500">
-            <span className="flex items-center gap-1">
-              <MapPin size={11} />
-              {typeof user?.postSted === 'object' ? user.postSted.city : user?.postSted || 'Oslo'}
-            </span>
-            <span className="text-gray-300">·</span>
-            <span className="truncate">
-              Medlem siden{' '}
-              {user?.createdAt
-                ? new Date(user.createdAt).toLocaleDateString('no-NO', { month: 'long', year: 'numeric' })
-                : 'desember 2019'}
-            </span>
-          </div>
-
-          {/* Stats */}
-          <div className="flex items-center justify-center sm:justify-start gap-3 sm:gap-4 mt-2.5 sm:mt-3">
-            {[
-              { label: 'Fullførte', val: user?.completedJobs || 0 },
-              { label: 'Rating', val: user?.averageRating != null ? user.averageRating.toFixed(1) : '0.0' },
-              { label: 'Utlagte', val: user?.postedJobsCount || 0 },
-            ].map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="text-sm sm:text-base font-bold text-gray-900">{stat.val}</div>
-                <div className="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wide">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Actions */}
-        {isOwnProfile && (
-          <div className="flex gap-1.5 sm:gap-2">
-            <button
-              onClick={() => navigate('/settings/bio')}
-              className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#1a3a1a] text-white rounded-lg text-[11px] sm:text-[12px] font-medium flex items-center gap-1 sm:gap-1.5 hover:bg-[#254d25] transition-colors"
-            >
-              <Pencil size={12} className="sm:hidden" />
-              <Pencil size={13} className="hidden sm:block" />
-              <span className="hidden sm:inline">Rediger</span>
-              <span className="sm:hidden">Endre</span>
-            </button>
-            <button
-              onClick={() => navigate('/settings/seeker')}
-              className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-black/5 text-gray-600 rounded-lg text-[11px] sm:text-[12px] font-medium hover:bg-black/10 transition-colors"
-            >
-              <Settings size={12} className="sm:hidden" />
-              <Settings size={13} className="hidden sm:block" />
-            </button>
-            <ConfirmDialog
-              title="Logg ut?"
-              description="Vil du logge ut?"
-              confirmText="Ja, logg ut"
-              cancelText="Avbryt"
-              isOpen={showLogoutConfirm}
-              onOpenChange={setShowLogoutConfirm}
-              onConfirm={handlelogout}
-              trigger={
-                <button className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-black/5 text-red-500 rounded-lg text-[11px] sm:text-[12px] font-medium hover:bg-red-50 transition-colors">
-                  Logg Ut
-                </button>
-              }
-            />
-          </div>
-        )}
+          ))}
+        </dl>
       </div>
-
-      {/* Quick links — own profile */}
-      {isOwnProfile && (
-        <div className="flex flex-wrap gap-2 mt-4">
-          <button onClick={() => navigate('/mine-annonser')} className="flex items-center gap-1.5 bg-white border border-black/10 rounded-full text-[12px] font-medium px-3 py-1.5 text-gray-600 hover:bg-[#f0faf0] hover:border-custom-green/30 hover:text-custom-green transition-all">
-            <FileText size={13} /> Mine annonser
-          </button>
-          <button onClick={() => navigate('/my-applicants')} className="flex items-center gap-1.5 bg-white border border-black/10 rounded-full text-[12px] font-medium px-3 py-1.5 text-gray-600 hover:bg-[#f0faf0] hover:border-custom-green/30 hover:text-custom-green transition-all">
-            <Users size={13} /> Mine søkere
-          </button>
-          <button onClick={() => navigate('/settings/safepay')} className="flex items-center gap-1.5 bg-white border border-black/10 rounded-full text-[12px] font-medium px-3 py-1.5 text-gray-600 hover:bg-[#f0faf0] hover:border-custom-green/30 hover:text-custom-green transition-all">
-            <ShieldCheck size={13} /> SafePay
-          </button>
-        </div>
-      )}
 
       <BlockModal
         user={user}
         isOpen={isBlockModalOpen}
         onClose={() => setIsBlockModalOpen(false)}
         onConfirm={() => {
-          if (user?._id) {
-            blockMutation.mutate(user._id, {
-              onSuccess: (data) => {
-                setIsBlockModalOpen(false);
-                toast.success(data.message || `${user?.name} blocked`);
-              },
-            });
-          }
+          if (!user?._id) return;
+          blockMutation.mutate(user._id, {
+            onSuccess: (data) => {
+              setIsBlockModalOpen(false);
+              toast.success(data.message || `${user?.name} er blokkert`);
+            },
+          });
         }}
         isPending={blockMutation.isPending}
         type="block"

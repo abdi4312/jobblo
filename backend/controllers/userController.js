@@ -528,6 +528,11 @@ exports.getUserById = async (req, res) => {
     const userObj = { ...sanitized };
     userObj.postedJobsCount = postedJobsCount;
     userObj.completedJobs = completedJobs;
+    // `responseRate` is 100 when there are no requests to respond to, which is the right
+    // default for sorting but reads as a boast on a profile — a brand-new account claimed
+    // "Svarprosent 100 %" before anyone had ever contacted it. The client needs the
+    // denominator to tell "answers everyone" apart from "has never been asked".
+    userObj.totalJobRequests = totalJobRequests;
     userObj.responseRate = responseRate;
     userObj.averageResponseTimeMinutes = averageResponseTimeMinutes;
     userObj.repeatCustomersCount = repeatCustomersCount;

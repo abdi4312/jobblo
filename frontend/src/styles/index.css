@@ -267,6 +267,39 @@ body {
   }
 }
 
+/* The confirmation mark on a completed payment.
+   The ring wipes in, then the tick draws — `stroke-dashoffset` on a path whose
+   `pathLength` is normalised to 1, so the same rule works at any size. This is the whole
+   animation: no bounce, no confetti. A page that tells someone money has left their
+   account should read as a receipt, not a celebration. */
+@keyframes jb-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.jb-check-ring {
+  stroke-dasharray: 1;
+  animation: jb-draw 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.jb-check-tick {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: jb-draw 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.4s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jb-check-ring,
+  .jb-check-tick {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
 /* The rotating word in the landing hero. Measured in `em` so the rise scales with the
    headline's own clamp() size rather than drifting as the viewport changes. */
 @keyframes jb-word-in {
