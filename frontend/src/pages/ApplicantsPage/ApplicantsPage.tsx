@@ -339,52 +339,17 @@ const ApplicantsPage: React.FC = () => {
                           : 'border-black/5'
                     }`}
                   >
-                    {/* Top Right Buttons */}
-                    <div className="absolute top-4 right-4 flex flex-wrap gap-1 z-10">
-                      <button
-                        onClick={() => handleToggleFavorite(app._id)}
-                        className={`p-1 rounded-full transition-all ${
-                          app.favorite
-                            ? 'text-yellow-500 bg-yellow-100'
-                            : 'text-gray-400 hover:text-yellow-500 hover:bg-gray-100'
-                        }`}
-                        title="Favoritt"
-                      >
-                        <Heart size={18} fill={app.favorite ? 'currentColor' : 'none'} />
-                      </button>
-                      <button
-                        onClick={() => toggleCompare(app.applicant._id)}
-                        className={`p-1 rounded-full transition-all ${
-                          comparedApplicants.includes(app.applicant._id)
-                            ? 'text-custom-green bg-green-100'
-                            : 'text-gray-400 hover:text-custom-green hover:bg-gray-100'
-                        }`}
-                        title="Sammenlign"
-                      >
-                        <Users size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleToggleArchive(app._id)}
-                        className={`p-1 rounded-full transition-all ${
-                          app.archived
-                            ? 'text-custom-green bg-green-100'
-                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                        }`}
-                        title={app.archived ? 'Gjenopprett fra arkiv' : 'Arkiver'}
-                      >
-                        <Archive size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleDecline(app._id)}
-                        className="p-1 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-full transition-all"
-                        title="Avslå søker"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
-
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-10 md:pt-0">
-                      <div className="flex items-start gap-4">
+                    {/*
+                      The four actions used to be `absolute top-4 right-4`, while the stats
+                      below sat in normal flow on the same side of the same row. The row
+                      reserved space for them on mobile (`pt-10`) but cancelled it on
+                      desktop (`md:pt-0`), so from the `md` breakpoint up the icons were
+                      laid directly over the Fullførte/Rating/Svar% figures. They are in
+                      flow now — one right-hand column, actions above the numbers — so the
+                      two cannot collide at any width.
+                    */}
+                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                      <div className="flex min-w-0 flex-1 items-start gap-4">
                         <div className="relative flex-shrink-0">
                           <div className="w-12 h-12 rounded-full bg-[#EAF1E9] text-[#122A1C] font-medium flex items-center justify-center text-lg overflow-hidden">
                             {app.applicant.avatarUrl ? (
@@ -440,26 +405,89 @@ const ApplicantsPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex gap-6 overflow-x-auto pb-1">
-                        <div className="text-center">
-                          <div className="text-[15px] font-medium text-gray-900">
-                            {app.applicant.completedJobs}
-                          </div>
-                          <div className="text-[10px] text-gray-400 uppercase">Fullførte</div>
+                      {/* Side by side on a phone, stacked on the right on desktop. */}
+                      <div className="flex shrink-0 items-center justify-between gap-4 md:flex-col md:items-end md:gap-3">
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleFavorite(app._id)}
+                            aria-pressed={!!app.favorite}
+                            aria-label="Marker som favoritt"
+                            title="Favoritt"
+                            className={`flex size-9 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${
+                              app.favorite
+                                ? 'bg-[#EAF1E9] text-[#2E6641]'
+                                : 'text-[#9B9E96] hover:bg-[#F4F6F0] hover:text-[#2E6641]'
+                            }`}
+                          >
+                            <Heart size={17} fill={app.favorite ? 'currentColor' : 'none'} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleCompare(app.applicant._id)}
+                            aria-pressed={comparedApplicants.includes(app.applicant._id)}
+                            aria-label="Legg til i sammenligning"
+                            title="Sammenlign"
+                            className={`flex size-9 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${
+                              comparedApplicants.includes(app.applicant._id)
+                                ? 'bg-[#EAF1E9] text-[#2E6641]'
+                                : 'text-[#9B9E96] hover:bg-[#F4F6F0] hover:text-[#2E6641]'
+                            }`}
+                          >
+                            <Users size={17} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleArchive(app._id)}
+                            aria-pressed={!!app.archived}
+                            aria-label={app.archived ? 'Gjenopprett fra arkiv' : 'Arkiver søker'}
+                            title={app.archived ? 'Gjenopprett fra arkiv' : 'Arkiver'}
+                            className={`flex size-9 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${
+                              app.archived
+                                ? 'bg-[#EAF1E9] text-[#2E6641]'
+                                : 'text-[#9B9E96] hover:bg-[#F4F6F0] hover:text-[#0B0B0B]'
+                            }`}
+                          >
+                            <Archive size={17} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDecline(app._id)}
+                            aria-label="Avslå søker"
+                            title="Avslå søker"
+                            className="flex size-9 items-center justify-center rounded-full text-[#9B9E96] transition-colors hover:bg-[#FBF4F2] hover:text-[#B4544A] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
+                          >
+                            <X size={17} />
+                          </button>
                         </div>
-                        <div className="text-center">
-                          <div className="text-[15px] font-medium text-gray-900">
-                            {app.applicant.rating}★
+
+                        <dl className="flex shrink-0 items-start gap-5">
+                          <div className="text-center">
+                            <dd className="text-[0.9375rem] font-semibold tabular-nums text-[#0B0B0B]">
+                              {app.applicant.completedJobs}
+                            </dd>
+                            <dt className="mt-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[#9B9E96]">
+                              Fullførte
+                            </dt>
                           </div>
-                          <div className="text-[10px] text-gray-400 uppercase">Rating</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-[15px] font-medium text-gray-900">
-                            {app.applicant.responseRate}
+                          <div className="text-center">
+                            <dd className="text-[0.9375rem] font-semibold tabular-nums text-[#0B0B0B]">
+                              {app.applicant.rating}★
+                            </dd>
+                            <dt className="mt-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[#9B9E96]">
+                              Rating
+                            </dt>
                           </div>
-                          <div className="text-[10px] text-gray-400 uppercase">Svar%</div>
-                        </div>
-                        {/* "Svartid" removed — see the sidebar card above. */}
+                          <div className="text-center">
+                            <dd className="text-[0.9375rem] font-semibold tabular-nums text-[#0B0B0B]">
+                              {app.applicant.responseRate}
+                            </dd>
+                            <dt className="mt-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.08em] text-[#9B9E96]">
+                              Svar%
+                            </dt>
+                          </div>
+                          {/* "Svartid" removed — see the sidebar card above. */}
+                        </dl>
                       </div>
                     </div>
 
