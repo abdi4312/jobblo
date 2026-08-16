@@ -1,6 +1,7 @@
 const JobRequest = require('../models/JobRequest');
 const Service = require('../models/Service');
 const Order = require('../models/Order');
+const Notification = require('../models/Notification');
 
 /**
  * GET /api/applicants/:serviceId
@@ -58,13 +59,22 @@ exports.getApplicantsForService = async (req, res) => {
       requests.map(async (reqDoc) => {
         const applicant = reqDoc.customerId;
 
+        // A deleted user leaves a dangling ref that populates to null. Dereferencing it
+        // threw, and the catch returned 500 for the WHOLE applicants page — one removed
+        // account made the job unmanageable. Skip the row instead.
+        if (!applicant?._id) return null;
+
         // Count completed orders where this applicant was the provider
         const completedJobsCount = await Order.countDocuments({
           providerId: applicant._id,
           status: 'completed',
         });
 
-        // Calculate real response rate
+        // Response rate = how promptly this applicant answers requests on jobs THEY
+        // posted. JobRequest.providerId is the job owner, so counting by it here
+        // measured their behaviour as a poster, not as a worker — and every pure
+        // worker (who has never posted) fell to the `: 100` default and was shown to
+        // the hiring owner as a flawless 100%. Report it only when it is real.
         const totalRequests = await JobRequest.countDocuments({
           providerId: applicant._id,
         });
@@ -72,9 +82,10 @@ exports.getApplicantsForService = async (req, res) => {
           providerId: applicant._id,
           status: { $in: ['accepted', 'declined'] },
         });
-        const responseRatePercent =
-          totalRequests > 0 ? Math.round((respondedRequests / totalRequests) * 100) : 100;
-        const responseRate = `${responseRatePercent}%`;
+        const responseRate =
+          totalRequests > 0
+            ? `${Math.round((respondedRequests / totalRequests) * 100)}%`
+            : null;
 
         return {
           _id: reqDoc._id,
@@ -105,8 +116,8 @@ exports.getApplicantsForService = async (req, res) => {
       })
     );
 
-    // Apply sorting that depends on the populated data
-    let sortedApplicants = [...applicantsWithStats];
+    // Drop the rows skipped above (applicant account no longer exists).
+    let sortedApplicants = applicantsWithStats.filter(Boolean);
     if (sort === 'rating') {
       sortedApplicants.sort((a, b) => b.applicant.rating - a.applicant.rating);
     } else if (sort === 'completedJobs') {
@@ -329,11 +340,39 @@ exports.declineApplicant = async (req, res) => {
       return res.status(403).json({ error: 'Ikke autorisert' });
     }
 
+    // Refuse to decline the applicant who is actually doing the job.
+    //
+    // There was no status check, so an owner could decline the worker mid-contract.
+    // The application then read `declined` while the order read `in_progress`, and
+    // because the applicant's dashboard tests `declined` before the accepted-with-order
+    // branch, the worker was told "Søknad avslått" in the middle of a paid job.
+    const liveOrder = await Order.findOne({
+      serviceId: jobRequest.serviceId,
+      providerId: jobRequest.customerId, // JobRequest.customerId is the applicant
+      status: { $in: ['awaiting_payment', 'paid', 'in_progress', 'ready_for_review', 'disputed'] },
+    }).select('_id status');
+
+    if (liveOrder) {
+      return res.status(409).json({
+        error: 'Denne søkeren har en aktiv kontrakt og kan ikke avslås. Avbryt kontrakten først.',
+        code: 'applicant_has_active_order',
+      });
+    }
+
     jobRequest.status = 'declined';
     if (archive) {
       jobRequest.archived = true;
     }
     await jobRequest.save();
+
+    // Declines were silent — no notification, unlike the accept/decline path in
+    // orderController. The applicant was left waiting on a job already given away.
+    await Notification.create({
+      userId: jobRequest.customerId,
+      senderId: userId,
+      type: 'application',
+      content: `Søknaden din på "${service.title}" ble dessverre ikke valgt.`,
+    }).catch((err) => console.error('declineApplicant notification failed:', err.message));
 
     res.json({ status: jobRequest.status, archived: jobRequest.archived });
   } catch (err) {

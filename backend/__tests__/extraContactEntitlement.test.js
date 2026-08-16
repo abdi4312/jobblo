@@ -24,8 +24,13 @@ const GlobalConfig = require('../models/GlobalConfig');
 const JobRequest = require('../models/JobRequest');
 const { checkSubscription } = require('../middleware/checkSubscription');
 
-const USER_ID = 'user_1';
-const SERVICE_ID = 'service_1';
+const mongoose = require('mongoose');
+
+// Real ObjectIds: the middleware now refuses a serviceId that is not one, because
+// `serviceId` is untyped body input and an operator object like {"$ne": null} would
+// otherwise match — and consume — an entitlement bought for a different service.
+const USER_ID = String(new mongoose.Types.ObjectId());
+const SERVICE_ID = String(new mongoose.Types.ObjectId());
 
 function makeReq(body = {}) {
   return { user: { _id: USER_ID }, body };
@@ -96,6 +101,16 @@ describe('replay protection', () => {
 });
 
 describe('entitlement consumption', () => {
+  it('ignores a Mongo operator object in place of a serviceId', async () => {
+    Transaction.findOneAndUpdate.mockResolvedValue({ _id: 'txn_1' });
+
+    const res = makeRes();
+    await checkSubscription(makeReq({ serviceId: { $ne: null } }), res, jest.fn());
+
+    // Must never reach the entitlement claim with an injected filter.
+    expect(Transaction.findOneAndUpdate).not.toHaveBeenCalled();
+  });
+
   it('claims the entitlement atomically, requiring it to be unconsumed', async () => {
     Transaction.findOneAndUpdate.mockResolvedValue({ _id: 'txn_1' });
 
@@ -105,6 +120,8 @@ describe('entitlement consumption', () => {
     await checkSubscription(req, makeRes(), next);
 
     expect(next).toHaveBeenCalled();
+    // A paid contact must not also spend a free monthly one.
+    expect(req.isFreeContact).toBe(true);
     expect(Transaction.findOneAndUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: USER_ID,

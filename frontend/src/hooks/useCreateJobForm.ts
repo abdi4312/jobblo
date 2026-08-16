@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { generateFullJobListing } from '../api/aiAPI';
+import { useTranslate } from '../i18n/useTranslate';
 import { useUserStore } from '../stores/userStore';
 import { usePaymentCalculation } from './usePaymentCalculation';
 import { useForm } from './useForm';
 import { jobValidationSchema, type JobFormValues } from '../validations/jobValidations';
 import { saveFormData, loadFormData, clearFormData } from '../utils/indexedDB';
 import { getErrorMessage } from '../utils/getErrorMessage';
+import { summariseAiFill, clampMessage } from '../utils/aiFillSummary';
+import { scrollToFirstError } from '../utils/scrollToError';
 
 interface InitialData {
   title?: string;
@@ -70,13 +73,57 @@ export const useCreateJobForm = (
 
   // Individual states that are not part of the primary validation schema or need special handling
   const [equipment, setEquipment] = useState(initialData?.equipment || '');
-  const [countyCode, setCountyCode] = useState(initialData?.countyCode || '');
-  const [municipalityCode, setMunicipalityCode] = useState(initialData?.municipalityCode || '');
+  const [countyCode, setCountyCodeState] = useState(initialData?.countyCode || '');
+  const [municipalityCode, setMunicipalityCodeState] = useState(
+    initialData?.municipalityCode || ''
+  );
   const [areaCode, setAreaCode] = useState(initialData?.areaCode || '');
-  const [coordinates, setCoordinates] = useState<[number, number] | null>(() =>
+  const [coordinates, setCoordinatesState] = useState<[number, number] | null>(() =>
     initialData?.latitude != null && initialData?.longitude != null
       ? [initialData.latitude, initialData.longitude]
       : null
+  );
+
+  /**
+   * Fylke, kommune and the map pin live outside the validation schema, so `useForm` — which
+   * clears a field's error as soon as it changes — never sees them fixed. Without this their
+   * errors would stay red after the person had already put them right, and the scroll would
+   * keep sending them back to a field with nothing wrong with it.
+   */
+  const clearFieldError = useCallback(
+    (field: string) => {
+      setErrors((prev) => {
+        if (!prev[field as keyof JobFormValues]) return prev;
+        const next = { ...prev };
+        delete next[field as keyof JobFormValues];
+        return next;
+      });
+    },
+    [setErrors]
+  );
+
+  const setCountyCode = useCallback(
+    (value: string) => {
+      setCountyCodeState(value);
+      if (value) clearFieldError('countyCode');
+    },
+    [clearFieldError]
+  );
+
+  const setMunicipalityCode = useCallback(
+    (value: string) => {
+      setMunicipalityCodeState(value);
+      if (value) clearFieldError('municipalityCode');
+    },
+    [clearFieldError]
+  );
+
+  const setCoordinates = useCallback(
+    (value: [number, number] | null) => {
+      setCoordinatesState(value);
+      if (value) clearFieldError('coordinates');
+    },
+    [clearFieldError]
   );
   const durationValue = values.durationValue;
   const fromDate = values.fromDate;
@@ -134,12 +181,15 @@ export const useCreateJobForm = (
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [smartFillPrompt, setSmartFillPrompt] = useState('');
   const [showSmartFillInput, setShowSmartFillInput] = useState(false);
+  /** Smart-fill's pricing rationale, rendered under the price field rather than in a toast. */
+  const [smartFillPricingNote, setSmartFillPricingNote] = useState('');
   const [checklistItems, setChecklistItems] = useState<{ id: string; text: string }[]>([]);
 
   // Flag to prevent save effect from running before load completes
   const [isLoaded, setIsLoaded] = useState(false);
 
   const currentUser = useUserStore((state) => state.user);
+  const { locale } = useTranslate();
 
   // Category-based checklist suggestions
   const getCategorySuggestions = (category: string): string[] => {
@@ -210,6 +260,7 @@ export const useCreateJobForm = (
     const newFlags: typeof smartFillSuggestionFlags = { ...smartFillSuggestionFlags };
     try {
       const response = await generateFullJobListing(smartFillPrompt, {
+        lang: locale,
         existingTitle: values.title || undefined,
         existingDescription: values.description || undefined,
         existingCategory:
@@ -308,20 +359,15 @@ export const useCreateJobForm = (
 
         setShowSmartFillInput(false);
         setSmartFillPrompt('');
-        const hints: string[] = [];
-        if (newFlags.title) hints.push('tittel');
-        if (newFlags.description) hints.push('beskrivelse');
-        if (newFlags.categories) hints.push('kategori');
-        if (newFlags.price) hints.push('pris');
-        if (newFlags.duration) hints.push('varighet');
-        toast.success(
-          hints.length > 0
-            ? `AI fylte ut: ${hints.join(', ')}. Priser er estimater — rediger fritt.${
-                pricingReasoning ? ` (${pricingReasoning})` : ''
-              }`
-            : `AI ga forslag. Rediger fritt.${pricingReasoning ? ` (${pricingReasoning})` : ''}`,
-          { duration: 6000 }
-        );
+
+        // This toast used to name every field, add "Priser er estimater — rediger fritt."
+        // and then append the model's whole pricing sentence in parentheses — five lines of
+        // rounded slab, for six seconds, over the form the person is trying to read. The
+        // rationale now renders under the price field in `BasicInformation`, where it sits
+        // next to the number it explains and stays until dismissed. The toast is left with
+        // the one thing it is good for: confirming that something happened.
+        setSmartFillPricingNote(pricingReasoning || '');
+        toast.success(summariseAiFill(newFlags), { duration: 3000 });
       }
     } catch (err: any) {
       console.error('SMART FILL ERROR:', err);
@@ -332,7 +378,7 @@ export const useCreateJobForm = (
       const details = err.response?.data?.validationErrors?.length
         ? ` (${err.response.data.validationErrors.slice(0, 2).join(', ')})`
         : '';
-      toast.error(errorMessage + details);
+      toast.error(clampMessage(errorMessage + details));
     } finally {
       setSmartFillSuggestionFlags(newFlags);
       setIsGeneratingFullListing(false);
@@ -462,6 +508,10 @@ export const useCreateJobForm = (
   ]);
   const validateStep = (step: number) => {
     const currentErrors: Partial<Record<keyof JobFormValues, string>> = {};
+    // `images`, `coordinates`, `countyCode` and `municipalityCode` are validated here but
+    // are not fields of JobFormValues — they live in their own state. Same object, wider
+    // key type, so they can be reported through the one error channel the UI reads.
+    const extraErrors = currentErrors as Record<string, string>;
     let isValid = true;
 
     if (step === 1) {
@@ -482,7 +532,7 @@ export const useCreateJobForm = (
 
       // Special check for images
       if (selectedImages.length === 0 && currentImages.length === 0) {
-        currentErrors['images' as any] = 'Vennligst last opp minst ett bilde.';
+        extraErrors.images = 'Vennligst last opp minst ett bilde.';
         isValid = false;
       }
     } else if (step === 2) {
@@ -523,7 +573,13 @@ export const useCreateJobForm = (
       // on the map (click pin / drag marker / geolocation), otherwise the job
       // silently posts with default coordinates. Coordinates live outside the
       // validation schema, so enforce the requirement here.
+      //
+      // These three used to fail silently: `isValid` went false and the toast named the
+      // field, but nothing on the page turned red, so there was no target to scroll to and
+      // nothing to look at once you got there. They write a message now like any other field.
       if (!coordinates) {
+        extraErrors.coordinates =
+          'Bekreft hvor oppdraget er — velg en adresse fra forslagene eller klikk i kartet.';
         isValid = false;
       }
 
@@ -531,7 +587,12 @@ export const useCreateJobForm = (
       // schema too. Without them the job never matches the location filter
       // (serviceController.getAllServices), so it is invisible to the people
       // searching in that area.
-      if (!countyCode || !municipalityCode) {
+      if (!countyCode) {
+        extraErrors.countyCode = 'Velg fylke.';
+        isValid = false;
+      }
+      if (!municipalityCode) {
+        extraErrors.municipalityCode = 'Velg kommune.';
         isValid = false;
       }
     } else if (step === 4) {
@@ -560,6 +621,10 @@ export const useCreateJobForm = (
       setCurrentStep((prev) => Math.min(prev + 1, 4));
       return;
     }
+
+    // The toast names what is missing; this takes them to it. Without it the page sits
+    // still, and on a step several screens tall the empty field is usually off screen.
+    scrollToFirstError();
 
     // Build a friendlier error message that names the missing/invalid fields
     // so the user knows what to fix instead of just "please fill in everything".
@@ -652,6 +717,7 @@ export const useCreateJobForm = (
 
     if (!validateStep(4)) {
       toast.error('Vennligst fyll ut alle påkrevde felt riktig.');
+      scrollToFirstError();
       return;
     }
 
@@ -662,6 +728,11 @@ export const useCreateJobForm = (
     if (!coordinates) {
       setCurrentStep(2);
       toast.error('Bekreft hvor oppdraget skal utføres på kartet før du publiserer.');
+      // Sending them back a step is not enough on its own — step 2 opens at the top and the
+      // map is below the fold. Run the whole step's validation first so the map block is
+      // marked, then scroll to it once the step has rendered.
+      validateStep(2);
+      scrollToFirstError();
       return;
     }
 
@@ -878,6 +949,8 @@ export const useCreateJobForm = (
     setSmartFillPrompt,
     showSmartFillInput,
     setShowSmartFillInput,
+    smartFillPricingNote,
+    setSmartFillPricingNote,
     handleAiSmartFill,
     handleNext,
     handleBack,

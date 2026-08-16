@@ -1,18 +1,51 @@
 const { OpenAI } = require('openai');
 const Category = require('../models/Category');
-const {
-  validateSmartFillOutput,
-  anchorHourlyRate,
-  anchorDuration,
-  PAYMENT_TYPES,
-} = require('../utils/aiSmartFill');
+const { validateSmartFillOutput, PAYMENT_TYPES } = require('../utils/aiSmartFill');
+const { buildRequest, supportsStrictSchema, SUPPORTED_LANGS } = require('../services/ai/jobListingPrompt');
 
 // ──────────────────────────────────────────────────────────────────────────────
 // OpenAI client
+//
+// Bounded on purpose: an unbounded client defaults to a 10-minute timeout, so a
+// stalled upstream call would hold an Express handler open far longer than any
+// user waits. 25s covers the p99 for this prompt (measured ~2.6s mean), and one
+// retry absorbs a transient 5xx without turning a rate-limit into a retry storm.
 // ──────────────────────────────────────────────────────────────────────────────
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Constructed lazily. The client used to be built at module scope, which meant
+// requiring this controller threw when OPENAI_API_KEY was unset — so app.js
+// could not boot without a key, and the per-handler "AI-tjeneste ikke
+// konfigurert" guards below were unreachable. Building it on first use makes
+// those guards work and lets the rest of the app run without an AI key.
+let _client = null;
+function getClient() {
+  if (!_client) {
+    _client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      timeout: 25_000,
+      maxRetries: 1,
+    });
+  }
+  return _client;
+}
+
+// gpt-4o-mini is the floor for this feature: it is the cheapest model that can
+// enforce a strict JSON schema. On gpt-3.5-turbo the same prompt produces
+// equally good prose but structurally invalid data — it translates enum values
+// ("hours" -> "timer") and returns booleans for string fields. See
+// evals/results/after-gpt35.json.
+const DEFAULT_MODEL = 'gpt-4o-mini';
+const MODEL = process.env.OPENAI_MODEL || DEFAULT_MODEL;
+
+let _warnedAboutModel = false;
+function warnIfWeakModel() {
+  if (_warnedAboutModel || supportsStrictSchema(MODEL)) return;
+  _warnedAboutModel = true;
+  console.warn(
+    `[ai] OPENAI_MODEL="${MODEL}" cannot enforce a strict JSON schema. ` +
+      `Falling back to loose JSON mode, which measured 4/28 structurally valid ` +
+      `responses in evals. Set OPENAI_MODEL=${DEFAULT_MODEL} or better.`
+  );
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Helpers shared across all 3 endpoints
@@ -28,163 +61,120 @@ async function _loadCategoryContext(categoryFromUser) {
           ? categoryFromUser[0]
           : categoryFromUser.name)) ||
     '';
-  return { names, chosen: names.includes(chosen) ? chosen : chosen };
+  // Previously `names.includes(chosen) ? chosen : chosen` — both branches
+  // returned the same value, so a category that is not in the active list was
+  // passed to the prompt as though it were valid, and the pricing anchor was
+  // looked up against a name the marketplace does not have.
+  return { names, chosen: names.includes(chosen) ? chosen : '' };
 }
 
+/** Remove anything key-shaped before a message is written to a log. */
+function _redact(text) {
+  return String(text == null ? '' : text).replace(/\bsk-[A-Za-z0-9_-]{8,}/g, 'sk-***REDACTED***');
+}
+
+/**
+ * Map an upstream failure onto a safe response.
+ *
+ * The previous version returned `err.message` straight to the client. OpenAI's
+ * 401 body embeds the key that was rejected ("Incorrect API key provided:
+ * sk-proj-..."), so a misconfigured server would have handed its own credential
+ * to every browser that pressed Smart Fill. Upstream text is now logged
+ * (redacted) and never returned; the client gets a fixed message per class.
+ */
 function _respondWithAiError(res, err, prefix = 'AI generation failed') {
-  console.error(`[${prefix}]`, err && err.message ? err.message : err);
-  if (
-    err &&
-    (err.status === 429 || err.code === 'insufficient_quota' || String(err.message).includes('429'))
-  ) {
+  const status = err && err.status;
+  console.error(`[${prefix}]`, _redact(err && err.message ? err.message : err));
+
+  if (err && (status === 429 || err.code === 'insufficient_quota' || /\b429\b/.test(String(err.message)))) {
     return res.status(429).json({
       success: false,
       error: 'AI-kvote overskredet',
       message: 'Du har nådd grensen for AI-forespørsler. Prøv igjen senere.',
     });
   }
+  if (status === 401 || status === 403) {
+    return res.status(500).json({
+      success: false,
+      error: 'AI-tjenesten er ikke riktig konfigurert',
+      message: 'Kontakt support hvis dette fortsetter.',
+    });
+  }
+  if (err && (err.name === 'APIConnectionTimeoutError' || /timeout|hang up|ECONNRESET/i.test(String(err.message)))) {
+    return res.status(504).json({
+      success: false,
+      error: 'AI-tjenesten svarte ikke i tide',
+      message: 'Prøv igjen, eller fyll ut feltene manuelt.',
+    });
+  }
   return res.status(500).json({
     success: false,
-    error: err && err.message ? err.message : prefix,
+    error: 'Kunne ikke generere AI-innhold',
+    message: 'Prøv igjen, eller fyll ut feltene manuelt.',
   });
 }
 
-// Given user-provided field name + existing value, produce a short string to
-// tell the prompt what the USER already typed (so AI doesn't overwrite it in
-// the suggestion — the backend still guards afterwards, this helps the prompt).
-function _ifPresent(label, value) {
-  if (value == null) return '';
-  const s = String(value).trim();
-  if (!s) return '';
-  return `\n- ${label}: ${s}`;
+// Resolve the caller's UI language. The frontend has a locale ('no' | 'en')
+// from LanguageContext; when it sends one we honour it, otherwise the prompt
+// module sniffs the free text. The old implementation hard-coded Norwegian
+// bokmål, so an English-speaking user got a Norwegian listing back.
+function _resolveLang(body) {
+  const raw = ((body && (body.lang || body.locale || body.language)) || '')
+    .toString()
+    .toLowerCase();
+  return SUPPORTED_LANGS.includes(raw) ? raw : undefined;
 }
 
-// Build a single SHARED system / user prompt for title generation +
-// description generation + full-listing generation. The schema output is the
-// SAME for every endpoint so frontend parsing is simpler.
-function _buildPrompt(context) {
-  // context: { task, categoryAllowList, categoryName, title, description,
-  //            paymentType, userDuration, userCity, userCounty,
-  //            userCompletionNote, urgency, equipment }
-  const catList = (context.categoryAllowList || []).join(', ');
-  const anchorHr = anchorHourlyRate(context.categoryName);
-  const anchorDur = anchorDuration(context.categoryName);
-  const durHintHours = (context.userDuration && context.userDuration.value) || anchorDur.value;
-  const durHintUnit = (context.userDuration && context.userDuration.unit) || anchorDur.unit;
-  const heuristicTotalHint = Math.round(
-    anchorHr *
-      (durHintUnit === 'hours'
-        ? durHintHours
-        : durHintUnit === 'days'
-          ? durHintHours * 8
-          : durHintHours / 60)
-  );
+/**
+ * Single entry point for all three endpoints.
+ *
+ * The prompt itself lives in services/ai/jobListingPrompt.js, which keeps the
+ * stable instructions, the application context and the user's raw text in
+ * separate, clearly-labelled parts. This function only performs the call.
+ */
+async function _callAi(context) {
+  warnIfWeakModel();
+  const request = buildRequest(context, MODEL);
+  const completion = await getClient().chat.completions.create(request);
+  const choice = completion.choices && completion.choices[0];
 
-  // Explicitly enumerate allowed payment-type mappings: what primary value
-  // the AI should treat as "the user-facing price".
-  const payHint =
-    context.paymentType === 'Timepris'
-      ? `Betalingsmåte: Timepris. Sett suggestedPrice ≈ hourlyRate * ${durHintHours ?? 2} timer (estimat), men den viktigste prisfeltet er hourlyRate (ca. ${anchorHr} kr/t).`
-      : context.paymentType === 'Anbud'
-        ? `Betalingsmåte: Anbud. suggestedPrice er et ANSLÅTT BUDSJETT som vises til arbeidstakere før de byder. Gi en rimelig totalpris for omfanget (ca. ${heuristicTotalHint} kr +/-), men merk det som et estimat.`
-        : `Betalingsmåte: Fastpris. suggestedPrice ER den totale jobbstyringsverdien brukeren vil se. Forutsatt ca. ${durHintHours} ${durHintUnit === 'days' ? 'dager' : durHintUnit === 'minutes' ? 'minutter' : 'timer'} arbeid. Heuristisk anslag: ~${heuristicTotalHint} kr.`;
+  // A strict-schema refusal is a distinct outcome from a bad answer: the model
+  // declined rather than returned something malformed.
+  if (choice && choice.message && choice.message.refusal) {
+    throw new Error(`AI declined to answer: ${choice.message.refusal}`);
+  }
 
-  const userContext = [
-    context.task && `- Kort beskrivelse fra bruker: "${context.task}"`,
-    _ifPresent('Tittel allerede skrevet av bruker', context.title),
-    _ifPresent('Beskrivelse allerede skrevet av bruker', context.description),
-    _ifPresent('Valgt kategori', context.categoryName),
-    _ifPresent('By/sted', context.userCity),
-    _ifPresent('Fylke', context.userCounty),
-    _ifPresent('Utstyr bruker har nevnt', context.equipment),
-    context.urgency && `- Haster: ja`,
-  ]
-    .filter(Boolean)
-    .join('\n');
+  const rawText = ((choice && choice.message && choice.message.content) || '').toString().trim();
+  if (!rawText) throw new Error('OpenAI returnerte tomt svar');
 
-  // ── The PROMPT (user message). System prompt is short; instructions here.
-  return `
-Du hjelper en norsk oppdragsgiver med å fylle ut et jobbannonseskjema på Jobblo.
-Oppdragsgiveren skriver norsk, og ALLE tekstfelt FRA DEG MÅ VÆRE PÅ NORSK BOKMÅL.
-Ikke bytt språk. Ikke bruk engelske ord der norsk finnes.
-
-=== KONTEKST FRA BRUKER ===
-${userContext || '- (ingen felt er fylt ennå — bruk bare den korte beskrivelsen nedenfor)'}
-
-=== LOVLIGE KATEGORIER (velg kun ÉN FRA DENNE LISTEN, ellers la feltet stå tomt) ===
-[${catList}]
-
-=== PRIS-HEURISTIKK DU SKAL BRUKE SOM REFERANSE (ikke oppgi som faktum, bruk som ramme) ===
-- Heuristisk timepris for denne kategorien i Norge (2025): omtrent ${anchorHr} kr/time
-- Tillatt intervall timepris: ${Math.round(anchorHr * 0.8)}–${Math.round(anchorHr * 1.35)} kr/time
-- Forventet varighet: ca. ${durHintHours} ${durHintUnit === 'days' ? 'dager' : durHintUnit === 'minutes' ? 'minutter' : 'timer'} → total ca. ${heuristicTotalHint} kr
-${payHint}
-
-=== HVA DU SKAL RETURNERE ===
-Returnere NØYAKTIG ett JSON-objekt. Ingen forklarende tekst utenfor JSON. Ingen markdown.
-
-Schema:
-{
-  "title": "KORT, KONKRET NORSK TITTEL (4–70 tegn). MØNSTER: Aktivitet/hovedhandling + «av» + objekt/område/rom/type som NEVNES i beskrivelsen. EKSEMPELSTIL (ikke gjenbruk): «Montering av IKEA-garderobe», «Flyttevask av 3-roms leilighet», «Maling av stue og gang», «Snømåking av gårdsplass». IKKE BRUK: «Hjelp ønskes», «Jobb tilgjengelig», «Oppdrag», «Tjeneste», «Jeg trenger hjelp med…», «Leter etter…», «Noen som kan…». IKKE start med pronomen eller hjelpeønske. IKKE halluciner detaljer (romnavn, antall, type) som IKKE står i beskrivelsen. Bare trekk ut det som faktisk er nevnt.",
-  "description": "Klar, engasjerende norsk jobb-beskrivelse (80–180 ord), skriv SOM OPPDRAGSGIVER: «Jeg trenger hjelp til...», «Jeg leter etter noen som kan...». Ikke bruk faguttrykk der vanlig norsk holder. Ikke oppgis tjenester som ikke nevnes i beskrivelsen.",
-  "category": "Én verdi fra LOVLIGE KATEGORIER ovenfor (eller tom streng hvis du er usikker). IKKE oppfinn nye kategorier.",
-  "skills": ["3–5 konkrete, relevante ferdigheter på norsk, maks 30 tegn hver"],
-  "paymentType": "${PAYMENT_TYPES.join(' / ')} — bruk akkurat dette ordet, hvis bruker har oppgitt en type, behold den.",
-  "hourlyRate": ${anchorHr},
-  "suggestedPrice": ${heuristicTotalHint},
-  "priceMin": ${Math.round(heuristicTotalHint * 0.85)},
-  "priceMax": ${Math.round(heuristicTotalHint * 1.15)},
-  "duration": { "value": ${durHintHours}, "unit": "${durHintUnit}" },
-  "locationRelevance": "on-site (hvis jobben må gjøres der) ELLER remote (hvis den kan gjøres hjemmefra — for det meste on-site for tjenesteyrker)",
-  "pricingReasoning": "Kort norsk begrunnelse (én setning, maks 350 tegn). SI KLARTE AT ALLE PRISER ER ESTIMATER – IKKE autoriserte markedssatser – basert på kategori, omfang og anslått varighet i Norge 2025, og at det ikke finnes et offisielt markedssats datasett i systemet. Eksempelstil: «Estimat basert på timepris for rengjøring (ca X kr/t) × anslått varighet». Merk om det er Timepris/Fastpris/Anbud."
+  let parsed;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch (err) {
+    // Only reachable on models without strict-schema support. Never surface the
+    // raw model text to the client — it is unvalidated and may echo user input.
+    console.error('[ai] model returned unparseable JSON', { model: MODEL, length: rawText.length });
+    throw new Error('AI returnerte et svar som ikke kunne tolkes');
+  }
+  return { parsed, usage: completion.usage };
 }
 
-=== TITTEL-REGLER — OVERTRED IKKE ===
-1. Tittelen MÅ beskrive HVA som skal gjøres, ikke at oppdragsgiver ønsker hjelp.
-2. Hvis beskrivelsen sier noe om ANTALL (rom, timer, kvm, personer), TYPE (IKEA, utvendig/innvendig, leilighet/hus), STED (gårdsplass, kjeller, bod) → TA DET MED i tittelen hvis det gir mening og rom er innen 70 tegn.
-3. IKKE lag til ting som ikke nevnes i konteksten.
-4. IKKE avslutt med punktum, utropstegn eller spørsmålstegn.
-5. IKKE bruk anførselstegn rundt noe.
-6. Hvis det er svært lite info og du er usikker, velg det MEST spesifikke du kan hente ut, ikke en generisk frasering.
-
-=== PRIS-REGLER — OVERTRED IKKE ===
-1. ALLE priser må være positive heltall (ingen desimaler, ingen 0, ingen negative).
-2. IKKE gi sifre langt utenfor intervallene nevnt ovenfor — validator vil fange det opp, men prøv å være innenfor.
-3. IKKE si at disse prisene er autoriserte/korrekte markedssatser — de er ESTIMATER.
-4. Timepris: hourlyRate er HOVEDPRIS feltet, suggestedPrice er kun et anslag for totalt.
-5. Fastpris: suggestedPrice ER den totale jobbstyringsverdien brukeren ser.
-6. Anbud: suggestedPrice er et ANSLÅTT BUDSJETT (referanse), ikke et endelig krav.
-
-=== ANDRE REGLER ===
-1. IKKE halluciner romnavn, stedsnavn eller arbeid som ikke nevnes i kontekst.
-2. IKKE bytt språk til engelsk i noen tekstfelt.
-3. IKKE gjenbruk eksemplene som gitt (de er bare stil-eksempler).
-
-Gi nå JSON-en, INGEN annet.
-`.trim();
-}
-
-async function _callAi(system, user) {
-  return openai.chat.completions.create({
-    model: process.env.OPENAI_MODEL || 'gpt-4o-mini', // mini is faster/cheaper for structured JSON
-    temperature: 0.3, // low — deterministic titles, not creative
-    messages: [
-      {
-        role: 'system',
-        content:
-          system ||
-          'Du er en konsis AI-assistent som skriver nøyaktig norsk bokmål for en jobbplattform. Du returnerer KUN gyldig JSON i det skjemaet som er bedt om — aldrig forklarende tekst, aldrig markdown.',
-      },
-      { role: 'user', content: user },
-    ],
-    response_format: { type: 'json_object' },
-  });
-}
-
-function _jsonFromChoice(choice) {
-  const raw = ((choice && choice.message && choice.message.content) || '').toString().trim();
-  if (!raw) throw new Error('OpenAI returnerte tomt svar');
-  return JSON.parse(raw);
+/** Fields every endpoint returns, so the three responses stay consistent. */
+function _sharedPayload(c) {
+  return {
+    skills: c.skills,
+    openQuestions: c.openQuestions,
+    hourlyRate: c.hourlyRate,
+    suggestedPrice: c.suggestedPrice,
+    priceMin: c.priceMin,
+    priceMax: c.priceMax,
+    estimatedPrice: c.suggestedPrice, // backwards-compat key BasicInformation.tsx uses
+    duration: c.duration,
+    locationRelevance: c.locationRelevance,
+    pricingReasoning: c.pricingReasoning,
+    paymentType: c.paymentType,
+    isEstimate: true, // UI shows "Dette er et estimat" label
+  };
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -218,7 +208,9 @@ exports.generateJobInfo = async (req, res) => {
     const { names: catNames, chosen: catChosen } = await _loadCategoryContext(category);
     const userPayment = PAYMENT_TYPES.includes(paymentType) ? paymentType : 'Fastpris';
 
-    const prompt = _buildPrompt({
+    const { parsed } = await _callAi({
+      feature: 'job-info',
+      lang: _resolveLang(req.body),
       task: title,
       categoryAllowList: catNames,
       categoryName: catChosen,
@@ -232,8 +224,6 @@ exports.generateJobInfo = async (req, res) => {
       urgency: !!urgent,
     });
 
-    const choice = (await _callAi(null, prompt)).choices[0];
-    const parsed = _jsonFromChoice(choice);
     const validated = validateSmartFillOutput(parsed, {
       userPaymentType: userPayment,
       categoryName: catChosen,
@@ -258,18 +248,8 @@ exports.generateJobInfo = async (req, res) => {
       success: true,
       data: {
         description: c.description,
-        skills: c.skills,
-        hourlyRate: c.hourlyRate,
-        suggestedPrice: c.suggestedPrice,
-        priceMin: c.priceMin,
-        priceMax: c.priceMax,
-        estimatedPrice: c.suggestedPrice, // backwards-compat key BasicInformation.tsx uses
-        duration: c.duration,
         category: c.category,
-        locationRelevance: c.locationRelevance,
-        pricingReasoning: c.pricingReasoning,
-        paymentType: c.paymentType,
-        isEstimate: true, // UI shows "Dette er et estimat" label
+        ..._sharedPayload(c),
       },
     });
   } catch (err) {
@@ -297,7 +277,9 @@ exports.generateTitle = async (req, res) => {
     const { names: catNames, chosen: catChosen } = await _loadCategoryContext(category);
     const userPayment = PAYMENT_TYPES.includes(paymentType) ? paymentType : 'Fastpris';
 
-    const prompt = _buildPrompt({
+    const { parsed } = await _callAi({
+      feature: 'title',
+      lang: _resolveLang(req.body),
       task: description,
       categoryAllowList: catNames,
       categoryName: catChosen,
@@ -310,8 +292,6 @@ exports.generateTitle = async (req, res) => {
       urgency: !!urgent,
     });
 
-    const choice = (await _callAi(null, prompt)).choices[0];
-    const parsed = _jsonFromChoice(choice);
     const validated = validateSmartFillOutput(parsed, {
       userPaymentType: userPayment,
       categoryName: catChosen,
@@ -332,17 +312,7 @@ exports.generateTitle = async (req, res) => {
       success: true,
       data: {
         title: c.title,
-        skills: c.skills,
-        hourlyRate: c.hourlyRate,
-        suggestedPrice: c.suggestedPrice,
-        priceMin: c.priceMin,
-        priceMax: c.priceMax,
-        estimatedPrice: c.suggestedPrice,
-        duration: c.duration,
-        locationRelevance: c.locationRelevance,
-        pricingReasoning: c.pricingReasoning,
-        paymentType: c.paymentType,
-        isEstimate: true,
+        ..._sharedPayload(c),
       },
     });
   } catch (err) {
@@ -386,7 +356,9 @@ exports.generateFullJobListing = async (req, res) => {
       ? existingPaymentType
       : 'Fastpris';
 
-    const aiPrompt = _buildPrompt({
+    const { parsed } = await _callAi({
+      feature: 'full-listing',
+      lang: _resolveLang(req.body),
       task: prompt,
       categoryAllowList: catNames,
       categoryName: catChosen,
@@ -400,8 +372,6 @@ exports.generateFullJobListing = async (req, res) => {
       urgency: !!existingUrgent,
     });
 
-    const choice = (await _callAi(null, aiPrompt)).choices[0];
-    const parsed = _jsonFromChoice(choice);
     const validated = validateSmartFillOutput(parsed, {
       userPaymentType: userPayment,
       categoryName: catChosen,
@@ -425,18 +395,8 @@ exports.generateFullJobListing = async (req, res) => {
         title: c.title,
         description: c.description,
         category: c.category,
-        skills: c.skills,
-        hourlyRate: c.hourlyRate,
-        suggestedPrice: c.suggestedPrice,
         priceRange: { min: c.priceMin, max: c.priceMax },
-        priceMin: c.priceMin,
-        priceMax: c.priceMax,
-        estimatedPrice: c.suggestedPrice,
-        duration: c.duration,
-        locationRelevance: c.locationRelevance,
-        pricingReasoning: c.pricingReasoning,
-        paymentType: c.paymentType,
-        isEstimate: true,
+        ..._sharedPayload(c),
       },
     });
   } catch (err) {

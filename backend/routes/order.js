@@ -134,7 +134,14 @@ router.get('/:id/completed-details', authenticate, orderController.getCompletedJ
  *       404:
  *         description: Tjeneste ikke funnet
  */
-router.post('/', authenticate, orderController.createOrder);
+// ── Removed: POST /api/orders (createOrder) ──────────────────────────────────
+//
+// It created the Order with the roles inverted — caller as payer, service owner as
+// payee — which is the opposite of every other path, and the resulting `pending`
+// order was payable. It also required no application and no ownership check, so one
+// account could order another user's listing and inflate that owner's completed-job
+// and earnings counters. No component called it. Orders come from the award flow:
+// POST /api/safepay/create-contract or POST /api/chats/:chatId/contracts.
 
 // ── Removed: PATCH /api/orders/:id and DELETE /api/orders/:id ────────────────
 //

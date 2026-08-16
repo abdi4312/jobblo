@@ -78,4 +78,19 @@ const chatSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+/**
+ * The pair lookup — "is there already a conversation between these two about this job?" —
+ * runs on every apply, every request approval and every "Send melding". It had no index, so
+ * each one was a collection scan, and a slow lookup is exactly what widens the window in
+ * which a second request can slip in and create a duplicate.
+ *
+ * Both directions are covered by the same index: the query is an $or over the two slot
+ * orders, and the planner uses this index for both branches.
+ */
+chatSchema.index({ serviceId: 1, clientId: 1, providerId: 1 });
+
+/** getMyChats: everything I am part of, newest first. Two indexes for the two slots. */
+chatSchema.index({ clientId: 1, updatedAt: -1 });
+chatSchema.index({ providerId: 1, updatedAt: -1 });
+
 module.exports = mongoose.model('Chat', chatSchema);

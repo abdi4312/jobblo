@@ -3,6 +3,7 @@ const Chat = require('../models/ChatMessage');
 const Order = require('../models/Order');
 const Service = require('../models/Service');
 const Dispute = require('../models/Dispute');
+const JobRequest = require('../models/JobRequest');
 const { getStripe } = require('../config/stripe');
 const { resolveStripeCustomer } = require('../services/stripe/customers');
 const mongoose = require('mongoose');
@@ -24,6 +25,11 @@ exports.createOrGetChat = async (req, res) => {
       return res.status(400).json({ message: 'Service ID is required.' });
     }
 
+    // Unvalidated ids reached findById and threw a CastError → 500 instead of 400.
+    if (!isValidId(serviceId) || !isValidId(providerId)) {
+      return res.status(400).json({ message: 'Invalid ID format.' });
+    }
+
     if (id === providerId) {
       return res.status(400).json({ message: 'You cannot create a chat with yourself.' });
     }
@@ -31,6 +37,46 @@ exports.createOrGetChat = async (req, res) => {
     const provider = await User.findById(providerId).select('role name');
     if (!provider) {
       return res.status(404).json({ message: 'Provider not found.' });
+    }
+
+    // Both people must have a real relationship to this job.
+    //
+    // The only checks here used to be "not yourself" and "the other user exists" —
+    // nothing tied either party to the service. Any authenticated user could therefore
+    // open a conversation with any other user by supplying a scraped user id and any
+    // service id, and it arrived in the victim's inbox looking like a legitimate job
+    // conversation. That is a direct spam and harassment channel, and it also let a
+    // stranger seed a chat they could later try to create a contract from.
+    //
+    // A conversation about a job is between its owner and someone who applied to it.
+    const service = await Service.findById(serviceId).select('userId');
+    if (!service) {
+      return res.status(404).json({ message: 'Service not found.' });
+    }
+
+    const ownerId = String(service.userId);
+    const callerIsOwner = ownerId === String(id);
+    const targetIsOwner = ownerId === String(providerId);
+
+    if (!callerIsOwner && !targetIsOwner) {
+      return res.status(403).json({
+        message: 'Du kan bare starte en samtale om et oppdrag du eier eller har søkt på.',
+        code: 'not_related_to_service',
+      });
+    }
+
+    // The non-owner side must actually have applied.
+    const applicantId = callerIsOwner ? providerId : id;
+    const application = await JobRequest.findOne({
+      serviceId,
+      customerId: applicantId, // JobRequest.customerId is the applicant
+    }).select('_id');
+
+    if (!application) {
+      return res.status(403).json({
+        message: 'Det finnes ingen søknad som knytter dere til dette oppdraget.',
+        code: 'no_application_between_parties',
+      });
     }
 
     // Direction-agnostic: match the PAIR, not the slots.
@@ -42,43 +88,50 @@ exports.createOrGetChat = async (req, res) => {
     // same pair and the same job. The duplicate also put the owner in the clientId
     // slot, which every role-aware view reads as "the applicant", so the owner
     // appeared to have applied to their own listing.
-    let chat = await Chat.findOne({
+    const pairFilter = {
       serviceId,
       $or: [
         { clientId: id, providerId },
         { clientId: providerId, providerId: id },
       ],
-    })
-      .populate('clientId', 'name')
-      .populate('providerId', 'name')
-      .populate('serviceId', 'title description images price categories userId')
-      .populate('orderId');
+    };
 
-    if (chat) {
-      // If user previously deleted this chat, restore it by removing from deletedFor
-      if (chat.deletedFor && chat.deletedFor.includes(id)) {
-        await Chat.findByIdAndUpdate(chat._id, {
-          $pull: { deletedFor: id },
-        });
+    // One atomic operation rather than find-then-create.
+    //
+    // Reading first and inserting afterwards is a check-then-act race: two requests for the
+    // same pair — a double-clicked button, or the applicant and the owner opening the
+    // conversation at the same moment — both read "no chat here" before either has written,
+    // so both insert. `findOneAndUpdate ... upsert` collapses that into a single matched
+    // write, and `$setOnInsert` means an existing conversation is never overwritten by the
+    // second caller's slot order.
+    //
+    // `$pull` on the same call restores the thread for someone who had deleted it, which
+    // used to be a second round trip.
+    const result = await Chat.findOneAndUpdate(
+      pairFilter,
+      {
+        $setOnInsert: { clientId: id, providerId, serviceId, messages: [] },
+        $pull: { deletedFor: new mongoose.Types.ObjectId(id) },
+      },
+      {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true,
+        // Tells us whether this call created the conversation, so the status code stays
+        // honest — the client distinguishes 200 from 201.
+        includeResultMetadata: true,
       }
-      return res.status(200).json(chat);
-    }
+    );
 
-    chat = await Chat.create({
-      clientId: id,
-      providerId,
-      serviceId,
-      messages: [],
-    });
+    const created = !result.lastErrorObject?.updatedExisting;
 
-    // Populate the newly created chat
-    chat = await Chat.findById(chat._id)
+    const chat = await Chat.findById(result.value._id)
       .populate('clientId', 'name')
       .populate('providerId', 'name')
       .populate('serviceId', 'title description images price categories userId')
       .populate('orderId');
 
-    res.status(201).json(chat);
+    res.status(created ? 201 : 200).json(chat);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -153,15 +206,35 @@ exports.sendMessage = async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized: You are not part of this chat.' });
     }
 
+    // `text` was stored with no validation at all. Two consequences: an empty body
+    // wrote a message with `text: undefined` and set `lastMessage: undefined`, showing
+    // a blank unread row in the inbox; and with no length cap, the 12 MB JSON body
+    // limit meant two messages could push the chat document past MongoDB's 16 MB
+    // ceiling — after which every save on that conversation fails, permanently
+    // breaking messaging, contract creation and payment confirmation for that job.
+    if (typeof text !== 'string' || !text.trim()) {
+      return res.status(400).json({ message: 'Meldingen kan ikke være tom.' });
+    }
+    if (text.length > MAX_MESSAGE_LENGTH) {
+      return res
+        .status(400)
+        .json({ message: `Meldingen er for lang (maks ${MAX_MESSAGE_LENGTH} tegn).` });
+    }
+
+    const trimmed = text.trim();
     const message = {
       senderId: id,
-      text,
+      text: trimmed,
       createdAt: new Date(),
       seenBy: [id],
     };
 
     chat.messages.push(message);
-    chat.lastMessage = text;
+    chat.lastMessage = trimmed;
+    // A new message brings the conversation back for anyone who had hidden it —
+    // otherwise a reply landed in an inbox the recipient could no longer see, and the
+    // chat stayed invisible to them forever.
+    chat.deletedFor = [];
 
     await chat.save();
 
@@ -188,6 +261,18 @@ exports.deleteForMe = async (req, res) => {
   try {
     const { chatId } = req.params;
     const { id } = req.user;
+
+    if (!isValidId(chatId)) return res.status(400).json({ error: 'Invalid chat ID format' });
+
+    // There was no authorization here at all: any authenticated user could append their
+    // id to ANY chat's `deletedFor`, on a document they have no relationship to, with
+    // no bound on the array. Only a participant may hide their own copy.
+    const chat = await Chat.findById(chatId).select('clientId providerId');
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+
+    if (String(chat.clientId) !== String(id) && String(chat.providerId) !== String(id)) {
+      return res.status(403).json({ error: 'Not allowed' });
+    }
 
     await Chat.findByIdAndUpdate(chatId, {
       $addToSet: { deletedFor: id },
@@ -558,6 +643,22 @@ exports.deleteChat = async (req, res) => {
           code: 'chat_locked_by_dispute',
         });
       }
+    }
+
+    // An abuse report points at this conversation, and the common harassment /
+    // off-platform-payment case has NO order — so the order guard above did not cover
+    // it. The reported user could delete the thread and leave the admin opening a
+    // report that resolves to null.
+    const ChatReport = require('../models/ChatReport');
+    const openReport = await ChatReport.findOne({
+      chatId,
+      status: { $nin: ['resolved', 'dismissed', 'closed'] },
+    }).select('_id');
+    if (openReport) {
+      return res.status(409).json({
+        error: 'Samtalen er under vurdering etter en rapport og kan ikke slettes.',
+        code: 'chat_locked_by_report',
+      });
     }
 
     await Chat.findByIdAndDelete(chatId);

@@ -12,6 +12,7 @@ jest.mock('../models/Order', () => ({ findOne: jest.fn(), findById: jest.fn() })
 jest.mock('../models/User', () => ({ findById: jest.fn() }));
 jest.mock('../models/Service', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
 jest.mock('../models/Dispute', () => ({ findOne: jest.fn() }));
+jest.mock('../models/ChatReport', () => ({ findOne: jest.fn() }));
 jest.mock('../config/stripe', () => ({ getStripe: jest.fn() }));
 jest.mock('../services/stripe/customers', () => ({ resolveStripeCustomer: jest.fn() }));
 
@@ -19,6 +20,7 @@ const mongoose = require('mongoose');
 const Chat = require('../models/ChatMessage');
 const Order = require('../models/Order');
 const Dispute = require('../models/Dispute');
+const ChatReport = require('../models/ChatReport');
 const chatController = require('../controllers/chatController');
 
 const OWNER_ID = new mongoose.Types.ObjectId();
@@ -68,6 +70,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   Order.findOne.mockResolvedValue(null);
   Dispute.findOne.mockResolvedValue(null);
+  // No open abuse report unless a test says otherwise.
+  ChatReport.findOne.mockReturnValue({ select: jest.fn().mockResolvedValue(null) });
 });
 
 describe('createContract authorization', () => {
@@ -180,6 +184,23 @@ describe('deleteChat protects dispute evidence', () => {
 
     expect(res.statusCode).toBe(409);
     expect(res.body.code).toBe('chat_locked_by_dispute');
+  });
+
+  it('refuses to delete a conversation with an open abuse report, even with no order', async () => {
+    // The harassment / off-platform-payment case usually has NO order, so the order
+    // guard above did not cover it and the reported user could delete the evidence.
+    Chat.findById.mockResolvedValue(chatWithOrder(null));
+    ChatReport.findOne.mockReturnValue({ select: jest.fn().mockResolvedValue({ _id: 'rep1' }) });
+    Chat.findByIdAndDelete = jest.fn().mockResolvedValue({});
+
+    const req = { user: { id: String(APPLICANT_ID) }, params: { chatId: String(CHAT_ID) } };
+    const res = makeRes();
+
+    await chatController.deleteChat(req, res);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body.code).toBe('chat_locked_by_report');
+    expect(Chat.findByIdAndDelete).not.toHaveBeenCalled();
   });
 
   it('still allows deleting a chat with no order attached', async () => {

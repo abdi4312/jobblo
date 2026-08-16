@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getJobDetail, createChat, createStripeSession, getNearbyJobs } from './jobApi';
 import { fetchJobs } from '../jobsList/jobListingAPI';
 import {
-  createOrder,
   getAllOrders,
   createJobRequest,
   getMyJobRequests,
@@ -56,15 +55,9 @@ export const useUpdateJobRequestStatusMutation = () => {
   });
 };
 
-export const useCreateOrderMutation = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: createOrder,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-    },
-  });
-};
+// useCreateOrderMutation removed alongside POST /api/orders. No component used it, and
+// the endpoint created orders with the payer and payee reversed. Orders are created by
+// the award flow (useCreateSafePayContractMutation).
 
 // useUpdateOrderStatusMutation removed alongside PATCH /api/orders/:id. No component
 // used it, and the endpoint it called let either party drive an order into a terminal

@@ -223,29 +223,72 @@ async function retryFailedPayouts() {
  * can award it again — before this, an abandoned contract blocked the job.
  */
 async function cleanupAbandonedOrders() {
+  const Service = require('../../models/Service');
+  const JobRequest = require('../../models/JobRequest');
   const { abandonedOrderHours } = config();
   const cutoff = new Date(Date.now() - abandonedOrderHours * 60 * 60 * 1000);
 
-  const result = await Order.updateMany(
-    {
-      status: 'awaiting_payment',
-      paymentStatus: { $ne: 'paid' },
-      createdAt: { $lte: cutoff },
-    },
-    {
-      $set: { status: 'cancelled' },
-      $push: {
-        history: {
-          action: 'auto_cancelled',
-          userId: null,
-          timestamp: new Date(),
-          data: { reason: `Ikke betalt innen ${abandonedOrderHours} timer` },
-        },
-      },
-    }
-  );
+  const abandoned = await Order.find({
+    status: 'awaiting_payment',
+    paymentStatus: { $ne: 'paid' },
+    createdAt: { $lte: cutoff },
+  })
+    .select('_id serviceId providerId')
+    .limit(100)
+    .lean();
 
-  return { cancelled: result.modifiedCount || 0 };
+  let cancelled = 0;
+  let reopened = 0;
+
+  for (const order of abandoned) {
+    // CAS so a payment landing right now cannot be cancelled out from under itself.
+    const moved = await Order.findOneAndUpdate(
+      { _id: order._id, status: 'awaiting_payment', paymentStatus: { $ne: 'paid' } },
+      {
+        $set: { status: 'cancelled' },
+        $push: {
+          history: {
+            action: 'auto_cancelled',
+            userId: null,
+            timestamp: new Date(),
+            data: { reason: `Ikke betalt innen ${abandonedOrderHours} timer` },
+          },
+        },
+      }
+    );
+    if (!moved) continue;
+    cancelled += 1;
+
+    // Put the listing back on the market.
+    //
+    // Awarding sets Service.status to 'awaiting_payment', and NOTHING in the codebase
+    // ever set it back to 'open' — the update whitelist deliberately excludes status.
+    // So an award the customer never paid for removed the job from search permanently,
+    // with no owner-facing way to recover it. Only reopen when no other live order
+    // holds the service.
+    const stillHeld = await Order.findOne({
+      serviceId: order.serviceId,
+      status: { $in: ['awaiting_payment', 'paid', 'in_progress', 'ready_for_review', 'disputed'] },
+    }).select('_id');
+
+    if (!stillHeld) {
+      const service = await Service.findOneAndUpdate(
+        { _id: order.serviceId, status: 'awaiting_payment' },
+        { $set: { status: 'open' } }
+      );
+      if (service) {
+        reopened += 1;
+        // The applicants auto-declined by that award get their applications back, so
+        // the owner can pick someone else instead of reposting from scratch.
+        await JobRequest.updateMany(
+          { serviceId: order.serviceId, status: { $in: ['declined', 'accepted'] } },
+          { $set: { status: 'pending' } }
+        );
+      }
+    }
+  }
+
+  return { cancelled, reopened };
 }
 
 /**

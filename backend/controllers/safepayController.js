@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Order = require('../models/Order');
+const Dispute = require('../models/Dispute');
 const Service = require('../models/Service');
 const JobRequest = require('../models/JobRequest');
 const Notification = require('../models/Notification');
@@ -49,28 +50,30 @@ exports.createContract = async (req, res) => {
 
     // Bug 10: Validate applicant actually applied
     // In JobRequest: customerId is the applicant (person who wants to do the work), providerId is service owner (person who posted the job)
-    // First, let's log all JobRequests for this serviceId to debug
-    const allJobRequests = await JobRequest.find({ serviceId });
+    // The application must still be live.
+    //
+    // Neither branch checked `status`, so a DECLINED applicant could still be awarded
+    // the contract — and the update further down flips their request from `declined`
+    // back to `accepted`. That also meant the whole field auto-declined by an earlier
+    // award stayed awardable indefinitely.
+    const AWARDABLE_STATUSES = ['pending', 'accepted'];
 
-    if (requestId) {
-      const jobRequest = await JobRequest.findOne({
-        _id: requestId,
-        serviceId,
-        customerId: applicantId,
-        providerId: userId,
+    const applicationQuery = requestId
+      ? { _id: requestId, serviceId, customerId: applicantId, providerId: userId }
+      : { serviceId, customerId: applicantId, providerId: userId };
+
+    const jobRequest = await JobRequest.findOne(applicationQuery);
+    if (!jobRequest) {
+      return res.status(400).json({
+        error: requestId ? 'Ugyldig søknad' : 'Søker har ikke søkt på denne tjenesten',
       });
-      if (!jobRequest) {
-        return res.status(400).json({ error: 'Ugyldig søknad' });
-      }
-    } else {
-      const jobRequest = await JobRequest.findOne({
-        serviceId,
-        customerId: applicantId,
-        providerId: userId,
+    }
+    if (!AWARDABLE_STATUSES.includes(jobRequest.status)) {
+      return res.status(400).json({
+        error: 'Denne søknaden er ikke lenger aktiv og kan ikke velges.',
+        code: 'application_not_awardable',
+        status: jobRequest.status,
       });
-      if (!jobRequest) {
-        return res.status(400).json({ error: 'Søker har ikke søkt på denne tjenesten' });
-      }
     }
 
     // Prevent duplicate contract.
@@ -127,11 +130,21 @@ exports.createContract = async (req, res) => {
 
     // Link chat to order and vice versa
     const Chat = require('../models/ChatMessage');
+    // Direction-agnostic. This is the PRIMARY award path, and it looked only for
+    // { clientId: owner, providerId: applicant } — while applying creates the chat the
+    // other way round. So on the normal flow (applicant applies, owner awards) this
+    // matched nothing: Order.chatId was never set, the "Kontrakt er opprettet!" message
+    // never appeared, chat.status never became 'contracted', and because startJob and
+    // markReadyForReview both guard on `if (order.chatId)`, their system messages never
+    // posted either. The whole conversation timeline went silent the moment a job was
+    // awarded.
     const chat = await Chat.findOneAndUpdate(
       {
-        clientId: userId,
-        providerId: applicantId,
         serviceId: serviceId,
+        $or: [
+          { clientId: userId, providerId: applicantId },
+          { clientId: applicantId, providerId: userId },
+        ],
       },
       { orderId: order._id, status: 'contracted', agreedPrice: service.price },
       { new: true }
@@ -524,6 +537,31 @@ exports.updateChecklistItem = async (req, res) => {
       String(order.providerId) !== String(userId)
     ) {
       return res.status(403).json({ error: 'Ikke autorisert' });
+    }
+
+    // The checklist is the record a dispute admin adjudicates from, and it is what the
+    // customer approved against. There was no status guard at all, so after a job was
+    // completed — or while a dispute was open and the money frozen — either party could
+    // still flip items on and off, and be stamped into `checkedBy` doing it. Freeze it
+    // once the work is no longer in flight.
+    const EDITABLE_ORDER_STATUSES = ['paid', 'in_progress', 'ready_for_review'];
+    if (!EDITABLE_ORDER_STATUSES.includes(order.status)) {
+      return res.status(409).json({
+        error: 'Sjekklisten kan ikke endres for dette oppdraget nå.',
+        code: 'checklist_locked',
+        status: order.status,
+      });
+    }
+
+    const activeDispute = await Dispute.findOne({
+      orderId: order._id,
+      status: { $nin: ['resolved', 'closed', 'cancelled'] },
+    }).select('_id');
+    if (activeDispute) {
+      return res.status(409).json({
+        error: 'Sjekklisten er låst mens tvisten behandles.',
+        code: 'checklist_locked_by_dispute',
+      });
     }
 
     const checklistItemIndex = order.checklist.findIndex((item) => item.id === itemId);

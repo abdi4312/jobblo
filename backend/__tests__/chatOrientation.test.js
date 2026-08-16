@@ -23,6 +23,7 @@
 jest.mock('../models/ChatMessage', () => ({
   findById: jest.fn(),
   findOne: jest.fn(),
+  findOneAndUpdate: jest.fn(),
   create: jest.fn(),
   findByIdAndUpdate: jest.fn(),
   findByIdAndDelete: jest.fn(),
@@ -84,25 +85,41 @@ beforeEach(() => {
 });
 
 describe('createOrGetChat finds an existing conversation in either orientation', () => {
+  /** What Mongo returns for `findOneAndUpdate ... includeResultMetadata`. */
+  const modifyResult = (value, updatedExisting) => ({
+    value,
+    lastErrorObject: { updatedExisting, n: 1 },
+    ok: 1,
+  });
+
+  const startChat = (callerId) => ({
+    req: {
+      user: { id: String(callerId) },
+      body: { providerId: String(APPLICANT), serviceId: String(SERVICE) },
+    },
+    res: makeRes(),
+  });
+
   it('reuses the chat created when the applicant applied, instead of making a second one', async () => {
     // The chat as the apply flow stored it: applicant in clientId, owner in providerId.
     const existing = { _id: CHAT, clientId: { _id: APPLICANT }, providerId: { _id: OWNER } };
-    Chat.findOne.mockReturnValue(populateChain(existing));
+    Chat.findOneAndUpdate.mockResolvedValue(modifyResult(existing, true));
+    Chat.findById.mockReturnValue(populateChain(existing));
 
-    const req = { user: { id: String(OWNER) }, body: { providerId: String(APPLICANT), serviceId: String(SERVICE) } };
-    const res = makeRes();
-
+    const { req, res } = startChat(OWNER);
     await chatController.createOrGetChat(req, res);
 
     // The query must match the PAIR, not one specific arrangement of the slots.
-    expect(Chat.findOne).toHaveBeenCalledWith(
+    expect(Chat.findOneAndUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         serviceId: String(SERVICE),
         $or: [
           { clientId: String(OWNER), providerId: String(APPLICANT) },
           { clientId: String(APPLICANT), providerId: String(OWNER) },
         ],
-      })
+      }),
+      expect.anything(),
+      expect.anything()
     );
     expect(Chat.create).not.toHaveBeenCalled();
     expect(res.statusCode).toBe(200);
@@ -110,17 +127,59 @@ describe('createOrGetChat finds an existing conversation in either orientation',
   });
 
   it('still creates a chat when the two have genuinely never spoken about this job', async () => {
-    Chat.findOne.mockReturnValue(populateChain(null));
-    Chat.create.mockResolvedValue({ _id: CHAT });
-    Chat.findById.mockReturnValue(populateChain({ _id: CHAT, clientId: { _id: OWNER }, providerId: { _id: APPLICANT } }));
+    const fresh = { _id: CHAT, clientId: { _id: OWNER }, providerId: { _id: APPLICANT } };
+    Chat.findOneAndUpdate.mockResolvedValue(modifyResult(fresh, false));
+    Chat.findById.mockReturnValue(populateChain(fresh));
 
-    const req = { user: { id: String(OWNER) }, body: { providerId: String(APPLICANT), serviceId: String(SERVICE) } };
-    const res = makeRes();
-
+    const { req, res } = startChat(OWNER);
     await chatController.createOrGetChat(req, res);
 
-    expect(Chat.create).toHaveBeenCalledTimes(1);
     expect(res.statusCode).toBe(201);
+  });
+
+  /**
+   * The duplicate-room bug in its second form.
+   *
+   * Even with the pair lookup fixed, reading and then inserting leaves a window: a
+   * double-clicked button fires two requests, both read "nothing here", and both insert.
+   * The only way to close it is to let the database decide — one upsert, matched on the
+   * pair, with `$setOnInsert` so a conversation that already exists is never rewritten.
+   */
+  it('creates the conversation in a single upsert, never read-then-insert', async () => {
+    Chat.findOneAndUpdate.mockResolvedValue(
+      modifyResult({ _id: CHAT, clientId: { _id: OWNER }, providerId: { _id: APPLICANT } }, false)
+    );
+    Chat.findById.mockReturnValue(populateChain({ _id: CHAT }));
+
+    const { req, res } = startChat(OWNER);
+    await chatController.createOrGetChat(req, res);
+
+    expect(Chat.create).not.toHaveBeenCalled();
+    expect(Chat.findOne).not.toHaveBeenCalled();
+    expect(Chat.findOneAndUpdate).toHaveBeenCalledTimes(1);
+
+    const [, update, options] = Chat.findOneAndUpdate.mock.calls[0];
+    expect(options).toEqual(expect.objectContaining({ upsert: true, new: true }));
+    // $set would overwrite the slots of an existing conversation with the caller's
+    // orientation — which is how the owner ended up in the applicant's slot.
+    expect(update.$setOnInsert).toEqual(
+      expect.objectContaining({ clientId: String(OWNER), providerId: String(APPLICANT) })
+    );
+    expect(update.$set).toBeUndefined();
+  });
+
+  it('restores the thread for someone who had deleted it, in the same write', async () => {
+    Chat.findOneAndUpdate.mockResolvedValue(modifyResult({ _id: CHAT }, true));
+    Chat.findById.mockReturnValue(populateChain({ _id: CHAT }));
+
+    const { req, res } = startChat(OWNER);
+    await chatController.createOrGetChat(req, res);
+
+    const [, update] = Chat.findOneAndUpdate.mock.calls[0];
+    expect(String(update.$pull.deletedFor)).toBe(String(OWNER));
+    // It used to take a second round trip, and only when the first query happened to
+    // return a document whose deletedFor had already been populated.
+    expect(Chat.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 
   it('refuses a chat with yourself', async () => {
@@ -130,7 +189,7 @@ describe('createOrGetChat finds an existing conversation in either orientation',
     await chatController.createOrGetChat(req, res);
 
     expect(res.statusCode).toBe(400);
-    expect(Chat.findOne).not.toHaveBeenCalled();
+    expect(Chat.findOneAndUpdate).not.toHaveBeenCalled();
   });
 });
 

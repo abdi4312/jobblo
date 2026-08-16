@@ -117,13 +117,28 @@ const ApplicantsPage: React.FC = () => {
       })
     : 'Fullført oppdrag';
 
+  /**
+   * Which applicant's chat is being opened, if any.
+   *
+   * The button had no pending state, so a second click while the first request was still in
+   * flight sent a second POST. Both requests looked for an existing conversation, both found
+   * none, and both created one — the classic check-then-act race, and the fastest way to end
+   * up with two rooms for the same pair. The server refuses to duplicate now, but the button
+   * should not be firing twice in the first place.
+   */
+  const [chatStartingFor, setChatStartingFor] = useState<string | null>(null);
+
   const handleStartChat = async (applicantId: string) => {
+    if (chatStartingFor) return;
+    setChatStartingFor(applicantId);
     try {
       const chat = await createOrGetChat(applicantId, serviceId!);
       navigate(`/messages/${chat._id}`);
     } catch (error) {
       console.error('Error starting chat:', error);
       toast.error('Kunne ikke starte chat');
+    } finally {
+      setChatStartingFor(null);
     }
   };
 
@@ -524,19 +539,29 @@ const ApplicantsPage: React.FC = () => {
                               : 'Velg og start SafePay'
                         }
                         icon={<Check size={16} />}
-                        className={`w-auto rounded-full bg-custom-green px-5 py-2.5 text-[13px] font-medium text-white shadow-sm hover:bg-[#266b3c] sm:flex-1 ${activeOrder ? 'opacity-70' : ''}`}
+                        className={`w-auto rounded-full bg-custom-green px-5 py-2.5 text-[13px] font-medium text-white shadow-sm hover:bg-[#266b3c] sm:flex-1 sm:basis-0 ${activeOrder ? 'opacity-70' : ''}`}
                       />
                       {/* (F-35) "Velg uten SafePay" removed: it only fired
                           toast.success('Bruker valgt uten SafePay') — no API call, no
                           contract, no applicant selected and nobody notified, while the
                           poster believed they had hired someone. Hiring outside escrow
                           is not an implemented flow. */}
-                      {/* Sized to its own text, so the primary action keeps the weight. */}
+                      {/*
+                        `sm:flex-1 sm:basis-0` on both, so the row splits down the middle.
+                        `flex-1` alone would not: its basis is 0% but the labels differ in
+                        length, and the base Button sets `whitespace-nowrap`, so the wider
+                        label claims more of the row. Fixing the basis makes the two halves
+                        equal regardless of what the primary label currently says — it
+                        changes between "Velg og start SafePay", "Gå til betaling" and
+                        "Betalt".
+                      */}
                       <Button
                         variant="outline"
                         label="Send melding"
                         icon={<MessageCircle size={16} />}
-                        className="w-auto rounded-full border-black/20 px-5 py-2.5 text-[13px] font-medium hover:bg-gray-50 sm:flex-none"
+                        loading={chatStartingFor === app.applicant._id}
+                        disabled={!!chatStartingFor}
+                        className="w-auto rounded-full border-black/20 px-5 py-2.5 text-[13px] font-medium hover:bg-gray-50 sm:flex-1 sm:basis-0"
                         onClick={() => handleStartChat(app.applicant._id)}
                       />
                     </div>

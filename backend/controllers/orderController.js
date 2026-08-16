@@ -139,10 +139,16 @@ exports.createJobRequest = async (req, res) => {
 
     // ── Create or get Chat so it appears in "Forespørsler Sendt" ──────────────
     const Chat = require('../models/ChatMessage');
+    // Direction-agnostic: match the pair, not the slots. If the owner messaged the
+    // applicant first, the chat exists as { clientId: owner, providerId: applicant },
+    // and a slot-specific lookup here would miss it and open a second conversation for
+    // the same pair and job.
     let chat = await Chat.findOne({
-      clientId: customerId,   // applicant
-      providerId: providerId, // job owner
       serviceId,
+      $or: [
+        { clientId: customerId, providerId }, // applicant applied first
+        { clientId: providerId, providerId: customerId }, // owner messaged first
+      ],
     });
 
     if (!chat) {
@@ -227,10 +233,14 @@ exports.updateJobRequestStatus = async (req, res) => {
 
     if (status === 'accepted') {
       // 1. Create Chat
+      // Same direction-agnostic match as createJobRequest — otherwise accepting a
+      // request opens a duplicate conversation whenever the owner messaged first.
       let chat = await Chat.findOne({
-        clientId: jobRequest.customerId,
-        providerId: jobRequest.providerId,
         serviceId: jobRequest.serviceId,
+        $or: [
+          { clientId: jobRequest.customerId, providerId: jobRequest.providerId },
+          { clientId: jobRequest.providerId, providerId: jobRequest.customerId },
+        ],
       });
 
       if (!chat) {
@@ -378,61 +388,25 @@ exports.getOrderById = async (req, res) => {
 };
 
 /**
- * POST /api/orders
- * Opprett ny ordre
+ * REMOVED: POST /api/orders (createOrder)
+ *
+ * Two problems, either of which is disqualifying:
+ *
+ *  1. It built the Order with the roles INVERTED. Every other path treats the job
+ *     owner as the payer (safepayController: "Service owner is the customer"), but
+ *     this set customerId to the CALLER and providerId to the service owner. The
+ *     resulting order sat at status 'pending', which confirmPaidSession accepts, so
+ *     it was fully payable — a second account could order a stranger's 1 kr listing,
+ *     pay it, complete it, and inflate the listing owner's completedJobs and earnings.
+ *
+ *  2. It required no application, no ownership and no service-status check.
+ *
+ * No component called it (the useCreateOrderMutation hook existed but was unused).
+ * Orders are created by the award flow: POST /api/safepay/create-contract, or
+ * POST /api/chats/:chatId/contracts — both of which verify service ownership and
+ * derive payer/payee from the service.
  */
-exports.createOrder = async (req, res) => {
-  try {
-    const { serviceId } = req.body;
-    const customerId = req.userId;
 
-    if (!serviceId) return res.status(400).json({ error: 'Service ID is required' });
-
-    if (!isValidId(serviceId)) return res.status(400).json({ error: 'Invalid service ID format' });
-
-    const service = await Service.findById(serviceId);
-    if (!service) return res.status(404).json({ error: 'Service not found' });
-
-    const providerId = service.userId;
-
-    if (providerId.toString() === customerId)
-      return res.status(400).json({ error: 'Cannot order your own service' });
-
-    // Check if an order already exists for this service and customer
-    const existingOrder = await Order.findOne({ serviceId, customerId });
-    if (existingOrder) {
-      return res.status(400).json({
-        error: 'Du har allerede sendt en forespørsel på dette oppdraget',
-      });
-    }
-
-    const order = await Order.create({
-      serviceId,
-      customerId,
-      providerId,
-      price: service.price,
-      status: 'pending',
-    });
-
-    await order.populate('serviceId');
-    await order.populate('customerId', 'name');
-    await order.populate('providerId', 'name');
-
-    await notify({
-      userId: providerId,
-      senderId: customerId,
-      orderId: order._id,
-      type: 'order',
-      content: `${order.customerId.name} har sendt en forespørsel på "${order.serviceId.title}"`,
-      event: 'new_order_request',
-      payload: order,
-    });
-
-    res.status(201).json(order);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
 
 /**
  * REMOVED: PATCH /api/orders/:id (updateOrder)
@@ -477,11 +451,20 @@ exports.getCompletedJobDetails = async (req, res) => {
 
     // Get chat messages
     const ChatMessage = require('../models/ChatMessage');
-    const chat = await ChatMessage.findOne({
-      clientId: order.customerId._id,
-      providerId: order.providerId._id,
-      serviceId: order.serviceId._id,
-    });
+    // Order.customerId is the job OWNER and Order.providerId is the worker, but the
+    // chat created by applying stores them the other way round — so this slot-specific
+    // lookup returned null for every apply-created conversation and the completed-job
+    // view showed no message history at all. Prefer the chat the order already points
+    // at; fall back to a direction-agnostic pair match for older orders.
+    const chat = order.chatId
+      ? await ChatMessage.findById(order.chatId)
+      : await ChatMessage.findOne({
+          serviceId: order.serviceId._id,
+          $or: [
+            { clientId: order.customerId._id, providerId: order.providerId._id },
+            { clientId: order.providerId._id, providerId: order.customerId._id },
+          ],
+        });
 
     // Get all transactions (optional, from Transaction model if exists)
     let transactions = [];

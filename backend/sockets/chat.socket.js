@@ -107,25 +107,23 @@ module.exports = (io) => {
         // spoofable for any user. Use the authenticated id only.
         const userId = socket.userId;
         const Chat = require('../models/ChatMessage');
-        const chat = await Chat.findById(chatId);
+        const chat = await Chat.findById(chatId).select('clientId providerId');
         if (!chat || !isChatParticipant(chat, userId)) return;
 
-        let modified = false;
-        chat.messages.forEach((m) => {
-          if (!m.seenBy) m.seenBy = [];
-          // More robust ID comparison
-          const currentUserIdStr = String(userId);
-          const alreadySeen = m.seenBy.some((id) => String(id) === currentUserIdStr);
-          if (!alreadySeen) {
-            m.seenBy.push(userId);
-            modified = true;
-          }
-        });
-
-        if (modified) {
-          chat.markModified('messages');
-          await chat.save();
-        }
+        // This used to load the document, push into every message's seenBy, call
+        // markModified('messages') and save — which writes the ENTIRE messages array
+        // with $set. The client emits mark-as-read on mount and on every inbound
+        // message, so if the counterparty's send-message committed between the read
+        // and the save, that message was overwritten out of existence: no error, the
+        // sender's UI showed it delivered, and it was gone from dispute evidence too.
+        //
+        // A positional-filtered $addToSet touches only the seenBy arrays, so a
+        // concurrent $push of a new message cannot be clobbered.
+        await Chat.updateOne(
+          { _id: chatId },
+          { $addToSet: { 'messages.$[unseen].seenBy': userId } },
+          { arrayFilters: [{ 'unseen.seenBy': { $ne: userId } }] }
+        );
 
         // Notify ALL users in the chat room (including sender)
         io.to(`chat-${chatId}`).emit('messages-read', { chatId, userId });

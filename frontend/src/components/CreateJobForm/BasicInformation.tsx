@@ -3,36 +3,9 @@ import { useCategories } from '../../features/categories/hooks';
 import { Search, Info, Check, Sparkles, Loader2, X, Plus, AlertCircle, Wand2 } from 'lucide-react';
 import type { CategoryType } from '../../features/categories/types';
 import mainLink from '../../api/mainURLs';
+import { useTranslate } from '../../i18n/useTranslate';
 import toast from 'react-hot-toast';
-
-/**
- * What the AI actually filled in, as one short line.
- *
- * The old toasts read like a paragraph: the list of fields, the model's pricing rationale
- * in parentheses, and "Rediger fritt." — inside a pill-shaped toast capped at 30rem, which
- * meant four or five wrapped lines rendered as a giant rounded slab. A confirmation should
- * be readable at a glance and gone before it is in the way.
- */
-const FIELD_LABELS: Record<string, string> = {
-  title: 'tittel',
-  description: 'beskrivelse',
-  price: 'pris',
-  duration: 'varighet',
-  hourlyRate: 'timepris',
-  tags: 'ferdigheter',
-};
-
-const summarise = (flags: Record<string, boolean>): string => {
-  const filled = Object.keys(FIELD_LABELS).filter((key) => flags[key]);
-  if (filled.length === 0) return 'Ingen nye forslag';
-  if (filled.length === 1) return `AI fylte ut ${FIELD_LABELS[filled[0]]}`;
-  if (filled.length === 2) return `AI fylte ut ${filled.map((f) => FIELD_LABELS[f]).join(' og ')}`;
-  return `AI fylte ut ${filled.length} felter`;
-};
-
-/** Server messages are not written for a toast; keep them to one line. */
-const clamp = (message: string, max = 90): string =>
-  message.length > max ? `${message.slice(0, max - 1).trimEnd()}…` : message;
+import { summariseAiFill, clampMessage } from '../../utils/aiFillSummary';
 
 interface BasicInformationProps {
   title: string;
@@ -72,6 +45,13 @@ interface BasicInformationProps {
     title?: boolean;
     description?: boolean;
   };
+  /**
+   * Pricing rationale from smart-fill, which runs a step above this component. It belongs
+   * under the price field either way, so it is rendered here rather than duplicating the
+   * note — or worse, going back into the toast it came out of.
+   */
+  aiPricingNote?: string;
+  onDismissAiPricingNote?: () => void;
 }
 
 export const BasicInformation: React.FC<BasicInformationProps> = ({
@@ -100,6 +80,8 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
   urgent,
   onAiGenerated,
   aiGeneratedFlags,
+  aiPricingNote,
+  onDismissAiPricingNote,
 }) => {
   const { data: categoryData = [], isLoading, error } = useCategories();
   const [searchTerm, setSearchTerm] = useState('');
@@ -111,6 +93,8 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
   /** The model's pricing rationale. Shown next to the price, not inside a toast. */
   const [pricingNote, setPricingNote] = useState('');
   const maxDescriptionLength = 2000;
+  /** Tells the backend which language to answer in. */
+  const { locale } = useTranslate();
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -140,6 +124,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
     setIsGenerating(true);
     try {
       const res = await mainLink.post('/api/ai/generate-job-info', {
+        lang: locale,
         title,
         category: categories,
         paymentType,
@@ -200,7 +185,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
         // confirm that something happened; the reasoning is shown under the price field
         // instead, where it is next to the number it explains.
         setPricingNote(pricingReasoning || '');
-        toast.success(summarise(flags), { duration: 3000 });
+        toast.success(summariseAiFill(flags), { duration: 3000 });
         onAiGenerated?.(flags);
       }
     } catch (err: any) {
@@ -209,7 +194,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
         err.response?.data?.message ||
         err.response?.data?.error ||
         'Kunne ikke generere AI-innhold. Sjekk API-nøkkel.';
-      toast.error(clamp(errorMessage));
+      toast.error(clampMessage(errorMessage));
     } finally {
       setIsGenerating(false);
     }
@@ -232,6 +217,7 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
     setIsGeneratingTitle(true);
     try {
       const res = await mainLink.post('/api/ai/generate-title', {
+        lang: locale,
         description: titleAiPrompt,
         category: categories,
         paymentType,
@@ -283,14 +269,14 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
         setShowTitleAiInput(false);
         setTitleAiPrompt('');
         setPricingNote(pricingReasoning || '');
-        toast.success(summarise(flags), { duration: 3000 });
+        toast.success(summariseAiFill(flags), { duration: 3000 });
         onAiGenerated?.(flags);
       }
     } catch (err: any) {
       console.error('TITLE GEN ERROR:', err);
       const errorMessage =
         err.response?.data?.error || err.response?.data?.message || 'Kunne ikke generere tittel.';
-      toast.error(clamp(errorMessage));
+      toast.error(clampMessage(errorMessage));
     } finally {
       setIsGeneratingTitle(false);
     }
@@ -494,16 +480,19 @@ export const BasicInformation: React.FC<BasicInformationProps> = ({
           It lives here now: dismissible, next to the fields it explains, and readable for
           as long as the person wants rather than for five seconds.
         */}
-        {pricingNote && (
+        {(pricingNote || aiPricingNote) && (
           <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-[#E6E7E1] bg-[#F4F6F0] p-3 animate-in fade-in slide-in-from-top-1">
             <Sparkles size={14} className="mt-0.5 shrink-0 text-[#2E6641]" />
             <p className="min-w-0 flex-1 text-[0.8125rem] leading-relaxed text-[#63665F]">
               <span className="font-semibold text-[#0B0B0B]">Slik ble prisen anslått: </span>
-              {pricingNote}
+              {pricingNote || aiPricingNote}
             </p>
             <button
               type="button"
-              onClick={() => setPricingNote('')}
+              onClick={() => {
+                setPricingNote('');
+                onDismissAiPricingNote?.();
+              }}
               aria-label="Skjul prisforklaring"
               className="-mr-1 -mt-1 flex size-7 shrink-0 items-center justify-center rounded-full text-[#9B9E96] transition-colors hover:bg-white hover:text-[#0B0B0B]"
             >

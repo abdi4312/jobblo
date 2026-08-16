@@ -113,6 +113,8 @@ export default function CreateJobForm({
     smartFillPrompt,
     setSmartFillPrompt,
     handleAiSmartFill,
+    smartFillPricingNote,
+    setSmartFillPricingNote,
     isGeneratingFullListing,
     isSubmitting,
     handleNext,
@@ -350,6 +352,8 @@ export default function CreateJobForm({
                 paymentType={paymentType}
                 equipment={equipment}
                 urgent={urgent}
+                aiPricingNote={smartFillPricingNote}
+                onDismissAiPricingNote={() => setSmartFillPricingNote('')}
               />
             </div>
           )}

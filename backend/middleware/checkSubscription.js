@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const SubscriptionPlan = require('../models/SubscriptionPlan');
 const Subscription = require('../models/Subscription');
@@ -46,7 +47,10 @@ exports.checkSubscription = async (req, res, next) => {
     //
     // Released again below if the request it was claimed for does not succeed, so a
     // failed application does not silently burn something the user paid for.
-    if (serviceId) {
+    // `serviceId` is untyped body input and reaches this filter before the controller
+    // validates it. An operator object such as {"$ne": null} would otherwise match an
+    // entitlement bought for a DIFFERENT service and consume it.
+    if (serviceId && typeof serviceId === 'string' && mongoose.Types.ObjectId.isValid(serviceId)) {
       const claimed = await Transaction.findOneAndUpdate(
         {
           userId,
@@ -61,6 +65,10 @@ exports.checkSubscription = async (req, res, next) => {
 
       if (claimed) {
         req.consumedEntitlementId = claimed._id;
+        // This contact was PAID for, so it must not also spend a free monthly one.
+        // The free-under-10k branch below sets this flag; the paid branch did not, so
+        // buying an extra contact charged the user cash AND incremented their counter.
+        req.isFreeContact = true;
         res.on('finish', () => {
           if (res.statusCode >= 400) {
             Transaction.updateOne({ _id: claimed._id }, { $set: { consumedAt: null } }).catch(
