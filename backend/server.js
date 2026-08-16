@@ -5,6 +5,7 @@ const swaggerSpec = require('./swagger');
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const chatSocket = require('./sockets/chat.socket');
+const { joinUserRooms } = require('./sockets/rooms');
 
 require('dotenv').config({ path: __dirname + '/.env' });
 
@@ -34,30 +35,26 @@ const io = new Server(server, {
 app.set('io', io);
 chatSocket(io);
 io.on('connection', (socket) => {
-  console.log(`Socket connected: ${socket.id}`);
+  // Private notification rooms, joined here rather than in response to a client `join`.
+  //
+  // (F-50) The room used to be named by a client-supplied userId, so an authenticated
+  // attacker could emit `join` with a victim's id and receive their entire order, payment
+  // and notification event stream. That was fixed by ignoring the payload — but the join
+  // still only happened when the client asked, which meant it happened once per page load
+  // and never again after a reconnect. See `sockets/rooms.js`: this runs on every
+  // connection, including every reconnect, from the authenticated id alone.
+  joinUserRooms(socket);
 
   // Join service room
   socket.on('join_service', (serviceId) => {
     socket.join(`service_${serviceId}`);
-    console.log(`Socket ${socket.id} joined room service_${serviceId}`);
   });
 
-  // Join user room for private notifications.
-  // (F-50) The room used to be named by a client-supplied userId, so an authenticated
-  // attacker could emit `join` with a victim's id and receive their entire order,
-  // payment and notification event stream (orderController, providerWorkController and
-  // SafePayCheckoutController all emit to `user_<id>`). The authenticated id set by the
-  // chatSocket handshake middleware — which runs for every connection on this io
-  // instance — is the only source. The payload is ignored, so older clients still work.
-  socket.on('join', () => {
-    if (socket.userId) {
-      socket.join(`user_${socket.userId}`);
-    }
-  });
+  // Kept for older clients still sending it. The rooms are already joined above; this is
+  // a no-op that exists so an outdated tab does not error.
+  socket.on('join', () => joinUserRooms(socket));
 
-  socket.on('disconnect', () => {
-    console.log(`Socket disconnected: ${socket.id}`);
-  });
+  socket.on('disconnect', () => {});
 });
 // io.on('connection', (socket) => {
 //   console.log(`Socket.io connected: ${socket.id}`);

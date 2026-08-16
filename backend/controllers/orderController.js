@@ -8,6 +8,7 @@ const JobRequest = require('../models/JobRequest');
 
 const User = require('../models/User');
 const { calculatePointsFromService } = require('../utils/points');
+const { notify } = require('../services/notifications');
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -173,21 +174,17 @@ exports.createJobRequest = async (req, res) => {
       });
     }
 
-    // Send notification to provider
-    const notification = await Notification.create({
+    // Tell the job owner someone applied. `notify` creates and delivers in one call, so
+    // this can never again end up written to the database but not sent.
+    await notify(req.app.get('io'), {
       userId: providerId,
       senderId: customerId,
       requestId: jobRequest._id,
-      type: 'order',
-      content: `Ny forespørsel: ${jobRequest.customerId.name} ønsker å søke på "${jobRequest.serviceId.title}"`,
+      type: 'application',
+      content: `${jobRequest.customerId.name} har søkt på "${jobRequest.serviceId.title}"`,
+      event: 'new_job_request',
+      payload: jobRequest,
     });
-
-    // Emit socket event
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`user_${providerId}`).emit('new_notification', notification);
-      io.to(`user_${providerId}`).emit('new_job_request', jobRequest);
-    }
 
     res.status(201).json({ ...jobRequest.toObject(), chatId: chat._id });
   } catch (err) {
@@ -252,38 +249,28 @@ exports.updateJobRequestStatus = async (req, res) => {
 
       const service = await Service.findById(jobRequest.serviceId);
 
-      // 3. Notify Customer
-      const notification = await Notification.create({
+      // 3. Notify the applicant
+      await notify(req.app.get('io'), {
         userId: jobRequest.customerId,
         senderId: jobRequest.providerId,
         requestId: jobRequest._id,
-        type: 'order',
-        content: `Din forespørsel for "${service.title}" er godkjent!`,
+        type: 'application',
+        content: `Søknaden din på "${service.title}" er godkjent`,
+        event: 'order_approved',
+        payload: { requestId: jobRequest._id, chatId: chat._id },
       });
-
-      const io = req.app.get('io');
-      if (io) {
-        io.to(`user_${jobRequest.customerId}`).emit('new_notification', notification);
-        io.to(`user_${jobRequest.customerId}`).emit('order_approved', {
-          requestId: jobRequest._id,
-          chatId: chat._id,
-        });
-      }
     } else {
       // Notify Rejection
       await jobRequest.populate('serviceId');
-      const notification = await Notification.create({
+      await notify(req.app.get('io'), {
         userId: jobRequest.customerId,
         senderId: jobRequest.providerId,
         requestId: jobRequest._id,
-        type: 'order',
-        content: `Din forespørsel for "${jobRequest.serviceId.title}" ble avvist.`,
+        type: 'application',
+        content: `Søknaden din på "${jobRequest.serviceId.title}" ble ikke valgt denne gangen`,
+        event: 'request_declined',
+        payload: { requestId: jobRequest._id },
       });
-
-      const io = req.app.get('io');
-      if (io) {
-        io.to(`user_${jobRequest.customerId}`).emit('new_notification', notification);
-      }
     }
 
     res.json(jobRequest);
@@ -431,21 +418,15 @@ exports.createOrder = async (req, res) => {
     await order.populate('customerId', 'name');
     await order.populate('providerId', 'name');
 
-    // Send notification to provider
-    const notification = await Notification.create({
+    await notify(req.app.get('io'), {
       userId: providerId,
       senderId: customerId,
       orderId: order._id,
       type: 'order',
-      content: `Ny forespørsel: ${order.customerId.name} ønsker å søke på "${order.serviceId.title}"`,
+      content: `${order.customerId.name} har sendt en forespørsel på "${order.serviceId.title}"`,
+      event: 'new_order_request',
+      payload: order,
     });
-
-    // Emit socket event for real-time alert
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`user_${providerId}`).emit('new_notification', notification);
-      io.to(`user_${providerId}`).emit('new_order_request', order);
-    }
 
     res.status(201).json(order);
   } catch (err) {

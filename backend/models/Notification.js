@@ -72,4 +72,13 @@ const notificationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+/**
+ * The tray query is `find({ userId }).sort({ createdAt: -1 })` and the badge query is
+ * `countDocuments({ userId, read: false })` — the second one now runs on every delivered
+ * notification as well as on every page load. Neither had an index, so both were full
+ * collection scans that got slower for everybody as the collection grew.
+ */
+notificationSchema.index({ userId: 1, createdAt: -1 });
+notificationSchema.index({ userId: 1, read: 1 });
+
 module.exports = mongoose.model('Notification', notificationSchema);
