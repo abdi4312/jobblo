@@ -27,10 +27,21 @@ exports.createOrGetChat = async (req, res) => {
       return res.status(404).json({ message: 'Provider not found.' });
     }
 
+    // Direction-agnostic: match the PAIR, not the slots.
+    //
+    // Applying to a job creates the chat as { clientId: applicant, providerId: owner }
+    // (orderController.createJobRequest). When the owner then pressed "Send melding"
+    // this looked for { clientId: owner, providerId: applicant } — the same two people
+    // the other way round — found nothing, and created a SECOND conversation for the
+    // same pair and the same job. The duplicate also put the owner in the clientId
+    // slot, which every role-aware view reads as "the applicant", so the owner
+    // appeared to have applied to their own listing.
     let chat = await Chat.findOne({
-      clientId: id,
-      providerId,
       serviceId,
+      $or: [
+        { clientId: id, providerId },
+        { clientId: providerId, providerId: id },
+      ],
     })
       .populate('clientId', 'name')
       .populate('providerId', 'name')
@@ -318,11 +329,30 @@ exports.createContract = async (req, res) => {
     // whoever called this endpoint set the contract price unilaterally.
     const price = chat.agreedPrice || chat.serviceId.price;
 
+    // Who pays and who gets paid is decided by the SERVICE, not by the chat slots.
+    //
+    // These used to be `chat.clientId` → customerId and `chat.providerId` → providerId.
+    // A chat created by the applicant applying stores { clientId: applicant,
+    // providerId: owner }, so creating the contract from that conversation produced an
+    // order with the applicant as the payer and the owner as the payee — the money
+    // pointing the wrong way. The owner sees the "Opprett kontrakt" button in either
+    // conversation (it keys off service ownership), so that path was reachable.
+    //
+    // The job owner always pays; the other participant always does the work. This
+    // matches safepayController.createContract, which is the primary award path.
+    const serviceOwnerId = String(chat.serviceId.userId);
+    const participants = [String(chat.clientId._id), String(chat.providerId._id)];
+    const workerId = participants.find((p) => p !== serviceOwnerId);
+
+    if (!workerId) {
+      return res.status(400).json({ error: 'Fant ikke motparten i denne samtalen.' });
+    }
+
     const order = new Order({
       chatId: chat._id,
       serviceId: chat.serviceId._id,
-      customerId: chat.clientId._id,
-      providerId: chat.providerId._id,
+      customerId: serviceOwnerId,
+      providerId: workerId,
       status: 'awaiting_payment',
       initialPrice: chat.serviceId.price,
       agreedPrice: price,

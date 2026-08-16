@@ -2,6 +2,7 @@ import { useOutletContext } from 'react-router-dom';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { MapPin } from 'lucide-react';
 import type { SettingsContextType } from '../../../pages/SettingsPage';
+import { formatPostalCode } from '../../../utils/norwegianFormat';
 import { LocationPickerMap } from '../../CreateJobForm/LocationPickerMap';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
@@ -67,11 +68,17 @@ export const AddressesView = () => {
           >
             Postnummer
           </label>
+          {/* Four digits, and kept as text: `type="number"` would strip the leading
+              zero from real postcodes like 0150 (Oslo). */}
           <input
             id="postNumber"
+            inputMode="numeric"
+            autoComplete="postal-code"
+            maxLength={4}
+            placeholder="0150"
             className="w-full border border-[#E6E7E1] bg-white outline-none focus:border-[#2E6641] focus:ring-4 focus:ring-[#2E6641]/12 rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors"
-            value={form.postNumber}
-            onChange={(event) => handleChange('postNumber', event.target.value)}
+            value={String(form.postNumber || '')}
+            onChange={(event) => handleChange('postNumber', formatPostalCode(event.target.value))}
           />
         </div>
 

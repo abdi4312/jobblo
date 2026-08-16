@@ -1,5 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import type { SettingsContextType } from '../../../pages/SettingsPage';
+import { formatPhone, isValidPhone, phoneDigits } from '../../../utils/norwegianFormat';
 
 export const PhoneView = () => {
   const { form, handleChange, handleUpdate, updateUser, user } =
@@ -9,18 +10,17 @@ export const PhoneView = () => {
   const isUnchanged = form.phone === user?.phone;
   const isDisabled = isUnchanged || updateUser?.isPending;
 
-  // Funksjon for å bare tillate tall
-  const handlePhoneChange = (value: string) => {
-    // 1. Logikk for å bare tillate tall og '+' i begynnelsen
-    const cleaned = value.replace(/[^\d+]/g, ''); // Fjerner alt unntatt siffer og '+'
+  /**
+   * Digits only, country code stripped, capped at eight.
+   *
+   * This used to keep a leading `+` and everything after it verbatim, so the same person
+   * could be stored as `41234567`, `+4741234567` or `004741234567` depending on how they
+   * happened to type it — three spellings of one number that no lookup matches across.
+   * The `+47` is now a fixed prefix in the field rather than part of the value.
+   */
+  const handlePhoneChange = (value: string) => handleChange('phone', phoneDigits(value));
 
-    // 2. Sørger for at '+' bare kan være i begynnelsen
-    const finalValue = cleaned.startsWith('+')
-      ? '+' + cleaned.replace(/\+/g, '')
-      : cleaned.replace(/\+/g, '');
-
-    handleChange('phone', finalValue);
-  };
+  const showError = String(form.phone || '').length >= 8 && !isValidPhone(String(form.phone));
 
   return (
     <section className="flex flex-col gap-6 max-w-2xl">
@@ -32,16 +32,29 @@ export const PhoneView = () => {
           Telefonnummer
         </label>{' '}
         {/* Labelen slutter her */}
+        <span className="pointer-events-none absolute bottom-3 left-4 select-none text-[0.9375rem] text-[#9B9E96]">
+          +47
+        </span>
         <input
           id="phone"
           type="tel"
           inputMode="numeric"
-          className="w-full border border-[#E6E7E1] bg-white outline-none focus:border-[#2E6641] focus:ring-4 focus:ring-[#2E6641]/12 rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors"
-          value={form.phone}
+          autoComplete="tel-national"
+          aria-invalid={showError || undefined}
+          className={`w-full rounded-2xl border bg-white pt-6 pb-3 pl-14 pr-4 font-medium text-[#0B0B0B] outline-none transition-colors ${
+            showError
+              ? 'border-[#B4544A] focus:border-[#B4544A] focus:ring-4 focus:ring-[#B4544A]/12'
+              : 'border-[#E6E7E1] focus:border-[#2E6641] focus:ring-4 focus:ring-[#2E6641]/12'
+          }`}
+          value={formatPhone(String(form.phone || ''))}
           onChange={(event) => handlePhoneChange(event.target.value)}
-          placeholder="+47 000 00 000"
+          placeholder="412 34 567"
         />
       </div>
+
+      {showError && (
+        <p className="-mt-3 text-[0.8125rem] text-[#B4544A]">Et norsk nummer har åtte siffer.</p>
+      )}
 
       <button
         type="button"

@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { formatPhone, phoneDigits } from '../../../utils/norwegianFormat';
 
 interface NewUserData {
   name: string;
@@ -64,12 +65,15 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
             </div>
             <div>
               <label className="text-[10px] font-bold text-gray-400 uppercase ml-2">Phone</label>
+              {/* `type="number"` on a phone field gives a spinner, changes the value on
+                  a stray scroll and drops leading zeros. Same mask as the rest of the app. */}
               <input
                 required
-                type="number"
-                placeholder="0300..."
-                value={newUser.phone}
-                onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                type="tel"
+                inputMode="numeric"
+                placeholder="412 34 567"
+                value={formatPhone(newUser.phone)}
+                onChange={(e) => setNewUser({ ...newUser, phone: phoneDigits(e.target.value) })}
                 className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm outline-none focus:border-[#2d4a3e]"
               />
             </div>

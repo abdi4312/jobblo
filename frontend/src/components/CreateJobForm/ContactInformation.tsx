@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
+import { formatPhone, isValidPhone, phoneDigits } from '../../utils/norwegianFormat';
 
 interface ContactInformationProps {
   phone: string;
@@ -25,6 +26,10 @@ export const ContactInformation: React.FC<ContactInformationProps> = ({
   summary,
   errors,
 }) => {
+  // The field is optional, so an empty one is not an error. Only complain once there is
+  // something in it that cannot be a Norwegian number — and not while it is half typed.
+  const showPhoneError = phone.length >= 8 && !isValidPhone(phone);
+
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
       <div className="box-card-custom p-4 md:p-6 rounded-[14px]">
@@ -34,13 +39,41 @@ export const ContactInformation: React.FC<ContactInformationProps> = ({
             <label className="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider">
               Telefonnummer
             </label>
-            <input
-              type="number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Ditt nummer"
-              className="w-full px-4 md:px-6 py-3 md:py-4 rounded-xl border border-gray-200 bg-white outline-none focus:border-[#2D7A4D] transition-all"
-            />
+            {/*
+              Was `type="number"`, which is wrong for a phone number in every way that
+              matters: a number spinner appears beside it, scrolling the wheel over the
+              focused field silently changes the value, `e`, `+` and `-` are accepted
+              because they are legal in a JS number literal, and any leading zero is
+              dropped. It is a `tel` field now, and the digits are grouped as they are
+              typed — `412 34 567` for mobile, `22 12 34 56` for landline.
+
+              State stays as bare digits; only the display is masked. Storing "412 34 567"
+              would mean the same number is written three ways across the database.
+            */}
+            <div className="relative">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 select-none text-[0.9375rem] text-[#9B9E96] md:left-6">
+                +47
+              </span>
+              <input
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                value={formatPhone(phone)}
+                onChange={(e) => setPhone(phoneDigits(e.target.value))}
+                placeholder="412 34 567"
+                aria-invalid={showPhoneError || undefined}
+                className={`w-full rounded-xl border bg-white py-3 pl-14 pr-4 outline-none transition-all md:py-4 md:pl-18 md:pr-6 ${
+                  showPhoneError
+                    ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/5'
+                    : 'border-gray-200 focus:border-[#2D7A4D] focus:ring-4 focus:ring-[#2D7A4D]/5'
+                }`}
+              />
+            </div>
+            {showPhoneError && (
+              <p className="mt-1 flex items-center gap-1.5 text-[10px] font-bold text-red-500 animate-in fade-in slide-in-from-top-1 md:text-xs">
+                <AlertCircle size={12} /> Et norsk nummer har åtte siffer.
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <label className="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider">
