@@ -9,6 +9,7 @@ const Review = require('../models/Review');
 const Chat = require('../models/ChatMessage');
 const { getStripe } = require('../config/stripe');
 const { resolveStripeCustomer } = require('../services/stripe/customers');
+const { notify } = require('../services/notifications');
 
 const PAID_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed'];
 
@@ -119,19 +120,23 @@ async function confirmPaidSession(session, io) {
     );
 
     await Promise.all([
-      Notification.create({
+      notify({
         userId: order.providerId,
-        type: 'order',
-        content: 'Betaling mottatt! Du kan nå starte jobben.',
+        type: 'payment',
+        content: 'Betaling mottatt — du kan starte jobben.',
         orderId: order._id,
         senderId: order.customerId,
+        event: 'order_paid',
+        payload: { orderId: String(order._id) },
       }),
-      Notification.create({
+      notify({
         userId: order.customerId,
-        type: 'order',
-        content: 'Betalingen er bekreftet.',
+        type: 'payment',
+        content: 'Betalingen er bekreftet og holdes trygt til jobben er godkjent.',
         orderId: order._id,
         senderId: order.customerId,
+        event: 'order_paid',
+        payload: { orderId: String(order._id) },
       }),
     ]);
   }
@@ -656,15 +661,17 @@ exports.approveAndPayout = async (req, res) => {
         : 'Jobben er godkjent, men utbetalingen mislyktes midlertidig. Pengene er trygge og vil bli forsøkt igjen.';
 
       // Notify provider of action needed
-      await Notification.create({
+      await notify({
         userId: order.providerId,
-        type: 'order',
+        type: 'payment',
         content: isSetupRequired
           ? 'Jobben er godkjent! Fullfør Stripe Connect-oppsett under Innstillinger → Utbetaling for å motta pengene.'
           : `Jobb godkjent, men overføring mislyktes: ${payoutErr.message}. Kontakt support.`,
         orderId: order._id,
         senderId: userId,
-      }).catch(() => {});
+        event: 'payout_failed',
+        payload: { orderId: String(order._id), setupRequired: isSetupRequired },
+      });
 
       // Return success for the job approval itself, with payout warning
       const io = req.app?.get('io');
@@ -683,19 +690,23 @@ exports.approveAndPayout = async (req, res) => {
 
     // ── Notifications ──────────────────────────────────────────────────────────
     await Promise.allSettled([
-      Notification.create({
+      notify({
         userId: order.providerId,
-        type: 'order',
-        content: `Jobb godkjent! ${netProvider} kr er lagt til din saldo.`,
+        type: 'payment',
+        content: `Jobb godkjent — ${netProvider} kr er på vei til deg.`,
         orderId: order._id,
         senderId: userId,
+        event: 'payout_sent',
+        payload: { orderId: String(order._id), amount: netProvider },
       }),
-      Notification.create({
+      notify({
         userId: order.customerId,
         type: 'order',
         content: 'Oppdraget er fullført og godkjent.',
         orderId: order._id,
         senderId: userId,
+        event: 'order_completed',
+        payload: { orderId: String(order._id) },
       }),
     ]);
 

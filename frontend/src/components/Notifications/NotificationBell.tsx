@@ -52,6 +52,21 @@ export function NotificationBell() {
     if (open) setHasOpened(true);
   }, [open]);
 
+  // 'default' means the user has neither granted nor denied. Re-asking after a denial is
+  // both useless (browsers remember) and obnoxious, so the prompt only appears once.
+  const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(() =>
+    typeof Notification === 'undefined' ? 'unsupported' : Notification.permission
+  );
+  const canAskPermission = open && permission === 'default';
+
+  const askPermission = async () => {
+    try {
+      setPermission(await Notification.requestPermission());
+    } catch {
+      setPermission('denied');
+    }
+  };
+
   // Close on outside click and on Escape.
   useEffect(() => {
     if (!open) return;
@@ -117,6 +132,27 @@ export function NotificationBell() {
               </button>
             )}
           </div>
+
+          {/* Asking for system-notification permission, at the only moment it makes sense.
+              The request lived on a settings page nobody visits, so in practice the app had
+              permission from almost no one and the `document.hidden` branch that shows a
+              system notification could never fire. Browsers also require a user gesture,
+              which opening this panel is. Hidden on iOS Safari, where `Notification` does
+              not exist outside an installed PWA — there the in-app toast is the channel. */}
+          {canAskPermission && (
+            <div className="flex items-center gap-3 border-b border-[#E6E7E1] bg-[#F4F6F0] px-4 py-3">
+              <span className="min-w-0 flex-1 text-[0.8125rem] leading-relaxed text-[#63665F]">
+                Få varsler også når Jobblo ikke er åpent.
+              </span>
+              <button
+                type="button"
+                onClick={askPermission}
+                className="shrink-0 rounded-full bg-[#2E6641] px-3 py-1.5 text-[0.75rem] font-semibold text-white transition-colors hover:bg-[#255335] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25"
+              >
+                Slå på
+              </button>
+            </div>
+          )}
 
           <div className="max-h-96 overflow-y-auto">
             {isLoading && notifications.length === 0 ? (

@@ -19,12 +19,17 @@ const Notification = require('../../models/Notification');
  *      after a reconnect.
  *   3. A notification failure never breaks the thing that caused it. Nobody's payment
  *      should 500 because a socket was mid-reconnect.
- *   4. The unread count travels with the event. The client used to refetch a count over
+ *   4. Nothing takes `io` as an argument. Half the notification sites live in background
+ *      jobs and services with no `req` to pull it off, which is a large part of why they
+ *      never emitted anything — the socket server was simply out of reach. It comes from
+ *      `sockets/io.js` now, so a scheduler job and a controller send the same way.
+ *   5. The unread count travels with the event. The client used to refetch a count over
  *      HTTP every time a socket event arrived — one extra round trip per notification, per
  *      open tab, to learn a number the server already knew.
  */
 
 const { userRooms } = require('../../sockets/rooms');
+const { getIO } = require('../../sockets/io');
 
 /**
  * The notification catalogue.
@@ -70,12 +75,17 @@ const POPULATE = [
  * Controllers reach for `io.to(...)` directly all over this codebase and disagree about
  * the room name. This is the only correct spelling.
  */
-function emitToUser(io, userId, event, payload) {
+function emitToUser(userId, event, payload) {
+  const io = getIO();
   if (!io || !userId || !event) return;
+  const rooms = userRooms(userId);
+  if (!rooms.length) return;
   try {
-    for (const room of userRooms(userId)) {
-      io.to(room).emit(event, payload);
-    }
+    // Chained into a single emit rather than one emit per room. A socket is in both rooms
+    // (see sockets/rooms.js), and `io.to(a).emit(); io.to(b).emit();` would deliver the
+    // event to it twice — two sounds, two toasts, one notification. socket.io dedupes
+    // recipients across a chained `.to()`, so this delivers exactly once.
+    rooms.reduce((chain, room) => chain.to(room), io).emit(event, payload);
   } catch (err) {
     console.error('emitToUser(%s, %s) failed: %s', userId, event, err.message);
   }
@@ -93,7 +103,6 @@ async function unreadCount(userId) {
 /**
  * Create a notification and deliver it.
  *
- * @param {import('socket.io').Server} io
  * @param {object} input
  * @param {string} input.userId     recipient
  * @param {string} input.type       one of TYPES
@@ -106,7 +115,7 @@ async function unreadCount(userId) {
  * @returns {Promise<object|null>} the populated notification, or null if it could not be
  *   created — callers are not expected to check, that is the point.
  */
-async function notify(io, input = {}) {
+async function notify(input = {}) {
   const { userId, type, content, senderId, orderId, requestId, event, payload } = input;
 
   try {
@@ -134,7 +143,7 @@ async function notify(io, input = {}) {
     const populated = await Notification.findById(created._id).populate(POPULATE);
 
     const count = await unreadCount(userId);
-    emitToUser(io, userId, 'new_notification', {
+    emitToUser(userId, 'new_notification', {
       ...(populated ? populated.toObject() : created.toObject()),
       // The client decides between "sound + system notification" and "quiet tray entry"
       // on this flag rather than keeping its own copy of which types matter.
@@ -142,8 +151,8 @@ async function notify(io, input = {}) {
       unreadCount: count,
     });
 
-    if (count !== null) emitToUser(io, userId, 'notification_count', { count });
-    if (event) emitToUser(io, userId, event, payload ?? {});
+    if (count !== null) emitToUser(userId, 'notification_count', { count });
+    if (event) emitToUser(userId, event, payload ?? {});
 
     return populated;
   } catch (err) {
@@ -159,9 +168,9 @@ async function notify(io, input = {}) {
  * The same notification to several people — dispute parties, both sides of an order.
  * Runs them concurrently; one failure does not stop the others.
  */
-async function notifyMany(io, userIds, build) {
+async function notifyMany(userIds, build) {
   const unique = [...new Set((userIds || []).filter(Boolean).map(String))];
-  return Promise.all(unique.map((userId) => notify(io, { ...build(userId), userId })));
+  return Promise.all(unique.map((userId) => notify({ ...build(userId), userId })));
 }
 
 /**
@@ -170,7 +179,8 @@ async function notifyMany(io, userIds, build) {
  * Kept separate from `notify` because it is genuinely a different shape — `userId` is null,
  * there is no per-user unread count to send, and it goes to the whole namespace.
  */
-async function broadcast(io, { type, content }) {
+async function broadcast({ type, content }) {
+  const io = getIO();
   try {
     if (!isKnownType(type)) {
       console.error('broadcast: unknown notification type "%s"', type);

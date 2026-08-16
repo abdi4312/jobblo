@@ -9,6 +9,7 @@ const { asyncHandler, sendSuccess, sendError, buildPagination } = require('../..
 const { parsePagination, parseObjectId, parseSort, parseDate } = require('../../utils/pagination');
 const { logActivity } = require('../../services/admin/activityService');
 const { openDispute, DISPUTE_ELIGIBLE_STATUSES } = require('../../services/admin/safePayStateService');
+const { notify } = require('../../services/notifications');
 
 const SORT_FIELDS = ['createdAt', 'updatedAt'];
 const TERMINAL_STATUSES = ['resolved', 'dismissed', 'closed'];
@@ -201,7 +202,11 @@ const requestInformation = asyncHandler(async (req, res) => {
 
   // Notify the user
   const notifyId = from === 'reporter' ? report.reportedBy : report.reportedUser;
-  await Notification.create({ userId: notifyId, type: 'system', content: 'Admin ber om mer informasjon angående en rapport du er involvert i.' }).catch(() => {});
+  await notify({
+    userId: notifyId,
+    type: 'alert',
+    content: 'Support ber om mer informasjon om en rapport du er involvert i.',
+  });
 
   return sendSuccess(res, {}, 'Informasjonsforespørsel sendt.');
 });

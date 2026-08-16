@@ -6,6 +6,7 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const chatSocket = require('./sockets/chat.socket');
 const { joinUserRooms } = require('./sockets/rooms');
+const { setIO } = require('./sockets/io');
 
 require('dotenv').config({ path: __dirname + '/.env' });
 
@@ -33,6 +34,9 @@ const io = new Server(server, {
 
 // Make io accessible to routes
 app.set('io', io);
+// Also register it globally, so background jobs and services that have no `req`
+// can deliver notifications. See sockets/io.js.
+setIO(io);
 chatSocket(io);
 io.on('connection', (socket) => {
   // Private notification rooms, joined here rather than in response to a client `join`.

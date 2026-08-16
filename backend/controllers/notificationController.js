@@ -1,6 +1,7 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const mongoose = require('mongoose');
+const { notify, broadcast } = require('../services/notifications');
 
 // GET /api/notifications - Get all notifications for a user
 exports.getAllNotifications = async (req, res) => {
@@ -181,26 +182,13 @@ exports.getUnreadCount = async (req, res) => {
   }
 };
 
-// Helper function to create and emit notification (can be used elsewhere)
-exports.createAndEmitNotification = async (io, data) => {
-  try {
-    const notification = await Notification.create(data);
-    const populated = await Notification.findById(notification._id)
-      .populate('userId', 'name email')
-      .populate('senderId', 'name lastName avatarUrl');
-
-    // Emit to the specific user room
-    if (data.userId) {
-      io.to(data.userId.toString()).emit('new_notification', populated);
-    } else if (data.isSystem) {
-      io.emit('new_notification', populated); // System notification to everyone
-    }
-
-    return populated;
-  } catch (error) {
-    console.error('Error creating/emitting notification:', error);
-  }
-};
+/**
+ * Kept as a thin wrapper so the two callers that still use it (messages, favourites)
+ * keep working. All it does now is forward to `services/notifications`, which is the
+ * single place that creates and delivers. The `io` argument is ignored — the service
+ * resolves the socket server itself.
+ */
+exports.createAndEmitNotification = async (_io, data) => notify(data);
 
 // POST /api/notifications/test - Create test notification
 exports.createTestNotification = async (req, res) => {
@@ -228,7 +216,7 @@ exports.createTestNotification = async (req, res) => {
     // Create test notification
     const testNotification = await exports.createAndEmitNotification(io, {
       userId,
-      type: type || 'test',
+      type: type || 'alert',
       content: content || 'Dette er en test-notifikasjon fra Jobblo API',
     });
 
@@ -248,12 +236,7 @@ exports.createSystemNotification = async (req, res) => {
       return res.status(400).json({ error: 'Type & content required' });
     }
 
-    const notification = await exports.createAndEmitNotification(io, {
-      type,
-      content,
-      isSystem: true,
-      userId: null,
-    });
+    const notification = await broadcast({ type, content });
 
     res.status(201).json({
       success: true,

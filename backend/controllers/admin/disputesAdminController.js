@@ -9,6 +9,7 @@ const { logApplicationError } = require('../../utils/errorLogger');
 const { asyncHandler, sendSuccess, sendError, buildPagination } = require('../../utils/apiResponse');
 const { parsePagination, parseObjectId, parseSort, parseDate } = require('../../utils/pagination');
 const { logActivity } = require('../../services/admin/activityService');
+const { notify } = require('../../services/notifications');
 
 const SORT_FIELDS = ['createdAt', 'updatedAt', 'openedAt'];
 const VALID_STATUSES = ['open','under_review','waiting_for_customer','waiting_for_provider','evidence_submitted','resolved','closed','cancelled'];
@@ -217,11 +218,13 @@ const requestInformation = asyncHandler(async (req, res) => {
   const order = await Order.findById(dispute.orderId).select('customerId providerId').lean();
   if (order) {
     const notifyUserId = from === 'customer' ? order.customerId : order.providerId;
-    await Notification.create({
+    await notify({
       userId: notifyUserId,
-      type: 'system',
-      content: `Admin ber om mer informasjon angående din tvist.`,
+      type: 'alert',
+      content: 'Support ber om mer informasjon om tvisten din.',
       orderId: dispute.orderId,
+      event: 'dispute_updated',
+      payload: { disputeId: String(dispute._id) },
     });
   }
 
@@ -543,17 +546,21 @@ const resolveDispute = asyncHandler(async (req, res) => {
   // Notifications are best-effort and must never fail the resolution.
   try {
     await Promise.all([
-      Notification.create({
+      notify({
         userId: order.customerId,
-        type: 'system',
-        content: `Din tvist er løst. Utfall: ${outcome}.`,
+        type: 'alert',
+        content: `Tvisten din er avgjort. Utfall: ${outcome}.`,
         orderId: order._id,
+        event: 'dispute_resolved',
+        payload: { orderId: String(order._id), outcome },
       }),
-      Notification.create({
+      notify({
         userId: order.providerId,
-        type: 'system',
-        content: `Tvisten tilknyttet ditt oppdrag er løst. Utfall: ${outcome}.`,
+        type: 'alert',
+        content: `Tvisten på oppdraget ditt er avgjort. Utfall: ${outcome}.`,
         orderId: order._id,
+        event: 'dispute_resolved',
+        payload: { orderId: String(order._id), outcome },
       }),
     ]);
   } catch {

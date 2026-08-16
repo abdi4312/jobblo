@@ -8,6 +8,7 @@ import { CookieBanner } from './components/shared/CookieBanner.tsx';
 import { App as AntApp } from 'antd';
 import { useAuth } from './features/auth/hook/useAuth.ts';
 import { useOrderApprovalSocket } from './features/notifications/hooks';
+import { NotificationRealtime } from './features/notifications/NotificationRealtime';
 import { useUserStore } from './stores/userStore';
 import { Toaster } from 'react-hot-toast';
 import { PageLoader } from './components/Loading/PageLoader.tsx';
@@ -68,6 +69,10 @@ export default function App() {
         }}
       />
       <AntApp>
+        {/* All notification socket handling — sound, toast, system notification, cache
+            updates, reconnect and foreground recovery — lives here and is mounted exactly
+            once. It renders nothing. */}
+        <NotificationRealtime />
         <ScrollToTop />
         <CookieBanner />
         {!isAuthPage && <Header />}

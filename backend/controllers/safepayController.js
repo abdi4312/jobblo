@@ -7,6 +7,7 @@ const Payment = require('../models/Payment');
 const User = require('../models/User');
 const SafePayHistory = require('../models/SafePayHistory');
 const Review = require('../models/Review');
+const { notify } = require('../services/notifications');
 
 /**
  * POST /api/safepay/create-contract
@@ -181,14 +182,15 @@ exports.createContract = async (req, res) => {
     }
 
     // 4. Create notification for the applicant
-    const notification = new Notification({
+    await notify({
       userId: applicantId,
       type: 'order',
-      content: `Du har blitt valgt for oppdraget: ${service.title}. Venter på betaling.`,
+      content: `Du er valgt til oppdraget "${service.title}" — venter på betaling.`,
       orderId: order._id,
       senderId: userId,
+      event: 'worker_selected',
+      payload: { orderId: String(order._id) },
     });
-    await notification.save();
 
     res.status(201).json({
       message: 'Kontrakt opprettet',
@@ -302,14 +304,15 @@ exports.startJob = async (req, res) => {
     // Create notification for the other party
     const otherUserId =
       String(order.providerId) === String(userId) ? order.customerId : order.providerId;
-    const notification = new Notification({
+    await notify({
       userId: otherUserId,
       type: 'order',
-      content: `Oppdraget er startet!`,
+      content: 'Oppdraget er startet.',
       orderId: order._id,
       senderId: userId,
+      event: 'order_started',
+      payload: { orderId: String(order._id) },
     });
-    await notification.save();
 
     res.json({ message: 'Oppdraget startet', order });
   } catch (err) {

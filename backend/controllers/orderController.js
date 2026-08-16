@@ -176,7 +176,7 @@ exports.createJobRequest = async (req, res) => {
 
     // Tell the job owner someone applied. `notify` creates and delivers in one call, so
     // this can never again end up written to the database but not sent.
-    await notify(req.app.get('io'), {
+    await notify({
       userId: providerId,
       senderId: customerId,
       requestId: jobRequest._id,
@@ -250,7 +250,7 @@ exports.updateJobRequestStatus = async (req, res) => {
       const service = await Service.findById(jobRequest.serviceId);
 
       // 3. Notify the applicant
-      await notify(req.app.get('io'), {
+      await notify({
         userId: jobRequest.customerId,
         senderId: jobRequest.providerId,
         requestId: jobRequest._id,
@@ -262,7 +262,7 @@ exports.updateJobRequestStatus = async (req, res) => {
     } else {
       // Notify Rejection
       await jobRequest.populate('serviceId');
-      await notify(req.app.get('io'), {
+      await notify({
         userId: jobRequest.customerId,
         senderId: jobRequest.providerId,
         requestId: jobRequest._id,
@@ -418,7 +418,7 @@ exports.createOrder = async (req, res) => {
     await order.populate('customerId', 'name');
     await order.populate('providerId', 'name');
 
-    await notify(req.app.get('io'), {
+    await notify({
       userId: providerId,
       senderId: customerId,
       orderId: order._id,

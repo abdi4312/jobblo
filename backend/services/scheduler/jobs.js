@@ -4,6 +4,7 @@ const Payout = require('../../models/Payout');
 const Dispute = require('../../models/Dispute');
 const Notification = require('../../models/Notification');
 const { logApplicationError } = require('../../utils/errorLogger');
+const { notify } = require('../../services/notifications');
 
 /**
  * The lifecycle automation the product design already assumed existed.
@@ -111,18 +112,22 @@ async function autoReleaseStaleReviews() {
         payment.status = 'released';
         await payment.save();
         released += 1;
-        await Notification.create({
+        await notify({
           userId: order.customerId,
-          type: 'order',
+          type: 'payment',
           content: `Oppdraget ble automatisk godkjent etter ${autoReleaseDays} dager, og betalingen er utbetalt.`,
           orderId: order._id,
-        }).catch(() => {});
-        await Notification.create({
+          event: 'order_completed',
+          payload: { orderId: String(order._id), automatic: true },
+        });
+        await notify({
           userId: order.providerId,
-          type: 'order',
+          type: 'payment',
           content: 'Betalingen din er frigitt automatisk.',
           orderId: order._id,
-        }).catch(() => {});
+          event: 'payout_sent',
+          payload: { orderId: String(order._id), automatic: true },
+        });
       }
     } catch (err) {
       await logApplicationError({
@@ -162,12 +167,12 @@ async function warnBeforeAutoRelease() {
     );
     if (!claimed) continue;
 
-    await Notification.create({
+    await notify({
       userId: order.customerId,
       type: 'order',
       content: `Du har ${warnBeforeDays} dager på deg til å godkjenne oppdraget. Etter det frigis betalingen automatisk.`,
       orderId: order._id,
-    }).catch(() => {});
+    });
     warned += 1;
   }
 

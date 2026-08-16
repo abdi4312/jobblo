@@ -4,6 +4,7 @@ const User = require('../../models/User');
 const Notification = require('../../models/Notification');
 const { upsertTransaction } = require('../../utils/transaction');
 const { upsertSubscription } = require('../../utils/subscription');
+const { notify } = require('../../services/notifications');
 
 /**
  * Provisioning for the two non-SafePay purchase types.
@@ -193,10 +194,12 @@ async function applyInvoicePaymentFailed(invoice) {
     type: 'subscription',
   });
 
-  await Notification.create({
+  await notify({
     userId: subscription.userId,
-    type: 'order',
+    type: 'payment',
     content: 'Betalingen for abonnementet ditt mislyktes. Oppdater betalingskortet ditt.',
+    event: 'subscription_payment_failed',
+    payload: { subscriptionId: String(subscription._id) },
   });
 
   return { ok: true, subscription };

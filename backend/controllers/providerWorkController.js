@@ -9,6 +9,7 @@ const Notification = require('../models/Notification');
 const Dispute = require('../models/Dispute');
 const Chat = require('../models/ChatMessage');
 const Service = require('../models/Service');
+const { notify } = require('../services/notifications');
 // stripe is lazily initialized only when needed (reconcile endpoint)
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -99,10 +100,10 @@ exports.startJob = async (req, res) => {
         await chat.save();
       }
     }
-    const notif = await Notification.create({
+    const notif = await notify({
       userId: updated.customerId,
       type: 'order',
-      content: 'Utfører har startet oppdraget!',
+      content: 'Utføreren har startet oppdraget.',
       orderId: updated._id,
       senderId: userId,
     });
@@ -380,10 +381,10 @@ exports.markReadyForReview = async (req, res) => {
         await chat.save();
       }
     }
-    const notif = await Notification.create({
+    const notif = await notify({
       userId: updated.customerId,
       type: 'order',
-      content: 'Utfører har levert jobben. Vennligst gjennomgå og godkjenn.',
+      content: 'Utføreren har levert jobben — se over og godkjenn.',
       orderId: updated._id,
       senderId: userId,
     });

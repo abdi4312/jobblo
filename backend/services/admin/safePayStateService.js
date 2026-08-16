@@ -5,6 +5,7 @@ const Chat = require('../../models/ChatMessage');
 const Dispute = require('../../models/Dispute');
 const Notification = require('../../models/Notification');
 const { logActivity } = require('./activityService');
+const { notify } = require('../../services/notifications');
 
 /**
  * Order statuses a user-initiated dispute may be opened from.
@@ -217,18 +218,22 @@ async function openDispute({
   // Notifications (failure should not fail the main operation)
   try {
     await Promise.all([
-      Notification.create({
+      notify({
         userId: openedAgainst,
-        type: 'order',
-        content: `En tvist er åpnet for oppdrag. Tittel: ${title}`,
+        type: 'alert',
+        content: `Det er åpnet en tvist på oppdraget "${title}".`,
         orderId,
         senderId: openedByUserId,
+        event: 'dispute_opened',
+        payload: { orderId: String(orderId) },
       }),
-      Notification.create({
+      notify({
         userId: order.customerId,
-        type: 'system',
-        content: `Tvist åpnet for kontrakt. Admin er varslet.`,
+        type: 'alert',
+        content: 'Tvist åpnet. Support er varslet og tar kontakt.',
         orderId,
+        event: 'dispute_opened',
+        payload: { orderId: String(orderId) },
       }),
     ]);
   } catch {

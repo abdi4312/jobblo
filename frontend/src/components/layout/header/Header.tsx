@@ -29,7 +29,7 @@ export default function Header() {
   const Auth = useUserStore((state) => state.isAuthenticated);
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
-  const { playMessageSound, playAlertSound } = useNotificationSound();
+  const { playMessageSound } = useNotificationSound();
 
   // Still read here for the mobile drawer's badge — the desktop bell has its own copy,
   // and react-query dedupes them onto one request. `useUnreadCount` takes no argument;
@@ -151,27 +151,11 @@ export default function Header() {
       }
     };
 
-    // Listen for new notifications (alerts)
-    const handleNewNotification = (data: any) => {
-      if (useUserStore.getState().notificationsEnabled) {
-        playAlertSound();
-      }
-
-      if (
-        useUserStore.getState().browserNotificationsEnabled &&
-        document.hidden &&
-        'Notification' in window &&
-        Notification.permission === 'granted'
-      ) {
-        const notification = new Notification('Ny varsel fra Jobblo', {
-          body: data?.content || 'Du har fått et nytt varsel',
-          icon: '/logo192.png',
-        });
-
-        // Auto-close after 5 seconds
-        setTimeout(() => notification.close(), 5000);
-      }
-    };
+    // `new_notification` is deliberately NOT handled here. It used to be — the header
+    // played the alert sound while `useUnreadCount` (mounted by the bell inside this same
+    // header) invalidated the queries, so one event ran two handlers, and the server was
+    // emitting it into two rooms on top of that. It belongs to `NotificationRealtime`,
+    // which is mounted once in App. What stays here is chat, which is a different stream.
 
     // Listen for real-time read status
     const handleMessagesRead = (data: any) => {
@@ -191,7 +175,6 @@ export default function Header() {
       }
       socket.on('receive-message', handleReceiveMessage);
       socket.on('messages-read', handleMessagesRead);
-      socket.on('new_notification', handleNewNotification);
     }
 
     window.addEventListener('chat-read', handleChatRead);
@@ -200,12 +183,14 @@ export default function Header() {
       if (socket) {
         socket.off('receive-message', handleReceiveMessage);
         socket.off('messages-read', handleMessagesRead);
-        socket.off('new_notification', handleNewNotification);
-        socket.off('connect');
+        // Was `socket.off('connect')` with no handler, which removes *every* connect
+        // listener on the socket — including the reconnect recovery in
+        // NotificationRealtime and anything chat registers.
+        socket.off('connect', initializeChatState);
       }
       window.removeEventListener('chat-read', handleChatRead);
     };
-  }, [user?._id, playMessageSound, playAlertSound]);
+  }, [user?._id, playMessageSound]);
 
   const handleProtectedNavigation = (path: string) => {
     if (!user) {
