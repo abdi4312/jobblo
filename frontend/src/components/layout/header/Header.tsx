@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { useUnreadCount } from '../../../features/notifications/hooks';
+import { NotificationBell } from '../../Notifications/NotificationBell';
 import { useNotificationSound } from '../../../hooks/useNotificationSound';
 
 export default function Header() {
@@ -30,8 +31,10 @@ export default function Header() {
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const { playMessageSound, playAlertSound } = useNotificationSound();
 
-  // Get unread notifications count using our new hook
-  const { data: unreadNotificationsData } = useUnreadCount(user?._id);
+  // Still read here for the mobile drawer's badge — the desktop bell has its own copy,
+  // and react-query dedupes them onto one request. `useUnreadCount` takes no argument;
+  // it reads the user from the store itself, so the id passed here was silently ignored.
+  const { data: unreadNotificationsData } = useUnreadCount();
   const unreadNotificationsCount = unreadNotificationsData?.count || 0;
 
   useEffect(() => {
@@ -264,6 +267,21 @@ export default function Header() {
     { name: 'Profil', icon: <User size={18} />, path: '/profile' },
   ];
 
+  /**
+   * The labelled destinations in the desktop bar.
+   *
+   * `navLinkUse` above still drives the mobile drawer, where every entry wants its icon
+   * and its name. Up here only these four are worth a word — the rest are the post CTA,
+   * the bell and the profile, which are rendered explicitly so their sizes cannot drift
+   * apart the way they had.
+   */
+  const DESKTOP_LINKS = [
+    { name: 'Hjem', path: '/home' },
+    { name: 'Søkere', path: '/my-applicants' },
+    { name: 'Medlemskap', path: '/membership' },
+    { name: 'Meldinger', path: '/messages' },
+  ];
+
   const isMessagesPage = location.pathname.startsWith('/messages');
 
   // While the drawer is open it owns the screen: Escape closes it, and the page behind
@@ -371,61 +389,80 @@ export default function Header() {
             </nav>
           )}
 
+          {/* DESKTOP NAV — signed in.
+              This row used to render four different shapes side by side: an icon-only
+              green pill, a bare 25 px icon with `mx-auto` (meaningless inside a flex
+              row), three icon+label links at `py-2` that grew a 2 px bottom border when
+              active, and a 40 px round bell. Four heights, three icon sizes and three
+              different ways of showing "you are here" — so nothing lined up on any
+              baseline.
+
+              It is two groups now. Destinations are label pills, matching the signed-out
+              nav exactly. Notifications and profile are icon-only buttons of one size,
+              grouped tight at the end where utility controls belong, with the post CTA
+              last. Everything in the row is h-10 and centred on one axis. */}
           {Auth && (
-            <div className="hidden md:flex items-center gap-6 px-4 py-3">
-              {navLinkUse.map((link, index) => {
-                const homeButton = link.path === '/home';
-                const isHomeButtonActive = homeButton && location.pathname === link.path;
-
-                if (homeButton) {
-                  return (
-                    <button
-                      key={index}
-                      onClick={() => handleProtectedNavigation(link.path)}
-                      className={`flex items-center mx-auto ${isHomeButtonActive ? 'text-custom-green' : 'hover:text-custom-green'}`}
-                    >
-                      {link.icon}
-                    </button>
-                  );
-                }
-                const jobButton = link.path === '/publish-job';
-                const isJobButtonActive = jobButton && location.pathname === link.path;
-                if (jobButton) {
-                  return (
-                    <button
-                      key={index}
-                      onClick={() => handleProtectedNavigation(link.path)}
-                      className={`flex items-center mx-auto ${isJobButtonActive ? 'bg-custom-green' : 'bg-custom-green'} text-white px-4 py-2 rounded-full font-medium transition-hover hover:bg-custom-green`}
-                    >
-                      {link.icon}
-                    </button>
-                  );
-                }
-
-                return (
-                  <NavLink
-                    key={index}
-                    to={link.path}
-                    className={({ isActive }) =>
-                      `relative flex items-center gap-2 cursor-pointer group py-2 ${
-                        isActive ? 'border-b-2 border-[#2F7E47]' : ''
-                      }`
-                    }
-                  >
-                    <div className="relative text-[#364153]! group-hover:text-black">
-                      {link.icon}
-                      {link.badgeCount !== undefined && link.badgeCount > 0 && (
-                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
-                          {link.badgeCount}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-sm font-medium text-[#0A0A0A9E]! group-hover:text-black">
-                      {link.name}
+            <div className="hidden flex-1 items-center justify-end gap-1 md:flex">
+              {DESKTOP_LINKS.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  aria-current={isCurrent(link.path) ? 'page' : undefined}
+                  className={`flex h-10 items-center gap-2 rounded-full px-3.5 text-[0.875rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2E6641]/25 ${
+                    isCurrent(link.path)
+                      ? 'bg-[#F0F1EB] text-[#0B0B0B]!'
+                      : 'text-[#63665F]! hover:bg-[#F0F1EB] hover:text-[#0B0B0B]!'
+                  }`}
+                >
+                  {link.name}
+                  {link.path === '/messages' && unreadMessagesCount > 0 && (
+                    /* Was `bg-red-500` — the only red on the site, for something that is
+                       not an error. */
+                    <span className="flex min-w-4.5 items-center justify-center rounded-full bg-[#2E6641] px-1 text-[0.625rem] font-bold leading-4.5 text-white">
+                      {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
                     </span>
-                  </NavLink>
-                );
-              })}
+                  )}
+                </Link>
+              ))}
+
+              <span aria-hidden="true" className="mx-1.5 h-6 w-px bg-[#E6E7E1]" />
+
+              {/* The bell is a panel, not a destination: checking "do I have anything?"
+                  should not cost a navigation away from whatever you were doing. Its own
+                  footer link is what takes you to the full page. */}
+              <NotificationBell />
+
+              <NavLink
+                to="/profile"
+                aria-label="Profil"
+                title="Profil"
+                className={({ isActive }) =>
+                  `flex size-10 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${
+                    isActive
+                      ? 'bg-[#F0F1EB] text-[#0B0B0B]!'
+                      : 'text-[#63665F]! hover:bg-[#F0F1EB] hover:text-[#0B0B0B]!'
+                  }`
+                }
+              >
+                {user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt=""
+                    className="size-7 rounded-full object-cover"
+                  />
+                ) : (
+                  <User size={19} strokeWidth={2} />
+                )}
+              </NavLink>
+
+              <button
+                type="button"
+                onClick={() => handleProtectedNavigation('/publish-job')}
+                className="ml-1.5 flex h-10 items-center gap-1.5 rounded-full bg-[#2E6641] px-4 text-[0.875rem] font-semibold text-white transition-colors hover:bg-[#255335] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/20"
+              >
+                <Plus size={17} strokeWidth={2.6} />
+                Legg ut
+              </button>
             </div>
           )}
 

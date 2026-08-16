@@ -14,6 +14,7 @@ import {
   Shield,
   ShieldOff,
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import type { AlertType } from '../../features/notifications/types';
 import { dateFormatter } from '../../utils/dateFormatter';
 import { timeFormatter } from '../../utils/timeFormatter';

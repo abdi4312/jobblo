@@ -28,7 +28,9 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
+  ShieldCheck,
 } from 'lucide-react';
+import { BackLink } from '../../components/Ui/BackLink';
 import { dateFormatter } from '../../utils/dateFormatter';
 import { isClosedService, statusLabel } from '../../constants/statuses';
 import { apiUrl } from '../../config/env';
@@ -189,15 +191,21 @@ const JobListingDetailPage = () => {
   // the backend — so a job in any of them kept an enabled "Send forespørsel"
   // and printed its raw status string as the chip.
   const isServiceClosed = !!job && isClosedService(job.status);
-  const SERVICE_STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-    completed: { label: 'Oppdrag fullført', color: 'text-gray-600', bg: 'bg-gray-100 border-gray-200' },
-    in_progress: { label: 'Utfører er valgt — pågår', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
-    closed: { label: 'Oppdrag er lukket', color: 'text-gray-600', bg: 'bg-gray-100 border-gray-200' },
-    cancelled: { label: 'Oppdrag er kansellert', color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
-    expired: { label: 'Oppdrag har utløpt', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
-    awaiting_payment: { label: 'Utfører er valgt — venter på betaling', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
-    paid: { label: 'Betalt — arbeidet starter snart', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
-    waiting_for_approval: { label: 'Venter på godkjenning', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
+  // Blue for four different states, plus grey, red and amber — seven colours saying one
+  // thing: you cannot apply. The emoji that led each of them (✅ 🔨 ❌ ⏰ 🔒 ⏸️) went with
+  // them. Two tones now: quiet for "finished", dark for "someone else has it".
+  const SERVICE_STATUS_LABELS: Record<string, { label: string; cls: string }> = {
+    completed: { label: 'Oppdraget er fullført', cls: 'bg-[#F4F6F0] text-[#63665F]' },
+    in_progress: { label: 'Utfører er valgt — arbeidet pågår', cls: 'bg-[#122A1C] text-white' },
+    closed: { label: 'Oppdraget er lukket', cls: 'bg-[#F4F6F0] text-[#63665F]' },
+    cancelled: { label: 'Oppdraget er kansellert', cls: 'bg-[#F4F6F0] text-[#63665F]' },
+    expired: { label: 'Oppdraget har utløpt', cls: 'bg-[#F4F6F0] text-[#63665F]' },
+    awaiting_payment: {
+      label: 'Utfører er valgt — venter på betaling',
+      cls: 'bg-[#122A1C] text-white',
+    },
+    paid: { label: 'Betalt — arbeidet starter snart', cls: 'bg-[#122A1C] text-white' },
+    waiting_for_approval: { label: 'Venter på godkjenning', cls: 'bg-[#122A1C] text-white' },
   };
 
   const [lng, lat] = job?.location?.coordinates || [0, 0];
@@ -354,8 +362,8 @@ const JobListingDetailPage = () => {
   // Loading State
   if (isJobLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 pt-16">
-        <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="min-h-screen bg-[#EFF0EA]">
+        <div className="mx-auto max-w-300 px-4 py-8 sm:px-6">
           <JobDetailSkeleton />
         </div>
       </div>
@@ -365,374 +373,455 @@ const JobListingDetailPage = () => {
   // Not Found State
   if (!job) {
     return (
-      <div className="min-h-screen bg-gray-50 pt-16 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Oppdrag ikke funnet</h2>
-          <p className="text-gray-600">Oppdraget du leter etter eksisterer ikke.</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#EFF0EA] p-4">
+        <div className="w-full max-w-md rounded-3xl border border-[#E6E7E1] bg-white p-10 text-center">
+          <span className="mx-auto mb-4 flex size-11 items-center justify-center rounded-full bg-[#EAF1E9] text-[#2E6641]">
+            <MapPin size={20} strokeWidth={2} />
+          </span>
+          <p className="text-[1.0625rem] font-semibold text-[#0B0B0B]">Oppdraget finnes ikke</p>
+          <p className="mx-auto mt-2 max-w-sm text-[0.875rem] leading-relaxed text-[#63665F]">
+            Annonsen er kanskje fjernet, eller lenken er feil.
+          </p>
+          <button
+            onClick={() => navigate('/home')}
+            className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-[#2E6641] px-6 text-[0.9375rem] font-semibold text-white transition-colors hover:bg-[#255335]"
+          >
+            Se andre oppdrag
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Main Content */}
-      <div className="max-w-300 mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Left - Image */}
-          <div className="relative lg:sticky lg:top-20 lg:h-fit">
-            <div
-              className="group relative rounded-xl overflow-hidden shadow-sm max-h-125 bg-gray-50"
-              onTouchStart={onTouchStart}
-              onTouchMove={onTouchMove}
-              onTouchEnd={onTouchEnd}
-              style={{ touchAction: 'pan-y' }}
-            >
-              {job.images && job.images.length > 0 ? (
-                <>
-                  <img
-                    src={job.images[selectedImageIndex]}
-                    alt={job.title}
-                    className="w-full max-h-125 h-full object-contain transition-all duration-300"
-                  />
+    <div className="min-h-screen bg-[#EFF0EA] pb-16">
+      <div className="mx-auto max-w-300 px-4 pt-6 sm:px-6">
+        <BackLink fallback="/home" />
 
-                  {/* Navigation Arrows */}
-                  {job.images.length > 1 && (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePrevImage();
-                        }}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-md transition-all z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                        aria-label="Previous image"
-                      >
-                        <ChevronLeft size={24} className="text-gray-700" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleNextImage();
-                        }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-md transition-all z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                        aria-label="Next image"
-                      >
-                        <ChevronRight size={24} className="text-gray-700" />
-                      </button>
-                    </>
-                  )}
-
-                  {/* Counter badge */}
-                  {job.images.length > 1 && (
-                    <div className="absolute top-3 right-3 z-10 px-2.5 py-0.5 rounded-full bg-black/35 backdrop-blur-sm text-[10px] sm:text-[11px] font-semibold text-white">
-                      {selectedImageIndex + 1} / {job.images.length}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="w-full h-96 bg-gray-200 flex items-center justify-center">
-                  <span className="text-gray-400">Ingen bilde</span>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="absolute top-4 right-4 flex flex-col gap-3 z-10"></div>
-
-              {/* Badges */}
-              <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-                {job.promoted && (
-                  <div className="bg-[#FF8A71] text-white px-4 py-2 rounded-full font-bold text-[12px] shadow-lg flex items-center gap-1.5 uppercase tracking-widest">
-                    <Zap size={14} fill="white" /> Fremmet
-                  </div>
-                )}
-                {job.urgent && (
-                  <div className="bg-[#FF4B4B] text-white px-4 py-2 rounded-full font-bold text-[12px] shadow-lg flex items-center gap-1.5 uppercase tracking-widest">
-                    <Zap size={14} fill="white" /> Haster
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Thumbnails */}
-            {job.images && job.images.length > 1 && (
-              <div className="flex gap-2 mt-3">
-                {job.images.slice(0, 4).map((img: string, idx: number) => (
-                  <div
-                    key={idx}
-                    onClick={() => setSelectedImageIndex(idx)}
-                    className={`w-16 h-16 rounded-lg overflow-hidden cursor-pointer transition-all ${idx === selectedImageIndex ? 'ring-2 ring-[#2F7E47] opacity-100' : 'opacity-70 hover:opacity-100'}`}
-                  >
-                    <img src={img} className="w-full h-full object-cover" alt="" />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Right - Details */}
-          <div className="space-y-6">
-            {/* Title & Price */}
+        {/* The gallery and the decision panel sit side by side; everything else runs
+            under the gallery. The old layout stacked six identical white boxes down the
+            right column, so the price, the apply button and the map all carried the same
+            weight and the one action on the page had to be hunted for. */}
+        <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-10">
+          {/* ── Left: gallery + content ──────────────────────────────────── */}
+          <div className="min-w-0 space-y-5">
             <div>
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex-1">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-1">
-                    {job.title || 'Uten tittel'}
-                  </h1>
-                  <div className="flex flex-wrap items-center gap-3 mb-2">
-                    {/* Service status chip */}
-                    {job.status && job.status !== 'open' && job.status !== 'pending' && (
-                      <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${job.status === 'completed' ? 'bg-gray-100 border-gray-200 text-gray-600' :
-                          job.status === 'in_progress' ? 'bg-blue-50 border-blue-200 text-blue-700' :
-                            job.status === 'cancelled' ? 'bg-red-50 border-red-200 text-red-600' :
-                              job.status === 'expired' ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                                'bg-gray-100 border-gray-200 text-gray-600'
-                        }`}>
-                        {job.status === 'completed' ? '✅ Fullført' :
-                          job.status === 'in_progress' ? '🔨 Under arbeid' :
-                            job.status === 'cancelled' ? '❌ Kansellert' :
-                              job.status === 'expired' ? '⏰ Utløpt' :
-                                job.status === 'closed' ? '🔒 Lukket' : statusLabel(job.status)}
-                      </span>
+              <div
+                className="group relative aspect-4/3 overflow-hidden rounded-3xl border border-[#E6E7E1] bg-[#EAF1E9]"
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+                style={{ touchAction: 'pan-y' }}
+              >
+                {job.images && job.images.length > 0 ? (
+                  <>
+                    {/* `object-contain` on a grey ground left letterbox bars around every
+                        photo. A fixed 4:3 frame also stops the page reflowing when the
+                        image finally loads. */}
+                    <img
+                      src={job.images[selectedImageIndex]}
+                      alt={job.title}
+                      className="size-full object-cover"
+                    />
+
+                    {job.images.length > 1 && (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePrevImage();
+                          }}
+                          className="absolute left-3 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-[#0B0B0B] shadow-sm backdrop-blur-sm transition hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 md:opacity-0 md:group-hover:opacity-100"
+                          aria-label="Forrige bilde"
+                        >
+                          <ChevronLeft size={18} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleNextImage();
+                          }}
+                          className="absolute right-3 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-[#0B0B0B] shadow-sm backdrop-blur-sm transition hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 md:opacity-0 md:group-hover:opacity-100"
+                          aria-label="Neste bilde"
+                        >
+                          <ChevronRight size={18} />
+                        </button>
+
+                        <span className="absolute bottom-3 right-3 rounded-full bg-[#0B0B0B]/60 px-2.5 py-1 text-[0.6875rem] font-semibold tabular-nums text-white backdrop-blur-sm">
+                          {selectedImageIndex + 1} / {job.images.length}
+                        </span>
+                      </>
                     )}
-                    {job.favCount !== undefined && job.favCount > 0 && (
-                      <div className="flex items-center gap-1.5 text-sm font-bold text-custom-green bg-custom-green/5 px-3 py-1 rounded-full border border-[#2F7E47]/10">
-                        <Bookmark size={14} fill="#2F7E47" color="#2F7E47" />
-                        <span>{job.favCount} lagret</span>
-                      </div>
-                    )}
+                  </>
+                ) : (
+                  <div className="flex size-full items-center justify-center text-[0.875rem] text-[#63665F]">
+                    Ingen bilde
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-3xl font-bold text-custom-green shrink-0">
-                    {job.price ? job.price.toLocaleString() : '0'} kr
-                  </p>
-                  {job.hourlyRate && (
-                    <p className="text-sm font-medium text-gray-500">
-                      {job.hourlyRate.toLocaleString()} kr / time
-                    </p>
+                )}
+
+                {/* Coral #FF8A71 and #FF4B4B appeared nowhere else on the site. */}
+                <div className="absolute left-3 top-3 z-10 flex flex-col items-start gap-1.5">
+                  {job.promoted && (
+                    <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-white/95 px-3 text-[0.75rem] font-semibold text-[#63665F] shadow-sm backdrop-blur-sm">
+                      <Zap size={12} strokeWidth={2.4} /> Sponset
+                    </span>
+                  )}
+                  {job.urgent && (
+                    <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-[#122A1C] px-3 text-[0.75rem] font-semibold text-white shadow-sm">
+                      <Zap size={12} strokeWidth={2.4} /> Haster
+                    </span>
                   )}
                 </div>
-              </div>
-              <p className="text-sm text-gray-500">
-                Varighet: {job.duration?.value || '-'} {job.duration?.unit || ''}
-              </p>
-            </div>
 
-            {/* Contact Button */}
-            {job._id && (
-              <div className="space-y-3">
-                {/* Status banner — shown when service is not open */}
-                {isServiceClosed && job.status && SERVICE_STATUS_LABELS[job.status] && (
-                  <div className={`flex items-center gap-2.5 border rounded-xl px-4 py-3 text-[13px] font-medium ${SERVICE_STATUS_LABELS[job.status].bg} ${SERVICE_STATUS_LABELS[job.status].color}`}>
-                    <span className="text-lg">
-                      {job.status === 'completed' ? '✅' : job.status === 'in_progress' ? '🔨' : job.status === 'cancelled' ? '❌' : '⏸️'}
-                    </span>
-                    {SERVICE_STATUS_LABELS[job.status].label} — søknad er ikke mulig
-                  </div>
+                {/* `useFavoriteToggle` was called at the top of this component and its
+                    three return values went nowhere — the markup here was an empty
+                    <div/> labelled "Action Buttons". A job could be saved from every
+                    card in every grid, but not from its own page. */}
+                {!isOwnJob && (
+                  <button
+                    type="button"
+                    onClick={handleFavoriteClick}
+                    disabled={favLoading}
+                    aria-pressed={isFavorited}
+                    aria-label={isFavorited ? 'Fjern fra lagrede' : 'Lagre oppdraget'}
+                    className={`absolute right-3 top-3 z-10 flex size-9 items-center justify-center rounded-full bg-white/95 shadow-sm backdrop-blur-sm transition hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 active:scale-95 disabled:opacity-60 ${
+                      isFavorited ? 'text-[#2E6641]' : 'text-[#0B0B0B]'
+                    }`}
+                  >
+                    <Bookmark
+                      size={16}
+                      strokeWidth={2}
+                      className={isFavorited ? 'fill-current' : ''}
+                    />
+                  </button>
                 )}
+              </div>
 
-                {/* Apply button — disabled if service is closed */}
-                <div className={isServiceClosed ? 'opacity-50 pointer-events-none' : ''}>
-                  <JobButton
-                    handleSendMessage={isServiceClosed ? () => { } : handleCreateOrder}
-                    id={job._id}
-                    job={job}
-                    isOwnJob={isOwnJob}
-                    isMsgLoading={isMessageLoading}
-                    hasRequested={hasRequested}
-                    wasDeclined={wasDeclined}
-                    isTimerActive={isTimerActive}
-                  />
-                </div>
-
-                {isTimerActive && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-                    <div className="bg-amber-100 p-2 rounded-lg">
-                      <Zap size={20} className="text-amber-600 animate-pulse" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-amber-900">
-                        Åpner for deg om {timeLeft}
-                      </p>
-                      <p className="text-xs text-amber-700">
-                        Oppgrader til Plus eller Pro for umiddelbar tilgang
-                      </p>
-                    </div>
+              {job.images && job.images.length > 1 && (
+                <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                  {job.images.map((img: string, idx: number) => (
                     <button
-                      onClick={() => navigate('/pricing')}
-                      className="ml-auto text-xs font-bold text-amber-900 underline hover:text-amber-700"
+                      key={idx}
+                      type="button"
+                      onClick={() => setSelectedImageIndex(idx)}
+                      aria-label={`Vis bilde ${idx + 1}`}
+                      className={`size-16 shrink-0 overflow-hidden rounded-xl transition-all ${
+                        idx === selectedImageIndex
+                          ? 'ring-2 ring-[#2E6641] ring-offset-2 ring-offset-[#EFF0EA]'
+                          : 'opacity-65 hover:opacity-100'
+                      }`}
                     >
-                      Oppgrader
+                      <img src={img} className="size-full object-cover" alt="" />
                     </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Description */}
-            <div className="bg-white rounded-xl p-5 shadow-sm">
-              <h2 className="font-semibold text-gray-900 mb-3">Beskrivelse</h2>
-              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {job.description || 'Ingen beskrivelse tilgjengelig'}
-              </p>
-            </div>
-
-            {/* Checklist */}
-            {job.checklist && job.checklist.length > 0 && (
-              <div className="bg-white rounded-xl p-5 shadow-sm">
-                <h2 className="font-semibold text-gray-900 mb-3">Sjekkliste</h2>
-                <div className="space-y-2">
-                  {job.checklist.map((item: any, idx: number) => (
-                    <div key={idx} className="flex items-start gap-2">
-                      <div
-                        className={`mt-1 w-5 h-5 rounded border flex items-center justify-center shrink-0 ${item.checked
-                          ? 'bg-custom-green border-custom-green'
-                          : 'bg-gray-100 border-gray-300'
-                          }`}
-                      >
-                        {item.checked && <CheckCircle2 size={14} className="text-white" />}
-                      </div>
-                      <div className="flex-1">
-                        <p
-                          className={`text-sm ${item.checked ? 'text-gray-500 line-through' : 'text-gray-700'}`}
-                        >
-                          {item.text}
-                        </p>
-                        {item.checkedBy && (
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            Merket av: {item.checkedBy.name} • {formatDate(item.checkedAt)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* Details */}
-            <div className="bg-white rounded-xl p-5 shadow-sm">
-              <h2 className="font-semibold text-gray-900 mb-3">Detaljer</h2>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Kategori</span>
-                  <span className="font-medium">{job.categories?.[0] || 'Generelt'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Sted</span>
-                  <span className="font-medium flex items-center gap-1">
-                    <MapPin size={14} /> {job.location?.city || 'Ikke angitt'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Lagt ut</span>
-                  <span className="font-medium">
-                    {job.createdAt ? formatDate(job.createdAt) : '-'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Erfaring</span>
-                  <span className="font-medium">{job.experience || 'Ikke angitt'}</span>
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* Map */}
+            {/* Beskrivelse */}
+            <section className="rounded-3xl border border-[#E6E7E1] bg-white p-5 sm:p-6">
+              <h2 className="text-[0.9375rem] font-semibold tracking-[-0.02em] text-[#0B0B0B]">
+                Om oppdraget
+              </h2>
+              <p className="mt-3 whitespace-pre-wrap text-[0.9375rem] leading-relaxed text-[#63665F]">
+                {job.description || 'Ingen beskrivelse tilgjengelig.'}
+              </p>
+            </section>
+
+            {/* Sjekkliste */}
+            {job.checklist && job.checklist.length > 0 && (
+              <section className="rounded-3xl border border-[#E6E7E1] bg-white p-5 sm:p-6">
+                <h2 className="text-[0.9375rem] font-semibold tracking-[-0.02em] text-[#0B0B0B]">
+                  Sjekkliste
+                </h2>
+                <ul className="mt-3 space-y-2.5">
+                  {job.checklist.map((item: any, idx: number) => (
+                    <li key={idx} className="flex items-start gap-2.5">
+                      <span
+                        className={`mt-0.5 flex size-4.5 shrink-0 items-center justify-center rounded-[0.3rem] border ${
+                          item.checked
+                            ? 'border-[#2E6641] bg-[#2E6641] text-white'
+                            : 'border-[#D4D6CD] bg-white'
+                        }`}
+                      >
+                        {item.checked && <CheckCircle2 size={11} strokeWidth={3} />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className={`block text-[0.875rem] leading-relaxed ${
+                            item.checked ? 'text-[#9B9E96] line-through' : 'text-[#0B0B0B]'
+                          }`}
+                        >
+                          {item.text}
+                        </span>
+                        {item.checkedBy && (
+                          <span className="mt-0.5 block text-[0.75rem] text-[#9B9E96]">
+                            Merket av {item.checkedBy.name} · {formatDate(item.checkedAt)}
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {/* Detaljer */}
+            <section className="rounded-3xl border border-[#E6E7E1] bg-white p-5 sm:p-6">
+              <h2 className="mb-1 text-[0.9375rem] font-semibold tracking-[-0.02em] text-[#0B0B0B]">
+                Detaljer
+              </h2>
+              <dl className="text-[0.875rem]">
+                {[
+                  { label: 'Kategori', value: job.categories?.[0] || 'Generelt' },
+                  { label: 'Sted', value: job.location?.city || 'Ikke angitt' },
+                  {
+                    label: 'Varighet',
+                    value: job.duration?.value
+                      ? `${job.duration.value} ${job.duration.unit || ''}`.trim()
+                      : null,
+                  },
+                  {
+                    label: 'Ønsket oppstart',
+                    value: job.fromDate ? formatDate(job.fromDate) : null,
+                  },
+                  { label: 'Frist', value: job.toDate ? formatDate(job.toDate) : null },
+                  { label: 'Betaling', value: job.paymentType || null },
+                  // `job.experience` was rendered here, but the Service schema has no such
+                  // path — the row printed "Ikke angitt" on every listing that has ever
+                  // existed. `equipment` is the field the form actually collects, and it
+                  // was shown nowhere.
+                  { label: 'Utstyr', value: job.equipment || null },
+                  { label: 'Lagt ut', value: job.createdAt ? formatDate(job.createdAt) : null },
+                ]
+                  .filter((row) => row.value)
+                  .map((row) => (
+                    <div
+                      key={row.label}
+                      className="flex items-baseline justify-between gap-4 border-b border-[#E6E7E1] py-2.5 last:border-b-0 last:pb-0"
+                    >
+                      <dt className="shrink-0 text-[#63665F]">{row.label}</dt>
+                      <dd className="text-right font-medium text-[#0B0B0B]">{row.value}</dd>
+                    </div>
+                  ))}
+              </dl>
+            </section>
+
+            {/* Kart */}
             {hasCoordinates && (
-              <div className="bg-white rounded-xl p-5 shadow-sm">
-                <h2 className="font-semibold text-gray-900 mb-3">Kart over lokasjon</h2>
-                <div className="h-48 rounded-lg overflow-hidden bg-gray-100">
-                  <Suspense
-                    fallback={
-                      <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center text-gray-400">
-                        Laster kart...
-                      </div>
-                    }
-                  >
+              <section className="rounded-3xl border border-[#E6E7E1] bg-white p-5 sm:p-6">
+                <h2 className="mb-3 text-[0.9375rem] font-semibold tracking-[-0.02em] text-[#0B0B0B]">
+                  Hvor
+                </h2>
+                <div className="h-56 overflow-hidden rounded-2xl border border-[#E6E7E1]">
+                  <Suspense fallback={<div className="jb-skeleton size-full" />}>
                     <MapComponent
                       coordinates={[lng, lat]}
                       circleRadius={job?.location?.radius || 1000}
                     />
                   </Suspense>
                 </div>
-              </div>
+                <p className="mt-2.5 text-[0.75rem] text-[#9B9E96]">
+                  Omtrentlig plassering. Nøyaktig adresse deles når oppdraget er tildelt.
+                </p>
+              </section>
             )}
+          </div>
 
-            {/* Seller/Company Info */}
-            <div
-              className="bg-white rounded-xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => job.userId?._id && navigate(`/profile/${job.userId._id}`)}
-            >
-              <div className="flex items-center gap-3">
-                {job.userId?.avatarUrl ? (
-                  <img
-                    src={job.userId.avatarUrl}
-                    alt={job.userId.name}
-                    className="w-14 h-14 rounded-full object-cover border border-gray-200"
-                  />
-                ) : (
-                  <div className="w-14 h-14 bg-custom-green rounded-full flex items-center justify-center text-white text-xl font-bold">
-                    {job.userId?.name?.charAt(0) || '?'}
-                  </div>
+          {/* ── Right: the decision panel ────────────────────────────────── */}
+          <div className="min-w-0 lg:sticky lg:top-24 lg:h-fit lg:space-y-4">
+            <div className="rounded-3xl border border-[#E6E7E1] bg-white p-5 sm:p-6">
+              {job.status && job.status !== 'open' && job.status !== 'pending' && (
+                <span
+                  className={`mb-3 inline-flex h-7 items-center rounded-full px-3 text-[0.75rem] font-semibold ${
+                    SERVICE_STATUS_LABELS[job.status]?.cls || 'bg-[#F4F6F0] text-[#63665F]'
+                  }`}
+                >
+                  {SERVICE_STATUS_LABELS[job.status]?.label || statusLabel(job.status)}
+                </span>
+              )}
+
+              <h1 className="text-[clamp(1.375rem,2.6vw,1.75rem)] font-bold leading-tight tracking-[-0.03em] text-[#0B0B0B]">
+                {job.title || 'Uten tittel'}
+              </h1>
+
+              <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.875rem] text-[#63665F]">
+                <span className="inline-flex items-center gap-1">
+                  <MapPin size={13} strokeWidth={2} className="text-[#9B9E96]" />
+                  {job.location?.city || 'Norge'}
+                </span>
+                {job.createdAt && (
+                  <>
+                    <span aria-hidden="true" className="text-[#9B9E96]">
+                      ·
+                    </span>
+                    <span>{dateFormatter.toRelative(job.createdAt)}</span>
+                  </>
                 )}
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold text-gray-900">
-                      {job.userId?.role === 'company' && job.userId?.companyName
-                        ? job.userId.companyName
-                        : job.userId?.name || 'Ukjent'}
-                    </p>
-                    <div className="flex items-center gap-1.5">
-                      {job.userId?.role === 'company' && (
-                        <span className="px-2 py-0.5 bg-[#0066A2] text-white text-[10px] font-bold rounded-full uppercase tracking-wider">
-                          Bedrift
-                        </span>
-                      )}
-                      <span
-                        className={`px-2 py-0.5 text-white text-[10px] font-bold rounded-full uppercase tracking-wider ${job.userId?.verified ? 'bg-custom-green' : 'bg-gray-500'}`}
-                      >
-                        {job.userId?.verified ? 'Verifisert' : 'Ikke verifisert'}
-                      </span>
-                    </div>
-                  </div>
+                {job.favCount ? (
+                  <>
+                    <span aria-hidden="true" className="text-[#9B9E96]">
+                      ·
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Bookmark size={12} strokeWidth={2} className="text-[#9B9E96]" />
+                      {job.favCount} lagret
+                    </span>
+                  </>
+                ) : null}
+              </p>
 
-                  {job.userId?.role === 'company' && job.userId?.orgNumber && (
-                    <p className="text-xs font-semibold text-gray-500 mt-0.5">
-                      Org.nr: {job.userId.orgNumber}
+              <div className="mt-5 border-t border-[#E6E7E1] pt-5">
+                <p className="text-[2rem] font-bold leading-none tabular-nums tracking-[-0.04em] text-[#0B0B0B]">
+                  {job.price ? job.price.toLocaleString('nb-NO') : '0'} kr
+                </p>
+                <p className="mt-1.5 text-[0.8125rem] text-[#63665F]">
+                  {job.hourlyRate
+                    ? `${job.hourlyRate.toLocaleString('nb-NO')} kr per time`
+                    : job.paymentType === 'Anbud'
+                      ? 'Antatt budsjett — gi ditt tilbud'
+                      : 'Fastpris for hele oppdraget'}
+                </p>
+              </div>
+
+              {job._id && (
+                <div className="mt-5 space-y-3">
+                  {isServiceClosed && job.status && SERVICE_STATUS_LABELS[job.status] && (
+                    <p className="rounded-2xl bg-[#F4F6F0] px-4 py-3 text-[0.8125rem] leading-relaxed text-[#63665F]">
+                      {SERVICE_STATUS_LABELS[job.status].label}. Det er ikke mulig å søke på dette
+                      oppdraget lenger.
                     </p>
                   )}
 
-                  <div className="flex items-center gap-3 mt-1">
-                    <div className="flex items-center gap-1 text-sm text-yellow-500">
-                      <Star size={14} fill="currentColor" />
-                      <span>{job.userId?.averageRating || '0'}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-sm text-custom-green">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <span>{job.userId?.completedJobs || '0'} fullførte</span>
-                    </div>
+                  <div className={isServiceClosed ? 'pointer-events-none opacity-50' : ''}>
+                    <JobButton
+                      handleSendMessage={isServiceClosed ? () => {} : handleCreateOrder}
+                      id={job._id}
+                      job={job}
+                      isOwnJob={isOwnJob}
+                      isMsgLoading={isMessageLoading}
+                      hasRequested={hasRequested}
+                      wasDeclined={wasDeclined}
+                      isTimerActive={isTimerActive}
+                    />
                   </div>
+
+                  {isTimerActive && (
+                    <div className="rounded-2xl bg-[#F4F6F0] px-4 py-3.5">
+                      <p className="text-[0.875rem] font-semibold text-[#0B0B0B]">
+                        Åpner for deg om {timeLeft}
+                      </p>
+                      <p className="mt-1 text-[0.8125rem] leading-relaxed text-[#63665F]">
+                        Med Plus eller Pro slipper du ventetiden.{' '}
+                        <button
+                          onClick={() => navigate('/pricing')}
+                          className="font-semibold text-[#2E6641] underline-offset-[3px] hover:underline"
+                        >
+                          Se planer
+                        </button>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* The page where someone decides to commit had no mention of the
+                      protection that makes committing safe. */}
+                  {!isServiceClosed && !isOwnJob && (
+                    <p className="flex items-start gap-2 text-[0.75rem] leading-relaxed text-[#63665F]">
+                      <ShieldCheck
+                        size={14}
+                        strokeWidth={2.2}
+                        className="mt-px shrink-0 text-[#2E6641]"
+                      />
+                      Betalingen sikres med SafePay og utbetales først når arbeidet er godkjent.
+                    </p>
+                  )}
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Actions */}
-            <div className="flex gap-3">
+            {/* Oppdragsgiver */}
+            <div className="mt-4 rounded-3xl border border-[#E6E7E1] bg-white p-5 sm:p-6 lg:mt-0">
+              <h2 className="mb-3.5 text-[0.9375rem] font-semibold tracking-[-0.02em] text-[#0B0B0B]">
+                Oppdragsgiver
+              </h2>
+              <button
+                type="button"
+                onClick={() => job.userId?._id && navigate(`/profile/${job.userId._id}`)}
+                disabled={!job.userId?._id}
+                className="flex w-full items-center gap-3 rounded-2xl text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
+              >
+                <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9] text-[1rem] font-semibold text-[#2E6641]">
+                  {job.userId?.avatarUrl ? (
+                    <img src={job.userId.avatarUrl} alt="" className="size-full object-cover" />
+                  ) : (
+                    (job.userId?.name?.charAt(0) || '?').toUpperCase()
+                  )}
+                </span>
+
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <span className="truncate text-[0.9375rem] font-semibold text-[#0B0B0B]">
+                      {job.userId?.role === 'company' && job.userId?.companyName
+                        ? job.userId.companyName
+                        : job.userId?.name || 'Ukjent'}
+                    </span>
+                    {job.userId?.role === 'company' && (
+                      <span className="rounded-full bg-[#F4F6F0] px-2 py-0.5 text-[0.625rem] font-bold uppercase tracking-wider text-[#63665F]">
+                        Bedrift
+                      </span>
+                    )}
+                    {job.userId?.verified && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#EAF1E9] px-2 py-0.5 text-[0.625rem] font-bold uppercase tracking-wider text-[#2E6641]">
+                        <ShieldCheck size={9} strokeWidth={3} /> Verifisert
+                      </span>
+                    )}
+                  </span>
+
+                  {job.userId?.role === 'company' && job.userId?.orgNumber && (
+                    <span className="mt-0.5 block text-[0.75rem] text-[#9B9E96]">
+                      Org.nr {job.userId.orgNumber}
+                    </span>
+                  )}
+
+                  <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.8125rem] text-[#63665F]">
+                    {/* Was `averageRating || '0'` — a hard zero shown as a score for
+                        anyone who had simply never been rated. */}
+                    {job.userId?.averageRating > 0 ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Star
+                          size={12}
+                          strokeWidth={2}
+                          className="fill-[#2E6641] text-[#2E6641]"
+                        />
+                        {job.userId.averageRating}
+                      </span>
+                    ) : (
+                      <span className="text-[#9B9E96]">Ingen vurderinger ennå</span>
+                    )}
+                    {job.userId?.completedJobs > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <CheckCircle2 size={12} strokeWidth={2} className="text-[#2E6641]" />
+                        {job.userId.completedJobs} fullførte
+                      </span>
+                    )}
+                  </span>
+                </span>
+
+                <ChevronRight size={17} className="shrink-0 text-[#9B9E96]" />
+              </button>
+            </div>
+
+            {/* Del / rapporter */}
+            <div className="mt-4 flex gap-2 lg:mt-0">
               <button
                 onClick={handleShare}
-                className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2"
+                className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-full border border-[#E6E7E1] bg-white text-[0.875rem] font-medium text-[#0B0B0B] transition-colors hover:border-[#2E6641]/45 hover:text-[#2E6641]"
               >
-                <Share2 size={16} /> Del
+                <Share2 size={15} strokeWidth={2} /> Del
               </button>
               <button
                 onClick={() => setIsReportModalOpen(true)}
-                className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+                className="inline-flex h-10 flex-1 items-center justify-center rounded-full text-[0.875rem] font-medium text-[#63665F] transition-colors hover:text-[#0B0B0B]"
               >
                 Rapporter
               </button>
@@ -741,12 +830,14 @@ const JobListingDetailPage = () => {
         </div>
 
         {/* Recommended Jobs Section */}
-        <div className="mt-12 pt-12 border-t border-gray-100">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-1">Anbefalte oppdrag</h2>
-              <p className="text-gray-500">Basert på lokasjon og kategori</p>
-            </div>
+        <div className="mt-14 border-t border-[#E6E7E1] pt-10">
+          <div className="mb-6">
+            <h2 className="text-[clamp(1.25rem,2.4vw,1.625rem)] font-bold tracking-[-0.03em] text-[#0B0B0B]">
+              Lignende oppdrag
+            </h2>
+            <p className="mt-1 text-[0.875rem] text-[#63665F]">
+              Basert på sted og kategori
+            </p>
           </div>
           <RelatedJobs
             coordinates={job?.location?.coordinates}

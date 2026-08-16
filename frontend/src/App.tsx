@@ -33,14 +33,37 @@ export default function App() {
 
   return (
     <>
+      {/* Toasts were `#333` on white at a 12 px radius — a neutral grey that appears
+          nowhere else on the site, in a shape that matches nothing either. They are the
+          brand's near-black green now, with the pill radius the rest of the UI uses, and
+          success/error keep their own icon colour so the two read apart at a glance
+          rather than relying on the words alone. */}
       <Toaster
         position="bottom-center"
+        gutter={10}
         toastOptions={{
+          duration: 4000,
           style: {
-            background: '#333', // Thora dark gray/black
-            color: '#fff',
-            zIndex: 99999, // Max z-index
-            borderRadius: '12px',
+            background: '#122A1C',
+            color: '#FFFFFF',
+            zIndex: 99999,
+            borderRadius: '9999px',
+            padding: '10px 18px',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            lineHeight: 1.5,
+            maxWidth: '30rem',
+            boxShadow: '0 12px 32px rgba(11, 11, 11, 0.22)',
+          },
+          success: {
+            iconTheme: { primary: '#8FBF9A', secondary: '#122A1C' },
+          },
+          error: {
+            duration: 5000,
+            iconTheme: { primary: '#E8A8A0', secondary: '#122A1C' },
+          },
+          loading: {
+            iconTheme: { primary: '#8FBF9A', secondary: '#122A1C' },
           },
         }}
       />
