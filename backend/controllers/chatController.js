@@ -9,6 +9,12 @@ const mongoose = require('mongoose');
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
+/** Ceiling for a negotiated price. Stripe rejects unit_amount above ~1e8 øre. */
+const MAX_AGREED_PRICE = 1000000;
+
+/** Longest single chat message. Guards the 16 MB per-document limit — see sendMessage. */
+const MAX_MESSAGE_LENGTH = 5000;
+
 exports.createOrGetChat = async (req, res) => {
   try {
     const { providerId, serviceId } = req.body;
@@ -221,6 +227,32 @@ exports.createPaymentSession = async (req, res) => {
         .json({ error: 'No order exists for this chat. Please create a contract first.' });
     }
 
+    // Only the payer may start the checkout.
+    //
+    // The participant check above let the WORKER open a payment session. The session's
+    // metadata.userId then carried the worker's id, and confirmPaidSession rejects a
+    // session whose customer does not match the order (session_customer_mismatch) — so
+    // the card was charged, Stripe held the money, and the order was never marked paid
+    // and never refunded. Silent loss with no recovery path.
+    if (String(order.customerId) !== String(id)) {
+      return res.status(403).json({
+        error: 'Bare oppdragsgiveren kan betale for dette oppdraget.',
+        code: 'not_the_payer',
+      });
+    }
+
+    // Do not open a second checkout for an order that is already paid or under way.
+    // createSafePaySession guards this; this route did not, so paying twice was one
+    // button press away and the second payment was silently dropped by
+    // confirmPaidSession's already-confirmed branch.
+    const PAYABLE_STATUSES = ['awaiting_payment', 'pending', 'accepted'];
+    if (order.paymentStatus === 'paid' || !PAYABLE_STATUSES.includes(order.status)) {
+      return res.status(409).json({
+        error: 'Dette oppdraget er allerede betalt eller i gang.',
+        code: 'order_not_payable',
+      });
+    }
+
     // Create Stripe checkout session
     const fee = Math.round((chat.agreedPrice || order.agreedPrice || chat.serviceId.price) * 0.03);
     const total = (chat.agreedPrice || order.agreedPrice || chat.serviceId.price) + fee;
@@ -409,8 +441,18 @@ exports.updateAgreedPrice = async (req, res) => {
     const { agreedPrice } = req.body;
 
     if (!isValidId(chatId)) return res.status(400).json({ error: 'Invalid chat ID format' });
-    if (typeof agreedPrice !== 'number' || agreedPrice < 0) {
-      return res.status(400).json({ error: 'Invalid agreedPrice value' });
+
+    // `agreedPrice >= 0` allowed 0, which is falsy — so `chat.agreedPrice || price`
+    // in createContract and createPaymentSession silently fell back to the listing
+    // price while the chat displayed "Pris avtalt: 0 kr". And there was no ceiling, so
+    // a huge number overflowed Stripe's maximum unit_amount and 500'd at checkout.
+    if (typeof agreedPrice !== 'number' || !Number.isFinite(agreedPrice) || agreedPrice <= 0) {
+      return res.status(400).json({ error: 'Prisen må være et positivt beløp.' });
+    }
+    if (agreedPrice > MAX_AGREED_PRICE) {
+      return res
+        .status(400)
+        .json({ error: `Prisen kan ikke overstige ${MAX_AGREED_PRICE} kr.` });
     }
 
     const chat = await Chat.findById(chatId);
@@ -420,9 +462,29 @@ exports.updateAgreedPrice = async (req, res) => {
     if (chat.clientId.toString() !== id && chat.providerId.toString() !== id)
       return res.status(403).json({ error: 'Not allowed' });
 
+    // Once a contract exists the price is settled — the Order carries it, and escrow
+    // is calculated from it.
+    //
+    // Without this, either party could renegotiate the chat price AFTER the contract
+    // and then start checkout, which prefers the chat value: agree 5000, set the chat
+    // to 3, pay 3 kr, and confirmPaidSession still flips the 5000 kr order to fully
+    // paid — the provider is later released `order.agreedPrice - fee` that the
+    // platform never collected. The UI hides the edit control once an order exists;
+    // this is the server-side half of that rule.
+    if (chat.orderId) {
+      return res.status(409).json({
+        error: 'Prisen kan ikke endres etter at kontrakten er opprettet.',
+        code: 'price_locked_by_contract',
+      });
+    }
+
     // Update chat
     chat.agreedPrice = agreedPrice;
-    chat.status = 'agreed';
+    // Only advance the badge from a pre-contract state. Overwriting unconditionally
+    // dragged a live job's chat back to "agreed" from paid/in_progress.
+    if (!chat.status || ['requested', 'agreed'].includes(chat.status)) {
+      chat.status = 'agreed';
+    }
 
     // Add system message
     chat.messages.push({

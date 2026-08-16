@@ -498,7 +498,20 @@ const ApplicantsPage: React.FC = () => {
                       <p className="text-[13px] text-gray-600 leading-relaxed">{app.message}</p>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
+                    {/*
+                      One row from `sm` up, stacked below it.
+
+                      These were already in a `flex flex-wrap` container, so the intent was
+                      there — but the shared `Button` bakes `w-full` into its cva base, so
+                      each one filled the line and forced a wrap. The `w-auto` below is what
+                      actually releases them; `cn` runs through tailwind-merge, so it beats
+                      the base rather than sitting alongside it.
+
+                      They stay stacked under 640px because "Velg og start SafePay" is a long
+                      label and the base sets `whitespace-nowrap` — side by side on a narrow
+                      phone would overflow the card rather than wrap.
+                    */}
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <Button
                         onClick={() => handleSelectApplicant(app.applicant._id, app._id)}
                         loading={createContractMutation.isPending}
@@ -511,18 +524,19 @@ const ApplicantsPage: React.FC = () => {
                               : 'Velg og start SafePay'
                         }
                         icon={<Check size={16} />}
-                        className={`bg-custom-green text-white rounded-full py-2.5 text-[13px] font-medium h-auto shadow-sm hover:bg-[#266b3c] ${activeOrder ? 'opacity-70' : ''}`}
+                        className={`w-auto rounded-full bg-custom-green px-5 py-2.5 text-[13px] font-medium text-white shadow-sm hover:bg-[#266b3c] sm:flex-1 ${activeOrder ? 'opacity-70' : ''}`}
                       />
                       {/* (F-35) "Velg uten SafePay" removed: it only fired
                           toast.success('Bruker valgt uten SafePay') — no API call, no
                           contract, no applicant selected and nobody notified, while the
                           poster believed they had hired someone. Hiring outside escrow
                           is not an implemented flow. */}
+                      {/* Sized to its own text, so the primary action keeps the weight. */}
                       <Button
                         variant="outline"
                         label="Send melding"
                         icon={<MessageCircle size={16} />}
-                        className="px-4 border-black/20 rounded-full py-2.5 text-[13px] font-medium h-auto hover:bg-gray-50"
+                        className="w-auto rounded-full border-black/20 px-5 py-2.5 text-[13px] font-medium hover:bg-gray-50 sm:flex-none"
                         onClick={() => handleStartChat(app.applicant._id)}
                       />
                     </div>
