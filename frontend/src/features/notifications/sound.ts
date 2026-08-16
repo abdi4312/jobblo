@@ -30,18 +30,24 @@ import notificationTone from '../../assets/sound/msg_notification.mp3';
  * Falls back to a single shared `HTMLAudioElement` where Web Audio is unavailable.
  */
 
-/** Quietest sensible default. The old one played the file at full scale. */
-const VOLUME = 0.45;
+/**
+ * Per-variant volume and spacing.
+ *
+ * `notification` is something happening to you and gets the wider gap — a burst is one
+ * event as far as a person is concerned, and the tray badge carries the count.
+ * `ui` is feedback for something *you* just did (a sent message), so it is quieter and
+ * may repeat as fast as you can act.
+ */
+const VARIANTS = {
+  notification: { volume: 0.45, minIntervalMs: 1500 },
+  ui: { volume: 0.22, minIntervalMs: 250 },
+} as const;
+
+export type SoundVariant = keyof typeof VARIANTS;
 
 /** Fade in and out, in seconds. Enough to kill the edge click, short enough to be unheard. */
 const ATTACK = 0.012;
 const RELEASE = 0.05;
-
-/**
- * Minimum gap between tones. A burst of notifications is one event as far as a person is
- * concerned; the tray badge carries the count.
- */
-const MIN_INTERVAL_MS = 1500;
 
 type Ctor = typeof AudioContext;
 
@@ -49,7 +55,7 @@ let context: AudioContext | null = null;
 let buffer: AudioBuffer | null = null;
 let decoding: Promise<AudioBuffer | null> | null = null;
 let fallback: HTMLAudioElement | null = null;
-let lastPlayedAt = 0;
+const lastPlayedAt: Record<SoundVariant, number> = { notification: 0, ui: 0 };
 let unlocked = false;
 
 const getContextCtor = (): Ctor | null => {
@@ -102,7 +108,6 @@ const getFallback = (): HTMLAudioElement | null => {
     try {
       fallback = new Audio(notificationTone);
       fallback.preload = 'auto';
-      fallback.volume = VOLUME;
     } catch {
       return null;
     }
@@ -155,19 +160,22 @@ export function listenForUnlock(): () => void {
  * Never throws and never returns a rejected promise — a blocked autoplay is an ordinary
  * outcome on the web, not an error worth surfacing.
  */
-export function playNotificationSound(): void {
+function playTone(variant: SoundVariant): void {
   if (typeof window === 'undefined') return;
   if (!useUserStore.getState().notificationsEnabled) return;
 
+  const { volume, minIntervalMs } = VARIANTS[variant];
+
   const now = Date.now();
-  if (now - lastPlayedAt < MIN_INTERVAL_MS) return;
-  lastPlayedAt = now;
+  if (now - lastPlayedAt[variant] < minIntervalMs) return;
+  lastPlayedAt[variant] = now;
 
   const ctx = getContext();
 
   if (!ctx) {
     const element = getFallback();
     if (element) {
+      element.volume = volume;
       // Only restart the fallback if it has actually finished, so this path cannot
       // reproduce the mid-sample cut that made the old implementation click.
       if (element.paused || element.ended) void element.play().catch(() => {});
@@ -189,8 +197,8 @@ export function playNotificationSound(): void {
       // Ramp up, hold, ramp down. `setValueAtTime` first so the ramps have a known
       // starting point — without it Chrome ramps from whatever the node last held.
       gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(VOLUME, t + ATTACK);
-      gain.gain.setValueAtTime(VOLUME, Math.max(t + ATTACK, end - RELEASE));
+      gain.gain.exponentialRampToValueAtTime(volume, t + ATTACK);
+      gain.gain.setValueAtTime(volume, Math.max(t + ATTACK, end - RELEASE));
       gain.gain.exponentialRampToValueAtTime(0.0001, end);
 
       source.connect(gain).connect(ctx.destination);
@@ -219,7 +227,16 @@ export function playNotificationSound(): void {
     if (decoded) start(decoded);
     else {
       const element = getFallback();
-      if (element && (element.paused || element.ended)) void element.play().catch(() => {});
+      if (element && (element.paused || element.ended)) {
+        element.volume = volume;
+        void element.play().catch(() => {});
+      }
     }
   });
 }
+
+/** Something happened to you: a notification arrived. */
+export const playNotificationSound = () => playTone('notification');
+
+/** Feedback for something you just did — a sent message. Quieter, and repeatable. */
+export const playUiSound = () => playTone('ui');

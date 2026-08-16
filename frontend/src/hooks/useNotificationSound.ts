@@ -1,105 +1,48 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { useUserStore } from '../stores/userStore';
-import MessageSound from '../assets/sound/msg_notification.mp3';
+import { playNotificationSound, playUiSound } from '../features/notifications/sound';
 
-const SOUND_CONFIG = {
-  message: MessageSound,
-  // Was hotlinked from assets.mixkit.co while every other sound was bundled, so
-  // the send tone depended on a third-party CDN being up.
-  send: MessageSound,
-  alert: MessageSound,
+/**
+ * Backwards-compatible shim over `features/notifications/sound`.
+ *
+ * This file used to own the audio itself, and its autoplay "unlock" is why signing in
+ * made a noise:
+ *
+ *     audio.muted = true;
+ *     audio.play()
+ *       .then(() => { audio.pause(); audio.currentTime = 0; audio.muted = false; })
+ *       .catch(() => { audio.muted = false; });
+ *
+ * The intent was to prime the element silently on the first click. But the hook was not
+ * mounted on the login screen — App hides the header there — so the listeners only
+ * attached *after* the redirect, and the first gesture they saw was the user's first click
+ * inside the app. If that `play()` was rejected for want of a gesture, the `catch` unmuted
+ * an element the browser had already queued, and it started audibly a moment later. If it
+ * resolved, the unmute raced the `pause()`. Either way the tone escaped, at a moment when
+ * nothing had happened — right after signing in.
+ *
+ * The engine behind this shim never calls `play()` to prime anything. It resumes an
+ * `AudioContext` and decodes the file; neither makes a sound, so there is no silent play to
+ * leak. Sound is only ever produced by an explicit call below.
+ *
+ * The three functions were already the same file (`SOUND_CONFIG` mapped `message`, `send`
+ * and `alert` to one mp3), so nothing is lost by routing them to one engine — and they now
+ * share a rate limiter, which means an incoming chat message and its notification can no
+ * longer double-play.
+ *
+ * Stable module-level identities: `Header` lists `playMessageSound` in an effect's
+ * dependencies, and a new closure per render would resubscribe the chat socket every time.
+ */
+
+export type SoundType = 'message' | 'send' | 'alert';
+
+const api = {
+  /** An incoming chat message. */
+  playMessageSound: playNotificationSound,
+  /** Your own outgoing message — quieter, and repeatable at typing speed. */
+  playSendSound: playUiSound,
+  /** A notification. Kept for callers that predate `NotificationRealtime`. */
+  playAlertSound: playNotificationSound,
+  playCustomSound: (type: SoundType) =>
+    type === 'send' ? playUiSound() : playNotificationSound(),
 } as const;
 
-export type SoundType = keyof typeof SOUND_CONFIG;
-
-// global unlock flag (shared across hook instances)
-let isAudioUnlocked = false;
-
-export const useNotificationSound = (volume: number = 1) => {
-  const audioRefs = useRef<Partial<Record<SoundType, HTMLAudioElement>>>({});
-
-  const getAudio = useCallback(
-    (type: SoundType) => {
-      if (typeof window === 'undefined') return null;
-
-      if (!audioRefs.current[type]) {
-        try {
-          const audio = new Audio(SOUND_CONFIG[type]);
-          audio.preload = 'auto';
-          audio.volume = volume;
-          audioRefs.current[type] = audio;
-        } catch (err) {
-          console.error(`[sound] init failed: ${type}`, err);
-          return null;
-        }
-      }
-
-      return audioRefs.current[type]!;
-    },
-    [volume]
-  );
-
-  const play = useCallback(
-    (type: SoundType) => {
-      if (typeof window === 'undefined') return;
-
-      const { notificationsEnabled } = useUserStore.getState();
-      if (!notificationsEnabled) return;
-
-      const audio = getAudio(type);
-      if (!audio) return;
-
-      audio.currentTime = 0;
-      void audio.play();
-    },
-    [getAudio]
-  );
-
-  // global unlock (runs once across app)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (isAudioUnlocked) return;
-
-    const unlock = () => {
-      if (isAudioUnlocked) return;
-      isAudioUnlocked = true;
-
-      const audio = getAudio('message');
-      if (!audio) return;
-
-      audio.muted = true;
-
-      audio
-        .play()
-        .then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-          audio.muted = false;
-        })
-        .catch(() => {
-          audio.muted = false;
-        });
-
-      window.removeEventListener('click', unlock);
-      window.removeEventListener('keydown', unlock);
-      window.removeEventListener('touchstart', unlock);
-    };
-
-    window.addEventListener('click', unlock);
-    window.addEventListener('keydown', unlock);
-    window.addEventListener('touchstart', unlock);
-
-    return () => {
-      window.removeEventListener('click', unlock);
-      window.removeEventListener('keydown', unlock);
-      window.removeEventListener('touchstart', unlock);
-    };
-  }, [getAudio]);
-
-  return {
-    playMessageSound: useCallback(() => play('message'), [play]),
-    playSendSound: useCallback(() => play('send'), [play]),
-    playAlertSound: useCallback(() => play('alert'), [play]),
-    playCustomSound: play,
-  };
-};
+export const useNotificationSound = () => api;
