@@ -28,6 +28,78 @@ import { useUserStore } from '../../stores/userStore';
 import { DisputePanel } from '../../components/SafePay/DisputePanel';
 import { useDispute } from '../../features/disputes/hooks';
 import { disputeReasonOptions } from '../../constants/disputes';
+import { statusLabel } from '../../constants/statuses';
+
+/**
+ * What the customer is actually looking at, per order status.
+ *
+ * The "Jobbstatus" banner was a fixed string — "<utfører> melder jobben som ferdig" —
+ * rendered at every status this page can be reached in. A customer who arrived while
+ * the order was still `paid` or `in_progress` was therefore told the provider had
+ * reported the work finished, when the provider had not pressed "Meld jobb som ferdig"
+ * at all (that button is the only thing that writes `ready_for_review`, see
+ * providerWorkController.markReadyForReview). Every status states its own truth now,
+ * and `approvable` is what decides whether the approve action is live — matching the
+ * backend, which refuses approval from anything but `ready_for_review`.
+ */
+type JobStatusView = {
+  title: (providerName: string) => string;
+  body: string;
+  step: number;
+  approvable: boolean;
+};
+
+const JOB_STATUS_VIEW: Record<string, JobStatusView> = {
+  awaiting_payment: {
+    title: () => 'Venter på betaling',
+    body: 'Oppdraget starter når betalingen er gjennomført og beløpet er sikret hos Jobblo.',
+    step: 2,
+    approvable: false,
+  },
+  paid: {
+    title: (name) => `${name} har ikke startet jobben ennå`,
+    body: 'Beløpet er sikret hos Jobblo. Du får varsel så snart arbeidet er meldt ferdig.',
+    step: 3,
+    approvable: false,
+  },
+  in_progress: {
+    title: (name) => `${name} jobber med oppdraget nå`,
+    body: 'Du kan godkjenne og utbetale når utfører har meldt jobben som ferdig.',
+    step: 3,
+    approvable: false,
+  },
+  ready_for_review: {
+    title: (name) => `${name} melder jobben som ferdig`,
+    body: 'Se over arbeidet under. Godkjenner du, utbetales beløpet til utfører.',
+    step: 4,
+    approvable: true,
+  },
+  completed: {
+    title: () => 'Jobben er godkjent',
+    body: 'Beløpet er frigitt til utfører. Oppdraget er avsluttet.',
+    step: 4,
+    approvable: false,
+  },
+  disputed: {
+    title: () => 'Oppdraget er under tvist',
+    body: 'Utbetalingen står på vent til tvisten er avklart.',
+    step: 4,
+    approvable: false,
+  },
+  cancelled: {
+    title: () => 'Oppdraget er kansellert',
+    body: 'Det er ingenting å godkjenne på dette oppdraget.',
+    step: 2,
+    approvable: false,
+  },
+};
+
+const FALLBACK_STATUS_VIEW: JobStatusView = {
+  title: () => 'Oppdraget er underveis',
+  body: 'Du kan godkjenne og utbetale når utfører har meldt jobben som ferdig.',
+  step: 3,
+  approvable: false,
+};
 
 // Reusable Star Rating Component
 interface StarRatingProps {
@@ -468,6 +540,17 @@ const SafePayApproval: React.FC = () => {
 
   const isOrderCompleted = orderData.status === 'completed';
 
+  // The single source of truth for what this page is allowed to claim and offer.
+  const statusView = JOB_STATUS_VIEW[orderData.status] || FALLBACK_STATUS_VIEW;
+  // Approval is live only from `ready_for_review` — the same rule the backend enforces
+  // in SafePayCheckoutController.approveAndPayout.
+  const canApproveNow = statusView.approvable && !isSuccess;
+  // Mirrors safepayController.updateChecklistItem's EDITABLE_ORDER_STATUSES, so the
+  // customer can tick items off while the work is still running without the request
+  // coming back 409.
+  const canEditChecklist =
+    !isSuccess && !dispute && ['paid', 'in_progress', 'ready_for_review'].includes(orderData.status);
+
   // ── Proof-of-work evidence from the provider ─────────────────────────────
   const beforeImages: string[] = orderData.beforeImages || [];
   const afterImages: string[] = orderData.afterImages || [];
@@ -581,7 +664,11 @@ const SafePayApproval: React.FC = () => {
           <ArrowLeft size={16} /> Tilbake
         </button>
 
-        <SafePaySteps currentStep={4} orderId={orderId} serviceId={orderData.serviceId._id} />
+        <SafePaySteps
+          currentStep={statusView.step}
+          orderId={orderId}
+          serviceId={orderData.serviceId._id}
+        />
 
         <DisputePanel orderId={orderId} dispute={dispute} viewerRole="customer" />
 
@@ -602,17 +689,38 @@ const SafePayApproval: React.FC = () => {
           <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
             <CircleCheck size={18} className="text-custom-green" /> Jobbstatus
           </div>
-          <div className="bg-[#EAF1E9] border border-[#EAF1E9] rounded-xl p-4 flex items-center gap-4">
-            <div className="w-12 h-12 bg-custom-green rounded-full flex items-center justify-center shrink-0">
-              <Wrench size={24} className="text-white" />
+          <div
+            className={`rounded-xl p-4 flex items-center gap-4 border ${
+              canApproveNow
+                ? 'bg-[#EAF1E9] border-[#EAF1E9]'
+                : 'bg-[#F4F6F0] border-[#E6E7E1]'
+            }`}
+          >
+            <div
+              className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
+                canApproveNow ? 'bg-custom-green text-white' : 'bg-white text-[#63665F]'
+              }`}
+            >
+              <Wrench size={24} />
             </div>
             <div>
-              <h3 className="text-[15px] font-bold text-[#2E6641] mb-0.5">
-                {orderData.providerId.name} melder jobben som ferdig
+              <h3
+                className={`text-[15px] font-bold mb-0.5 ${
+                  canApproveNow ? 'text-[#2E6641]' : 'text-[#0B0B0B]'
+                }`}
+              >
+                {statusView.title(orderData.providerId.name)}
               </h3>
-              <p className="text-[12px] text-custom-green/80">
+              <p
+                className={`text-[12px] ${
+                  canApproveNow ? 'text-custom-green/80' : 'text-[#63665F]'
+                }`}
+              >
                 {new Date(orderData.updatedAt).toLocaleDateString('no-NO')} •{' '}
                 {orderData.serviceId.title} • {orderData.serviceId.location?.city || 'Oslo'}
+              </p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-[#63665F]">
+                {statusView.body}
               </p>
             </div>
           </div>
@@ -757,14 +865,16 @@ const SafePayApproval: React.FC = () => {
                 Ingen arbeidsbevis lastet opp
               </p>
               <p className="text-[12px] text-gray-400 max-w-md mx-auto">
-                Utfører har ikke lastet opp bilder eller dokumentasjon for denne jobben. Du kan
-                fortsatt godkjenne jobben nedenfor hvis alt er i orden, eller åpne en tvist hvis du
-                forventet visuelt bevis.
+                {canApproveNow
+                  ? 'Utfører har ikke lastet opp bilder eller dokumentasjon for denne jobben. Du kan fortsatt godkjenne jobben nedenfor hvis alt er i orden, eller åpne en tvist hvis du forventet visuelt bevis.'
+                  : 'Utfører har ikke lastet opp bilder eller dokumentasjon ennå. Bevis lastes opp underveis i arbeidet.'}
               </p>
-              <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-gray-400">
-                <ShieldCheck size={14} className="text-custom-green" />
-                <span>Du kan likevel vurdere jobben nedenfor basert på samtale og resultat.</span>
-              </div>
+              {canApproveNow && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-gray-400">
+                  <ShieldCheck size={14} className="text-custom-green" />
+                  <span>Du kan likevel vurdere jobben nedenfor basert på samtale og resultat.</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -778,7 +888,7 @@ const SafePayApproval: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {checklist.map((item) => {
-                const canToggle = !isOrderCompleted && !isSuccess;
+                const canToggle = canEditChecklist;
                 return (
                   <label
                     key={item.id}
@@ -837,8 +947,8 @@ const SafePayApproval: React.FC = () => {
               })}
             </div>
 
-            {/* Skip option */}
-            {!isSuccess && !isOrderCompleted && checklist.some((item) => !item.checked) && (
+            {/* Skip option — only meaningful when approving is actually possible. */}
+            {canApproveNow && checklist.some((item) => !item.checked) && (
               <div className="mt-4 text-center">
                 <button
                   onClick={() => setShowSkipDialog(true)}
@@ -851,9 +961,11 @@ const SafePayApproval: React.FC = () => {
           </div>
         )}
 
-        {/* Rating Section */}
+        {/* Rating Section — a review belongs to finished work, so the form only appears
+            once the provider has actually reported the job done. Before that the same
+            card shows the provider's existing ratings instead. */}
         <div className="bg-white border border-black/5 rounded-2xl p-6 mb-4 shadow-sm">
-          {!isOrderCompleted && !isSuccess ? (
+          {canApproveNow ? (
             <>
               <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
                 <Star size={18} className="text-custom-green" /> Gi {orderData.providerId.name} en
@@ -1086,20 +1198,19 @@ const SafePayApproval: React.FC = () => {
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                   Status
                 </span>
+                {/* Was a three-way guess that collapsed every status except `completed`
+                    and `paid` into "Venter" — including `in_progress` and
+                    `ready_for_review`, the two this page most needs to tell apart. */}
                 <span
                   className={`text-sm font-bold px-3 py-1 rounded-full ${
                     orderData.status === 'completed'
                       ? 'bg-emerald-100 text-emerald-700'
-                      : orderData.status === 'paid'
+                      : orderData.status === 'ready_for_review'
                         ? 'bg-blue-100 text-blue-700'
                         : 'bg-amber-100 text-amber-700'
                   }`}
                 >
-                  {orderData.status === 'completed'
-                    ? 'Fullført'
-                    : orderData.status === 'paid'
-                      ? 'Betalt'
-                      : 'Venter'}
+                  {statusLabel(orderData.status)}
                 </span>
               </div>
             </div>
@@ -1135,26 +1246,28 @@ const SafePayApproval: React.FC = () => {
             </div>
           </div>
 
-          <Button
-            onClick={handleApprove}
-            loading={approveMutation.isPending}
-            disabled={
-              isOrderCompleted || (!checklist.every((item) => item.checked) && !showSkipDialog)
-            }
-            className={
-              isOrderCompleted
-                ? 'w-full bg-gray-300 text-gray-500 rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 shadow-lg mt-6 cursor-not-allowed'
-                : 'w-full bg-custom-green text-white rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#255335] transition-all shadow-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed'
-            }
-          >
-            {isOrderCompleted ? (
-              'Jobb allerede godkjent!'
-            ) : (
-              <>
-                <CircleCheck size={20} /> Godkjenn jobb og utbetal {calculation.providerNet} kr
-              </>
-            )}
-          </Button>
+          {/* The button used to be live at every status but `completed`, so a customer
+              who believed the banner pressed it and got "Utfører har ikke meldt jobben
+              som ferdig ennå" back from the server. Nothing to press until there is. */}
+          {canApproveNow ? (
+            <Button
+              onClick={handleApprove}
+              loading={approveMutation.isPending}
+              disabled={!checklist.every((item) => item.checked) && !showSkipDialog}
+              className="w-full bg-custom-green text-white rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#255335] transition-all shadow-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <CircleCheck size={20} /> Godkjenn jobb og utbetal {calculation.providerNet} kr
+            </Button>
+          ) : (
+            <div className="mt-6 flex gap-3 rounded-2xl bg-[#F4F6F0] p-4 text-left">
+              <Clock size={16} className="mt-0.5 shrink-0 text-[#63665F]" />
+              <p className="text-[13px] leading-relaxed text-[#63665F]">
+                {isOrderCompleted
+                  ? `Jobben er godkjent og ${calculation.providerNet} kr er utbetalt til ${orderData.providerId.name}.`
+                  : statusView.body}
+              </p>
+            </div>
+          )}
 
           {/* Skip Confirmation Dialog */}
           {showSkipDialog && (

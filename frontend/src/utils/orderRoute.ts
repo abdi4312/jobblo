@@ -8,6 +8,8 @@
  * `/provider/orders/null` when the referenced order had been deleted.
  */
 
+import { customerOrderPath } from '../constants/statuses';
+
 export interface OrderRouteSubject {
   _id?: string;
   customerId?: unknown;
@@ -45,12 +47,14 @@ export function resolveOrderRoute(order: unknown, userId?: string | null): strin
 
   const isCustomer = idOf(populated.customerId) === String(userId);
   if (isCustomer) {
-    const isPaid =
-      populated.paymentStatus === 'paid' ||
-      ['paid', 'in_progress', 'ready_for_review', 'waiting_for_approval', 'completed'].includes(
-        populated.status || ''
-      );
-    return isPaid ? `/safepay/approval/${orderId}` : `/safepay/checkout/${orderId}`;
+    // Paid is not the same as approvable. Sending every paid customer to
+    // `/safepay/approval` put them on a screen that claims the provider has
+    // reported the job finished — true only from `ready_for_review` onwards.
+    // Between payment and that moment the job's home is the status screen.
+    const approvalPath = customerOrderPath(orderId, populated.status);
+    if (approvalPath) return approvalPath;
+    if (populated.paymentStatus === 'paid') return `/safepay/success?orderId=${orderId}`;
+    return `/safepay/checkout/${orderId}`;
   }
 
   const isProvider = idOf(populated.providerId) === String(userId);

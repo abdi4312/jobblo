@@ -18,9 +18,13 @@ import {
   SheetTitle,
   SheetClose,
 } from '../../components/Ui/sheet';
+import { customerOrderPath } from '../../constants/statuses';
 
-const getOrderStage = (status: string, paymentStatus: string) => {
+const getOrderStage =(status: string, paymentStatus: string) => {
   if (status === 'completed') return 'Fullført';
+  // Checked before the `paymentStatus === 'paid'` fallback, which otherwise
+  // flattened a job the provider had reported finished back down to "Betalt".
+  if (status === 'ready_for_review') return 'Meldt ferdig';
   if (status === 'in_progress') return 'Pågår';
   if (paymentStatus === 'paid') return 'Betalt';
   if (status === 'awaiting_payment') return 'Venter på betaling';
@@ -70,10 +74,19 @@ export function ChatView() {
       navigate(`/provider/orders/${id}`);
       return;
     }
-    // Customer side routing
-    const paymentStatus = typeof order === 'object' ? order.paymentStatus : undefined;
-    if (opts.preferApprovalWhenPaid && paymentStatus === 'paid') {
-      navigate(`/safepay/approval/${id}`);
+    // Customer side routing. `preferApprovalWhenPaid` used to mean literally that —
+    // paid ⇒ approval screen — which showed "utfører melder jobben som ferdig" to a
+    // customer whose provider had not even started. Approval is only a destination
+    // once the order actually reaches `ready_for_review`.
+    const orderObj =
+      typeof order === 'object' ? (order as { paymentStatus?: string; status?: string }) : undefined;
+    const approvalPath = opts.preferApprovalWhenPaid
+      ? customerOrderPath(id, orderObj?.status)
+      : null;
+    if (approvalPath) {
+      navigate(approvalPath);
+    } else if (opts.preferApprovalWhenPaid && orderObj?.paymentStatus === 'paid') {
+      navigate(`/safepay/success?orderId=${id}`);
     } else {
       navigate(`/safepay/checkout/${id}`);
     }

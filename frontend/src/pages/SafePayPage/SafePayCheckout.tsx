@@ -19,6 +19,7 @@ import { dateFormatter } from '../../utils/dateFormatter';
 import { timeFormatter } from '../../utils/timeFormatter';
 import { BackLink } from '../../components/Ui/BackLink';
 import { CARD, MICRO_LABEL } from '../../theme/brand';
+import { customerOrderPath, isApprovable } from '../../constants/statuses';
 
 /**
  * Step 2 of SafePay: the contract, and the payment that commits to it.
@@ -388,11 +389,20 @@ const SafePayCheckout: React.FC = () => {
                 <CheckCircle2 size={17} strokeWidth={2.2} />
                 Betalingen er gjennomført
               </div>
+              {/* "Gå til godkjenning" was offered the moment payment cleared, i.e.
+                  before the provider had started — and the approval page then told the
+                  customer the job was already reported finished. The CTA follows the
+                  order's real stage now. */}
               <button
-                onClick={() => navigate(`/safepay/approval/${order._id}`)}
+                onClick={() =>
+                  navigate(
+                    customerOrderPath(order._id, order.status) ??
+                      `/safepay/success?orderId=${order._id}`
+                  )
+                }
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#2E6641] text-[0.9375rem] font-semibold text-white transition-colors hover:bg-[#255335] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25"
               >
-                Gå til godkjenning
+                {isApprovable(order.status) ? 'Gå til godkjenning' : 'Se status på oppdraget'}
               </button>
             </>
           ) : (

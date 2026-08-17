@@ -53,6 +53,34 @@ export const ACTIVE_ORDER_STATUSES = [
   'disputed',
 ] as const;
 
+/**
+ * Order statuses at which the customer's approval screen is the right place to be.
+ *
+ * The backend refuses `POST /api/safepay-checkout/approve` from anything but
+ * `ready_for_review`, but every surface that linked to `/safepay/approval/:id`
+ * tested `paymentStatus === 'paid'` instead. A customer who had merely paid was
+ * therefore routed to a page that announced "<utfører> melder jobben som ferdig"
+ * — before the provider had started, let alone pressed "Meld jobb som ferdig" —
+ * and handed an approve button the server would reject.
+ */
+export const APPROVABLE_ORDER_STATUSES = ['ready_for_review', 'completed'] as const;
+
+/** True once the provider has actually reported the work finished. */
+export const isApprovable = (status?: string | null): boolean =>
+  !!status && (APPROVABLE_ORDER_STATUSES as readonly string[]).includes(status);
+
+/**
+ * Where a paying customer belongs for a given order status.
+ *
+ * `null` means "no opinion" — the caller should fall back to its own default
+ * (usually the checkout page, since an unpaid order has nowhere else to go).
+ */
+export const customerOrderPath = (orderId: string, status?: string | null): string | null => {
+  if (isApprovable(status)) return `/safepay/approval/${orderId}`;
+  if (isPaidOrder(status)) return `/safepay/success?orderId=${orderId}`;
+  return null;
+};
+
 /** Norwegian labels. Anything missing here would otherwise be shown raw. */
 export const STATUS_LABELS: Record<string, string> = {
   open: 'Åpent',
