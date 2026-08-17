@@ -29,37 +29,57 @@ const prefersReducedMotion = (): boolean =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /**
+ * How many extra frames to keep looking after the first two.
+ *
+ * Two frames is enough when validation only marks fields on the step already on screen. It
+ * is not enough when the caller also changes step — publishing from step 4 with no map pin
+ * sends the person back to step 2, and that step mounts behind an `animate-in` transition,
+ * so the marked field does not exist in the DOM yet on the frame we used to give up on.
+ * That is the "sometimes it doesn't scroll" case. ~12 frames is about 200 ms at 60 Hz:
+ * long enough for a step swap, short enough that nobody sees a delay.
+ */
+const MAX_EXTRA_FRAMES = 12;
+
+/**
  * Scroll the first invalid control into view and focus it.
  *
- * Runs after two frames on purpose. Validation calls `setErrors`, and the red borders and
- * `aria-invalid` attributes this looks for only exist once React has committed that state —
- * searching immediately finds the *previous* render, which on a first submit means finding
- * nothing at all.
+ * The first two frames are waited out unconditionally. Validation calls `setErrors`, and the
+ * red borders and `aria-invalid` attributes this looks for only exist once React has
+ * committed that state — searching immediately finds the *previous* render, which would mean
+ * scrolling to a field the person has already fixed. After those two frames it keeps looking
+ * for up to `MAX_EXTRA_FRAMES` more, so a step change in the same tick still lands.
  *
  * @param root  Limit the search — pass the form element when a page has more than one.
  */
 export function scrollToFirstError(root: ParentNode = document): void {
   if (typeof window === 'undefined') return;
 
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const target = root.querySelector<HTMLElement>(INVALID_SELECTOR);
-      if (!target) return;
+  let framesLeft = MAX_EXTRA_FRAMES;
 
-      target.scrollIntoView({
-        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-        // Centred rather than `start`: the site has a sticky header, and a field aligned to
-        // the top of the viewport ends up underneath it.
-        block: 'center',
-        inline: 'nearest',
-      });
+  const attempt = () => {
+    const target = root.querySelector<HTMLElement>(INVALID_SELECTOR);
 
-      // Focus so the next keystroke goes where the person is looking. `preventScroll` because
-      // focusing jumps the viewport instantly and would fight the smooth scroll above.
-      // Non-focusable markers (the map wrapper) are skipped rather than made tabbable.
-      if (typeof target.focus === 'function' && target.tabIndex >= 0) {
-        target.focus({ preventScroll: true });
-      }
+    if (!target) {
+      if (framesLeft-- > 0) requestAnimationFrame(attempt);
+      return;
+    }
+
+    target.scrollIntoView({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      // Centred rather than `start`: the site has a sticky header, and a field aligned to
+      // the top of the viewport ends up underneath it.
+      block: 'center',
+      inline: 'nearest',
     });
-  });
+
+    // Focus so the next keystroke goes where the person is looking. `preventScroll` because
+    // focusing jumps the viewport instantly and would fight the smooth scroll above.
+    // Non-focusable markers (the map wrapper, the image card) are skipped rather than made
+    // tabbable.
+    if (typeof target.focus === 'function' && target.tabIndex >= 0) {
+      target.focus({ preventScroll: true });
+    }
+  };
+
+  requestAnimationFrame(() => requestAnimationFrame(attempt));
 }

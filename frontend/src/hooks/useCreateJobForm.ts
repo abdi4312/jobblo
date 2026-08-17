@@ -11,6 +11,15 @@ import { getErrorMessage } from '../utils/getErrorMessage';
 import { summariseAiFill, clampMessage } from '../utils/aiFillSummary';
 import { scrollToFirstError } from '../utils/scrollToError';
 
+/**
+ * The four keys `validateStep` writes that are not fields of `JobFormValues` — they are held
+ * in their own state (images, the map pin, fylke, kommune) but reported through the same
+ * error channel so the UI has one thing to read and `scrollToFirstError` one thing to find.
+ */
+export type JobFormErrors = Partial<
+  Record<keyof JobFormValues | 'images' | 'coordinates' | 'countyCode' | 'municipalityCode', string>
+>;
+
 interface InitialData {
   title?: string;
   description?: string;
@@ -235,6 +244,21 @@ export const useCreateJobForm = (
   );
   const setPhone = useCallback((val: string) => handleFormChange('phone', val), [handleFormChange]);
   const setEmail = useCallback((val: string) => handleFormChange('email', val), [handleFormChange]);
+
+  /**
+   * Images sit outside the validation schema, so `useForm` never cleared their error the way
+   * it does for a text field the moment you type in it. `validateStep` only ever merges into
+   * `errors`, so once "Vennligst last opp minst ett bilde" was set it stayed set — the card
+   * kept its red border after the photo was added, and the scroll kept sending the person
+   * back to a field with nothing wrong with it.
+   */
+  const handleImagesChange = useCallback(
+    (files: File[]) => {
+      setSelectedImages(files);
+      if (files.length > 0) clearFieldError('images');
+    },
+    [clearFieldError]
+  );
 
   const handleAiSmartFill = async () => {
     if (!smartFillPrompt || smartFillPrompt.length < 5) {
@@ -715,26 +739,34 @@ export const useCreateJobForm = (
     // failed run that didn't reach `finally`).
     if (isSubmitting) return;
 
-    if (!validateStep(4)) {
-      toast.error('Vennligst fyll ut alle påkrevde felt riktig.');
+    // Publish validates the whole form, not just the step in front of you.
+    //
+    // It used to check step 4 alone, plus a special case for the missing map pin. But
+    // `loadFormData` restores `currentStep`, so a draft saved on step 4 reopens there — and
+    // an empty title from step 1 then sailed past this guard and failed server-side, with
+    // nothing marked anywhere on the page for the person to be sent to. `find` stops at the
+    // first failing step, which is the one worth taking them to. Step 3 is the checklist and
+    // has no required fields.
+    const firstInvalidStep = [1, 2, 4].find((step) => !validateStep(step));
+
+    if (firstInvalidStep) {
+      if (currentStep !== firstInvalidStep) setCurrentStep(firstInvalidStep);
+      toast.error(
+        firstInvalidStep === 2 && !coordinates
+          ? 'Bekreft hvor oppdraget skal utføres på kartet før du publiserer.'
+          : 'Vennligst fyll ut alle påkrevde felt riktig.'
+      );
+      // Sending them back a step is not enough on its own — the step opens at the top and the
+      // field is usually below the fold, and on the frame this runs the new step has not
+      // rendered yet. `scrollToFirstError` keeps looking across a few frames for exactly this.
       scrollToFirstError();
       return;
     }
 
-    // Last line of defence before we build the payload. Step 2 already blocks on
-    // this, but a draft saved before that rule existed can restore straight to
-    // step 4 with no pin — and publishing then used to fall back to Oslo city
-    // centre, putting the job in the wrong place with no warning at all.
-    if (!coordinates) {
-      setCurrentStep(2);
-      toast.error('Bekreft hvor oppdraget skal utføres på kartet før du publiserer.');
-      // Sending them back a step is not enough on its own — step 2 opens at the top and the
-      // map is below the fold. Run the whole step's validation first so the map block is
-      // marked, then scroll to it once the step has rendered.
-      validateStep(2);
-      scrollToFirstError();
-      return;
-    }
+    // Narrowing for TypeScript — step 2 above already refuses to pass without a pin, and
+    // publishing without one used to fall back to Oslo city centre, putting the job in the
+    // wrong place with no warning at all.
+    if (!coordinates) return;
 
     if (!onSubmit) {
       toast.error('Kunne ikke sende skjemaet. Prøv igjen.');
@@ -936,7 +968,8 @@ export const useCreateJobForm = (
     tags,
     setTags,
     selectedImages,
-    setSelectedImages,
+    // The wrapper, not the raw setter — it also clears the "last opp minst ett bilde" error.
+    setSelectedImages: handleImagesChange,
     currentImages,
     setCurrentImages,
     imagesToDelete,
@@ -959,7 +992,14 @@ export const useCreateJobForm = (
     handleCancel,
     previewJobData,
     currentUser,
-    errors, // Exporting errors for validation display
+    /**
+     * `useForm` types its errors as `{ [K in keyof JobFormValues]?: string }`, but
+     * `validateStep` also reports on `images`, `coordinates`, `countyCode` and
+     * `municipalityCode` — four things validated here that live in their own state rather
+     * than in the schema. Consumers read those keys and TypeScript rejected every one of
+     * them; the return type says what the object actually contains.
+     */
+    errors: errors as JobFormErrors,
     checklistItems,
     setChecklistItems,
   };

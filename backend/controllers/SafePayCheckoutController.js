@@ -10,6 +10,7 @@ const Chat = require('../models/ChatMessage');
 const { getStripe } = require('../config/stripe');
 const { resolveStripeCustomer } = require('../services/stripe/customers');
 const { notify } = require('../services/notifications');
+const { normaliseReviewPhotos, MAX_REVIEW_PHOTOS } = require('../utils/reviewPhotos');
 
 const PAID_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed'];
 
@@ -433,14 +434,78 @@ exports.stripeWebhook = (req, res) =>
  */
 exports.confirmPaidSession = confirmPaidSession;
 
+/**
+ * POST /api/safepay-checkout/review-photos/:orderId
+ *
+ * Upload the customer's own review photos and get back URLs to send with `approve`.
+ *
+ * Mirrors providerWorkController.uploadEvidence rather than inventing a second convention:
+ * multipart in, Cloudinary out, URLs back. It exists because the approval screen used to
+ * inline the images as base64 in the approve request — see utils/reviewPhotos.js for what
+ * that cost.
+ */
+exports.uploadReviewPhotos = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.userId;
+    const files = req.files || [];
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ error: 'Ugyldig orderId' });
+    }
+    if (!files.length) {
+      return res.status(400).json({ error: 'Ingen filer mottatt' });
+    }
+    if (files.length > MAX_REVIEW_PHOTOS) {
+      return res.status(400).json({ error: `Maks ${MAX_REVIEW_PHOTOS} bilder per vurdering.` });
+    }
+
+    const order = await Order.findById(orderId).select('customerId status');
+    if (!order) return res.status(404).json({ error: 'Kontrakten ble ikke funnet' });
+
+    // Only the customer writes the review, so only the customer uploads its photos.
+    if (String(order.customerId) !== String(userId)) {
+      return res.status(403).json({ error: 'Ikke tilgang. Kun oppdragsgiver kan legge ved bilder.' });
+    }
+
+    // The review is written at approval, so photos are only meaningful from the point the
+    // job is up for review. Uploading earlier would leave orphans in Cloudinary that no
+    // review ever references.
+    if (!['ready_for_review', 'completed'].includes(order.status)) {
+      return res.status(400).json({
+        error: `Kan ikke legge ved bilder i status "${order.status}".`,
+      });
+    }
+
+    const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
+    const urls = [];
+    for (const file of files) {
+      urls.push(await uploadToCloudinary(file, `jobblo/reviews/${orderId}`));
+    }
+
+    res.status(201).json({ urls });
+  } catch (err) {
+    console.error('uploadReviewPhotos failed [order=%s]: %s', req.params?.orderId, err?.message);
+    res.status(500).json({ error: 'Serverfeil ved opplasting av bilder' });
+  }
+};
+
 exports.approveAndPayout = async (req, res) => {
   try {
-    const { orderId, ratings, comment, photos, recommendWorker } = req.body;
+    const { orderId, ratings, comment, recommendWorker } = req.body;
     const userId = req.userId;
 
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
       return res.status(400).json({ error: 'Ugyldig orderId' });
     }
+
+    // Photos are URLs from uploadReviewPhotos above — never image bytes. An older client
+    // sending base64 is refused here rather than being written into the Review document.
+    const photoResult = normaliseReviewPhotos(req.body.photos);
+    if (!photoResult.ok) {
+      return res.status(400).json({ error: photoResult.error });
+    }
+    const photos = photoResult.photos;
 
     // Validate ratings: overall is required; other fields optional but if present must be 1-5
     if (!ratings || typeof ratings.overall !== 'number' || ratings.overall < 1 || ratings.overall > 5) {

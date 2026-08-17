@@ -1,6 +1,7 @@
-import { Upload, Camera } from 'lucide-react';
+import { Upload, Camera, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import React, { useState, useRef, useEffect } from 'react';
+import { compressImages } from '../../utils/compressImage';
 
 interface ImageUploadProps {
   onImagesChange: (files: File[]) => void;
@@ -17,6 +18,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 }) => {
   const [previews, setPreviews] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -29,36 +31,60 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     }
   }, [initialFiles]);
 
-  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+  /**
+   * The server's own cap is 8 MB per file (backend/middleware/upload.js). Nothing should
+   * ever reach it: photos are scaled down before this check, and a 1920px re-encode lands
+   * a few hundred KB. This is the floor for the cases compression cannot help with — a
+   * huge PNG screenshot, or a browser where the canvas path failed and the original came
+   * back unchanged.
+   */
+  const MAX_FILE_SIZE = 8 * 1024 * 1024;
+  const MAX_IMAGES = 6;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    // Let the same file be chosen again if it was rejected the first time.
+    e.target.value = '';
     if (files.length === 0) return;
 
-    const validFiles: File[] = [];
-    const rejected: string[] = [];
+    const room = MAX_IMAGES - (selectedFiles.length + existingImages.length);
+    if (room <= 0) {
+      toast.error(`Du kan laste opp inntil ${MAX_IMAGES} bilder.`);
+      return;
+    }
+    if (files.length > room) {
+      toast.error(`Inntil ${MAX_IMAGES} bilder — de første ${room} ble lagt til.`);
+    }
 
-    for (const file of files) {
-      if (file.size > MAX_FILE_SIZE) {
-        rejected.push(file.name);
-      } else {
-        validFiles.push(file);
+    setIsProcessing(true);
+    try {
+      // This used to reject anything over 2 MB with a toast. A photo straight off a phone
+      // is 3–8 MB, so the common outcome was a person picking an ordinary picture and
+      // being told no — the "entity too large" complaints started here. Scaling it down
+      // first turns the same photo into something every limit in the stack accepts.
+      const processed = await compressImages(files.slice(0, room));
+
+      const validFiles: File[] = [];
+      const rejected: string[] = [];
+      for (const file of processed) {
+        if (file.size > MAX_FILE_SIZE) rejected.push(file.name);
+        else validFiles.push(file);
       }
+
+      if (rejected.length > 0) {
+        toast.error(`Disse filene er for store og ble ikke lagt til: ${rejected.join(', ')}`);
+      }
+      if (validFiles.length === 0) return;
+
+      const updatedFiles = [...selectedFiles, ...validFiles];
+      setSelectedFiles(updatedFiles);
+      onImagesChange(updatedFiles);
+
+      const newPreviews = validFiles.map((file) => URL.createObjectURL(file));
+      setPreviews((prev) => [...prev, ...newPreviews]);
+    } finally {
+      setIsProcessing(false);
     }
-
-    if (rejected.length > 0) {
-      toast.error(`Disse bildene er over 2 MB og ble ikke lagt til: ${rejected.join(', ')}`);
-    }
-
-    if (validFiles.length === 0) return;
-
-    const updatedFiles = [...selectedFiles, ...validFiles];
-
-    setSelectedFiles(updatedFiles);
-    onImagesChange(updatedFiles);
-
-    const newPreviews = validFiles.map((file) => URL.createObjectURL(file));
-    setPreviews((prev) => [...prev, ...newPreviews]);
   };
 
   const removeImage = (index: number) => {
@@ -92,18 +118,27 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       {/* Upload Box */}
       <div className="flex gap-4">
         <div
-          onClick={() => fileInputRef.current?.click()}
-          className="flex-1 flex flex-col items-center justify-center border-2 gap-2 text-[#99A1AF] border-[#D1D5DC] rounded-[14px] py-10 px-5 text-center cursor-pointer transition-all duration-300 ease-in-out hover:border-[#4CAF50] hover:bg-[#f0f9f0] group"
+          onClick={() => !isProcessing && fileInputRef.current?.click()}
+          aria-busy={isProcessing}
+          className={`flex-1 flex flex-col items-center justify-center border-2 gap-2 text-[#99A1AF] border-[#D1D5DC] rounded-[14px] py-10 px-5 text-center transition-all duration-300 ease-in-out group ${
+            isProcessing ? 'cursor-wait opacity-60' : 'cursor-pointer hover:border-[#4CAF50] hover:bg-[#f0f9f0]'
+          }`}
         >
           <p className="">
-            <Upload size={24} />
+            {isProcessing ? <Loader2 size={24} className="animate-spin" /> : <Upload size={24} />}
           </p>
-          <p className="text-[12px] font-medium">Last opp</p>
-          <p className="text-[10px] text-gray-400">Maks 2 MB per bilde</p>
+          <p className="text-[12px] font-medium">{isProcessing ? 'Behandler…' : 'Last opp'}</p>
+          {/* Was "Maks 2 MB per bilde" — a rule that rejected almost every phone photo.
+              Large pictures are scaled down automatically now, so there is nothing for the
+              person to do about size and nothing to warn them about. */}
+          <p className="text-[10px] text-gray-400">Inntil 6 bilder · store bilder komprimeres</p>
         </div>
         <div
-          onClick={() => cameraInputRef.current?.click()}
-          className="flex-1 flex flex-col items-center justify-center border-2 gap-2 text-[#99A1AF] border-[#D1D5DC] rounded-[14px] py-10 px-5 text-center cursor-pointer transition-all duration-300 ease-in-out hover:border-[#4CAF50] hover:bg-[#f0f9f0] group"
+          onClick={() => !isProcessing && cameraInputRef.current?.click()}
+          aria-busy={isProcessing}
+          className={`flex-1 flex flex-col items-center justify-center border-2 gap-2 text-[#99A1AF] border-[#D1D5DC] rounded-[14px] py-10 px-5 text-center transition-all duration-300 ease-in-out group ${
+            isProcessing ? 'cursor-wait opacity-60' : 'cursor-pointer hover:border-[#4CAF50] hover:bg-[#f0f9f0]'
+          }`}
         >
           <p className="">
             <Camera size={24} />

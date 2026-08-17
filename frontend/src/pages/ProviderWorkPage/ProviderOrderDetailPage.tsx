@@ -14,6 +14,7 @@ import { ContractViewModal } from '../../components/SafePay/ContractViewModal';
 import { DisputePanel } from '../../components/SafePay/DisputePanel';
 import { useDispute } from '../../features/disputes/hooks';
 import { disputeReasonOptions } from '../../constants/disputes';
+import { compressImages } from '../../utils/compressImage';
 
 // ── Status config ──────────────────────────────────────────────────────────────
 //
@@ -324,8 +325,12 @@ const ProviderOrderDetailPage: React.FC = () => {
     };
 
     // ── Evidence helpers ───────────────────────────────────────────────────────
-    const addPendingFiles = (fl: FileList | File[]) => {
-        const list = Array.from(fl);
+    const addPendingFiles = async (fl: FileList | File[]) => {
+        // Proof-of-work photos come off the same phone cameras as everything else, so they
+        // get the same treatment: scaled down before the size check rather than measured
+        // as-is and refused. PDFs and anything the canvas cannot decode pass through
+        // untouched — see utils/compressImage.ts.
+        const list = await compressImages(Array.from(fl));
         const tabUploadedCount = data?.order
             ? (evidenceTab === 'before' ? (data.order.beforeImages?.length || 0) : (data.order.afterImages?.length || 0))
             : 0;
@@ -336,6 +341,9 @@ const ProviderOrderDetailPage: React.FC = () => {
         }
         const accepted: PendingFile[] = [];
         for (const f of list) {
+            // `allowedSlots` was measured before the await above, so it can be stale if a
+            // second selection landed while these were compressing. The cap is re-applied
+            // against the live list when the state actually commits, below.
             if (accepted.length >= allowedSlots) break;
             // Frontend validation mirrors backend — user gets fast feedback
             const okMime = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(f.type);
@@ -347,7 +355,15 @@ const ProviderOrderDetailPage: React.FC = () => {
                 id: `${f.name}-${f.size}-${Math.random().toString(36).slice(2, 8)}`,
             });
         }
-        setPendingFiles((prev) => [...prev, ...accepted]);
+        setPendingFiles((prev) => {
+            const room = MAX_IMAGES_PER_TYPE - tabUploadedCount - prev.length;
+            if (room <= 0) {
+                accepted.forEach((p) => p.preview && URL.revokeObjectURL(p.preview));
+                return prev;
+            }
+            accepted.slice(room).forEach((p) => p.preview && URL.revokeObjectURL(p.preview));
+            return [...prev, ...accepted.slice(0, room)];
+        });
     };
 
     const removePendingFile = (id: string) => {
@@ -747,7 +763,13 @@ const ProviderOrderDetailPage: React.FC = () => {
                                         multiple
                                         accept={ALLOWED_MIME}
                                         disabled={tabTotalUsed >= MAX_IMAGES_PER_TYPE || evidenceMutation.isPending}
-                                        onChange={(e) => e.target.files && addPendingFiles(e.target.files)}
+                                        onChange={(e) => {
+                                            const files = Array.from(e.target.files ?? []);
+                                            // Clear first so picking the same file again still fires
+                                            // `change`; the File references above stay valid.
+                                            e.target.value = '';
+                                            if (files.length) void addPendingFiles(files);
+                                        }}
                                         className="hidden"
                                     />
                                     <Upload size={18} className="mx-auto mb-1.5 text-custom-green" />
