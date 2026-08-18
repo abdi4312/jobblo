@@ -3,6 +3,7 @@ const Service = require('../models/Service');
 const User = require('../models/User');
 const Order = require('../models/Order');
 const mongoose = require('mongoose');
+const { normaliseReviewPhotos } = require('../utils/reviewPhotos');
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -24,10 +25,16 @@ exports.createReview = async (req, res) => {
       revieweeRole,
       rating,
       comment,
-      photos,
       recommendWorker,
     } = req.body;
     const reviewerId = req.userId;
+
+    // Photos are Cloudinary URLs, never image bytes — see utils/reviewPhotos.js.
+    const photoResult = normaliseReviewPhotos(req.body.photos);
+    if (!photoResult.ok) {
+      return res.status(400).json({ error: photoResult.error });
+    }
+    const photos = photoResult.photos;
 
     // Validate IDs
     if (!isValidId(revieweeId)) {
@@ -149,7 +156,13 @@ exports.updateReview = async (req, res) => {
     }
 
     if (photos !== undefined) {
-      review.photos = photos;
+      // Same rule as create: URLs only. Without this, editing a review was a way back in
+      // for the base64 payloads the create path now refuses.
+      const photoResult = normaliseReviewPhotos(photos);
+      if (!photoResult.ok) {
+        return res.status(400).json({ error: photoResult.error });
+      }
+      review.photos = photoResult.photos;
     }
 
     if (recommendWorker !== undefined) {

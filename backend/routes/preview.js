@@ -1,102 +1,92 @@
 const express = require('express');
 const router = express.Router();
 const Service = require('../models/Service');
+const {
+  buildListingPreview,
+  renderPreviewHtml,
+  isValidObjectId,
+} = require('../utils/socialPreview');
 
-// Escape HTML to avoid injection in meta tags
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+/**
+ * Server-rendered social previews for listing links.
+ *
+ * Facebook, WhatsApp, iMessage, Slack, LinkedIn, Discord and Telegram fetch a URL once
+ * and read the `<head>`. None of them runs JavaScript, so the React shell — which is
+ * what every one of them currently receives — can never produce a card. This route is
+ * the server-rendered answer; a reverse proxy sends crawler user-agents here and
+ * everyone else to the SPA. See `deploy/nginx/jobblo-share-cards.conf`.
+ *
+ * The metadata decisions live in `utils/socialPreview.js` so they can be tested without
+ * HTTP. What is here is the lookup and the status codes.
+ *
+ * ── Changes from the previous version ──────────────────────────────────────────
+ *
+ *   Visibility was a BLACKLIST — `draft`, `closed`, `private`, `cancelled`. Eight of
+ *   the eleven real statuses were absent, so `expired`, `pending`, `awaiting_payment`,
+ *   `paid`, `in_progress`, `ready_for_review`, `waiting_for_approval` and `completed`
+ *   listings all served full previews with title, description and photo from an
+ *   unauthenticated endpoint. (`'private'` is not a value the schema can hold, so that
+ *   clause matched nothing at all.) It is now the shared allow-list every other public
+ *   read path uses — `constants/serviceVisibility.js`.
+ *
+ *   A malformed id reached `Service.findById`, threw a CastError, and returned a 500
+ *   with the body "Internal Server Error". Crawlers cache failures; a 500 on a shared
+ *   link can suppress the card until the cache expires.
+ *
+ *   The generic fallback answered 404. Facebook and LinkedIn frequently decline to
+ *   render Open Graph on a 404 body, so an unavailable listing showed a bare link
+ *   rather than the Jobblo card. It is a 200 with `noindex` now: the page really is a
+ *   valid generic page about Jobblo, it just is not that listing.
+ */
 
-// Truncate text to a sensible length for social previews
-function truncate(str, n = 200) {
-  if (!str) return '';
-  return str.length > n ? str.slice(0, n - 1) + '…' : str;
-}
+/**
+ * Only the three fields a preview needs.
+ *
+ * An explicit projection rather than the whole document: `contactPhone` and
+ * `contactEmail` are `select: false` and so were already excluded, but relying on that
+ * means any field added to the schema later is one `.lean()` away from a public
+ * preview. Nothing about the owner, applicants, orders or SafePay state is loaded.
+ */
+const PREVIEW_FIELDS = 'title description images status';
 
 router.get('/job-listing/:id', async (req, res) => {
+  const { id } = req.params;
+
   try {
-    const id = req.params.id;
-    const job = await Service.findById(id).lean();
+    // Validated before the query, so a hand-typed or truncated link degrades to the
+    // generic Jobblo card instead of a 500.
+    const service = isValidObjectId(id)
+      ? await Service.findById(id).select(PREVIEW_FIELDS).lean()
+      : null;
 
-    const frontendBase = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+    const meta = buildListingPreview(service, id);
+    const html = renderPreviewHtml(meta);
 
-    // Default safe values
-    let title = 'Jobblo - Oppdrag';
-    let description = 'Se oppdrag på Jobblo';
-    let image = `${frontendBase}/favicon.svg`;
-    let url = `${frontendBase}/job-listing/${escapeHtml(id)}`;
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    // Vary on User-Agent: the proxy routes by it, so a shared cache must not hand this
+    // crawler HTML to a browser (or the SPA shell to a crawler) for the same URL.
+    res.set('Vary', 'User-Agent');
+    res.set(
+      'Cache-Control',
+      meta.found
+        ? 'public, max-age=300, stale-while-revalidate=600'
+        : // Do not let a card for a listing that is missing or private stick around.
+          'public, max-age=60'
+    );
 
-    if (
-      !job ||
-      job.status === 'draft' ||
-      job.status === 'closed' ||
-      job.status === 'private' ||
-      job.status === 'cancelled'
-    ) {
-      // return generic preview for non-public or missing jobs
-      const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(description)}"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:image" content="${escapeHtml(image)}"><meta property="og:type" content="website"><meta property="og:url" content="${escapeHtml(url)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(title)}"><meta name="twitter:description" content="${escapeHtml(description)}"><meta name="twitter:image" content="${escapeHtml(image)}"></head><body><script>window.location='${url}';</script></body></html>`;
-      res.status(404).send(html);
-      return;
-    }
-
-    // Use job data
-    title = job.title || title;
-    description = truncate((job.description || '').replace(/\s+/g, ' ').trim(), 220) || description;
-    url = `${frontendBase}/job-listing/${escapeHtml(id)}`;
-
-    if (job.images && job.images.length > 0) {
-      image = job.images[0];
-      // ensure absolute https URL if possible
-      if (image.startsWith('//')) image = 'https:' + image;
-      if (!/^https?:\/\//i.test(image)) {
-        image = `${frontendBase.replace(/\/$/, '')}/${image.replace(/^\//, '')}`;
-      }
-    }
-
-    const safeTitle = escapeHtml(title);
-    const safeDesc = escapeHtml(description);
-    const safeImage = escapeHtml(image);
-    const safeUrl = escapeHtml(url);
-
-    const html = `<!doctype html>
-    <html lang="en">
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
-        <title>${safeTitle}</title>
-        <meta name="description" content="${safeDesc}" />
-
-        <!-- Open Graph -->
-        <meta property="og:title" content="${safeTitle}" />
-        <meta property="og:description" content="${safeDesc}" />
-        <meta property="og:image" content="${safeImage}" />
-        <meta property="og:url" content="${safeUrl}" />
-        <meta property="og:type" content="article" />
-
-        <!-- Twitter -->
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="${safeTitle}" />
-        <meta name="twitter:description" content="${safeDesc}" />
-        <meta name="twitter:image" content="${safeImage}" />
-
-      </head>
-      <body>
-        <div id="root"></div>
-        <script>location.replace('${safeUrl}');</script>
-      </body>
-    </html>`;
-
-    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
-    res.send(html);
+    return res.status(200).send(html);
   } catch (err) {
-    console.error('Preview route error', err);
-    res.status(500).send('Internal Server Error');
+    console.error('Preview route error for id %s: %s', id, err.message);
+
+    /**
+     * Still answer with a valid generic card. A 500 here is worse than useless: the
+     * crawler caches the failure, so a database blip while somebody pastes a link
+     * leaves that link previewless long after the blip is over.
+     */
+    const meta = buildListingPreview(null, id);
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.set('Cache-Control', 'no-store');
+    return res.status(200).send(renderPreviewHtml(meta));
   }
 });
 

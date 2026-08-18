@@ -16,6 +16,7 @@ import {
   Camera,
   X,
   ZoomIn,
+  Loader2,
   Image as ImageIcon,
 } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -29,6 +30,10 @@ import { DisputePanel } from '../../components/SafePay/DisputePanel';
 import { useDispute } from '../../features/disputes/hooks';
 import { disputeReasonOptions } from '../../constants/disputes';
 import { statusLabel } from '../../constants/statuses';
+import { compressImages } from '../../utils/compressImage';
+
+/** Matches MAX_REVIEW_PHOTOS in backend/utils/reviewPhotos.js. */
+const MAX_REVIEW_PHOTOS = 6;
 
 /**
  * What the customer is actually looking at, per order status.
@@ -362,6 +367,7 @@ const SafePayApproval: React.FC = () => {
 
   const [comment, setComment] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const [recommendWorker, setRecommendWorker] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -468,6 +474,58 @@ const SafePayApproval: React.FC = () => {
       refetch();
     },
   });
+
+  /**
+   * Review photos go to Cloudinary and only their URLs travel with `approve`.
+   *
+   * They used to be read with `FileReader.readAsDataURL` and posted inline as base64 in the
+   * approve request. Base64 adds ~33 %, so two ordinary phone photos pushed the JSON body
+   * past the server's 12 MB limit and the approval failed with "Innholdet er for stort" —
+   * at the one point in the flow where failing costs the provider their payout. The bytes
+   * also ended up stored in the Review document itself.
+   */
+  const handlePhotoSelect = async (files: File[]) => {
+    if (!files.length || !orderId) return;
+
+    const room = MAX_REVIEW_PHOTOS - photos.length;
+    if (room <= 0) {
+      toast.error(`Maks ${MAX_REVIEW_PHOTOS} bilder.`);
+      return;
+    }
+    if (files.length > room) {
+      toast.error(`Maks ${MAX_REVIEW_PHOTOS} bilder — de første ${room} ble lagt til.`);
+    }
+
+    setIsUploadingPhotos(true);
+    try {
+      // Compress first: a phone photo is 3–8 MB and comes out a few hundred KB, which is
+      // what keeps this well under every limit between here and Cloudinary.
+      const compressed = await compressImages(files.slice(0, room));
+
+      const body = new FormData();
+      compressed.forEach((file) => body.append('photos', file));
+
+      // The header override is required, not decorative: `mainLink` defaults to
+      // `Content-Type: application/json`, and axios 1.x serialises a FormData body to JSON
+      // when it sees a JSON content type — the files would arrive as `{}`. The browser
+      // adapter replaces this with the real boundary before sending.
+      const res = await mainLink.post(`/api/safepay-checkout/review-photos/${orderId}`, body, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const urls: string[] = res.data?.urls ?? [];
+      if (!urls.length) throw new Error('Ingen bilder ble lastet opp.');
+
+      setPhotos((prev) => [...prev, ...urls]);
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        (err as Error)?.message ||
+        'Kunne ikke laste opp bildene. Prøv igjen.';
+      toast.error(message);
+    } finally {
+      setIsUploadingPhotos(false);
+    }
+  };
 
   const handleApprove = () => {
     const allChecked = checklist.every((item) => item.checked);
@@ -1066,16 +1124,12 @@ const SafePayApproval: React.FC = () => {
                   <input
                     type="file"
                     multiple
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={isUploadingPhotos}
                     onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      files.forEach((file) => {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                          setPhotos((prev) => [...prev, event.target?.result as string]);
-                        };
-                        reader.readAsDataURL(file);
-                      });
+                      void handlePhotoSelect(Array.from(e.target.files || []));
+                      // Let the same file be picked again after a failed upload.
+                      e.target.value = '';
                     }}
                     className="hidden"
                     id="photo-upload"
@@ -1084,10 +1138,23 @@ const SafePayApproval: React.FC = () => {
                 {!isOrderCompleted && (
                   <label
                     htmlFor="photo-upload"
-                    className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-custom-green transition-colors"
+                    aria-busy={isUploadingPhotos}
+                    className={`flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed rounded-xl transition-colors ${
+                      isUploadingPhotos
+                        ? 'border-gray-200 cursor-wait'
+                        : 'border-gray-300 cursor-pointer hover:border-custom-green'
+                    }`}
                   >
-                    <FileText size={18} className="text-gray-400" />
-                    <span className="text-[13px] text-gray-500">Last opp dine egne bilder</span>
+                    {isUploadingPhotos ? (
+                      <Loader2 size={18} className="animate-spin text-gray-400" />
+                    ) : (
+                      <FileText size={18} className="text-gray-400" />
+                    )}
+                    <span className="text-[13px] text-gray-500">
+                      {isUploadingPhotos
+                        ? 'Laster opp…'
+                        : `Last opp dine egne bilder (maks ${MAX_REVIEW_PHOTOS})`}
+                    </span>
                   </label>
                 )}
               </div>

@@ -1,8 +1,8 @@
 import mainLink from '../../api/mainURLs';
-import type { ServiceUpdateData } from './types';
+import type { Service, ServiceUpdateData } from './types';
 
-export async function getMyPostedServices() {
-  const res = await mainLink.get('/api/services/my-posted');
+export async function getMyPostedServices(): Promise<Service[]> {
+  const res = await mainLink.get<Service[]>('/api/services/my-posted');
   return res.data;
 }
 

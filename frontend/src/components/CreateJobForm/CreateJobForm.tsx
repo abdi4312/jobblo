@@ -297,7 +297,13 @@ export default function CreateJobForm({
                 </button>
               )}
 
+              {/* `data-invalid` is what `scrollToFirstError` looks for. This card marks its
+                  error state with a bespoke `border-[#B4453A]` rather than the `border-red-500`
+                  the step components use, so it matched none of the utility's selectors:
+                  "Vennligst last opp minst ett bilde" was the one error on the form that never
+                  scrolled into view. */}
               <div
+                data-invalid={errors?.images ? 'true' : undefined}
                 className={`box-card-custom p-5 md:p-6 transition-colors ${
                   errors?.images ? 'border-[#B4453A]' : ''
                 }`}

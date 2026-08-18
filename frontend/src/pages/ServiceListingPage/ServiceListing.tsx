@@ -262,10 +262,19 @@ const ServiceListing = () => {
     );
   };
 
+  /**
+   * The API is the source of truth for these (see backend/utils/serviceSort.js); this
+   * is only the offline fallback, kept in step with it by hand.
+   *
+   * Before the sort contract was unified, the API served English labels here
+   * ("Newest first", "Price: low to high"), which won over this Norwegian fallback
+   * whenever the request succeeded — so the Norwegian text below was almost never
+   * what users saw.
+   */
   const sortOptions = filterOptions?.sortOptions || [
     { label: 'Nyeste først', value: 'newest' },
-    { label: 'Pris: lav til høy', value: 'price_low' },
-    { label: 'Pris: høy til lav', value: 'price_high' },
+    { label: 'Pris – lavest først', value: 'price_low' },
+    { label: 'Pris – høyest først', value: 'price_high' },
     { label: 'Mest relevant', value: 'relevant' },
   ];
 

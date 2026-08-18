@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import SocialAuthButtons from '../SocialAuthButtons/AuthButton.tsx';
 import AuthField from './AuthField.tsx';
@@ -8,12 +8,18 @@ import { useAuth } from '../../features/auth/hook/useAuth.ts';
 import { useForm } from '../../hooks/useForm.ts';
 import { getErrorMessage } from '../../utils/getErrorMessage.ts';
 import { loginValidationSchema, type LoginFormValues } from '../../validations/authValidations';
+import { oauthErrorMessage } from '../../features/auth/oauthErrors.ts';
 
 export const LoginForm = () => {
   const navigate = useNavigate();
   const { login, isLoggingIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [searchParams] = useSearchParams();
+
+  // Vipps and Google redirect here with ?error=<code> when they refuse a sign-in.
+  // Nothing read it before, so the person landed on a blank form with no idea why.
+  const oauthError = oauthErrorMessage(searchParams.get('error'));
 
   const { values, errors, handleChange, validate } = useForm<LoginFormValues>(
     { email: '', password: '' },
@@ -61,6 +67,15 @@ export const LoginForm = () => {
       </div>
 
       <form onSubmit={handleLogin} noValidate className="flex flex-col gap-4">
+        {oauthError && !serverError && (
+          <p
+            role="alert"
+            className="rounded-xl bg-[#FCF4F3] px-3.5 py-2.5 text-[0.8125rem] leading-snug text-[#B0453B]"
+          >
+            {oauthError}
+          </p>
+        )}
+
         {serverError && (
           <p
             role="alert"

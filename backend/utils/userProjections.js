@@ -76,6 +76,10 @@ const SAFE_BASE = [
   'payoutOnboardingLastRefreshedAt',
   'payoutMethod',
   'payoutVerified',
+  // Loaded so it can be REDUCED to a display-safe summary below. The raw subdocument
+  // never reaches a response — sanitizeUserPublic/Owner replace it. See
+  // identityVerificationSummary for exactly which three fields survive.
+  'identityVerification',
   // stripeCustomerId is safe to self/owner only; but our public list hides it below.
 ];
 
@@ -115,6 +119,40 @@ const OWN_USER_SELECT = [
   'stripeCustomerId',
 ].join(' ');
 
+
+/**
+ * BankID verification, reduced to what a badge needs.
+ *
+ * `identityVerification` holds the OIDC `sub`, Idura's `uniqueuserid`, the asserted
+ * name, a birth year and the `acr`. None of that belongs in an API response: it is
+ * identity data being sent so a page can draw a tick. The three derived fields below
+ * are everything the UI actually renders, and they are safe to show to any viewer —
+ * "this person verified with BankID" is the whole point of the badge.
+ *
+ * `identityVerified` is deliberately NOT `user.verified`. That older flag is set by
+ * several unrelated paths (admin action, and the removed Idura controller which set it
+ * on a bare e-mail match), so treating it as proof of BankID would put a BankID badge
+ * on accounts that never completed BankID. It requires a real Idura identity: the
+ * provider AND a subject, which only a validated id_token can produce.
+ */
+function identityVerificationSummary(user) {
+  const iv = user?.identityVerification;
+  const verified = iv?.provider === 'idura' && Boolean(iv?.subject);
+
+  return {
+    identityVerified: verified,
+    identityVerificationProvider: verified ? iv.provider : null,
+    identityVerifiedAt: verified ? iv.verifiedAt || null : null,
+  };
+}
+
+/** Swap the raw subdocument for the summary. Mutates the plain object in place. */
+function applyIdentitySummary(o) {
+  const summary = identityVerificationSummary(o);
+  delete o.identityVerification;
+  return Object.assign(o, summary);
+}
+
 /**
  * Sanitize a user doc to PUBLIC SAFE projection (works for lean() + full docs).
  * Idempotent — safe to call multiple times. Does NOT mutate the original object.
@@ -132,7 +170,7 @@ function sanitizeUserPublic(user) {
       }
     }
   }
-  return o;
+  return applyIdentitySummary(o);
 }
 
 /**
@@ -147,10 +185,11 @@ function sanitizeUserOwner(user) {
   delete o.iban;
   delete o.bicSwift;
   delete o.vippsHandle;
-  return o;
+  return applyIdentitySummary(o);
 }
 
 module.exports = {
+  identityVerificationSummary,
   PUBLIC_USER_SELECT,
   OWN_USER_SELECT,
   SENSITIVE_STRIP,

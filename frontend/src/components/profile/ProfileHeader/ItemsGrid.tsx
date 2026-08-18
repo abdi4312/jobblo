@@ -22,6 +22,7 @@ import { JobCard } from '../../component/jobCard/JobCard.tsx';
 import { JobCardSkeleton } from '../../Loading/JobCardSkeleton.tsx';
 import type { Jobs } from '../../../types/Jobs.ts';
 import type { EditSection } from '../EditProfileSheet';
+import { IdentityVerificationCard } from '../IdentityVerificationCard';
 
 /**
  * Everything below the tabs on a profile.
@@ -263,6 +264,19 @@ export function ItemsGrid({
         </div>
 
         <div className="flex flex-col gap-4">
+          {/* Identity above Vurdering: it is the first thing a stranger deciding whether
+              to let this person into their home wants to know, and it is the owner's
+              most valuable unfinished action.
+
+              Hidden below lg because the single-column stack puts this whole column
+              after "Om meg" — too far down to be discoverable. ProfilePage renders the
+              same card high in the mobile flow instead, so exactly one is ever visible. */}
+          <IdentityVerificationCard
+            user={user}
+            isOwnProfile={isOwner}
+            className="hidden lg:block"
+          />
+
           <section className={`${CARD} p-5`}>
             <h2 className={MICRO}>Vurdering</h2>
             {reviewCount > 0 ? (

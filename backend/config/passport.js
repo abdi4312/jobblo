@@ -1,128 +1,118 @@
-const Subscription = require('../models/Subscription');
-
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
+const { ensureDefaultSubscription } = require('../utils/subscription');
+const { createUnusablePassword } = require('../utils/passwordUtils');
+const { resolveOAuthLogin } = require('../utils/oauthLinking');
 
-console.log('Loading passport config...');
-console.log('Google Client ID:', process.env.GOOGLE_CLIENT_ID ? 'Present' : 'Missing');
-console.log('Google Client Secret:', process.env.GOOGLE_CLIENT_SECRET ? 'Present' : 'Missing');
+/**
+ * Google sign-in.
+ *
+ * This strategy carried the same account-takeover path the Vipps callback did: when
+ * the Google id was unknown it looked the user up by e-mail address and, on a match,
+ * pushed the Google identity onto that account and logged the caller in. Controlling
+ * an e-mail address is not proof of owning the Jobblo account that uses it, so that
+ * handed over order history, payout details and chat to whoever turned up with a
+ * matching address.
+ *
+ * The policy is shared with Vipps and lives in utils/oauthLinking.js. Here the
+ * strategy only translates its decision into a passport result.
+ *
+ * Two other things were wrong in the old version and are gone:
+ *
+ *   password: 'oauth-user'
+ *       A constant, shared by every Google account on the platform, stored where a
+ *       credential goes. `bcrypt.compare` refuses it today because it is not a hash,
+ *       but the obvious "we should hash these" migration would have turned it into a
+ *       working password for every one of those accounts. See utils/passwordUtils.js.
+ *
+ *   phone: `oauth-temp-${profile.id}`
+ *       A fake phone number written to satisfy an index that no longer requires it,
+ *       which then showed up in the UI as the user's contact number.
+ *
+ * There is also no longer a catch-block that swallowed a failed insert and fell back
+ * to `User.findOne({ email })` -- that was the takeover path a second time, reached
+ * through the error handler.
+ */
 
-// Configure Google OAuth Strategy
+/** Google's OIDC `email_verified` claim, wherever this profile shape keeps it. */
+function emailVerifiedFrom(profile) {
+  if (typeof profile?._json?.email_verified === 'boolean') return profile._json.email_verified;
+  if (typeof profile?.emails?.[0]?.verified === 'boolean') return profile.emails[0].verified;
+  return undefined; // unknown -- treated as "not explicitly unverified"
+}
+
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: process.env.CALLBACK_URL || '/api/auth/google/callback',
+      passReqToCallback: true,
     },
-    async (accessToken, refreshToken, profile, done) => {
+    async (req, accessToken, refreshToken, profile, done) => {
       try {
-        console.log('OAuth callback - Profile received:', profile.id, profile.emails[0].value);
-
-        // Check if user already exists with this Google ID
-        let existingUser = await User.findOne({
-          'oauthProviders.provider': 'google',
-          'oauthProviders.providerId': profile.id,
+        const decision = await resolveOAuthLogin({
+          provider: 'google',
+          providerId: profile?.id,
+          email: profile?.emails?.[0]?.value,
+          emailVerified: emailVerifiedFrom(profile),
+          // Set only when a signed-in person asked to connect Google to the account
+          // they are already using. The session cookie is the proof of ownership.
+          linkToUserId: req?.session?.googleLinkUserId || null,
         });
-        console.log('Existing Google user found:', existingUser ? 'YES' : 'NO');
 
-        if (existingUser) {
-          // User exists, return the user
-          return done(null, existingUser);
-        }
+        // Single-use, like the Vipps state.
+        if (req?.session?.googleLinkUserId) delete req.session.googleLinkUserId;
 
-        // Check if user exists with same email
-        existingUser = await User.findOne({ email: profile.emails[0].value });
-        console.log('Existing email user found:', existingUser ? 'YES' : 'NO');
+        switch (decision.outcome) {
+          case 'login':
+          case 'linked':
+            return done(null, decision.user);
 
-        if (existingUser) {
-          // Check if Google provider is already linked
-          const googleProvider = existingUser.oauthProviders.find(
-            (provider) => provider.provider === 'google'
-          );
+          case 'invalid_identity':
+            return done(null, false, { code: 'google_identity' });
 
-          if (!googleProvider) {
-            // Link Google account to existing user
-            existingUser.oauthProviders.push({
-              provider: 'google',
-              providerId: profile.id,
+          case 'link_conflict':
+            return done(null, false, { code: 'google_already_linked' });
+
+          case 'link_target_gone':
+            return done(null, false, { code: 'google_failed' });
+
+          case 'account_exists':
+            // An account already holds this address. Refuse rather than link; they
+            // sign in with their password and connect Google from the profile page.
+            return done(null, false, { code: 'google_account_exists' });
+
+          case 'create': {
+            if (!decision.email) {
+              // User.email is required and unique -- no account is possible without it.
+              return done(null, false, { code: 'google_no_email' });
+            }
+
+            const user = await User.create({
+              name: profile.displayName || 'Google-bruker',
+              email: decision.email,
+              // Not a credential: a bcrypt hash of random bytes that were discarded.
+              password: await createUnusablePassword(),
+              avatarUrl: profile.photos?.[0]?.value,
+              verified: false,
+              role: 'user',
+              oauthProviders: [{ provider: 'google', providerId: String(profile.id) }],
             });
-            await existingUser.save();
+
+            // Idempotent upsert -- cannot produce a second subscription row.
+            await ensureDefaultSubscription(user);
+
+            return done(null, user);
           }
-          return done(null, existingUser);
+
+          default:
+            console.error('Google OAuth: unhandled linking outcome %s', decision.outcome);
+            return done(null, false, { code: 'google_failed' });
         }
-
-        // Simple approach: Try to find or create user step by step
-        console.log(
-          'Creating/finding user with simple approach for email:',
-          profile.emails[0].value
-        );
-
-        // First, try to create the user with a basic structure
-        let user;
-        try {
-          // Try to create a new user directly
-          user = new User({
-            name: profile.displayName,
-            email: profile.emails[0].value,
-            password: 'oauth-user',
-            phone: `oauth-temp-${profile.id}`, // Temporary unique placeholder
-            avatarUrl: profile.photos[0]?.value,
-            verified: false,
-            role: 'user',
-            subscription: 'Standard',
-            earnings: 0,
-            spending: 0,
-            availability: [],
-            oauthProviders: [
-              {
-                provider: 'google',
-                providerId: profile.id,
-              },
-            ],
-          });
-          await user.save();
-          console.log('User saved successfully:', user);
-          await Subscription.create({
-            userId: user._id,
-
-            currentPlan: {
-              plan: 'Standard',
-              planType: 'private',
-              startDate: new Date(),
-              status: 'active',
-            },
-          });
-          console.log('New user created successfully:', user.email);
-        } catch (createError) {
-          console.log('User creation failed (likely duplicate email):', createError.message);
-          // If creation fails, find the existing user
-          user = await User.findOne({ email: profile.emails[0].value });
-
-          if (!user) {
-            console.log('No user found after creation failure');
-            return done(new Error('Failed to create or find user'), null);
-          }
-          console.log('Found existing user:', user.email);
-        }
-
-        // If user exists but doesn't have Google OAuth, add it
-        if (user && user.save) {
-          // Check if it's a real DB user
-          const hasGoogleAuth = user.oauthProviders.some((p) => p.provider === 'google');
-          if (!hasGoogleAuth) {
-            user.oauthProviders.push({
-              provider: 'google',
-              providerId: profile.id,
-            });
-            await user.save();
-          }
-        }
-        console.log('User operation completed for:', user?.email);
-        return done(null, user);
       } catch (error) {
-        console.error('OAuth error:', error);
+        console.error('Google OAuth error:', error.message);
         return done(error, null);
       }
     }
