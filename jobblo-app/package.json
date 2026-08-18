@@ -26,7 +26,6 @@
     "react-native-reanimated": "^4.5.3",
     "react-native-safe-area-context": "^5.9.0",
     "react-native-screens": "^4.27.0",
-    "react-native-svg": "^15.15.5",
     "react-native-svg": "^15.0.0",
     "react-native-toast-message": "^2.4.0",
     "react-native-web": "^0.21.2",
@@ -43,7 +42,8 @@
     "web": "expo start --web"
   },
   "devDependencies": {
-    "babel-preset-expo": "~57.0.7"
+    "babel-preset-expo": "~57.0.7",
+    "typescript": "^7.0.2"
   },
   "private": true
 }

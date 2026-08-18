@@ -15,7 +15,7 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function AppProviders({ children }) {
+export default function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }}>
