@@ -16,9 +16,38 @@ import { toast } from 'react-hot-toast';
  * server-rendered Open Graph metadata on the listing route, not buttons in this menu.
  */
 
-/** The link a listing is shared as. Absolute, because it leaves the app. */
+/**
+ * The canonical public origin for shared links.
+ *
+ * `window.location.origin` alone is wrong for anything that leaves the browser. It is
+ * whatever host the app happens to be served from, which is `http://localhost:5173`
+ * in development, a preview host on a branch build, and — if the SPA is ever opened
+ * through the API domain — the API host. A link pasted into a chat has to survive
+ * being read by somebody else on another machine, and it is also the URL the social
+ * crawler will fetch, so it must be the production site.
+ *
+ * `VITE_PUBLIC_SITE_URL` (for example `https://jobblo.no`) is the canonical value and
+ * is what production builds should set. Without it this falls back to the current
+ * origin, which keeps local development usable and is correct in production once the
+ * variable is configured.
+ */
+function siteOrigin(): string {
+  const configured = import.meta.env.VITE_PUBLIC_SITE_URL;
+  if (typeof configured === 'string' && /^https?:\/\//i.test(configured.trim())) {
+    return configured.trim().replace(/\/+$/, '');
+  }
+  return window.location.origin.replace(/\/+$/, '');
+}
+
+/**
+ * The link a listing is shared as.
+ *
+ * Must match `og:url` in backend/utils/socialPreview.js exactly — a crawler that is
+ * handed one URL and finds a different canonical in the document may attribute the
+ * card to the other URL, or decline to render one.
+ */
 export function listingUrl(serviceId: string): string {
-  return `${window.location.origin}/job-listing/${serviceId}`;
+  return `${siteOrigin()}/job-listing/${encodeURIComponent(serviceId)}`;
 }
 
 /**

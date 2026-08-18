@@ -3,6 +3,7 @@ const JobRequest = require('../models/JobRequest');
 const Order = require('../models/Order');
 const mongoose = require('mongoose');
 const { evaluateListingCapabilities } = require('../utils/listingCapabilities');
+const { PUBLIC_SERVICE_STATUSES } = require('../constants/serviceVisibility');
 const { resolveSort } = require('../utils/serviceSort');
 
 /** A user-supplied string is not a regex. Same escape the admin search already uses. */
@@ -129,7 +130,7 @@ exports.getAllServices = async (req, res) => {
     // completed jobs. This route is unauthenticated; owners read their own listings
     // (including non-public ones) through GET /api/services/my-posted, which is
     // authenticated and scoped to the caller.
-    query.status = { $in: ['open', 'active'] };
+    query.status = { $in: PUBLIC_SERVICE_STATUSES };
 
     if (ownerId) {
       query.userId = ownerId;
@@ -260,8 +261,6 @@ exports.getAllServices = async (req, res) => {
 
 // ------------------- Get Service By ID -------------------
 
-/** Statuses a listing may be read at by anyone. Mirrors the public list filter. */
-const PUBLIC_SERVICE_STATUSES = ['open', 'active'];
 
 exports.getServiceById = async (req, res) => {
   try {

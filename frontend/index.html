@@ -4,7 +4,61 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Jobblo - Din plattform for tjenester</title>
+    <title>Jobblo – Finn eller legg ut oppdrag</title>
+    <meta
+      name="description"
+      content="Jobblo kobler deg med folk som kan gjøre jobben. Legg ut oppdraget ditt gratis, få tilbud, og betal trygt med SafePay."
+    />
+
+    <!--
+      Generic social metadata for the app shell.
+
+      This is the FALLBACK, used when a link to any page other than a listing is
+      pasted into Facebook, WhatsApp, iMessage, Slack, LinkedIn, Discord or Telegram.
+      None of those crawlers executes JavaScript, so whatever React later writes into
+      document.head is never seen — the tags have to be in the served HTML, and this
+      file is the only HTML the SPA has.
+
+      Listing-specific tags deliberately do NOT belong here. A single listing cannot be
+      described by a static shell, so `/job-listing/:id` is served by the backend
+      preview route instead (backend/routes/preview.js), which reads the listing and
+      renders its own head. Putting a placeholder og:title here would be worse than
+      nothing: every listing link would preview as the same generic card, and it would
+      look correct while being wrong.
+
+      og:url is intentionally absent. It is the *canonical* URL of the document, and
+      one static value would claim that every route in the app is the front page.
+      Crawlers fall back to the requested URL, which is the right answer here.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Jobblo" />
+    <meta property="og:title" content="Jobblo – Finn eller legg ut oppdrag" />
+    <meta
+      property="og:description"
+      content="Jobblo kobler deg med folk som kan gjøre jobben. Legg ut oppdraget ditt gratis, få tilbud, og betal trygt med SafePay."
+    />
+    <meta property="og:locale" content="nb_NO" />
+
+    <!--
+      og:image is omitted until a real asset exists.
+
+      Jobblo has no social share image: the largest branded raster in the repository is
+      a 152x55 logo, under Facebook's 200x200 floor, and favicon.svg is both 27x14 and
+      an SVG, which Facebook, WhatsApp, LinkedIn and Twitter all refuse for og:image.
+      Pointing at either produces a card with a broken grey box, which reads as a
+      broken site. Omitting it produces a clean text card instead.
+
+      When design delivers a 1200x630 PNG, drop it in `public/` and add:
+          <meta property="og:image" content="https://jobblo.no/og-default.png" />
+          <meta name="twitter:image" content="https://jobblo.no/og-default.png" />
+      and switch twitter:card below to "summary_large_image".
+    -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Jobblo – Finn eller legg ut oppdrag" />
+    <meta
+      name="twitter:description"
+      content="Jobblo kobler deg med folk som kan gjøre jobben. Legg ut oppdraget ditt gratis, få tilbud, og betal trygt med SafePay."
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
