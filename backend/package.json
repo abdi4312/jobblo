@@ -10,6 +10,7 @@
     "check:payments": "node scripts/check-payment-config.js",
     "e2e:flow": "node scripts/e2e-job-flow.js",
     "dedupe:payments": "node scripts/dedupe-payment-records.js",
+    "dedupe:subscriptions": "node scripts/dedupe-subscriptions.js",
     "merge:chats": "node scripts/merge-duplicate-chats.js"
   },
   "dependencies": {

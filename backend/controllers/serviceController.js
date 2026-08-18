@@ -2,6 +2,7 @@ const Service = require('../models/Service');
 const JobRequest = require('../models/JobRequest');
 const Order = require('../models/Order');
 const mongoose = require('mongoose');
+const { evaluateListingCapabilities } = require('../utils/listingCapabilities');
 const { resolveSort } = require('../utils/serviceSort');
 
 /** A user-supplied string is not a regex. Same escape the admin search already uses. */
@@ -597,6 +598,21 @@ exports.updateService = async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
+    /**
+     * Same gate as delete. Editing a listing that already has a contract rewrites the
+     * terms the other party agreed to -- price, scope and dates are exactly the fields
+     * this endpoint accepts -- after they have committed, and in the paid case after
+     * the money is in escrow.
+     */
+    const capabilities = await loadCapabilities(service);
+    if (!capabilities.canEdit) {
+      return res.status(409).json({
+        error: capabilities.blockedReason,
+        code: capabilities.blockedCode,
+        blockingStatus: capabilities.blockingStatus,
+      });
+    }
+
     // Validate paymentType & price if being updated
     const updatedPaymentType = req.body.paymentType || service.paymentType;
     const updatedPrice = req.body.price !== undefined ? Number(req.body.price) : service.price;
@@ -745,6 +761,19 @@ exports.updateService = async (req, res) => {
 
 // ------------------- Delete Service -------------------
 
+/**
+ * Load the orders attached to a listing and work out what its owner may do with it.
+ *
+ * Both the edit and the delete endpoint call this before writing. The same evaluation
+ * is attached to every listing in getMyPostedServices, so in normal use the interface
+ * has already explained the situation and never offers the action -- this is the check
+ * that makes that true rather than merely presentational.
+ */
+async function loadCapabilities(service) {
+  const orders = await Order.find({ serviceId: service._id }).select('status').lean();
+  return evaluateListingCapabilities({ service, orders });
+}
+
 exports.deleteService = async (req, res) => {
   try {
     const { id } = req.params;
@@ -757,6 +786,24 @@ exports.deleteService = async (req, res) => {
 
     if (service.userId.toString() !== req.userId) {
       return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    /**
+     * Refuse when the listing is tied to a live commitment.
+     *
+     * This used to check ownership and nothing else, so an owner could delete a
+     * listing with a paid SafePay escrow, work in progress or an open dispute against
+     * it. The Order survives pointing at a `serviceId` that no longer resolves, and so
+     * does every Review carrying it -- the provider's order page and the customer's
+     * approval page lose the job they describe while the money is still held.
+     */
+    const capabilities = await loadCapabilities(service);
+    if (!capabilities.canDelete) {
+      return res.status(409).json({
+        error: capabilities.blockedReason,
+        code: capabilities.blockedCode,
+        blockingStatus: capabilities.blockingStatus,
+      });
     }
 
     // ⭐ DELETE ALL IMAGES FROM CLOUDINARY
@@ -1024,9 +1071,40 @@ exports.getMyPostedServices = async (req, res) => {
     const services = await Service.find({ userId: req.userId })
       .select('+contactPhone +contactEmail')
       .populate('userId', 'name email avatarUrl verified role orgNumber companyName')
-      .sort({ _id: -1 });
+      .sort({ _id: -1 })
+      .lean();
 
-    res.json(services);
+    /**
+     * Attach what the owner may actually do with each listing.
+     *
+     * Without this the interface has to guess from `service.status`, which is written
+     * by a different code path than the Order and has historically drifted from it. The
+     * result was a delete button that looked available on a listing with money in
+     * escrow and returned an opaque error when pressed. The server decides, the client
+     * renders the decision, and the endpoints enforce the same rule on write.
+     *
+     * One query for every listing rather than one per listing.
+     */
+    const orders = await Order.find({ serviceId: { $in: services.map((s) => s._id) } })
+      .select('serviceId status')
+      .lean();
+
+    const ordersByService = new Map();
+    for (const order of orders) {
+      const key = String(order.serviceId);
+      if (!ordersByService.has(key)) ordersByService.set(key, []);
+      ordersByService.get(key).push(order);
+    }
+
+    res.json(
+      services.map((service) => ({
+        ...service,
+        capabilities: evaluateListingCapabilities({
+          service,
+          orders: ordersByService.get(String(service._id)) || [],
+        }),
+      }))
+    );
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });

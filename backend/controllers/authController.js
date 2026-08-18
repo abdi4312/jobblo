@@ -2,6 +2,8 @@ const Subscription = require('../models/Subscription');
 const User = require('../models/User');
 const Session = require('../models/Session');
 const bcrypt = require('bcryptjs');
+const { isBcryptHash } = require('../utils/passwordUtils');
+const { ensureDefaultSubscription } = require('../utils/subscription');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { generateTokens, createSession } = require('../utils/tokenUtils');
@@ -169,16 +171,10 @@ exports.register = async (req, res) => {
 
     const { accessToken, refreshToken } = await createSession(req, user._id);
 
-    await Subscription.create({
-      userId: user._id,
-      currentPlan: {
-        plan: role === 'company' ? 'Start' : 'Standard',
-        planType: role === 'company' ? 'business' : 'private',
-        startDate: new Date(),
-        status: 'active',
-        autoRenew: false,
-      },
-    });
+    // Shared with the Google and Vipps signup paths so all three provision the same
+    // plan the same way. Atomic upsert with everything inside $setOnInsert, so a retry
+    // or a concurrent request cannot produce a second subscription row.
+    await ensureDefaultSubscription(user);
 
     setAuthCookies(res, accessToken, refreshToken);
 
@@ -224,7 +220,24 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    /**
+     * Refuse anything in `password` that is not actually a bcrypt hash.
+     *
+     * OAuth-created accounts used to carry a placeholder there -- the literal string
+     * 'oauth-user' for Google and Idura, a random hex string for Vipps. Neither can be
+     * used to log in today, because `bcrypt.compare` returns false when the stored
+     * value will not parse as a hash (verified against bcryptjs 2.4.3), so this guard
+     * changes no behaviour for any existing account.
+     *
+     * It is here so that stays true. 'oauth-user' was a constant shared by every Google
+     * account on the platform, and the obvious "we should hash these" migration would
+     * have handed all of them the working password `oauth-user`. New OAuth accounts get
+     * a real hash of random bytes nobody kept (utils/passwordUtils.js); this line makes
+     * the remaining legacy rows fail closed rather than depending on a library's
+     * behaviour with malformed input.
+     */
+    const isPasswordValid =
+      isBcryptHash(user.password) && (await bcrypt.compare(password, user.password));
 
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid credentials' });

@@ -3,9 +3,15 @@ const mongoose = require('mongoose');
 jest.mock('../models/Service', () => ({ findById: jest.fn() }));
 jest.mock('../models/JobRequest', () => ({}));
 jest.mock('../models/User', () => ({ findById: jest.fn() }));
+// updateService now asks utils/listingCapabilities what the owner may do, which reads
+// the orders attached to the listing. Deletion is what those capabilities actually
+// block; editing stays open except during a dispute, so an empty result here is the
+// ordinary case and leaves every assertion below unchanged.
+jest.mock('../models/Order', () => ({ find: jest.fn() }));
 
 const Service = require('../models/Service');
 const User = require('../models/User');
+const Order = require('../models/Order');
 const serviceController = require('../controllers/serviceController');
 
 /**
@@ -56,6 +62,7 @@ const req = (body, id) => ({ params: { id: String(id) }, body, userId: String(OW
 beforeEach(() => {
   jest.clearAllMocks();
   User.findById.mockReturnValue({ select: jest.fn().mockResolvedValue({ subscription: 'Standard' }) });
+  Order.find.mockReturnValue({ select: () => ({ lean: () => Promise.resolve([]) }) });
 });
 
 describe('updateService field whitelist (F-39)', () => {

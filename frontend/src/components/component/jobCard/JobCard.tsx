@@ -1,12 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
-import { Bookmark, MapPin, Pencil, ShieldCheck, Trash2, Zap } from 'lucide-react';
+import { Bookmark, MapPin, ShieldCheck, Zap } from 'lucide-react';
 import type { Jobs } from '../../../types/Jobs.ts';
 import { useUserStore } from '../../../stores/userStore.ts';
 import AddToListModal from '../../Explore/jobs/AddToListModal';
 import { useFavoriteLists } from '../../../features/favoriteLists/hooks';
 import { useServiceActions } from '../../../features/services/hooks';
 import { jobImage } from '../../../assets/images/categories';
+import { ListingOwnerActions } from '../../listing/ListingOwnerActions';
 
 /**
  * The job card — one implementation, used everywhere a job is listed.
@@ -72,18 +73,6 @@ export const JobCard = ({ job, isOwner, showDescription = false }: JobCardProps)
     setIsModalOpen(true);
   };
 
-  const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate(`/Publish-job/${job._id}`);
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (window.confirm('Er du sikker på at du vil slette denne annonsen?')) {
-      deleteMutation.mutate(job._id);
-    }
-  };
-
   const price =
     typeof job?.price === 'number' ? job.price.toLocaleString('nb-NO') : job?.price || '0';
   const place = job?.location?.city || job?.location?.address || 'Norge';
@@ -141,33 +130,27 @@ export const JobCard = ({ job, isOwner, showDescription = false }: JobCardProps)
           )}
         </div>
 
-        {/* Owner actions on hover — also shown on keyboard focus, which the
-            opacity-only version hid from anyone not using a mouse. */}
         {isOwnJob ? (
-          <div className="absolute right-2.5 top-2.5 z-10 flex gap-1.5 opacity-0 transition-opacity duration-200 group-focus-within:opacity-100 group-hover:opacity-100 max-sm:opacity-100">
-            <button
-              type="button"
-              title="Rediger"
-              aria-label="Rediger annonsen"
-              onClick={handleEditClick}
-              className={`${PHOTO_ACTION} text-[#2E6641]`}
-            >
-              <Pencil size={15} strokeWidth={2} />
-            </button>
-            <button
-              type="button"
-              title="Slett"
-              aria-label="Slett annonsen"
-              onClick={handleDeleteClick}
-              disabled={deleteMutation.isPending}
-              className={`${PHOTO_ACTION} text-[#0B0B0B] disabled:opacity-50`}
-            >
-              {deleteMutation.isPending ? (
-                <span className="size-3.5 animate-spin rounded-full border-[1.5px] border-[#E6E7E1] border-t-[#0B0B0B]" />
-              ) : (
-                <Trash2 size={15} strokeWidth={2} />
-              )}
-            </button>
+          /* One overflow menu, not a row of unlabelled icons — the same control and the
+             same confirmation dialog the "Mine annonser" cards use, so managing a
+             listing behaves identically wherever you meet it.
+
+             It replaces a pencil and a bin that appeared only on hover (so a phone
+             showed them permanently via `max-sm:opacity-100`, and a keyboard user
+             reached them only through `group-focus-within`), were 32 px against a
+             ~44 px target, and confirmed deletion with `window.confirm` — a browser
+             dialog that carries none of the product's typography, cannot say which
+             listing it is about, and does not match any other confirmation in Jobblo. */
+          <div className="absolute right-2.5 top-2.5 z-10">
+            <ListingOwnerActions
+              serviceId={job._id}
+              title={job?.title || 'Uten tittel'}
+              onDelete={() => deleteMutation.mutateAsync(job._id)}
+              isDeleting={deleteMutation.isPending}
+              onPhoto
+              // Full 44px where it is tapped; discreet where there is a pointer.
+              className="size-11 sm:size-9"
+            />
           </div>
         ) : (
           <button

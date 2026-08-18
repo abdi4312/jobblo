@@ -53,7 +53,12 @@ describe('Idura / BankID entry points are disabled', () => {
     expect(routerCode).toMatch(/router\.post\(\s*['"]\/register['"]/);
     expect(routerCode).toMatch(/router\.post\(\s*['"]\/logout['"]/);
     expect(routerCode).toMatch(/router\.post\(\s*['"]\/refresh-token['"]/);
-    expect(routerCode).toMatch(/router\.get\(\s*['"]\/vipps['"]\s*,\s*vippsController\.redirectToVipps/);
+    // Middleware may sit in front of the handler (optionalAuthenticate was added so a
+    // signed-in user can CONNECT Vipps rather than only sign in with it), so this
+    // asserts the handler is still wired up, not the exact argument list.
+    expect(routerCode).toMatch(
+      /router\.get\(\s*['"]\/vipps['"]\s*,[\s\S]{0,80}?vippsController\.redirectToVipps/
+    );
     expect(routerCode).toMatch(
       /router\.get\(\s*['"]\/vipps\/callback['"]\s*,\s*vippsController\.vippsCallback/
     );

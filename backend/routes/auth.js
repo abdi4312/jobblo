@@ -5,7 +5,7 @@ const vippsController = require('../controllers/vippsController');
 const User = require('../models/User');
 const { setCookie } = require('../utils/setCookie.js');
 
-const { authenticate } = require('../middleware/auth');
+const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 const { authLimiter, otpSendLimiter, otpVerifyLimiter } = require('../middleware/rateLimiter');
 const { generateTokens, createSession } = require('../utils/tokenUtils');
 
@@ -124,41 +124,67 @@ router.post('/change-password/send-otp-no-password', authenticate, otpSendLimite
 router.post('/change-password/verify-otp', authenticate, otpVerifyLimiter, authController.changePasswordVerifyOtp);
 
 // Google OAuth Routes
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-
-router.get(
-  '/google/callback',
-  passport.authenticate('google', {
-    failureRedirect: '/login',
-    session: false,
-  }),
-  async (req, res) => {
-    // This now returns { session, accessToken, refreshToken }
-    const { session, accessToken, refreshToken } = await createSession(req, req.user._id);
-
-    // Set cookies
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 60 * 60 * 1000, // 1 hour (matches token expiry)
-    });
-
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const redirectUrl = frontendBase.endsWith('/')
-      ? `${frontendBase}oauth-success`
-      : `${frontendBase}/oauth-success`;
-
-    res.redirect(`${redirectUrl}?token=${accessToken}`);
+//
+// `optionalAuthenticate` for the same reason as Vipps: signing in must work when
+// signed out, but a signed-in caller asking to CONNECT Google to the account they are
+// already using (`/api/auth/google?link=1`) records that intent in the session. That
+// cookie is the proof of ownership that an e-mail match is not -- see
+// utils/oauthLinking.js.
+router.get('/google', optionalAuthenticate, (req, res, next) => {
+  if (req.session && (req.query.link === '1' || req.query.intent === 'link') && req.userId) {
+    req.session.googleLinkUserId = String(req.userId);
+  } else if (req.session) {
+    delete req.session.googleLinkUserId;
   }
-);
+  return passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+});
+
+/**
+ * A custom callback rather than `failureRedirect: '/login'`.
+ *
+ * Two problems with the old arrangement. It was a BACKEND-relative path, so a refused
+ * login landed on the API host's /login, which does not exist -- the user got a 404
+ * instead of the sign-in form. And it was a single static destination, so every
+ * refusal looked identical: the strategy now distinguishes "this address already
+ * belongs to an account" from "Google sent no usable identity", and that distinction
+ * only helps if it reaches the person.
+ */
+router.get('/google/callback', (req, res, next) => {
+  const frontendBase = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+
+  passport.authenticate('google', { session: false }, async (err, user, info) => {
+    if (err) {
+      console.error('Google callback error:', err.message);
+      return res.redirect(`${frontendBase}/login?error=google_failed`);
+    }
+    if (!user) {
+      return res.redirect(`${frontendBase}/login?error=${info?.code || 'google_failed'}`);
+    }
+
+    try {
+      const { accessToken, refreshToken } = await createSession(req, user._id);
+
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        maxAge: 60 * 60 * 1000, // 1 hour (matches token expiry)
+      });
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      return res.redirect(`${frontendBase}/oauth-success?token=${accessToken}`);
+    } catch (sessionError) {
+      console.error('Google callback session error:', sessionError.message);
+      return res.redirect(`${frontendBase}/login?error=google_failed`);
+    }
+  })(req, res, next);
+});
 
 /**
  * Idura / BankID — INTENTIONALLY DISABLED.
@@ -200,7 +226,20 @@ router.all('/idura/callback', (req, res) =>
 router.all('/idura', (req, res) =>
   res.status(410).json({ error: IDURA_DISABLED_MESSAGE, code: 'IDURA_DISABLED' })
 );
-router.get('/vipps', vippsController.redirectToVipps);
+/**
+ * Vipps.
+ *
+ * `optionalAuthenticate` rather than `authenticate`: signing in with Vipps must work
+ * for someone who is not logged in, which is the whole point of it. But when the
+ * caller IS logged in and asked to connect Vipps to that account
+ * (`/api/auth/vipps?link=1`), the middleware sets `req.userId`, and the controller
+ * records it in the session as the link target.
+ *
+ * That session cookie is the only thing that authorises attaching a Vipps identity to
+ * an existing account. Matching e-mail addresses no longer does -- see
+ * utils/oauthLinking.js.
+ */
+router.get('/vipps', optionalAuthenticate, vippsController.redirectToVipps);
 router.get('/vipps/callback', vippsController.vippsCallback);
 
 module.exports = router;

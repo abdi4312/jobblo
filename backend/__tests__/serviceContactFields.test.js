@@ -64,6 +64,11 @@ describe('updateService — blank contact values (F-42)', () => {
       return model;
     });
     jest.doMock('../models/JobRequest', () => ({}));
+    // updateService consults utils/listingCapabilities, which reads the listing's
+    // orders. No orders means nothing blocks, which is this fixture's situation.
+    jest.doMock('../models/Order', () => ({
+      find: () => ({ select: () => ({ lean: () => Promise.resolve([]) }) }),
+    }));
     ServiceModel = require('../models/Service');
     serviceController = require('../controllers/serviceController');
   });
@@ -71,6 +76,7 @@ describe('updateService — blank contact values (F-42)', () => {
   afterEach(() => {
     jest.dontMock('../models/Service');
     jest.dontMock('../models/JobRequest');
+    jest.dontMock('../models/Order');
   });
 
   function mockRes() {
