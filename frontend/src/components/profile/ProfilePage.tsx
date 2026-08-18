@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ProfileHeader } from './ProfileHeader/ProfileHeader';
 import { ItemsGrid } from './ProfileHeader/ItemsGrid';
 import { ProfileNav } from './ProfileHeader/ProfileNav';
@@ -6,6 +7,8 @@ import { BlockedUserView } from './ProfilePageComponents/BlockedUserView';
 import { EditProfileSheet, type EditSection } from './EditProfileSheet';
 import { ProfileCover } from './ProfileCover';
 import { useProfileLogic } from '../../features/profile/useProfileLogic';
+import { useUserStore } from '../../stores/userStore';
+import { IdentityVerificationCard } from './IdentityVerificationCard';
 
 /**
  * A profile.
@@ -41,6 +44,25 @@ export default function ProfilePage() {
     isBlockedByMe,
     navigate,
   } = useProfileLogic();
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const fetchProfile = useUserStore((state) => state.fetchProfile);
+
+  /**
+   * The BankID callback returns to /profile?verified=bankid.
+   *
+   * Refresh the profile so the card flips to its verified state, then scrub the
+   * parameter so a reload — or the URL being shared — cannot replay a success banner
+   * for something that did not just happen. Handled here rather than inside the card
+   * because the card is mounted at two breakpoints and this is a write.
+   */
+  useEffect(() => {
+    if (searchParams.get('verified') !== 'bankid') return;
+    void fetchProfile?.();
+    const next = new URLSearchParams(searchParams);
+    next.delete('verified');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, fetchProfile]);
 
   const [editSection, setEditSection] = useState<EditSection | null>(null);
   const openEditor = (section: EditSection = 'identity') => setEditSection(section);
@@ -122,6 +144,18 @@ export default function ProfilePage() {
                 ))}
               </div>
             )}
+
+            {/* Mobile/tablet placement: header → role switch → identity → tabs.
+
+                The desktop copy lives in ItemsGrid's right column, above Vurdering.
+                Each is hidden at the other's breakpoint, so one is visible at a time —
+                the alternative was a media-query hook, and a CSS breakpoint is the
+                thing that actually decides which layout is on screen. */}
+            <IdentityVerificationCard
+              user={userToDisplay}
+              isOwnProfile={isOwnProfile}
+              className="lg:hidden"
+            />
 
             <ProfileNav
               activeTab={activeTab}

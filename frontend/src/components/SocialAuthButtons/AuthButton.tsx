@@ -1,3 +1,4 @@
+import { ShieldCheck } from 'lucide-react';
 import { apiUrl } from '../../config/env';
 
 /**
@@ -77,6 +78,29 @@ export default function SocialAuthButtons() {
       >
         <span>Fortsett med</span>
         <VippsWordmark />
+      </button>
+
+      {/*
+        BankID third, and quiet.
+
+        Vipps is the fastest way onto the service for most Norwegians and stays the
+        primary action; Google is the familiar fallback. BankID is neither — it is the
+        heavyweight option, and someone reaching for it is doing so deliberately. Giving
+        it a third filled button would flatten the hierarchy into a wall of equals, so
+        it gets the same outline treatment as Google with the SafePay shield the product
+        already uses to mean "verified", and sits last.
+
+        `/api/auth/idura` with no `link` parameter is the sign-in intent. The server
+        mints state, nonce and the PKCE verifier and holds them in the session — nothing
+        about the flow is constructed here, which is precisely what was wrong before.
+      */}
+      <button
+        type="button"
+        onClick={go('/api/auth/idura')}
+        className="flex h-11.5 items-center justify-center gap-2.5 rounded-xl border border-[#E6E7E1] bg-white px-4 text-[0.9375rem] font-semibold text-[#0B0B0B] transition duration-150 hover:border-[#D4D6CD] hover:bg-[#FAFBF7] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 active:scale-[0.995]"
+      >
+        <ShieldCheck size={18} strokeWidth={2.2} className="text-[#2E6641]" />
+        <span>Fortsett med BankID</span>
       </button>
 
       <button

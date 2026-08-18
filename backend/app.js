@@ -91,6 +91,7 @@ const corsOptions = {
 
 const passport = require('./config/passport');
 const session = require('express-session');
+const mongoose = require('mongoose');
 const useragent = require('express-useragent');
 const requestId = require('./middleware/requestId');
 
@@ -138,6 +139,71 @@ app.use(cookieParser());
 // Attach a request ID to every request for tracing
 app.use(requestId);
 
+/**
+ * Session storage.
+ *
+ * This used to run on express-session's default MemoryStore, which is documented as
+ * unsuitable for production: it leaks (nothing is ever evicted), it is per-process, and
+ * every session is lost on restart. That was survivable while sessions only held the
+ * Vipps `state`.
+ *
+ * It is not survivable now. The BankID flow keeps its `state`, `nonce` and PKCE
+ * `code_verifier` in the session for the duration of an authentication that involves
+ * the person reaching for a code device — and the callback arrives on a *different*
+ * request, possibly minutes later. With MemoryStore, a pm2 restart or a second app
+ * instance means the callback finds no transaction and every BankID login fails closed
+ * at the state check. Correct, but broken.
+ *
+ * connect-mongo stores sessions in the database Jobblo already runs, so there is no new
+ * piece of infrastructure to provision. It reuses Mongoose's existing connection rather
+ * than opening a second pool — Cosmos bills and caps connections, and a duplicate pool
+ * is pure cost. The store is created lazily against `asPromise()`, which resolves when
+ * `db.js` finishes connecting; `server.js` starts that before requiring this file.
+ *
+ * If MONGO_URI is absent the app falls back to MemoryStore so local work without a
+ * database still runs, and says so loudly in production rather than silently degrading.
+ */
+function buildSessionStore() {
+  if (!process.env.MONGO_URI) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error(
+        'CRITICAL: MONGO_URI is not set, so sessions are using the in-memory store. ' +
+          'BankID logins will fail on restart and across instances.'
+      );
+    }
+    return undefined; // express-session falls back to MemoryStore
+  }
+
+  const MongoStore = require('connect-mongo').default;
+
+  return MongoStore.create({
+    clientPromise: mongoose.connection.asPromise().then((conn) => conn.getClient()),
+    /**
+     * NOT 'sessions'. That collection already belongs to models/Session.js — the auth
+     * refresh-token store — and it carries a UNIQUE index on `refreshToken`.
+     *
+     * connect-mongo documents have no `refreshToken`, so the first one inserts with
+     * `refreshToken: null` and every subsequent one collides:
+     *
+     *   E11000 duplicate key error ... index: refreshToken_1 dup key: { refreshToken: null }
+     *
+     * The visible symptom was that BankID could not start at all: `req.session.save()`
+     * threw, `startIduraAuth` caught it, and the user was bounced back to the frontend
+     * with `bankid_verification_failed` instead of being sent to Idura. It was also
+     * quietly writing express-session documents into the authentication collection.
+     */
+    collectionName: 'expressSessions',
+    // Sessions carry an in-flight OIDC transaction at most; a day is generous.
+    ttl: 24 * 60 * 60,
+    // Do not rewrite the document on every request just to move `expires` — one write
+    // per hour per session is plenty, and Cosmos charges per write.
+    touchAfter: 3600,
+    // The transaction holds a PKCE code_verifier. Encrypting at rest means a database
+    // dump is not by itself enough to complete somebody's pending authentication.
+    crypto: process.env.SESSION_SECRET ? { secret: process.env.SESSION_SECRET } : undefined,
+  });
+}
+
 // Session configuration
 app.use(
   session({
@@ -146,6 +212,7 @@ app.use(
     secret: process.env.SESSION_SECRET || process.env.JWT_SECRET,
     resave: false,
     saveUninitialized: false,
+    store: buildSessionStore(),
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,

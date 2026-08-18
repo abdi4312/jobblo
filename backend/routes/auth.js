@@ -1,6 +1,4 @@
-// Deliberately not imported: the Idura callback is disabled below and the controller
-// must not be reachable. Left as a pointer to the file rather than deleted.
-// const { iduraCallback } = require('../controllers/iduraAuthcontroller');
+const iduraAuthController = require('../controllers/iduraAuthController');
 const vippsController = require('../controllers/vippsController');
 const User = require('../models/User');
 const { setCookie } = require('../utils/setCookie.js');
@@ -187,58 +185,28 @@ router.get('/google/callback', (req, res, next) => {
 });
 
 /**
- * Idura / BankID — INTENTIONALLY DISABLED.
+ * Idura / BankID — Norwegian BankID identity verification and sign-in.
  *
- * The implementation in controllers/iduraAuthcontroller.js is not a safe OIDC client
- * and must not be reachable until it is rebuilt. Concretely, it:
+ * The 410 that stood here through Stage B1 is gone: the bespoke implementation it was
+ * protecting against has been replaced by a real OpenID Connect authorization code +
+ * PKCE flow in controllers/iduraAuthController.js. The old controller validated no
+ * state, sent no nonce and no PKCE, never verified an id_token, and linked to any
+ * account whose e-mail matched before marking it verified.
  *
- *   - never validates `state` (the frontend sent the constant 'idura_login', so there
- *     was no CSRF protection at all),
- *   - sends no `nonce` and performs no PKCE,
- *   - never requests or verifies an `id_token`, so nothing proves the identity
- *     assertion came from Idura,
- *   - exchanges the code through a bespoke `POST /auth/token` shape that is not
- *     Idura's OIDC token endpoint,
- *   - links to any pre-existing account whose e-mail merely matches the profile
- *     e-mail, and then sets `verified: true` / `accountStatus: 'verified'` on it —
- *     an account-takeover path,
- *   - writes the literal string 'oauth-user' into `password` instead of a hash.
+ * `optionalAuthenticate` on the start endpoint, for the same reason as Vipps and
+ * Google: signing in with BankID must work when signed out, but the primary use case
+ * is a signed-in person verifying THEIR account (`?link=1`), and that session cookie is
+ * the only thing that authorises attaching a verified identity to an existing account.
+ * The account id is recorded server-side at the start of the flow and read back from
+ * the session at the end — never from the callback query string.
  *
- * Returning 410 rather than deleting the route: a bare 404 is indistinguishable from
- * a deploy or routing mistake, and an explicit, asserted response is what the
- * regression test in __tests__/iduraDisabled.test.js pins down. The controller file
- * is deliberately left in the tree — this is a temporary stop, not a removal. The
- * replacement is a real OIDC authorization-code + PKCE flow driven server-side; see
- * the Stage A audit for the plan.
- *
- * Do not re-enable by restoring this line. Re-enable by replacing the controller.
+ * Both endpoints answer with a redirect carrying an opaque error code; the mapping to
+ * Norwegian copy lives in the frontend (src/features/auth/oauthErrors.ts). No OAuth
+ * error, token error, issuer value or stack trace reaches the browser.
  */
-const IDURA_DISABLED_MESSAGE =
-  'BankID-innlogging er midlertidig utilgjengelig. Bruk e-post, passord eller Vipps.';
+router.get('/idura', optionalAuthenticate, iduraAuthController.startIduraAuth);
+router.get('/idura/callback', iduraAuthController.iduraCallback);
 
-router.all('/idura/callback', (req, res) =>
-  res.status(410).json({ error: IDURA_DISABLED_MESSAGE, code: 'IDURA_DISABLED' })
-);
-
-// Also stop the initiation path, in case a client or bookmark points at it. There is
-// no server-side initiator today (the old frontend built the authorize URL itself),
-// so this exists to make the whole surface answer consistently.
-router.all('/idura', (req, res) =>
-  res.status(410).json({ error: IDURA_DISABLED_MESSAGE, code: 'IDURA_DISABLED' })
-);
-/**
- * Vipps.
- *
- * `optionalAuthenticate` rather than `authenticate`: signing in with Vipps must work
- * for someone who is not logged in, which is the whole point of it. But when the
- * caller IS logged in and asked to connect Vipps to that account
- * (`/api/auth/vipps?link=1`), the middleware sets `req.userId`, and the controller
- * records it in the session as the link target.
- *
- * That session cookie is the only thing that authorises attaching a Vipps identity to
- * an existing account. Matching e-mail addresses no longer does -- see
- * utils/oauthLinking.js.
- */
 router.get('/vipps', optionalAuthenticate, vippsController.redirectToVipps);
 router.get('/vipps/callback', vippsController.vippsCallback);
 
