@@ -1,5 +1,18 @@
 # Jobblo Mobile Flow
 
+## 📋 Quick Reference
+
+**For comprehensive Search/Filter documentation**, see [MOBILE_FILTER_FLOW.md](MOBILE_FILTER_FLOW.md):
+- Complete filter feature list (search, categories, price, urgent, location, sort)
+- Interactive price filter with Norwegian formatting
+- TanStack Query integration and cache strategy  
+- Component hierarchy and dependencies
+- API contract and query parameters
+- useSearchFilters hook and state management
+- Performance considerations
+
+---
+
 ## Architecture & Shared Components
 
 ### Category Icons & Mapping
@@ -53,6 +66,33 @@
 
 - Home screen: [app/(app)/index.tsx](<app/(app)/index.tsx>) — displays category chips with icons
 - Explore screen: [app/(app)/explore.tsx](<app/(app)/explore.tsx>) — displays category chips with icons
+
+---
+
+## Search Visual Parity Update
+
+**Source of truth inspected**:
+
+- [frontend/src/pages/ServiceListingPage/ServiceListing.tsx](../frontend/src/pages/ServiceListingPage/ServiceListing.tsx)
+- [frontend/src/components/landing/Search/SearchInput.tsx](../frontend/src/components/landing/Search/SearchInput.tsx)
+- [frontend/src/components/component/jobCard/JobCard.tsx](../frontend/src/components/component/jobCard/JobCard.tsx)
+- [frontend/src/pages/ExplorePage/JobListingPage.tsx](../frontend/src/pages/ExplorePage/JobListingPage.tsx)
+
+**Search UI parity changes made in mobile**:
+
+- Rebuilt the Explore/Search screen to match the web Search screen order: sticky search bar, filter trigger, result count + sort, category chip rail, active filter chips, then result grid.
+- Reused the shared search input pattern with the web control size, 12px pill height, border radius, white background, and green accent states.
+- Kept the verified TanStack Query infinite-query flow and did not move job data into local state.
+- Kept the shared CategoryChip and category icon mapping architecture intact, while aligning display and selected-state styling to the web design.
+- Reused the shared JobCard contract rather than duplicate card patterns.
+- Reworked the mobile filter pattern to follow the critical web search semantics: a filter trigger, result summary, and a native sheet for the deeper filter panel.
+- Kept sort values aligned to the canonical API contract: `newest`, `price_low`, `price_high`, `relevant`.
+- Updated the result header to match the responsive web message structure: count plus result label, same vertical rhythm, and filter/sort placement.
+
+**Native-vs-web difference note**:
+
+- The desktop sidebar is translated into a native sheet on mobile, because the web mobile pattern is a filter drawer rather than an always-visible sidebar.
+- The sticky search behavior is implemented as a native top control with the same visual hierarchy rather than a desktop floating layout.
 
 ---
 
@@ -141,7 +181,7 @@ if (categories.length > 0) queryParams.category = categories.join(',');
 - ✅ Home
 - ✅ Explore / Search
 - ⬜ Search Filters
-- ⬜ Job Details
+- ✅ Job Details
 - ⬜ Apply to Job
 - ⬜ My Applications
 - ⬜ Post Job Step 1
@@ -171,6 +211,132 @@ if (categories.length > 0) queryParams.category = categories.join(',');
 - ⬜ Settings
 - ⬜ Account
 - ⬜ Support
+
+## Job Details
+
+Screen:
+File: app/(app)/jobs/[id].tsx
+Route: /(app)/jobs/[id]
+Purpose: Display a single job/service page matching the responsive web Job Details implementation, with loading, error, not-found, and role-aware CTA states. This task is intentionally scoped to detail display only; the apply flow remains deferred.
+
+Web source inspected:
+
+- frontend/src/pages/JobListingDetailPage/JobListingDetailPage.tsx
+- frontend/src/features/jobDetail/hook.ts
+- frontend/src/features/jobDetail/jobApi.ts
+- frontend/src/components/job/JobButton.tsx
+- frontend/src/components/job/RelatedJobs.tsx
+
+Responsive design source of truth:
+
+- 360–430px mobile viewport behavior on the web Job Details page
+- Section order and visual rhythm from the responsive desktop-to-mobile layout
+- Norwegian labels, price and location presentation, CTA states, badge styling, and metadata rows
+
+Component hierarchy:
+
+- app/(app)/jobs/[id].tsx
+  - LoadingIndicator / ErrorState / EmptyState
+  - JobMetaRow
+  - categoryIcons mapping for category chips
+  - Job poster/customer card
+  - CTA footer with login/owner/closed guard
+
+Reusable mobile components used:
+
+- src/components/JobCard.tsx
+- src/components/domain/JobMetaRow.tsx
+- src/components/ui/LoadingIndicator.tsx
+- src/components/ui/ErrorState.tsx
+- src/components/ui/EmptyState.tsx
+- src/utils/categoryIcons.ts
+
+Query hook:
+
+- src/hooks/useJobDetails.ts
+
+Hook implementation:
+
+```ts
+export function useJobDetails(jobId: string) {
+  return useQuery({
+    queryKey: queryKeys.jobs.detail(jobId),
+    queryFn: () => jobsService.getJob(jobId),
+    enabled: !!jobId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+}
+```
+
+Query key:
+
+- queryKeys.jobs.detail(jobId)
+
+Service:
+
+- src/services/jobs.service.ts
+
+Endpoint and contract:
+
+- METHOD: GET /api/services/:id
+- Route from frontend: /api/services/${id}
+- API client: src/api/client.ts
+- Response is resolved as either `response.data.data`, `response.data.job`, or the raw response object, matching backend variations
+
+Verified response fields used:
+
+- _id
+- userId
+- title
+- description
+- price
+- hourlyRate
+- paymentType
+- location
+- duration
+- categories
+- images
+- urgent
+- promoted
+- favCount
+- status
+- tags
+- equipment
+- createdAt
+- updatedAt
+- checklist
+- fromDate / toDate
+
+Authentication and CTA logic:
+
+- Logged-out user: CTA directs to the login flow via router.push('/(auth)/login')
+- Job owner: CTA is presented as owner state and disabled from applying
+- Closed/completed/cancelled/expired job: CTA is disabled and shows closed state
+- Non-owner and active job: CTA remains available for the next flow, but no apply request is executed in this task
+
+Navigation relationships:
+
+- Home -> JobCard -> /jobs/[id]
+- Explore/Search -> JobCard -> /jobs/[id]
+- Shared route: /(app)/jobs/[id]
+- Not duplicated into home-only or explore-only detail routes
+
+Future Apply boundary:
+
+- The current Job Details task only prepares the correct action boundary, the route, and CTA guard states.
+- The actual apply mutation/API is explicitly deferred until the Apply task.
+
+### Job Details change history
+
+- Verified the existing detail route and hook already existed in the mobile app.
+- Audited the current implementation against the responsive web Job Details page rather than rebuilding from scratch.
+- Reused the existing TanStack Query detail hook, service method, and query key structure.
+- Kept the web’s visible structure: hero image/gallery, category/status badges, title, price, location, description, detail rows, poster card, CTA footer, and not-found/error/loading states.
+- Kept JobCard route navigation centralized to the single shared dynamic job detail screen.
+- Kept the apply action intentionally non-functional until the later Apply task.
+
+---
 
 ## Login
 

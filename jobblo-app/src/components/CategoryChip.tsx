@@ -4,7 +4,7 @@ import { getCategoryIcon, getAllCategoriesIcon } from '../utils/categoryIcons';
 import type { Category } from '../types/Category';
 
 interface CategoryChipProps {
-  category: Category | { name: 'Alle' }; // "Alle" is synthetic
+  category: Category | { name: string }; // Can be full Category or simple name object
   isSelected: boolean;
   onPress: () => void;
   showIcon?: boolean;

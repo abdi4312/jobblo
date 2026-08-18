@@ -290,9 +290,20 @@ export default function HomeScreen() {
             <SectionHeader eyebrow="03 — I nærheten" title="Anbefalte oppdragstakere" actionLabel="Se alle" action={() => router.push('/(app)/explore')} />
 
             <View className="space-y-4">
-              {workerCards.map((worker) => (
+              {workerCards.map((worker: {
+                _id?: string;
+                initials: string;
+                name: string;
+                role: string;
+                rating: number;
+                count: number;
+                rate: string;
+                location: string;
+                sponsored: boolean;
+                avatarUrl?: string;
+              }) => (
                 <TouchableOpacity
-                  key={worker._id}
+                  key={worker._id ?? worker.name}
                   activeOpacity={0.9}
                   className="flex-row items-center gap-3 rounded-2xl border border-[#E6E7E1] bg-white p-4"
                   onPress={() => {}}

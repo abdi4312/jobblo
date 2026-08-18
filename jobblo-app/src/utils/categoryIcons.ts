@@ -27,7 +27,7 @@ import {
  * The backend stores category.icon as a string (e.g., "Brush", "Wrench").
  * This map converts those string names to the corresponding lucide-react-native icons.
  */
-const ICON_MAP: Record<string, LucideIcon> = {
+const ICON_MAP: Record<string, any> = {
   Brush,
   BrushCleaning: Brush,
   Sprout,
@@ -58,7 +58,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
  */
 export function getCategoryIcon(
   category: { name?: string; icon?: string } | null | undefined
-): LucideIcon {
+): any {
   if (!category) return MoreHorizontal;
 
   // Try backend icon first
@@ -93,6 +93,6 @@ export function getCategoryIcon(
  *
  * @returns lucide-react-native icon component
  */
-export function getAllCategoriesIcon(): LucideIcon {
+export function getAllCategoriesIcon(): any {
   return Grid3x3;
 }

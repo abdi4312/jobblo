@@ -37,7 +37,6 @@ interface UseInfiniteJobsParams extends Omit<FetchJobsParams, 'page'> {
 export const useInfiniteJobs = ({
   limit = 16,
   categories = [],
-  locations = [],
   countyCodes = [],
   municipalityCodes = [],
   areaCodes = [],
@@ -56,16 +55,23 @@ export const useInfiniteJobs = ({
     queryKey: queryKeys.jobs.infinite({
       limit,
       categories,
+      countyCodes,
+      municipalityCodes,
+      areaCodes,
       search,
       sort,
       urgent,
+      minPrice,
+      maxPrice,
+      lat,
+      lng,
+      radius,
     }),
     queryFn: ({ pageParam = 1 }) =>
       jobsService.fetchJobs({
         page: pageParam,
         limit,
         categories,
-        locations,
         countyCodes,
         municipalityCodes,
         areaCodes,

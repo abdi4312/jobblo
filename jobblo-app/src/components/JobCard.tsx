@@ -23,10 +23,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false }
   const router = useRouter();
 
   const handlePress = () => {
-    // Navigate to job detail page
-    // Note: Job detail page is not yet implemented; placeholder routing for now
-    // router.push(`/(app)/job-detail/${job._id}`);
-    // Using explore as placeholder since job-detail route doesn't exist yet
+    router.push({ pathname: '/(app)/jobs/[id]', params: { id: job._id } });
   };
 
   // Get the first image or use a fallback

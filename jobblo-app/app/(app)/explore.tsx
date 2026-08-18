@@ -1,73 +1,37 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, SafeAreaView } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Search, X, ChevronRight } from 'lucide-react-native';
+import React from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  ActivityIndicator,
+  SafeAreaView,
+} from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { useInfiniteJobs } from '../../src/hooks/useInfiniteJobs';
 import { useCategories } from '../../src/hooks/useCategories';
+import { useLocationTree } from '../../src/hooks/useLocationTree';
+import { useSearchFilters } from '../../src/hooks/useSearchFilters';
 import { JobCard } from '../../src/components/JobCard';
+import { Button } from '../../src/components/ui/Button';
 import { CategoryChip } from '../../src/components/CategoryChip';
+import { SearchHeader } from '../../src/components/search/SearchHeader';
+import { SearchResultsHeader } from '../../src/components/search/SearchResultsHeader';
+import { ActiveFiltersDisplay } from '../../src/components/search/ActiveFiltersDisplay';
+import { SearchFilterSheet } from '../../src/components/search/SearchFilterSheet';
 
-// Sort options matching backend vocabulary from utils/serviceSort.js
-// Canonical values: 'newest', 'price_low', 'price_high', 'relevant'
-// 'relevant' is deliberately identical to 'newest' for now (no relevance signal)
-const SORT_OPTIONS = [
-  { value: 'newest', label: 'Nyeste først' },
-  { value: 'price_low', label: 'Laveste pris' },
-  { value: 'price_high', label: 'Høyeste pris' },
-  { value: 'relevant', label: 'Mest relevant' },
-] as const;
-
-// Simple debounce helper
-function debounce<T extends (...args: any[]) => void>(
-  func: T,
-  delay: number
-): (...args: Parameters<T>) => void {
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  return (...args: Parameters<T>) => {
-    if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
-  };
-}
-
+/**
+ * Explore/Search screen for browsing jobs with comprehensive filtering.
+ */
 export default function ExploreScreen() {
-  const router = useRouter();
   const params = useLocalSearchParams();
-
-  // Initialize search from route params if provided
   const initialSearch = (params.search as string) || '';
-  const initialCategory = (params.category as string) || '';
 
-  // UI state only — no server data state
-  const [searchText, setSearchText] = useState(initialSearch);
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
-  const [sortValue, setSortValue] = useState('newest');
-  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const filters = useSearchFilters(initialSearch);
+  const [sheetVisible, setSheetVisible] = React.useState(false);
 
-  // Fetch categories from backend with icons
   const { data: filterOptions, isLoading: categoriesLoading } = useCategories();
+  const { data: locationTree, isLoading: locationsLoading } = useLocationTree();
 
-  // Debounced search ref
-  const debouncedSearch = useRef(
-    debounce(() => {
-      // Empty body — the query key change triggers refetch automatically
-    }, 500)
-  ).current;
-
-  const handleSearchChange = (text: string) => {
-    setSearchText(text);
-    debouncedSearch();
-  };
-
-  const handleClearSearch = () => {
-    setSearchText('');
-  };
-
-  const handleCategoryToggle = (category: string) => {
-    setSelectedCategory(selectedCategory === category ? '' : category);
-  };
-
-  // Fetch jobs using infinite query with current filters
-  // Note: backend expects 'category' param as comma-separated string (see serviceController.js line 144)
   const {
     data,
     isLoading,
@@ -77,15 +41,24 @@ export default function ExploreScreen() {
     isFetchingNextPage,
     refetch,
   } = useInfiniteJobs({
-    search: searchText,
-    categories: selectedCategory ? [selectedCategory] : [],
-    sort: sortValue,
+    search: filters.searchText,
+    categories: filters.selectedCategories,
+    sort: filters.sortValue,
+    minPrice: filters.minPrice > 0 ? filters.minPrice : undefined,
+    maxPrice: filters.maxPrice < 100000 ? filters.maxPrice : undefined,
+    urgent: filters.isUrgent,
+    countyCodes: filters.selectedCountyCodes,
+    municipalityCodes: filters.selectedMunicipalityCodes,
+    areaCodes: filters.selectedAreaCodes,
+    lat: filters.userLocation?.lat,
+    lng: filters.userLocation?.lng,
+    radius: filters.userLocation ? 5000 : undefined,
     limit: 16,
   });
 
-  // Flatten all pages into a single array for rendering
   const allJobs = data?.pages.flatMap((page) => page.data) ?? [];
   const totalCount = data?.pages[0]?.pagination?.total ?? 0;
+  const filterCategories = filterOptions?.categories ?? [];
 
   const handleLoadMore = () => {
     if (!isFetchingNextPage && hasNextPage) {
@@ -93,8 +66,220 @@ export default function ExploreScreen() {
     }
   };
 
+  const renderHeader = () => (
+    <View>
+      <SearchHeader
+        searchText={filters.searchText}
+        onSearchChange={filters.setSearchText}
+        onFilterPress={() => setSheetVisible(true)}
+        activeFilterCount={
+          filters.selectedCategories.length +
+          (filters.minPrice !== 0 || filters.maxPrice !== 100000 ? 1 : 0) +
+          (filters.isUrgent ? 1 : 0) +
+          filters.selectedCountyCodes.length +
+          filters.selectedMunicipalityCodes.length +
+          (filters.userLocation ? 1 : 0)
+        }
+      />
+
+      <SearchResultsHeader
+        totalCount={totalCount}
+        isLoading={isLoading}
+        sortValue={filters.sortValue}
+        onSortChange={filters.setSortValue}
+      />
+
+      <ActiveFiltersDisplay
+        filters={filters}
+        locationTree={locationTree}
+        onRemoveCategory={(cat) => {
+          filters.setSelectedCategories(
+            filters.selectedCategories.filter((c) => c !== cat)
+          );
+        }}
+        onRemovePrice={filters.resetPrice}
+        onRemoveUrgent={() => filters.setIsUrgent(false)}
+        onRemoveCounty={(code) => {
+          filters.setSelectedCountyCodes(
+            filters.selectedCountyCodes.filter((c) => c !== code)
+          );
+          if (locationTree) {
+            const county = locationTree.find((c) => c.code === code);
+            if (county?.children) {
+              const munCodes = county.children.map((m) => m.code);
+              filters.setSelectedMunicipalityCodes(
+                filters.selectedMunicipalityCodes.filter(
+                  (m) => !munCodes.includes(m)
+                )
+              );
+              const areaCodes = county.children.flatMap(
+                (m) => m.children?.map((a) => a.code) ?? []
+              );
+              filters.setSelectedAreaCodes(
+                filters.selectedAreaCodes.filter((a) => !areaCodes.includes(a))
+              );
+            }
+          }
+        }}
+        onRemoveMunicipality={(code) => {
+          filters.setSelectedMunicipalityCodes(
+            filters.selectedMunicipalityCodes.filter((m) => m !== code)
+          );
+          if (locationTree) {
+            const parentCounty = locationTree.find((c) =>
+              c.children?.some((m) => m.code === code)
+            );
+            const municipality = parentCounty?.children?.find(
+              (m) => m.code === code
+            );
+            if (municipality?.children) {
+              const areaCodes = municipality.children.map((a) => a.code);
+              filters.setSelectedAreaCodes(
+                filters.selectedAreaCodes.filter((a) => !areaCodes.includes(a))
+              );
+            }
+          }
+        }}
+        onRemoveLocation={() => filters.setUserLocation(null)}
+      />
+
+      <View className="mb-2 px-4">
+        <Text className="mb-2 text-[0.8125rem] font-medium text-[#63665F]">
+          Kategorier
+        </Text>
+        {categoriesLoading ? (
+          <View className="py-3">
+            <ActivityIndicator color="#2E6641" size="small" />
+          </View>
+        ) : (
+          <View className="flex-row flex-wrap -mx-1.5">
+            <View className="w-1/3 px-1.5 pb-3">
+              <CategoryChip
+                category={{ name: 'Alle' }}
+                isSelected={filters.selectedCategories.length === 0}
+                onPress={() => filters.setSelectedCategories([])}
+              />
+            </View>
+            {filterCategories.map((cat) => (
+              <View key={cat._id} className="w-1/3 px-1.5 pb-3">
+                <CategoryChip
+                  category={cat}
+                  isSelected={filters.selectedCategories.includes(cat.name)}
+                  onPress={() => filters.toggleCategory(cat.name)}
+                />
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SearchFilterSheet
+        visible={sheetVisible}
+        onClose={() => setSheetVisible(false)}
+        filters={filters}
+        categories={filterCategories}
+        locationTree={locationTree}
+        categoriesLoading={categoriesLoading}
+        locationsLoading={locationsLoading}
+        onToggleCategory={filters.toggleCategory}
+        onSetMinPrice={filters.setMinPrice}
+        onSetMaxPrice={filters.setMaxPrice}
+        onResetPrice={filters.resetPrice}
+        onSetIsUrgent={filters.setIsUrgent}
+        onToggleCounty={(code) => {
+          const isSelected = filters.selectedCountyCodes.includes(code);
+          if (isSelected) {
+            filters.setSelectedCountyCodes(
+              filters.selectedCountyCodes.filter((c) => c !== code)
+            );
+            if (locationTree) {
+              const county = locationTree.find((c) => c.code === code);
+              if (county?.children) {
+                const munCodes = county.children.map((m) => m.code);
+                filters.setSelectedMunicipalityCodes(
+                  filters.selectedMunicipalityCodes.filter(
+                    (m) => !munCodes.includes(m)
+                  )
+                );
+                const areaCodes = county.children.flatMap(
+                  (m) => m.children?.map((a) => a.code) ?? []
+                );
+                filters.setSelectedAreaCodes(
+                  filters.selectedAreaCodes.filter(
+                    (a) => !areaCodes.includes(a)
+                  )
+                );
+              }
+            }
+            filters.toggleExpandCounty(code);
+          } else {
+            filters.setSelectedCountyCodes([
+              ...filters.selectedCountyCodes,
+              code,
+            ]);
+            filters.toggleExpandCounty(code);
+          }
+        }}
+        onToggleCountyExpand={filters.toggleExpandCounty}
+        onToggleMunicipality={(code) => {
+          const isSelected = filters.selectedMunicipalityCodes.includes(code);
+          if (isSelected) {
+            filters.setSelectedMunicipalityCodes(
+              filters.selectedMunicipalityCodes.filter((m) => m !== code)
+            );
+            if (locationTree) {
+              const parentCounty = locationTree.find((c) =>
+                c.children?.some((m) => m.code === code)
+              );
+              const municipality = parentCounty?.children?.find(
+                (m) => m.code === code
+              );
+              if (municipality?.children) {
+                const areaCodes = municipality.children.map((a) => a.code);
+                filters.setSelectedAreaCodes(
+                  filters.selectedAreaCodes.filter(
+                    (a) => !areaCodes.includes(a)
+                  )
+                );
+              }
+            }
+            filters.toggleExpandMunicipality(code);
+          } else {
+            filters.setSelectedMunicipalityCodes([
+              ...filters.selectedMunicipalityCodes,
+              code,
+            ]);
+            const parentCounty = locationTree?.find((c) =>
+              c.children?.some((m) => m.code === code)
+            );
+            const municipality = parentCounty?.children?.find(
+              (m) => m.code === code
+            );
+            if (municipality?.children && municipality.children.length > 0) {
+              filters.toggleExpandMunicipality(code);
+            }
+          }
+        }}
+        onToggleMunicipalityExpand={filters.toggleExpandMunicipality}
+        onToggleArea={(code) => {
+          filters.setSelectedAreaCodes(
+            filters.selectedAreaCodes.includes(code)
+              ? filters.selectedAreaCodes.filter((a) => a !== code)
+              : [...filters.selectedAreaCodes, code]
+          );
+        }}
+        onResetLocation={filters.resetLocation}
+        onSetUserLocation={filters.setUserLocation}
+        onSetIsLocating={filters.setIsLocating}
+        onResetAllFilters={filters.resetAll}
+        jobsCount={allJobs.length}
+        hasNextPage={hasNextPage}
+      />
+
       <FlatList
         data={allJobs}
         keyExtractor={(job) => job._id}
@@ -103,163 +288,69 @@ export default function ExploreScreen() {
             <JobCard job={item} />
           </View>
         )}
-        ListHeaderComponent={
-          <View className="px-4 pt-4 pb-4 gap-4">
-            {/* ── Search Input ──────────────────────────────────────────── */}
-            <View className="rounded-xl bg-white border border-[#E6E7E1] flex-row items-center px-3 py-2 gap-2">
-              <Search size={18} color="#63665F" />
-              <TextInput
-                className="flex-1 text-[15px] text-[#0B0B0B] placeholder-[#9B9E96]"
-                placeholder="Søk etter oppdrag..."
-                placeholderTextColor="#9B9E96"
-                value={searchText}
-                onChangeText={handleSearchChange}
-              />
-              {searchText ? (
-                <TouchableOpacity onPress={handleClearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <X size={18} color="#63665F" />
-                </TouchableOpacity>
-              ) : null}
-            </View>
-
-            {/* ── Results Count and Sort ────────────────────────────────– */}
-            <View className="flex-row items-center justify-between">
-              <Text className="text-[0.875rem] text-[#63665F]">
-                {totalCount} {totalCount === 1 ? 'resultat' : 'resultater'}
-              </Text>
-
-              {/* Sort Dropdown */}
-              <View className="relative">
-                <TouchableOpacity
-                  onPress={() => setShowSortDropdown(!showSortDropdown)}
-                  className="flex-row items-center gap-1 px-3 py-2 bg-white border border-[#E6E7E1] rounded-lg"
-                >
-                  <Text className="text-[0.75rem] font-medium text-[#0B0B0B]">
-                    {SORT_OPTIONS.find((s) => s.value === sortValue)?.label || 'Sorter'}
-                  </Text>
-                  <ChevronRight size={14} color="#63665F" />
-                </TouchableOpacity>
-
-                {showSortDropdown && (
-                  <View className="absolute top-full right-0 mt-1 bg-white border border-[#E6E7E1] rounded-lg z-50 shadow-sm min-w-40">
-                    {SORT_OPTIONS.map((option) => (
-                      <TouchableOpacity
-                        key={option.value}
-                        onPress={() => {
-                          setSortValue(option.value);
-                          setShowSortDropdown(false);
-                        }}
-                        className="px-3 py-2.5 border-b border-[#E6E7E1] flex-row items-center justify-between"
-                      >
-                        <Text className="text-[0.875rem] text-[#0B0B0B]">{option.label}</Text>
-                        {sortValue === option.value && (
-                          <Text className="text-[0.875rem] font-semibold text-[#2E6641]">✓</Text>
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* ── Category Filter Chips ───────────────────────────────– */}
-            {categoriesLoading ? (
-              <View className="py-4 items-center">
-                <ActivityIndicator color="#2E6641" size="small" />
-              </View>
-            ) : (
-              <View className="gap-2">
-                <Text className="text-[0.8125rem] font-medium text-[#63665F]">Kategorier</Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {/* All button */}
-                  <CategoryChip
-                    category={{ name: 'Alle' }}
-                    isSelected={selectedCategory === ''}
-                    onPress={() => handleCategoryToggle('')}
-                    showIcon={true}
-                  />
-
-                  {/* Category chips from backend */}
-                  {filterOptions?.categories?.map((cat) => (
-                    <CategoryChip
-                      key={cat._id}
-                      category={cat}
-                      isSelected={selectedCategory === cat.name}
-                      onPress={() => handleCategoryToggle(cat.name)}
-                      showIcon={true}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* ── Loading State ────────────────────────────────────────– */}
-            {isLoading && (
-              <View className="py-12 items-center justify-center">
-                <ActivityIndicator color="#2E6641" size="large" />
-                <Text className="mt-4 text-[0.875rem] text-[#63665F]">Søker etter oppdrag...</Text>
-              </View>
-            )}
-
-            {/* ── Error State ──────────────────────────────────────────– */}
-            {isError && !isLoading && (
-              <View className="bg-white rounded-2xl p-4 border border-[#E6E7E1] mb-4">
-                <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">
-                  Kunne ikke laste oppdrag
-                </Text>
-                <Text className="mt-1.5 text-[0.875rem] text-[#63665F]">
-                  Sjekk internettforbindelsen din og prøv igjen.
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    refetch();
-                  }}
-                  className="mt-4 py-2 px-4 bg-[#2E6641] rounded-lg"
-                >
-                  <Text className="text-white text-[0.875rem] font-semibold">Prøv igjen</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* ── Empty State ──────────────────────────────────────────– */}
-            {!isLoading && !isError && allJobs.length === 0 && (
-              <View className="bg-white rounded-2xl p-6 border border-[#E6E7E1] mb-4 items-center">
-                <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">
-                  Ingen oppdrag funnet
-                </Text>
-                <Text className="mt-1.5 text-[0.875rem] text-[#63665F] text-center">
-                  {searchText || selectedCategory
-                    ? 'Prøv å endre søket eller filteret ditt'
-                    : 'Det finnes ingen tilgjengelige oppdrag akkurat nå'}
-                </Text>
-                {(searchText || selectedCategory) && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      handleClearSearch();
-                      setSelectedCategory('');
-                    }}
-                    className="mt-4 py-2 px-4 bg-[#2E6641] rounded-lg"
-                  >
-                    <Text className="text-white text-[0.875rem] font-semibold">Fjern filtre</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-          </View>
-        }
-        scrollEnabled={true}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
+        ListHeaderComponent={renderHeader}
         ListFooterComponent={
           isFetchingNextPage ? (
-            <View className="py-8 items-center justify-center">
+            <View className="items-center justify-center py-8">
               <ActivityIndicator color="#2E6641" size="small" />
             </View>
           ) : null
         }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          !isLoading && !isError && allJobs.length === 0 ? (
+            <View className="mx-4 rounded-[24px] border border-[#E6E7E1] bg-white p-6">
+              <Text className="text-[1rem] font-semibold text-[#0B0B0B]">
+                Ingen oppdrag funnet
+              </Text>
+              <Text className="mt-2 text-[0.875rem] leading-relaxed text-[#63665F]">
+                {filters.searchText ||
+                filters.selectedCategories.length > 0 ||
+                filters.minPrice !== 0 ||
+                filters.maxPrice !== 100000 ||
+                filters.isUrgent ||
+                filters.selectedCountyCodes.length > 0 ||
+                filters.selectedMunicipalityCodes.length > 0 ||
+                filters.userLocation
+                  ? 'Pr�v et annet s�keord eller fjern noen filtrer.'
+                  : 'Det finnes ingen tilgjengelige oppdrag akkurat n�.'}
+              </Text>
+              {(filters.searchText ||
+                filters.selectedCategories.length > 0 ||
+                filters.minPrice !== 0 ||
+                filters.maxPrice !== 100000 ||
+                filters.isUrgent ||
+                filters.selectedCountyCodes.length > 0 ||
+                filters.selectedMunicipalityCodes.length > 0 ||
+                filters.userLocation) && (
+                <View className="mt-4">
+                  <Button
+                    label="Nullstill filtre"
+                    onPress={filters.resetAll}
+                  />
+                </View>
+              )}
+            </View>
+          ) : null
+        }
       />
+
+      {isError && !isLoading && (
+        <View className="absolute inset-x-4 top-24 rounded-[24px] border border-[#E6E7E1] bg-white p-6">
+          <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">
+            Kunne ikke laste oppdrag
+          </Text>
+          <Text className="mt-1 text-[0.875rem] text-[#63665F]">
+            Sjekk tilkoblingen din og pr�v igjen.
+          </Text>
+          <View className="mt-4">
+            <Button label="Pr�v igjen" onPress={() => refetch()} />
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }

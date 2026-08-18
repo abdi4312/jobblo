@@ -7,6 +7,18 @@ export type JobStatus = 'open' | 'closed' | 'awaiting_payment' | 'paid' | 'in_pr
 
 export type Equipment = 'utstyrfri' | 'delvis utstyr' | 'trengs utstyr';
 
+export interface JobPoster {
+  _id?: string;
+  name?: string;
+  companyName?: string;
+  avatarUrl?: string;
+  averageRating?: number;
+  verified?: boolean;
+  role?: string;
+  orgNumber?: string;
+  completedJobs?: number;
+}
+
 export interface JobLocation {
   type: string;
   coordinates: [number, number];
@@ -31,11 +43,12 @@ export interface TimeEntry {
 
 export interface Job {
   _id: string;
-  userId: string | null;
+  userId: JobPoster | string | null;
   title: string;
   description: string;
   price: number;
   hourlyRate?: number;
+  paymentType?: string;
   location: JobLocation;
   duration: JobDuration;
   categories: string[];
@@ -49,8 +62,12 @@ export interface Job {
   currentApplicants?: number;
   isLimitReached?: boolean;
   equipment: Equipment;
+  checklist?: Array<{ id: string; text: string; checked: boolean; checkedBy?: { name?: string }; checkedAt?: string }>;
   createdAt: string;
   updatedAt: string;
+  fromDate?: string;
+  toDate?: string;
+  views?: number;
   timeEntries?: TimeEntry[];
 }
 

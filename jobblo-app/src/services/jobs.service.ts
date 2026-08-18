@@ -1,5 +1,5 @@
 import apiClient from '../api/client';
-import type { JobsResponse, FetchJobsParams } from '../types/Jobs';
+import type { Job, JobsResponse, FetchJobsParams } from '../types/Jobs';
 
 /**
  * Jobs service layer for API calls to /api/services endpoint.
@@ -85,7 +85,8 @@ export const jobsService = {
    * Get a single job/service by ID.
    * @param jobId - The job ID to fetch
    */
-  async getJob(jobId: string) {
-    return apiClient.get(`/services/${jobId}`);
+  async getJob(jobId: string): Promise<Job> {
+    const response = await apiClient.get<{ data?: Job; job?: Job }>(`/services/${jobId}`);
+    return (response.data?.data ?? response.data?.job ?? response.data) as Job;
   },
 };
