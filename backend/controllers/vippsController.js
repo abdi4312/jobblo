@@ -113,8 +113,18 @@ exports.vippsCallback = async (req, res) => {
       'oauthProviders.providerId': profile.sub,
     });
 
+    let isNewUser = false;
+
     if (!user) {
-      let existingEmailUser = profile.email ? await User.findOne({ email: profile.email }) : null;
+      // Only consider an e-mail match when Vipps has not explicitly told us the
+      // address is unverified. Vipps does not always send `email_verified`; when the
+      // claim is absent this behaves exactly as before, so this is a guard rather
+      // than a change of flow. The wider question — whether matching on e-mail alone
+      // should ever silently attach a Vipps identity to a pre-existing password
+      // account — is deliberately left alone here; it needs an account-linking
+      // design, not a patch. See the Stage A report.
+      const emailIsUsable = profile.email && profile.email_verified !== false;
+      const existingEmailUser = emailIsUsable ? await User.findOne({ email: profile.email }) : null;
 
       if (existingEmailUser) {
         existingEmailUser.oauthProviders.push({
@@ -131,19 +141,51 @@ exports.vippsCallback = async (req, res) => {
           password: randomPassword,
           oauthProviders: [{ provider: 'vipps', providerId: profile.sub }],
         });
+        isNewUser = true;
       }
     }
 
-    await Subscription.create({
-      userId: user._id,
-
-      currentPlan: {
-        plan: 'Standard',
-        planType: 'private',
-        startDate: new Date(),
-        status: 'active',
+    /**
+     * Give the account a default subscription, but only if it does not already have
+     * one.
+     *
+     * This used to be an unconditional `Subscription.create(...)` sitting outside the
+     * `if (!user)` block, so it ran on EVERY Vipps login — not just at signup. A user
+     * who signed in ten times had ten Subscription rows. Every reader in the codebase
+     * (`checkSubscription`, `stripeController`, `services/stripe/provisioning`) looks
+     * the subscription up with `findOne({ userId })`, so which of those rows won was
+     * down to natural document order: a user who had upgraded could be served a stale
+     * free row and silently lose their paid entitlement and contact quota.
+     *
+     * `$setOnInsert` + `upsert` makes this idempotent in a single atomic operation:
+     * it writes only when no subscription exists, and touches nothing — plan, status,
+     * Stripe ids, history — when one already does. That is what protects a real paid
+     * subscription from being reset to the free default on the next login.
+     *
+     * The plan defaults mirror authController.register so a Vipps signup and an
+     * e-mail signup start on the same footing.
+     */
+    const isCompany = user.role === 'company';
+    await Subscription.findOneAndUpdate(
+      { userId: user._id },
+      {
+        $setOnInsert: {
+          userId: user._id,
+          currentPlan: {
+            plan: isCompany ? 'Start' : 'Standard',
+            planType: isCompany ? 'business' : 'private',
+            startDate: new Date(),
+            status: 'active',
+            autoRenew: false,
+          },
+        },
       },
-    });
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    if (isNewUser) {
+      console.log('Vipps signup created user %s', user._id);
+    }
     // 6️⃣ Clear session state
     if (req.session) delete req.session.vippsState;
 

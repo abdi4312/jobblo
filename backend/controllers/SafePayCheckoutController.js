@@ -9,7 +9,7 @@ const Review = require('../models/Review');
 const Chat = require('../models/ChatMessage');
 const { getStripe } = require('../config/stripe');
 const { resolveStripeCustomer } = require('../services/stripe/customers');
-const { notify } = require('../services/notifications');
+const { notify, emitToUser } = require('../services/notifications');
 const { normaliseReviewPhotos, MAX_REVIEW_PHOTOS } = require('../utils/reviewPhotos');
 
 const PAID_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed'];
@@ -738,12 +738,16 @@ exports.approveAndPayout = async (req, res) => {
         payload: { orderId: String(order._id), setupRequired: isSetupRequired },
       });
 
-      // Return success for the job approval itself, with payout warning
-      const io = req.app?.get('io');
-      if (io) {
-        io.to(`user_${order.providerId}`).emit('order_completed', { orderId: order._id, payoutPending: true });
-        io.to(`user_${order.customerId}`).emit('order_completed', { orderId: order._id });
-      }
+      // The approval itself succeeded even though the transfer did not, so both
+      // parties still get the completion event. Unlike the happy path above there is
+      // no `notify({ event: 'order_completed' })` on this branch, so these are the
+      // only delivery — not duplicates. Routed through `emitToUser` so they reach
+      // every room the user occupies rather than only the `user_<id>` spelling.
+      emitToUser(order.providerId, 'order_completed', {
+        orderId: String(order._id),
+        payoutPending: true,
+      });
+      emitToUser(order.customerId, 'order_completed', { orderId: String(order._id) });
 
       return res.status(200).json({
         message: 'Jobb godkjent',
@@ -775,12 +779,22 @@ exports.approveAndPayout = async (req, res) => {
       }),
     ]);
 
-    // ── Socket events ──────────────────────────────────────────────────────────
-    const io = req.app?.get('io');
-    if (io) {
-      io.to(`user_${order.providerId}`).emit('order_completed', { orderId: order._id, netProvider });
-      io.to(`user_${order.customerId}`).emit('order_completed', { orderId: order._id });
-    }
+    /**
+     * The socket emits that used to sit here are gone.
+     *
+     * Both notifications above already carry their lifecycle event (`payout_sent` to
+     * the provider, `order_completed` to the customer) and `notify` delivers it. This
+     * block emitted `order_completed` a second time to both parties over a raw
+     * `io.to()`, so the customer received the same event twice — two cache
+     * invalidations, and two of anything the client chooses to show for it.
+     *
+     * The provider now learns of completion through `payout_sent`, which is the more
+     * accurate event for their side anyway: it carries the amount.
+     */
+    emitToUser(order.providerId, 'order_completed', {
+      orderId: String(order._id),
+      netProvider,
+    });
 
     res.json({ message: 'Jobb godkjent og beløp lagt til saldo', orderId });
   } catch (err) {

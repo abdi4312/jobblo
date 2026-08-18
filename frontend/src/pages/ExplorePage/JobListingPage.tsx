@@ -1,4 +1,16 @@
 import { useState, useEffect } from 'react';
+
+/**
+ * Mirrors the canonical vocabulary in `backend/utils/serviceSort.js`.
+ * `value` is the stable API key; `label` is display text only.
+ */
+const EXPLORE_SORT_OPTIONS = [
+  { value: 'newest', label: 'Nyeste først' },
+  { value: 'price_low', label: 'Pris – lavest først' },
+  { value: 'price_high', label: 'Pris – høyest først' },
+  { value: 'relevant', label: 'Mest relevant' },
+] as const;
+
 import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import * as Icons from 'lucide-react';
 import { FileText, LayoutGrid, ShieldCheck, Star } from 'lucide-react';
@@ -232,6 +244,16 @@ export default function JobListingPage() {
     }
   }, [location.state]);
 
+  /**
+   * Sorting on the main browse page.
+   *
+   * This page had no sort control at all — the only sort UI lived on
+   * `/search/job`, so the feed most people land on could not be reordered. The
+   * values are the canonical API keys from `backend/utils/serviceSort.js`; the
+   * Norwegian text is display only and must never be sent as the query value.
+   */
+  const [sortValue, setSortValue] = useState('newest');
+
   const {
     data: jobsData,
     isLoading: jobsLoading,
@@ -240,6 +262,7 @@ export default function JobListingPage() {
     categories: selectedCategories,
     search: searchQuery,
     urgent: isUrgentOnly,
+    sort: sortValue,
     tab: 'Discover',
   });
   const { data: categoriesData } = useCategories();
@@ -448,6 +471,28 @@ export default function JobListingPage() {
             actionLabel="Se alle oppdrag"
             onAction={() => navigate('/search/job/all')}
           />
+
+          <div className="mb-5 flex items-center justify-end gap-2.5">
+            <label
+              htmlFor="explore-sort"
+              className="text-[0.8125rem] font-medium text-[#63665F]"
+            >
+              Sorter
+            </label>
+            <select
+              id="explore-sort"
+              data-testid="explore-sort"
+              value={sortValue}
+              onChange={(event) => setSortValue(event.target.value)}
+              className="h-10 rounded-xl border border-[#E6E7E1] bg-white px-3 text-[0.875rem] font-medium text-[#0B0B0B] transition-colors hover:border-[#2E6641]/45 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/20"
+            >
+              {EXPLORE_SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Two columns from the narrowest phone up — the cards carry no panel, so a
               pair fits side by side without either feeling squeezed, and a thumb sees

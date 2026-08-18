@@ -2,6 +2,7 @@ const Service = require('../models/Service');
 const JobRequest = require('../models/JobRequest');
 const Order = require('../models/Order');
 const mongoose = require('mongoose');
+const { resolveSort } = require('../utils/serviceSort');
 
 /** A user-supplied string is not a regex. Same escape the admin search already uses. */
 const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -217,17 +218,12 @@ exports.getAllServices = async (req, res) => {
     }
 
     // Sort field came straight from the query string, so any unindexed field could be
-    // forced into an in-memory sort. Whitelist to fields that are actually indexed or
-    // cheap to sort.
-    const SORTABLE_FIELDS = ['createdAt', 'price', 'views', 'updatedAt'];
-    let sortOption = { createdAt: -1 };
-    if (sort && typeof sort === 'string') {
-      const desc = sort.startsWith('-');
-      const field = desc ? sort.substring(1) : sort;
-      if (SORTABLE_FIELDS.includes(field)) {
-        sortOption = { [field]: desc ? -1 : 1 };
-      }
-    }
+    // forced into an in-memory sort. The whitelist that fixed that is still here — it
+    // just lives in utils/serviceSort.js now, next to the vocabulary the options
+    // endpoint advertises. The two used to be written out separately and had drifted
+    // completely apart: the picker offered `price_low`, this endpoint accepted only
+    // `price`, so every choice fell through to the default and sorting did nothing.
+    const { sort: sortOption } = resolveSort(sort);
 
     // `limit` was parsed with no ceiling, so `?limit=1000000` returned the whole
     // collection in one response. MAX_LIMIT matches utils/pagination.js, which the

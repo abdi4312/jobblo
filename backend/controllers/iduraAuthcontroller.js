@@ -1,3 +1,23 @@
+/**
+ * ⚠️  UNREACHABLE — INTENTIONALLY DISABLED. DO NOT WIRE THIS UP AGAIN AS-IS.
+ *
+ * `routes/auth.js` no longer routes to this controller; `/api/auth/idura/callback`
+ * answers 410 instead. The code is kept only as the starting point for the planned
+ * rebuild.
+ *
+ * Why it is disabled (all still present below):
+ *   - no `state` validation — CSRF protection is absent
+ *   - no `nonce`, no PKCE
+ *   - no `id_token` requested or verified: nothing proves the assertion is Idura's
+ *   - bespoke `POST /auth/token` body shape, not Idura's OIDC token endpoint
+ *   - links to an existing account on bare e-mail equality, then marks it verified
+ *   - stores the literal string 'oauth-user' in `password` instead of a bcrypt hash
+ *
+ * The rebuild is a server-side authorization-code + PKCE flow against Idura's
+ * discovery document, with `state`/`nonce` held in the session and the `id_token`
+ * verified before any account is touched. It must not request the `ssn` scope.
+ */
+
 const { createSession } = require('../utils/tokenUtils');
 const axios = require('axios');
 const User = require('../models/User');

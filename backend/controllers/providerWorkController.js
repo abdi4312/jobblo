@@ -9,7 +9,7 @@ const Notification = require('../models/Notification');
 const Dispute = require('../models/Dispute');
 const Chat = require('../models/ChatMessage');
 const Service = require('../models/Service');
-const { notify } = require('../services/notifications');
+const { notify, emitToUser } = require('../services/notifications');
 // stripe is lazily initialized only when needed (reconcile endpoint)
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -100,21 +100,34 @@ exports.startJob = async (req, res) => {
         await chat.save();
       }
     }
-    const notif = await notify({
+    /**
+     * `notify` both creates the tray entry and delivers it, and it emits the
+     * companion lifecycle event for us — so this no longer re-emits
+     * `new_notification` by hand.
+     *
+     * It used to. `notify` emits to the user's rooms, and the raw
+     * io.to('user_<id>').emit('new_notification') below it emitted to one of those
+     * same rooms again. socket.io only dedupes recipients within a single chained
+     * `.to().to().emit()`; two separate emits are two deliveries. Every start-job and
+     * ready-for-review therefore produced two tray entries, two toasts and two
+     * sounds for one event.
+     *
+     * `order_status_changed` still carries the status so a client can react without
+     * refetching just to learn it; `job_started` is the canonical lifecycle name.
+     */
+    await notify({
       userId: updated.customerId,
       type: 'order',
       content: 'Utføreren har startet oppdraget.',
       orderId: updated._id,
       senderId: userId,
+      event: 'job_started',
+      payload: { orderId: String(updated._id), status: 'in_progress' },
     });
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`user_${updated.customerId}`).emit('new_notification', notif);
-      io.to(`user_${updated.customerId}`).emit('order_status_changed', {
-        orderId: updated._id,
-        status: 'in_progress',
-      });
-    }
+    emitToUser(updated.customerId, 'order_status_changed', {
+      orderId: String(updated._id),
+      status: 'in_progress',
+    });
     // Sync service status
     await Service.findByIdAndUpdate(updated.serviceId, { status: 'in_progress' });
     res.json({ message: 'Oppdrag startet', order: updated });
@@ -279,6 +292,20 @@ exports.uploadEvidence = async (req, res) => {
         await chat.save();
       }
     }
+    /**
+     * Refresh the customer's screen without adding a tray entry.
+     *
+     * Proof-of-work photos land on the approval page, and a customer with that page
+     * open had no way to see them arrive. This is deliberately emitToUser rather than
+     * notify: a provider uploading four photos one at a time should move the page
+     * four times, not send four notifications.
+     */
+    emitToUser(order.customerId, 'evidence_uploaded', {
+      orderId: String(order._id),
+      evidenceType,
+      count: urls.length,
+    });
+
     res.json({ message: 'Bevis lastet opp', urls, order: updated });
   } catch (err) {
     res.status(500).json({ error: 'Serverfeil ved opplasting' });
@@ -381,18 +408,28 @@ exports.markReadyForReview = async (req, res) => {
         await chat.save();
       }
     }
-    const notif = await notify({
+    /**
+     * The single most important realtime event in the product: this is the moment the
+     * customer's "Godkjenn og utbetal" becomes available. It was emitted to nobody —
+     * no frontend listener carried this name — so the customer sat on the approval
+     * page looking at a stale screen until they reloaded.
+     *
+     * As in startJob above, the hand-rolled `new_notification` re-emit is gone; it was
+     * a second delivery of what `notify` had already sent.
+     */
+    await notify({
       userId: updated.customerId,
       type: 'order',
       content: 'Utføreren har levert jobben — se over og godkjenn.',
       orderId: updated._id,
       senderId: userId,
+      event: 'order_ready_for_review',
+      payload: { orderId: String(updated._id), status: 'ready_for_review' },
     });
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`user_${updated.customerId}`).emit('new_notification', notif);
-      io.to(`user_${updated.customerId}`).emit('order_ready_for_review', { orderId: updated._id });
-    }
+    emitToUser(updated.customerId, 'order_status_changed', {
+      orderId: String(updated._id),
+      status: 'ready_for_review',
+    });
     // Sync service status
     await Service.findByIdAndUpdate(updated.serviceId, { status: 'waiting_for_approval' });
     res.json({ message: 'Klar for gjennomgang', order: updated });

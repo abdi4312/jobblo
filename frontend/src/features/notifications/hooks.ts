@@ -10,6 +10,7 @@ import {
 import { useEffect } from 'react';
 import { initSocket } from '../../socket/socket';
 import { useUserStore } from '../../stores/userStore';
+import { ALL_LIFECYCLE_EVENTS, idFrom, type LifecyclePayload } from './orderEvents';
 
 export const useNotifications = (type?: string) => {
   const user = useUserStore((state) => state.user);
@@ -27,26 +28,32 @@ export const useNotifications = (type?: string) => {
 };
 
 /**
- * Order-state events that need to invalidate more than the notification tray.
+ * Keep an open order screen in step with the server.
  *
  * The notification itself is handled by `NotificationRealtime`; these are the companion
- * events the server emits alongside it (`event`/`payload` on `notify`), and they exist so
- * an open order page updates itself rather than showing stale state behind a fresh toast.
+ * lifecycle events the server emits alongside it, and they exist so an order page
+ * updates itself rather than showing stale state behind a fresh toast.
+ *
+ * Two things were wrong here and they cancelled each other out into silence:
+ *
+ *   1. The event list did not match what the server emits. It waited on
+ *      `new_order_request`, which nothing has ever emitted, and did not carry
+ *      `order_ready_for_review` — the single event that unlocks the customer's
+ *      "Godkjenn og utbetal" button. The customer sat on the approval page and had to
+ *      reload to find out the provider had finished.
+ *   2. Even for the events that did match, it invalidated `['orders']`, `['order']`,
+ *      `['myApplicants']` and `['jobRequests']` — none of which any order screen uses.
+ *      The live screens query `['safepay-checkout', id]`, `['provider-order', id]`,
+ *      `['dispute', id]` and `['order-reviews', id]`.
+ *
+ * Both lists now come from `./orderEvents`, which mirrors `backend/constants/orderEvents.js`.
+ *
+ * Invalidation is scoped to the order in the payload wherever one is present, so a
+ * dispute update on order A does not refetch order B. Only when a payload arrives
+ * without an id do the per-order keys get invalidated wholesale, and even then this
+ * never clears the cache — `queryClient.clear()` here would drop the user's profile,
+ * chat list and everything else along with it.
  */
-const ORDER_EVENTS = [
-  'order_approved',
-  'order_paid',
-  'order_started',
-  'order_completed',
-  'worker_selected',
-  'payout_sent',
-  'payout_failed',
-  'dispute_opened',
-  'dispute_resolved',
-  'new_job_request',
-  'new_order_request',
-] as const;
-
 export const useOrderApprovalSocket = (userId: string | undefined) => {
   const queryClient = useQueryClient();
 
@@ -55,17 +62,33 @@ export const useOrderApprovalSocket = (userId: string | undefined) => {
 
     const socket = initSocket();
 
-    const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      queryClient.invalidateQueries({ queryKey: ['order'] });
-      queryClient.invalidateQueries({ queryKey: ['myApplicants'] });
-      queryClient.invalidateQueries({ queryKey: ['jobRequests'] });
+    /** Lists that can change shape on any lifecycle event, regardless of which order. */
+    const invalidateLists = () => {
+      for (const key of [['orders'], ['order'], ['myApplicants'], ['jobRequests'], ['services']]) {
+        queryClient.invalidateQueries({ queryKey: key });
+      }
     };
 
-    ORDER_EVENTS.forEach((event) => socket.on(event, invalidate));
+    /** The per-order screens. Scoped when we know the id, broad only when we do not. */
+    const invalidateOrder = (orderId?: string) => {
+      const perOrder = ['safepay-checkout', 'provider-order', 'dispute', 'order-reviews'];
+      for (const prefix of perOrder) {
+        queryClient.invalidateQueries({
+          queryKey: orderId ? [prefix, orderId] : [prefix],
+        });
+      }
+    };
+
+    const handler = (payload: LifecyclePayload | undefined) => {
+      const orderId = idFrom(payload?.orderId);
+      invalidateOrder(orderId);
+      invalidateLists();
+    };
+
+    ALL_LIFECYCLE_EVENTS.forEach((event) => socket.on(event, handler));
 
     return () => {
-      ORDER_EVENTS.forEach((event) => socket.off(event, invalidate));
+      ALL_LIFECYCLE_EVENTS.forEach((event) => socket.off(event, handler));
     };
   }, [userId, queryClient]);
 };

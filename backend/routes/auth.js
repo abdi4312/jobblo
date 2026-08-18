@@ -1,4 +1,6 @@
-const { iduraCallback } = require('../controllers/iduraAuthcontroller');
+// Deliberately not imported: the Idura callback is disabled below and the controller
+// must not be reachable. Left as a pointer to the file rather than deleted.
+// const { iduraCallback } = require('../controllers/iduraAuthcontroller');
 const vippsController = require('../controllers/vippsController');
 const User = require('../models/User');
 const { setCookie } = require('../utils/setCookie.js');
@@ -158,7 +160,46 @@ router.get(
   }
 );
 
-router.get('/idura/callback', iduraCallback);
+/**
+ * Idura / BankID — INTENTIONALLY DISABLED.
+ *
+ * The implementation in controllers/iduraAuthcontroller.js is not a safe OIDC client
+ * and must not be reachable until it is rebuilt. Concretely, it:
+ *
+ *   - never validates `state` (the frontend sent the constant 'idura_login', so there
+ *     was no CSRF protection at all),
+ *   - sends no `nonce` and performs no PKCE,
+ *   - never requests or verifies an `id_token`, so nothing proves the identity
+ *     assertion came from Idura,
+ *   - exchanges the code through a bespoke `POST /auth/token` shape that is not
+ *     Idura's OIDC token endpoint,
+ *   - links to any pre-existing account whose e-mail merely matches the profile
+ *     e-mail, and then sets `verified: true` / `accountStatus: 'verified'` on it —
+ *     an account-takeover path,
+ *   - writes the literal string 'oauth-user' into `password` instead of a hash.
+ *
+ * Returning 410 rather than deleting the route: a bare 404 is indistinguishable from
+ * a deploy or routing mistake, and an explicit, asserted response is what the
+ * regression test in __tests__/iduraDisabled.test.js pins down. The controller file
+ * is deliberately left in the tree — this is a temporary stop, not a removal. The
+ * replacement is a real OIDC authorization-code + PKCE flow driven server-side; see
+ * the Stage A audit for the plan.
+ *
+ * Do not re-enable by restoring this line. Re-enable by replacing the controller.
+ */
+const IDURA_DISABLED_MESSAGE =
+  'BankID-innlogging er midlertidig utilgjengelig. Bruk e-post, passord eller Vipps.';
+
+router.all('/idura/callback', (req, res) =>
+  res.status(410).json({ error: IDURA_DISABLED_MESSAGE, code: 'IDURA_DISABLED' })
+);
+
+// Also stop the initiation path, in case a client or bookmark points at it. There is
+// no server-side initiator today (the old frontend built the authorize URL itself),
+// so this exists to make the whole surface answer consistently.
+router.all('/idura', (req, res) =>
+  res.status(410).json({ error: IDURA_DISABLED_MESSAGE, code: 'IDURA_DISABLED' })
+);
 router.get('/vipps', vippsController.redirectToVipps);
 router.get('/vipps/callback', vippsController.vippsCallback);
 
