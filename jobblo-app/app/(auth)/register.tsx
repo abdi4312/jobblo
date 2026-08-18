@@ -115,7 +115,7 @@ export default function RegisterScreen() {
           orgNumber: formData.orgNumber,
         }),
       },
-      { onSuccess: () => router.replace('/(app)/' as any) }
+      { onSuccess: () => router.replace('/(app)') }
     );
   };
 

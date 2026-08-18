@@ -1,0 +1,84 @@
+/**
+ * Job/Service types mirroring the Jobblo backend service model.
+ * Used for home page job listings and discovery.
+ */
+
+export type JobStatus = 'open' | 'closed' | 'awaiting_payment' | 'paid' | 'in_progress' | 'completed' | 'pending' | 'waiting_for_approval' | 'cancelled' | 'expired' | 'draft';
+
+export type Equipment = 'utstyrfri' | 'delvis utstyr' | 'trengs utstyr';
+
+export interface JobLocation {
+  type: string;
+  coordinates: [number, number];
+  address: string;
+  city: string;
+}
+
+export interface JobDuration {
+  value?: number;
+  unit: 'minutes' | 'hours' | 'days';
+}
+
+export interface TimeEntry {
+  userId: string;
+  hours: number;
+  date: string;
+  note: string;
+  _id: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Job {
+  _id: string;
+  userId: string | null;
+  title: string;
+  description: string;
+  price: number;
+  hourlyRate?: number;
+  location: JobLocation;
+  duration: JobDuration;
+  categories: string[];
+  images: string[];
+  urgent: boolean;
+  promoted?: boolean;
+  favCount?: number;
+  status: JobStatus;
+  tags: string[];
+  maxApplicants?: number;
+  currentApplicants?: number;
+  isLimitReached?: boolean;
+  equipment: Equipment;
+  createdAt: string;
+  updatedAt: string;
+  timeEntries?: TimeEntry[];
+}
+
+export interface JobsResponse {
+  data: Job[];
+  pagination: {
+    total: number;
+    totalPages: number;
+    page: number;
+    limit: number;
+  };
+}
+
+export interface FetchJobsParams {
+  page?: number;
+  limit?: number;
+  categories?: string[];
+  locations?: string[];
+  countyCodes?: string[];
+  municipalityCodes?: string[];
+  areaCodes?: string[];
+  search?: string;
+  sort?: string;
+  userId?: string;
+  urgent?: boolean;
+  minPrice?: number;
+  maxPrice?: number;
+  lat?: number;
+  lng?: number;
+  radius?: number;
+}

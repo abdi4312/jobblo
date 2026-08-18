@@ -1,24 +1,9 @@
 import { Redirect, Tabs } from 'expo-router';
-import { Home, Search, PlusCircle, MessageCircle, User } from 'lucide-react-native';
+import { Home, Search } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
-import { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
 
 export default function AppLayout() {
-    const { isAuthenticated, hydrate } = useAuthStore();
-    const [hydrated, setHydrated] = useState(false);
-
-    useEffect(() => {
-        hydrate().finally(() => setHydrated(true));
-    }, []);
-
-    if (!hydrated) {
-        return (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EFF0EA' }}>
-                <ActivityIndicator color="#2E6641" size="large" />
-            </View>
-        );
-    }
+    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
     if (!isAuthenticated) {
         return <Redirect href="/(auth)/login" />;
@@ -40,38 +25,11 @@ export default function AppLayout() {
         >
             <Tabs.Screen
                 name="index"
-                options={{
-                    title: 'Hjem',
-                    tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
-                }}
+                options={{ title: 'Hjem', tabBarIcon: ({ color, size }) => <Home size={size} color={color} /> }}
             />
             <Tabs.Screen
                 name="explore"
-                options={{
-                    title: 'Utforsk',
-                    tabBarIcon: ({ color, size }) => <Search size={size} color={color} />,
-                }}
-            />
-            <Tabs.Screen
-                name="post"
-                options={{
-                    title: 'Legg ut',
-                    tabBarIcon: ({ color, size }) => <PlusCircle size={size} color={color} />,
-                }}
-            />
-            <Tabs.Screen
-                name="messages"
-                options={{
-                    title: 'Meldinger',
-                    tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} />,
-                }}
-            />
-            <Tabs.Screen
-                name="profile"
-                options={{
-                    title: 'Profil',
-                    tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
-                }}
+                options={{ title: 'Utforsk', tabBarIcon: ({ color, size }) => <Search size={size} color={color} /> }}
             />
         </Tabs>
     );

@@ -104,7 +104,9 @@ export default function LoginScreen() {
 
     loginMutation.mutate(
       { email: form.email.trim().toLowerCase(), password: form.password },
-      { onSuccess: () => router.replace('/(app)/' as any) }
+      {
+        onSuccess: () => router.replace('/(app)'),
+      }
     );
   };
 

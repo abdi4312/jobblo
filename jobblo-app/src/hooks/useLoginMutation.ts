@@ -14,8 +14,9 @@ export function useLoginMutation() {
 
   return useMutation<LoginResponse, Error, LoginRequest>({
     mutationFn: loginUser,
-    onSuccess: (data) => {
-      useAuthStore.getState().login(data.accessToken, data.user);
+    onSuccess: async (data) => {
+      // Wait for auth store to persist state before returning
+      await useAuthStore.getState().login(data.accessToken, data.user);
       queryClient.setQueryData(queryKeys.auth.profile, data.user);
     },
   });
