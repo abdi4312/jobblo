@@ -3,9 +3,10 @@
 ## 📋 Quick Reference
 
 **For comprehensive Search/Filter documentation**, see [MOBILE_FILTER_FLOW.md](MOBILE_FILTER_FLOW.md):
+
 - Complete filter feature list (search, categories, price, urgent, location, sort)
 - Interactive price filter with Norwegian formatting
-- TanStack Query integration and cache strategy  
+- TanStack Query integration and cache strategy
 - Component hierarchy and dependencies
 - API contract and query parameters
 - useSearchFilters hook and state management
@@ -189,7 +190,7 @@ if (categories.length > 0) queryParams.category = categories.join(',');
 - ⬜ Remaining Post Job Steps
 - ⬜ My Jobs
 - ⬜ Job Management
-- ⬜ Applicants
+- ✅ Mine søkere overview
 - ⬜ Applicant Details
 - ⬜ Select Provider
 - ⬜ Chat List
@@ -211,6 +212,325 @@ if (categories.length > 0) queryParams.category = categories.join(',');
 - ⬜ Settings
 - ⬜ Account
 - ⬜ Support
+
+## Søkere og søknader overview
+
+The mobile overview uses one shared shell with two tabs:
+
+```text
+Søkere og søknader
+├── Mine søkere
+│   ↓
+│   useMyApplicantsOverview
+│   ↓
+│   applicants.service
+│   ↓
+│   GET /api/applicants/my/overview
+│
+└── Mine søknader
+   ↓
+   useMyApplications
+   ↓
+   applications.service
+   ↓
+   GET /api/my-applications
+```
+
+### Mine søkere
+
+The owner overview uses the authenticated `GET /api/applicants/my/overview` response directly through TanStack Query. The response is an array of `ApplicantOverviewService` values with:
+
+- `_id`, `title`, `price`, `status`, `location`
+- `applicantCount`, `applicantAvatars`, `createdAt`, `updatedAt`, `lastActivity`
+- `categories`, `fromDate`, `toDate`
+- `selectedWorker` with `_id`, `name`, and optional `avatarUrl`
+- `order` with `_id`, `status`, `paymentStatus`, and optional `agreedPrice`
+
+Header stats are derived from the response: `totalApplicants` sums `applicantCount`, while `needsAttention` counts services with applicants and no `selectedWorker`. Search is client-side over title, selected worker name, and categories. Application status filters are only rendered on Mine søknader.
+
+Each service card shows the Briefcase icon plate, service status, the `Velg utfører` action badge when `applicantCount > 0 && !selectedWorker`, title, created date, city, price, up to three applicant avatars, the correctly pluralized applicant count, and the selected-worker row when present. The card navigates to the mobile `/job-applicants/[serviceId]` detail route.
+
+Owner loading uses the reusable overview row skeleton. Request failures use `Kunne ikke laste`, the server-connection explanation, and `Prøv igjen`. Empty owner data uses `Ingen søkere ennå`; a client-side search miss uses `Ingen treff`.
+
+### Implementation map
+
+- Screen: `app/(app)/my-applications.tsx`
+- Shared tabs: `src/components/domain/OverviewTabs.tsx`
+- Owner card: `src/components/domain/ApplicantServiceCard.tsx`
+- Status primitive: `src/components/domain/ServiceStatusBadge.tsx`
+- Avatar stack: `src/components/domain/ApplicantAvatarStack.tsx`
+- Loading row: `src/components/domain/ApplicantOverviewSkeleton.tsx`
+- Query: `src/hooks/useMyApplicantsOverview.ts`
+- Service: `src/services/applicants.service.ts`
+- Types: `src/types/Applicants.ts`
+- Query key: `queryKeys.applicants.overview`
+
+Provider selection, SafePay, Contract, Chat, and all downstream flows remain outside the owner overview implementation.
+
+## Job Applicants detail
+
+### Flow
+
+```text
+Mine søkere
+↓
+tap service card
+↓
+app/(app)/job-applicants/[serviceId].tsx
+↓
+useApplicants(serviceId, sort, filter)
+↓
+src/services/applicants.service.ts
+↓
+GET /api/applicants/:serviceId
+```
+
+The endpoint verifies that the authenticated user owns the service. The mobile screen preserves separate error states for unauthorized access, a missing job, and server/network failure rather than treating them as an empty applicant list.
+
+The typed response contains:
+
+- `service`: `_id`, `title`, `price`, `location`, `status`, `date`, and `duration`
+- `applicants`: request `_id`, `status`, `message`, `appliedAt`, `favorite`, `archived`, and the populated applicant profile
+- applicant profile: `_id`, `name`, optional `avatarUrl`, `verified`, `skills`, `locations`, `rating`, `reviewCount`, `completedJobs`, and nullable `responseRate`
+- `activeOrder`: nullable `_id` and `status`
+
+Sort values are `createdAt`, `rating`, `completedJobs`, and `favorites`. Filter values are `notArchived`, `favorites`, and `archived`. They are sent as query parameters through the service layer and cached with `queryKeys.applicants.detail({ serviceId, sort, filter })`.
+
+The detail card shows only backend-backed data: avatar or initials fallback, verified state, skills, rating, review count, completed jobs, response rate, locations, application message, applied date, application status, favorite state, and archived state. Favorite, archive, and decline use their existing PATCH endpoints and invalidate the applicant-detail query family. A decline error with status 409 is surfaced as an active-contract warning.
+
+The response `activeOrder` prevents duplicate contract creation and changes the action to the current existing-order destination: `Gå til betaling`, `Betalt`, `Se godkjenning`, or `Se aktiv kontrakt`. Without an active order, `Velg og start SafePay` calls `POST /api/safepay/create-contract` with `serviceId`, `applicantId`, and `requestId`, then navigates to the checkout boundary using the returned `orderId`.
+
+### Job Applicants implementation map
+
+- Route: `app/(app)/job-applicants/[serviceId].tsx`
+- Card: `src/components/domain/ApplicantCard.tsx`
+- Query hook: `src/hooks/useApplicants.ts`
+- Service: `src/services/applicants.service.ts`
+- Types: `src/types/Applicants.ts`
+- Query keys: `queryKeys.applicants.detailRoot` and `queryKeys.applicants.detail`
+- Selector: `src/components/ui/Select.tsx`
+  Compare section: `src/components/domain/ApplicantCompareSection.tsx`
+  SafePay sections: `src/components/domain/SafePayProgressSteps.tsx`
+  Chat mutation: `src/hooks/useCreateOrGetChat.ts`
+
+Favorite, archive, and decline remain on the detail page. Compare is local-only and limited to three applicants. `Send melding` calls `POST /api/chats/create` with `{ providerId: applicantId, serviceId }`, disables while pending, and navigates to `/messages/:chatId` on success.
+
+SafePay checkout, payment status, approval, contract view, chat UI, provider work, and all later lifecycle screens are navigation boundaries only and remain the next implementation scope.
+
+## SafePay Checkout
+
+```text
+Job Applicants
+↓
+Velg og start SafePay
+↓
+POST /api/safepay/create-contract
+↓
+order.awaiting_payment + orderId
+↓
+app/(app)/safepay/checkout/[orderId].tsx
+↓
+useSafePayCheckout(orderId)
+↓
+GET /api/safepay-checkout/details/:orderId
+↓
+POST /api/safepay-checkout/create-session
+↓
+Stripe browser checkout
+↓
+GET /api/safepay-checkout/status/:sessionId
+↓
+server confirmation / webhook
+↓
+order.paid + service.paid
+↓
+customer waits for provider
+↓
+provider sees paid and can start
+```
+
+**STATIC VERIFIED — MANUAL STRIPE RUNTIME REQUIRED**
+
+Contract selection sends `{ serviceId, applicantId, requestId }` as three non-empty string IDs. The backend creates the order, accepts the selected application, declines other pending applications, marks the service `awaiting_payment`, and links the chat when available. Mobile does not duplicate those side effects. A successful response must contain a non-empty string `orderId` before checkout navigation.
+
+The checkout response is typed as `{ order, calculation }`. `order` contains the populated service, customer, provider, status, payment status, agreed price, and checklist data. `calculation` is rendered directly from the backend as `basePrice`, `fee`, `total`, and `providerNet`; the mobile UI does not recalculate payment values.
+
+The screen handles invalid orders, missing contracts, unauthorized access, server errors, deleted services, customer view, provider view, and unrelated-user access. Providers see `Betaling håndteres av oppdragsgiver` and a boundary to their order; unrelated users see only `Ikke tilgang` without contract or payment data.
+
+The customer payment flow is:
+
+```text
+Payment CTA
+↓
+useCreateSafePaySessionMutation
+↓
+POST /api/safepay-checkout/create-session
+↓
+backend-provided Stripe URL
+↓
+Linking.openURL(url)
+↓
+app becomes active
+↓
+refetch checkout details and payment status
+```
+
+The response supports `{ url }` and `{ url, reused: true }`; a reused open Stripe session is valid and is opened directly. A missing URL and backend errors are shown to the customer; a `409` refetches checkout details. Payment is never marked paid locally. Settled state is read from `paymentStatus` and server-owned paid lifecycle statuses.
+
+The backend builds Stripe success and cancel URLs from `FRONTEND_URL`, so mobile does not claim a native deep-link return. Returning to or resuming the app refetches server state. The canonical confirmation path is `GET /api/safepay-checkout/status/:sessionId`, which calls the shared idempotent confirmation path; the Stripe webhook can confirm the same session independently. Mobile does not call the separate order-level `POST /api/safepay/orders/:orderId/reconcile-payment` endpoint.
+
+### SafePay Checkout implementation map
+
+- Route: `app/(app)/safepay/checkout/[orderId].tsx`
+- Public runtime URL: `/safepay/checkout/:orderId` (the `(app)` group is not part of the URL)
+- Query and mutation hook: `src/hooks/useSafePayCheckout.ts`
+- Service: `src/services/safepay.service.ts`
+- Types: `src/types/SafePay.ts`
+- Query key: `queryKeys.safepay.checkout(orderId)`
+- Sections: `src/components/domain/SafePayCheckoutSections.tsx`
+
+## SafePay Success / Payment Verification
+
+The canonical mobile route is `app/(app)/safepay/success.tsx`. The old dynamic
+`app/(app)/safepay/success/[orderId].tsx` path now forwards to it, so there is one payment-status implementation.
+
+```text
+SafePay Success
+├── session_id
+│   ↓
+│   useSafePaySessionStatus
+│   ↓
+│   GET /api/safepay-checkout/status/:sessionId
+│
+└── orderId
+   ↓
+   useSafePayCheckout
+   ↓
+   GET /api/safepay-checkout/details/:orderId
+```
+
+The screen derives only four states: `verifying`, `paid`, `pending`, and `unverified`. A session is paid only when the backend status response says `payment_status: 'paid'`; an order fallback is paid only when `paymentStatus` is `paid` or the exact current SafePay Success statuses are `paid`, `in_progress`, `ready_for_review`, or `completed`. The backend status endpoint owns `confirmPaidSession`, idempotency, Payment creation, notifications, and order updates. Mobile performs none of those side effects and never sets paid state locally.
+
+Without a session ID, a valid `orderId` is sufficient for server-backed verification. When the status response supplies an `orderId`, it is reused for the checkout-details query. Pending state shows `Betalingen er ikke fullført`, `Sjekk på nytt`, and `Gå til betaling`; unverified state never claims that payment failed. `alreadyConfirmed: true` is treated as a successful reconciliation result.
+
+On server confirmation, the order and service become `paid`; payment records, chat system messages, notifications, and socket events remain backend-owned. The mobile app only invalidates checkout, applicant, overview, application, and provider-order caches.
+
+Paid success uses SafePay step 3, the customer/provider-specific explanation, SafePay protection copy, and role-aware continuation: providers get `Gå til aktiv jobb`, customers wait while the order is `paid` or `in_progress`, and customers get approval-boundary actions only for `ready_for_review` or `completed`. The combined overview CTA selects `mine-søkere` for customers and `mine-søknader` for providers.
+
+Stripe currently redirects to web URLs generated from `FRONTEND_URL`, not directly to Expo. The mobile checkout opens the backend URL externally; returning to the app refetches server state. No deep link or local payment success is invented. SafePay Approval remains a separate boundary.
+
+## SafePay Approval
+
+The canonical customer route is `app/(app)/safepay/approval/[orderId].tsx` and resolves to `/safepay/approval/:orderId` at runtime.
+
+The detail query remains `GET /api/safepay-checkout/details/:orderId`, and the customer approval screen is server-driven. The customer sees provider proof-of-work before approval, including the completion note, before/after image grids, and safe PDF tiles that open via native URL handling. If there is no evidence at all, the screen shows the neutral empty-state copy while still allowing approval when the server status is `ready_for_review` and no active dispute exists.
+
+Checklist edits are restricted to the exact backend lifecycle window: `paid`, `in_progress`, and `ready_for_review`, and they are locked while an active dispute exists. On a `409` conflict, the screen refetches the server order and surfaces the backend-safe lock message without keeping stale optimistic state.
+
+The review form includes the full customer rating set: `overall` required, optional `punctuality`, `quality`, `communication`, and `tidiness`, with comment length capped at 1000 characters. `recommendWorker` remains user-editable via a native switch, and the final `approve` request sends Cloudinary review-photo URLs rather than base64. The final payload is:
+
+```json
+{
+  "orderId": "...",
+  "ratings": {
+    "overall": 5,
+    "punctuality": 4,
+    "quality": 5,
+    "communication": 4,
+    "tidiness": 5
+  },
+  "comment": "...",
+  "photos": ["https://..."],
+  "recommendWorker": true
+}
+```
+
+On successful approval, the screen presents either the normal payout success state (`Jobben er godkjent`) or the payout-warning state (`Godkjent — men utbetalingen stoppet`) with the backend warning text and the `Ikke utbetalt ennå` status label. Reopening an already-completed order renders the completed summary from the server status instead of relying on local mutation success.
+
+### Final approval and payout result
+
+**STATIC VERIFIED — MANUAL STRIPE/PAYOUT REQUIRED**
+
+```text
+Provider: ready_for_review
+↓
+Customer: SafePay Approval
+↓
+server proof-of-work and checklist data
+↓
+customer review and remote review-photo URLs
+↓
+POST /api/safepay-checkout/approve
+↓
+order.completed + service.completed
+├── payout success → neutral completed state plus backend payout notification
+└── payoutWarning → approval still completed, payout remains pending
+```
+
+The approval mutation invalidates `safepay.checkout(orderId)`, `providerOrders.detail/order`, `providerOrders.reviews`, `applicants.overview`, applicant detail, applications, and the auth profile key. A lost approval response refetches checkout details before deciding whether to show completed or leave a deliberate retry available; it never retries approval automatically. Both customer and provider final screens derive completion from the server order state.
+
+## Provider Active Job / Provider Work
+
+The existing provider-order boundary is now the real mobile Provider Work page:
+
+```text
+SafePay paid
+↓
+/provider/orders/:orderId
+↓
+useProviderOrder(orderId)
+↓
+GET /api/safepay/orders/:orderId
+```
+
+### Provider paid-to-review lifecycle
+
+**STATIC VERIFIED — MANUAL DEVICE REQUIRED for image/PDF runtime upload**
+
+| Transition | Role | Route | Endpoint | Server before | Server after | Targeted invalidation |
+| --- | --- | --- | --- | --- | --- | --- |
+| Start job | Provider | `/provider/orders/:orderId` | `POST /api/safepay/orders/:orderId/start` | `paid`, payment `paid` | Order `in_progress`, service `in_progress` | Provider order, checkout, applications, applicant detail, applicant overview |
+| Provider checklist | Provider | `/provider/orders/:orderId` | `PATCH /api/safepay/orders/:orderId/provider-checklist/:itemId` | `paid`, `in_progress`, or `ready_for_review` | Server checklist fields updated | Same targeted lifecycle caches |
+| Evidence/note | Provider | `/provider/orders/:orderId` | `POST /api/safepay/orders/:orderId/evidence` | `paid` or `in_progress` | Server evidence URLs and optional completion note | Same targeted lifecycle caches |
+| Remove evidence | Provider | `/provider/orders/:orderId` | `DELETE /api/safepay/orders/:orderId/evidence` | `paid` or `in_progress` | Server evidence URL removed | Same targeted lifecycle caches |
+| Ready for review | Provider | `/provider/orders/:orderId` | `POST /api/safepay/orders/:orderId/ready-for-review` | `in_progress`, payment `paid` | Order `ready_for_review`, service `waiting_for_approval` | Same targeted lifecycle caches |
+
+The provider screen never assigns lifecycle status locally. Start, checklist, evidence, deletion, and ready-for-review mutations all refetch the server-owned provider order and invalidate the relevant application, applicant overview/detail, and SafePay checkout keys. The customer’s next server-backed action is `/safepay/approval/:orderId` once the order is `ready_for_review`.
+
+Evidence uses React Native multipart parts with `{ uri, name, type }`. Picker selection is capped at 10 files per evidence type after accounting for existing server files; each file is checked against the 10 MB limit and JPEG, PNG, WebP, and PDF MIME types. Before and after counts remain independent. Evidence and destructive controls are hidden after review lock.
+
+The page uses `queryKeys.providerOrders.detail(orderId)` and typed `ProviderOrderResponse` data containing `order`, `calculation`, `isProvider`, `isCustomer`, and `activeDispute`.
+
+Lifecycle actions remain server-owned:
+
+- `paid` → `POST /api/safepay/orders/:orderId/start` → `in_progress`
+- `paid` / `in_progress` → `PATCH /api/safepay/orders/:orderId/provider-checklist/:itemId`
+- `paid` / `in_progress` → `POST /api/safepay/orders/:orderId/evidence` with `before` or `after`
+- `paid` / `in_progress` → `DELETE /api/safepay/orders/:orderId/evidence`
+- `in_progress` → `POST /api/safepay/orders/:orderId/ready-for-review` → `ready_for_review`
+
+The mobile page uses Expo Image Picker and Document Picker for native evidence selection. It sends real URI, filename, and MIME type values as multipart data, respects the backend’s 10 MB and 10-files-per-type limits, renders before/after evidence, and locks evidence after review starts. No browser `File`, `FileList`, object URLs, or local lifecycle status mutation is used.
+
+Provider status copy matches the current web semantics: payment waiting, paid and ready to start, job in progress, reported finished, completed, disputed, refunded, and cancelled. Active disputes block start and ready-for-review and show the dispute state. Provider dispute creation uses `/api/safepay/contract/:orderId/dispute`. Completed orders expose the provider review form through `/api/orders/:orderId/review` and `/api/reviews`.
+
+The canonical mobile provider route is `app/(app)/provider/orders/[orderId].tsx`, with public runtime URL `/provider/orders/:orderId`. SafePay Success, Checkout, and Mine søknader provider actions target this same route. Customer approval remains the next separate flow.
+
+### Provider Work implementation map
+
+- Route: `app/(app)/provider/orders/[orderId].tsx`
+- Query/mutations: `src/hooks/useProviderOrder.ts`
+- Service: `src/services/providerWork.service.ts`
+- Types: `src/types/ProviderOrder.ts`
+- Query keys: `queryKeys.providerOrders.detail`, `queryKeys.disputes.byOrder`, `queryKeys.providerOrders.reviews`
+- Native dependencies: `expo-image-picker`, `expo-document-picker`
+
+### SafePay Success implementation map
+
+- Canonical route: `app/(app)/safepay/success.tsx`
+- Legacy redirect: `app/(app)/safepay/success/[orderId].tsx`
+- Hook: `src/hooks/useSafePayCheckout.ts`
+- Service: `src/services/safepay.service.ts`
+- Status key: `queryKeys.safepay.status(sessionId)`
 
 ## Job Details
 
@@ -883,3 +1203,466 @@ State synchronization:
 - verified Home remains unchanged (still uses normal useJobs for non-paginated queries)
 - verified category icon system unchanged (CategoryChip, getCategoryIcon, useCategories all shared)
 - TypeScript compilation passes: zero errors
+
+---
+
+## My Applications / Mine søknader
+
+**Route**: `app/(app)/my-applications.tsx`
+
+**Accessible from**: app tab bar as "Mine søknader"
+
+### My Applications Flow Overview
+
+```
+Mine søknader tab
+↓
+useMyApplications (TanStack Query)
+↓
+applications.service.ts → getMyApplications()
+↓
+apiClient (axios) → GET /api/my-applications
+↓
+Backend: myApplicationsController.getMyApplications
+↓
+ApplicationCard + ApplicationStatusBadge + ApplicationFlowSteps
+↓
+optional withdraw via Dialog + useWithdrawApplicationMutation
+↓
+applications.service.ts → withdrawApplication()
+↓
+apiClient (axios) → DELETE /api/my-applications/:requestId
+```
+
+### My Applications API Contract
+
+**Response**:
+
+- `applications: MyApplication[]`
+- `pagination: { page, limit, total, pages }`
+
+**Important backend naming**:
+
+- `customerId` on JobRequest is the applicant (worker)
+- `providerId` is the job owner/poster
+
+**Status filters**:
+
+- `''` → Alle
+- `pending` → Venter
+- `accepted` → Valgt
+- `declined` → Avslått
+
+### Components
+
+- `src/hooks/useMyApplications.ts`
+- `src/components/domain/ApplicationCard.tsx`
+- `src/components/domain/ApplicationStatusBadge.tsx`
+- `src/components/domain/ApplicationFlowSteps.tsx`
+- `src/components/ui/Dialog.tsx`
+
+### Apply to Job
+
+**Route**: `app/(app)/jobs/[id].tsx` (integrated into Job Details screen)
+
+**Accessible from**: Job Details screen via "Søk på oppdraget" CTA button at bottom
+
+### Apply Flow Overview
+
+```
+Job Details Screen
+↓ (user clicks "Søk på oppdraget")
+ApplyModal (centered modal dialog)
+↓ (user enters optional message, clicks "Send forespørsel")
+useApplyMutation (TanStack Query mutation)
+↓
+applications.service.ts → applyToJob()
+↓
+apiClient (axios) → POST /api/orders/request
+↓
+Backend: createJobRequest controller
+↓ (success or error)
+Cache invalidation (job detail + applications list)
+↓
+Modal closes, success/error message shown
+```
+
+### Apply Modal Component
+
+**File**: `src/components/domain/ApplyModal.tsx`
+
+**Props**:
+
+- `visible: boolean` - modal open/closed state
+- `onClose: () => void` - callback when closing
+- `onSubmit: (payload) => void` - callback when submitting
+- `jobTitle?: string` - job title for context display
+- `isLoading?: boolean` - submission in progress
+- `error?: string | null` - error message to display
+
+**Features**:
+
+- Centered modal card with dark backdrop overlay matching the web dialog
+- Message field (textarea): optional, max 500 characters
+- Character counter: "X/500"
+- Simple inline job title text below the header, matching web
+- Compact error block for validation/API errors
+- Submit button: "Send forespørsel" (disabled while loading, when over char limit)
+- Cancel button: "Avbryt" (disabled while loading)
+- No visible Cmd/Ctrl helper text
+- Built with reusable `Dialog` primitive and web-parity layout modeled on `frontend/src/components/job/OrderRequestModal.tsx`
+
+### Apply Mutation Hook
+
+**File**: `src/hooks/useApplyMutation.ts`
+
+**Returns TanStack Query mutation with**:
+
+- `mutate(payload)`: submit application
+- `isPending`: submission in progress
+- `isError`: submission failed
+- `error`: error object (with response data)
+
+**Cache invalidation on success**:
+
+- Invalidates `queryKeys.applications.all` (my applications list)
+- Invalidates `queryKeys.jobs.detail(jobId)` (job detail to update CTA state)
+
+**Error handling** (in Job Details onError callback):
+
+- 403 with isDelayed=true: cooldown timer message
+- 402: contact limit message
+- Other: generic error from response
+
+### Applications Service
+
+**File**: `src/services/applications.service.ts`
+
+**Functions**:
+
+1. **applyToJob(payload)**
+   - POST /api/orders/request
+   - Payload: `{ serviceId: string, message?: string }`
+   - Returns: JobRequest with `chatId`
+   - Auth: required (via apiClient interceptor)
+
+2. **getMyJobRequests()**
+   - GET /api/orders/requests/my
+   - Returns: JobRequest[]
+   - Not used in MVP but available for future My Applications screen
+
+3. **updateJobRequestStatus(requestId, status)**
+   - PATCH /api/orders/request/:id
+   - Payload: `{ status: 'accepted' | 'declined' }`
+   - For provider (job owner) only
+   - Not called in mobile MVP (applies via web)
+
+### Application Types
+
+**File**: `src/types/Application.ts`
+
+```typescript
+interface JobRequest {
+  _id: string;
+  serviceId: string | { _id: string; title: string };
+  customerId: string | { _id: string; name: string };
+  providerId: string;
+  status: 'pending' | 'accepted' | 'declined';
+  message?: string;
+  chatId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface CreateJobRequestPayload {
+  serviceId: string;
+  message?: string;
+}
+
+interface ApplyError {
+  error?: string;
+  isDelayed?: boolean;
+  unlockAt?: string;
+  paymentRequired?: boolean;
+  upgradeRequired?: boolean;
+  limit?: number;
+  usage?: number;
+  perContactPrice?: number;
+}
+```
+
+### Job Details Integration
+
+**File**: `app/(app)/jobs/[id].tsx`
+
+**Changes**:
+
+- Added `isApplyModalOpen` state to track modal visibility
+- Added `applyError` state to track submission errors
+- Added `useApplyMutation` hook call with error handler
+- Modified `handlePrimaryAction` to open ApplyModal instead of deferring
+- Added `handleApplySubmit` to pass payload to mutation
+- Added `<ApplyModal>` component before closing SafeAreaView
+
+**CTA Button Logic**:
+
+- Logged out: "Logg inn for å søke" → navigates to /login
+- Job owner: "Dette er ditt oppdrag" → disabled
+- Job closed: "Oppdraget er lukket" → disabled
+- Normal provider: "Søk på oppdraget" → opens ApplyModal
+
+**Error Handling**:
+
+- 403 cooldown: Shows "Du må vente X minutter..." message in modal
+- 402 contact limit: Shows upgrade message in modal
+- Other errors: Shows generic error message
+- User can dismiss modal and try again
+
+### API Endpoint
+
+**Backend**: POST /api/orders/request
+
+**Middleware**:
+
+- `authenticate`: Validates JWT token
+- `checkSubscription`: Handles contact limit logic, cooldown timer, free job bypass
+
+**Validation**:
+
+- serviceId required, valid ObjectId
+- Service must exist and be "open" status
+- No active order/contract for service
+- Cannot apply to own service (providerId !== customerId)
+- No duplicate pending request (unique partial index on serviceId, customerId, status=pending)
+
+**Response (201)**:
+
+```json
+{
+  "_id": "...",
+  "serviceId": "...",
+  "customerId": "...",
+  "providerId": "...",
+  "status": "pending",
+  "message": "...",
+  "createdAt": "...",
+  "updatedAt": "...",
+  "chatId": "..."
+}
+```
+
+**Errors**:
+
+- 400: Service not found, invalid status, already applied, own service, closed job
+- 402: Contact limit reached (paymentRequired: true)
+- 403: Cooldown active (isDelayed: true, unlockAt: timestamp)
+- 500: Server error
+
+### Query Keys
+
+**File**: `src/queryKeys.ts`
+
+Added to queryKeys object:
+
+```typescript
+applications: {
+  all: ['applications', 'all'],
+  detail: (requestId: string) => ['applications', 'detail', requestId],
+}
+```
+
+### Apply Behavior & Restrictions
+
+**Who can apply**:
+
+- Authenticated provider (any user role)
+- NOT job owner (cannot apply to own job)
+- NOT non-authenticated user (redirects to login)
+
+**When can't apply**:
+
+- Job status not "open" (completed, in_progress, closed, cancelled, expired, draft, waiting_for_approval)
+- Already applied with pending status (duplicate guard)
+- Monthly free contacts exhausted (402 error with payment info)
+- Still on cooldown from last application (403 error with cooldown minutes)
+- Active order/contract already exists for this job
+
+**After successful apply**:
+
+- Modal closes automatically
+- Job Details re-fetches to update CTA state
+- CTA button changes to reflect pending application status (if implemented)
+- Chat is created or found (direction-agnostic matching)
+- Provider (job owner) receives notification
+- Application appears in provider's "Forespørsler" list
+
+### Duplicate Application Prevention
+
+**Backend Logic** (MongoDB unique partial index):
+
+- Unique on (serviceId, customerId) where status='pending'
+- Allows re-apply after decline or withdrawal
+- No concurrent duplicate creation (MongoDB enforces atomically)
+
+**Frontend Logic**:
+
+- Disable submit button if message over limit
+- Show error if already applied
+- Don't allow rapid re-submission (mutation isPending disables button)
+
+### Contact Limit & Cooldown
+
+**Handled by backend checkSubscription middleware**:
+
+1. Monthly free contacts per plan (Standard has X, Pro has Y, etc.)
+2. If quota exhausted:
+   - Check cooldown time: last application + ContactUnlock minutes
+   - If cooldown active: return 403 with unlockAt timestamp
+   - If cooldown passed: return 402 with contact upgrade option
+3. Free job bypass: jobs under 10k NOK bypass quota for private users (if enabled)
+
+**Mobile shows**:
+
+- Error message with countdown if on cooldown
+- Error message with upgrade option if limit reached
+- Button/UI remains disabled during cooldown
+
+### Cache Invalidation Strategy
+
+**After successful apply**:
+
+- Invalidate `queryKeys.applications.all` (my applications list for future My Applications screen)
+- Invalidate `queryKeys.jobs.detail(jobId)` (specific job detail to refresh CTA state)
+- Does NOT invalidate job list (Explore/Home) because listing order/count doesn't change until provider accepts
+
+**Rationale**:
+
+- Job detail updates immediately to show "Forespørsel sendt" state
+- Full invalidation avoided to preserve search/filter pagination state
+- My Applications query can be added later without changing Apply flow
+
+### Success Behavior
+
+**Current (Mobile MVP)**:
+
+- Modal closes automatically
+- Job Details refetches
+- CTA state updates (visual feedback of successful apply)
+
+**Future (with notifications)**:
+
+- Success toast: "Forespørsel sendt! Venter på godkjenning."
+- Navigate to chat (optional)
+
+### Error UX
+
+**Three error scenarios**:
+
+1. **Cooldown (403 with isDelayed)**
+   - Message: "Du må vente X minutter mellom hver forespørsel. Neste åpner om Y minutter."
+   - Modal stays open, user can read and wait
+   - Timer counts down (client-side calculation from unlockAt timestamp)
+   - User can manually close and reopen modal later
+
+2. **Contact Limit (402 with paymentRequired)**
+   - Message: "Du har nådd din månedlige grense for kontakter. Oppgrader planen din for å søke videre."
+   - Modal stays open
+   - Could show upgrade CTA button (future enhancement)
+   - User closes modal to access settings/billing (not implemented in MVP)
+
+3. **Validation/Other (400, 409, 500)**
+   - Message: Generic backend error message
+   - Modal stays open
+   - User can dismiss and potentially try again
+   - Examples: "Service not found", "You have already applied", "Server error"
+
+### Loading & Submit Behavior
+
+**While submitting** (mutation isPending = true):
+
+- Submit button: disabled, shows "Sender..." text
+- Cancel button: disabled
+- Message field: disabled (non-editable)
+- Modal cannot close (handleClose checks isLoading)
+- Prevents duplicate submission by second click
+
+**After error**:
+
+- Buttons re-enabled immediately
+- Modal stays open so user can correct and retry
+- Error persists until next submit attempt or manual close
+
+### Mobile Responsive Sizes
+
+Tested at: 360, 375, 390, 393, 414, 430 dp
+
+**Considerations**:
+
+- Sheet slides from left (drawer pattern)
+- ScrollView handles tall/keyboard scenarios
+- TextArea multiline with 6 default rows
+- Character counter always visible
+- Buttons stack vertically (full width)
+- Padding consistent with Jobblo design system (16px sides)
+
+### Regression Checks
+
+✅ Job Details page loads (not broken by new code)
+✅ Apply CTA button renders and enables correctly
+✅ Login redirect works when not authenticated
+✅ Owner cannot apply (button disabled, no modal)
+✅ Closed job shows correct state (button disabled)
+✅ ApplyModal opens/closes properly
+✅ Message input accepts typing
+✅ Character count updates in real-time
+✅ Error messages display properly
+✅ Loading state prevents duplicate submission
+✅ TypeScript: zero errors
+
+### Not Implemented in MVP
+
+- My Applications screen (can fetch via getMyJobRequests())
+- Application status updates (accept/decline happen via provider on web)
+- Contact limit/cooldown UI bypass options
+- "Already applied" check (backend prevents duplicate, shows error if attempted)
+- Application withdrawal/cancellation
+- Rich text or file attachments in message
+- Address validation (just freeform text like web)
+
+### Files Created
+
+- `src/types/Application.ts` - JobRequest, CreateJobRequestPayload, ApplyError types
+- `src/services/applications.service.ts` - applyToJob(), getMyJobRequests(), updateJobRequestStatus()
+- `src/hooks/useApplyMutation.ts` - TanStack Query mutation with cache invalidation
+- `src/components/domain/ApplyModal.tsx` - Apply modal UI component
+
+### Files Modified
+
+- `app/(app)/jobs/[id].tsx` - Added ApplyModal state, mutation, CTA logic, error handling
+- `src/queryKeys.ts` - Added applications query keys
+
+### Implementation Status
+
+✅ Web Apply flow inspected and documented
+✅ Backend Apply endpoint reviewed and understood
+✅ Apply modal component created
+✅ Applications service created
+✅ useApplyMutation hook created
+✅ Job Details CTA wired to Apply modal
+✅ Error handling for all scenarios
+✅ Cache invalidation targeted
+✅ TypeScript compilation: PASSED
+✅ MOBILE_FLOW.md updated with Apply documentation
+❌ My Applications screen (not in scope)
+❌ Application status (provider-side, not in MVP scope)
+
+### Change History
+
+- created src/types/Application.ts with JobRequest, CreateJobRequestPayload, ApplyError types
+- created src/services/applications.service.ts with applyToJob(), getMyJobRequests(), updateJobRequestStatus() functions
+- created src/hooks/useApplyMutation.ts with TanStack Query mutation and cache invalidation
+- created src/components/domain/ApplyModal.tsx with message input, character count, error display
+- updated app/(app)/jobs/[id].tsx to add ApplyModal state, useApplyMutation, error handling, CTA logic
+- updated src/queryKeys.ts to add applications.all and applications.detail query keys
+- verified no regression to Job Details page, Home, Search, all filters
+- TypeScript validation: zero errors

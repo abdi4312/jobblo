@@ -315,8 +315,8 @@ export default function ExploreScreen() {
                 filters.selectedCountyCodes.length > 0 ||
                 filters.selectedMunicipalityCodes.length > 0 ||
                 filters.userLocation
-                  ? 'Prøv et annet søkeord eller fjern noen filtrer.'
-                  : 'Det finnes ingen tilgjengelige oppdrag akkurat nå.'}
+                  ? 'Prï¿½v et annet sï¿½keord eller fjern noen filtrer.'
+                  : 'Det finnes ingen tilgjengelige oppdrag akkurat nï¿½.'}
               </Text>
               {(filters.searchText ||
                 filters.selectedCategories.length > 0 ||
@@ -344,10 +344,10 @@ export default function ExploreScreen() {
             Kunne ikke laste oppdrag
           </Text>
           <Text className="mt-1 text-[0.875rem] text-[#63665F]">
-            Sjekk tilkoblingen din og prøv igjen.
+            Sjekk tilkoblingen din og prï¿½v igjen.
           </Text>
           <View className="mt-4">
-            <Button label="Prøv igjen" onPress={() => refetch()} />
+            <Button label="Prï¿½v igjen" onPress={() => refetch()} />
           </View>
         </View>
       )}

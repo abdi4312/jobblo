@@ -5,8 +5,8 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowLeft,
@@ -19,10 +19,12 @@ import {
   Zap,
 } from 'lucide-react-native';
 import { useJobDetails } from '../../../src/hooks/useJobDetails';
+import { useApplyMutation } from '../../../src/hooks/useApplyMutation';
 import { useAuthStore } from '../../../src/store/authStore';
 import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
+import { ApplyModal } from '../../../src/components/domain/ApplyModal';
 import { JobMetaRow } from '../../../src/components/domain/JobMetaRow';
 import { getCategoryIcon } from '../../../src/utils/categoryIcons';
 import type { Job } from '../../../src/types/Jobs';
@@ -51,6 +53,35 @@ export default function JobDetailsScreen() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
   const { data: job, isLoading, isError, refetch } = useJobDetails(id ?? '');
+  const [isApplyModalOpen, setIsApplyModalOpen] = React.useState(false);
+  const [applyError, setApplyError] = React.useState<string | null>(null);
+
+  const { mutate: applyToJob, isPending: isApplyLoading } = useApplyMutation({
+    onSuccess: () => {
+      setIsApplyModalOpen(false);
+      setApplyError(null);
+      // Modal closes, success toast is shown by parent if needed
+    },
+    onError: (error: any) => {
+      const errorData = error.response?.data;
+      let errorMessage = 'Kunne ikke sende forespørsel. Prøv igjen senere.';
+      
+      if (error.response?.status === 403 && errorData?.isDelayed) {
+        const minutesLeft = Math.ceil((new Date(errorData.unlockAt).getTime() - Date.now()) / 60000);
+        errorMessage = `Du må vente ${minutesLeft} minutter før du kan søke på nytt.`;
+      } else if (error.response?.status === 402) {
+        errorMessage = 'Du har nådd din månedlige grense for kontakter. Oppgrader planen din for å søke videre.';
+      } else if (errorData?.error) {
+        errorMessage = String(errorData.error);
+      } else if (errorData?.message) {
+        errorMessage = String(errorData.message);
+      } else if (error.message) {
+        errorMessage = String(error.message);
+      }
+      
+      setApplyError(errorMessage);
+    },
+  });
 
   const poster = typeof job?.userId === 'object' && job.userId ? job.userId : null;
   const isOwner = !!poster && !!user && String((user as any)._id ?? (user as any).id) === String(poster._id ?? '');
@@ -71,8 +102,19 @@ export default function JobDetailsScreen() {
       return;
     }
 
-    // Apply flow is intentionally deferred and kept outside this task.
-    // The button is presented visually only and is disabled for non-allowed states.
+    if (isOwner || isClosed) {
+      return;
+    }
+
+    setApplyError(null);
+    setIsApplyModalOpen(true);
+  };
+
+  const handleApplySubmit = (payload: any) => {
+    applyToJob({
+      serviceId: id ?? '',
+      message: payload.message,
+    });
   };
 
   if (isLoading) {
@@ -320,6 +362,15 @@ export default function JobDetailsScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      <ApplyModal
+        visible={isApplyModalOpen}
+        onClose={() => setIsApplyModalOpen(false)}
+        onSubmit={handleApplySubmit}
+        jobTitle={job?.title}
+        isLoading={isApplyLoading}
+        error={applyError}
+      />
     </SafeAreaView>
   );
 }

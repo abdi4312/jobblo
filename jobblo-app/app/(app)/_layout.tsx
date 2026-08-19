@@ -1,5 +1,5 @@
 import { Redirect, Tabs } from 'expo-router';
-import { Home, Search } from 'lucide-react-native';
+import { ClipboardList, Home, Search } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
 
 export default function AppLayout() {
@@ -30,6 +30,13 @@ export default function AppLayout() {
             <Tabs.Screen
                 name="explore"
                 options={{ title: 'Utforsk', tabBarIcon: ({ color, size }) => <Search size={size} color={color} /> }}
+            />
+            <Tabs.Screen
+                name="my-applications"
+                options={{
+                    title: 'Mine søknader',
+                    tabBarIcon: ({ color, size }) => <ClipboardList size={size} color={color} />,
+                }}
             />
         </Tabs>
     );

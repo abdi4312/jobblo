@@ -72,4 +72,41 @@ export const queryKeys = {
      */
     stats: ['locations', 'stats'] as const,
   },
+  applications: {
+    /**
+     * Query key for all applications/job requests (those I've sent).
+     * Used by useApplyMutation for cache invalidation after applying.
+     */
+    all: ['applications', 'all'] as const,
+
+    /**
+     * Query key for the current user's application list with optional filters.
+     */
+    list: (params?: { page?: number; limit?: number; status?: string }) =>
+      ['applications', 'list', params ?? {}] as const,
+
+    /**
+     * Query key for a single job request by ID.
+     */
+    detail: (requestId: string) => ['applications', 'detail', requestId] as const,
+  },
+  applicants: {
+    all: ['applicants', 'all'] as const,
+    overview: ['applicants', 'overview'] as const,
+    detailRoot: ['applicants', 'detail'] as const,
+    detail: (params: { serviceId: string; sort: string; filter: string }) =>
+      ['applicants', 'detail', params] as const,
+  },
+  safepay: {
+    checkout: (orderId: string) => ['safepay', 'checkout', orderId] as const,
+    status: (sessionId: string) => ['safepay', 'status', sessionId] as const,
+  },
+  providerOrders: {
+    all: ['provider-orders'] as const,
+    detail: (orderId: string) => ['provider-orders', 'detail', orderId] as const,
+    reviews: (orderId: string) => ['provider-orders', 'reviews', orderId] as const,
+  },
+  disputes: {
+    byOrder: (orderId: string) => ['disputes', 'order', orderId] as const,
+  },
 } as const;

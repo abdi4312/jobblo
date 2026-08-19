@@ -7,12 +7,14 @@ Complete search/filter system for Jobblo mobile app (Expo React Native + TypeScr
 ## Filter Features
 
 ### 1. Search Text
+
 - **Type**: String
 - **Default**: Empty
 - **Behavior**: Real-time, updates query key immediately
 - **API Param**: `search`
 
 ### 2. Categories (Multi-Select)
+
 - **Type**: String array
 - **Default**: Empty array (all categories)
 - **Selection**: Toggle to add/remove categories
@@ -21,10 +23,11 @@ Complete search/filter system for Jobblo mobile app (Expo React Native + TypeScr
 - **UI**: CategoryChip component with icons
 
 ### 3. Price Range (Interactive)
+
 - **Type**: minPrice (number), maxPrice (number)
 - **Default**: 0 - 100000 kr
 - **Input**: Two TextInput fields (Fra/Til)
-- **Display**: 
+- **Display**:
   - "Fra (minimum)" field: shows 0 at default, empty field, or entered value
   - "Til (maksimum)" field: shows empty (∞) at default, or entered value
   - Summary display: "0–∞ kr" → "5 000–50 000 kr" with Norwegian formatting
@@ -36,6 +39,7 @@ Complete search/filter system for Jobblo mobile app (Expo React Native + TypeScr
 - **Component**: PriceRangeFilter
 
 ### 4. Urgent Flag
+
 - **Type**: Boolean
 - **Default**: false
 - **Behavior**: Checkbox to filter for haste jobs only
@@ -44,10 +48,11 @@ Complete search/filter system for Jobblo mobile app (Expo React Native + TypeScr
 - **Component**: UrgentFilter
 
 ### 5. Location Filter (Hierarchical)
+
 - **Structure**: County → Municipality → Area (3 levels)
 - **Type**: Three string arrays (selectedCountyCodes, selectedMunicipalityCodes, selectedAreaCodes)
 - **Default**: All empty
-- **Smart Logic**: 
+- **Smart Logic**:
   - If specific municipalities selected under a county, don't pass the broad county code
   - If specific areas selected under a municipality, don't pass the broad municipality code
   - Prevents API overshooting
@@ -56,10 +61,10 @@ Complete search/filter system for Jobblo mobile app (Expo React Native + TypeScr
   - Checkboxes for selection
   - Hierarchical indentation
   - Smart expand on selection
-- **Expand/Collapse State**: 
+- **Expand/Collapse State**:
   - expandedCounties: array of county codes that are expanded
   - expandedMunicipalities: array of municipality codes that are expanded
-- **Removal Logic**: 
+- **Removal Logic**:
   - Remove county → also remove its municipalities and areas
   - Remove municipality → also remove its areas
   - Remove area → only remove that area
@@ -68,6 +73,7 @@ Complete search/filter system for Jobblo mobile app (Expo React Native + TypeScr
 - **Component**: LocationFilter
 
 ### 6. Current Location (Radius Search)
+
 - **Type**: { lat: number, lng: number } | null
 - **Default**: null (no location-based search)
 - **Permission**: requestForegroundPermissionsAsync() from expo-location
@@ -82,6 +88,7 @@ Complete search/filter system for Jobblo mobile app (Expo React Native + TypeScr
 - **Component**: SearchFilterSheet (button integrated), Expo Location API
 
 ### 7. Sort Order
+
 - **Type**: String
 - **Default**: 'newest'
 - **Options**:
@@ -94,6 +101,7 @@ Complete search/filter system for Jobblo mobile app (Expo React Native + TypeScr
 - **Component**: SearchResultsHeader
 
 ### 8. Active Filter Chips
+
 - **Display**: Row of removable chips showing all applied filters
 - **Format Examples**:
   - Category: "Maling"
@@ -108,6 +116,7 @@ Complete search/filter system for Jobblo mobile app (Expo React Native + TypeScr
 ## API Integration
 
 ### Query Parameter Format
+
 ```
 GET /api/services?
   search=maling
@@ -127,16 +136,18 @@ GET /api/services?
 ```
 
 ### Backend Contract
+
 **Endpoint**: `GET /api/services`
 
 **Supported Parameters** (from serviceController.js):
+
 - `search`: String search term
 - `categories`: Comma-separated category names
 - `minPrice`: Minimum price (integer, kr)
 - `maxPrice`: Maximum price (integer, kr)
 - `urgent`: Boolean for haste jobs
 - `countyCodes`: Comma-separated county codes
-- `municipalityCodes`: Comma-separated municipality codes  
+- `municipalityCodes`: Comma-separated municipality codes
 - `areaCodes`: Comma-separated area codes
 - `lat`, `lng`, `radius`: Geolocation with radius in meters
 - `sort`: Sort value (newest, price_low, price_high, relevant)
@@ -144,6 +155,7 @@ GET /api/services?
 - `limit`: Results per page
 
 **Response**:
+
 ```typescript
 {
   data: Job[],
@@ -159,11 +171,13 @@ GET /api/services?
 ## State Management Architecture
 
 ### useSearchFilters Hook
+
 **Location**: `src/hooks/useSearchFilters.ts`
 
 **Purpose**: Centralized filter state management for entire Explore screen.
 
 **State Shape**:
+
 ```typescript
 interface SearchFiltersState {
   searchText: string;
@@ -183,6 +197,7 @@ interface SearchFiltersState {
 ```
 
 **Provided Functions**:
+
 - `setSearchText(text)`
 - `setSelectedCategories(cats)`
 - `toggleCategory(cat)`
@@ -205,36 +220,44 @@ interface SearchFiltersState {
 - `resetAll()`
 
 ### useInfiniteJobs Hook
+
 **Location**: `src/hooks/useInfiniteJobs.ts`
 
 **Purpose**: TanStack Query infinite pagination with all filter params.
 
 **Key Behavior**:
+
 - Query key includes ALL filter parameters
 - Any filter change → new query key → cache miss → refetch from page 1
 - Automatic pagination with `getNextPageParam` logic
 - Returns pages array (not flattened by hook)
 
 **Query Key Format**:
+
 ```typescript
-['jobs', 'infinite', {
-  limit,
-  categories,
-  countyCodes,
-  municipalityCodes,
-  areaCodes,
-  search,
-  sort,
-  urgent,
-  minPrice,
-  maxPrice,
-  lat,
-  lng,
-  radius
-}]
+[
+  'jobs',
+  'infinite',
+  {
+    limit,
+    categories,
+    countyCodes,
+    municipalityCodes,
+    areaCodes,
+    search,
+    sort,
+    urgent,
+    minPrice,
+    maxPrice,
+    lat,
+    lng,
+    radius,
+  },
+];
 ```
 
 ### useLocationTree Hook
+
 **Location**: `src/hooks/useLocationTree.ts`
 
 **Purpose**: Fetch and cache location tree (counties → municipalities → areas).
@@ -292,19 +315,23 @@ app/(app)/explore.tsx (343 lines)
 **Location**: `src/components/search/`
 
 ### SearchHeader.tsx (40 lines)
+
 - Search input + filter button
 - Active filter count badge
 
 ### SearchResultsHeader.tsx (50 lines)
+
 - Results count display
 - Sort dropdown menu
 
 ### ActiveFiltersDisplay.tsx (130 lines)
+
 - Renders all applied filter chips
 - Handles individual chip removal
 - Smart label formatting (price, location)
 
 ### SearchFilterSheet.tsx (200 lines)
+
 - All filter controls
 - Categories grid
 - Price inputs
@@ -319,21 +346,25 @@ app/(app)/explore.tsx (343 lines)
 **Location**: `src/components/domain/`
 
 ### PriceRangeFilter.tsx (80 lines)
+
 - Two TextInput fields (Fra/Til)
 - Norwegian currency formatting
 - Summary display
 - Reset button
 
 ### UrgentFilter.tsx (30 lines)
+
 - Checkbox for urgent/haste jobs
 
 ### LocationFilter.tsx (150 lines)
+
 - Hierarchical tree view
 - Expand/collapse per county and municipality
 - Checkboxes with indentation
 - Smart selection logic
 
 ### ActiveFilterChip.tsx (30 lines)
+
 - Removable chip with X icon
 - Shows filter label
 
@@ -342,20 +373,24 @@ app/(app)/explore.tsx (343 lines)
 **Location**: `src/components/ui/`
 
 ### SearchInput (existing)
+
 - Text input with placeholder
 - Right action support
 - Clean styling
 
 ### Button (existing)
+
 - Primary/secondary variants
 - Disabled state support
 
 ### Sheet (existing)
+
 - Modal bottom sheet
 - Title + footer support
 - Scrollable content
 
 ### RangeSlider.tsx (70 lines - created but not used in MVP)
+
 - Visual range slider
 - Touch-based dragging
 - Track visualization
@@ -363,6 +398,7 @@ app/(app)/explore.tsx (343 lines)
 ## Query Key Strategy
 
 **Why All Filters in Key**:
+
 - TanStack Query uses query key for cache identity
 - Different filter = different key = different cache entry
 - Filter change automatically triggers fresh fetch from page 1
@@ -370,6 +406,7 @@ app/(app)/explore.tsx (343 lines)
 - Manual pagination reset not needed
 
 **Example Scenarios**:
+
 1. User changes price: key changes → cache miss → page 1 refetch ✓
 2. User adds category: key changes → cache miss → page 1 refetch ✓
 3. User navigates to page 2, then changes price: key changes → starts over at page 1 ✓
@@ -379,6 +416,7 @@ app/(app)/explore.tsx (343 lines)
 **Problem**: Passing broad county codes + specific municipalities under it causes API to return too many results.
 
 **Solution**: Client-side filtering before query:
+
 ```typescript
 // Don't send county code if any of its municipalities are selected
 if (selectedMunicipalityCodes includes municipality under this county) {
@@ -387,6 +425,7 @@ if (selectedMunicipalityCodes includes municipality under this county) {
 ```
 
 **Implementation**:
+
 - OnRemoveCounty callback: removes related municipalities + areas
 - OnToggleMunicipality callback: removes related areas
 - Smart expand: open municipality if selecting it under expanded county
@@ -394,12 +433,14 @@ if (selectedMunicipalityCodes includes municipality under this county) {
 ## Price Display & Formatting
 
 **Norwegian Locale Rules**:
+
 - Thousands separator: space (not comma)
 - 5000 → "5 000"
 - 100000 → "100 000"
 - ∞ symbol used for unlimited max
 
 **Active Chip Examples**:
+
 - `5000–50000` → `"5 000–50 000 kr"`
 - `0–100000` → not shown (defaults, hidden)
 - `0–50000` → `"0–50 000 kr"`
@@ -408,6 +449,7 @@ if (selectedMunicipalityCodes includes municipality under this county) {
 ## Regression Checks
 
 All filters maintained from previous implementation:
+
 - ✅ Search text
 - ✅ Categories (now multi-select)
 - ✅ Price (now interactive)
@@ -424,6 +466,7 @@ All filters maintained from previous implementation:
 ## File Changes Summary
 
 ### New Files Created
+
 - `src/hooks/useSearchFilters.ts` - Centralized filter state management
 - `src/hooks/useLocationTree.ts` - Location tree TanStack Query hook
 - `src/types/Location.ts` - LocationNode interface
@@ -434,6 +477,7 @@ All filters maintained from previous implementation:
 - `src/components/search/SearchFilterSheet.tsx` - Complete filter sheet
 
 ### Updated Files
+
 - `src/components/domain/PriceRangeFilter.tsx` - Rewrote as interactive with inputs
 - `src/components/CategoryChip.tsx` - Updated type to accept { name: string }
 - `app/(app)/explore.tsx` - Refactored from 557 to 343 lines using new components
@@ -441,6 +485,7 @@ All filters maintained from previous implementation:
 - `src/queryKeys.ts` - Complete filter set in infinite query key (no changes needed)
 
 ### Unchanged Files
+
 - `src/services/jobs.service.ts` - Already supports all params
 - `app/(app)/index.tsx` - Home screen (no changes)
 - `app/(app)/jobs/[id].tsx` - Job Details (no changes)

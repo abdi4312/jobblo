@@ -72,6 +72,8 @@ async function confirmPaidSession(session, io) {
     return { ok: true, alreadyConfirmed: true, order: await Order.findById(orderId) };
   }
 
+  await Service.findByIdAndUpdate(updatedOrder.serviceId, { status: 'paid' });
+
   if (updatedOrder.chatId) {
     const chat = await Chat.findById(updatedOrder.chatId);
     if (chat && !['paid', 'completed'].includes(chat.status)) {
