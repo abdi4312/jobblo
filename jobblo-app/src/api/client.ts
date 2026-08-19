@@ -11,6 +11,7 @@ const nativeAsyncStorage = (() => {
 
 const rawBaseUrl = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001/api').replace(/\/$/, '');
 const baseUrl = rawBaseUrl.endsWith('/api') ? rawBaseUrl : `${rawBaseUrl}/api`;
+export const apiBaseUrl = baseUrl;
 
 const webStorage = {
   async getItem(key: string) {

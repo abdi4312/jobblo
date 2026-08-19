@@ -5,7 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import Toast from "react-native-toast-message";
 import { StyleSheet, View } from "react-native";
 
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 60 * 1000,

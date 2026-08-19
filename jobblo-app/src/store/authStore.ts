@@ -1,6 +1,18 @@
 import { create } from 'zustand';
+import { queryClient } from '../providers/AppProviders';
+import { destroyChatSocket } from '../services/chatSocket.service';
 
 type AuthUser = Record<string, unknown> | null;
+
+function userId(user: AuthUser) {
+  return user && typeof user._id === 'string' ? user._id : null;
+}
+
+async function clearAuthenticatedSession() {
+  await queryClient.cancelQueries();
+  queryClient.removeQueries();
+  destroyChatSocket();
+}
 
 const nativeAsyncStorage = (() => {
   try {
@@ -101,6 +113,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   login: async (token, user) => {
+    if (userId(get().user) && userId(get().user) !== userId(user)) {
+      await clearAuthenticatedSession();
+    }
     await Promise.all([
       storage.setItem('token', token),
       storage.setItem('user', JSON.stringify(user)),
@@ -110,6 +125,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    await clearAuthenticatedSession();
     await storage.removeItem('token');
     await storage.removeItem('user');
     set({ token: null, user: null, isAuthenticated: false });

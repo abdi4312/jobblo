@@ -191,8 +191,8 @@ if (categories.length > 0) queryParams.category = categories.join(',');
 - ✅ Mine søkere overview
 - ⬜ Applicant Details
 - ⬜ Select Provider
-- ⬜ Chat List
-- ⬜ Chat Conversation
+- ✅ Chat List / Meldinger
+- ✅ Chat Detail / Conversation
 - ⬜ Notifications
 - ⬜ Contract
 - ⬜ SafePay
@@ -263,7 +263,15 @@ Owner loading uses the reusable overview row skeleton. Request failures use `Kun
 - Types: `src/types/Applicants.ts`
 - Query key: `queryKeys.applicants.overview`
 
-Provider selection, SafePay, Contract, Chat, and all downstream flows remain outside the owner overview implementation.
+Provider selection, SafePay, Contract, and downstream flows remain outside the owner overview implementation.
+
+## Meldinger / Chat Detail
+
+The mobile conversation list is `/(app)/messages`, backed by `GET /api/chats/get` through `useMessages` and `messages.service.ts`. Rows show the other participant, avatar/initials, latest message, timestamp, unread indicator from the backend latest message `seenBy`, and service context. Rendering does not mark messages read; there is no mobile read mutation in this flow.
+
+The canonical detail route is `/(app)/messages/[chatId]`. It uses `queryKeys.chats.detail(chatId)` and `useChatDetail` with `GET /api/chats/:chatId?limit=50&offset=...`. The backend `messagePage.hasMore` value drives older-page loading; pages are merged oldest-to-newest with message-ID/fallback deduplication. Sending uses `POST /api/chats/:chatId/message` with `{ text }`, clears the composer on success, and invalidates both detail and list keys.
+
+Chat detail joins `join-chat` and leaves `leave-chat` using the shared Socket.IO client wrapper; it removes only its own `receive-message` listener. It renders text and system messages with timestamps, uses authenticated participant identity for own/other bubbles, and routes job context role-aware: customers use SafePay checkout/success/approval boundaries while providers use `/provider/orders/:orderId`. Attachments and persistent read marking are not implemented because this mobile flow has no corresponding user-facing send/read contract.
 
 ## Job Applicants detail
 

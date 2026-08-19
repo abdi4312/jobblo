@@ -16,13 +16,8 @@ module.exports = (io) => {
   io.use(async (socket, next) => {
     try {
       const rawCookie = socket.handshake.headers.cookie;
-      if (!rawCookie) {
-        return next(new Error('No cookies found'));
-      }
-
-      // 🍪 parse cookies
-      const cookies = cookie.parse(rawCookie);
-      const token = cookies.accessToken || cookies.token;
+      const cookies = rawCookie ? cookie.parse(rawCookie) : {};
+      const token = cookies.accessToken || cookies.token || socket.handshake.auth?.token;
 
       if (!token) {
         return next(new Error('No token found'));
