@@ -97,7 +97,7 @@ export default function ProviderOrderScreen() {
       Alert.alert('Maks antall filer nådd', 'Du kan laste opp maksimalt 10 filer per type.');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsMultipleSelection: true, selectionLimit: limit, quality: 0.85 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: limit, quality: 0.85 });
     if (!result.canceled) {
       const selected = result.assets.slice(0, limit).map((asset, index) => ({ uri: asset.uri, name: asset.fileName ?? `bevis-${Date.now()}-${index}.jpg`, type: asset.mimeType ?? 'image/jpeg', size: asset.fileSize }));
       setAssets((current) => [...current, ...selected]);

@@ -106,7 +106,7 @@ export default function SafePayApprovalScreen() {
       Alert.alert('Maks antall bilder nådd', 'Du kan laste opp maksimalt 6 bilder.');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsMultipleSelection: true, selectionLimit: remaining, quality: 0.85 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: remaining, quality: 0.85 });
     if (!result.canceled) {
       const unsupported = result.assets.find((asset) => !REVIEW_PHOTO_TYPES.includes(asset.mimeType ?? 'image/jpeg'));
       if (unsupported) {

@@ -271,6 +271,9 @@ export default function HomeScreen() {
               <TouchableOpacity onPress={() => router.push('/(app)/explore')} className="mt-4 rounded-lg bg-[#2E6641] px-4 py-2.5">
                 <Text className="text-center text-[0.875rem] font-semibold text-white">Se alle oppdrag</Text>
               </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/(app)/create-job')} className="mt-3 rounded-lg border border-[#2E6641] bg-white px-4 py-2.5">
+                <Text className="text-center text-[0.875rem] font-semibold text-[#2E6641]">Legg ut et oppdrag</Text>
+              </TouchableOpacity>
             </View>
           )}
 

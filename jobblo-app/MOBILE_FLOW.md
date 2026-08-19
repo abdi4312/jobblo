@@ -185,9 +185,7 @@ if (categories.length > 0) queryParams.category = categories.join(',');
 - ✅ Job Details
 - ⬜ Apply to Job
 - ⬜ My Applications
-- ⬜ Post Job Step 1
-- ⬜ Post Job Step 2
-- ⬜ Remaining Post Job Steps
+- ✅ Post Job / Legg ut
 - ⬜ My Jobs
 - ⬜ Job Management
 - ✅ Mine søkere overview
@@ -845,7 +843,41 @@ Navigation To:
 
 - Explore tab: router.push('/(app)/explore') — search/filter view
 - Job Detail: JobCard press navigates to job detail (route not yet created)
-- Post job empty state button: disabled until Post tab is implemented
+- Post job empty state button opens the canonical mobile `/(app)/create-job` route.
+
+## Post Job / Legg ut
+
+**STATIC VERIFIED — MANUAL DEVICE TEST REQUIRED**
+
+```text
+Legg ut tab
+↓
+/(app)/create-job
+↓
+four-step native form
+↓
+native images + geocoded coordinates + location tree
+↓
+POST /api/services (multipart/form-data)
+↓
+server-created service.status = open
+↓
+invalidate Home/Explore job lists and applicant overview
+↓
+return to Home; provider can discover the service
+```
+
+Implementation map:
+
+- Route/screen: `app/(app)/create-job.tsx`
+- Hook: `src/hooks/useCreateJob.ts`
+- Service: `src/services/createJob.service.ts`
+- Endpoint: `POST /api/services`
+- Location hook/service: existing `useLocationTree` and `locationService` → `GET /api/location-filter/tree`
+- Category source: existing `useCategories` → `GET /api/filter/options`
+- Draft key: `jobblo-create-job-draft`; auth storage is untouched
+
+The multipart payload sends `location.coordinates` as `[longitude, latitude]`, checklist as a JSON string, repeated categories/tags, optional `contactPhone`/`contactEmail`, and native image parts `{ uri, name, type }`. The client never sends `userId` or `status`; the backend owns service ownership and `open` status. Failed publication retains the textual draft and best-effort image URI draft; durable image restoration across app restart is not claimed. Successful publication clears only the create-job draft after a valid `_id` response.
 
 Sections:
 
