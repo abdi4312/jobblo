@@ -180,15 +180,42 @@ describe('the frontend never constructs the flow', () => {
     expect(verifiedCode).toMatch(/apiUrl\('\/api\/auth\/idura\?link=1'\)/);
   });
 
-  it('the login screen offers BankID through the same server endpoint', () => {
+  it('the login screen does not offer BankID while it is commented out', () => {
+    /**
+     * Deliberately inverted. The "Fortsett med BankID" button on login and register is
+     * commented out at the user's request while the Idura test tenant is being
+     * configured — the redirect URI and the dashboard registration do not line up yet,
+     * so sign-in with BankID is a dead end on those two screens.
+     *
+     * `stripComments` removes the block, so this asserts it does not RENDER. The
+     * profile card below is untouched, and that is the primary use case.
+     */
     const authButtons = stripComments(
       fs.readFileSync(path.join(FRONTEND, 'components', 'SocialAuthButtons', 'AuthButton.tsx'), 'utf8')
     );
-    expect(authButtons).toMatch(/go\('\/api\/auth\/idura'\)/);
-    expect(authButtons).toMatch(/Fortsett med BankID/);
-    // Sign-in must NOT carry the link intent — that would try to attach an identity
-    // to whoever happened to be signed in.
-    expect(authButtons).not.toMatch(/idura\?link=1/);
+    expect(authButtons).not.toMatch(/Fortsett med BankID/);
+    expect(authButtons).not.toMatch(/go\('\/api\/auth\/idura'\)/);
+
+    // Vipps and Google are unaffected.
+    expect(authButtons).toMatch(/go\('\/api\/auth\/vipps'\)/);
+    expect(authButtons).toMatch(/go\('\/api\/auth\/google'\)/);
+  });
+
+  it('the commented-out block is intact and restorable', () => {
+    // Commented out, not deleted — restoring it should be removing two markers, and it
+    // must still be the sign-in intent (no `link=1`) when it comes back.
+    const raw = fs.readFileSync(
+      path.join(FRONTEND, 'components', 'SocialAuthButtons', 'AuthButton.tsx'),
+      'utf8'
+    );
+    expect(raw).toMatch(/BANKID TEMPORARILY HIDDEN/);
+    expect(raw).toMatch(/go\('\/api\/auth\/idura'\)/);
+    expect(raw).not.toMatch(/idura\?link=1/);
+  });
+
+  it('the profile verification entry point is still live', () => {
+    // Only the login/register entry point was hidden.
+    expect(verifiedCode).toMatch(/apiUrl\('\/api\/auth\/idura\?link=1'\)/);
   });
 
   it('no VITE_IDURA_* variables remain anywhere in the frontend', () => {

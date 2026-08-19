@@ -1,4 +1,3 @@
-import { ShieldCheck } from 'lucide-react';
 import { apiUrl } from '../../config/env';
 
 /**
@@ -81,19 +80,21 @@ export default function SocialAuthButtons() {
       </button>
 
       {/*
-        BankID third, and quiet.
+        BANKID TEMPORARILY HIDDEN ON LOGIN AND REGISTER.
 
-        Vipps is the fastest way onto the service for most Norwegians and stays the
-        primary action; Google is the familiar fallback. BankID is neither — it is the
-        heavyweight option, and someone reaching for it is doing so deliberately. Giving
-        it a third filled button would flatten the hierarchy into a wall of equals, so
-        it gets the same outline treatment as Google with the SafePay shield the product
-        already uses to mean "verified", and sits last.
+        Commented out at the user's request while the Idura test tenant is still being
+        configured — sign-in with BankID sends people to Idura before the redirect URI
+        and dashboard registration line up, so it is a dead end on these two screens.
 
-        `/api/auth/idura` with no `link` parameter is the sign-in intent. The server
-        mints state, nonce and the PKCE verifier and holds them in the session — nothing
-        about the flow is constructed here, which is precisely what was wrong before.
-      */}
+        Nothing else is disabled. The backend routes stay live, and the profile page
+        still offers "Verifiser med BankID" (components/profile/IdentityVerificationCard),
+        which is the primary use case: a signed-in person verifying their own account.
+        This is only the "sign in with BankID" entry point.
+
+        To restore, delete the comment markers around the block below. It needs no other
+        change — `/api/auth/idura` with no `link` parameter is the sign-in intent, and
+        the server mints state, nonce and the PKCE verifier itself.
+
       <button
         type="button"
         onClick={go('/api/auth/idura')}
@@ -102,6 +103,7 @@ export default function SocialAuthButtons() {
         <ShieldCheck size={18} strokeWidth={2.2} className="text-[#2E6641]" />
         <span>Fortsett med BankID</span>
       </button>
+      */}
 
       <button
         type="button"

@@ -339,27 +339,49 @@ export function ProfileHeader({
 
                       <div className="my-1.5 h-px bg-[#E6E7E1]" />
 
-                      <ConfirmDialog
-                        title="Logg ut?"
-                        description="Vil du logge ut av Jobblo?"
-                        confirmText="Ja, logg ut"
-                        cancelText="Avbryt"
-                        isOpen={showLogoutConfirm}
-                        onOpenChange={setShowLogoutConfirm}
-                        onConfirm={handlelogout}
-                        trigger={
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[0.875rem] font-medium text-[#B4544A] transition-colors hover:bg-[#FBF4F2]"
-                          >
-                            <LogOut size={15} strokeWidth={2} />
-                            Logg ut
-                          </button>
-                        }
-                      />
+                      {/* Opens the dialog and closes the menu. The dialog itself is
+                          rendered OUTSIDE this block — see below for why. */}
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          setShowLogoutConfirm(true);
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[0.875rem] font-medium text-[#B4544A] transition-colors hover:bg-[#FBF4F2]"
+                      >
+                        <LogOut size={15} strokeWidth={2} />
+                        Logg ut
+                      </button>
                     </div>
                   )}
+
+                  {/**
+                   * Outside `{isMenuOpen && …}` on purpose — this is what made logging
+                   * out impossible.
+                   *
+                   * The dialog used to live inside the menu, with the menu item as its
+                   * `trigger`. AlertDialog renders through a PORTAL, so its buttons are
+                   * not inside `menuRef` — and the document-level `mousedown` handler
+                   * above closes the menu on any click outside that ref.
+                   *
+                   * So pressing "Ja, logg ut" ran: mousedown → menu closes → this whole
+                   * subtree unmounts → the dialog vanishes before the click completes,
+                   * and `onConfirm` never fired. The dialog flashed open and shut and
+                   * nothing happened.
+                   *
+                   * Rendered as a sibling, it survives the menu closing. `showLogoutConfirm`
+                   * was already controlled state, so nothing else needed to change.
+                   */}
+                  <ConfirmDialog
+                    title="Logg ut?"
+                    description="Vil du logge ut av Jobblo?"
+                    confirmText="Ja, logg ut"
+                    cancelText="Avbryt"
+                    isOpen={showLogoutConfirm}
+                    onOpenChange={setShowLogoutConfirm}
+                    onConfirm={handlelogout}
+                  />
                 </div>
               </>
             ) : (
