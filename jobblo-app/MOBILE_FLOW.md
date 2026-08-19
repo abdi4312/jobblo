@@ -487,13 +487,13 @@ GET /api/safepay/orders/:orderId
 
 **STATIC VERIFIED — MANUAL DEVICE REQUIRED for image/PDF runtime upload**
 
-| Transition | Role | Route | Endpoint | Server before | Server after | Targeted invalidation |
-| --- | --- | --- | --- | --- | --- | --- |
-| Start job | Provider | `/provider/orders/:orderId` | `POST /api/safepay/orders/:orderId/start` | `paid`, payment `paid` | Order `in_progress`, service `in_progress` | Provider order, checkout, applications, applicant detail, applicant overview |
-| Provider checklist | Provider | `/provider/orders/:orderId` | `PATCH /api/safepay/orders/:orderId/provider-checklist/:itemId` | `paid`, `in_progress`, or `ready_for_review` | Server checklist fields updated | Same targeted lifecycle caches |
-| Evidence/note | Provider | `/provider/orders/:orderId` | `POST /api/safepay/orders/:orderId/evidence` | `paid` or `in_progress` | Server evidence URLs and optional completion note | Same targeted lifecycle caches |
-| Remove evidence | Provider | `/provider/orders/:orderId` | `DELETE /api/safepay/orders/:orderId/evidence` | `paid` or `in_progress` | Server evidence URL removed | Same targeted lifecycle caches |
-| Ready for review | Provider | `/provider/orders/:orderId` | `POST /api/safepay/orders/:orderId/ready-for-review` | `in_progress`, payment `paid` | Order `ready_for_review`, service `waiting_for_approval` | Same targeted lifecycle caches |
+| Transition         | Role     | Route                       | Endpoint                                                        | Server before                                | Server after                                             | Targeted invalidation                                                        |
+| ------------------ | -------- | --------------------------- | --------------------------------------------------------------- | -------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Start job          | Provider | `/provider/orders/:orderId` | `POST /api/safepay/orders/:orderId/start`                       | `paid`, payment `paid`                       | Order `in_progress`, service `in_progress`               | Provider order, checkout, applications, applicant detail, applicant overview |
+| Provider checklist | Provider | `/provider/orders/:orderId` | `PATCH /api/safepay/orders/:orderId/provider-checklist/:itemId` | `paid`, `in_progress`, or `ready_for_review` | Server checklist fields updated                          | Same targeted lifecycle caches                                               |
+| Evidence/note      | Provider | `/provider/orders/:orderId` | `POST /api/safepay/orders/:orderId/evidence`                    | `paid` or `in_progress`                      | Server evidence URLs and optional completion note        | Same targeted lifecycle caches                                               |
+| Remove evidence    | Provider | `/provider/orders/:orderId` | `DELETE /api/safepay/orders/:orderId/evidence`                  | `paid` or `in_progress`                      | Server evidence URL removed                              | Same targeted lifecycle caches                                               |
+| Ready for review   | Provider | `/provider/orders/:orderId` | `POST /api/safepay/orders/:orderId/ready-for-review`            | `in_progress`, payment `paid`                | Order `ready_for_review`, service `waiting_for_approval` | Same targeted lifecycle caches                                               |
 
 The provider screen never assigns lifecycle status locally. Start, checklist, evidence, deletion, and ready-for-review mutations all refetch the server-owned provider order and invalidate the relevant application, applicant overview/detail, and SafePay checkout keys. The customer’s next server-backed action is `/safepay/approval/:orderId` once the order is `ready_for_review`.
 

@@ -248,7 +248,11 @@ exports.createSafePaySession = async (req, res) => {
     }
 
     if (!(order.agreedPrice > 0)) {
-      console.error('createSafePaySession: order %s has agreedPrice %o', orderId, order.agreedPrice);
+      console.error(
+        'createSafePaySession: order %s has agreedPrice %o',
+        orderId,
+        order.agreedPrice
+      );
       return res.status(409).json({
         error: 'Kontrakten mangler en avtalt pris.',
         code: 'missing_agreed_price',
@@ -257,7 +261,9 @@ exports.createSafePaySession = async (req, res) => {
 
     // ── SECURITY: Only customer (job poster/payer) may create checkout ─────────
     if (String(order.customerId) !== String(userId)) {
-      return res.status(403).json({ error: 'Ikke tilgang. Kun oppdragsgiver kan gjøre betalinger.' });
+      return res
+        .status(403)
+        .json({ error: 'Ikke tilgang. Kun oppdragsgiver kan gjøre betalinger.' });
     }
 
     // Already paid — return 409
@@ -467,7 +473,9 @@ exports.uploadReviewPhotos = async (req, res) => {
 
     // Only the customer writes the review, so only the customer uploads its photos.
     if (String(order.customerId) !== String(userId)) {
-      return res.status(403).json({ error: 'Ikke tilgang. Kun oppdragsgiver kan legge ved bilder.' });
+      return res
+        .status(403)
+        .json({ error: 'Ikke tilgang. Kun oppdragsgiver kan legge ved bilder.' });
     }
 
     // The review is written at approval, so photos are only meaningful from the point the
@@ -510,13 +518,25 @@ exports.approveAndPayout = async (req, res) => {
     const photos = photoResult.photos;
 
     // Validate ratings: overall is required; other fields optional but if present must be 1-5
-    if (!ratings || typeof ratings.overall !== 'number' || ratings.overall < 1 || ratings.overall > 5) {
-      return res.status(400).json({ error: 'Overall rating (overall) must be provided and between 1 and 5' });
+    if (
+      !ratings ||
+      typeof ratings.overall !== 'number' ||
+      ratings.overall < 1 ||
+      ratings.overall > 5
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'Overall rating (overall) must be provided and between 1 and 5' });
     }
     const optionalFields = ['punctuality', 'quality', 'communication', 'tidiness'];
     for (const field of optionalFields) {
-      if (ratings[field] !== undefined && (typeof ratings[field] !== 'number' || ratings[field] < 1 || ratings[field] > 5)) {
-        return res.status(400).json({ error: `Optional rating ${field} must be a number between 1 and 5 if provided` });
+      if (
+        ratings[field] !== undefined &&
+        (typeof ratings[field] !== 'number' || ratings[field] < 1 || ratings[field] > 5)
+      ) {
+        return res
+          .status(400)
+          .json({ error: `Optional rating ${field} must be a number between 1 and 5 if provided` });
       }
     }
     if (comment && comment.length > 1000) {
@@ -569,7 +589,8 @@ exports.approveAndPayout = async (req, res) => {
     };
     if (ratings.punctuality !== undefined) reviewSet['review.punctuality'] = ratings.punctuality;
     if (ratings.quality !== undefined) reviewSet['review.quality'] = ratings.quality;
-    if (ratings.communication !== undefined) reviewSet['review.communication'] = ratings.communication;
+    if (ratings.communication !== undefined)
+      reviewSet['review.communication'] = ratings.communication;
     if (ratings.tidiness !== undefined) reviewSet['review.tidiness'] = ratings.tidiness;
 
     order = await Order.findOneAndUpdate(
@@ -618,29 +639,30 @@ exports.approveAndPayout = async (req, res) => {
     // ── SafePayHistory (idempotent) ────────────────────────────────────────────
     const existingHistory = await SafePayHistory.findOne({ orderId: order._id });
     if (!existingHistory) {
-        try {
-          // sanitize ratings for history (only include provided fields)
-          const sanitizedRatings = { overall: ratings.overall };
-          if (ratings.punctuality !== undefined) sanitizedRatings.punctuality = ratings.punctuality;
-          if (ratings.quality !== undefined) sanitizedRatings.quality = ratings.quality;
-          if (ratings.communication !== undefined) sanitizedRatings.communication = ratings.communication;
-          if (ratings.tidiness !== undefined) sanitizedRatings.tidiness = ratings.tidiness;
+      try {
+        // sanitize ratings for history (only include provided fields)
+        const sanitizedRatings = { overall: ratings.overall };
+        if (ratings.punctuality !== undefined) sanitizedRatings.punctuality = ratings.punctuality;
+        if (ratings.quality !== undefined) sanitizedRatings.quality = ratings.quality;
+        if (ratings.communication !== undefined)
+          sanitizedRatings.communication = ratings.communication;
+        if (ratings.tidiness !== undefined) sanitizedRatings.tidiness = ratings.tidiness;
 
-          await SafePayHistory.create({
-            orderId: order._id,
-            serviceId: order.serviceId._id,
-            customerId: order.customerId,
-            providerId: order.providerId,
-            serviceTitle: order.serviceId.title || 'Uten navn',
-            amounts: { agreedPrice: order.agreedPrice, fee, tax, totalCustomer, netProvider },
-            status: 'completed',
-            paymentDate: new Date(),
-            ratings: sanitizedRatings,
-            reviewComment: comment,
-          });
-        } catch (e) {
-          if (e.code !== 11000) throw e;
-        }
+        await SafePayHistory.create({
+          orderId: order._id,
+          serviceId: order.serviceId._id,
+          customerId: order.customerId,
+          providerId: order.providerId,
+          serviceTitle: order.serviceId.title || 'Uten navn',
+          amounts: { agreedPrice: order.agreedPrice, fee, tax, totalCustomer, netProvider },
+          status: 'completed',
+          paymentDate: new Date(),
+          ratings: sanitizedRatings,
+          reviewComment: comment,
+        });
+      } catch (e) {
+        if (e.code !== 11000) throw e;
+      }
     }
 
     // ── Review: customer reviews provider ─────────────────────────────────────
@@ -652,8 +674,8 @@ exports.approveAndPayout = async (req, res) => {
         await Review.create({
           orderId: order._id,
           serviceId: order.serviceId._id,
-          reviewerId: userId,               // customer writes the review
-          revieweeId: order.providerId,     // review is ABOUT the provider
+          reviewerId: userId, // customer writes the review
+          revieweeId: order.providerId, // review is ABOUT the provider
           // 'poster' means the PROVIDER here — the enum values are named
           // backwards. See the note on Review.revieweeRole before changing this.
           revieweeRole: 'poster',
@@ -700,17 +722,17 @@ exports.approveAndPayout = async (req, res) => {
       // Source the payment record for reconciliation
       const sourcePayment = await Payment.findOne({ orderId: order._id });
       payoutResult = await releasePayoutToProvider({
-        orderId:                 order._id,
-        providerId:              order.providerId,
-        customerId:              order.customerId,
-        serviceId:               order.serviceId._id,
-        grossAmount:             order.agreedPrice,
-        platformFee:             fee,
-        releaseSource:           'customer_approve',
-        releasedBy:              userId,
-        stripePaymentIntentId:   sourcePayment?.stripePaymentIntentId,
+        orderId: order._id,
+        providerId: order.providerId,
+        customerId: order.customerId,
+        serviceId: order.serviceId._id,
+        grossAmount: order.agreedPrice,
+        platformFee: fee,
+        releaseSource: 'customer_approve',
+        releasedBy: userId,
+        stripePaymentIntentId: sourcePayment?.stripePaymentIntentId,
         stripeCheckoutSessionId: sourcePayment?.stripeSessionId,
-        safePayHistoryId:        (await SafePayHistory.findOne({ orderId: order._id }))?._id,
+        safePayHistoryId: (await SafePayHistory.findOne({ orderId: order._id }))?._id,
       });
 
       // Only increment virtual earnings after confirmed transfer
@@ -722,7 +744,9 @@ exports.approveAndPayout = async (req, res) => {
       // but provider is NOT marked paid and earnings are NOT incremented
       console.error('approveAndPayout: Stripe transfer failed:', payoutErr.message);
 
-      const isSetupRequired = ['PAYOUT_SETUP_REQUIRED', 'PAYOUT_NOT_ENABLED'].includes(payoutErr.code);
+      const isSetupRequired = ['PAYOUT_SETUP_REQUIRED', 'PAYOUT_NOT_ENABLED'].includes(
+        payoutErr.code
+      );
       const userMessage = isSetupRequired
         ? 'Jobben er godkjent, men utbetalingen krever at oppdragstaker fullfører Stripe Connect-oppsett før penger kan overføres.'
         : 'Jobben er godkjent, men utbetalingen mislyktes midlertidig. Pengene er trygge og vil bli forsøkt igjen.';
