@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { queryClient } from '../providers/AppProviders';
 import { destroyChatSocket } from '../services/chatSocket.service';
+import { deactivateRegisteredPushToken } from '../services/pushNotifications.service';
 
 type AuthUser = Record<string, unknown> | null;
 
@@ -9,6 +10,7 @@ function userId(user: AuthUser) {
 }
 
 async function clearAuthenticatedSession() {
+  await deactivateRegisteredPushToken().catch(() => undefined);
   await queryClient.cancelQueries();
   queryClient.removeQueries();
   destroyChatSocket();

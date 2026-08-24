@@ -4,6 +4,17 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import Toast from "react-native-toast-message";
 import { StyleSheet, View } from "react-native";
+import { useEffect } from 'react';
+import { useAuthStore } from '../store/authStore';
+import { registerPushNotifications } from '../services/pushNotifications.service';
+
+function PushRegistration() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  useEffect(() => {
+    if (isAuthenticated) void registerPushNotifications().catch(() => undefined);
+  }, [isAuthenticated]);
+  return null;
+}
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,6 +29,7 @@ export const queryClient = new QueryClient({
 export default function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
+      <PushRegistration />
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <View style={styles.root}>{children}</View>

@@ -7,6 +7,7 @@ const JobRequest = require('../models/JobRequest');
 const { getStripe } = require('../config/stripe');
 const { resolveStripeCustomer } = require('../services/stripe/customers');
 const mongoose = require('mongoose');
+const { sendPushToUser } = require('../services/pushNotifications');
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -283,6 +284,15 @@ exports.sendMessage = async (req, res) => {
         message: messagePayload,
       });
     }
+
+    const recipientId = chat.clientId.toString() === id
+      ? chat.providerId.toString()
+      : chat.clientId.toString();
+    void sendPushToUser(recipientId, {
+      title: 'Ny melding på Jobblo',
+      body: trimmed,
+      data: { type: 'chat_message', chatId },
+    });
 
     res.status(201).json(messagePayload);
   } catch (error) {

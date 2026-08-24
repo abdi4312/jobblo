@@ -193,7 +193,7 @@ if (categories.length > 0) queryParams.category = categories.join(',');
 - ⬜ Select Provider
 - ✅ Chat List / Meldinger
 - ✅ Chat Detail / Conversation
-- ⬜ Notifications
+- ✅ Notification settings overview
 - ⬜ Contract
 - ⬜ SafePay
 - ⬜ Payment Success / Failure
@@ -205,11 +205,41 @@ if (categories.length > 0) queryParams.category = categories.join(',');
 - ⬜ Dispute List
 - ⬜ Dispute Details / Thread
 - ⬜ Create Dispute
-- ⬜ Profile
-- ⬜ Edit Profile
-- ⬜ Settings
+- ✅ Profile overview
+ - ✅ Edit Profile
+ - ✅ Settings overview
 - ⬜ Account
 - ⬜ Support
+
+## Profile overview
+
+The canonical mobile profile route is `/(app)/profile` (bottom tab `Profil`). It fetches the authenticated owner profile through `useProfile` → `profile.service.ts` → `api/client.ts` using `GET /api/auth/profile` and the centralized query key `queryKeys.auth.profile`.
+
+The page displays the backend-backed avatar/initials, name, role, verification status when present, location, member date, rating and review count, completed jobs or posted jobs, bio, and skills. The available action is `Mine oppdrag og søknader`, which navigates to `/(app)/my-applications`. Logout calls the existing `authStore.logout`, retaining query cancellation/cache removal, socket destruction, push cleanup where supported, and auth clearing.
+
+There is currently no mobile settings, membership, reviews, support, or job-management destination to navigate to. Edit profile is now available at `/(app)/profile/edit`; the remaining pages are outside this profile overview and edit task.
+
+The edit profile route is `/(app)/profile/edit`. It seeds the form from `GET /api/auth/profile` and sends text-only changes as JSON via `PUT /api/users/:id`; avatar changes use multipart field `avatar` on the same endpoint. Editable fields are the web-supported profile fields: name, last name, bio (600 characters), skills, availability text, address, post number, poststed, and company name/org number/website for companies. Role, verification, ratings, statistics, email, and phone are read-only or settings-owned. The mutation updates and invalidates `queryKeys.auth.profile`, then syncs only basic identity fields to auth storage before returning to the profile.
+
+## Settings overview
+
+The canonical route is `/(app)/profile/settings`. It is a static navigation page grouped as Profil, Konto, Betaling, Personvern, and Annet. The only working destinations are `/(app)/profile/edit` from `Rediger profil` and back to the profile; all other rows are visibly deferred until their mobile detail screens exist.
+
+The web distinguishes `Medlemskap` (`/membership`) as plan selection/purchase from `Abonnementer` (`/settings/subscriptions`) as current subscription management. Neither detail flow is implemented on mobile. Reviews remain deferred because the web review route was intentionally removed after relying on invented review data; the profile only shows server-backed summary data.
+
+Recommended next settings screen: subscription management, followed by SafePay/payout, account deletion, then privacy/session settings. These are priority order only; no detail screens are included here.
+
+## Notification settings
+
+The route is `/(app)/profile/settings/notifications`, enabled from the `Varsler` row. The current web toggles for sound, browser, email, and SMS are client-local Zustand preferences; the backend has no notification preference fields or APIs. This mobile screen therefore does not render fake toggles.
+
+The mobile package now uses a guarded lazy `expo-notifications` loader. It reads `granted`, `denied`, or `undetermined`, requests only when undetermined, gets an Expo token, and registers it through `POST /api/push-tokens`; the token is stored locally only for current-device deactivation and is never displayed. The settings screen can deactivate that current device through `DELETE /api/push-tokens/current`. Expo Go receives a neutral development-build message and does not request permission. Denied native permissions can open system settings. Logout/account switching deactivates only the locally registered token before clearing the session. Backend chat sends deliver `data.type: chat_message` with `chatId`; tapping routes to the existing mobile chat detail, while socket foreground behavior remains unchanged.
+
+## Change password
+
+The password screen is `/(app)/profile/settings/password`, enabled from the settings overview. It sends `POST /api/auth/change-password/send-otp` with `{ currentPassword }`, then verifies with `POST /api/auth/change-password/verify-otp` using `{ otp, newPassword }`. Validation requires a current password, a new password of at least 8 characters containing lowercase, uppercase, and a digit, plus an exact confirmation match. OTP entry requires 6 digits; resend uses the same send endpoint after a 60-second countdown and keeps the current password local to the screen.
+
+The backend stores the OTP for 10 minutes, rate-limits sending to 3 requests per 15 minutes and verification to 5 attempts per 10 minutes, then replaces the password and clears the OTP fields. It does not revoke or regenerate the current session, so mobile keeps the user signed in. Passwords and OTPs are never persisted or placed in query state.
 
 ## Søkere og søknader overview
 

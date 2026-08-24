@@ -21,6 +21,7 @@ const messagesRouter = require('./routes/messages');
 const uploadRouter = require('./routes/upload');
 const ordersRouter = require('./routes/order');
 const notificationsRouter = require('./routes/notifications');
+const pushTokensRouter = require('./routes/pushTokens');
 const adminRouter = require('./routes/admin');
 const adminV2Router = require('./routes/admin/index');
 const reviewsRouter = require('./routes/review');
@@ -246,6 +247,7 @@ app.use('/api/home-hero', homeHeroRouter);
 app.use('/api/config', globalConfigRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/push-tokens', pushTokensRouter);
 // New modular admin router mounted FIRST — takes priority over legacy routes
 app.use('/api/admin', adminV2Router);
 // Legacy admin router — kept for backward compat (hero, system-history)

@@ -62,3 +62,13 @@ export async function resetPassword(
   });
   return response.data;
 }
+
+export async function changePasswordSendOtp(currentPassword: string): Promise<{ message: string }> {
+  const response = await apiClient.post<{ message: string }>('/auth/change-password/send-otp', { currentPassword });
+  return response.data;
+}
+
+export async function changePasswordVerifyOtp(otp: string, newPassword: string): Promise<{ message: string }> {
+  const response = await apiClient.post<{ message: string }>('/auth/change-password/verify-otp', { otp, newPassword });
+  return response.data;
+}

@@ -1,5 +1,5 @@
 import { Redirect, Tabs } from 'expo-router';
-import { Home, MessageCircle, PlusCircle } from 'lucide-react-native';
+import { Home, MessageCircle, PlusCircle, UserRound } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
 
 export default function AppLayout() {
@@ -34,6 +34,10 @@ export default function AppLayout() {
             <Tabs.Screen
                 name="messages"
                 options={{ title: 'Meldinger', tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} /> }}
+            />
+            <Tabs.Screen
+                name="profile"
+                options={{ title: 'Profil', tabBarIcon: ({ color, size }) => <UserRound size={size} color={color} /> }}
             />
             <Tabs.Screen
                 name="explore"
