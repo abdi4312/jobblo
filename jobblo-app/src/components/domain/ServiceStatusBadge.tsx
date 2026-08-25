@@ -9,6 +9,12 @@ const SERVICE_STATUS: Record<string, { label: string; tone: Tone }> = {
   in_progress: { label: 'I gang', tone: 'moving' },
   awaiting_payment: { label: 'Venter på betaling', tone: 'action' },
   waiting_for_approval: { label: 'Venter godkjenning', tone: 'action' },
+  // The remaining Service.status enum values — without these the raw English
+  // status string leaked into the badge.
+  paid: { label: 'Betalt', tone: 'moving' },
+  pending: { label: 'Ventende', tone: 'quiet' },
+  draft: { label: 'Utkast', tone: 'quiet' },
+  expired: { label: 'Utløpt', tone: 'closed' },
   completed: { label: 'Fullført', tone: 'closed' },
   cancelled: { label: 'Kansellert', tone: 'closed' },
   closed: { label: 'Lukket', tone: 'closed' },

@@ -66,4 +66,4 @@ async function resolveStripeCustomer(stripe, user) {
   }
 }
 
-module.exports = { resolveStripeCustomer, customerFieldForMode };
+module.exports = { resolveStripeCustomer, customerFieldForMode, isResourceMissing };

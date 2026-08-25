@@ -29,7 +29,8 @@ const getWebStorage = () => {
   if (typeof window !== 'undefined' && window.localStorage) {
     return {
       getItem: (key: string) => Promise.resolve(window.localStorage.getItem(key)),
-      setItem: (key: string, value: string) => Promise.resolve(window.localStorage.setItem(key, value)),
+      setItem: (key: string, value: string) =>
+        Promise.resolve(window.localStorage.setItem(key, value)),
       removeItem: (key: string) => Promise.resolve(window.localStorage.removeItem(key)),
     };
   }
@@ -80,6 +81,7 @@ type AuthState = {
   token: string | null;
   user: AuthUser;
   isAuthenticated: boolean;
+  hydrated: boolean;
   hydrate: () => Promise<void>;
   login: (token: string, user: AuthUser) => Promise<void>;
   logout: () => Promise<void>;
@@ -90,16 +92,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   user: null,
   isAuthenticated: false,
+  hydrated: false,
 
   hydrate: async () => {
     try {
-      const [token, user] = await Promise.all([
-        storage.getItem('token'),
-        storage.getItem('user'),
-      ]);
+      const [token, user] = await Promise.all([storage.getItem('token'), storage.getItem('user')]);
 
       if (!token) {
-        set({ token: null, user: null, isAuthenticated: false });
+        set({ token: null, user: null, isAuthenticated: false, hydrated: true });
         return;
       }
 
@@ -107,10 +107,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         token,
         user: user ? JSON.parse(user) : null,
         isAuthenticated: true,
+        hydrated: true,
       });
     } catch (error) {
       console.warn('Unable to hydrate auth state', error);
-      set({ token: null, user: null, isAuthenticated: false });
+      set({ token: null, user: null, isAuthenticated: false, hydrated: true });
     }
   },
 
@@ -123,14 +124,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       storage.setItem('user', JSON.stringify(user)),
     ]);
 
-    set({ token, user, isAuthenticated: true });
+    set({ token, user, isAuthenticated: true, hydrated: true });
   },
 
   logout: async () => {
     await clearAuthenticatedSession();
     await storage.removeItem('token');
     await storage.removeItem('user');
-    set({ token: null, user: null, isAuthenticated: false });
+    set({ token: null, user: null, isAuthenticated: false, hydrated: true });
   },
 
   updateUser: async (patch) => {
@@ -138,7 +139,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const nextUser = { ...currentUser, ...patch };
 
     await storage.setItem('user', JSON.stringify(nextUser));
-    set({ user: nextUser });
+    set({ user: nextUser, hydrated: true });
   },
 }));
 

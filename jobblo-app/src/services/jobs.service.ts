@@ -1,5 +1,5 @@
 import apiClient from '../api/client';
-import type { Job, JobsResponse, FetchJobsParams } from '../types/Jobs';
+import type { Job, JobsResponse, FetchJobsParams, MyJob } from '../types/Jobs';
 
 /**
  * Jobs service layer for API calls to /api/services endpoint.
@@ -88,5 +88,29 @@ export const jobsService = {
   async getJob(jobId: string): Promise<Job> {
     const response = await apiClient.get<{ data?: Job; job?: Job }>(`/services/${jobId}`);
     return (response.data?.data ?? response.data?.job ?? response.data) as Job;
+  },
+
+  /**
+   * Fetch the listings posted by the authenticated user.
+   *
+   * Maps to GET /api/services/my-posted. Ownership comes from the token on the
+   * server (req.userId) — never send a userId param here. The response is a bare
+   * array of listings, each with a server-computed `capabilities` object.
+   */
+  async fetchMyJobs(): Promise<MyJob[]> {
+    const response = await apiClient.get<MyJob[]>('/services/my-posted');
+    return Array.isArray(response.data) ? response.data : [];
+  },
+
+  /**
+   * Delete one of the authenticated user's listings.
+   *
+   * Maps to DELETE /api/services/:serviceId. The server answers 403 when the
+   * caller is not the owner and 409 with a human-readable Norwegian `error`
+   * when an active order blocks deletion — callers must surface that text.
+   */
+  async deleteMyJob(serviceId: string): Promise<void> {
+    if (!serviceId.trim()) throw new Error('Mangler gyldig annonse-ID');
+    await apiClient.delete(`/services/${serviceId.trim()}`);
   },
 };

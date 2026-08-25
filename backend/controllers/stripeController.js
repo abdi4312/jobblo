@@ -2,12 +2,14 @@ const Coupon = require('../models/Coupon');
 const Subscription = require('../models/Subscription');
 const User = require('../models/User');
 const Service = require('../models/Service');
+const mongoose = require('mongoose');
 const { getStripe } = require('../config/stripe');
 const SubscriptionPlan = require('../models/SubscriptionPlan');
 const calculateDiscount = require('../utils/calculateDiscount');
 const { validateCouponLogic } = require('../utils/couponValidation');
 const { upsertTransaction } = require('../utils/transaction');
 const { upsertSubscription } = require('../utils/subscription');
+const { findBillingCapableSubscription } = require('../services/stripe/subscriptionState');
 const {
   provisionSubscriptionFromSession,
   provisionExtraContactFromSession,
@@ -51,6 +53,49 @@ function resolveFrontendUrl() {
  */
 const { resolveStripeCustomer } = require('../services/stripe/customers');
 
+/**
+ * How long two identical checkout requests are collapsed into one Stripe session.
+ *
+ * A double-tap on the mobile "Kjøp" button, or a re-submit on a slow connection, sends
+ * the request twice. Both copies pass the duplicate-subscription guard below, because
+ * neither has been paid yet and so neither is visible to the other — see the race note
+ * on `subscriptionIdempotencyKey`. Handing Stripe the same idempotency key makes it
+ * return the *same* session for the second call instead of minting a second one.
+ *
+ * A window rather than a bare key because Stripe remembers keys for 24 hours: a
+ * customer who abandons checkout and comes back an hour later should get a fresh
+ * session, not a replay of the old one. A minute is long enough to cover any plausible
+ * double-submit and short enough that a deliberate retry is never blocked.
+ */
+const CHECKOUT_IDEMPOTENCY_WINDOW_MS = 60 * 1000;
+
+/**
+ * A key that is stable across an accidental double-submit and different across a
+ * deliberate retry.
+ *
+ * Every component is server-derived: the authenticated user, the plan we looked up
+ * ourselves, and the coupon code after server-side validation. Nothing the client sent
+ * as an authority contributes to it.
+ */
+function subscriptionIdempotencyKey({ userId, planId, couponCode }) {
+  const window = Math.floor(Date.now() / CHECKOUT_IDEMPOTENCY_WINDOW_MS);
+  return `sub_checkout_${userId}_${planId}_${couponCode || 'nocoupon'}_${window}`;
+}
+
+/** Stripe's two "you are already using this key" signals, which mean: they tapped twice. */
+function isIdempotencyCollision(error) {
+  return error?.code === 'idempotency_key_in_use' || error?.type === 'idempotency_error';
+}
+
+/**
+ * Start a Stripe Checkout session for a paid subscription plan.
+ *
+ * The request body is read for `planId` and `couponCode` and nothing else. Price,
+ * discount, plan type, the Stripe customer and the owning user are all resolved
+ * server-side from the authenticated session — a client that posts `price`,
+ * `finalPrice`, `userId` or `stripeCustomerId` is simply ignored, and the coupon is
+ * revalidated here even if the UI already validated it for display.
+ */
 exports.createCheckoutSession = async (req, res) => {
   try {
     const stripe = await getStripe();
@@ -58,6 +103,12 @@ exports.createCheckoutSession = async (req, res) => {
     const user = req.user;
 
     if (!planId) return res.status(400).json({ message: 'planId mangler' });
+
+    // `findById` on a malformed id throws a CastError, which the catch below would
+    // report as a 500 "contact support" — misleading for what is just a bad id.
+    if (!mongoose.isValidObjectId(planId)) {
+      return res.status(404).json({ message: 'Plan not found' });
+    }
 
     const frontend = resolveFrontendUrl();
     if (frontend.error) {
@@ -72,6 +123,19 @@ exports.createCheckoutSession = async (req, res) => {
     const plan = await SubscriptionPlan.findById(planId);
     if (!plan) return res.status(404).json({ message: 'Plan not found' });
 
+    // A retired plan must not be purchasable, and this is the only place that can
+    // actually enforce it. `GET /api/plans` returns inactive plans on purpose — the
+    // admin plan editor reads the same public route and needs to see them — so both
+    // the web and mobile plan lists filter client-side. Client-side filtering is a
+    // display choice, not a rule: anyone who kept an old planId, or replayed a stale
+    // request, would otherwise still be able to subscribe to a plan that was pulled.
+    if (plan.isActive !== true) {
+      return res.status(400).json({
+        message: 'Denne planen er ikke tilgjengelig lenger. Velg en annen plan.',
+        code: 'plan_inactive',
+      });
+    }
+
     // A 0 kr plan has nothing to charge. Stripe rejects a subscription line item priced at
     // zero, so this used to surface as an opaque 500 if the UI ever let it through.
     if (!plan.price || plan.price <= 0) {
@@ -80,12 +144,42 @@ exports.createCheckoutSession = async (req, res) => {
         .json({ message: 'Denne planen er gratis og krever ingen betaling', code: 'plan_is_free' });
     }
 
-    // 2️⃣ Determine final price
+    // 2️⃣ Refuse a second paid subscription before anything is created at Stripe.
+    //
+    // This runs before the customer is resolved and before the session is created, so a
+    // blocked attempt leaves nothing behind at Stripe to clean up. Both the same plan
+    // and a different plan are refused: "switching" plans through this endpoint is what
+    // produced two live subscriptions and one unreachable id in the first place.
+    // Proration and plan switching are deliberately out of scope — the existing
+    // subscription has to be managed through the subscription screen.
+    const existing = await findBillingCapableSubscription(stripe, user._id);
+    if (existing.blocking) {
+      console.warn(
+        'createCheckoutSession blocked: user %s already has a %s subscription (cancelAtPeriodEnd=%s), requested plan %s',
+        String(user._id),
+        existing.stripeStatus,
+        existing.cancelAtPeriodEnd,
+        String(planId)
+      );
+      return res.status(409).json({
+        message:
+          'Du har allerede et aktivt abonnement. Administrer det eksisterende abonnementet før du kjøper en ny plan.',
+        code: 'active_subscription_exists',
+      });
+    }
+
+    // 3️⃣ Determine final price
     let finalPrice = plan.price; // default price
     let appliedCoupon = null;
     let couponId = null; // ✅ declare here
 
     if (couponCode) {
+      // Only a string can be upper-cased; anything else would throw and be reported as
+      // a 500 rather than as the invalid code it is.
+      if (typeof couponCode !== 'string') {
+        return res.status(400).json({ message: 'Invalid or inactive coupon' });
+      }
+
       const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
 
       // logic moved to utils/couponValidation.js
@@ -98,42 +192,95 @@ exports.createCheckoutSession = async (req, res) => {
       couponId = coupon._id;
     }
 
-    // 3️⃣ Reuse the user's Stripe customer, creating it only on the first purchase
+    // 4️⃣ Refuse a total Stripe cannot bill.
+    //
+    // The free-plan guard above checks `plan.price`, which is not the same number.
+    // `calculateDiscount` clamps at zero, so a 100% coupon — or a fixed coupon worth at
+    // least the plan price — brings `finalPrice` to 0 while `plan.price` stays positive.
+    // That reached Stripe as a recurring line item of `unit_amount: 0`, which Stripe
+    // rejects, and the customer saw "contact support". Sub-øre totals round to the same
+    // zero, so the guard is on the amount actually sent rather than on `finalPrice`.
+    //
+    // There is no "activate a free subscription" operation to fall back on: every user
+    // already holds a free default plan from signup, and nothing in the codebase
+    // upgrades an account without a Stripe subscription behind it. So this is refused
+    // rather than quietly turned into something else.
+    const unitAmount = Math.round(finalPrice * 100);
+    if (!Number.isFinite(unitAmount) || unitAmount < 1) {
+      console.warn(
+        'createCheckoutSession blocked: coupon %s reduced plan %s to a zero total',
+        appliedCoupon,
+        String(planId)
+      );
+      return res.status(400).json({
+        message:
+          'Rabatten gjør betalingen gratis, og kan ikke behandles som et Stripe-abonnement.',
+        code: 'zero_total_subscription',
+      });
+    }
+
+    // 5️⃣ Reuse the user's Stripe customer, creating it only on the first purchase
     const customerId = await resolveStripeCustomer(stripe, user);
 
-    // 4️⃣ Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'nok',
-            product_data: { name: plan.name },
-            unit_amount: Math.round(finalPrice * 100),
-            recurring: { interval: 'month' },
+    // 6️⃣ Create Stripe checkout session
+    const session = await stripe.checkout.sessions.create(
+      {
+        customer: customerId,
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'nok',
+              product_data: { name: plan.name },
+              unit_amount: unitAmount,
+              recurring: { interval: 'month' },
+            },
+            quantity: 1,
           },
-          quantity: 1,
+        ],
+        mode: 'subscription',
+        success_url: `${frontend.url}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${frontend.url}/membership`,
+        metadata: {
+          userId: String(user._id),
+          planId: String(planId),
+          planName: plan.name,
+          planPrice: plan.price,
+          discountAmount: plan.price - finalPrice,
+          planType: plan.type,
+          // `SubscriptionPlan` has no `autoRenew` field, so this has always been the
+          // literal string "undefined" and provisioning has always read it as false.
+          // Left as-is rather than removed: changing it would change the metadata
+          // contract, which is not what this hardening pass is for.
+          autoRenew: String(plan.autoRenew),
+          coupon: appliedCoupon || '',
+          couponId: couponId ? String(couponId) : '', // ✅ safe
         },
-      ],
-      mode: 'subscription',
-      success_url: `${frontend.url}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${frontend.url}/membership`,
-      metadata: {
-        userId: String(user._id),
-        planId: String(planId),
-        planName: plan.name,
-        planPrice: plan.price,
-        discountAmount: plan.price - finalPrice,
-        planType: plan.type,
-        autoRenew: String(plan.autoRenew),
-        coupon: appliedCoupon || '',
-        couponId: couponId ? String(couponId) : '', // ✅ safe
       },
-    });
+      {
+        // Same convention as the payout and refund calls in
+        // services/payout/releasePayoutToProvider.js: money-moving Stripe calls carry
+        // a key so a retry cannot duplicate them.
+        idempotencyKey: subscriptionIdempotencyKey({
+          userId: user._id,
+          planId,
+          couponCode: appliedCoupon,
+        }),
+      }
+    );
 
     res.json({ url: session.url });
   } catch (error) {
+    if (isIdempotencyCollision(error)) {
+      // Two copies of the same request, in flight at the same time. The other one is
+      // creating the session; asking again in a moment gets it.
+      console.warn('createCheckoutSession: duplicate submit for plan %s', req.body?.planId);
+      return res.status(409).json({
+        message: 'Betalingen er allerede under behandling. Vent et øyeblikk og prøv igjen.',
+        code: 'checkout_in_progress',
+      });
+    }
+
     // A coupon that is expired, used up or not valid for this plan throws from
     // `validateCouponLogic` with a message written for the user; those are worth passing
     // through. A Stripe or database failure is not — it used to be echoed verbatim, which

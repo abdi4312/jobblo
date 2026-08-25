@@ -159,6 +159,10 @@ router.get('/google/callback', (req, res, next) => {
       return res.redirect(`${frontendBase}/login?error=${info?.code || 'google_failed'}`);
     }
 
+    if (user.isDeleted || user.accountStatus === 'deactivated') {
+      return res.redirect(`${frontendBase}/login?error=account_deactivated`);
+    }
+
     try {
       const { accessToken, refreshToken } = await createSession(req, user._id);
 

@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, Star } from 'lucide-react-native';
+import { ChevronRight, Star, Bell } from 'lucide-react-native';
 import apiClient from '../../src/api/client';
 import { useJobs } from '../../src/hooks/useJobs';
 import { useCategories } from '../../src/hooks/useCategories';
 import { useAuthStore } from '../../src/store/authStore';
+import { useUnreadCount } from '../../src/hooks/useNotifications';
 import { JobCard } from '../../src/components/JobCard';
 import { CategoryChip } from '../../src/components/CategoryChip';
 
@@ -127,6 +129,9 @@ export default function HomeScreen() {
     avatarUrl: worker.avatarUrl,
   }));
 
+  const { data: unreadCountData } = useUnreadCount();
+  const unreadCount = unreadCountData?.count ?? 0;
+
   const SectionHeader = ({ eyebrow, title, actionLabel, action }: { eyebrow: string; title: string; actionLabel?: string; action?: () => void }) => (
     <View className="mb-6">
       <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[#63665F]">
@@ -145,6 +150,21 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <TouchableOpacity
+        onPress={() => router.push('/(app)/alerts')}
+        className="absolute right-4 top-2 z-10 h-11 w-11 items-center justify-center rounded-full bg-white/90"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityLabel="Varsler"
+      >
+        <Bell size={20} color="#0B0B0B" />
+        {unreadCount > 0 && (
+          <View className="absolute -right-0.5 -top-0.5 h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#B4544A] px-1">
+            <Text className="text-[0.625rem] font-bold text-white">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 28 }}
@@ -309,7 +329,7 @@ export default function HomeScreen() {
                   key={worker._id ?? worker.name}
                   activeOpacity={0.9}
                   className="flex-row items-center gap-3 rounded-2xl border border-[#E6E7E1] bg-white p-4"
-                  onPress={() => {}}
+                  onPress={() => { }}
                 >
                   <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9]">
                     {worker.avatarUrl ? (

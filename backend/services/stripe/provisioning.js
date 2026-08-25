@@ -5,6 +5,11 @@ const Notification = require('../../models/Notification');
 const { upsertTransaction } = require('../../utils/transaction');
 const { upsertSubscription } = require('../../utils/subscription');
 const { notify } = require('../../services/notifications');
+const { getStripe } = require('../../config/stripe');
+const {
+  retrieveLiveSubscription,
+  isBillingCapableStripeStatus,
+} = require('./subscriptionState');
 
 /**
  * Provisioning for the two non-SafePay purchase types.
@@ -38,6 +43,54 @@ function subscriptionPeriodEnd(sub) {
 function idOf(value) {
   if (!value) return null;
   return typeof value === 'string' ? value : value.id || null;
+}
+
+/**
+ * Refuse to point a user's subscription record at a new Stripe subscription while the
+ * one it currently names is still able to bill them.
+ *
+ * `upsertSubscription` overwrites `currentPlan.stripeSubscriptionId` wholesale. That is
+ * correct for a replay (same id) and for a genuine re-subscribe after cancellation (old
+ * id is dead), but it is destructive in one case: the stored id names a *different*
+ * subscription that Stripe is still invoicing. Overwriting then leaves that first
+ * subscription billing every month with nothing in Jobblo referring to it —
+ * `cancelMySubscription`, `applySubscriptionUpdated` and `applySubscriptionDeleted` all
+ * find their subscription through the stored id, so it becomes unreachable and
+ * uncancellable from inside the product.
+ *
+ * `createCheckoutSession` now blocks this at the source, but a session created before
+ * that guard existed can still be paid, a checkout link can sit in a browser tab for
+ * hours, and two simultaneous unpaid sessions can still both be completed. So the
+ * destructive write is also refused here, where the money has already moved.
+ *
+ * The transaction row is written before this runs and is deliberately kept: the customer
+ * was charged, and that has to be on record for anyone reconciling or refunding it. What
+ * is withheld is only the overwrite.
+ *
+ * @throws when Stripe cannot be reached — the caller's contract is that a thrown error
+ *   releases the webhook claim so Stripe retries, which is right for a transient fault.
+ * @returns {Promise<{ conflict: boolean, storedStripeSubscriptionId?: string, storedStripeStatus?: string }>}
+ */
+async function detectConflictingLiveSubscription({ userId, stripeSubscriptionId }) {
+  // Nothing to protect if the incoming session has no subscription id to write.
+  if (!stripeSubscriptionId) return { conflict: false };
+
+  const record = await Subscription.findOne({ userId });
+  const storedId = record?.currentPlan?.stripeSubscriptionId || null;
+
+  // No stored id, or the same one: this is a first purchase or a replay. Both are safe.
+  if (!storedId || storedId === stripeSubscriptionId) return { conflict: false };
+
+  const stripe = await getStripe();
+  const live = await retrieveLiveSubscription(stripe, storedId);
+
+  // Stripe does not know it — stale, or from the other mode. Safe to replace.
+  if (!live.found) return { conflict: false };
+
+  const storedStripeStatus = live.subscription.status;
+  if (!isBillingCapableStripeStatus(storedStripeStatus)) return { conflict: false };
+
+  return { conflict: true, storedStripeSubscriptionId: storedId, storedStripeStatus };
 }
 
 /**
@@ -79,6 +132,22 @@ async function provisionSubscriptionFromSession(session) {
     discountCoupon,
     coupon: couponId,
   });
+
+  const conflict = await detectConflictingLiveSubscription({ userId, stripeSubscriptionId });
+  if (conflict.conflict) {
+    // Ids are Stripe object references, not credentials, and this is the only record an
+    // admin has to work from — both subscriptions have to be named or the duplicate
+    // cannot be found and cancelled. No keys, secrets or card data are logged.
+    console.error(
+      'provisionSubscriptionFromSession: refusing to overwrite subscription for user %s — stored %s is still %s at Stripe, incoming %s from session %s was NOT applied; the customer may now have two live subscriptions and needs manual review',
+      String(userId),
+      conflict.storedStripeSubscriptionId,
+      conflict.storedStripeStatus,
+      stripeSubscriptionId,
+      session.id
+    );
+    return { ok: false, reason: 'conflicting_live_subscription' };
+  }
 
   const subscription = await upsertSubscription({
     userId,
@@ -281,4 +350,5 @@ module.exports = {
   applySubscriptionDeleted,
   subscriptionPeriodEnd,
   mapStripeSubscriptionStatus,
+  detectConflictingLiveSubscription,
 };

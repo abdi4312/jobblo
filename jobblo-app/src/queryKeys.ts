@@ -5,6 +5,21 @@ export const queryKeys = {
   },
   auth: {
     profile: ['auth', 'profile'] as const,
+
+    /**
+     * Query key for the current user's active login sessions
+     * (GET /api/auth/sessions). Used by the Active Sessions settings screen.
+     *
+     * This key is intentionally nested under `auth` so it is torn down by the
+     * blanket `queryClient.removeQueries()` in authStore's
+     * `clearAuthenticatedSession()` on logout / account switch. Session data is
+     * private to one account and must never survive into another user's session,
+     * so it lives ONLY in the TanStack cache — never in AsyncStorage or Zustand.
+     */
+    sessions: ['auth', 'sessions'] as const,
+  },
+  subscription: {
+    current: ['subscription', 'current'] as const,
   },
   jobs: {
     /**
@@ -55,6 +70,12 @@ export const queryKeys = {
      * Query key for individual job details.
      */
     detail: (jobId: string) => ['jobs', 'detail', jobId] as const,
+
+    /**
+     * Query key for the listings the authenticated user has posted.
+     * Used by useMyJobs (GET /api/services/my-posted) on the Mine annonser screen.
+     */
+    mine: ['jobs', 'mine'] as const,
   },
   categories: {
     /**
@@ -104,6 +125,7 @@ export const queryKeys = {
   safepay: {
     checkout: (orderId: string) => ['safepay', 'checkout', orderId] as const,
     status: (sessionId: string) => ['safepay', 'status', sessionId] as const,
+    history: ['safepay', 'history'] as const,
   },
   providerOrders: {
     all: ['provider-orders'] as const,
@@ -112,5 +134,44 @@ export const queryKeys = {
   },
   disputes: {
     byOrder: (orderId: string) => ['disputes', 'order', orderId] as const,
+  },
+  payout: {
+    status: ['payout', 'status'] as const,
+  },
+  plans: {
+    /**
+     * Query key for the public subscription plan catalogue (GET /api/plans).
+     * Used by usePlans on the Membership screen. The endpoint returns every plan
+     * including inactive ones, so the hook filters `isActive` client-side.
+     */
+    all: ['plans', 'all'] as const,
+  },
+  support: {
+    mine: ['support', 'mine'] as const,
+  },
+  notifications: {
+    all: ['notifications'] as const,
+    list: (type?: string) => ['notifications', 'list', type ?? 'all'] as const,
+    unreadCount: ['notifications', 'unreadCount'] as const,
+  },
+  favoriteLists: {
+    /**
+     * The signed-in user's saved lists (GET /api/lists, no userId param — the server
+     * derives the owner from the token). One shared entry, so the Favorites overview,
+     * the "Lagre i liste" sheet and every JobCard bookmark read the same cache and
+     * cause a single request.
+     *
+     * Favorites are private per-account server state. They live ONLY here — never in
+     * AsyncStorage and never in Zustand — so `queryClient.removeQueries()` in
+     * authStore's `clearAuthenticatedSession()` tears them down on logout and on an
+     * account switch. There is deliberately no second local source of truth.
+     */
+    all: ['favoriteLists', 'all'] as const,
+
+    /**
+     * One saved list with its populated services (GET /api/lists/:listId).
+     * Nested under the same root so a broad invalidate reaches overview and details.
+     */
+    detail: (listId: string) => ['favoriteLists', 'detail', listId] as const,
   },
 } as const;

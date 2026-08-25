@@ -71,6 +71,27 @@ export interface Job {
   timeEntries?: TimeEntry[];
 }
 
+/**
+ * Server-computed owner permissions for a listing.
+ * Produced by backend/utils/listingCapabilities.js — the client renders this
+ * decision instead of inferring it from `status`, because Service.status has
+ * historically drifted from the Order status that actually blocks the action.
+ */
+export interface ListingCapabilities {
+  canEdit: boolean;
+  canDelete: boolean;
+  blockedCode: string | null;
+  blockedReason: string | null;
+  blockingStatus: string | null;
+}
+
+/** A listing as returned by GET /api/services/my-posted (owner-scoped). */
+export interface MyJob extends Job {
+  capabilities: ListingCapabilities;
+  contactPhone?: string;
+  contactEmail?: string;
+}
+
 export interface JobsResponse {
   data: Job[];
   pagination: {

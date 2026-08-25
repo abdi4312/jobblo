@@ -258,6 +258,10 @@ exports.vippsCallback = async (req, res) => {
         return res.redirect(frontendUrl(`login?error=${ERRORS.FAILED}`));
     }
 
+    if (user?.isDeleted || user?.accountStatus === 'deactivated') {
+      return res.redirect(frontendUrl(`login?error=account_deactivated`));
+    }
+
     // Idempotent by construction -- everything writable is inside `$setOnInsert`, so
     // this cannot create a second row or reset an existing paid plan on a repeat login.
     await ensureDefaultSubscription(user);

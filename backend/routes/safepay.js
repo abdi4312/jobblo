@@ -43,6 +43,7 @@ router.post('/contract/:orderId/start', authenticate, providerWorkController.sta
 // paymentStatus check, no lifecycle-state check, no dispute check — so a customer could
 // trigger a transfer for money the platform never collected. It had no callers.
 // The hardened replacement is POST /api/safepay-checkout/approve (approveAndPayout).
+router.get('/history', authenticate, safePayController.getSafePayHistory);
 router.get('/history/:userId', authenticate, safePayController.getSafePayHistory);
 router.put('/contract/:orderId/checklist/:itemId', authenticate, safePayController.updateChecklistItem);
 

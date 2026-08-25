@@ -243,6 +243,10 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    if (user.isDeleted || user.accountStatus === 'deactivated') {
+      return res.status(401).json({ error: 'Kontoen er deaktivert eller slettet.' });
+    }
+
     const { accessToken, refreshToken } = await createSession(req, user._id);
 
     setAuthCookies(res, accessToken, refreshToken);

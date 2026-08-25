@@ -340,7 +340,7 @@ exports.startJob = async (req, res) => {
  */
 exports.getSafePayHistory = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.params.userId || req.userId;
 
     // Validate input ID (Bug 9)
     if (!mongoose.Types.ObjectId.isValid(userId)) {

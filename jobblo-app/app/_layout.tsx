@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import AppProviders from '../src/providers/AppProviders';
 import { subscribeToPushResponses } from '../src/services/pushNotifications.service';
+import { NotificationRealtime } from '../src/components/NotificationRealtime';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function RootLayout() {
 
   return (
     <AppProviders>
+      <NotificationRealtime />
       <Stack
         screenOptions={{
           headerShown: false,

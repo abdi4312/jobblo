@@ -600,6 +600,26 @@ exports.updateUser = async (req, res) => {
       }
     }
 
+    // Normalize Norwegian post numbers on the server side.
+    //
+    // Postnummer is kept as a STRING throughout because Norwegian codes like
+    // "0150" have a meaningful leading zero that `Number` / Mongo number types
+    // would destroy. Clients are asked to submit digits only (max 4), and the
+    // schema defines `trim: true`, but no previous code actually enforced
+    // digits. This normalization is deliberately minimal:
+    //   - strip everything that is not a digit
+    //   - cap at 4 characters
+    //   - accept empty / undefined as "no postcode set" — field is optional
+    //
+    // It avoids breaking any existing profile data because already-stored
+    // values are not re-written on an UPDATE that does not include
+    // `postNumber`.
+    if (updates.postNumber !== undefined && updates.postNumber !== null) {
+      const raw = String(updates.postNumber);
+      const digits = raw.replace(/\D/g, '').slice(0, 4);
+      updates.postNumber = digits;
+    }
+
     // ⭐ HANDLE AVATAR UPLOAD
     if (req.files) {
       if (req.files.avatar && req.files.avatar[0]) {
@@ -658,18 +678,15 @@ exports.deleteUser = async (req, res) => {
       return res.status(400).json({ error: 'Invalid user ID format' });
     }
 
-    // Authorization check
     if (!authorizeUser(req, id)) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const user = await User.findById(id).select('isDeleted email');
+    const user = await User.findById(id).select(
+      'isDeleted email avatarPublicId bannerPublicId certifications'
+    );
     if (!user || user.isDeleted) return res.status(404).json({ error: 'Fant ikke brukeren.' });
 
-    // Refuse while the user is still party to live money or live work. Deleting
-    // here would orphan an order mid-escrow — the counterparty would be left with
-    // a contract against a user that no longer exists, and any pending Stripe
-    // payout would have nowhere to go.
     const blockingOrders = await Order.countDocuments({
       $or: [{ customerId: id }, { providerId: id }],
       status: {
@@ -682,15 +699,56 @@ exports.deleteUser = async (req, res) => {
         error:
           'Du har pågående oppdrag eller betalinger. Fullfør eller avslutt disse først, ' +
           'eller kontakt kundeservice, så hjelper vi deg med slettingen.',
+        code: 'active_orders_exist',
       });
     }
 
-    // Anonymise rather than remove the row. The model's own note says never to
-    // hard-delete a user with financial history, and Norwegian bookkeeping rules
-    // require transaction records to be retained — but every piece of personal
-    // data is overwritten, which is what erasure actually asks for.
-    // The e-mail is nulled through a unique index, so a placeholder keyed on the
-    // id keeps it unique without being identifying.
+    const { findBillingCapableSubscription } = require('../services/stripe/subscriptionState');
+    let stripe;
+    try {
+      stripe = require('../config/stripe');
+    } catch {
+      stripe = null;
+    }
+    if (stripe) {
+      try {
+        const capable = await findBillingCapableSubscription(stripe, id);
+        if (capable.blocking) {
+          return res.status(409).json({
+            error:
+              'Du har et aktivt abonnement. Si opp abonnementet og vent til abonnementsperioden er avsluttet før du sletter profilen.',
+            code: 'active_subscription_exists',
+          });
+        }
+      } catch (subErr) {
+        if (subErr?.code === 'subscription_check_unavailable') {
+          return res.status(503).json({
+            error: 'Kunne ikke verifisere abonnementsstatus akkurat nå. Prøv igjen litt senere.',
+            code: 'subscription_check_unavailable',
+          });
+        }
+        throw subErr;
+      }
+    }
+
+    const cloudinary = require('../config/cloudinary');
+    const destroyPublicId = async (publicId) => {
+      if (!publicId) return;
+      try {
+        await cloudinary.uploader.destroy(publicId);
+      } catch (cdnErr) {
+        console.error('Cloudinary destroy failed for %s: %s', publicId, cdnErr.message);
+      }
+    };
+
+    const assetCleanup = [];
+    if (user.avatarPublicId) assetCleanup.push(destroyPublicId(user.avatarPublicId));
+    if (user.bannerPublicId) assetCleanup.push(destroyPublicId(user.bannerPublicId));
+    for (const cert of user.certifications || []) {
+      if (cert?.publicId) assetCleanup.push(destroyPublicId(cert.publicId));
+    }
+    await Promise.allSettled(assetCleanup);
+
     const anonymised = {
       isDeleted: true,
       deletedAt: new Date(),
@@ -708,27 +766,67 @@ exports.deleteUser = async (req, res) => {
       address: null,
       postNumber: null,
       postSted: null,
+      country: null,
+      birthDate: null,
+      gender: null,
       website: null,
       companyName: null,
       orgNumber: null,
+      orgType: null,
       skills: [],
       locations: [],
       portfolio: [],
       previousProjects: [],
-      // Ends every existing login immediately.
+      certifications: [],
+      experience: [],
+      blockedUsers: [],
+      favorites: [],
+      pointsBalance: 0,
+      pointsHistory: [],
+      monthlyContactUsage: 0,
       password: crypto.randomBytes(32).toString('hex'),
       refreshTokens: [],
       passwordResetToken: null,
       passwordResetExpires: null,
+      oauthProviders: [],
+      identityVerification: undefined,
+      availability: [],
+      availabilityText: null,
     };
 
     await User.findByIdAndUpdate(id, anonymised, { runValidators: false });
 
-    // Drop active sessions so the account cannot keep being used.
     try {
       await require('../models/Session').deleteMany({ userId: id });
     } catch (sessionErr) {
       console.error('Session cleanup on delete failed:', sessionErr.message);
+    }
+
+    try {
+      await require('../models/PushToken').deleteMany({ userId: id });
+    } catch (pushErr) {
+      console.error('PushToken cleanup on delete failed:', pushErr.message);
+    }
+
+    try {
+      const IdentityClaim = require('../models/IdentityClaim');
+      await IdentityClaim.deleteMany({ userId: id });
+    } catch (claimErr) {
+      console.error('IdentityClaim cleanup on delete failed:', claimErr.message);
+    }
+
+    try {
+      const { getIO } = require('../sockets/io');
+      const io = getIO();
+      if (io && io.sockets && io.sockets.sockets) {
+        for (const [, sock] of io.sockets.sockets) {
+          if (sock.userId && String(sock.userId) === String(id)) {
+            sock.disconnect(true);
+          }
+        }
+      }
+    } catch (socketErr) {
+      console.error('Socket disconnect on delete failed:', socketErr.message);
     }
 
     res.json({ message: 'Profilen din er slettet.' });

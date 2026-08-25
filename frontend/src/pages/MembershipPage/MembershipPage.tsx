@@ -143,6 +143,47 @@ export default function MembershipPage() {
   const isCurrent = !!selectedPlan && selectedPlan._id === currentPlanId;
   const finalPrice = discount ? discount.finalPrice : (selectedPlan?.price ?? 0);
 
+  /**
+   * Whether the account already holds a Stripe subscription that can bill it.
+   *
+   * `currentPlanId` cannot answer this. It is matched off `user.subscription` — the plan
+   * *name* — and every account carries a free default plan name from signup, so the
+   * page used to offer "Bytt til denne planen" to free users and paying users alike.
+   * The stored `stripeSubscriptionId` is what separates a real paid subscription from
+   * that default.
+   *
+   * This is a display gate only. The rule lives on the server, in
+   * `services/stripe/subscriptionState.js`, which refuses a second paid checkout with
+   * HTTP 409 `active_subscription_exists` regardless of what this page shows. The
+   * settled list below mirrors the statuses that server treats as non-blocking, so the
+   * page stops inviting a purchase the server will reject. `cancelAtPeriodEnd`
+   * deliberately does not clear it: a subscription set to cancel is still active, and
+   * still billing, until the period actually ends.
+   */
+  const hasPaidSubscription = useMemo(() => {
+    if (!mySub?.stripeSubscriptionId) return false;
+    const settled = ['canceled', 'cancelled', 'incomplete_expired', 'expired'];
+    const live = mySub.stripeStatus?.toLowerCase();
+    const local = mySub.status?.toLowerCase();
+    // `getMySubscription` reports 'unknown' when its own live Stripe lookup throws, so
+    // that value is not a signal — fall back to the stored status, and when neither is
+    // conclusive assume paid, which blocks rather than risking a duplicate charge.
+    if (live && live !== 'unknown') return !settled.includes(live);
+    if (local) return !settled.includes(local);
+    return true;
+  }, [mySub]);
+
+  /**
+   * A coupon can discount a paid plan all the way to 0 kr. `calculateDiscount` clamps at
+   * zero, and Stripe rejects a recurring line item of `unit_amount: 0`, so the server
+   * refuses this with `zero_total_subscription`. Don't advertise it as purchasable.
+   */
+  const couponMakesFree = !isFree && finalPrice <= 0;
+
+  /** Paid checkout is offered only where the server would actually accept it. */
+  const canCheckout =
+    !!selectedPlan && !isFree && !isCurrent && !hasPaidSubscription && !couponMakesFree;
+
   const resetPromo = () => {
     setDiscount(null);
     setPromoCode('');
@@ -172,7 +213,9 @@ export default function MembershipPage() {
   };
 
   const handleCheckout = async () => {
-    if (!selectedPlan || isFree) return;
+    // Re-assert the preconditions here rather than relying on the button being hidden.
+    // `selectedPlan` is repeated because `canCheckout` does not narrow it for TypeScript.
+    if (!selectedPlan || !canCheckout) return;
     setIsRedirecting(true);
     try {
       const payload: { planId: string; couponCode?: string } = { planId: selectedPlan._id };
@@ -187,6 +230,18 @@ export default function MembershipPage() {
       toast.error(
         err?.response?.data?.message || 'Kunne ikke starte betalingen. Prøv igjen.'
       );
+      // 409 `active_subscription_exists` means the server found a subscription this page
+      // did not know about — bought in another tab, or provisioned since the 30-second
+      // cache was filled. Refetch so the CTA corrects itself instead of inviting a
+      // second attempt that cannot succeed.
+      if (err?.response?.data?.code === 'active_subscription_exists') {
+        queryClient.invalidateQueries({ queryKey: ['my-subscription'] });
+      }
+      // A plan retired since the catalogue was cached. `usePlans` holds it forever
+      // (`staleTime: Infinity`), so it has to be asked again explicitly.
+      if (err?.response?.data?.code === 'plan_inactive') {
+        void refetch();
+      }
       setIsRedirecting(false);
     }
   };
@@ -527,8 +582,61 @@ export default function MembershipPage() {
                         Dette er planen du har nå
                       </p>
                       <p className="mt-1 text-[0.8125rem] leading-relaxed text-[#63665F]">
-                        Velg en annen plan for å bytte.
+                        {hasPaidSubscription
+                          ? 'Si opp abonnementet fra abonnementskortet på denne siden hvis du vil avslutte.'
+                          : 'Velg en annen plan for å bytte.'}
                       </p>
+                    </div>
+                  ) : !isFree && hasPaidSubscription ? (
+                    /*
+                     * The account already has a Stripe subscription that can bill it, so
+                     * this button used to say "Bytt til denne planen" and quietly start a
+                     * SECOND one — the old subscription kept billing and its id was
+                     * overwritten in Mongo, leaving it uncancellable from Jobblo. The
+                     * server now refuses with 409 `active_subscription_exists`, so
+                     * offering the button would only lead into a failure. Plan switching
+                     * is not supported: there is no proration or change-plan flow behind
+                     * it, and inventing one is out of scope.
+                     */
+                    <div className="mt-6 rounded-xl border border-[#E6E7E1] bg-[#F4F6F0] px-4 py-3.5">
+                      <div className="flex items-start gap-2.5">
+                        <AlertCircle
+                          size={15}
+                          strokeWidth={2.2}
+                          className="mt-0.5 shrink-0 text-[#63665F]"
+                        />
+                        <div>
+                          <p className="text-[0.875rem] font-semibold text-[#0B0B0B]">
+                            Du har allerede et aktivt abonnement
+                          </p>
+                          <p className="mt-1 text-[0.8125rem] leading-relaxed text-[#63665F]">
+                            Du er på {mySub?.plan || 'en betalt plan'}. Å kjøpe en ny plan nå
+                            ville gitt deg to abonnement som begge trekkes hver måned, så det
+                            er ikke mulig. Si opp det eksisterende abonnementet fra
+                            abonnementskortet på denne siden først.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : couponMakesFree ? (
+                    <div className="mt-6 rounded-xl border border-[#E6E7E1] bg-[#F4F6F0] px-4 py-3.5">
+                      <div className="flex items-start gap-2.5">
+                        <AlertCircle
+                          size={15}
+                          strokeWidth={2.2}
+                          className="mt-0.5 shrink-0 text-[#63665F]"
+                        />
+                        <div>
+                          <p className="text-[0.875rem] font-semibold text-[#0B0B0B]">
+                            Rabatten gjør betalingen gratis
+                          </p>
+                          <p className="mt-1 text-[0.8125rem] leading-relaxed text-[#63665F]">
+                            Et abonnement må trekke minst 1 øre, så denne koden kan ikke
+                            brukes på {selectedPlan?.name}. Fjern koden for å fortsette, eller
+                            kontakt support.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <button
@@ -548,7 +656,13 @@ export default function MembershipPage() {
                       ) : (
                         <>
                           <ShieldCheck size={15} strokeWidth={2.2} />
-                          {currentPlanId ? 'Bytt til denne planen' : 'Start abonnement'}
+                          {/*
+                           * Always "Start abonnement" now. The old label branched on
+                           * `currentPlanId`, which is only the plan *name* — so a user on
+                           * the free default plan was told they were "switching", and a
+                           * paying user was offered a switch that does not exist.
+                           */}
+                          Start abonnement
                         </>
                       )}
                     </button>

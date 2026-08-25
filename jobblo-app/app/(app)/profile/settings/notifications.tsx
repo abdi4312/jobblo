@@ -1,5 +1,6 @@
 import React from 'react';
-import { Linking, Platform, Pressable, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Linking, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { ArrowLeft, Bell, Check, Loader2, Settings2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';

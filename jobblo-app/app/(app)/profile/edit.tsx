@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Camera, ChevronLeft, Loader2, Plus, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useProfile, useUpdateProfile } from '../../../src/hooks/useProfile';

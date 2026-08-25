@@ -358,6 +358,9 @@ exports.iduraCallback = async (req, res) => {
     if (existing) {
       // Refresh the assurance level and timestamp, then log them in.
       await applyVerification(existing._id, identity);
+      if (existing.isDeleted || existing.accountStatus === 'deactivated') {
+        return res.redirect(frontendUrl(`${failureTarget}?error=account_deactivated`));
+      }
       return completeLogin(req, res, existing, 'oauth-success');
     }
 

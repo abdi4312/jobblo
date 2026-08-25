@@ -4,8 +4,8 @@ import {
   Text,
   FlatList,
   ActivityIndicator,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useInfiniteJobs } from '../../src/hooks/useInfiniteJobs';
 import { useCategories } from '../../src/hooks/useCategories';
@@ -308,13 +308,13 @@ export default function ExploreScreen() {
               </Text>
               <Text className="mt-2 text-[0.875rem] leading-relaxed text-[#63665F]">
                 {filters.searchText ||
-                filters.selectedCategories.length > 0 ||
-                filters.minPrice !== 0 ||
-                filters.maxPrice !== 100000 ||
-                filters.isUrgent ||
-                filters.selectedCountyCodes.length > 0 ||
-                filters.selectedMunicipalityCodes.length > 0 ||
-                filters.userLocation
+                  filters.selectedCategories.length > 0 ||
+                  filters.minPrice !== 0 ||
+                  filters.maxPrice !== 100000 ||
+                  filters.isUrgent ||
+                  filters.selectedCountyCodes.length > 0 ||
+                  filters.selectedMunicipalityCodes.length > 0 ||
+                  filters.userLocation
                   ? 'Pr�v et annet s�keord eller fjern noen filtrer.'
                   : 'Det finnes ingen tilgjengelige oppdrag akkurat n�.'}
               </Text>
@@ -326,13 +326,13 @@ export default function ExploreScreen() {
                 filters.selectedCountyCodes.length > 0 ||
                 filters.selectedMunicipalityCodes.length > 0 ||
                 filters.userLocation) && (
-                <View className="mt-4">
-                  <Button
-                    label="Nullstill filtre"
-                    onPress={filters.resetAll}
-                  />
-                </View>
-              )}
+                  <View className="mt-4">
+                    <Button
+                      label="Nullstill filtre"
+                      onPress={filters.resetAll}
+                    />
+                  </View>
+                )}
             </View>
           ) : null
         }

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
-import { Alert, AppState, Pressable, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { Alert, AppState, Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AlertCircle, ArrowLeft, CheckCircle2, ShieldCheck } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useAuthStore } from '../../../src/store/authStore';
