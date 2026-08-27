@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { queryClient } from '../providers/AppProviders';
+import { queryClient } from '../providers/queryClient';
 import { destroyChatSocket } from '../services/chatSocket.service';
 import { deactivateRegisteredPushToken } from '../services/pushNotifications.service';
+import { authStorage as storage } from '../utils/authStorage';
 
 type AuthUser = Record<string, unknown> | null;
 
@@ -15,67 +16,6 @@ async function clearAuthenticatedSession() {
   queryClient.removeQueries();
   destroyChatSocket();
 }
-
-const nativeAsyncStorage = (() => {
-  try {
-    const storage = require('@react-native-async-storage/async-storage');
-    return storage?.default ?? storage ?? null;
-  } catch {
-    return null;
-  }
-})();
-
-const getWebStorage = () => {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    return {
-      getItem: (key: string) => Promise.resolve(window.localStorage.getItem(key)),
-      setItem: (key: string, value: string) =>
-        Promise.resolve(window.localStorage.setItem(key, value)),
-      removeItem: (key: string) => Promise.resolve(window.localStorage.removeItem(key)),
-    };
-  }
-
-  return {
-    getItem: async () => null,
-    setItem: async () => undefined,
-    removeItem: async () => undefined,
-  };
-};
-
-const storage = {
-  getItem: async (key: string) => {
-    if (nativeAsyncStorage) {
-      try {
-        return await nativeAsyncStorage.getItem(key);
-      } catch {
-        // Fall back to browser storage when native storage is unavailable in web/runtime.
-      }
-    }
-    return getWebStorage().getItem(key);
-  },
-  setItem: async (key: string, value: string) => {
-    if (nativeAsyncStorage) {
-      try {
-        await nativeAsyncStorage.setItem(key, value);
-        return;
-      } catch {
-        // Fall back to browser storage when native storage is unavailable in web/runtime.
-      }
-    }
-    await getWebStorage().setItem(key, value);
-  },
-  removeItem: async (key: string) => {
-    if (nativeAsyncStorage) {
-      try {
-        await nativeAsyncStorage.removeItem(key);
-        return;
-      } catch {
-        // Fall back to browser storage when native storage is unavailable in web/runtime.
-      }
-    }
-    await getWebStorage().removeItem(key);
-  },
-};
 
 type AuthState = {
   token: string | null;
@@ -103,9 +43,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
+      // Parsed separately and deliberately non-fatally: the token is what authenticates the
+      // session, the cached user object is only a render convenience that the profile query
+      // refetches anyway. A corrupt blob here used to fall into the catch below and sign a
+      // perfectly valid session out.
+      let parsedUser: AuthUser = null;
+      if (user) {
+        try {
+          parsedUser = JSON.parse(user) as AuthUser;
+        } catch {
+          await storage.removeItem('user');
+        }
+      }
+
       set({
         token,
-        user: user ? JSON.parse(user) : null,
+        user: parsedUser,
         isAuthenticated: true,
         hydrated: true,
       });
@@ -121,13 +74,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     await Promise.all([
       storage.setItem('token', token),
-      storage.setItem('user', JSON.stringify(user)),
+      // `?? null` keeps this a valid string write: AsyncStorage rejects a non-string value,
+      // and `JSON.stringify(undefined)` returns undefined rather than a string.
+      storage.setItem('user', JSON.stringify(user ?? null)),
     ]);
 
     set({ token, user, isAuthenticated: true, hydrated: true });
   },
 
   logout: async () => {
+    // Best-effort, and deliberately first: this is what deletes the server session and
+    // invalidates the 7-day refresh cookie held by the native cookie store. Clearing only
+    // local storage would leave a resumable session behind. A network failure must still
+    // let the user sign out locally, so the result is ignored.
+    //
+    // Lazy require, matching src/api/client.ts: a static import here would close the
+    // authStore → auth.service → api/client → authStore cycle at module load time.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { logoutUser } = require('../services/auth.service') as typeof import('../services/auth.service');
+      await logoutUser();
+    } catch {
+      // Offline, or the session was already gone server-side. Sign out locally regardless.
+    }
     await clearAuthenticatedSession();
     await storage.removeItem('token');
     await storage.removeItem('user');

@@ -43,6 +43,13 @@ export interface SafePayOrder {
   status: string;
   paymentStatus?: string;
   agreedPrice?: number;
+  /**
+   * Stripe Checkout Session id. `create-session` only returns the Checkout URL, so this —
+   * written to the order before that endpoint responds — is how the app gets an id to
+   * verify the payment with at `GET /safepay-checkout/status/:sessionId`.
+   */
+  checkoutSessionId?: string;
+  checkoutSessionStatus?: string;
   serviceId: SafePayService | null;
   customerId: SafePayParty | null;
   providerId: SafePayParty | null;

@@ -5,6 +5,7 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -20,12 +21,14 @@ import {
 } from 'lucide-react-native';
 import { useJobDetails } from '../../../src/hooks/useJobDetails';
 import { useApplyMutation } from '../../../src/hooks/useApplyMutation';
+import { useIsServiceSaved } from '../../../src/hooks/useFavoriteLists';
 import { useAuthStore } from '../../../src/store/authStore';
 import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { ApplyModal } from '../../../src/components/domain/ApplyModal';
 import { JobMetaRow } from '../../../src/components/domain/JobMetaRow';
+import { SaveToListSheet } from '../../../src/components/domain/SaveToListSheet';
 import { getCategoryIcon } from '../../../src/utils/categoryIcons';
 import type { Job } from '../../../src/types/Jobs';
 
@@ -49,12 +52,15 @@ function formatDuration(duration?: Job['duration']) {
 }
 
 export default function JobDetailsScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string | string[] }>();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
   const { data: job, isLoading, isError, refetch } = useJobDetails(id ?? '');
   const [isApplyModalOpen, setIsApplyModalOpen] = React.useState(false);
   const [applyError, setApplyError] = React.useState<string | null>(null);
+  const [saveSheetVisible, setSaveSheetVisible] = React.useState(false);
+  const { isSaved, isLoading: savedLoading } = useIsServiceSaved(id ?? '');
 
   const { mutate: applyToJob, isPending: isApplyLoading } = useApplyMutation({
     onSuccess: () => {
@@ -195,10 +201,23 @@ export default function JobDetailsScreen() {
 
             {!isOwner && (
               <TouchableOpacity
+                onPress={() => {
+                  if (!isAuthenticated) {
+                    router.push('/(auth)/login');
+                    return;
+                  }
+                  setSaveSheetVisible(true);
+                }}
                 className="absolute right-3 top-3 h-9 w-9 items-center justify-center rounded-full bg-white/95"
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={isSaved ? 'Fjern fra lagrede lister' : 'Lagre i liste'}
               >
-                <Bookmark size={16} color="#0B0B0B" />
+                {savedLoading ? (
+                  <View className="h-4 w-4" />
+                ) : (
+                  <Bookmark size={16} color="#0B0B0B" fill={isSaved ? '#0B0B0B' : 'none'} />
+                )}
               </TouchableOpacity>
             )}
           </View>
@@ -287,7 +306,12 @@ export default function JobDetailsScreen() {
         </View>
 
         {poster && (
-          <View className="mt-5 rounded-[28px] border border-[#E6E7E1] bg-white p-5">
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/(app)/profile/[userId]', params: { userId: String(poster._id) } })
+            }
+            className="mt-5 rounded-[28px] border border-[#E6E7E1] bg-white p-5"
+          >
             <Text className="mb-3 text-[0.9375rem] font-semibold text-[#0B0B0B]">Oppdragsgiver</Text>
             <View className="flex-row items-center gap-3">
               <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9]">
@@ -327,7 +351,7 @@ export default function JobDetailsScreen() {
                 )}
               </View>
             </View>
-          </View>
+          </Pressable>
         )}
 
         {job.tags?.length > 0 && (
@@ -370,6 +394,13 @@ export default function JobDetailsScreen() {
         jobTitle={job?.title}
         isLoading={isApplyLoading}
         error={applyError}
+      />
+
+      <SaveToListSheet
+        visible={saveSheetVisible}
+        onClose={() => setSaveSheetVisible(false)}
+        serviceId={id ?? ''}
+        serviceTitle={job?.title}
       />
     </SafeAreaView>
   );

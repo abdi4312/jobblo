@@ -20,6 +20,7 @@ export const queryKeys = {
   },
   subscription: {
     current: ['subscription', 'current'] as const,
+    history: ['subscription', 'history'] as const,
   },
   jobs: {
     /**
@@ -153,6 +154,10 @@ export const queryKeys = {
     all: ['notifications'] as const,
     list: (type?: string) => ['notifications', 'list', type ?? 'all'] as const,
     unreadCount: ['notifications', 'unreadCount'] as const,
+  },
+  users: {
+    profile: (userId: string) => ['users', 'profile', userId] as const,
+    services: (userId: string) => ['users', 'services', userId] as const,
   },
   favoriteLists: {
     /**

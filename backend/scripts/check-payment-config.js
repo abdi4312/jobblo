@@ -64,6 +64,7 @@ const note = (m) => console.log(`        ${m}`);
   }
 
   // ── 3. Return URLs ─────────────────────────────────────────────────────────
+  // Web checkouts only. Mobile checkouts return through the bridge checked in section 4.
   console.log('\nReturn URLs (FRONTEND_URL)');
   const frontend = process.env.FRONTEND_URL?.trim();
   if (!frontend) {
@@ -75,7 +76,44 @@ const note = (m) => console.log(`        ${m}`);
     if (frontend.includes('localhost')) note('points at localhost — wrong for a deployed server');
   }
 
-  // ── 4. Webhook ─────────────────────────────────────────────────────────────
+  // ── 4. Mobile return bridge ────────────────────────────────────────────────
+  // Only used when the app calls create-session with { platform: 'mobile' }. Stripe will
+  // not accept `jobblo://` as a return URL, so mobile checkouts return to an HTTPS page on
+  // THIS server which then hands off to the app scheme.
+  console.log('\nMobile return bridge (MOBILE_RETURN_URL, MOBILE_APP_LINK_PREFIX)');
+  const mobileBase = process.env.MOBILE_RETURN_URL?.trim().replace(/\/$/, '');
+  if (!mobileBase) {
+    if (process.env.NODE_ENV === 'production') {
+      bad('MOBILE_RETURN_URL is NOT SET — mobile checkouts return 500 (the Host header is');
+      note('not trusted in production, because it would let a caller pick the redirect target)');
+    } else {
+      note('MOBILE_RETURN_URL not set — outside production the request origin is used, which');
+      note('is fine for a LAN dev server. Set it before deploying.');
+    }
+  } else if (!/^https?:\/\//i.test(mobileBase)) {
+    bad(`MOBILE_RETURN_URL must be absolute http(s), got "${mobileBase}"`);
+  } else {
+    ok(`${mobileBase}/api/safepay-checkout/mobile-return`);
+    if (!/^https:/i.test(mobileBase)) note('plain http — iOS/Android app links require https');
+    if (mobileBase.includes('localhost')) note('points at localhost — a phone cannot reach that');
+  }
+
+  const linkPrefix = process.env.MOBILE_APP_LINK_PREFIX?.trim() || 'jobblo://';
+  if (/^https?:\/\//i.test(linkPrefix)) {
+    bad(`MOBILE_APP_LINK_PREFIX must be an app scheme, not http(s): "${linkPrefix}"`);
+  } else if (!/^[a-z][a-z0-9+.-]*:\/\/[^\s"'<>]*$/i.test(linkPrefix)) {
+    bad(`MOBILE_APP_LINK_PREFIX is not a usable deep-link prefix: "${linkPrefix}"`);
+  } else {
+    ok(`${linkPrefix}${linkPrefix.endsWith('/') ? '' : '/'}safepay/success  (hand-off target)`);
+    if (linkPrefix.startsWith('exp://')) {
+      note('an exp:// prefix opens Expo Go / a dev client — do not ship this value');
+    } else {
+      note('Expo Go does not register the app scheme; automatic return needs a dev client');
+      note('or a standalone build. Point this at exp://<lan-ip>:8081/--/ to test in Expo Go.');
+    }
+  }
+
+  // ── 5. Webhook ─────────────────────────────────────────────────────────────
   console.log('\nWebhook');
   const hookName = testMode ? 'STRIPE_TEST_WEBHOOK_SECRET' : 'STRIPE_WEBHOOK_SECRET';
   // No cross-mode fallback here either — config/stripe.js does not fall back, so
@@ -92,7 +130,7 @@ const note = (m) => console.log(`        ${m}`);
     ok(`${hookName} present (${hook.slice(0, 10)}…)`);
   }
 
-  // ── 5. Does the toggle agree with the key it selected ──────────────────────
+  // ── 6. Does the toggle agree with the key it selected ──────────────────────
   console.log('\nMode consistency');
   if (!key) {
     note('skipped — no key to compare against');

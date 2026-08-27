@@ -13,9 +13,34 @@ export type CurrentSubscription = {
   cancelAtPeriodEnd: boolean;
 };
 
+export type PurchaseStatus = 'pending' | 'succeeded' | 'failed' | 'refunded';
+export type PurchaseType = 'subscription' | 'extra_contact';
+
+export type PurchaseHistoryItem = {
+  _id: string;
+  planName?: string | null;
+  planType?: string | null;
+  amount?: number;
+  currency?: string;
+  status?: PurchaseStatus;
+  type?: PurchaseType;
+  createdAt?: string;
+};
+
 export async function getCurrentSubscription(): Promise<CurrentSubscription | null> {
   const response = await apiClient.get<{ subscription: CurrentSubscription | null }>('/stripe/subscription');
   return response.data.subscription;
+}
+
+/**
+ * GET /api/transactions/user — the authenticated user's persisted purchase rows.
+ * The backend writes these via `upsertTransaction` on every subscription purchase,
+ * renewal (`invoice.paid`) and failed-charge; `stripeSessionId` stays server-side
+ * and is never surfaced.
+ */
+export async function getPurchaseHistory(): Promise<PurchaseHistoryItem[]> {
+  const response = await apiClient.get<{ transactions?: PurchaseHistoryItem[] }>('/transactions/user');
+  return response.data.transactions ?? [];
 }
 
 export async function cancelCurrentSubscription() {

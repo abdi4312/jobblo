@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Eye, MapPin, Search, ShieldCheck, Trash2, Users, X } from 'lucide-react-native';
-import { useRouter, type Href } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useDeleteMyJobMutation, useMyJobs } from '../../src/hooks/useMyJobs';
 import { useMyApplicantsOverview } from '../../src/hooks/useMyApplicantsOverview';
 import { ServiceStatusBadge } from '../../src/components/domain/ServiceStatusBadge';
@@ -19,6 +19,7 @@ import { Dialog } from '../../src/components/ui/Dialog';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ErrorState } from '../../src/components/ui/ErrorState';
 import { Select } from '../../src/components/ui/Select';
+import { customerOrderRoute, type OrderRoute } from '../../src/utils/orderRoute';
 import type { ApplicantOverviewOrder } from '../../src/types/Applicants';
 import type { JobStatus, MyJob } from '../../src/types/Jobs';
 
@@ -52,23 +53,19 @@ function getErrorMessage(error: unknown): string | null {
   return null;
 }
 
-/** Owner-side (paying customer) order route. Mirrors app/(app)/messages/[chatId].tsx. */
-function ownerOrderRoute(order: ApplicantOverviewOrder): Href {
-  const orderId = order._id.trim();
-  if (order.status === 'ready_for_review' || order.status === 'completed') {
-    return `/safepay/approval/${orderId}` as Href;
-  }
-  if (order.paymentStatus === 'paid' || order.status === 'paid' || order.status === 'in_progress') {
-    return `/safepay/success?orderId=${orderId}` as Href;
-  }
-  return `/safepay/checkout/${orderId}` as Href;
+/** Every owner-side order lands on the same route as the SafePay helper resolves. */
+function orderRouteFor(order: ApplicantOverviewOrder): OrderRoute {
+  return customerOrderRoute(order._id, order.status, order.paymentStatus);
 }
 
+/**
+ * The CTA label is derived from the resolved destination rather than from a second copy
+ * of the status buckets, so the button can never promise one screen and open another.
+ */
 function orderActionLabel(order: ApplicantOverviewOrder) {
-  if (order.status === 'ready_for_review' || order.status === 'completed') return 'Godkjenn arbeid';
-  if (order.paymentStatus === 'paid' || order.status === 'paid' || order.status === 'in_progress') {
-    return 'Se SafePay-ordre';
-  }
+  const { pathname } = orderRouteFor(order);
+  if (pathname === '/(app)/safepay/approval/[orderId]') return 'Godkjenn arbeid';
+  if (pathname === '/(app)/safepay/success') return 'Se SafePay-ordre';
   return 'Betal med SafePay';
 }
 
@@ -443,7 +440,7 @@ export default function MyJobsScreen() {
                     })
                   }
                   onOrder={() => {
-                    if (extra?.order) router.push(ownerOrderRoute(extra.order));
+                    if (extra?.order) router.push(orderRouteFor(extra.order));
                   }}
                   onDelete={() => {
                     setDeleteError(null);

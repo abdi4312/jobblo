@@ -1,9 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../queryKeys';
-import { cancelCurrentSubscription, getCurrentSubscription, resumeCurrentSubscription } from '../services/subscription.service';
+import { cancelCurrentSubscription, getCurrentSubscription, getPurchaseHistory, resumeCurrentSubscription } from '../services/subscription.service';
 
 export function useCurrentSubscription() {
   return useQuery({ queryKey: queryKeys.subscription.current, queryFn: getCurrentSubscription, refetchOnMount: 'always' });
+}
+
+export function useSubscriptionHistory() {
+  return useQuery({ queryKey: queryKeys.subscription.history, queryFn: getPurchaseHistory, retry: false });
 }
 
 export function useCancelSubscription() {

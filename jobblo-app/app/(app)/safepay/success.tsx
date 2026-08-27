@@ -2,11 +2,13 @@ import React, { useEffect, useMemo } from 'react';
 import { Alert, AppState, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AlertCircle, ArrowLeft, CheckCircle2, ShieldCheck } from 'lucide-react-native';
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuthStore } from '../../../src/store/authStore';
 import { useSafePayCheckout, useSafePaySessionStatus } from '../../../src/hooks/useSafePayCheckout';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { SafePayProgressSteps } from '../../../src/components/domain/SafePayProgressSteps';
+import { providerOrderRoute } from '../../../src/utils/orderRoute';
+import { isValidOrderId, isValidSessionId } from '../../../src/utils/safepayCheckoutSession';
 
 const PAID_ORDER_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed'];
 type PaymentState = 'verifying' | 'paid' | 'pending' | 'unverified';
@@ -46,11 +48,17 @@ function ActionButton({ label, onPress, secondary = false }: { label: string; on
 export default function SafePaySuccessScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ session_id?: string | string[]; orderId?: string | string[] }>();
-  const sessionId = Array.isArray(params.session_id) ? params.session_id[0] : params.session_id;
-  const paramOrderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
+  // This screen is a deep-link target, so both ids arrive from a URL we do not control.
+  // Validated rather than merely truthy-checked: a malformed link carrying "undefined" or
+  // "[object Object]" would otherwise pass `enabled: !!id` and fire a request for it.
+  const rawSessionId = Array.isArray(params.session_id) ? params.session_id[0] : params.session_id;
+  const rawOrderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
+  const sessionId = isValidSessionId(rawSessionId) ? rawSessionId.trim() : undefined;
+  const paramOrderId = isValidOrderId(rawOrderId) ? rawOrderId.trim() : undefined;
   const user = useAuthStore((state) => state.user);
   const statusQuery = useSafePaySessionStatus(sessionId ?? '');
-  const resolvedOrderId = paramOrderId ?? statusQuery.data?.orderId ?? '';
+  const statusOrderId = statusQuery.data?.orderId;
+  const resolvedOrderId = paramOrderId ?? (isValidOrderId(statusOrderId) ? statusOrderId : '');
   const orderQuery = useSafePayCheckout(resolvedOrderId);
   const order = orderQuery.data?.order;
 
@@ -80,9 +88,10 @@ export default function SafePaySuccessScreen() {
 
   const goOverview = () => {
     const tab = isProvider ? 'mine-soknader' : 'mine-sokere';
-    router.push(`/my-applications?tab=${tab}` as Href);
+    router.push({ pathname: '/(app)/my-applications', params: { tab } });
   };
-  const goHome = () => router.push('/' as Href);
+  // `/` is only a redirect gate, so dismissing goes straight to the tab group.
+  const goHome = () => router.push('/(app)');
 
   const errorCopy = useMemo(() => {
     const status = getErrorStatus(statusQuery.error) ?? getErrorStatus(orderQuery.error);
@@ -99,7 +108,7 @@ export default function SafePaySuccessScreen() {
     const retry = () => void statusQuery.refetch();
     const checkout = () => {
       if (!resolvedOrderId.trim()) return;
-      router.push(`/safepay/checkout/${resolvedOrderId}` as Href);
+      router.push({ pathname: '/(app)/safepay/checkout/[orderId]', params: { orderId: resolvedOrderId } });
     };
     const pending = paymentState === 'pending';
     return (
@@ -126,9 +135,9 @@ export default function SafePaySuccessScreen() {
 
   const readyForApproval = isCustomer && order.status === 'ready_for_review';
   const completed = isCustomer && order.status === 'completed';
-  const goApproval = () => router.push(`/safepay/approval/${order._id}` as Href);
-  const goProvider = () => router.push(`/provider/orders/${order._id}` as Href);
-  const goApplicants = () => serviceId ? router.push(`/job-applicants/${serviceId}` as Href) : goOverview();
+  const goApproval = () => router.push({ pathname: '/(app)/safepay/approval/[orderId]', params: { orderId: order._id } });
+  const goProvider = () => router.push(providerOrderRoute(order._id));
+  const goApplicants = () => serviceId ? router.push({ pathname: '/(app)/job-applicants/[serviceId]', params: { serviceId } }) : goOverview();
 
   return (
     <SafeAreaView className="flex-1 bg-[#EFF0EA]">

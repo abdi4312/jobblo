@@ -3,10 +3,12 @@ import {
   View,
   Text,
   FlatList,
+  Pressable,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useInfiniteJobs } from '../../src/hooks/useInfiniteJobs';
 import { useCategories } from '../../src/hooks/useCategories';
 import { useLocationTree } from '../../src/hooks/useLocationTree';
@@ -18,16 +20,19 @@ import { SearchHeader } from '../../src/components/search/SearchHeader';
 import { SearchResultsHeader } from '../../src/components/search/SearchResultsHeader';
 import { ActiveFiltersDisplay } from '../../src/components/search/ActiveFiltersDisplay';
 import { SearchFilterSheet } from '../../src/components/search/SearchFilterSheet';
+import { SaveToListSheet } from '../../src/components/domain/SaveToListSheet';
 
 /**
  * Explore/Search screen for browsing jobs with comprehensive filtering.
  */
 export default function ExploreScreen() {
-  const params = useLocalSearchParams();
-  const initialSearch = (params.search as string) || '';
+  const router = useRouter();
+  const params = useLocalSearchParams<{ search?: string | string[] }>();
+  const initialSearch = (Array.isArray(params.search) ? params.search[0] : params.search) ?? '';
 
   const filters = useSearchFilters(initialSearch);
   const [sheetVisible, setSheetVisible] = React.useState(false);
+  const [saveSheetServiceId, setSaveSheetServiceId] = React.useState<string | null>(null);
 
   const { data: filterOptions, isLoading: categoriesLoading } = useCategories();
   const { data: locationTree, isLoading: locationsLoading } = useLocationTree();
@@ -68,6 +73,19 @@ export default function ExploreScreen() {
 
   const renderHeader = () => (
     <View>
+      {/* Utforsk is a hidden tab (href: null) that is always pushed — from Home, the
+          category chips or a search — so the back control has to live in the content. */}
+      <Pressable
+        onPress={() => router.back()}
+        accessibilityRole="button"
+        accessibilityLabel="Tilbake"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        className="flex-row items-center gap-2 px-4 pt-3"
+      >
+        <ArrowLeft size={20} color="#0B0B0B" />
+        <Text className="text-[0.875rem] font-medium text-[#0B0B0B]">Tilbake</Text>
+      </Pressable>
+
       <SearchHeader
         searchText={filters.searchText}
         onSearchChange={filters.setSearchText}
@@ -285,7 +303,7 @@ export default function ExploreScreen() {
         keyExtractor={(job) => job._id}
         renderItem={({ item }) => (
           <View className="px-4 pb-8">
-            <JobCard job={item} />
+            <JobCard job={item} onSavePress={(id) => setSaveSheetServiceId(id)} />
           </View>
         )}
         ListHeaderComponent={renderHeader}
@@ -315,8 +333,8 @@ export default function ExploreScreen() {
                   filters.selectedCountyCodes.length > 0 ||
                   filters.selectedMunicipalityCodes.length > 0 ||
                   filters.userLocation
-                  ? 'Pr�v et annet s�keord eller fjern noen filtrer.'
-                  : 'Det finnes ingen tilgjengelige oppdrag akkurat n�.'}
+                  ? 'Prøv et annet søkeord eller fjern noen filtrer.'
+                  : 'Det finnes ingen tilgjengelige oppdrag akkurat nå.'}
               </Text>
               {(filters.searchText ||
                 filters.selectedCategories.length > 0 ||
@@ -344,13 +362,19 @@ export default function ExploreScreen() {
             Kunne ikke laste oppdrag
           </Text>
           <Text className="mt-1 text-[0.875rem] text-[#63665F]">
-            Sjekk tilkoblingen din og pr�v igjen.
+            Sjekk tilkoblingen din og prøv igjen.
           </Text>
           <View className="mt-4">
-            <Button label="Pr�v igjen" onPress={() => refetch()} />
+            <Button label="Prøv igjen" onPress={() => refetch()} />
           </View>
         </View>
       )}
+
+      <SaveToListSheet
+        visible={!!saveSheetServiceId}
+        onClose={() => setSaveSheetServiceId(null)}
+        serviceId={saveSheetServiceId ?? ''}
+      />
     </SafeAreaView>
   );
 }

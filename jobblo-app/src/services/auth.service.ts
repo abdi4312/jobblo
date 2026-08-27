@@ -39,6 +39,20 @@ export async function registerUser(payload: RegisterRequest): Promise<LoginRespo
   return response.data;
 }
 
+/**
+ * POST /api/auth/logout — deletes the server-side session row and clears the auth cookies.
+ *
+ * Clearing local storage alone is not enough. The 7-day refresh cookie lives in the native
+ * cookie store, outside JS, and `authController.logout` is the only thing that invalidates
+ * it and removes the `Session` document. Without this call a "logged out" device keeps a
+ * resumable session on the server for a week.
+ *
+ * Callers should treat failure as non-fatal: signing out locally must succeed even offline.
+ */
+export async function logoutUser(): Promise<void> {
+  await apiClient.post('/auth/logout', {});
+}
+
 export async function forgotPassword(email: string): Promise<{ message: string }> {
   const response = await apiClient.post<{ message: string }>('/auth/forgot-password', { email });
   return response.data;

@@ -24,5 +24,14 @@ export function useReviewPhotoUploadMutation(orderId: string) {
 
 export function useApproveSafePayJobMutation(orderId: string) {
   const queryClient = useQueryClient();
-  return useMutation({ mutationFn: approveSafePayJob, onSuccess: () => invalidateApprovalQueries(queryClient, orderId) });
+  return useMutation({
+    mutationFn: approveSafePayJob,
+    // Explicit rather than relying on the library default, same reasoning as
+    // `useCreateSafePaySessionMutation`: a retried approve is a second escrow-release attempt
+    // for the same order. The server does reject a non-`ready_for_review` order, but a payout
+    // is not something to leave to a default that a future global `defaultOptions.mutations`
+    // could change underneath us.
+    retry: 0,
+    onSuccess: () => invalidateApprovalQueries(queryClient, orderId),
+  });
 }

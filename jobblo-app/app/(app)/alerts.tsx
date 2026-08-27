@@ -20,7 +20,6 @@ import {
   ClipboardCheck,
   Check,
   Trash2,
-  ChevronLeft,
   type LucideIcon,
 } from 'lucide-react-native';
 import {
@@ -34,6 +33,7 @@ import {
 import { useAuthStore } from '../../src/store/authStore';
 import { resolveOrderRoute } from '../../src/utils/orderRoute';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
+import { Select } from '../../src/components/ui/Select';
 import type { Notification } from '../../src/types/Notification';
 
 /* ── Notification type metadata ──────────────────────────────────────────── */
@@ -62,15 +62,15 @@ function formatNotificationTime(date: string): string {
   return new Date(date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
 }
 
-/* ── Category filters ────────────────────────────────────────────────────── */
+/* ── Category filter — value is the API `type` enum, label is display-only ─ */
 
-const CATEGORIES = [
-  { key: 'all', label: 'Alle', Icon: Bell },
-  { key: 'application', label: 'Søknader', Icon: Briefcase },
-  { key: 'payment', label: 'Betalinger', Icon: Banknote },
-  { key: 'message', label: 'Meldinger', Icon: MessageSquare },
-  { key: 'review', label: 'Anmeldelser', Icon: Star },
-  { key: 'job_update', label: 'Jobber', Icon: ClipboardCheck },
+const FILTER_OPTIONS = [
+  { value: 'all', label: 'Alle varsler' },
+  { value: 'application', label: 'Søknader' },
+  { value: 'payment', label: 'Betalinger' },
+  { value: 'message', label: 'Meldinger' },
+  { value: 'review', label: 'Anmeldelser' },
+  { value: 'job_update', label: 'Jobboppdateringer' },
 ];
 
 /* ── Safe id extractor ───────────────────────────────────────────────────── */
@@ -157,7 +157,7 @@ export default function AlertsScreen() {
       if (n.orderId) {
         const route = resolveOrderRoute(n.orderId, userId);
         if (route) {
-          router.push(route as any);
+          router.push(route);
           return;
         }
         Alert.alert('Feil', 'Denne ordren er ikke tilgjengelig lenger.');
@@ -169,13 +169,13 @@ export default function AlertsScreen() {
         const serviceId =
           typeof request.serviceId === 'object' ? request.serviceId?._id : request.serviceId;
         if (serviceId) {
-          router.push(`/(app)/job-applicants/${serviceId}`);
+          router.push({ pathname: '/(app)/job-applicants/[serviceId]', params: { serviceId } });
         }
         return;
       }
 
       if (n.senderId?._id) {
-        router.push(`/(app)/profile`);
+        router.push({ pathname: '/(app)/profile/[userId]', params: { userId: n.senderId._id } });
         return;
       }
     },
@@ -306,16 +306,8 @@ export default function AlertsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#EFF0EA]" edges={['top']}>
-      {/* Header */}
+      {/* Header — this is a tab root, so there is no back destination to offer. */}
       <View className="flex-row items-center px-4 pb-2 pt-2">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          className="mr-3 h-10 w-10 items-center justify-center rounded-full"
-          accessibilityLabel="Tilbake"
-        >
-          <ChevronLeft size={22} color="#0B0B0B" />
-        </TouchableOpacity>
         <View className="flex-1">
           <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[#63665F]">
             Varsler
@@ -341,39 +333,13 @@ export default function AlertsScreen() {
         )}
       </View>
 
-      {/* Category chips — horizontal scroll */}
-      <FlatList
-        horizontal
-        data={CATEGORIES}
-        keyExtractor={(item) => item.key}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10 }}
-        renderItem={({ item: cat }) => {
-          const isActive = activeCategory === cat.key;
-          return (
-            <TouchableOpacity
-              onPress={() => setActiveCategory(cat.key)}
-              activeOpacity={0.8}
-              className={`mr-2 flex-row h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 ${
-                isActive
-                  ? 'border-[#2E6641] bg-[#2E6641]'
-                  : 'border-[#E6E7E1] bg-white'
-              }`}
-              accessibilityLabel={cat.label}
-              accessibilityState={{ selected: isActive }}
-            >
-              <cat.Icon size={14} color={isActive ? 'white' : '#63665F'} />
-              <Text
-                className={`text-[0.8125rem] font-medium ${
-                  isActive ? 'text-white' : 'text-[#63665F]'
-                }`}
-              >
-                {cat.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        }}
-      />
+      {/* Category filter — reusable shadcn Select. `activeCategory` is the API
+          `type` enum; it feeds `typeFilter` below, so pagination resets via the
+          distinct queryKey in useNotifications. */}
+      <View className="flex-row items-center gap-3 px-4 py-3">
+        <Text className="text-[0.8125rem] font-medium text-[#63665F]">Filter</Text>
+        <Select value={activeCategory} options={FILTER_OPTIONS} onValueChange={setActiveCategory} />
+      </View>
 
       {/* Unread toggle + reset + delete all */}
       <View className="flex-row items-center gap-2 px-4 pb-3">

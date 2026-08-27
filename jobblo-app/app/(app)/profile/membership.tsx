@@ -14,8 +14,10 @@ import {
   X,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../src/store/authStore';
 import { useCurrentSubscription } from '../../../src/hooks/useSubscription';
+import { queryKeys } from '../../../src/queryKeys';
 import {
   useCreateCheckoutSessionMutation,
   usePlans,
@@ -203,6 +205,7 @@ export default function MembershipScreen() {
   // Purchase is NEVER inferred from openURL succeeding or the browser closing.
   // The Stripe webhook provisions the subscription; this refetch just reads it.
   // ---------------------------------------------------------------------------
+  const queryClient = useQueryClient();
   const checkoutLaunchedRef = useRef(false);
   const refetchSubscriptionRef = useRef(subscriptionQuery.refetch);
 
@@ -215,10 +218,13 @@ export default function MembershipScreen() {
       if (state !== 'active') return;
       if (!checkoutLaunchedRef.current) return;
       checkoutLaunchedRef.current = false;
+      // A fresh purchase also writes a Transaction row, so refresh BOTH the current
+      // subscription and its purchase history rather than guessing the outcome.
       void refetchSubscriptionRef.current();
+      void queryClient.invalidateQueries({ queryKey: queryKeys.subscription.history });
     });
     return () => sub.remove();
-  }, []);
+  }, [queryClient]);
 
   const handleApplyCoupon = () => {
     const code = couponInput.trim();
@@ -291,7 +297,7 @@ export default function MembershipScreen() {
                 { text: 'Lukk', style: 'cancel' },
                 {
                   text: 'Administrer',
-                  onPress: () => router.push('/profile/settings/subscription' as any),
+                  onPress: () => router.push('/profile/settings/subscription'),
                 },
               ]
             );
@@ -651,7 +657,7 @@ export default function MembershipScreen() {
                   </View>
                 </View>
                 <Pressable
-                  onPress={() => router.push('/profile/settings/subscription' as any)}
+                  onPress={() => router.push('/profile/settings/subscription')}
                   className="mt-3 flex-row items-center justify-center rounded-2xl border border-[#E6E7E1] px-5 py-3.5 active:bg-[#F4F6F0]"
                 >
                   <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">
@@ -705,7 +711,7 @@ export default function MembershipScreen() {
         {/* Where to manage an existing subscription */}
         {!alreadyPaid ? (
           <Pressable
-            onPress={() => router.push('/profile/settings/subscription' as any)}
+            onPress={() => router.push('/profile/settings/subscription')}
             className="mt-5 rounded-3xl border border-[#E6E7E1] bg-white p-5 active:bg-[#F4F6F0]"
           >
             <View className="flex-row items-center">

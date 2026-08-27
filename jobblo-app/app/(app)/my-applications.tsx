@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { Search, Users, X } from 'lucide-react-native';
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMyApplications, useWithdrawApplicationMutation } from '../../src/hooks/useMyApplications';
 import { useMyApplicantsOverview } from '../../src/hooks/useMyApplicantsOverview';
 import { ApplicationCard } from '../../src/components/domain/ApplicationCard';
@@ -20,6 +20,7 @@ import { Dialog } from '../../src/components/ui/Dialog';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ErrorState } from '../../src/components/ui/ErrorState';
 import { LoadingIndicator } from '../../src/components/ui/LoadingIndicator';
+import { providerOrderRoute } from '../../src/utils/orderRoute';
 import type { MyApplication } from '../../src/types/Application';
 import type { ApplicantOverviewService } from '../../src/types/Applicants';
 
@@ -29,6 +30,11 @@ const FILTERS = [
   { label: 'Valgt', value: 'accepted' },
   { label: 'Avslått', value: 'declined' },
 ] as const;
+
+/** Only the two real tab keys are accepted; anything else means "no request". */
+function requestedTabKey(value?: string): OverviewTabKey | null {
+  return value === 'mine-sokere' || value === 'mine-soknader' ? value : null;
+}
 
 export default function MyApplicationsScreen() {
   const router = useRouter();
@@ -53,6 +59,23 @@ export default function MyApplicationsScreen() {
     refetch: refetchOwnerServices,
   } = useMyApplicantsOverview(activeTab === 'mine-sokere');
   const withdrawMutation = useWithdrawApplicationMutation();
+
+  // This is a hidden tab route, so a caller arriving with `?tab=` does not remount the screen:
+  // the tab router reuses the existing route key and only replaces its params. `useState` above
+  // therefore captures the tab requested on the very first mount and ignores every later
+  // arrival, which is how a "Mine søkere" entry point could land on the "Mine søknader" list.
+  //
+  // Local state only. This deliberately does NOT clear the param afterwards: `router.setParams`
+  // dispatches SET_PARAMS, which always yields a new navigation state (no bail-out), so calling
+  // it from an effect whose dependency is that same param feeds the effect its own output and
+  // re-enters BaseNavigationContainer's state from the passive-effect phase — that is the
+  // "Maximum update depth exceeded" crash. The param staying in the route is harmless: the
+  // equality guard below makes every later pass a no-op, so a manual tab switch is not undone.
+  useEffect(() => {
+    const wanted = requestedTabKey(requestedTab);
+    if (!wanted) return;
+    setActiveTab((current) => (current === wanted ? current : wanted));
+  }, [requestedTab]);
 
   const filteredServices = useMemo(() => {
     const query = searchText.trim().toLowerCase();
@@ -221,7 +244,10 @@ export default function MyApplicationsScreen() {
                   : 'Når noen søker på et av oppdragene dine, dukker det opp her.'}
               </Text>
               {!searchText ? (
-                <Pressable disabled className="mt-6 items-center rounded-full bg-[#2E6641] px-5 py-3 opacity-60">
+                <Pressable
+                  onPress={() => router.push('/(app)/create-job')}
+                  className="mt-6 items-center rounded-full bg-[#2E6641] px-5 py-3"
+                >
                   <Text className="text-[0.875rem] font-semibold text-white">Legg ut et oppdrag</Text>
                 </Pressable>
               ) : null}
@@ -261,18 +287,19 @@ export default function MyApplicationsScreen() {
                     if (serviceId) router.push({ pathname: '/(app)/jobs/[id]', params: { id: serviceId } });
                   }}
                   onChat={(chatId) => {
-                    if (chatId) {
-                      // Chat flow intentionally not implemented in this task.
-                    }
+                    // The card only offers this when the application already has a chat.
+                    if (chatId) router.push({ pathname: '/(app)/messages/[chatId]', params: { chatId } });
                   }}
                   onOrder={(orderId) => {
                     if (typeof orderId === 'string' && orderId.trim()) {
-                      router.push(`/provider/orders/${orderId.trim()}` as Href);
+                      router.push(providerOrderRoute(orderId));
                     }
                   }}
                   onContract={(orderId) => {
+                    // Applicants are the provider side, so the contract opens in their own
+                    // order workspace rather than the customer-only checkout.
                     if (typeof orderId === 'string' && orderId.trim()) {
-                      router.push(`/provider/orders/${orderId.trim()}` as Href);
+                      router.push(providerOrderRoute(orderId));
                     }
                   }}
                 />

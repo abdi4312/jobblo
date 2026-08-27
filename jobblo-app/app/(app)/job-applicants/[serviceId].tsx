@@ -2,16 +2,17 @@ import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, CalendarDays, Clock, MapPin, Users } from 'lucide-react-native';
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ApplicantCard } from '../../../src/components/domain/ApplicantCard';
 import { ApplicantCompareSection } from '../../../src/components/domain/ApplicantCompareSection';
 import { ApplicantOverviewSkeleton } from '../../../src/components/domain/ApplicantOverviewSkeleton';
-import { ApplicantNextSteps, ApplicantSelectionGuide, SafePayInfoCard, SafePayProgressSteps } from '../../../src/components/domain/SafePayProgressSteps';
+import { ApplicantNextSteps, ApplicantSelectionGuide, SafePayInfoCard, SafePayProgressSteps, getApplicantProgressStep } from '../../../src/components/domain/SafePayProgressSteps';
 import { Select } from '../../../src/components/ui/Select';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { useApplicants, useCreateSafePayContractMutation, useDeclineApplicantMutation, useToggleApplicantArchiveMutation, useToggleApplicantFavoriteMutation } from '../../../src/hooks/useApplicants';
 import { useCreateOrGetChatMutation } from '../../../src/hooks/useCreateOrGetChat';
+import { customerOrderRoute, type OrderRoute } from '../../../src/utils/orderRoute';
 
 const SORT_OPTIONS = [
   { value: 'createdAt', label: 'Nyeste først' },
@@ -64,6 +65,19 @@ function formatDuration(value?: { value?: number; unit?: string } | null) {
 
 function validId(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+/**
+ * Label derived from the destination rather than re-deciding the status thresholds here —
+ * same pattern as `orderActionLabel` in app/(app)/my-jobs.tsx, so this can never disagree
+ * with `customerOrderRoute` about where the button goes.
+ */
+function activeOrderActionLabel(route: OrderRoute, status?: string) {
+  if (route.pathname === '/(app)/safepay/approval/[orderId]') {
+    return status === 'completed' ? 'Se godkjenningen' : 'Godkjenn jobb og utbetal';
+  }
+  if (route.pathname === '/(app)/safepay/success') return 'Se SafePay-ordren';
+  return 'Gå til betaling';
 }
 
 export default function JobApplicantsScreen() {
@@ -131,6 +145,10 @@ export default function JobApplicantsScreen() {
   const { service, applicants, activeOrder } = data;
   const duration = formatDuration(service.duration);
   const compared = applicants.filter((application) => comparedApplicants.includes(application.applicant._id));
+  // The backend 403s anyone but the job owner on this route, so the viewer is always the
+  // customer side of the order. `null` when the id is unusable — never a Home fallback.
+  const activeOrderRoute: OrderRoute | null =
+    activeOrder && validId(activeOrder._id) ? customerOrderRoute(activeOrder._id.trim(), activeOrder.status) : null;
 
   const handleMutationError = (action: string, mutationError: unknown) => {
     if (getErrorStatus(mutationError) === 409) {
@@ -153,16 +171,8 @@ export default function JobApplicantsScreen() {
         Alert.alert('Kunne ikke åpne kontrakten', 'Ordren mangler en gyldig ID.');
         return;
       }
-      const activeOrderId = activeOrder._id.trim();
-      if (activeOrder.status === 'awaiting_payment') {
-        router.push(`/safepay/checkout/${activeOrderId}` as Href);
-      } else if (activeOrder.status === 'paid' || activeOrder.status === 'in_progress') {
-        router.push({ pathname: '/(app)/safepay/success', params: { orderId: activeOrderId } });
-      } else if (activeOrder.status === 'ready_for_review' || activeOrder.status === 'completed') {
-        router.push({ pathname: '/(app)/safepay/approval/[orderId]', params: { orderId: activeOrderId } });
-      } else {
-        router.push({ pathname: '/(app)/safepay/success', params: { orderId: activeOrderId } });
-      }
+      // The viewer owns this job, so they are always the customer side of the order.
+      router.push(customerOrderRoute(activeOrder._id, activeOrder.status));
       return;
     }
     if (!validId(application.applicant._id) || !validId(application._id)) {
@@ -177,7 +187,8 @@ export default function JobApplicantsScreen() {
             handleMutationError('velge søker', new Error('Mangler orderId fra serveren.'));
             return;
           }
-          router.push(`/safepay/checkout/${orderId.trim()}` as Href);
+          // A freshly created contract is always `awaiting_payment`, so this resolves to checkout.
+          router.push(customerOrderRoute(orderId));
         },
         onError: (mutationError) => handleMutationError('velge søker', mutationError),
       },
@@ -206,7 +217,7 @@ export default function JobApplicantsScreen() {
           <Text className="text-[0.8125rem] text-[#63665F]">Tilbake til oversikt</Text>
         </Pressable>
 
-        <SafePayProgressSteps />
+        <SafePayProgressSteps currentStep={getApplicantProgressStep(activeOrder?.status)} />
 
         <View className="mb-5 rounded-2xl bg-[#122A1C] p-5">
           <View className="flex-row items-start justify-between gap-3">
@@ -237,9 +248,25 @@ export default function JobApplicantsScreen() {
             </View>
           </View>
           {activeOrder ? (
-            <View className="mt-4 flex-row items-center gap-2 rounded-xl bg-white/10 px-3 py-2.5">
-              <Text className="text-[0.8125rem] font-semibold text-white">Utfører valgt</Text>
-              <Text className="text-[0.75rem] text-white/70">Aktiv kontrakt: {activeOrder.status}</Text>
+            <View className="mt-4 gap-2.5 rounded-xl bg-white/10 p-3">
+              <View className="flex-row items-center gap-2">
+                <Text className="text-[0.8125rem] font-semibold text-white">Utfører valgt</Text>
+                <Text className="text-[0.75rem] text-white/70">Aktiv kontrakt: {activeOrder.status}</Text>
+              </View>
+              {/* The only other way into the contract was the per-applicant "Se godkjenning"
+                  button, which disappears when the list is empty, archived or filtered — so the
+                  customer could have a `ready_for_review` order and no reachable approval CTA. */}
+              {activeOrderRoute ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push(activeOrderRoute)}
+                  className="rounded-full bg-white px-4 py-2.5"
+                >
+                  <Text className="text-center text-[0.8125rem] font-semibold text-[#122A1C]">
+                    {activeOrderActionLabel(activeOrderRoute, activeOrder.status)}
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           ) : null}
         </View>

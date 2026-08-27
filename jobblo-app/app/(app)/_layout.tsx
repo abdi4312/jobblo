@@ -35,7 +35,15 @@ function BellIcon({ color, size }: { color: string; size: number }) {
 }
 
 export default function AppLayout() {
+  const hydrated = useAuthStore((s) => s.hydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  // Until the persisted session is read back, "not authenticated" is unknown rather than
+  // false. Redirecting here would kick a signed-in user to the login screen on every cold
+  // start, and a deep link into this group would lose its target.
+  if (!hydrated) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)/login" />;
@@ -43,6 +51,12 @@ export default function AppLayout() {
 
   return (
     <Tabs
+      // Most screens in this group are hidden tab routes (`href: null`), so cross-section
+      // navigation like SafePay -> "Mine søkere" is a tab switch, not a stack push. With the
+      // default `firstRoute`, `changeIndex` rewrites the tab history to [index, target], so
+      // every back action out of those hidden screens lands on Hjem instead of the screen the
+      // user actually came from. `history` returns to the last visited tab instead.
+      backBehavior="history"
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
@@ -55,7 +69,7 @@ export default function AppLayout() {
         tabBarLabelStyle: { fontSize: 11, fontWeight: '500' as const },
       }}
     >
-      {/* 4 visible tabs */}
+      {/* 5 visible tabs */}
       <Tabs.Screen
         name="index"
         options={{
@@ -102,6 +116,7 @@ export default function AppLayout() {
       <Tabs.Screen name="job-applicants" options={{ href: null }} />
       <Tabs.Screen name="provider" options={{ href: null }} />
       <Tabs.Screen name="safepay" options={{ href: null }} />
+      <Tabs.Screen name="disputes" options={{ href: null }} />
     </Tabs>
   );
 }

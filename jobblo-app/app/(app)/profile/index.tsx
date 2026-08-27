@@ -12,7 +12,7 @@ import {
   ShieldCheck,
   Star,
 } from 'lucide-react-native';
-import { useRouter, type Href } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useProfile } from '../../../src/hooks/useProfile';
 import { useAuthStore } from '../../../src/store/authStore';
 import { Button } from '../../../src/components/ui/Button';
@@ -186,7 +186,7 @@ export default function ProfileScreen() {
               <ChevronRight size={18} color="#63665F" />
             </Pressable>
             <Pressable
-              onPress={() => router.push('/(app)/favorites' as Href)}
+              onPress={() => router.push('/(app)/favorites')}
               className="flex-row items-center border-t border-[#E6E7E1] p-5"
             >
               <Bookmark size={18} color="#2E6641" />
@@ -204,7 +204,7 @@ export default function ProfileScreen() {
               </View>
             ) : null}
             <Pressable
-              onPress={() => router.push('/(app)/profile/settings' as Href)}
+              onPress={() => router.push('/(app)/profile/settings')}
               className="flex-row items-center border-t border-[#E6E7E1] p-5"
             >
               <Settings size={18} color="#2E6641" />

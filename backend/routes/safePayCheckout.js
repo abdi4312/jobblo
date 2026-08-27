@@ -8,6 +8,14 @@ const { authenticate } = require('../middleware/auth');
 router.get('/details/:orderId', authenticate, SafePayCheckoutController.getCheckoutDetails);
 router.post('/create-session', authenticate, SafePayCheckoutController.createSafePaySession);
 
+// PUBLIC on purpose — no `authenticate`. This is the HTTPS return URL handed to Stripe for
+// mobile checkouts, so it is opened by a browser redirect from Stripe that carries none of
+// our cookies or tokens; requiring auth here would mean every mobile payment ended on a 401
+// instead of back in the app. It reads nothing, writes nothing and confirms nothing: it
+// renders a page that hands off to `jobblo://…`, and the app then verifies the payment
+// against /status/:sessionId. See the handler for the full reasoning.
+router.get('/mobile-return', SafePayCheckoutController.mobileReturn);
+
 // Review photos: multipart in, Cloudinary URLs back. `approve` then carries the URLs.
 // The 8 MB cap is the server's own floor — the browser compresses to a few hundred KB
 // before it gets here (frontend/src/utils/compressImage.ts), so hitting this means

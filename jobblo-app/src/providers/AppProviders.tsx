@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
@@ -7,6 +7,7 @@ import { StyleSheet, View } from "react-native";
 import { useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { registerPushNotifications } from '../services/pushNotifications.service';
+import { queryClient } from './queryClient';
 
 function PushRegistration() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -16,19 +17,29 @@ function PushRegistration() {
   return null;
 }
 
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60 * 1000,
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-});
+/**
+ * Restores the persisted session once, on mount, before any route guard runs.
+ *
+ * Every auth gate (`app/index.tsx`, `app/(app)/_layout.tsx`, `app/(auth)/_layout.tsx`)
+ * waits for `hydrated` instead of reading `isAuthenticated` directly, so a stored token
+ * is never mistaken for a signed-out user on cold start.
+ */
+function AuthHydration() {
+  const hydrate = useAuthStore((state) => state.hydrate);
+  useEffect(() => {
+    void hydrate();
+  }, [hydrate]);
+  return null;
+}
+
+// Re-exported so existing `import { queryClient } from '.../AppProviders'` call sites keep
+// working; the instance itself now lives in ./queryClient to keep this module out of a cycle.
+export { queryClient };
 
 export default function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
+      <AuthHydration />
       <PushRegistration />
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>

@@ -54,7 +54,7 @@ export default function DeleteAccountScreen() {
       try {
         await logout();
       } finally {
-        router.replace('/login');
+        router.replace('/(auth)/login');
       }
     },
   });

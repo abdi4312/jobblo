@@ -15,6 +15,7 @@ import {
   KeyRound,
   MapPin,
   Monitor,
+  Phone,
   ShieldCheck,
   Sparkles,
   Trash2,
@@ -108,13 +109,13 @@ export default function SettingsOverviewScreen() {
             title="Adresser"
             subtitle="Gateadresse, postnummer og sted"
             icon={Home}
-            onPress={() => router.push('/profile/settings/addresses' as any)}
+            onPress={() => router.push('/profile/settings/addresses')}
           />
           <SettingsRow
             title="Jobbsøker-profil"
             subtitle="Tilgjengelighet, ferdigheter og erfaring"
             icon={Briefcase}
-            onPress={() => router.push('/profile/settings/seeker' as any)}
+            onPress={() => router.push('/profile/settings/seeker')}
           />
         </Group>
         <Group title="Konto">
@@ -122,7 +123,13 @@ export default function SettingsOverviewScreen() {
             title="E-postadresse"
             subtitle="Adressen du logger inn med"
             icon={AtSign}
-            onPress={() => router.push('/profile/settings/email' as any)}
+            onPress={() => router.push('/profile/settings/email')}
+          />
+          <SettingsRow
+            title="Telefonnummer"
+            subtitle="Kontaktinformasjon"
+            icon={Phone}
+            onPress={() => router.push('/profile/settings/phone')}
           />
           <SettingsRow
             title="Endre passord"
@@ -133,32 +140,32 @@ export default function SettingsOverviewScreen() {
             title="Aktive økter"
             subtitle="Innloggede enheter"
             icon={Monitor}
-            onPress={() => router.push('/profile/settings/sessions' as any)}
+            onPress={() => router.push('/profile/settings/sessions')}
           />
         </Group>
         <Group title="Betaling">
           <SettingsRow
             title="SafePay-historikk"
             icon={ShieldCheck}
-            onPress={() => router.push('/profile/settings/safepay' as any)}
+            onPress={() => router.push('/profile/settings/safepay')}
           />
           <SettingsRow
             title="Utbetalinger"
             subtitle="Stripe Connect-oppsett for utbetalinger"
             icon={CreditCard}
-            onPress={() => router.push('/profile/settings/payout' as any)}
+            onPress={() => router.push('/profile/settings/payout')}
           />
           <SettingsRow
             title="Abonnementer"
             subtitle="Administrer aktivt abonnement"
             icon={CreditCard}
-            onPress={() => router.push('/profile/settings/subscription' as any)}
+            onPress={() => router.push('/profile/settings/subscription')}
           />
           <SettingsRow
             title="Medlemskap"
             subtitle="Planvalg og kjøp"
             icon={Sparkles}
-            onPress={() => router.push('/profile/membership' as any)}
+            onPress={() => router.push('/profile/membership')}
           />
         </Group>
         <Group title="Personvern">
@@ -166,13 +173,13 @@ export default function SettingsOverviewScreen() {
             title="Varsler"
             subtitle="Varslingsinnstillinger"
             icon={Bell}
-            onPress={() => router.push('/profile/settings/notifications' as any)}
+            onPress={() => router.push('/profile/settings/notifications')}
           />
           <SettingsRow
             title="Personvern og informasjonskapsler"
             subtitle="Personvernerklæring og cookie-policy"
             icon={ShieldCheck}
-            onPress={() => router.push('/profile/settings/privacy' as any)}
+            onPress={() => router.push('/profile/settings/privacy')}
           />
           <SettingsRow title="Søkemotorsynlighet" icon={Eye} />
           <SettingsRow title="Blokkerte brukere" icon={ShieldCheck} />
@@ -182,18 +189,18 @@ export default function SettingsOverviewScreen() {
             title="Kundesenter"
             subtitle="FAQ, e-post og saksregistrering"
             icon={HelpCircle}
-            onPress={() => router.push('/profile/support' as any)}
+            onPress={() => router.push('/profile/support')}
           />
           <SettingsRow
             title="Lokasjon"
             subtitle="Landet som vises på profilen din"
             icon={MapPin}
-            onPress={() => router.push('/profile/settings/location' as any)}
+            onPress={() => router.push('/profile/settings/location')}
           />
           <SettingsRow
             title="Om Jobblo"
             icon={Info}
-            onPress={() => router.push('/profile/settings/about' as any)}
+            onPress={() => router.push('/profile/settings/about')}
           />
           <SettingsRow
             title="Slett profilen min"

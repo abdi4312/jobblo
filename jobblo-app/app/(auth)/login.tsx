@@ -188,7 +188,7 @@ export default function LoginScreen() {
                   <View className="gap-2">
                     <View className="flex-row items-center justify-between gap-3">
                       <Text className="text-[13px] font-medium text-ink">Passord</Text>
-                      <Pressable onPress={() => router.push('/(auth)/forgot-password' as any)}>
+                      <Pressable onPress={() => router.push('/(auth)/forgot-password')}>
                         <Text className="text-[12px] font-medium text-brand">Glemt passord?</Text>
                       </Pressable>
                     </View>
@@ -240,7 +240,7 @@ export default function LoginScreen() {
                 </View>
 
                 <Pressable
-                  onPress={() => router.push('/(auth)/register' as any)}
+                  onPress={() => router.push('/(auth)/register')}
                   className="mt-6 flex-row justify-center"
                 >
                   <Text className="text-[14px] text-muted">Ny på Jobblo? </Text>

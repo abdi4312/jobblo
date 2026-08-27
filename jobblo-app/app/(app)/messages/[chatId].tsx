@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Briefcase, Send, ShieldCheck } from 'lucide-react-native';
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../src/store/authStore';
 import { messageIdentity, upsertChatMessage, useChatDetail, useSendChatMessage } from '../../../src/hooks/useChatDetail';
@@ -10,6 +10,7 @@ import { getChatSocket } from '../../../src/services/chatSocket.service';
 import type { ChatDetail, ChatMessage, MessageParticipant } from '../../../src/services/messages.service';
 import { queryKeys } from '../../../src/queryKeys';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
+import { orderRouteForRole } from '../../../src/utils/orderRoute';
 
 const STATUS_LABELS: Record<string, string> = {
   completed: 'Fullført', ready_for_review: 'Meldt ferdig', in_progress: 'Pågår',
@@ -27,13 +28,6 @@ function initials(name: string) { return name.split(/\s+/).filter(Boolean).slice
 function formatTime(value?: string) { if (!value) return ''; const date = new Date(value); return Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }); }
 function messageKey(message: ChatMessage) { return message._id || `${message.createdAt || ''}:${message.text || ''}:${idOf(message.senderId) || ''}`; }
 function isSystem(message: ChatMessage) { return message.type?.startsWith('system_'); }
-
-function orderRoute(orderId: string, status: string | undefined, paymentStatus: string | undefined, isCustomer: boolean): Href {
-  if (!isCustomer) return `/provider/orders/${orderId}` as Href;
-  if (status === 'ready_for_review' || status === 'completed') return `/safepay/approval/${orderId}` as Href;
-  if (paymentStatus === 'paid' || status === 'paid' || status === 'in_progress') return `/safepay/success?orderId=${orderId}` as Href;
-  return `/safepay/checkout/${orderId}` as Href;
-}
 
 function JobContext({ chat, userId, onPress }: { chat: ChatDetail; userId: string | null; onPress: () => void }) {
   const service = chat.serviceId;
@@ -104,7 +98,7 @@ export default function ChatDetailScreen() {
     const orderId = idOf(chat.orderId);
     if (!orderId) return;
     const order = typeof chat.orderId === 'object' ? chat.orderId : undefined;
-    router.push(orderRoute(orderId, order?.status || chat.status, order?.paymentStatus, chat.serviceId?.userId === userId));
+    router.push(orderRouteForRole(orderId, chat.serviceId?.userId === userId, order?.status || chat.status, order?.paymentStatus));
   };
 
   if (query.isLoading) return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><View className="flex-1 items-center justify-center"><ActivityIndicator color="#2E6641" /><Text className="mt-3 text-[#63665F]">Laster samtale...</Text></View></SafeAreaView>;

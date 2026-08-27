@@ -1,13 +1,18 @@
-import React, { useEffect, useMemo } from 'react';
-import { Alert, AppState, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, AppState, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, ShieldCheck } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../../src/store/authStore';
 import { useSafePayCheckout, useCreateSafePaySessionMutation } from '../../../../src/hooks/useSafePayCheckout';
+import { getSafePaySessionStatus } from '../../../../src/services/safepay.service';
+import { queryKeys } from '../../../../src/queryKeys';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { SafePayCheckoutSkeleton, SafePayPartiesCard, DigitalContractCard, SafePayPaymentCard } from '../../../../src/components/domain/SafePayCheckoutSections';
 import { SafePayProgressSteps } from '../../../../src/components/domain/SafePayProgressSteps';
+import { providerOrderRoute } from '../../../../src/utils/orderRoute';
+import { isValidOrderId, isValidSessionId, runStripeCheckout, sessionIdFromCheckoutUrl } from '../../../../src/utils/safepayCheckoutSession';
 
 const SETTLED_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed', 'disputed', 'refunded'];
 
@@ -60,10 +65,19 @@ function formatDuration(duration?: { value?: number; unit?: string } | null) {
 export default function SafePayCheckoutScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ orderId: string | string[] }>();
-  const orderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
+  // Deep-link target — Stripe's own `cancel_url` is `${FRONTEND_URL}/safepay/checkout/:orderId`
+  // — so this id arrives from a URL we do not control. Validated rather than merely
+  // truthy-checked: "undefined" and "[object Object]" are both truthy and would otherwise
+  // sail past `enabled: !!orderId` and fire a request for a nonsense id.
+  const rawOrderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
+  const orderId = isValidOrderId(rawOrderId) ? rawOrderId.trim() : undefined;
   const user = useAuthStore((state) => state.user);
+  const queryClient = useQueryClient();
   const { data, isLoading, isError, error, refetch } = useSafePayCheckout(orderId ?? '');
   const paymentMutation = useCreateSafePaySessionMutation(orderId ?? '');
+  // Held for the whole launch → Checkout → return window, not just the mutation, so the
+  // button cannot start a second payment while the first one is still open.
+  const [launching, setLaunching] = useState(false);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
@@ -80,6 +94,10 @@ export default function SafePayCheckoutScreen() {
     if (status === 500) return { title: 'Serverfeil', message: getErrorMessage(error) ?? 'Serveren kunne ikke hente betalingsinformasjon.' };
     return { title: 'Kunne ikke laste betalingsinformasjon', message: 'Sjekk internettforbindelsen din og prøv igjen.' };
   }, [error]);
+
+  if (!orderId) {
+    return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ErrorState title="Ugyldig lenke" message="Lenken mangler en gyldig ordre-ID, så betalingen kan ikke åpnes. Åpne oppdraget fra Mine søkere og prøv derfra." /></SafeAreaView>;
+  }
 
   if (isLoading) {
     return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ScrollView contentContainerStyle={{ paddingBottom: 100 }}><SafePayCheckoutSkeleton /></ScrollView></SafeAreaView>;
@@ -100,7 +118,9 @@ export default function SafePayCheckoutScreen() {
   }
 
   if (isProvider && !isCustomer) {
-    return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><View className="flex-1 justify-center px-4"><View className="rounded-3xl border border-[#E6E7E1] bg-white p-8"><View className="mx-auto h-11 w-11 items-center justify-center rounded-full bg-[#EAF1E9]"><ShieldCheck size={20} color="#2E6641" /></View><Text className="mt-4 text-center text-[1.0625rem] font-semibold text-[#0B0B0B]">Betaling håndteres av oppdragsgiver</Text><Text className="mt-2 text-center text-[0.875rem] leading-relaxed text-[#63665F]">Du kan følge oppdragets status og starte arbeidet fra din egen arbeidsside.</Text><Pressable onPress={() => router.push(`/provider/orders/${orderId}`)} className="mt-6 rounded-full bg-[#2E6641] px-6 py-3"><Text className="text-center text-[0.9375rem] font-semibold text-white">Gå til mitt oppdrag</Text></Pressable></View></View></SafeAreaView>;
+    // `replace`, not `push`: this screen is a wall for providers, so it must not stay on the
+    // stack for the back gesture to return to.
+    return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><View className="flex-1 justify-center px-4"><View className="rounded-3xl border border-[#E6E7E1] bg-white p-8"><View className="mx-auto h-11 w-11 items-center justify-center rounded-full bg-[#EAF1E9]"><ShieldCheck size={20} color="#2E6641" /></View><Text className="mt-4 text-center text-[1.0625rem] font-semibold text-[#0B0B0B]">Betaling håndteres av oppdragsgiver</Text><Text className="mt-2 text-center text-[0.875rem] leading-relaxed text-[#63665F]">Du kan følge oppdragets status og starte arbeidet fra din egen arbeidsside.</Text><Pressable onPress={() => router.replace(providerOrderRoute(order._id))} className="mt-6 rounded-full bg-[#2E6641] px-6 py-3"><Text className="text-center text-[0.9375rem] font-semibold text-white">Gå til mitt oppdrag</Text></Pressable></View></View></SafeAreaView>;
   }
 
   if (!isCustomer && !isProvider) {
@@ -112,22 +132,57 @@ export default function SafePayCheckoutScreen() {
   const duration = formatDuration(service.duration);
 
   const handlePay = () => {
+    if (launching || paymentMutation.isPending) return;
+    setLaunching(true);
     paymentMutation.mutate(undefined, {
       onSuccess: async (response) => {
-        if (typeof response.url !== 'string' || !response.url.trim()) {
+        const checkoutUrl = typeof response.url === 'string' ? response.url.trim() : '';
+        if (!checkoutUrl) {
           Alert.alert('Betaling kunne ikke starte', 'Fikk ingen betalingslenke fra Stripe. Prøv igjen.');
           return;
         }
-        try {
-          await Linking.openURL(response.url.trim());
-        } catch {
-          Alert.alert('Betaling kunne ikke starte', 'Kunne ikke åpne betalingslenken. Prøv igjen.');
+
+        // `create-session` returns only the Checkout URL, but the server writes
+        // `checkoutSessionId` onto the order before it responds — so this refetch always
+        // sees it. Parsing the URL is only a fallback.
+        const refreshed = await refetch();
+        const stored = refreshed.data?.order?.checkoutSessionId;
+        const sessionId = isValidSessionId(stored) ? stored : sessionIdFromCheckoutUrl(checkoutUrl);
+
+        const result = await runStripeCheckout({ checkoutUrl, sessionId, verify: getSafePaySessionStatus });
+
+        if (result.outcome === 'not_opened') {
+          Alert.alert('Betaling kunne ikke starte', 'Kunne ikke åpne betalingssiden. Prøv igjen.');
+          return;
         }
+
+        // Closed without the server confirming anything — including a deliberate cancel.
+        // The order stays in whatever state the server says (`awaiting_payment` for a
+        // cancel), the customer stays on this screen, and nothing claims success.
+        if (result.outcome !== 'paid') {
+          await refetch();
+          return;
+        }
+
+        // Seeding the status cache lets the success screen show the confirmed payment at
+        // once instead of verifying from scratch; its own effect then invalidates the
+        // applicant, application and order lists that the payment changed.
+        queryClient.setQueryData(queryKeys.safepay.status(result.sessionId), result.status);
+        await queryClient.invalidateQueries({ queryKey: queryKeys.safepay.checkout(orderId ?? '') });
+
+        const paidOrderId = isValidOrderId(result.status.orderId) ? result.status.orderId : orderId ?? '';
+        // `replace`: this order is paid now, so the back gesture must not return to a
+        // checkout screen offering to pay for it again.
+        router.replace({
+          pathname: '/(app)/safepay/success',
+          params: { orderId: paidOrderId, session_id: result.sessionId },
+        });
       },
       onError: (mutationError) => {
         if (getErrorStatus(mutationError) === 409) void refetch();
         Alert.alert('Kunne ikke starte betalingen', getErrorMessage(mutationError) ?? 'Prøv igjen.');
       },
+      onSettled: () => setLaunching(false),
     });
   };
 
@@ -139,7 +194,7 @@ export default function SafePayCheckoutScreen() {
         <SafePayProgressSteps currentStep={2} />
         <SafePayPartiesCard order={order} />
         <DigitalContractCard service={service} order={order} calculation={calculation} contractDate={contractDate} duration={duration} />
-        <SafePayPaymentCard calculation={calculation} isPaid={isPaid} providerName={order.providerId?.name} onPay={handlePay} isPending={paymentMutation.isPending} />
+        <SafePayPaymentCard calculation={calculation} isPaid={isPaid} providerName={order.providerId?.name} onPay={handlePay} isPending={paymentMutation.isPending || launching} />
         {order.paymentStatus === 'failed' ? <Text className="mt-4 text-center text-[0.8125rem] font-medium text-[#B4453A]">Forrige betalingsforsøk mislyktes. Du kan prøve igjen over.</Text> : null}
         <Text className="mt-5 text-center text-[0.75rem] leading-relaxed text-[#9B9E96]">Ved å bekrefte godtar du Jobblos vilkår og SafePay-avtalen.</Text>
       </ScrollView>

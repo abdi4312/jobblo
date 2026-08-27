@@ -47,7 +47,10 @@ export function ApplicantNextSteps({ activeOrderStatus, jobDate, payout }: { act
       <Text className="mb-4 text-[0.9375rem] font-bold text-[#0B0B0B]">Neste steg</Text>
       {steps.map(([label, description], index) => {
         const step = index + 1;
-        const current = step === 1;
+        // Was hardcoded to `step === 1`, which pinned "Du er her nå" to "Velg en søker" and left
+        // the final "Godkjenn og utbetal" row permanently greyed out even when the order was
+        // already `ready_for_review`.
+        const current = step === progressStep;
         const done = step < progressStep;
         return (
           <View key={label} className="flex-row gap-3">

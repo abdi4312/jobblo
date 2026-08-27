@@ -7,7 +7,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuthStore } from '../../../../src/store/authStore';
 import { useSafePayCheckout } from '../../../../src/hooks/useSafePayCheckout';
 import { useApproveSafePayJobMutation, useCustomerChecklistMutation, useReviewPhotoUploadMutation } from '../../../../src/hooks/useApproval';
-import { useProviderDispute } from '../../../../src/hooks/useProviderOrder';
+import { useDisputeByOrder } from '../../../../src/hooks/useDisputes';
+import { isDisputeActive, isDisputeEligibleOrderStatus } from '../../../../src/types/Dispute';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { Button } from '../../../../src/components/ui/Button';
@@ -73,8 +74,11 @@ export default function SafePayApprovalScreen() {
   const checklistMutation = useCustomerChecklistMutation(orderId ?? '');
   const approveMutation = useApproveSafePayJobMutation(orderId ?? '');
   const photoMutation = useReviewPhotoUploadMutation(orderId ?? '');
-  const { data: dispute } = useProviderDispute(orderId ?? '');
-  const activeDispute = !!dispute;
+  const { data: dispute } = useDisputeByOrder(orderId ?? '');
+  // Matches the backend's own definition of a blocking dispute (anything not
+  // resolved/closed/cancelled), so a settled dispute no longer locks approval forever.
+  const activeDispute = isDisputeActive(dispute?.status);
+  const hasDispute = !!dispute;
   const [ratings, setRatings] = useState<ReviewRatings>(emptyRatings());
   const [comment, setComment] = useState('');
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -310,9 +314,22 @@ export default function SafePayApprovalScreen() {
           </View>
         ) : null}
 
-        {status.canApprove && order.paymentStatus === 'paid' && !activeDispute && !completed ? <Action label={approveMutation.isPending ? 'Godkjenner...' : `Godkjenn jobb og utbetal ${calculation.providerNet.toLocaleString('nb-NO')} kr`} onPress={approve} disabled={approveMutation.isPending} /> : null}
+        {/* Reuses the single `canApprove` above instead of re-deriving the gate. Identical by
+            construction: `status.canApprove` is true only for `ready_for_review`, and `isCustomer`
+            is already enforced by the access wall — so this weakens nothing. */}
+        {canApprove && !completed ? <Action label={approveMutation.isPending ? 'Godkjenner...' : `Godkjenn jobb og utbetal ${calculation.providerNet.toLocaleString('nb-NO')} kr`} onPress={approve} disabled={approveMutation.isPending} /> : null}
+        {/* The CTA used to vanish with no explanation whenever the gate failed. */}
+        {!canApprove && !completed && !activeDispute ? (
+          <Text className="rounded-2xl bg-[#F4F6F0] p-4 text-center text-[0.8125rem] leading-relaxed text-[#63665F]">
+            {order.paymentStatus !== 'paid'
+              ? 'Betalingen er ikke bekreftet ennå. Godkjenning og utbetaling åpnes så snart SafePay har mottatt beløpet.'
+              : 'Du kan godkjenne og utbetale så snart utføreren har meldt jobben som ferdig — vi varsler deg.'}
+          </Text>
+        ) : null}
         {completed ? <View className="rounded-2xl bg-[#122A1C] p-5"><Text className="text-center font-bold text-white">Jobb allerede godkjent!</Text></View> : null}
         {activeDispute ? <Text className="mt-4 rounded-xl bg-[#FBF4F2] p-4 text-center text-sm font-semibold text-[#B4453A]">Tvist pågår — godkjenning og utbetaling er låst.</Text> : null}
+        {hasDispute ? <Pressable onPress={() => router.push({ pathname: '/(app)/disputes/order/[orderId]', params: { orderId: orderId ?? '' } })} className="mt-2 rounded-full border border-[#B4453A] px-4 py-3"><Text className="text-center text-[0.8125rem] font-semibold text-[#B4453A]">Se tvist</Text></Pressable> : null}
+        {!hasDispute && isDisputeEligibleOrderStatus(order.status) ? <Pressable onPress={() => router.push({ pathname: '/(app)/disputes/create', params: { orderId: orderId ?? '' } })} className="mt-4 rounded-full border border-[#B4453A] px-4 py-3"><Text className="text-center text-[0.8125rem] font-semibold text-[#B4453A]">Noe gikk galt? Åpne tvist</Text></Pressable> : null}
       </ScrollView>
 
       <Modal visible={!!selectedImage} transparent animationType="fade" onRequestClose={() => setSelectedImage(null)}>

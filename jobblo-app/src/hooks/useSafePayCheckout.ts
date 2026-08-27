@@ -31,6 +31,11 @@ export function useCreateSafePaySessionMutation(orderId: string) {
 
   return useMutation({
     mutationFn: () => createSafePaySession(orderId),
+    // Explicit rather than relying on the library default: a retried create-session is a
+    // second Stripe Checkout Session for the same order. The server does dedupe an `open`
+    // session, but a payment call is not something to leave to a default that a future
+    // global `defaultOptions.mutations` could change underneath us.
+    retry: 0,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.safepay.checkout(orderId) });
     },

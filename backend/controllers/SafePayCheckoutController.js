@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 const Order = require('../models/Order');
 const Service = require('../models/Service');
 const User = require('../models/User');
@@ -220,8 +221,112 @@ function resolveFrontendUrl() {
   return { url: raw };
 }
 
+/** Mongo ObjectId — the `orderId` that travels through the mobile return URL. */
+const ORDER_ID_RE = /^[a-f\d]{24}$/i;
+/** Stripe Checkout Session id — what Stripe substitutes for {CHECKOUT_SESSION_ID}. */
+const SESSION_ID_RE = /^cs_(?:test|live)_[A-Za-z0-9]{1,200}$/;
+/** A deep-link prefix, e.g. `jobblo://`. Deliberately not an http(s) URL. */
+const APP_LINK_PREFIX_RE = /^[a-z][a-z0-9+.-]*:\/\/[^\s"'<>]*$/i;
+
+/**
+ * The app scheme the mobile bridge page hands off to. `app.json` in jobblo-app declares
+ * `scheme: "jobblo"`, so this default matches a real build. Overridable because Expo Go
+ * does not register the app's own scheme — pointing this at `exp://<lan-ip>:8081/--/`
+ * makes the same bridge open a development client.
+ */
+function resolveAppLinkPrefix() {
+  const raw = process.env.MOBILE_APP_LINK_PREFIX?.trim() || 'jobblo://';
+  if (!APP_LINK_PREFIX_RE.test(raw)) {
+    return { error: `MOBILE_APP_LINK_PREFIX is not a usable deep-link prefix: "${raw}"` };
+  }
+  if (/^https?:\/\//i.test(raw)) {
+    return {
+      error:
+        'MOBILE_APP_LINK_PREFIX must be an app scheme such as jobblo://, not an http(s) URL — ' +
+        'the bridge hands off to the app, it is not a general web redirector',
+    };
+  }
+  return { prefix: raw.endsWith('/') ? raw : `${raw}/` };
+}
+
+/**
+ * Public origin of *this* server, where the bridge page is served from.
+ *
+ * Configured, not taken from the request: the Host header is client-supplied, and using it
+ * would let a caller decide where Stripe sends a customer. The request-derived origin is
+ * allowed outside production only, so a LAN dev server needs no extra setup to be testable.
+ */
+function resolveMobileReturnBase(req) {
+  const configured = process.env.MOBILE_RETURN_URL?.trim().replace(/\/$/, '');
+  if (configured) {
+    if (!/^https?:\/\//i.test(configured)) {
+      return { error: `MOBILE_RETURN_URL must start with http(s)://, got "${configured}"` };
+    }
+    return { base: configured };
+  }
+  if (process.env.NODE_ENV === 'production') {
+    return { error: 'MOBILE_RETURN_URL is not set — refusing to derive it from the Host header' };
+  }
+  const host = req?.get?.('host');
+  if (!host) return { error: 'MOBILE_RETURN_URL is not set and the request carries no Host header' };
+  return { base: `${req.protocol}://${host}` };
+}
+
+/**
+ * Do two return URLs point at the same destination?
+ *
+ * Query strings are ignored on purpose. The stored `success_url` contains the literal
+ * `{CHECKOUT_SESSION_ID}` template, and whether Stripe echoes it back unsubstituted on
+ * retrieve is not something to depend on. Origin + path is what distinguishes a web
+ * session from a mobile one, which is the only question being asked here.
+ */
+function sameRedirectTarget(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  return a.split('?')[0] === b.split('?')[0];
+}
+
+/**
+ * The `success_url` / `cancel_url` pair for one checkout, derived from a platform enum.
+ *
+ * Never from client-supplied URLs. The client says "mobile" or nothing; the scheme and the
+ * host both come from server configuration. Anything else is an open redirect with Stripe
+ * as the referrer.
+ *
+ * Mobile cannot use `jobblo://` directly — Stripe requires http(s) return URLs, and its own
+ * app-to-web guide points `success_url` at an HTTPS page that then hands off to a custom
+ * scheme. That page is `GET /api/safepay-checkout/mobile-return` below. If the association
+ * files (`apple-app-site-association`, `assetlinks.json`) are ever published on this origin,
+ * the very same URL is captured by the OS as a native app link and the page never renders.
+ */
+function buildCheckoutRedirects({ orderId, mobile, req }) {
+  if (!mobile) {
+    const frontend = resolveFrontendUrl();
+    if (frontend.error) return { error: frontend.error };
+    return {
+      success: `${frontend.url}/safepay/success?session_id={CHECKOUT_SESSION_ID}&orderId=${orderId}`,
+      cancel: `${frontend.url}/safepay/checkout/${orderId}`,
+    };
+  }
+
+  // Validated here as well as in the bridge handler: a bad prefix should fail while the
+  // customer is still in the app, not after Stripe has taken their money.
+  const link = resolveAppLinkPrefix();
+  if (link.error) return { error: link.error };
+
+  const origin = resolveMobileReturnBase(req);
+  if (origin.error) return { error: origin.error };
+
+  const bridge = `${origin.base}/api/safepay-checkout/mobile-return`;
+  return {
+    // `{CHECKOUT_SESSION_ID}` must reach Stripe raw — encoding the braces stops the
+    // substitution and the app would receive the literal template as its session id.
+    success: `${bridge}?state=success&orderId=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel: `${bridge}?state=cancel&orderId=${orderId}`,
+  };
+}
+
 exports.createSafePaySession = async (req, res) => {
-  const { orderId } = req.body || {};
+  const { orderId, platform } = req.body || {};
   try {
     const stripe = await getStripe();
     const userId = req.userId;
@@ -229,6 +334,15 @@ exports.createSafePaySession = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
       return res.status(400).json({ error: 'Ugyldig orderId' });
     }
+
+    // The ONLY thing the client gets to say about where Stripe returns to. A closed enum,
+    // rejected rather than defaulted when it is something else, so a typo ('Mobile', 'ios')
+    // surfaces as a 400 in development instead of silently sending a phone to the website.
+    // Absent means web — every existing caller keeps working untouched.
+    if (platform !== undefined && platform !== 'web' && platform !== 'mobile') {
+      return res.status(400).json({ error: 'Ugyldig plattform', code: 'invalid_platform' });
+    }
+    const isMobile = platform === 'mobile';
 
     const order = await Order.findById(orderId).populate('serviceId');
 
@@ -274,11 +388,40 @@ exports.createSafePaySession = async (req, res) => {
       return res.status(409).json({ error: 'Ordre er allerede betalt.' });
     }
 
+    // Computed before the reuse check below, not just before the Stripe call: the reuse
+    // decision needs to know what THIS request's return URLs are. A config mistake also
+    // still fails here rather than after Stripe has been handed "undefined/safepay/…",
+    // which it rejects as an invalid URL — a config error that arrived looking like a
+    // payment-provider failure.
+    const redirects = buildCheckoutRedirects({
+      // `order._id`, not the raw body value: `ObjectId.isValid()` also passes any 12-char
+      // string, so the request's `orderId` is not guaranteed to be 24 hex characters. This
+      // id is about to be embedded in a URL that leaves the server, and the bridge below
+      // re-validates it as 24 hex — normalising here keeps the two ends in agreement.
+      orderId: String(order._id),
+      mobile: isMobile,
+      req,
+    });
+    if (redirects.error) {
+      console.error('createSafePaySession: %s', redirects.error);
+      return res.status(500).json({
+        error: 'Betaling er ikke konfigurert riktig. Kontakt support.',
+        code: 'frontend_url_misconfigured',
+      });
+    }
+
     // Return existing open session if one exists (prevent duplicate sessions)
     if (order.checkoutSessionId && order.checkoutSessionStatus === 'open') {
       try {
         const existingSession = await stripe.checkout.sessions.retrieve(order.checkoutSessionId);
-        if (existingSession.status === 'open') {
+        // Reuse only a session that returns where this caller needs to go. A session opened
+        // from the website carries the web `success_url`; handing it to the app would send
+        // the customer to jobblo.no after paying and the app would never learn about it.
+        // Platform changed → let it fall through and open a fresh session instead.
+        if (
+          existingSession.status === 'open' &&
+          sameRedirectTarget(existingSession.success_url, redirects.success)
+        ) {
           return res.json({ url: existingSession.url, reused: true });
         }
       } catch (_) {
@@ -305,19 +448,7 @@ exports.createSafePaySession = async (req, res) => {
       });
     }
 
-    // Checked before the Stripe call rather than after: an unset FRONTEND_URL produced
-    // `success_url: "undefined/safepay/success?..."`, which Stripe rejects as an invalid
-    // URL — a config mistake that arrived looking like a payment-provider failure.
-    const frontend = resolveFrontendUrl();
-    if (frontend.error) {
-      console.error('createSafePaySession: %s', frontend.error);
-      return res.status(500).json({
-        error: 'Betaling er ikke konfigurert riktig. Kontakt support.',
-        code: 'frontend_url_misconfigured',
-      });
-    }
-    const frontendUrl = frontend.url;
-
+    // `redirects` was resolved above, before the session-reuse check.
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       payment_method_types: ['card'],
@@ -335,8 +466,8 @@ exports.createSafePaySession = async (req, res) => {
         },
       ],
       mode: 'payment',
-      success_url: `${frontendUrl}/safepay/success?session_id={CHECKOUT_SESSION_ID}&orderId=${orderId}`,
-      cancel_url: `${frontendUrl}/safepay/checkout/${orderId}`,
+      success_url: redirects.success,
+      cancel_url: redirects.cancel,
       metadata: {
         userId: String(user._id),
         orderId: orderId.toString(),
@@ -373,6 +504,157 @@ exports.createSafePaySession = async (req, res) => {
       code: isConfig ? 'stripe_key_missing' : err?.code || 'stripe_session_failed',
     });
   }
+};
+
+/**
+ * HTML-attribute escaping. Every value interpolated into the page below is already
+ * regex-validated, so this is the second lock on the door rather than the first.
+ */
+function escapeHtml(value) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return String(value).replace(/[&<>"']/g, (c) => map[c]);
+}
+
+/**
+ * The bridge page itself. Two jobs, in order of reliability: hand off to the app with no
+ * interaction at all, and — for the browsers that refuse to launch an external scheme on
+ * their own — give the person one obvious thing to tap.
+ *
+ * The deep link appears only inside HTML attributes. The script reads it back off the DOM
+ * (`a.href`) rather than having it interpolated into JavaScript, so there is no context in
+ * which a value could become code. A per-response nonce lets the CSP stay at
+ * `default-src 'none'` while still allowing this one inline script and stylesheet.
+ *
+ * The copy never claims the payment went through. Only the app says that, and only after
+ * asking the server.
+ */
+function mobileReturnPage({ nonce, target, cancelled }) {
+  const href = escapeHtml(target);
+  const title = target ? 'Åpner Jobblo…' : 'Åpne Jobblo-appen';
+  const lead = !target
+    ? 'Vi klarte ikke å lage lenken tilbake til appen. Bytt til Jobblo-appen og åpne oppdraget — betalingsstatusen vises der.'
+    : cancelled
+      ? 'Vi tar deg tilbake til appen, der du kan fortsette betalingen.'
+      : 'Vi tar deg tilbake til appen. Betalingen bekreftes der.';
+  const hint = target
+    ? 'Skjer ingenting? Trykk på knappen over, eller bytt til Jobblo-appen manuelt.'
+    : 'Du kan lukke dette vinduet.';
+
+  return `<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+${target ? `<meta http-equiv="refresh" content="0; url=${href}">` : ''}
+<title>${title}</title>
+<style nonce="${nonce}">
+  :root { color-scheme: light }
+  * { box-sizing: border-box }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center;
+    justify-content: center; padding: 24px; background: #EFF0EA; color: #0B0B0B;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif }
+  main { width: 100%; max-width: 22rem; background: #fff; border: 1px solid #E6E7E1;
+    border-radius: 24px; padding: 32px 24px; text-align: center }
+  .brand { margin: 0; font-size: .6875rem; font-weight: 600; letter-spacing: .16em;
+    text-transform: uppercase; color: #9B9E96 }
+  h1 { margin: .5rem 0 0; font-size: 1.25rem; line-height: 1.3 }
+  .lead { margin: .75rem 0 0; font-size: .875rem; line-height: 1.6; color: #63665F }
+  .btn { display: block; margin-top: 1.75rem; padding: .875rem 1.25rem;
+    border-radius: 9999px; background: #2E6641; color: #fff; font-size: .9375rem;
+    font-weight: 600; text-decoration: none }
+  .hint { margin: 1rem 0 0; font-size: .75rem; line-height: 1.6; color: #9B9E96 }
+</style>
+</head>
+<body>
+<main>
+  <p class="brand">Jobblo SafePay</p>
+  <h1>${title}</h1>
+  <p class="lead">${lead}</p>
+  ${target ? `<a class="btn" id="app" href="${href}">Åpne Jobblo</a>` : ''}
+  <p class="hint">${hint}</p>
+</main>
+${
+  target
+    ? `<script nonce="${nonce}">
+(function () {
+  var a = document.getElementById('app');
+  if (!a) return;
+  // Read back off the DOM: the URL exists in this page only as an attribute value.
+  try { window.location.replace(a.href); } catch (e) {}
+})();
+</script>`
+    : ''
+}
+</body>
+</html>`;
+}
+
+/**
+ * PUBLIC (no auth): the HTTPS bridge between Stripe Checkout and the mobile app.
+ *
+ * Stripe will not accept `jobblo://` as a return URL — return URLs must be http(s), and
+ * Stripe's own app-to-web guide points `success_url` at an HTTPS page that then hands off
+ * to a custom scheme. This is that page. It is unauthenticated because it is reached by a
+ * browser redirect from Stripe, which carries no Jobblo credentials.
+ *
+ * Unauthenticated is safe because the page reveals nothing: it asserts no payment outcome,
+ * reads no database, and only reflects ids that already match a strict shape. The app
+ * confirms the payment itself against `GET /status/:sessionId` once it is open — the deep
+ * link is a navigation instruction, never proof of payment.
+ *
+ * Both ids are re-validated here even though this server generated the URL: they are query
+ * parameters on a public endpoint, so at this point they are attacker-controlled strings
+ * that merely usually happen to come from Stripe.
+ */
+exports.mobileReturn = (req, res) => {
+  res.set({
+    'Content-Type': 'text/html; charset=utf-8',
+    // Nothing here should be cached, indexed, or leaked onwards as a referrer.
+    'Cache-Control': 'no-store, max-age=0',
+    'Referrer-Policy': 'no-referrer',
+    'X-Robots-Tag': 'noindex, nofollow',
+    'X-Content-Type-Options': 'nosniff',
+  });
+
+  const query = req.query || {};
+  const pick = (value) => (typeof value === 'string' ? value.trim() : '');
+  const cancelled = pick(query.state) === 'cancel';
+  // Anything that is not exactly the expected shape becomes an empty string and is simply
+  // left out of the deep link. Both id charsets are URL-safe by construction, so no
+  // encoding step is needed — and `{CHECKOUT_SESSION_ID}` failing to substitute lands here
+  // as an unparseable value rather than as a bogus session id handed to the app.
+  const orderId = ORDER_ID_RE.test(pick(query.orderId)) ? pick(query.orderId) : '';
+  const sessionId = SESSION_ID_RE.test(pick(query.session_id)) ? pick(query.session_id) : '';
+
+  const link = resolveAppLinkPrefix();
+  let target = '';
+  if (link.error) {
+    console.error('mobileReturn: %s', link.error);
+  } else if (cancelled) {
+    // Back to the screen the payment was started from; the app re-reads the order there.
+    target = orderId ? `${link.prefix}safepay/checkout/${orderId}` : link.prefix;
+  } else if (sessionId || orderId) {
+    const params = [];
+    if (sessionId) params.push(`session_id=${sessionId}`);
+    if (orderId) params.push(`orderId=${orderId}`);
+    // Group segments like `(app)` are omitted from expo-router URLs, so this path resolves
+    // to app/(app)/safepay/success.tsx — the single canonical success screen.
+    target = `${link.prefix}safepay/success?${params.join('&')}`;
+  }
+
+  const nonce = crypto.randomBytes(16).toString('base64');
+  res.set(
+    'Content-Security-Policy',
+    `default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; ` +
+      `img-src 'none'; base-uri 'none'; form-action 'none'`
+  );
+
+  // A page still renders in every case — a person is standing in front of it, possibly
+  // having just paid — but the status code distinguishes "we are misconfigured" from
+  // "those query parameters were not usable" for whoever reads the logs.
+  const status = target ? 200 : link.error ? 500 : 400;
+  res.status(status).send(mobileReturnPage({ nonce, target, cancelled }));
 };
 
 exports.checkoutSessionStatus = async (req, res) => {

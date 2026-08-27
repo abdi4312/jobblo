@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../queryKeys';
-import { createProviderReview, deleteProviderEvidence, getProviderDispute, getProviderOrder, getProviderOrderReviews, markProviderReadyForReview, openProviderDispute, startProviderJob, updateProviderChecklist, uploadProviderEvidence } from '../services/providerWork.service';
+import { createProviderReview, deleteProviderEvidence, getProviderOrder, getProviderOrderReviews, markProviderReadyForReview, startProviderJob, updateProviderChecklist, uploadProviderEvidence } from '../services/providerWork.service';
 import type { ProviderOrderResponse } from '../types/ProviderOrder';
 
 export function useProviderOrder(orderId: string) {
@@ -75,14 +75,8 @@ export function useMarkReadyForReviewMutation(orderId: string) {
   });
 }
 
-export function useProviderDispute(orderId: string) {
-  return useQuery({ queryKey: queryKeys.disputes.byOrder(orderId), queryFn: () => getProviderDispute(orderId), enabled: !!orderId, retry: false });
-}
-
-export function useOpenProviderDisputeMutation(orderId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({ mutationFn: (payload: { reasonCategory: string; title: string; description: string }) => openProviderDispute(orderId, payload), onSuccess: () => { void queryClient.invalidateQueries({ queryKey: queryKeys.providerOrders.detail(orderId) }); void queryClient.invalidateQueries({ queryKey: queryKeys.disputes.byOrder(orderId) }); } });
-}
+// Disputes are read and written through src/hooks/useDisputes.ts. A second copy here
+// shared the same `disputes.byOrder` cache key, so the two hook families fought over it.
 
 export function useProviderOrderReviews(orderId: string) {
   return useQuery({ queryKey: queryKeys.providerOrders.reviews(orderId), queryFn: () => getProviderOrderReviews(orderId), enabled: !!orderId });

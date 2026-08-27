@@ -215,7 +215,7 @@ export default function SafePayHistoryScreen() {
           </View>
         )}
         <Pressable
-          onPress={() => router.push('/profile/settings/payout' as any)}
+          onPress={() => router.push('/profile/settings/payout')}
           className="mt-5 rounded-3xl border border-[#E6E7E1] bg-white p-5 active:bg-[#F4F6F0]"
         >
           <View className="flex-row items-center">

@@ -32,6 +32,12 @@ export type CurrentProfile = {
    * location fields (address/city/coordinates/countyCode/municipalityCode).
    */
   country?: string;
+  /**
+   * Free-text phone number on the user profile (backend `User.phone` is a plain
+   * `String` with `trim: true`). Returned by GET /auth/profile because `phone`
+   * is part of the backend OWN_USER_SELECT projection.
+   */
+  phone?: string;
   orgNumber?: string;
   website?: string;
   averageRating?: number;
@@ -69,6 +75,12 @@ export type ProfileUpdate = Partial<{
   postSted: string;
   /** Accepted by backend updateUser's `allowedUpdates`; stored as free text. */
   country: string;
+  /**
+   * Free-text phone number on the user profile (backend `User.phone` is a plain
+   * `String` with `trim: true` and a `set` hook that converts empty strings to
+   * `undefined`). Present in normal-user `allowedUpdates` of `updateUser`.
+   */
+  phone: string;
   companyName: string;
   orgNumber: string;
   website: string;

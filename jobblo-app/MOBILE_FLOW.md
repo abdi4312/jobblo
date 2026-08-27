@@ -14,6 +14,124 @@
 
 ---
 
+## Canonical route map
+
+This table is the single source of truth for mobile routes. It is generated from the real files
+under `app/`, cross-checked against the generated `.expo/types/router.d.ts`. Prose elsewhere in
+this document describes screen behaviour; where the two disagree, this table wins.
+
+Conventions:
+
+- `(app)` and `(auth)` are URL-transparent groups. `'/(app)/jobs/[id]'` and `'/jobs/[id]'` are
+  the same route; the group-qualified spelling is preferred at call sites because it is
+  unambiguous about which layout guard applies.
+- Every navigation call uses the object form — `router.push({ pathname: '/(app)/jobs/[id]', params: { id } })`.
+  There are no template-string hrefs and no `as Href` / `as any` / `as never` route casts left in
+  the codebase.
+- Every screen in `(app)` runs under `Tabs`/`Stack` with `headerShown: false`, so each non-tab-root
+  screen renders its own back control.
+- "Auth" = `app/(app)/_layout.tsx` redirects to `/(auth)/login` when unauthenticated.
+  "Guest" = `app/(auth)/_layout.tsx` redirects to `/(app)` when already signed in.
+
+### Entry and auth
+
+| URL | Purpose | Required params | Auth | Role restriction |
+| --- | --- | --- | --- | --- |
+| `/` | Entry gate. Waits for auth hydration, then redirects to `/(app)` or `/(auth)/login`. Renders no UI of its own. | — | Public | — |
+| `/(auth)/login` | Sign in. | — | Guest | — |
+| `/(auth)/register` | Two-step sign up. | — | Guest | — |
+| `/(auth)/forgot-password` | Request a reset code and set a new password. | — | Guest | — |
+
+### Bottom tabs
+
+| URL | Purpose | Required params | Auth | Role restriction |
+| --- | --- | --- | --- | --- |
+| `/(app)` | Home (`Hjem`). Seasonal greeting, category chips, nearby jobs, recommended workers. | — | Auth | — |
+| `/(app)/create-job` | Post a job (`Legg ut`), including smart fill. | — | Auth | — |
+| `/(app)/messages` | Chat list (`Meldinger`). | — | Auth | own chats (server-scoped) |
+| `/(app)/alerts` | Notification inbox (`Varsler`), with unread badge on the tab icon. | — | Auth | own notifications |
+| `/(app)/profile` | Own profile (`Profil`) and the hub for jobs, applications, saved lists and settings. | — | Auth | — |
+
+### Hidden screens in the tab group
+
+Registered in `app/(app)/_layout.tsx` with `href: null`, so they never appear in the tab bar and
+are only reached by an explicit push. Each renders its own in-content back control.
+
+| URL | Purpose | Required params | Auth | Role restriction |
+| --- | --- | --- | --- | --- |
+| `/(app)/explore` | Search and browse jobs with the full filter sheet. | — (optional `search` seeds the query) | Auth | — |
+| `/(app)/my-applications` | Two-tab overview: `Mine søknader` (applications sent) and `Mine søkere` (applicants on own jobs). | — (optional `tab`: `mine-soknader` \| `mine-sokere`) | Auth | each tab is server-scoped to the viewer |
+| `/(app)/my-jobs` | Jobs the viewer posted, with their applicants and orders. | — | Auth | poster's own jobs (server-scoped) |
+
+### Job, chat, profile and favorites sections
+
+Folder sections with their own `_layout.tsx` `Stack`.
+
+| URL | Purpose | Required params | Auth | Role restriction |
+| --- | --- | --- | --- | --- |
+| `/(app)/jobs/[id]` | Job details and the apply flow. | `id` | Auth | owner sees a disabled CTA instead of apply |
+| `/(app)/messages/[chatId]` | Conversation, with order/contract shortcuts. | `chatId` | Auth | chat participants (server 403) |
+| `/(app)/job-applicants/[serviceId]` | Applicants on own job: accept, decline, chat, create the SafePay contract. | `serviceId` | Auth | job owner only (server 403 → `Ikke autorisert`) |
+| `/(app)/profile/[userId]` | Public profile of another user. Redirects to `/(app)/profile` when the id is the viewer. | `userId` | Auth | — |
+| `/(app)/favorites` | Saved lists overview. | — | Auth | own lists |
+| `/(app)/favorites/[listId]` | One saved list and its jobs. | `listId` | Auth | own list |
+
+### SafePay and order workspace
+
+All order destinations are resolved through one helper, `src/utils/orderRoute.ts`, so a CTA can
+never promise one screen and open another. No screen builds these URLs by hand.
+
+| URL | Purpose | Required params | Auth | Role restriction |
+| --- | --- | --- | --- | --- |
+| `/(app)/safepay/checkout/[orderId]` | Contract review and payment. | `orderId` | Auth | customer. A provider who lands here is sent to `/(app)/provider/orders/[orderId]` with `replace`, so the back gesture cannot bounce between the two. |
+| `/(app)/provider/orders/[orderId]` | Provider workspace: start work, checklist, evidence upload, mark ready, dispute. | `orderId` | Auth | order parties (server 403); every action is gated on the server-supplied `isProvider` |
+| `/(app)/safepay/approval/[orderId]` | Customer approves the finished work and releases payment. | `orderId` | Auth | customer only — non-customers get an `Ikke tilgang` panel |
+| `/(app)/safepay/success` | Post-payment confirmation. Verifies the Stripe session, then offers role-appropriate next steps. | — (reads `session_id` and/or `orderId` from the query) | Auth | customer and provider see different CTAs |
+| `/(app)/safepay/success/[orderId]` | Deep-link alias only. Redirects to `/(app)/safepay/success?orderId=…`. Kept because SafePay return links and older notifications use this shape. | `orderId` | Auth | — |
+
+### Disputes
+
+| URL | Purpose | Required params | Auth | Role restriction |
+| --- | --- | --- | --- | --- |
+| `/(app)/disputes/create` | Create a dispute for an order (reason, title, description). Both customer and provider. | `orderId` (query) | Auth | order participants only (server 403) |
+| `/(app)/disputes/order/[orderId]` | View the dispute thread for an order: details, messages, add message. | `orderId` | Auth | order participants only (server 403) |
+
+Both are hidden secondary routes reached from the SafePay order screens. There is no dispute tab and
+no standalone dispute list route, because the backend exposes no user-facing "list my disputes"
+endpoint — see [Disputes](#disputes-1).
+
+### Profile, membership, support and settings
+
+All are pushed from `/(app)/profile` or `/(app)/profile/settings`, all require auth, and none has a
+role restriction.
+
+| URL | Purpose | Required params |
+| --- | --- | --- |
+| `/(app)/profile/edit` | Edit own profile, including avatar upload. | — |
+| `/(app)/profile/membership` | Plan selection and purchase. | — |
+| `/(app)/profile/support` | Kundesenter: FAQ, e-mail, case registration. | — |
+| `/(app)/profile/settings` | Settings overview (Profil, Konto, Betaling, Personvern, Annet). | — |
+| `/(app)/profile/settings/addresses` | Street address, postal code, place, map picker. | — |
+| `/(app)/profile/settings/seeker` | Jobseeker profile: availability, skills, experience, portfolio, certificates. | — |
+| `/(app)/profile/settings/email` | Change the sign-in e-mail address. | — |
+| `/(app)/profile/settings/password` | Change password. | — |
+| `/(app)/profile/settings/sessions` | Active sessions / signed-in devices. | — |
+| `/(app)/profile/settings/safepay` | SafePay transaction history. | — |
+| `/(app)/profile/settings/payout` | Stripe Connect payout setup. | — |
+| `/(app)/profile/settings/subscription` | Manage the active subscription (cancel / resume). | — |
+| `/(app)/profile/settings/notifications` | Push permission and current-device registration. | — |
+| `/(app)/profile/settings/privacy` | Privacy statement and cookie policy. | — |
+| `/(app)/profile/settings/location` | Country shown on the profile. | — |
+| `/(app)/profile/settings/about` | About Jobblo; links on to `settings/terms`. | — |
+| `/(app)/profile/settings/terms` | Terms of service. Reached from `settings/about`, not from the settings list. | — |
+| `/(app)/profile/settings/delete-account` | Irreversible account deletion, then `router.replace('/(auth)/login')`. | — |
+
+### Deliberately absent
+
+These are **not** defects and must not be created to "complete" the map: `Søkemotorsynlighet` and
+`Blokkerte brukere` are visible but intentionally inert rows in the settings list; there is no
+mobile reviews route and no cookie-preference manager.
+
 ## Architecture & Shared Components
 
 ### Category Icons & Mapping
@@ -170,6 +288,10 @@ if (categories.length > 0) queryParams.category = categories.join(',');
 
 ## Implementation status
 
+This list tracks feature/parity completeness only. For which routes exist, what params they need
+and who may open them, use the [Canonical route map](#canonical-route-map) — several items still
+marked ⬜ below already have a working route.
+
 - ✅ Foundation
 - ✅ TypeScript
 - ✅ NativeWind
@@ -181,56 +303,71 @@ if (categories.length > 0) queryParams.category = categories.join(',');
 - ✅ Forgot Password
 - ✅ Home
 - ✅ Explore / Search
-- ⬜ Search Filters
+- ✅ Search Filters
 - ✅ Job Details
-- ⬜ Apply to Job
-- ⬜ My Applications
+- ✅ Apply to Job
+- ✅ My Applications
 - ✅ Post Job / Legg ut
-- ⬜ My Jobs
-- ⬜ Job Management
+- ✅ My Jobs
+- ✅ Job Management
 - ✅ Mine søkere overview
-- ⬜ Applicant Details
-- ⬜ Select Provider
+- ✅ Applicant Details (Job Applicants detail)
+- ✅ Select Provider (SafePay contract creation)
 - ✅ Chat List / Meldinger
 - ✅ Chat Detail / Conversation
 - ✅ Notification settings overview
 - ✅ Notification inbox (Varsler)
-- ⬜ Contract
+- ✅ Contract (SafePay checkout)
 - ✅ SafePay history
 - ✅ Payout settings / Stripe Connect
 - ✅ Membership / plan selection and purchase
-- ⬜ Payment Success / Failure
-- ⬜ Active Job
-- ⬜ Checklist
-- ⬜ Work Progress
-- ⬜ Completion
-- ⬜ Review
-- ⬜ Dispute List
-- ⬜ Dispute Details / Thread
-- ⬜ Create Dispute
+- ✅ Payment Success / Failure (SafePay Success)
+- ✅ Active Job (Provider Work)
+- ✅ Checklist (Provider Work)
+- ✅ Work Progress (Provider evidence upload)
+- ✅ Completion (SafePay approval)
+- ✅ Review (SafePay approval rating form)
+- ✅ Create Dispute
+- ✅ Dispute Details / Thread
+- ✅ Dispute text replies
+- ⬜ Dispute List — **NOT IMPLEMENTED**, backend endpoint absent
+- ⬜ Dispute attachments — **NOT IMPLEMENTED**, backend endpoint absent
+- ⬜ User cancel/close dispute — **NOT IMPLEMENTED**, admin only
+- ⏳ Dispute runtime QA pending
 - ✅ Profile overview
 - ✅ Edit Profile
+- ✅ Public profile (other user)
 - ✅ Settings overview
-- ⬜ Account
+- ✅ Account (addresses, email, phone, password, sessions, delete)
 - ✅ Support
+- ✅ Favorites (saved lists + SaveToListSheet bookmark)
+- ✅ Telefonnummer settings
 
 ## Profile overview
 
 The canonical mobile profile route is `/(app)/profile` (bottom tab `Profil`). It fetches the authenticated owner profile through `useProfile` → `profile.service.ts` → `api/client.ts` using `GET /api/auth/profile` and the centralized query key `queryKeys.auth.profile`.
 
-The page displays the backend-backed avatar/initials, name, role, verification status when present, location, member date, rating and review count, completed jobs or posted jobs, bio, and skills. The available action is `Mine oppdrag og søknader`, which navigates to `/(app)/my-applications`. Logout calls the existing `authStore.logout`, retaining query cancellation/cache removal, socket destruction, push cleanup where supported, and auth clearing.
+The page displays the backend-backed avatar/initials, name, role, verification status when present, location, member date, rating and review count, completed jobs or posted jobs, bio, and skills. Navigation rows are `Mine oppdrag og søknader` → `/(app)/my-applications`, `Mine annonser` → `/(app)/my-jobs`, `Lagrede lister` → `/(app)/favorites`, and `Innstillinger` → `/(app)/profile/settings`, plus `Rediger profil` → `/(app)/profile/edit`. Logout calls the existing `authStore.logout`, retaining query cancellation/cache removal, socket destruction, push cleanup where supported, and auth clearing.
 
-There is currently no mobile settings, membership, reviews, support, or job-management destination to navigate to. Edit profile is now available at `/(app)/profile/edit`; the remaining pages are outside this profile overview and edit task.
+## Public profile (other user)
+
+The canonical route is `/(app)/profile/[userId]`. It displays another user's profile using `usePublicProfile` (reads `GET /api/users/:id`) and `usePublicUserServices` (reads `GET /api/users/:id/services`). Reviews are embedded in the user response from `getUserById`, so no separate reviews query is needed.
+
+Self-profile detection: if the authenticated user's `_id` matches the route param, the screen redirects to `/(app)/profile` via `router.replace`.
+
+The screen shows: avatar, full name (company name for companies), BankID verification badge, role label (Bedrift/Jobbsøker), location, member-since date, stat chips (rating, completed jobs, response rate, response time, verified), three tabs (Om meg / Aktive / Vurderinger). Om meg shows bio, skills, experience, portfolio, and previous projects. Aktive shows services with title, category, price, and tap-to-job-detail. Vurderinger shows reviews from the embedded `user.reviews` array with reviewer avatar/name, service title, rating, and comment.
+
+Entry points (all three verified in source): recommended-worker cards on Home (`app/(app)/index.tsx`), notification sender taps in `/(app)/alerts`, and the job-poster card in `/(app)/jobs/[id]`. Because every one of those pushes happens with `headerShown: false`, the screen renders its own in-content `Tilbake` control. The query key is `queryKeys.users.profile(userId)` with 60s stale time. Types are in `src/types/UserProfile.ts`.
 
 The edit profile route is `/(app)/profile/edit`. It seeds the form from `GET /api/auth/profile` and sends text-only changes as JSON via `PUT /api/users/:id`; avatar changes use multipart field `avatar` on the same endpoint. Editable fields are the web-supported profile fields: name, last name, bio (600 characters), skills, availability text, address, post number, poststed, and company name/org number/website for companies. Role, verification, ratings, statistics, email, and phone are read-only or settings-owned. The mutation updates and invalidates `queryKeys.auth.profile`, then syncs only basic identity fields to auth storage before returning to the profile.
 
 ## Settings overview
 
-The canonical route is `/(app)/profile/settings`. It is a static navigation page grouped as Profil, Konto, Betaling, Personvern, and Annet. Working destinations are `/(app)/profile/edit`, `/(app)/profile/settings/password`, `/(app)/profile/settings/notifications`, `/(app)/profile/settings/subscription`, `/(app)/profile/settings/safepay`, `/(app)/profile/settings/payout`, and `/(app)/profile/membership`; the remaining rows are visibly deferred until their mobile detail screens exist.
+The canonical route is `/(app)/profile/settings`. It is a static navigation page grouped as Profil, Konto, Betaling, Personvern, and Annet. Every row is wired except two: `Søkemotorsynlighet` and `Blokkerte brukere` have no `onPress` and stay visibly deferred until their detail screens exist. The wired destinations are `/(app)/profile/edit`, `/(app)/profile/settings/addresses`, `/(app)/profile/settings/seeker`, `/(app)/profile/settings/email`, `/(app)/profile/settings/password`, `/(app)/profile/settings/sessions`, `/(app)/profile/settings/safepay`, `/(app)/profile/settings/payout`, `/(app)/profile/settings/subscription`, `/(app)/profile/membership`, `/(app)/profile/settings/notifications`, `/(app)/profile/settings/privacy`, `/(app)/profile/support`, `/(app)/profile/settings/location`, `/(app)/profile/settings/about`, and `/(app)/profile/settings/delete-account`.
 
 The web distinguishes `Medlemskap` (`/membership`) as plan selection/purchase from `Abonnementer` (`/settings/subscriptions`) as current subscription management. Mobile keeps that same split: `Medlemskap` → `/(app)/profile/membership` and `Abonnementer` → `/(app)/profile/settings/subscription`. Reviews remain deferred because the web review route was intentionally removed after relying on invented review data; the profile only shows server-backed summary data.
 
-Recommended next settings screen: account deletion, then privacy/session settings, then e-post/telefon. These are priority order only; no detail screens are included here.
+The settings detail screens that were once listed here as "recommended next" — account deletion, privacy, sessions, and e-post — all exist and are wired. What is still missing is `Søkemotorsynlighet` and `Blokkerte brukere`; both are deliberately deferred, not defects.
 
 ## SafePay history
 
@@ -260,11 +397,11 @@ The mobile package now uses a guarded lazy `expo-notifications` loader. It reads
 
 ### Route
 
-Canonical mobile route: `/(app)/alerts`. Public Expo Router URL: `/alerts`. Registered as a hidden tab in `(app)/_layout.tsx`. No duplicate `/notifications` route exists.
+Canonical mobile route: `/(app)/alerts`. Public Expo Router URL: `/alerts`. Registered as a **visible** bottom tab (`Varsler`) in `(app)/_layout.tsx`. No duplicate `/notifications` route exists.
 
 ### Entry point
 
-A bell icon (`Bell` from lucide-react-native) with an unread badge is rendered in the top-right corner of the Home screen. The badge count comes from `GET /api/notifications/unread-count` via the `useUnreadCount` hook and the centralized `queryKeys.notifications.unreadCount` key.
+The `Varsler` bottom tab. Its tab icon is a bell (`Bell` from lucide-react-native) wrapped in `BellIcon`, which renders the unread badge; the count comes from `GET /api/notifications/unread-count` via the `useUnreadCount` hook and the centralized `queryKeys.notifications.unreadCount` key. Because the inbox is a tab root, the screen intentionally renders no back control.
 
 ### Architecture
 
@@ -337,6 +474,7 @@ Backend system notifications have `userId: null, isSystem: true, readBy: [userId
 - `deleteAllNotifications` only deletes personal notifications.
 
 Mobile handles this:
+
 - System notifications do NOT show the delete (trash) icon.
 - The "Slett alle" action only deletes personal notifications.
 - Copy says "Slett alle personlige varsler" to remain truthful.
@@ -359,7 +497,7 @@ If `notification.requestId` is populated, extracts `serviceId` (handles both str
 
 ### Message notification navigation
 
-The backend Notification model does not persist `chatId` or `conversationId` — it only stores `senderId`. Direct chat deep-linking from a message notification is not reliably possible. Falls back to sender profile view.
+The backend Notification model does not persist `chatId` or `conversationId` — it only stores `senderId`. Direct chat deep-linking from a message notification is not reliably possible. Falls back to sender public profile view (`/(app)/profile/:senderId`).
 
 ### Realtime
 
@@ -1118,7 +1256,7 @@ Lifecycle actions remain server-owned:
 
 The mobile page uses Expo Image Picker and Document Picker for native evidence selection. It sends real URI, filename, and MIME type values as multipart data, respects the backend’s 10 MB and 10-files-per-type limits, renders before/after evidence, and locks evidence after review starts. No browser `File`, `FileList`, object URLs, or local lifecycle status mutation is used.
 
-Provider status copy matches the current web semantics: payment waiting, paid and ready to start, job in progress, reported finished, completed, disputed, refunded, and cancelled. Active disputes block start and ready-for-review and show the dispute state. Provider dispute creation uses `/api/safepay/contract/:orderId/dispute`. Completed orders expose the provider review form through `/api/orders/:orderId/review` and `/api/reviews`.
+Provider status copy matches the current web semantics: payment waiting, paid and ready to start, job in progress, reported finished, completed, disputed, refunded, and cancelled. Active disputes block start and ready-for-review and show the dispute state. The provider screen no longer carries its own dispute form: it links out to the shared dispute screens (`Åpne tvist` → `/(app)/disputes/create?orderId=…`, `Se tvist` → `/(app)/disputes/order/:orderId`) so the reason enum, field limits and eligibility rules live in one place. Completed orders expose the provider review form through `/api/orders/:orderId/review` and `/api/reviews`.
 
 The canonical mobile provider route is `app/(app)/provider/orders/[orderId].tsx`, with public runtime URL `/provider/orders/:orderId`. SafePay Success, Checkout, and Mine søknader provider actions target this same route. Customer approval remains the next separate flow.
 
@@ -1128,7 +1266,8 @@ The canonical mobile provider route is `app/(app)/provider/orders/[orderId].tsx`
 - Query/mutations: `src/hooks/useProviderOrder.ts`
 - Service: `src/services/providerWork.service.ts`
 - Types: `src/types/ProviderOrder.ts`
-- Query keys: `queryKeys.providerOrders.detail`, `queryKeys.disputes.byOrder`, `queryKeys.providerOrders.reviews`
+- Query keys: `queryKeys.providerOrders.detail`, `queryKeys.providerOrders.reviews`
+- Dispute reads/writes are **not** in this hook file; they live in `src/hooks/useDisputes.ts`
 - Native dependencies: `expo-image-picker`, `expo-document-picker`
 
 ### SafePay Success implementation map
@@ -1138,6 +1277,257 @@ The canonical mobile provider route is `app/(app)/provider/orders/[orderId].tsx`
 - Hook: `src/hooks/useSafePayCheckout.ts`
 - Service: `src/services/safepay.service.ts`
 - Status key: `queryKeys.safepay.status(sessionId)`
+
+## Disputes
+
+The dispute flow is two screens: create a dispute for one order, and read/reply to that order's
+dispute thread. There is deliberately **no standalone dispute list screen**. The backend exposes no
+user-facing "list my disputes" endpoint, so a list could only be faked by fanning out over every
+order or by calling admin endpoints — neither was done. Disputes are always entered from the SafePay
+screen for the order they belong to, and the dispute routes are hidden secondary routes, not a tab.
+
+### Status
+
+| Capability | State | Notes |
+| --- | --- | --- |
+| Create dispute | ✅ Implemented | `app/(app)/disputes/create.tsx` |
+| Dispute detail / thread | ✅ Implemented | `app/(app)/disputes/order/[orderId].tsx` |
+| Text replies in thread | ✅ Implemented | `POST /api/safepay/disputes/:disputeId/message` |
+| User dispute list | ⬜ **NOT IMPLEMENTED** | Backend endpoint absent |
+| Dispute attachments | ⬜ **NOT IMPLEMENTED** | Backend endpoint absent |
+| User cancel / close dispute | ⬜ **NOT IMPLEMENTED** | Admin only |
+| Runtime QA | ⏳ **Pending** | Static verification only so far (`npx tsc --noEmit` → exit 0) |
+
+### Backend contract
+
+**Endpoints used:**
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/safepay/contract/:orderId/dispute` | Create dispute (auth, customer or provider on the order) |
+| GET | `/api/safepay/contract/:orderId/dispute` | Newest dispute for that order (auth, participants only) |
+| POST | `/api/safepay/disputes/:disputeId/message` | Add a text message (auth, participants only) |
+
+These three are the only dispute endpoints the mobile app calls. Admin dispute endpoints are never
+called from mobile.
+
+**Create dispute payload** — exactly these three fields. `customerId`, `providerId`, `openedBy` and
+`openedAgainst` are **never** sent; the backend derives every participant from the order.
+
+```json
+{
+  "reasonCategory": "work_not_completed",
+  "title": "Jobben ble ikke fullført",
+  "description": "Detaljert beskrivelse av problemet..."
+}
+```
+
+Create responds `201 { success: true, message: "Tvist åpnet.", disputeId }`. The `disputeId` is used
+only to confirm the write; navigation goes to the order-scoped thread route, and the thread screen
+re-reads the dispute from the GET endpoint.
+
+**Reason categories (backend enum, all 12 offered):**
+`work_not_started`, `work_not_completed`, `poor_quality`, `different_from_agreement`,
+`customer_not_cooperating`, `provider_not_cooperating`, `payment_issue`, `unauthorized_payment`,
+`fraud_or_scam`, `damaged_property`, `missing_evidence`, `other`
+
+Norwegian labels live client-side in `DISPUTE_REASON_LABELS`. The wire value is always the raw enum
+value, never the translated label.
+
+**Dispute statuses (all 8 handled):**
+
+| Status | Norwegian label | Kind |
+| --- | --- | --- |
+| `open` | Åpen | active |
+| `under_review` | Under behandling | active |
+| `waiting_for_customer` | Venter på oppdragsgiver | active |
+| `waiting_for_provider` | Venter på utfører | active |
+| `evidence_submitted` | Dokumentasjon sendt inn | active |
+| `resolved` | Avgjort | terminal |
+| `closed` | Lukket | terminal |
+| `cancelled` | Kansellert | terminal |
+
+Active vs terminal is the client's only lifecycle rule, and it mirrors the backend's own definition:
+`safepayController.js` treats a dispute as blocking when its status is `$nin: ['resolved','closed','cancelled']`.
+
+**Message schema:** `senderId`, `senderRole` (`customer` / `provider` / `admin` / `system`),
+`message` (max 2000), `isInternal`, `createdAt`.
+
+Internal admin notes (`isInternal: true`) are filtered server-side before the dispute is served. The
+mobile app filters again anyway — once in `disputes.service.ts` and once in the thread screen — so a
+malformed payload still cannot render an internal note. `attachments[]` exists in the backend schema
+but is deliberately absent from `src/types/Dispute.ts`, so it cannot be rendered by accident.
+
+### Architecture
+
+Screen → TanStack Query hook → service → `src/api/client.ts`. No screen touches `apiClient`,
+`fetch` or `axios` directly.
+
+```text
+CreateDisputeScreen (app/(app)/disputes/create.tsx)
+├── useProviderOrder(orderId)         → GET /api/safepay/orders/:orderId (order context + activeDispute)
+├── useOpenDisputeMutation(orderId)   → POST /api/safepay/contract/:orderId/dispute
+└── useFetchDisputeByOrder()          → GET  /api/safepay/contract/:orderId/dispute (duplicate recovery only)
+
+DisputeThreadScreen (app/(app)/disputes/order/[orderId].tsx)
+├── useDisputeByOrder(orderId)        → GET  /api/safepay/contract/:orderId/dispute
+└── useAddDisputeMessageMutation      → POST /api/safepay/disputes/:disputeId/message
+```
+
+Query keys — `queryKeys.disputes.byOrder(orderId)` → `['disputes','order',orderId]` is the only
+dispute key. There is no `disputes.all`, because there is no list endpoint to back it.
+
+Invalidation is targeted, never global:
+
+- after create → `disputes.byOrder(orderId)`, `providerOrders.detail(orderId)`, `safepay.checkout(orderId)`
+- after a reply → `disputes.byOrder(orderId)` only
+
+Mutation retry is `0` on both mutations, and the dispute query uses `retry: false`, so a failed open
+or a failed reply surfaces immediately instead of silently repeating a write.
+
+### Routes
+
+| URL | Purpose | Required params | Auth |
+| --- | --- | --- | --- |
+| `/(app)/disputes/create` | Create a dispute: pick reason, write title + description | `orderId` (query string) | Auth (order participants) |
+| `/(app)/disputes/order/[orderId]` | Dispute thread: details, status, messages, reply | `orderId` (path) | Auth (order participants) |
+
+`app/(app)/disputes/_layout.tsx` is a `Stack`, and `app/(app)/_layout.tsx` registers
+`<Tabs.Screen name="disputes" options={{ href: null }} />`, so neither screen appears in the tab bar.
+The bottom bar remains exactly five tabs: Hjem, Legg ut, Meldinger, Varsler, Profil.
+
+`orderId` is normalised (`Array.isArray(p) ? p[0] : p`, then trimmed) on both screens. An empty or
+missing `orderId` renders a Norwegian error state and makes no API call at all.
+
+### Entry points
+
+Dispute entry points exist only where a SafePay order exists. The generic job detail screen has
+none, because before payment there is no order to dispute.
+
+- **Provider order screen** (`/(app)/provider/orders/[orderId]`): when the server reports an
+  `activeDispute`, a banner explains that Jobblo is reviewing the case and that start-job and
+  mark-ready are locked, with `Se tvist` → `/(app)/disputes/order/:orderId`. When there is no active
+  dispute and the order status is dispute-eligible, `Åpne tvist` → `/(app)/disputes/create?orderId=…`.
+  The old inline dispute modal was removed; it duplicated the enum and offered two values
+  (`scope_change`, `customer_unresponsive`) the backend would have rejected.
+- **Customer approval screen** (`/(app)/safepay/approval/[orderId]`): an active dispute shows the
+  lock banner and makes the approval CTA unavailable; `Se tvist` shows whenever a dispute exists at
+  all (including terminal ones); `Noe gikk galt? Åpne tvist` shows when no dispute exists and the
+  order status is dispute-eligible.
+
+Eligibility for offering the create CTA is `paid`, `in_progress`, `ready_for_review`, `completed`
+(`isDisputeEligibleOrderStatus`). This is a UI courtesy only — the backend stays authoritative and
+its 400 response is surfaced verbatim-safe if the client guess is ever wrong. Blocking rules
+(`canStart`, `canReady`, `canApprove`, `canEditChecklist`) read the server's `activeDispute` /
+order status rather than re-deriving business logic on the client.
+
+### Create dispute screen
+
+Shared by customer and provider. `useProviderOrder` supplies the service title, agreed price and the
+server's `activeDispute` flag. Fields:
+
+- **Reason category**: all 12 backend enum values as accessible radio rows with Norwegian labels
+- **Title**: required, trimmed, `maxLength` 200, live counter
+- **Description**: required multiline, trimmed, `maxLength` 2000, live counter
+
+Submit is `Åpne tvist` / `Åpner tvist...`, disabled while pending and while the form is invalid, with
+an additional in-handler `isPending` guard so a double tap cannot post twice.
+
+Pre-submit branches, in order: missing `orderId` → error state, no API call; order still loading;
+order fetch failed (403 gets `Ingen tilgang` and a back action, everything else gets retry); an
+existing `activeDispute` → `Tvist finnes allerede` card with `Se tvist`; order status not
+dispute-eligible → `Tvist kan ikke åpnes nå`.
+
+On success the screen `router.replace`s to `/(app)/disputes/order/:orderId`. If the server rejects
+the create because an active dispute already exists, the screen refetches the dispute for that order
+and opens the real thread when one comes back; if the refetch turns up nothing it shows a plain
+Norwegian explanation. No dispute ID is ever fabricated.
+
+### Dispute thread screen
+
+Reads the dispute for the order and renders server data only.
+
+- **Status badge** for all 8 statuses, colour-toned by active vs terminal
+- **Dispute card**: title, category label, description, created date, and which role opened it
+- **Messages**: chronological. `system` renders as a centred neutral pill, `admin` as a distinct
+  card labelled `Jobblo / Support`, the viewer's own messages right-aligned as `Deg`, the other party
+  left-aligned. Internal notes are filtered out defensively before render.
+- **Resolution card** (when the dispute is resolved): outcome label, reason, resolution date. Money
+  plumbing fields (`stripeRefundId`, `moneyState`, `platformFee`, `resolvedBy`, …) are not in the
+  client type and cannot leak into the UI.
+- **Composer** while the dispute is active: `TextInput` with `maxLength` 2000, trimmed before send,
+  empty rejected, disabled and `Sender...` while pending, then `disputes.byOrder(orderId)` is
+  invalidated. No optimistic insert — message `_id`s are server-generated, so there is nothing to
+  reconcile against.
+- **Terminal disputes** (`resolved` / `closed` / `cancelled`): the composer is replaced by a locked
+  row reading `Tvisten er avsluttet.` There are no reopen or cancel controls, because only admin
+  APIs can change dispute status.
+- **No dispute on this order** (API 404 → `null`): a neutral card offering `Åpne tvist` and `Tilbake`.
+
+### Error handling
+
+| Case | Behaviour |
+| --- | --- |
+| 400 | Server's Norwegian validation / ineligible / duplicate / closed message is shown |
+| 401 | Handled once, centrally, by the axios interceptor in `src/api/client.ts` (session teardown) |
+| 403 | `Du har ikke tilgang til denne tvisten.` — no logout |
+| 404 | `Tvisten ble ikke funnet.` — on the GET it degrades to "no dispute yet", no logout |
+| Network / no status | `Ingen nettverksforbindelse. Sjekk tilkoblingen og prøv igjen.` + retry, no logout |
+| 5xx | `Noe gikk galt hos oss. Prøv igjen om litt.` — no logout |
+
+Copy lives in `src/utils/disputeError.ts` so screens never import the service layer for messages.
+401 is deliberately absent from that module: the interceptor owns it.
+
+### Notification routing — STATIC RISK
+
+The backend emits `dispute_opened`, `dispute_updated` and `dispute_resolved`, but only as socket
+events. `services/notifications/index.js` persists just
+`{ userId, type, content, senderId, orderId, requestId }`, and `models/Notification.js` has no
+`event` and no `payload` field. A dispute notification fetched over REST is therefore
+indistinguishable from any other order notification — there is no client-visible discriminator to
+route on.
+
+Varsler consequently keeps its existing `resolveOrderRoute` behaviour: the notification's populated
+`orderId` takes the user to the correct SafePay order screen, where the dispute banner and `Se tvist`
+give a second, reliable hop into the thread. Direct notification → thread deep linking was **not**
+implemented, because it would require inventing a discriminator the payload does not carry. Adding a
+persisted `event`/`payload` field (or a dispute-specific notification type) is a backend change and
+was out of scope here.
+
+### Files created
+
+- `app/(app)/disputes/_layout.tsx` — Stack layout
+- `app/(app)/disputes/create.tsx` — Create dispute screen
+- `app/(app)/disputes/order/[orderId].tsx` — Dispute thread screen
+- `src/types/Dispute.ts` — enums, limits, labels, participant-safe interfaces
+- `src/services/disputes.service.ts` — API layer (+ `stripInternalMessages`)
+- `src/hooks/useDisputes.ts` — TanStack Query hooks
+- `src/utils/disputeError.ts` — HTTP → Norwegian error copy
+
+### Files modified
+
+- `app/(app)/safepay/approval/[orderId].tsx` — dispute entry points; blocking now keys off active
+  (non-terminal) disputes, so a resolved dispute no longer locks approval forever
+- `app/(app)/provider/orders/[orderId].tsx` — inline dispute modal removed, replaced by links to the
+  dispute screens; eligibility now uses `isDisputeEligibleOrderStatus`
+- `src/hooks/useProviderOrder.ts` — removed the duplicate dispute hooks that shared the
+  `disputes.byOrder` cache key with `useDisputes.ts`
+- `MOBILE_FLOW.md` — this section
+
+`app/(app)/_layout.tsx` and `src/queryKeys.ts` already had what this flow needs (`disputes` hidden
+tab entry; `disputes.byOrder` key) and were left unchanged. No backend file was touched.
+
+### Limitations
+
+- **No standalone dispute list**: there is no user-facing list endpoint. Building one would mean
+  fanning out over every order or using admin endpoints; both were rejected.
+- **No attachments**: the backend message schema has `attachments[]`, but no user-facing upload
+  endpoint exists, so no picker, no upload and no attachment UI were added. Text thread only.
+- **No user cancel/close/reopen**: status changes are admin-only APIs.
+- **Notification deep-linking to a thread**: not possible from the current REST payload (see above).
+- **Dead code left in place**: `getProviderDispute` / `openProviderDispute` remain exported from
+  `src/services/providerWork.service.ts` with no callers. Removal was declined during this task, so
+  the consolidation is complete at the hook and screen level but not at the service level.
 
 ## Job Details
 
@@ -2986,7 +3376,7 @@ Documentation: appended this section, and added the third known gap (mobile logo
 
 ## Email settings / E-postadresse
 
-Route: `app/(app)/profile/settings/email.tsx` → `/profile/settings/email`, reached from the `E-postadresse` row in the `Konto` group of `app/(app)/profile/settings/index.tsx`. That row previously read `E-post og telefon` and was disabled; it now carries only the e-mail scope, because no phone settings screen exists. Phone remains unbuilt and was not added as a placeholder.
+Route: `app/(app)/profile/settings/email.tsx` → `/profile/settings/email`, reached from the `E-postadresse` row in the `Konto` group of `app/(app)/profile/settings/index.tsx`.
 
 ### Endpoint used — generic profile update, no dedicated email endpoint
 
@@ -3244,7 +3634,7 @@ States: `isLoading` → four `ApplicantOverviewSkeleton`; `isError` → `ErrorSt
 
 - Card tap → `/(app)/jobs/[id]` with `params: { id: job._id }` (existing job detail).
 - `Se søkere` → `/(app)/job-applicants/[serviceId]` with `params: { serviceId: job._id }` (existing applicants screen).
-- SafePay: `my-posted` returns **no** `orderId`, so the screen joins `useMyApplicantsOverview()` by `_id` — the only owner-side source that returns a real `order._id`. The SafePay strip and its button render only when that join yields an order. Routing mirrors the owner branch of `app/(app)/messages/[chatId].tsx`: `ready_for_review` / `completed` → `/safepay/approval/:orderId` (`Godkjenn arbeid`), paid or in progress → `/safepay/success?orderId=` (`Se SafePay-ordre`), otherwise `/safepay/checkout/:orderId` (`Betal med SafePay`).
+- SafePay: `my-posted` returns **no** `orderId`, so the screen joins `useMyApplicantsOverview()` by `_id` — the only owner-side source that returns a real `order._id`. The SafePay strip and its button render only when that join yields an order. Routing goes through `customerOrderRoute(order._id, order.status, order.paymentStatus)` from `src/utils/orderRoute.ts`, the same helper every other order CTA uses, and the button label is derived from the resolved `pathname` rather than from a second copy of the status buckets: `/(app)/safepay/approval/[orderId]` → `Godkjenn arbeid`, `/(app)/safepay/success` → `Se SafePay-ordre`, otherwise `/(app)/safepay/checkout/[orderId]` → `Betal med SafePay`.
 
 No Create Job, Job Detail, Applicants or SafePay screen was duplicated.
 
@@ -3298,3 +3688,143 @@ Runtime / device: not verified here — manual. Expo was not started, Metro was 
 - `src/components/domain/ServiceStatusBadge.tsx` — all 11 statuses mapped (`Betalt`, `Ventende`, `Utkast`, `Utløpt`)
 
 Backend: unchanged. No new dependency was added.
+
+## Navigation + route integrity audit
+
+Audit and cleanup pass over the whole app: every route file, every navigation call, every layout
+guard. No product feature was added, and no route was created to fill a gap in an external list.
+The [Canonical route map](#canonical-route-map) above is the output of the inventory step.
+
+### Inventory
+
+51 files under `app/`, of which 41 are navigable screens (26 unique URLs plus the settings
+detail screens), 9 are layouts, and 1 is the redirect alias `safepay/success/[orderId].tsx`.
+Classification: 4 public/guest routes, 5 visible tabs, 3 hidden flat screens, 6 dynamic
+`[param]` screens, 5 SafePay/order screens, 18 profile-and-settings screens, 1 entry gate.
+
+### Fixes applied
+
+**Route type-safety — 27 casts removed across 10 files.** Every `as any` / `as Href` /
+`as never` on a navigation target is gone, and every template-string href is now an object-form
+href checked against the generated `.expo/types/router.d.ts` union:
+
+| File | Was | Now |
+| --- | --- | --- |
+| `app/(auth)/register.tsx` | `'/(auth)/login' as any` | plain literal |
+| `app/(auth)/login.tsx` | 2 × `as any` (forgot-password, register) | plain literals |
+| `app/(auth)/forgot-password.tsx` | 2 × `'/(auth)/login' as any` | plain literals |
+| `app/(app)/profile/index.tsx` | 2 × `as Href` + unused `type Href` import | plain literals, import trimmed |
+| `app/(app)/profile/membership.tsx` | 3 × `'/profile/settings/subscription' as any` | plain literals |
+| `app/(app)/profile/settings/index.tsx` | 14 × `as any` | plain literals |
+| `app/(app)/profile/settings/safepay.tsx` | `'/profile/settings/payout' as any` | plain literal |
+| `app/(app)/safepay/success/[orderId].tsx` | hand-built template string + `as Href` | two typed `<Redirect>` branches |
+
+Non-route casts were left alone on purpose — `(user as any)._id` in `jobs/[id].tsx` and the
+`FormData` / `profile as any` casts in `settings/seeker.tsx` are payload shape problems, not
+navigation defects, and rewriting them is outside an audit's remit.
+
+**`app/(app)/explore.tsx` — missing back control.** Utforsk is a hidden tab (`href: null`)
+that is only ever reached by `push` — from Home, a category chip or a search — and the group runs
+`headerShown: false`, so nothing was drawing a back affordance. Added one at the top of
+`renderHeader`, which is wired as `ListHeaderComponent` and therefore always renders; the error
+state is an absolutely-positioned overlay, so back survives a failed fetch too.
+
+**`app/(app)/safepay/success/[orderId].tsx` — param normalization.** `useLocalSearchParams`
+can hand back `string[]`, so the id is normalized before the redirect, and a blank id now falls
+through to `/(app)/safepay/success` instead of forwarding an empty param.
+
+**`app/(app)/_layout.tsx` — stale comment.** Read `{/* 4 visible tabs */}` above five
+registered tabs. Corrected to `5`.
+
+**`MOBILE_FLOW.md` — 6 stale prose claims repaired**, each of which would have sent a reader to
+the wrong file: Varsler described as a hidden tab (it is visible) with the bell placed in the Home
+header (it is the tab icon); "There is currently no mobile settings, membership, reviews, support,
+or job-management destination" on the profile overview (all exist); a fabricated fourth public-
+profile entry point; a seven-item "working destinations" settings list (16 are wired); a
+"recommended next settings screen" list naming screens that now ship; and the Mine annonser SafePay
+bullet still describing the pre-consolidation duplicated status buckets instead of
+`customerOrderRoute`.
+
+### Found but not fixed — report only
+
+Each of these is a real defect or divergence. None was changed, because fixing it would mean
+building an unshipped feature, making a product decision, or touching the backend.
+
+1. **Push cold-start is unhandled.** `src/services/pushNotifications.service.ts` only handles
+   `chat_message` / `chatId`, and never calls `getLastNotificationResponseAsync`. A tap that
+   launches the app from cold lands on Home, not on the notification's target. Fixing this is new
+   behaviour, not a route repair.
+2. **Home avatar renders nothing.** `app/(app)/index.tsx` renders an empty `View` where an
+   `Image` belongs when `avatarUrl` is present; `Image` is not imported in that file.
+3. **Dead Bookmark button on `jobs/[id].tsx`.** `src/components/domain/SaveToListSheet.tsx`
+   exists but grep confirms it is mounted nowhere. Wiring it ships an unreleased feature; removing
+   the button is a product call.
+4. **Tab set diverges from the assumed 5-tab list.** Varsler is a visible tab and Utforsk is
+   hidden — the reverse of what the audit brief assumed. The code is self-consistent; this is a
+   spec/implementation mismatch to confirm, not a bug to patch.
+5. **`safepay/success/[orderId].tsx` is a redirect, not a screen.** Kept deliberately, now
+   documented as a deep-link alias, because SafePay and older links still produce that shape.
+6. **`.expo/types/router.d.ts` staleness is a standing risk.** Cast removal is only safe while
+   that generated file is current; it happened to be fresh (Aug 26 00:39) when the casts came out.
+   A stale regeneration will surface as typecheck failures on href literals, not as runtime breaks.
+7. **Push tap while unauthenticated loses its intent.** The auth gate redirects to login and the
+   original target is dropped rather than resumed after sign-in.
+8. **`profile/[userId].tsx` self-redirect is effect-based**, so a user viewing their own public
+   profile sees one frame of the public layout before the redirect. Left as found.
+9. **Two settings rows are intentionally inert** — `Søkemotorsynlighet` and `Blokkerte brukere`
+   have no `onPress` and render the `Kommer` affordance. Explicitly excluded from this pass.
+
+### Verification
+
+- `npx tsc --noEmit` → **exit code 0**.
+- No backend file was changed, so no `node --check` run was required.
+- Expo was never started, restarted or re-pointed; no port changed. The running dev server was
+  left untouched for the whole pass.
+- Grep sweep confirms zero remaining `router.push(\`…\`)`, `href={\`…\`}`, `as Href` or
+  `as never` in any `.ts`/`.tsx`, and that all `src/` navigation uses object-form hrefs.
+
+### Manual navigation test matrix — MANUAL PENDING
+
+Runtime navigation is verified on device by the user. Nothing below has been executed, so nothing
+below is marked PASS. Status stays `⬜ PENDING` until a human runs it on a device.
+
+| # | Case | Expected | Status |
+| --- | --- | --- | --- |
+| 1 | Cold start, signed out | `/` gate holds until hydration, then login. No Home flash | ⬜ PENDING |
+| 2 | Cold start, signed in | `/` → Home tab. No login flash | ⬜ PENDING |
+| 3 | Deep link into an `(app)` URL before hydration | Target URL preserved, not swallowed by the gate | ⬜ PENDING |
+| 4 | Guest opens a protected URL directly | Redirect to `/(auth)/login` | ⬜ PENDING |
+| 5 | Login succeeds | Lands on Home; hardware back does not re-enter the auth group | ⬜ PENDING |
+| 6 | Auth cross-links | Register ↔ login and Forgot ↔ login both navigate and both come back | ⬜ PENDING |
+| 7 | Switch all 5 tabs | Hjem / Legg ut / Meldinger / Varsler / Profil all mount; no tab root draws a back control | ⬜ PENDING |
+| 8 | Alerts badge | Bell badge count matches unread; `99+` caps correctly | ⬜ PENDING |
+| 9 | Explore from a Home category chip | Opens `/(app)/explore`; back returns to Home | ⬜ PENDING |
+| 10 | Explore from search | Opens with the `search` param applied; back returns to origin | ⬜ PENDING |
+| 11 | Explore with the fetch failing | Error overlay shows **and** the back control is still reachable | ⬜ PENDING |
+| 12 | `jobs/[id]` from any list | Pushes detail; back returns to the originating list, not Home | ⬜ PENDING |
+
+| 13 | `messages/[chatId]` | Opens the thread; back returns to Meldinger | ⬜ PENDING |
+| 14 | `job-applicants/[serviceId]` | Owner sees applicants; non-owner gets `Ikke autorisert` from the server 403 | ⬜ PENDING |
+| 15 | Public profile, all 3 entry points | Home worker card, alerts sender tap and job-poster card each open `/(app)/profile/[userId]` | ⬜ PENDING |
+| 16 | Public profile with your own id | Redirects to the Profil tab (watch for a one-frame public flash) | ⬜ PENDING |
+| 17 | `my-applications?tab=mine-sokere` | Opens on the *Mine søkere* tab, not the default | ⬜ PENDING |
+| 18 | `my-jobs` SafePay CTA, all 3 states | `customerOrderRoute` resolves to approval / success / checkout and the label matches the resolved pathname | ⬜ PENDING |
+| 19 | Checkout as customer, then as provider | Customer sees checkout; provider is `replace`d to the provider order screen with no back loop | ⬜ PENDING |
+| 20 | Provider order workspace | `canStart` / `canUpload` / `canReady` / `canDispute` follow server `isProvider`, not the local role guess | ⬜ PENDING |
+| 21 | Approval screen, both roles | Customer can approve; provider gets the `Ikke tilgang` panel | ⬜ PENDING |
+| 22 | `safepay/success` query forms | Works with `session_id` (Stripe return) and with `orderId` | ⬜ PENDING |
+| 23 | `safepay/success/[orderId]` alias | Forwards to the query form; a blank id falls back to plain `/safepay/success` | ⬜ PENDING |
+| 24 | Settings sweep | All 16 wired rows open, the 2 inert rows show `Kommer` and do not navigate, and back returns to Innstillinger from every detail screen | ⬜ PENDING |
+| 25 | `Åpne tvist` from the provider order screen | Opens `/(app)/disputes/create?orderId=…`; only shows when there is no active dispute and the order status is `paid` / `in_progress` / `ready_for_review` / `completed` | ⬜ PENDING |
+| 26 | `Åpne tvist` from the customer approval screen | Same create screen and the same eligibility window | ⬜ PENDING |
+| 27 | Create a dispute end to end | All 12 categories selectable, counters cap at 200 / 2000, button disabled while pending, then lands on `/(app)/disputes/order/:orderId` with the new dispute rendered | ⬜ PENDING |
+| 28 | Create a dispute twice for one order | Second attempt does not create a duplicate: it opens the existing thread, or explains that one already exists. No fabricated id | ⬜ PENDING |
+| 29 | Active dispute blocks order actions | Provider `Start jobb` / `Meld ferdig` and customer approval are all unavailable, banners show, `Se tvist` works from both screens | ⬜ PENDING |
+| 30 | Reply in an active thread | Message posts, thread refetches and shows it, own message is right-aligned as `Deg`, admin messages read `Jobblo / Support`, no internal note appears | ⬜ PENDING |
+| 31 | Terminal dispute | `resolved` / `closed` / `cancelled` hides the composer, shows `Tvisten er avsluttet.`, offers no reopen or cancel, and a resolved dispute no longer blocks approval | ⬜ PENDING |
+| 32 | Dispute error paths | Non-participant gets `Du har ikke tilgang til denne tvisten.`, an order with no dispute gets the neutral empty card, and airplane mode gets the retry state — none of them logs the user out | ⬜ PENDING |
+
+
+
+
+

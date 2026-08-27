@@ -1,7 +1,17 @@
-import { Redirect, useLocalSearchParams, type Href } from 'expo-router';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 
+/**
+ * Deep-link alias. SafePay and older links can land on /safepay/success/<orderId>,
+ * while the real screen reads the id from a query param, so this forwards instead of
+ * duplicating the screen.
+ */
 export default function SafePaySuccessOrderRedirect() {
-  const { orderId } = useLocalSearchParams<{ orderId: string }>();
-  const href = orderId?.trim() ? `/safepay/success?orderId=${orderId}` : '/safepay/success';
-  return <Redirect href={href as Href} />;
+  const params = useLocalSearchParams<{ orderId: string | string[] }>();
+  const orderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
+
+  if (!orderId?.trim()) {
+    return <Redirect href="/(app)/safepay/success" />;
+  }
+
+  return <Redirect href={{ pathname: '/(app)/safepay/success', params: { orderId } }} />;
 }

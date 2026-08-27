@@ -1,12 +1,20 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { MapPin, Badge } from 'lucide-react-native';
+import { Bookmark, MapPin, Badge } from 'lucide-react-native';
 import type { Job } from '../types/Jobs';
+import { useIsServiceSaved } from '../hooks/useFavoriteLists';
+import { useAuthStore } from '../store/authStore';
 
 interface JobCardProps {
   job: Job;
   showDescription?: boolean;
+  /**
+   * Called when the bookmark icon is pressed. The parent screen owns the
+   * SaveToListSheet — the card only provides the visual entry point and
+   * the service id. When absent the bookmark icon is hidden entirely.
+   */
+  onSavePress?: (serviceId: string) => void;
 }
 
 /**
@@ -19,8 +27,10 @@ interface JobCardProps {
  *
  * Reused across Home, Search, and other job listing contexts.
  */
-export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false }) => {
+export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false, onSavePress }) => {
   const router = useRouter();
+  const { isSaved, isLoading: savedLoading } = useIsServiceSaved(job._id);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const handlePress = () => {
     router.push({ pathname: '/(app)/jobs/[id]', params: { id: job._id } });
@@ -40,10 +50,13 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false }
       className="flex-1 focus-visible:outline-none"
     >
       {/* Photo container — 4:5 aspect ratio, rounded 2xl, brand bg */}
-      <View className="relative aspect-4/5 overflow-hidden rounded-2xl bg-[#EAF1E9]">
+      <View
+        className="relative overflow-hidden rounded-2xl bg-[#EAF1E9]"
+        style={{ aspectRatio: 4 / 5, minHeight: 130 }}
+      >
         <Image
           source={{ uri: imageUrl }}
-          className="w-full h-full"
+          style={{ width: '100%', height: '100%', aspectRatio: 4 / 5 }}
           resizeMode="cover"
         />
 
@@ -69,6 +82,30 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false }
             <Text className="text-white text-sm font-semibold">Lukket</Text>
           </View>
         )}
+
+        {/* Bookmark — top right, only shown when the parent provides onSavePress */}
+        {onSavePress && (
+          <View className="absolute right-3 top-3" pointerEvents="box-none">
+            <Pressable
+              onPress={() => {
+                if (!isAuthenticated) {
+                  router.push('/(auth)/login');
+                  return;
+                }
+                onSavePress(job._id);
+              }}
+              className="h-9 w-9 items-center justify-center rounded-full bg-white/95"
+              accessibilityRole="button"
+              accessibilityLabel={isSaved ? 'Fjern fra lagrede lister' : 'Lagre i liste'}
+            >
+              {savedLoading ? (
+                <View className="h-4 w-4" />
+              ) : (
+                <Bookmark size={16} color="#0B0B0B" fill={isSaved ? '#0B0B0B' : 'none'} />
+              )}
+            </Pressable>
+          </View>
+        )}
       </View>
 
       {/* Text content below photo — sits directly on page, no card bg */}
@@ -83,10 +120,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false }
 
         {/* Description — optional, 1 line clamp if shown */}
         {showDescription && (
-          <Text
-            className="text-[0.8125rem] text-[#63665F] leading-tight mt-1"
-            numberOfLines={1}
-          >
+          <Text className="text-[0.8125rem] text-[#63665F] leading-tight mt-1" numberOfLines={1}>
             {job.description}
           </Text>
         )}
@@ -98,10 +132,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false }
           </Text>
           <View className="flex-row items-center gap-1">
             <MapPin size={13} color="#63665F" strokeWidth={2} />
-            <Text
-              className="text-[0.8125rem] text-[#63665F]"
-              numberOfLines={1}
-            >
+            <Text className="text-[0.8125rem] text-[#63665F]" numberOfLines={1}>
               {location}
             </Text>
           </View>

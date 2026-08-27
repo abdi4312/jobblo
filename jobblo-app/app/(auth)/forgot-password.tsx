@@ -54,7 +54,7 @@ export default function ForgotPasswordScreen() {
     mutationFn: ({ token, nextPassword }: { token: string; nextPassword: string }) =>
       resetPassword(token, nextPassword),
     onSuccess: () => {
-      router.replace('/(auth)/login' as any);
+      router.replace('/(auth)/login');
     },
     onError: (error: unknown) => {
       const err = error as { response?: { data?: { error?: string; message?: string } } };
@@ -216,7 +216,7 @@ export default function ForgotPasswordScreen() {
 
                     <View className="mt-6 flex-row justify-center">
                       <Text className="text-[14px] text-muted">Husker du passordet? </Text>
-                      <Pressable onPress={() => router.push('/(auth)/login' as any)}>
+                      <Pressable onPress={() => router.push('/(auth)/login')}>
                         <Text className="text-[14px] font-semibold text-brand">Logg inn</Text>
                       </Pressable>
                     </View>

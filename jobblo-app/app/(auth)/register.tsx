@@ -438,7 +438,7 @@ export default function RegisterScreen() {
                   </View>
                 )}
 
-                <Pressable onPress={() => router.push('/(auth)/login' as any)} className="mt-6 flex-row justify-center">
+                <Pressable onPress={() => router.push('/(auth)/login')} className="mt-6 flex-row justify-center">
                   <Text className="text-[14px] text-muted">Har du allerede konto? </Text>
                   <Text className="text-[14px] font-semibold text-brand">Logg inn</Text>
                 </Pressable>
