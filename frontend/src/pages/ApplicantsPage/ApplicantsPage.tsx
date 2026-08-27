@@ -37,6 +37,8 @@ const ApplicantsPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [filterBy, setFilterBy] = useState<string>('notArchived');
   const [comparedApplicants, setComparedApplicants] = useState<string[]>([]);
+  // Moved here from below the early returns — a hook after an early return is React error #310.
+  const [chatStartingFor, setChatStartingFor] = useState<string | null>(null);
   const { data, isLoading, error, refetch } = useApplicantsQuery(serviceId!, sortBy, filterBy);
   const createContractMutation = useCreateSafePayContractMutation();
   const toggleFavoriteMutation = useToggleApplicantFavoriteMutation(serviceId!);
@@ -112,21 +114,12 @@ const ApplicantsPage: React.FC = () => {
 
   const jobDateLabel = service.date
     ? new Date(service.date).toLocaleDateString('no-NO', {
-        day: 'numeric',
-        month: 'long',
-      })
+      day: 'numeric',
+      month: 'long',
+    })
     : 'Fullført oppdrag';
 
-  /**
-   * Which applicant's chat is being opened, if any.
-   *
-   * The button had no pending state, so a second click while the first request was still in
-   * flight sent a second POST. Both requests looked for an existing conversation, both found
-   * none, and both created one — the classic check-then-act race, and the fastest way to end
-   * up with two rooms for the same pair. The server refuses to duplicate now, but the button
-   * should not be firing twice in the first place.
-   */
-  const [chatStartingFor, setChatStartingFor] = useState<string | null>(null);
+  // chatStartingFor is declared at the top of the component, above the early returns.
 
   const handleStartChat = async (applicantId: string) => {
     if (chatStartingFor) return;
@@ -346,13 +339,12 @@ const ApplicantsPage: React.FC = () => {
                 {applicants.map((app: any, index: number) => (
                   <div
                     key={app._id}
-                    className={`relative bg-white border rounded-2xl p-4 md:p-5 transition-all ${
-                      app.favorite
-                        ? 'border-2 border-yellow-300'
-                        : app.archived
-                          ? 'opacity-60'
-                          : 'border-black/5'
-                    }`}
+                    className={`relative bg-white border rounded-2xl p-4 md:p-5 transition-all ${app.favorite
+                      ? 'border-2 border-yellow-300'
+                      : app.archived
+                        ? 'opacity-60'
+                        : 'border-black/5'
+                      }`}
                   >
                     {/*
                       The four actions used to be `absolute top-4 right-4`, while the stats
@@ -429,11 +421,10 @@ const ApplicantsPage: React.FC = () => {
                             aria-pressed={!!app.favorite}
                             aria-label="Marker som favoritt"
                             title="Favoritt"
-                            className={`flex size-9 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${
-                              app.favorite
-                                ? 'bg-[#EAF1E9] text-[#2E6641]'
-                                : 'text-[#9B9E96] hover:bg-[#F4F6F0] hover:text-[#2E6641]'
-                            }`}
+                            className={`flex size-9 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${app.favorite
+                              ? 'bg-[#EAF1E9] text-[#2E6641]'
+                              : 'text-[#9B9E96] hover:bg-[#F4F6F0] hover:text-[#2E6641]'
+                              }`}
                           >
                             <Heart size={17} fill={app.favorite ? 'currentColor' : 'none'} />
                           </button>
@@ -443,11 +434,10 @@ const ApplicantsPage: React.FC = () => {
                             aria-pressed={comparedApplicants.includes(app.applicant._id)}
                             aria-label="Legg til i sammenligning"
                             title="Sammenlign"
-                            className={`flex size-9 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${
-                              comparedApplicants.includes(app.applicant._id)
-                                ? 'bg-[#EAF1E9] text-[#2E6641]'
-                                : 'text-[#9B9E96] hover:bg-[#F4F6F0] hover:text-[#2E6641]'
-                            }`}
+                            className={`flex size-9 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${comparedApplicants.includes(app.applicant._id)
+                              ? 'bg-[#EAF1E9] text-[#2E6641]'
+                              : 'text-[#9B9E96] hover:bg-[#F4F6F0] hover:text-[#2E6641]'
+                              }`}
                           >
                             <Users size={17} />
                           </button>
@@ -457,11 +447,10 @@ const ApplicantsPage: React.FC = () => {
                             aria-pressed={!!app.archived}
                             aria-label={app.archived ? 'Gjenopprett fra arkiv' : 'Arkiver søker'}
                             title={app.archived ? 'Gjenopprett fra arkiv' : 'Arkiver'}
-                            className={`flex size-9 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${
-                              app.archived
-                                ? 'bg-[#EAF1E9] text-[#2E6641]'
-                                : 'text-[#9B9E96] hover:bg-[#F4F6F0] hover:text-[#0B0B0B]'
-                            }`}
+                            className={`flex size-9 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${app.archived
+                              ? 'bg-[#EAF1E9] text-[#2E6641]'
+                              : 'text-[#9B9E96] hover:bg-[#F4F6F0] hover:text-[#0B0B0B]'
+                              }`}
                           >
                             <Archive size={17} />
                           </button>
@@ -613,13 +602,12 @@ const ApplicantsPage: React.FC = () => {
                     <div key={step.label} className="flex gap-4">
                       <div className="flex flex-col items-center">
                         <div
-                          className={`w-2.5 h-2.5 rounded-full mt-1 ${
-                            isCurrent
-                              ? 'bg-[#122A1C] ring-4 ring-[#122A1C]/15'
-                              : isDone
-                                ? 'bg-custom-green'
-                                : 'bg-gray-200'
-                          }`}
+                          className={`w-2.5 h-2.5 rounded-full mt-1 ${isCurrent
+                            ? 'bg-[#122A1C] ring-4 ring-[#122A1C]/15'
+                            : isDone
+                              ? 'bg-custom-green'
+                              : 'bg-gray-200'
+                            }`}
                         ></div>
                         {!isLast && (
                           <div className="w-[1px] flex-1 bg-black/10 my-1 min-h-[30px]"></div>
@@ -627,20 +615,18 @@ const ApplicantsPage: React.FC = () => {
                       </div>
                       <div className={isLast ? '' : 'pb-5'}>
                         <div
-                          className={`text-[13px] leading-tight ${
-                            isCurrent ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'
-                          }`}
+                          className={`text-[13px] leading-tight ${isCurrent ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'
+                            }`}
                         >
                           {stepNumber}. {step.label}
                         </div>
                         <div
-                          className={`text-[11px] mt-0.5 ${
-                            isCurrent
-                              ? 'text-custom-green font-bold'
-                              : isDone
-                                ? 'text-custom-green'
-                                : 'text-gray-400'
-                          }`}
+                          className={`text-[11px] mt-0.5 ${isCurrent
+                            ? 'text-custom-green font-bold'
+                            : isDone
+                              ? 'text-custom-green'
+                              : 'text-gray-400'
+                            }`}
                         >
                           {isCurrent ? 'Du er her nå' : isDone ? 'Fullført' : step.desc}
                         </div>
