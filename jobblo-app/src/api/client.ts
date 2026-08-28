@@ -1,6 +1,23 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import { authStorage as storage } from '../utils/authStorage';
 
+/**
+ * Opt out of this client's session handling for one request.
+ *
+ * Set it when the caller is presenting a bearer token that is NOT the stored session — the
+ * OAuth hand-off verifying a freshly minted token against `/auth/profile` before anybody is
+ * signed in. Three things change for such a request: the interceptor leaves the caller's
+ * `Authorization` header alone instead of overwriting it from storage, a 401 does not try to
+ * refresh (there is no session to refresh), and a 401 does not tear down the session (a
+ * rejected hand-off token must not sign out whoever is already using the app).
+ */
+declare module 'axios' {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+  export interface AxiosRequestConfig {
+    _callerSuppliedAuth?: boolean;
+  }
+}
+
 const rawBaseUrl = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001/api').replace(/\/$/, '');
 const baseUrl = rawBaseUrl.endsWith('/api') ? rawBaseUrl : `${rawBaseUrl}/api`;
 export const apiBaseUrl = baseUrl;
@@ -14,6 +31,10 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use(async (config) => {
+  // The caller brought its own credential; overwriting it from storage would send the old
+  // session's token to an endpoint that was asked to check a different one.
+  if (config._callerSuppliedAuth) return config;
+
   try {
     const token = await storage.getItem('token');
     if (token && config.headers) {
@@ -31,7 +52,7 @@ apiClient.interceptors.request.use(async (config) => {
  *
  * The backend issues a 1-hour access token and a 7-day refresh token
  * (`backend/utils/tokenUtils.js`). The refresh token is delivered ONLY as an httpOnly
- * cookie, and `POST /api/auth/refresh` reads it only from `req.cookies.refreshToken`, so
+ * cookie, and `POST /api/auth/refresh-token` reads it only from `req.cookies.refreshToken`, so
  * JS can never hold it. What makes a client-side refresh possible anyway is that the
  * cookie is persistent (`maxAge` 7 days), so React Native's native cookie store keeps
  * sending it across JS reloads.
@@ -39,7 +60,12 @@ apiClient.interceptors.request.use(async (config) => {
  * Without this, every 401 was terminal: reloading the app more than an hour after login
  * hit `TOKEN_EXPIRED` on the first request and the user was logged straight back out.
  */
-const AUTH_PATHS_WITHOUT_REFRESH = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout'];
+const AUTH_PATHS_WITHOUT_REFRESH = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/refresh-token',
+  '/auth/logout',
+];
 
 function isAuthEndpoint(url?: string) {
   return !!url && AUTH_PATHS_WITHOUT_REFRESH.some((path) => url.includes(path));
@@ -50,7 +76,10 @@ async function requestNewAccessToken(): Promise<string | null> {
     // Bare axios rather than `apiClient`: routing this through our own interceptors
     // would let a failing refresh recurse into itself.
     const response = await axios.post<{ accessToken?: string }>(
-      `${baseUrl}/auth/refresh`,
+      // `/auth/refresh-token` is the route the backend actually registers
+      // (`backend/routes/auth.js`), and the one the web client uses. Asking for
+      // `/auth/refresh` returned 404, so every expired access token ended the session.
+      `${baseUrl}/auth/refresh-token`,
       {},
       { withCredentials: true, timeout: 15000 }
     );
@@ -119,6 +148,15 @@ apiClient.interceptors.response.use(
     if (error?.response?.status !== 401) return Promise.reject(error);
 
     const config = error.config as RetriableConfig | undefined;
+
+    /**
+     * A token the caller supplied itself was refused. That is an answer, not a dead session:
+     * the OAuth hand-off asks this question precisely so it can reject a bad token. There is
+     * nothing to refresh — the refresh cookie belongs to whatever session the device already
+     * has, and using it here would sign the *previous* account back in — and nothing to tear
+     * down, because a rejected hand-off must not log out whoever is currently signed in.
+     */
+    if (config?._callerSuppliedAuth) return Promise.reject(error);
 
     // A 401 from login/register is wrong credentials, not a dead session. Tearing the
     // session down here would also wipe a signed-in user who mistyped on a re-auth.

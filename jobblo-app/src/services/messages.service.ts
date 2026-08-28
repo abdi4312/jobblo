@@ -16,6 +16,8 @@ export interface MessageConversation {
     categories?: string[];
     price?: number;
     images?: string[];
+    image?: string;
+    isSold?: boolean;
     userId?: string;
   } | null;
   orderId?: {

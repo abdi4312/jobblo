@@ -9,6 +9,8 @@ import { useAuthStore } from '../store/authStore';
 interface JobCardProps {
   job: Job;
   showDescription?: boolean;
+  /** Compact/grid variant for 2-column layouts — prevents price/location row overflow at narrow widths. */
+  compact?: boolean;
   /**
    * Called when the bookmark icon is pressed. The parent screen owns the
    * SaveToListSheet — the card only provides the visual entry point and
@@ -27,7 +29,7 @@ interface JobCardProps {
  *
  * Reused across Home, Search, and other job listing contexts.
  */
-export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false, onSavePress }) => {
+export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false, compact = false, onSavePress }) => {
   const router = useRouter();
   const { isSaved, isLoading: savedLoading } = useIsServiceSaved(job._id);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -127,10 +129,10 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false, 
 
         {/* Price and location row */}
         <View className="flex-row items-center justify-between mt-2">
-          <Text className="text-[0.875rem] font-semibold text-[#0B0B0B] tabular-nums">
+          <Text className={['text-[0.875rem] font-semibold text-[#0B0B0B] tabular-nums', compact && 'flex-shrink'].join(' ')} numberOfLines={1}>
             {priceFormatted} kr
           </Text>
-          <View className="flex-row items-center gap-1">
+          <View className={['flex-row items-center gap-1', compact && 'ml-2 flex-1 min-w-0'].join(' ')}>
             <MapPin size={13} color="#63665F" strokeWidth={2} />
             <Text className="text-[0.8125rem] text-[#63665F]" numberOfLines={1}>
               {location}

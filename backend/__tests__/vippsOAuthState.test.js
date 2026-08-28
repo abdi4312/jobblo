@@ -27,12 +27,17 @@ function makeRes() {
   return {
     redirectedTo: null,
     cookies: {},
+    headers: {},
     redirect(url) {
       this.redirectedTo = url;
       return this;
     },
     cookie(name, value) {
       this.cookies[name] = value;
+      return this;
+    },
+    set(headers) {
+      Object.assign(this.headers, headers);
       return this;
     },
     status() {
@@ -44,7 +49,15 @@ function makeRes() {
   };
 }
 
+/**
+ * `save` calls back on a later tick, like a real async session store does — the start
+ * endpoint awaits it before sending the browser to Vipps, so a stub that resolved
+ * synchronously would hide the ordering the production race fix depends on.
+ */
 function makeReq({ query = {}, session = {}, userId } = {}) {
+  if (session && typeof session.save !== 'function') {
+    session.save = (cb) => setImmediate(() => cb(null));
+  }
   return { query, session, userId };
 }
 
@@ -60,6 +73,11 @@ beforeEach(() => {
     VIPPS_CLIENT_SECRET: 'secret',
     VIPPS_REDIRECT_URI: 'https://api.example/api/auth/vipps/callback',
     VIPPS_BASE_URL: 'https://apitest.vipps.no',
+    // Signs the platform token that rides in `state` for a mobile flow. A fixed fake so
+    // the assertions below are deterministic whatever the shell environment holds.
+    SESSION_SECRET: 'test-platform-state-secret',
+    MOBILE_RETURN_URL: 'https://api.example',
+    MOBILE_APP_LINK_PREFIX: 'jobblo://',
   };
 });
 
@@ -68,49 +86,60 @@ afterAll(() => {
 });
 
 describe('starting the flow', () => {
-  it('binds a fresh random state to the session', () => {
+  it('binds a fresh random state to the session', async () => {
     const req = makeReq();
     const res = makeRes();
 
-    vippsController.redirectToVipps(req, res);
+    await vippsController.redirectToVipps(req, res);
 
     expect(req.session.vippsAuth.state).toMatch(/^[0-9a-f]{64}$/);
     expect(res.redirectedTo).toContain(`state=${req.session.vippsAuth.state}`);
   });
 
-  it('generates a different state every time', () => {
+  it('generates a different state every time', async () => {
     const a = makeReq();
     const b = makeReq();
-    vippsController.redirectToVipps(a, makeRes());
-    vippsController.redirectToVipps(b, makeRes());
+    await vippsController.redirectToVipps(a, makeRes());
+    await vippsController.redirectToVipps(b, makeRes());
 
     expect(a.session.vippsAuth.state).not.toBe(b.session.vippsAuth.state);
   });
 
-  it('refuses to start when there is no session to bind the state to', () => {
+  it('refuses to start when there is no session to bind the state to', async () => {
     const req = { query: {}, session: null };
     const res = makeRes();
 
-    vippsController.redirectToVipps(req, res);
+    await vippsController.redirectToVipps(req, res);
 
     expect(res.redirectedTo).toBe('https://jobblo.example/login?error=vipps_failed');
     expect(res.redirectedTo).not.toContain('vipps.no');
   });
 
-  it('records the link intent only for an authenticated caller', () => {
+  it('records the link intent only for an authenticated caller', async () => {
     const signedIn = makeReq({ query: { link: '1' }, userId: 'user_1' });
-    vippsController.redirectToVipps(signedIn, makeRes());
+    await vippsController.redirectToVipps(signedIn, makeRes());
     expect(signedIn.session.vippsAuth.linkUserId).toBe('user_1');
 
     const anonymous = makeReq({ query: { link: '1' } });
-    vippsController.redirectToVipps(anonymous, makeRes());
+    await vippsController.redirectToVipps(anonymous, makeRes());
     expect(anonymous.session.vippsAuth.linkUserId).toBeNull();
   });
 
-  it('does not treat a plain sign-in as a link request', () => {
+  it('does not treat a plain sign-in as a link request', async () => {
     const req = makeReq({ userId: 'user_1' });
-    vippsController.redirectToVipps(req, makeRes());
+    await vippsController.redirectToVipps(req, makeRes());
     expect(req.session.vippsAuth.linkUserId).toBeNull();
+  });
+
+  /**
+   * The start endpoint mints the state and records where this flow ends up, so a browser
+   * answering the request from its own cache means neither happens — which is one of the two
+   * ways a second sign-in from the same browser ended up back on the website.
+   */
+  it('forbids caching the authorization redirect', async () => {
+    const res = makeRes();
+    await vippsController.redirectToVipps(makeReq(), res);
+    expect(res.headers['Cache-Control']).toContain('no-store');
   });
 });
 
@@ -221,6 +250,133 @@ describe('the identity decision reaches the user as a distinguishable outcome', 
 
     expect(res.redirectedTo).toContain('error=vipps_failed');
     expect(res.cookies.accessToken).toBeUndefined();
+  });
+});
+
+describe('where a mobile flow comes back to', () => {
+  /** `<CSRF state>-m.<issued>.<nonce>.<hmac>`, hex throughout so nothing needs escaping. */
+  const COMPOSITE = /^[0-9a-f]{64}-m\.\d{10,15}\.[a-f0-9]{18}\.[a-f0-9]{64}$/;
+
+  /** A returning user whose Vipps identity is already linked — the ordinary sign-in path. */
+  function primeReturningUser() {
+    axios.post.mockResolvedValue({ data: { access_token: 'vipps-at' } });
+    axios.get.mockResolvedValue({ data: { sub: 'vipps-sub', email: 'a@example.com' } });
+    User.findOne.mockImplementation((query) => {
+      const result = query.oauthProviders ? { _id: 'u1' } : null;
+      return Object.assign(Promise.resolve(result), { select: () => Promise.resolve(result) });
+    });
+  }
+
+  async function callbackWith({ state, session }) {
+    const res = makeRes();
+    await vippsController.vippsCallback(makeReq({ query: { code: 'c', state }, session }), res);
+    return res;
+  }
+
+  it('appends a signed platform token to the state', async () => {
+    const req = makeReq({ query: { platform: 'mobile' } });
+    const res = makeRes();
+
+    await vippsController.redirectToVipps(req, res);
+
+    expect(req.session.vippsAuth.state).toMatch(COMPOSITE);
+    // Stored and sent byte-for-byte the same, so what Vipps echoes back is what the
+    // constant-time comparison is given. A separator either half could contain, or one
+    // `URLSearchParams` percent-encodes, would break that.
+    expect(res.redirectedTo).toContain(`state=${req.session.vippsAuth.state}`);
+  });
+
+  it('mints nothing at all for a web flow', async () => {
+    const req = makeReq();
+    await vippsController.redirectToVipps(req, makeRes());
+    expect(req.session.vippsAuth.state).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('reaches the app when the session recorded the intent', async () => {
+    primeReturningUser();
+    const res = await callbackWith({
+      state: 'abc',
+      session: { vippsAuth: { state: 'abc', createdAt: Date.now() }, oauthPlatform: 'mobile' },
+    });
+    expect(res.redirectedTo).toBe(
+      'https://api.example/api/auth/mobile-return?state=success&token=at'
+    );
+  });
+
+  /**
+   * The reported symptom: the first sign-in worked, and after a sign-out the second one
+   * came back on the website. Nothing in the session said `mobile` any more, so the
+   * callback took the web branch and the Custom Tab was left on a `localhost:5173` that
+   * only exists on the developer's machine. The state is the second carrier.
+   */
+  it('reaches the app on the signed state alone, with no platform in the session', async () => {
+    const start = makeReq({ query: { platform: 'mobile' } });
+    await vippsController.redirectToVipps(start, makeRes());
+    const state = start.session.vippsAuth.state;
+
+    primeReturningUser();
+    const res = await callbackWith({
+      state,
+      session: { vippsAuth: { state, createdAt: Date.now() } },
+    });
+
+    expect(res.redirectedTo).toBe(
+      'https://api.example/api/auth/mobile-return?state=success&token=at'
+    );
+  });
+
+  it('an error also reaches the app on the signed state alone', async () => {
+    const start = makeReq({ query: { platform: 'mobile' } });
+    await vippsController.redirectToVipps(start, makeRes());
+    const state = start.session.vippsAuth.state;
+
+    axios.post.mockResolvedValue({ data: {} }); // no access_token
+    const res = await callbackWith({
+      state,
+      session: { vippsAuth: { state, createdAt: Date.now() } },
+    });
+
+    expect(res.redirectedTo).toBe(
+      'https://api.example/api/auth/mobile-return?state=error&code=vipps_failed'
+    );
+  });
+
+  it('a token this server did not sign is not mobile', async () => {
+    const base = 'a'.repeat(64);
+    const forged = `${base}-m.${Date.now()}.${'b'.repeat(18)}.${'c'.repeat(64)}`;
+
+    primeReturningUser();
+    const res = await callbackWith({
+      state: forged,
+      session: { vippsAuth: { state: forged, createdAt: Date.now() } },
+    });
+
+    // Web, exactly as before the bridge existed — a forged token cannot redirect a flow,
+    // and the worst it could ever point at is this server's own hand-off page anyway.
+    expect(res.redirectedTo).toBe('https://jobblo.example/oauth-success?token=at');
+  });
+
+  it('a stale token is not mobile', async () => {
+    /**
+     * Correctly signed, but issued sixteen minutes ago — past the 15-minute window. The
+     * clock is only moved for the start call, so the CSRF state's own `createdAt` below is
+     * fresh and this exercises the token's age rather than Vipps' separate state expiry.
+     */
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(Date.now() - 16 * 60 * 1000);
+    const start = makeReq({ query: { platform: 'mobile' } });
+    await vippsController.redirectToVipps(start, makeRes());
+    clock.mockRestore();
+
+    const state = start.session.vippsAuth.state;
+    expect(state).toMatch(COMPOSITE);
+
+    primeReturningUser();
+    const res = await callbackWith({
+      state,
+      session: { vippsAuth: { state, createdAt: Date.now() } },
+    });
+
+    expect(res.redirectedTo).toBe('https://jobblo.example/oauth-success?token=at');
   });
 });
 

@@ -20,7 +20,7 @@ export function SearchInput({
   rightAction,
 }: SearchInputProps) {
   return (
-    <View className="h-12 flex-row items-center rounded-full border border-[#E6E7E1] bg-white pl-4 pr-2">
+    <View className="h-12 min-w-0 flex-1 flex-row items-center rounded-full border border-[#E6E7E1] bg-white pl-4 pr-2">
       <Search size={17} color="#9B9E96" strokeWidth={2.2} />
 
       <TextInput

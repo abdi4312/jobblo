@@ -1,7 +1,7 @@
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image, Pressable, ScrollView, Text, View } from 'react-native';
-import { MessageCircle } from 'lucide-react-native';
+import { MessagesSquare } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../../src/store/authStore';
 import { useMessages } from '../../../src/hooks/useMessages';
@@ -12,10 +12,6 @@ import { ErrorState } from '../../../src/components/ui/ErrorState';
 
 function participantName(participant?: MessageParticipant | null) {
   return participant?.name?.trim() || 'Bruker';
-}
-
-function initials(name: string) {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'U';
 }
 
 function formatTime(value?: string) {
@@ -47,21 +43,36 @@ function ConversationRow({ chat, userId, onPress }: { chat: MessageConversation;
   const name = participantName(person);
   const unread = hasUnread(chat, userId);
   const latest = chat.messages?.[0];
+  const photo = chat.serviceId?.images?.[0] || chat.serviceId?.image || undefined;
   return (
-    <Pressable onPress={onPress} className={['mb-3 flex-row items-center gap-3 rounded-2xl border bg-white p-4', unread ? 'border-[#2E6641]' : 'border-[#E6E7E1]'].join(' ')}>
-      <View className="relative h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9]">
-        {person?.avatarUrl ? <Image source={{ uri: person.avatarUrl }} className="h-full w-full" /> : <Text className="font-semibold text-[#2E6641]">{initials(name)}</Text>}
-        {unread ? <View className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-[#2E6641]" /> : null}
+    <Pressable onPress={onPress} className="mb-3 flex-row items-center gap-3 rounded-2xl border border-[#E6E7E1] bg-white p-4">
+      <View className="relative shrink-0">
+        <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-[#EAF1E9]">
+          {photo ? (
+            <Image source={{ uri: photo }} className="h-full w-full" resizeMode="cover" />
+          ) : (
+            <MessagesSquare size={17} strokeWidth={2} color="#2E6641" />
+          )}
+        </View>
+        <View className="absolute -bottom-1 -right-1 h-6 w-6 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-[#EAF1E9]">
+          {person?.avatarUrl ? (
+            <Image source={{ uri: person.avatarUrl }} className="h-full w-full" resizeMode="cover" />
+          ) : (
+            <Text className="text-[0.625rem] font-semibold text-[#2E6641]">{(person?.name?.charAt(0) || 'U').toUpperCase()}</Text>
+          )}
+        </View>
       </View>
       <View className="min-w-0 flex-1">
         <View className="flex-row items-center justify-between gap-2">
           <Text className={['flex-1 text-[0.9375rem] text-[#0B0B0B]', unread ? 'font-bold' : 'font-semibold'].join(' ')} numberOfLines={1}>{name}</Text>
           <Text className="text-[0.6875rem] text-[#9B9E96]">{formatTime(latest?.createdAt ?? chat.updatedAt)}</Text>
         </View>
-        <Text className={['mt-1 text-[0.8125rem]', unread ? 'font-medium text-[#0B0B0B]' : 'text-[#63665F]'].join(' ')} numberOfLines={1}>{conversationPreview(chat)}</Text>
+        <View className="mt-1 flex-row items-center gap-2">
+          <Text className={['flex-1 text-[0.8125rem]', unread ? 'font-medium text-[#0B0B0B]' : 'text-[#63665F]'].join(' ')} numberOfLines={1}>{conversationPreview(chat)}</Text>
+          {unread ? <View className="h-2 w-2 shrink-0 rounded-full bg-[#2E6641]" /> : null}
+        </View>
         {chat.serviceId?.title ? <Text className="mt-2 self-start rounded-md bg-[#EAF1E9] px-2 py-1 text-[0.6875rem] font-semibold text-[#2E6641]" numberOfLines={1}>{chat.serviceId.title}</Text> : null}
       </View>
-      {unread ? <MessageCircle size={16} color="#2E6641" /> : null}
     </Pressable>
   );
 }

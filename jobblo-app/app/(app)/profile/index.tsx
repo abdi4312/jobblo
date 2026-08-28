@@ -93,7 +93,23 @@ export default function ProfileScreen() {
   const confirmLogout = () =>
     Alert.alert('Logg ut?', 'Du må logge inn igjen for å bruke Jobblo.', [
       { text: 'Avbryt', style: 'cancel' },
-      { text: 'Logg ut', style: 'destructive', onPress: () => void logout() },
+      {
+        // Leaves the group explicitly, exactly like deleting an account does. Signing out
+        // otherwise depended on the guard in app/(app)/_layout.tsx, which swaps `<Tabs>` for a
+        // `<Redirect>` the instant the session goes — so the navigation was dispatched from a
+        // route whose navigator had already been unmounted, and could go nowhere.
+        text: 'Logg ut',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            try {
+              await logout();
+            } finally {
+              router.replace('/(auth)/login');
+            }
+          })();
+        },
+      },
     ]);
 
   return (

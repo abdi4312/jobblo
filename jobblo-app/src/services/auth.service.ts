@@ -39,6 +39,53 @@ export async function registerUser(payload: RegisterRequest): Promise<LoginRespo
   return response.data;
 }
 
+/* ------------------------------------------------------------------ *
+ * OAuth hand-off
+ * ------------------------------------------------------------------ */
+
+/** Three base64url segments. Real access tokens are a few hundred characters. */
+const ACCESS_TOKEN = /^[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}$/;
+
+/**
+ * Does this look like an access token at all?
+ *
+ * The value arrives from a deep link, which can carry the literal strings `"undefined"`,
+ * `"null"` or `"[object Object]"` — all of them truthy, so a plain `if (token)` happily
+ * sends nonsense to the API and turns a misconfiguration into a mysterious 401. Shape only:
+ * whether the token is *valid* is the server's answer to give, below.
+ */
+export function isUsableAuthToken(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const token = value.trim();
+  if (!token || token.length > 4096) return false;
+  if (token === 'undefined' || token === 'null' || token === '[object Object]') return false;
+  return ACCESS_TOKEN.test(token);
+}
+
+/**
+ * GET /api/auth/profile with an explicitly supplied bearer token.
+ *
+ * This is what makes an OAuth deep link safe to act on. The link carries a token, and a
+ * token in a URL is a claim, not proof — the app treats it as unverified until the server
+ * answers with the profile it belongs to. Success means the token is real, unexpired and
+ * maps to a live account; anything else means no session is created.
+ *
+ * `_callerSuppliedAuth` keeps this request out of the client's session machinery: the header
+ * is not overwritten from storage, and a 401 neither refreshes nor signs anybody out. See
+ * src/api/client.ts.
+ *
+ * The endpoint answers with a BARE user object (`res.json(sanitizeUserOwner(user))`), not
+ * `{ user }` — so this is also the profile the store and the query cache are seeded with.
+ * Never decode the JWT and use its payload instead; the claims are not the profile.
+ */
+export async function fetchProfileWithToken(token: string): Promise<AuthUser> {
+  const response = await apiClient.get<AuthUser>('/auth/profile', {
+    headers: { Authorization: `Bearer ${token}` },
+    _callerSuppliedAuth: true,
+  });
+  return response.data;
+}
+
 /**
  * POST /api/auth/logout — deletes the server-side session row and clears the auth cookies.
  *

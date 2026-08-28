@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
 import { Home, MessageCircle, PlusCircle, UserRound, Bell } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
 import { useUnreadCount } from '@/hooks/useNotifications';
+import { useUnreadConversations } from '@/hooks/useUnreadConversations';
 
 function BellIcon({ color, size }: { color: string; size: number }) {
   const { data } = useUnreadCount();
@@ -10,6 +11,35 @@ function BellIcon({ color, size }: { color: string; size: number }) {
   return (
     <View>
       <Bell size={size} color={color} />
+      {count > 0 && (
+        <View
+          style={{
+            position: 'absolute',
+            top: -2,
+            right: -4,
+            minWidth: 18,
+            height: 18,
+            borderRadius: 9,
+            backgroundColor: '#B4544A',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 4,
+          }}
+        >
+          <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>
+            {count > 99 ? '99+' : count}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function MessageIcon({ color, size }: { color: string; size: number }) {
+  const count = useUnreadConversations();
+  return (
+    <View>
+      <MessageCircle size={size} color={color} />
       {count > 0 && (
         <View
           style={{
@@ -88,7 +118,7 @@ export default function AppLayout() {
         name="messages"
         options={{
           title: 'Meldinger',
-          tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <MessageIcon color={String(color)} size={size} />,
         }}
       />
       <Tabs.Screen

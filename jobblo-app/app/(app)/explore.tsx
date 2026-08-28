@@ -15,7 +15,6 @@ import { useLocationTree } from '../../src/hooks/useLocationTree';
 import { useSearchFilters } from '../../src/hooks/useSearchFilters';
 import { JobCard } from '../../src/components/JobCard';
 import { Button } from '../../src/components/ui/Button';
-import { CategoryChip } from '../../src/components/CategoryChip';
 import { SearchHeader } from '../../src/components/search/SearchHeader';
 import { SearchResultsHeader } from '../../src/components/search/SearchResultsHeader';
 import { ActiveFiltersDisplay } from '../../src/components/search/ActiveFiltersDisplay';
@@ -160,36 +159,6 @@ export default function ExploreScreen() {
         }}
         onRemoveLocation={() => filters.setUserLocation(null)}
       />
-
-      <View className="mb-2 px-4">
-        <Text className="mb-2 text-[0.8125rem] font-medium text-[#63665F]">
-          Kategorier
-        </Text>
-        {categoriesLoading ? (
-          <View className="py-3">
-            <ActivityIndicator color="#2E6641" size="small" />
-          </View>
-        ) : (
-          <View className="flex-row flex-wrap -mx-1.5">
-            <View className="w-1/3 px-1.5 pb-3">
-              <CategoryChip
-                category={{ name: 'Alle' }}
-                isSelected={filters.selectedCategories.length === 0}
-                onPress={() => filters.setSelectedCategories([])}
-              />
-            </View>
-            {filterCategories.map((cat) => (
-              <View key={cat._id} className="w-1/3 px-1.5 pb-3">
-                <CategoryChip
-                  category={cat}
-                  isSelected={filters.selectedCategories.includes(cat.name)}
-                  onPress={() => filters.toggleCategory(cat.name)}
-                />
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
     </View>
   );
 
@@ -301,9 +270,11 @@ export default function ExploreScreen() {
       <FlatList
         data={allJobs}
         keyExtractor={(job) => job._id}
+        numColumns={2}
+        columnWrapperStyle={{ paddingHorizontal: 16 }}
         renderItem={({ item }) => (
-          <View className="px-4 pb-8">
-            <JobCard job={item} onSavePress={(id) => setSaveSheetServiceId(id)} />
+          <View className="w-1/2 px-1.5 pb-4">
+            <JobCard job={item} compact onSavePress={(id) => setSaveSheetServiceId(id)} />
           </View>
         )}
         ListHeaderComponent={renderHeader}

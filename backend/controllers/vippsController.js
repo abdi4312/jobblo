@@ -2,6 +2,13 @@ const { createSession } = require('../utils/tokenUtils');
 const { ensureDefaultSubscription } = require('../utils/subscription');
 const { createUnusablePassword } = require('../utils/passwordUtils');
 const { resolveOAuthLogin } = require('../utils/oauthLinking');
+const {
+  oauthDestination,
+  rememberOAuthPlatform,
+  takeOAuthPlatform,
+  withPlatformState,
+  noStore,
+} = require('../utils/oauthReturn');
 const axios = require('axios');
 const User = require('../models/User');
 const crypto = require('crypto');
@@ -13,6 +20,11 @@ const crypto = require('crypto');
  * read that file for why matching e-mail addresses is not proof of account ownership.
  * What is here is the OAuth mechanics: state, the code exchange, and turning the
  * policy's decision into a redirect.
+ *
+ * Where that redirect points is decided by utils/oauthReturn.js — the website as before,
+ * or the mobile hand-off page when the flow was started with `?platform=mobile`. The Vipps
+ * redirect_uri itself is untouched and stays the HTTPS callback registered in the Vipps
+ * portal; a custom scheme never goes near the provider.
  */
 
 /** How long an authorization request may sit unanswered before the state expires. */
@@ -25,6 +37,8 @@ const ERRORS = {
   ACCOUNT_EXISTS: 'vipps_account_exists',
   ALREADY_LINKED: 'vipps_already_linked',
   NO_EMAIL: 'vipps_no_email',
+  /** Vipps itself refused or the person backed out. Mobile-only; web returns silently. */
+  CANCELLED: 'vipps_cancelled',
   FAILED: 'vipps_failed',
 };
 
@@ -43,17 +57,36 @@ function statesMatch(a, b) {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
-exports.redirectToVipps = (req, res) => {
+exports.redirectToVipps = async (req, res) => {
+  // This endpoint mints a one-time state and records where the flow ends up, so it has to
+  // run on every attempt rather than being replayed from a browser's cache.
+  noStore(res);
+
+  /**
+   * Recorded before anything below can fail, so a mobile flow that dies at the starting
+   * line still gets its answer delivered into the app instead of onto the website. Returns
+   * 'web' if there is no session to record it in — which is the case the very next check
+   * refuses outright anyway.
+   */
+  const platform = await rememberOAuthPlatform(req);
+  const fail = (code) => res.redirect(oauthDestination({ req, platform, error: code }));
+
   try {
-    // 1. Strong random state (CSRF protection), bound to this session.
-    const state = crypto.randomBytes(32).toString('hex');
+    /**
+     * 1. Strong random state (CSRF protection), bound to this session — plus, for a mobile
+     * flow, the signed platform token appended to it. Vipps hands `state` back untouched,
+     * so that token is a second, session-independent answer to "where does this land"; the
+     * value stored below and the value compared at the callback are both this composite,
+     * so the state check itself is unchanged. See utils/oauthReturn.js.
+     */
+    const state = withPlatformState(crypto.randomBytes(32).toString('hex'), platform);
 
     if (!req.session) {
       // Without a session there is nowhere to bind the state, and an unbound state is
       // not CSRF protection -- it is a parameter the attacker also controls. Fail here
       // rather than starting a flow the callback is going to have to reject anyway.
       console.error('Vipps: session middleware unavailable; refusing to start OAuth');
-      return res.redirect(frontendUrl(`login?error=${ERRORS.FAILED}`));
+      return fail(ERRORS.FAILED);
     }
 
     /**
@@ -74,13 +107,25 @@ exports.redirectToVipps = (req, res) => {
       linkUserId: wantsLink && req.userId ? String(req.userId) : null,
     };
 
+    /**
+     * Wait for the store write before sending the browser to Vipps.
+     *
+     * connect-mongo writes asynchronously and the callback arrives on a different request.
+     * Redirecting first meant the state could still be in flight when Vipps came back on a
+     * fast connection, which surfaced as a random `vipps_invalid_state` — the same race
+     * `startIduraAuth` already guards against.
+     */
+    await new Promise((resolve, reject) =>
+      req.session.save((err) => (err ? reject(err) : resolve()))
+    );
+
     // 2. Build the authorize URL.
     const clientId = (process.env.VIPPS_CLIENT_ID || '').trim();
     const redirectUri = (process.env.VIPPS_REDIRECT_URI || '').trim();
 
     if (!clientId || !redirectUri) {
       console.error('Vipps: VIPPS_CLIENT_ID or VIPPS_REDIRECT_URI is missing');
-      return res.redirect(frontendUrl(`login?error=${ERRORS.FAILED}`));
+      return fail(ERRORS.FAILED);
     }
 
     const params = new URLSearchParams({
@@ -101,12 +146,30 @@ exports.redirectToVipps = (req, res) => {
     );
   } catch (err) {
     console.error('Error in redirectToVipps:', err.message);
-    return res.redirect(frontendUrl(`login?error=${ERRORS.FAILED}`));
+    return fail(ERRORS.FAILED);
   }
 };
 
 exports.vippsCallback = async (req, res) => {
   const { code, state, error } = req.query;
+
+  /**
+   * Where this flow ends up, decided from intent recorded at the start endpoint — read
+   * once, here, before any early return. A refused sign-in has to reach the app just as
+   * much as a successful one does.
+   *
+   * `failed()` and `succeeded()` produce byte-identical web URLs to the ones this
+   * controller built by hand before the mobile bridge existed, so the website is
+   * unaffected. `cancelled()` is the one place they differ: web keeps its silent return
+   * to /login, while the app is given a code, because its arrival screen has no other way
+   * to tell "you backed out" from "still working on it".
+   */
+  const platform = takeOAuthPlatform(req);
+  const succeeded = (accessToken) => oauthDestination({ req, platform, accessToken });
+  const failed = (errorCode, webPath) =>
+    oauthDestination({ req, platform, error: errorCode, webPath });
+  const cancelled = () =>
+    platform === 'mobile' ? failed(ERRORS.CANCELLED) : frontendUrl('login');
 
   /**
    * The state is single-use. Reading it clears it, whatever happens next, so a
@@ -118,10 +181,10 @@ exports.vippsCallback = async (req, res) => {
   if (req.session) delete req.session.vippsAuth;
 
   if (error) {
-    return res.redirect(frontendUrl('login'));
+    return res.redirect(cancelled());
   }
   if (!code) {
-    return res.redirect(frontendUrl('login'));
+    return res.redirect(cancelled());
   }
 
   /**
@@ -135,11 +198,11 @@ exports.vippsCallback = async (req, res) => {
    */
   if (!pending || !statesMatch(String(state || ''), pending.state)) {
     console.warn('Vipps: state mismatch or missing');
-    return res.redirect(frontendUrl(`login?error=${ERRORS.INVALID_STATE}`));
+    return res.redirect(failed(ERRORS.INVALID_STATE));
   }
   if (Date.now() - (pending.createdAt || 0) > STATE_TTL_MS) {
     console.warn('Vipps: state expired');
-    return res.redirect(frontendUrl(`login?error=${ERRORS.INVALID_STATE}`));
+    return res.redirect(failed(ERRORS.INVALID_STATE));
   }
 
   try {
@@ -172,7 +235,7 @@ exports.vippsCallback = async (req, res) => {
     const vippsAccessToken = tokenResponse.data.access_token;
     if (!vippsAccessToken) {
       console.error('Vipps: token response carried no access_token');
-      return res.redirect(frontendUrl(`login?error=${ERRORS.FAILED}`));
+      return res.redirect(failed(ERRORS.FAILED));
     }
 
     // The userinfo endpoint is called server-to-server over TLS with a token we just
@@ -206,15 +269,15 @@ exports.vippsCallback = async (req, res) => {
 
       case 'invalid_identity':
         console.error('Vipps: userinfo response had no usable `sub`');
-        return res.redirect(frontendUrl(`login?error=${ERRORS.IDENTITY}`));
+        return res.redirect(failed(ERRORS.IDENTITY));
 
       case 'link_conflict':
         // This Vipps identity is already attached to a different Jobblo account.
         // Attaching it twice would make one identity resolve to two users.
-        return res.redirect(frontendUrl(`profile?error=${ERRORS.ALREADY_LINKED}`));
+        return res.redirect(failed(ERRORS.ALREADY_LINKED, 'profile'));
 
       case 'link_target_gone':
-        return res.redirect(frontendUrl(`login?error=${ERRORS.FAILED}`));
+        return res.redirect(failed(ERRORS.FAILED));
 
       case 'account_exists':
         /**
@@ -228,7 +291,7 @@ exports.vippsCallback = async (req, res) => {
          * the `linkUserId` branch above. Recoverable without support, including via
          * forgot-password.
          */
-        return res.redirect(frontendUrl(`login?error=${ERRORS.ACCOUNT_EXISTS}`));
+        return res.redirect(failed(ERRORS.ACCOUNT_EXISTS));
 
       case 'create': {
         if (!decision.email) {
@@ -236,7 +299,7 @@ exports.vippsCallback = async (req, res) => {
           // created without one. Say so plainly instead of failing as a generic
           // server error, which is what the old code did.
           console.error('Vipps: profile carried no usable e-mail; cannot create account');
-          return res.redirect(frontendUrl(`login?error=${ERRORS.NO_EMAIL}`));
+          return res.redirect(failed(ERRORS.NO_EMAIL));
         }
 
         user = await User.create({
@@ -255,11 +318,11 @@ exports.vippsCallback = async (req, res) => {
 
       default:
         console.error('Vipps: unhandled linking outcome %s', decision.outcome);
-        return res.redirect(frontendUrl(`login?error=${ERRORS.FAILED}`));
+        return res.redirect(failed(ERRORS.FAILED));
     }
 
     if (user?.isDeleted || user?.accountStatus === 'deactivated') {
-      return res.redirect(frontendUrl(`login?error=account_deactivated`));
+      return res.redirect(failed('account_deactivated'));
     }
 
     // Idempotent by construction -- everything writable is inside `$setOnInsert`, so
@@ -282,10 +345,10 @@ exports.vippsCallback = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return res.redirect(frontendUrl(`oauth-success?token=${accessToken}`));
+    return res.redirect(succeeded(accessToken));
   } catch (err) {
     console.error('Vipps API Error:', err.response?.data || err.message);
-    return res.redirect(frontendUrl(`login?error=${ERRORS.FAILED}`));
+    return res.redirect(failed(ERRORS.FAILED));
   }
 };
 

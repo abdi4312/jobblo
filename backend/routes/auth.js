@@ -6,6 +6,14 @@ const { setCookie } = require('../utils/setCookie.js');
 const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 const { authLimiter, otpSendLimiter, otpVerifyLimiter } = require('../middleware/rateLimiter');
 const { generateTokens, createSession } = require('../utils/tokenUtils');
+const {
+  mobileReturn,
+  oauthDestination,
+  rememberOAuthPlatform,
+  takeOAuthPlatform,
+  mintPlatformState,
+  noStore,
+} = require('../utils/oauthReturn');
 
 const express = require('express');
 const router = express.Router();
@@ -121,6 +129,17 @@ router.post('/change-password/send-otp', authenticate, otpSendLimiter, authContr
 router.post('/change-password/send-otp-no-password', authenticate, otpSendLimiter, authController.changePasswordSendOtpNoPassword);
 router.post('/change-password/verify-otp', authenticate, otpVerifyLimiter, authController.changePasswordVerifyOtp);
 
+/**
+ * PUBLIC on purpose — no `authenticate`.
+ *
+ * The HTTPS hand-off page that gets a finished Google or Vipps flow out of the browser and
+ * back into the mobile app. It is reached by a redirect from this server's own provider
+ * callback, running inside a Custom Tab that holds no Jobblo credentials, so requiring auth
+ * here would break the only flow that uses it. It reads nothing and asserts nothing; see
+ * utils/oauthReturn.js. Same shape as `/api/safepay-checkout/mobile-return`.
+ */
+router.get('/mobile-return', mobileReturn);
+
 // Google OAuth Routes
 //
 // `optionalAuthenticate` for the same reason as Vipps: signing in must work when
@@ -128,13 +147,38 @@ router.post('/change-password/verify-otp', authenticate, otpVerifyLimiter, authC
 // already using (`/api/auth/google?link=1`) records that intent in the session. That
 // cookie is the proof of ownership that an e-mail match is not -- see
 // utils/oauthLinking.js.
-router.get('/google', optionalAuthenticate, (req, res, next) => {
+//
+// `?platform=mobile` is recorded the same way and for the same reason: where this flow
+// ends up must be decided by the server, from intent captured before the provider is ever
+// contacted, and never from a parameter on the callback.
+//
+// It is recorded TWICE, in the session and in a signed `state`, because the session copy
+// turned out not to survive a second sign-in from the same browser — see utils/oauthReturn.js.
+// `no-store` belongs to the same fix: this endpoint must actually run on every attempt, and
+// a cached redirect would replay the previous flow's authorization request instead.
+router.get('/google', optionalAuthenticate, async (req, res, next) => {
+  noStore(res);
+
   if (req.session && (req.query.link === '1' || req.query.intent === 'link') && req.userId) {
     req.session.googleLinkUserId = String(req.userId);
   } else if (req.session) {
     delete req.session.googleLinkUserId;
   }
-  return passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+  // Persists both keys in one store write, and waits for it: Google can come back before
+  // an async session store has finished writing.
+  const platform = await rememberOAuthPlatform(req);
+
+  /**
+   * The Google strategy is constructed without `state`, so passport keeps a `NullStore`:
+   * it neither stores nor verifies this value and hands the whole parameter to us. A web
+   * flow mints nothing, `passport.authenticate` sees no `state` option, and the outgoing
+   * authorization request is exactly the one it has always been.
+   */
+  const state = mintPlatformState(platform);
+  return passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    ...(state ? { state } : {}),
+  })(req, res, next);
 });
 
 /**
@@ -146,21 +190,28 @@ router.get('/google', optionalAuthenticate, (req, res, next) => {
  * refusal looked identical: the strategy now distinguishes "this address already
  * belongs to an account" from "Google sent no usable identity", and that distinction
  * only helps if it reaches the person.
+ *
+ * Every destination now goes through `oauthDestination`, which sends a flow that started
+ * with `?platform=mobile` to the app bridge and everything else to the website exactly as
+ * before. The platform is read ONCE, up front, so the refusal paths below reach the app
+ * too -- an error that only ever lands on the website is invisible to someone holding a
+ * phone.
  */
 router.get('/google/callback', (req, res, next) => {
-  const frontendBase = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+  const platform = takeOAuthPlatform(req);
+  const to = (options) => oauthDestination({ req, platform, ...options });
 
   passport.authenticate('google', { session: false }, async (err, user, info) => {
     if (err) {
       console.error('Google callback error:', err.message);
-      return res.redirect(`${frontendBase}/login?error=google_failed`);
+      return res.redirect(to({ error: 'google_failed' }));
     }
     if (!user) {
-      return res.redirect(`${frontendBase}/login?error=${info?.code || 'google_failed'}`);
+      return res.redirect(to({ error: info?.code || 'google_failed' }));
     }
 
     if (user.isDeleted || user.accountStatus === 'deactivated') {
-      return res.redirect(`${frontendBase}/login?error=account_deactivated`);
+      return res.redirect(to({ error: 'account_deactivated' }));
     }
 
     try {
@@ -180,10 +231,10 @@ router.get('/google/callback', (req, res, next) => {
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
-      return res.redirect(`${frontendBase}/oauth-success?token=${accessToken}`);
+      return res.redirect(to({ accessToken }));
     } catch (sessionError) {
       console.error('Google callback session error:', sessionError.message);
-      return res.redirect(`${frontendBase}/login?error=google_failed`);
+      return res.redirect(to({ error: 'google_failed' }));
     }
   })(req, res, next);
 });
