@@ -472,6 +472,7 @@ export const useCreateJobForm = (
   // Persistence - Save data whenever it changes (only after initial load)
   useEffect(() => {
     if (!isLoaded) return; // Don't save until draft has been loaded
+    if (isEditMode) return; // Edit mode never uses the draft — don't overwrite it
 
     const saveData = async () => {
       try {
@@ -837,7 +838,7 @@ export const useCreateJobForm = (
       // the Publish button stuck in a loading state forever.
       // Edit mode never loads the draft, so clearing it here would throw away an
       // unrelated half-written job the user has in progress.
-      if (!isEditMode) clearFormData().catch(() => {});
+      if (!isEditMode) clearFormData().catch(() => { });
     } catch (error) {
       // The draft is deliberately left intact here — this catch is the failed
       // publish path, and it is the only copy of what the user typed.

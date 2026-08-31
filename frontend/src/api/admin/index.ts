@@ -126,10 +126,20 @@ export interface AdminService {
     title: string;
     description?: string;
     price: number;
+    hourlyRate?: number;
+    paymentType?: string;
     status: string;
     categories: string[];
+    tags?: string[];
     images?: string[];
     views: number;
+    urgent?: boolean;
+    promoted?: boolean;
+    maxApplicants?: number;
+    equipment?: string;
+    fromDate?: string;
+    toDate?: string;
+    location?: { address?: string; city?: string; coordinates?: number[] };
     createdAt: string;
     updatedAt: string;
     userId?: { _id: string; name: string; email: string; avatarUrl?: string; role: string };
@@ -151,6 +161,29 @@ export const updateServiceStatus = async (id: string, status: string): Promise<A
 
 export const deleteAdminService = async (id: string): Promise<void> => {
     await mainLink.delete(`/api/admin/services/${id}`);
+};
+
+export interface AdminServiceUpdate {
+    title?: string;
+    description?: string;
+    price?: number;
+    hourlyRate?: number;
+    paymentType?: string;
+    categories?: string[];
+    tags?: string[];
+    fromDate?: string;
+    toDate?: string;
+    equipment?: string;
+    maxApplicants?: number;
+    urgent?: boolean;
+    promoted?: boolean;
+    status?: string;
+    location?: { address?: string; city?: string };
+}
+
+export const updateAdminService = async (id: string, data: AdminServiceUpdate): Promise<AdminService> => {
+    const res = await mainLink.put<ApiResponse<{ service: AdminService }>>(`/api/admin/services/${id}`, data);
+    return res.data.data.service;
 };
 
 // ── Reviews ───────────────────────────────────────────────────────────────────
