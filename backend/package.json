@@ -5,7 +5,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "ts-node-dev --respawn --transpile-only server.js",
-    "start": "node server.js",
+    "start": "nodemon server.js",
     "test": "jest --forceExit --detectOpenHandles",
     "check:payments": "node scripts/check-payment-config.js",
     "e2e:flow": "node scripts/e2e-job-flow.js",

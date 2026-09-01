@@ -65,13 +65,11 @@ export function isOAuthReturnUrl(url: string | null | undefined): boolean {
 }
 
 /**
- * The provider start endpoint. `platform=mobile` is the ONLY thing the client says about
- * where it wants to come back to: a closed enum the server records in its own session, not
- * a URL. A client-supplied return URL here would be an open redirect with Google as the
- * referrer — see utils/oauthReturn.js.
+ * The app starts flow endpoints on the explicit mobile route so the server can choose the
+ * correct callback destination without accepting a caller-controlled return URL.
  */
 export function oauthStartUrl(provider: OAuthProvider, apiBase: string): string {
-  return `${apiBase.replace(/\/$/, '')}/auth/${provider}?platform=mobile`;
+  return `${apiBase.replace(/\/$/, '')}/auth/mobile/${provider}`;
 }
 
 /** Stops a forgotten browser tab holding the flow open forever. */

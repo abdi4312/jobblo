@@ -42,82 +42,92 @@ function emailVerifiedFrom(profile) {
   return undefined; // unknown -- treated as "not explicitly unverified"
 }
 
-passport.use(
-  new GoogleStrategy(
+function buildGoogleVerify() {
+  return async (req, accessToken, refreshToken, profile, done) => {
+    try {
+      const decision = await resolveOAuthLogin({
+        provider: 'google',
+        providerId: profile?.id,
+        email: profile?.emails?.[0]?.value,
+        emailVerified: emailVerifiedFrom(profile),
+        linkToUserId: req?.session?.googleLinkUserId || null,
+      });
+
+      if (req?.session?.googleLinkUserId) delete req.session.googleLinkUserId;
+
+      switch (decision.outcome) {
+        case 'login':
+        case 'linked':
+          return done(null, decision.user);
+
+        case 'invalid_identity':
+          return done(null, false, { code: 'google_identity' });
+
+        case 'link_conflict':
+          return done(null, false, { code: 'google_already_linked' });
+
+        case 'link_target_gone':
+          return done(null, false, { code: 'google_failed' });
+
+        case 'account_exists':
+          return done(null, false, { code: 'google_account_exists' });
+
+        case 'create': {
+          if (!decision.email) {
+            return done(null, false, { code: 'google_no_email' });
+          }
+
+          const user = await User.create({
+            name: profile.displayName || 'Google-bruker',
+            email: decision.email,
+            password: await createUnusablePassword(),
+            avatarUrl: profile.photos?.[0]?.value,
+            verified: false,
+            role: 'user',
+            oauthProviders: [{ provider: 'google', providerId: String(profile.id) }],
+          });
+
+          await ensureDefaultSubscription(user);
+          return done(null, user);
+        }
+
+        default:
+          console.error('Google OAuth: unhandled linking outcome %s', decision.outcome);
+          return done(null, false, { code: 'google_failed' });
+      }
+    } catch (error) {
+      console.error('Google OAuth error:', error.message);
+      return done(error, null);
+    }
+  };
+}
+
+function buildGoogleStrategy(callbackURL) {
+  return new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.CALLBACK_URL || '/api/auth/google/callback',
+      callbackURL,
       passReqToCallback: true,
     },
-    async (req, accessToken, refreshToken, profile, done) => {
-      try {
-        const decision = await resolveOAuthLogin({
-          provider: 'google',
-          providerId: profile?.id,
-          email: profile?.emails?.[0]?.value,
-          emailVerified: emailVerifiedFrom(profile),
-          // Set only when a signed-in person asked to connect Google to the account
-          // they are already using. The session cookie is the proof of ownership.
-          linkToUserId: req?.session?.googleLinkUserId || null,
-        });
+    buildGoogleVerify()
+  );
+}
 
-        // Single-use, like the Vipps state.
-        if (req?.session?.googleLinkUserId) delete req.session.googleLinkUserId;
-
-        switch (decision.outcome) {
-          case 'login':
-          case 'linked':
-            return done(null, decision.user);
-
-          case 'invalid_identity':
-            return done(null, false, { code: 'google_identity' });
-
-          case 'link_conflict':
-            return done(null, false, { code: 'google_already_linked' });
-
-          case 'link_target_gone':
-            return done(null, false, { code: 'google_failed' });
-
-          case 'account_exists':
-            // An account already holds this address. Refuse rather than link; they
-            // sign in with their password and connect Google from the profile page.
-            return done(null, false, { code: 'google_account_exists' });
-
-          case 'create': {
-            if (!decision.email) {
-              // User.email is required and unique -- no account is possible without it.
-              return done(null, false, { code: 'google_no_email' });
-            }
-
-            const user = await User.create({
-              name: profile.displayName || 'Google-bruker',
-              email: decision.email,
-              // Not a credential: a bcrypt hash of random bytes that were discarded.
-              password: await createUnusablePassword(),
-              avatarUrl: profile.photos?.[0]?.value,
-              verified: false,
-              role: 'user',
-              oauthProviders: [{ provider: 'google', providerId: String(profile.id) }],
-            });
-
-            // Idempotent upsert -- cannot produce a second subscription row.
-            await ensureDefaultSubscription(user);
-
-            return done(null, user);
-          }
-
-          default:
-            console.error('Google OAuth: unhandled linking outcome %s', decision.outcome);
-            return done(null, false, { code: 'google_failed' });
-        }
-      } catch (error) {
-        console.error('Google OAuth error:', error.message);
-        return done(error, null);
-      }
-    }
-  )
-);
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    'google-web',
+    buildGoogleStrategy(
+      process.env.GOOGLE_WEB_CALLBACK_URL || process.env.CALLBACK_URL || '/api/auth/web/google/callback'
+    )
+  );
+  passport.use(
+    'google-mobile',
+    buildGoogleStrategy(process.env.GOOGLE_MOBILE_CALLBACK_URL || '/api/auth/mobile/google/callback')
+  );
+} else {
+  console.warn('Google OAuth disabled: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are not set.');
+}
 
 // Serialize user for session
 passport.serializeUser((user, done) => {

@@ -6,14 +6,8 @@ const { setCookie } = require('../utils/setCookie.js');
 const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 const { authLimiter, otpSendLimiter, otpVerifyLimiter } = require('../middleware/rateLimiter');
 const { generateTokens, createSession } = require('../utils/tokenUtils');
-const {
-  mobileReturn,
-  oauthDestination,
-  rememberOAuthPlatform,
-  takeOAuthPlatform,
-  mintPlatformState,
-  noStore,
-} = require('../utils/oauthReturn');
+const { mobileReturn, noStore } = require('../utils/oauthReturn');
+const webOAuth = require('./webOAuth');
 
 const express = require('express');
 const router = express.Router();
@@ -158,27 +152,8 @@ router.get('/mobile-return', mobileReturn);
 // a cached redirect would replay the previous flow's authorization request instead.
 router.get('/google', optionalAuthenticate, async (req, res, next) => {
   noStore(res);
-
-  if (req.session && (req.query.link === '1' || req.query.intent === 'link') && req.userId) {
-    req.session.googleLinkUserId = String(req.userId);
-  } else if (req.session) {
-    delete req.session.googleLinkUserId;
-  }
-  // Persists both keys in one store write, and waits for it: Google can come back before
-  // an async session store has finished writing.
-  const platform = await rememberOAuthPlatform(req);
-
-  /**
-   * The Google strategy is constructed without `state`, so passport keeps a `NullStore`:
-   * it neither stores nor verifies this value and hands the whole parameter to us. A web
-   * flow mints nothing, `passport.authenticate` sees no `state` option, and the outgoing
-   * authorization request is exactly the one it has always been.
-   */
-  const state = mintPlatformState(platform);
-  return passport.authenticate('google', {
-    scope: ['profile', 'email'],
-    ...(state ? { state } : {}),
-  })(req, res, next);
+  req.baseUrl = '/api/auth/web';
+  return webOAuth.googleStart(req, res, next);
 });
 
 /**
@@ -198,45 +173,9 @@ router.get('/google', optionalAuthenticate, async (req, res, next) => {
  * phone.
  */
 router.get('/google/callback', (req, res, next) => {
-  const platform = takeOAuthPlatform(req);
-  const to = (options) => oauthDestination({ req, platform, ...options });
-
-  passport.authenticate('google', { session: false }, async (err, user, info) => {
-    if (err) {
-      console.error('Google callback error:', err.message);
-      return res.redirect(to({ error: 'google_failed' }));
-    }
-    if (!user) {
-      return res.redirect(to({ error: info?.code || 'google_failed' }));
-    }
-
-    if (user.isDeleted || user.accountStatus === 'deactivated') {
-      return res.redirect(to({ error: 'account_deactivated' }));
-    }
-
-    try {
-      const { accessToken, refreshToken } = await createSession(req, user._id);
-
-      res.cookie('accessToken', accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        maxAge: 60 * 60 * 1000, // 1 hour (matches token expiry)
-      });
-
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
-
-      return res.redirect(to({ accessToken }));
-    } catch (sessionError) {
-      console.error('Google callback session error:', sessionError.message);
-      return res.redirect(to({ error: 'google_failed' }));
-    }
-  })(req, res, next);
+  takeOAuthPlatform(req);
+  req.baseUrl = '/api/auth/web';
+  return webOAuth.googleCallback(req, res, next);
 });
 
 /**
@@ -262,7 +201,13 @@ router.get('/google/callback', (req, res, next) => {
 router.get('/idura', optionalAuthenticate, iduraAuthController.startIduraAuth);
 router.get('/idura/callback', iduraAuthController.iduraCallback);
 
-router.get('/vipps', optionalAuthenticate, vippsController.redirectToVipps);
-router.get('/vipps/callback', vippsController.vippsCallback);
+router.get('/vipps', optionalAuthenticate, (req, res) => {
+  req.baseUrl = '/api/auth/web';
+  return vippsController.redirectToVipps(req, res, { platform: 'web' });
+});
+router.get('/vipps/callback', (req, res) => {
+  req.baseUrl = '/api/auth/web';
+  return vippsController.vippsCallback(req, res, { platform: 'web' });
+});
 
 module.exports = router;

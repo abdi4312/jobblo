@@ -72,7 +72,7 @@ export default function SocialAuthButtons() {
     <div className="flex flex-col gap-2.5">
       <button
         type="button"
-        onClick={go('/api/auth/vipps')}
+        onClick={go('/api/auth/web/vipps')}
         className="flex h-11.5 items-center justify-center gap-2.5 rounded-xl bg-[#FF5B24] px-4 text-[0.9375rem] font-semibold text-white transition duration-150 hover:bg-[#F04E17] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FF5B24]/25 active:scale-[0.995]"
       >
         <span>Fortsett med</span>
@@ -107,7 +107,7 @@ export default function SocialAuthButtons() {
 
       <button
         type="button"
-        onClick={go('/api/auth/google')}
+        onClick={go('/api/auth/web/google')}
         className="flex h-11.5 items-center justify-center gap-2.5 rounded-xl border border-[#E6E7E1] bg-white px-4 text-[0.9375rem] font-semibold text-[#0B0B0B] transition duration-150 hover:border-[#D4D6CD] hover:bg-[#FAFBF7] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 active:scale-[0.995]"
       >
         <GoogleMark />

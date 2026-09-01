@@ -57,74 +57,49 @@ function statesMatch(a, b) {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
-exports.redirectToVipps = async (req, res) => {
-  // This endpoint mints a one-time state and records where the flow ends up, so it has to
-  // run on every attempt rather than being replayed from a browser's cache.
+function resolveVippsRoute(req, explicitPlatform) {
+  const requestPlatform =
+    typeof req?.query === 'object' && req.query && typeof req.query['platform'] === 'string'
+      ? req.query['platform'].trim().toLowerCase()
+      : '';
+  const routePlatform =
+    explicitPlatform ||
+    (requestPlatform === 'mobile' ? 'mobile' : undefined) ||
+    ((req?.baseUrl || '').includes('/mobile') ? 'mobile' : 'web');
+  const redirectVar = routePlatform === 'mobile' ? 'VIPPS_MOBILE_REDIRECT_URI' : 'VIPPS_WEB_REDIRECT_URI';
+  const redirectUri = (process.env[redirectVar] || process.env.VIPPS_REDIRECT_URI || '').trim();
+  return { platform: routePlatform, redirectUri };
+}
+
+exports.redirectToVipps = async (req, res, options = {}) => {
   noStore(res);
 
-  /**
-   * Recorded before anything below can fail, so a mobile flow that dies at the starting
-   * line still gets its answer delivered into the app instead of onto the website. Returns
-   * 'web' if there is no session to record it in — which is the case the very next check
-   * refuses outright anyway.
-   */
-  const platform = await rememberOAuthPlatform(req);
+  const { platform, redirectUri } = resolveVippsRoute(req, options.platform);
   const fail = (code) => res.redirect(oauthDestination({ req, platform, error: code }));
 
   try {
-    /**
-     * 1. Strong random state (CSRF protection), bound to this session — plus, for a mobile
-     * flow, the signed platform token appended to it. Vipps hands `state` back untouched,
-     * so that token is a second, session-independent answer to "where does this land"; the
-     * value stored below and the value compared at the callback are both this composite,
-     * so the state check itself is unchanged. See utils/oauthReturn.js.
-     */
     const state = withPlatformState(crypto.randomBytes(32).toString('hex'), platform);
 
     if (!req.session) {
-      // Without a session there is nowhere to bind the state, and an unbound state is
-      // not CSRF protection -- it is a parameter the attacker also controls. Fail here
-      // rather than starting a flow the callback is going to have to reject anyway.
       console.error('Vipps: session middleware unavailable; refusing to start OAuth');
       return fail(ERRORS.FAILED);
     }
 
-    /**
-     * `intent` separates the two things this button can mean.
-     *
-     * The route runs `optionalAuthenticate`, so `req.userId` is set when a signed-in
-     * person asked to connect Vipps to the account they are already using. That
-     * session cookie is the proof of ownership that an e-mail match is not, and it is
-     * the only thing that authorises attaching this identity to an existing account.
-     *
-     * It is recorded HERE, at the start of the flow, and read from the session on the
-     * way back -- never from a callback query parameter, which the attacker supplies.
-     */
     const wantsLink = req.query.link === '1' || req.query.intent === 'link';
     req.session.vippsAuth = {
       state,
       createdAt: Date.now(),
       linkUserId: wantsLink && req.userId ? String(req.userId) : null,
+      redirectUri,
     };
 
-    /**
-     * Wait for the store write before sending the browser to Vipps.
-     *
-     * connect-mongo writes asynchronously and the callback arrives on a different request.
-     * Redirecting first meant the state could still be in flight when Vipps came back on a
-     * fast connection, which surfaced as a random `vipps_invalid_state` — the same race
-     * `startIduraAuth` already guards against.
-     */
     await new Promise((resolve, reject) =>
       req.session.save((err) => (err ? reject(err) : resolve()))
     );
 
-    // 2. Build the authorize URL.
     const clientId = (process.env.VIPPS_CLIENT_ID || '').trim();
-    const redirectUri = (process.env.VIPPS_REDIRECT_URI || '').trim();
-
     if (!clientId || !redirectUri) {
-      console.error('Vipps: VIPPS_CLIENT_ID or VIPPS_REDIRECT_URI is missing');
+      console.error('Vipps: VIPPS_CLIENT_ID or route redirect URI is missing');
       return fail(ERRORS.FAILED);
     }
 
@@ -150,26 +125,14 @@ exports.redirectToVipps = async (req, res) => {
   }
 };
 
-exports.vippsCallback = async (req, res) => {
+exports.vippsCallback = async (req, res, options = {}) => {
   const { code, state, error } = req.query;
-
-  /**
-   * Where this flow ends up, decided from intent recorded at the start endpoint — read
-   * once, here, before any early return. A refused sign-in has to reach the app just as
-   * much as a successful one does.
-   *
-   * `failed()` and `succeeded()` produce byte-identical web URLs to the ones this
-   * controller built by hand before the mobile bridge existed, so the website is
-   * unaffected. `cancelled()` is the one place they differ: web keeps its silent return
-   * to /login, while the app is given a code, because its arrival screen has no other way
-   * to tell "you backed out" from "still working on it".
-   */
-  const platform = takeOAuthPlatform(req);
+  const platformFromState = takeOAuthPlatform(req);
+  const { platform: routePlatform, redirectUri: configuredRedirectUri } = resolveVippsRoute(req, options.platform || platformFromState);
+  const platform = options.platform || platformFromState || routePlatform;
   const succeeded = (accessToken) => oauthDestination({ req, platform, accessToken });
-  const failed = (errorCode, webPath) =>
-    oauthDestination({ req, platform, error: errorCode, webPath });
-  const cancelled = () =>
-    platform === 'mobile' ? failed(ERRORS.CANCELLED) : frontendUrl('login');
+  const failed = (errorCode, webPath) => oauthDestination({ req, platform, error: errorCode, webPath });
+  const cancelled = () => (platform === 'mobile' ? failed(ERRORS.CANCELLED) : frontendUrl('login'));
 
   /**
    * The state is single-use. Reading it clears it, whatever happens next, so a
@@ -186,6 +149,9 @@ exports.vippsCallback = async (req, res) => {
   if (!code) {
     return res.redirect(cancelled());
   }
+
+  const requestRedirectUri =
+    pending?.redirectUri || configuredRedirectUri || process.env.VIPPS_REDIRECT_URI?.trim();
 
   /**
    * State is now checked in EVERY environment.
@@ -211,13 +177,17 @@ exports.vippsCallback = async (req, res) => {
       ''
     );
 
-    // Exchange the code. The redirect_uri must match the one sent to authorize.
+    if (!requestRedirectUri) {
+      console.error('Vipps: no redirect URI available for this route');
+      return res.redirect(failed(ERRORS.FAILED));
+    }
+
     const tokenResponse = await axios.post(
       `${vippsBaseUrl}/access-management-1.0/access/oauth2/token`,
       new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: process.env.VIPPS_REDIRECT_URI?.trim(),
+        redirect_uri: requestRedirectUri,
       }).toString(),
       {
         headers: {

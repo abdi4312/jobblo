@@ -14,6 +14,8 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const indexRouter = require('./routes/index');
 const previewRouter = require('./routes/preview');
 const authRouter = require('./routes/auth');
+const webOAuthRouter = require('./routes/webOAuth');
+const mobileOAuthRouter = require('./routes/mobileOAuth');
 const usersRouter = require('./routes/users');
 const servicesRouter = require('./routes/service');
 const favoritesRouter = require('./routes/favorites');
@@ -238,6 +240,8 @@ if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_API_DOCS === 'tr
 app.use('/', previewRouter);
 app.use('/', indexRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/auth/web', webOAuthRouter);
+app.use('/api/auth/mobile', mobileOAuthRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/services', servicesRouter);
 app.use('/api/favorites', favoritesRouter);
