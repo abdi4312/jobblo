@@ -39,8 +39,11 @@ body {
 @theme {
   --color-orange-custom: #e08835;
   --color-custom-black: #0a0a0a;
-  --color-custom-green: #2f7e47;
-  --color-custom-green-light: #2f7e4733;
+  /* The logo's own sprout-stem green. Was #2f7e47, which was close to the mark but not
+     taken from it — so the ~90 places using `custom-green` sat a shade off the wordmark
+     they appeared next to. Sampled from the logo artwork; see src/theme/brand.ts. */
+  --color-custom-green: #2e6641;
+  --color-custom-green-light: #2e664133;
 }
 
 @theme inline {
@@ -171,8 +174,18 @@ body {
   }
 }
 
+/* The panel every step of the job form is built out of, and a handful of switchers.
+ *
+ * It used to be a translucent `bg-white/60` box with a white border and a 30 px drop
+ * shadow — which on the form's own tinted background rendered as a grey haze with no
+ * discernible edge, and stacked five deep down a step it read as fog rather than
+ * structure. It is the same card as everywhere else on the site now: white, one hairline,
+ * one radius, no shadow.
+ *
+ * `cursor: pointer` is gone with it. It was on the utility, so every non-interactive
+ * section of the form — image upload, price, dates — told the user it could be clicked. */
 @utility box-card-custom {
-  @apply rounded-[20px] bg-white/60 shadow-[0_10px_30px_rgba(0,0,0,0.04)] border border-white cursor-pointer;
+  @apply rounded-3xl border border-[#E6E7E1] bg-white;
 }
 
 @keyframes float {
@@ -187,4 +200,115 @@ body {
 
 .animate-float {
   animation: float 5s ease-in-out infinite;
+}
+
+/* The landing page's trust strip. The track holds the item list twice, so shifting it
+   half its width lands exactly on the start of the second copy and the loop is seamless. */
+@keyframes jb-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ── Loading motion ──────────────────────────────────────────────────────────
+   Three primitives, all on the brand palette and all deliberately quiet: nothing
+   bounces, nothing changes hue, nothing draws a character. What replaced the green
+   InfinitySpin and the 382 KB hourglass Lottie is a sweep, a shimmer and an arc.
+
+   Each one stops completely under prefers-reduced-motion rather than slowing down —
+   an indeterminate loader has nothing to say once it is not moving, so it simply
+   holds its resting state. */
+
+/* The hairline progress bar on the full-page loader. The segment is 40 % of the track
+   and travels past both ends, so there is no visible start or stop. */
+@keyframes jb-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+/* The sweep across a skeleton block. `translateX` only — animating a gradient's
+   position repaints the whole element on every frame. */
+@keyframes jb-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Skeletons: one class, so a placeholder cannot drift from the palette the way the
+   `bg-gray-200 animate-pulse` blocks did. */
+.jb-skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: #e5e7df;
+}
+
+.jb-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  animation: jb-shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jb-skeleton::after {
+    animation: none;
+  }
+}
+
+/* The confirmation mark on a completed payment.
+   The ring wipes in, then the tick draws — `stroke-dashoffset` on a path whose
+   `pathLength` is normalised to 1, so the same rule works at any size. This is the whole
+   animation: no bounce, no confetti. A page that tells someone money has left their
+   account should read as a receipt, not a celebration. */
+@keyframes jb-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.jb-check-ring {
+  stroke-dasharray: 1;
+  animation: jb-draw 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.jb-check-tick {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: jb-draw 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.4s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jb-check-ring,
+  .jb-check-tick {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* The rotating word in the landing hero. Measured in `em` so the rise scales with the
+   headline's own clamp() size rather than drifting as the viewport changes. */
+@keyframes jb-word-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.55em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

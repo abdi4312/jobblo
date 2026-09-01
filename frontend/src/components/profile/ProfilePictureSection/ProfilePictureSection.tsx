@@ -1,4 +1,5 @@
 import styles from './ProfilePictureSection.module.css';
+import { DEFAULT_AVATAR } from '../../../constants/assets';
 
 interface ProfilePictureSectionProps {
   profileImageUrl?: string;
@@ -6,7 +7,7 @@ interface ProfilePictureSectionProps {
 }
 
 export function ProfilePictureSection({
-  profileImageUrl = 'https://api.builder.io/api/v1/image/assets/TEMP/7278bc40eaffee1b3010ad41c4d262b59215cbf6?width=332',
+  profileImageUrl = DEFAULT_AVATAR,
   onChangeImage,
 }: ProfilePictureSectionProps) {
   const handleChangeImage = () => {

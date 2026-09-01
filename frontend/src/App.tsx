@@ -8,11 +8,10 @@ import { CookieBanner } from './components/shared/CookieBanner.tsx';
 import { App as AntApp } from 'antd';
 import { useAuth } from './features/auth/hook/useAuth.ts';
 import { useOrderApprovalSocket } from './features/notifications/hooks';
+import { NotificationRealtime } from './features/notifications/NotificationRealtime';
 import { useUserStore } from './stores/userStore';
 import { Toaster } from 'react-hot-toast';
-import MainLoading from './assets/loading/main-loading.gif';
-import Lottie from 'lottie-react';
-import Loging from './assets/animations/loading.json';
+import { PageLoader } from './components/Loading/PageLoader.tsx';
 
 export default function App() {
   const { isLoadingUser } = useAuth();
@@ -23,35 +22,62 @@ export default function App() {
   useOrderApprovalSocket(user?._id);
 
   if (isLoadingUser) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        {/* <img src={MainLoading} alt="Loading..." className="w-36 h-36" /> */}
-        <Lottie animationData={Loging} loop autoplay />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   const isMessagesPage = location.pathname.startsWith('/messages');
 
+  // The auth screens are their own full-viewport layout with their own branding.
+  // Rendering the site header and footer around them stacked three full-height
+  // regions on top of each other, which is what forced the login page to scroll.
+  const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
+
   return (
     <>
+      {/* Toasts were `#333` on white at a 12 px radius — a neutral grey that appears
+          nowhere else on the site, in a shape that matches nothing either. They are the
+          brand's near-black green now, with the pill radius the rest of the UI uses, and
+          success/error keep their own icon colour so the two read apart at a glance
+          rather than relying on the words alone. */}
       <Toaster
         position="bottom-center"
+        gutter={10}
         toastOptions={{
+          duration: 4000,
           style: {
-            background: '#333', // Thora dark gray/black
-            color: '#fff',
-            zIndex: 99999, // Max z-index
-            borderRadius: '12px',
+            background: '#122A1C',
+            color: '#FFFFFF',
+            zIndex: 99999,
+            borderRadius: '9999px',
+            padding: '10px 18px',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            lineHeight: 1.5,
+            maxWidth: '30rem',
+            boxShadow: '0 12px 32px rgba(11, 11, 11, 0.22)',
+          },
+          success: {
+            iconTheme: { primary: '#8FBF9A', secondary: '#122A1C' },
+          },
+          error: {
+            duration: 5000,
+            iconTheme: { primary: '#E8A8A0', secondary: '#122A1C' },
+          },
+          loading: {
+            iconTheme: { primary: '#8FBF9A', secondary: '#122A1C' },
           },
         }}
       />
       <AntApp>
+        {/* All notification socket handling — sound, toast, system notification, cache
+            updates, reconnect and foreground recovery — lives here and is mounted exactly
+            once. It renders nothing. */}
+        <NotificationRealtime />
         <ScrollToTop />
         <CookieBanner />
-        <Header />
+        {!isAuthPage && <Header />}
         <Outlet />
-        {!isMessagesPage && <Footer />}
+        {!isMessagesPage && !isAuthPage && <Footer />}
       </AntApp>
     </>
   );

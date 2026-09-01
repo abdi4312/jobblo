@@ -1,8 +1,20 @@
+/**
+ * NOTE: nothing renders this component.
+ *
+ * It belongs to the profile implementation that components/profile/ProfilePage.tsx
+ * replaced — `<CoinsSection />` appears in no JSX anywhere in the app, which is why the
+ * BankID card it used to hold was invisible on /profile. The card now lives in the real
+ * profile tree (ProfilePage for mobile, ItemsGrid's right column for desktop).
+ *
+ * Left in place rather than deleted because it is still exported from
+ * components/profile/index.ts and removing it is unrelated cleanup; its import is
+ * repointed so it keeps compiling.
+ */
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../../../stores/userStore';
 import { Coins } from 'lucide-react';
-import Verified from '../../verified/Verified';
+import { IdentityVerificationCard } from '../IdentityVerificationCard';
 
 export function CoinsSection() {
   const { fetchProfile } = useUserStore((state) => state);
@@ -38,7 +50,7 @@ export function CoinsSection() {
             </button>
           </div>
         </div>
-        <Verified />
+        <IdentityVerificationCard user={user} isOwnProfile />
       </div>
     </>
   );

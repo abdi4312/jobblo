@@ -1,95 +1,120 @@
 import { useNavigate } from 'react-router-dom';
+import { MapPin, ShieldCheck } from 'lucide-react';
 import { useJobs } from '../../features/jobsList/hooks';
-import { MapPin, ShieldCheck, Sprout } from 'lucide-react';
+import { dateFormatter } from '../../utils/dateFormatter';
+import { jobImage } from '../../assets/images/categories';
+import {
+  CARD,
+  CARD_INTERACTIVE,
+  CONTAINER,
+  HEADING,
+  MICRO_LABEL,
+  PILL_SECONDARY,
+  SECTION,
+} from '../../theme/brand';
+
+type Job = {
+  _id: string;
+  title: string;
+  description?: string;
+  price?: number | string;
+  promoted?: boolean;
+  images?: string[];
+  categories?: string[];
+  createdAt?: string;
+  location?: { city?: string; address?: string };
+};
 
 export function Jobs() {
   const navigate = useNavigate();
-  const { data: jobsData, isLoading: jobsLoading } = useJobs({
-    limit: 6,
-    tab: 'Discover',
-  });
+  const { data: jobsData, isLoading } = useJobs({ limit: 6, tab: 'Discover' });
 
-  const jobs = jobsData?.pages.flatMap((page) => page.data) || [];
+  const jobs: Job[] = jobsData?.pages.flatMap((page) => page.data) ?? [];
 
   return (
-    <section className="py-10 sm:py-15 px-4 sm:px-12 max-w-[1100px] mx-auto">
-      <div className="flex justify-between items-center mb-3">
-        <h2 className="text-[22px] sm:text-[28px] font-normal text-custom-black">
-          Populære <em className="text-custom-green not-italic">oppdrag</em>
-        </h2>
+    <section className={`${CONTAINER} ${SECTION}`}>
+      <div className="mb-10 flex flex-wrap items-end justify-between gap-6">
+        <div>
+          <p className={MICRO_LABEL}>05 — Ute nå</p>
+          <h2 className={`mt-4 ${HEADING}`}>
+            Hvem trenger <span className="text-[#2E6641]">hjelp</span> nå?
+          </h2>
+        </div>
         <button
+          type="button"
           onClick={() => navigate('/search/job/all')}
-          className="text-[12px] sm:text-[14px] text-custom-green no-underline bg-transparent border-none cursor-pointer"
+          className={PILL_SECONDARY}
         >
-          Se alle
+          Se alle oppdrag
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-        {jobsLoading
-          ? Array.from({ length: 6 }).map((_, index) => (
-              <div
-                key={index}
-                className="bg-white border border-black/8 rounded-[12px] sm:rounded-[14px] overflow-hidden animate-pulse"
-              >
-                <div className="h-[70px] sm:h-[90px] bg-gray-200" />
-                <div className="p-2 sm:p-[10px_12px]">
-                  <div className="h-3 sm:h-4 bg-gray-200 rounded mb-0.5 sm:mb-1 w-3/4" />
-                  <div className="h-2 sm:h-3 bg-gray-200 rounded mb-1.5 sm:mb-2 w-1/2" />
-                  <div className="flex justify-between items-center">
-                    <div className="h-3 sm:h-4 bg-gray-200 rounded w-1/4" />
-                    <div className="h-4 sm:h-5 bg-gray-200 rounded-full w-16 sm:w-20" />
-                  </div>
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {isLoading
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className={`${CARD} p-4`}>
+                <div className="jb-skeleton h-47.5 rounded-2xl" />
+                <div className="mt-5 space-y-2.5 px-2">
+                  <div className="jb-skeleton h-5 w-3/4 rounded" />
+                  <div className="jb-skeleton h-3.5 w-1/2 rounded" />
                 </div>
               </div>
             ))
-          : jobs.length > 0
-            ? jobs.slice(0, 6).map((job: any) => (
-                <div
-                  key={job._id}
-                  className={`bg-white border border-black/8 rounded-[12px] sm:rounded-[14px] overflow-hidden cursor-pointer ${job.promoted ? 'border-[1.5px] border-[#ca8a04]' : ''}`}
-                  onClick={() => navigate(`/job-listing/${job._id}`)}
-                >
-                  <div className="h-[70px] sm:h-[90px] bg-[#f0faf0] flex items-center justify-center overflow-hidden">
-                    {job.images && job.images[0] ? (
-                      <img
-                        src={job.images[0]}
-                        alt={job.title}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <Sprout size={28} className="text-[#16a34a] sm:w-9 sm:h-9" />
-                    )}
-                  </div>
-                  <div className="p-2 sm:p-[10px_12px]">
-                    <div className="flex items-start justify-between gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
-                      <div className="text-xs sm:text-sm font-medium text-[#1a1a1a] leading-tight line-clamp-2">
-                        {job.title}
-                      </div>
-                      {job.promoted && (
-                        <span className="text-[8px] sm:text-[9px] text-[#92400e] bg-[#fef9c3] rounded-full px-1.5 sm:px-[6px] py-0.5 sm:py-[2px] border border-[#fde68a] whitespace-nowrap flex-shrink-0">
-                          Sponset
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[10px] sm:text-xs text-[#888] mb-1.5 sm:mb-2 flex items-center gap-0.5 sm:gap-1">
-                      <MapPin size={8} sm={10} />
-                      {job.location?.city || job.location?.address || 'Norge'}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs sm:text-sm font-medium text-[#1a1a1a]">
-                        {typeof job.price === 'number' ? job.price.toLocaleString() : job.price} kr
-                      </span>
-                      <span className="flex items-center gap-0.5 sm:gap-1 bg-[#f0faf0] rounded-full px-1.5 sm:px-[7px] py-0.5 sm:py-[2px] text-[10px] sm:text-xs text-[#166534] font-medium">
-                        <ShieldCheck size={9} sm={11} />
-                        SafePay
-                      </span>
-                    </div>
-                  </div>
+          : jobs.slice(0, 6).map((job, i) => (
+              <button
+                key={job._id}
+                type="button"
+                onClick={() => navigate(`/job-listing/${job._id}`)}
+                className={`${CARD_INTERACTIVE} flex cursor-pointer flex-col gap-5 p-4 pb-6 text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15`}
+              >
+                <div className="h-47.5 overflow-hidden rounded-2xl bg-[#EAF1E9]">
+                  <img
+                    src={jobImage(job, i)}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="size-full object-cover"
+                  />
                 </div>
-              ))
-            : null}
+
+                <div className="flex items-center justify-between gap-3 px-2">
+                  <span className="flex h-7 items-center gap-1.5 rounded-full bg-[#EAF1E9] px-3 text-[0.75rem] font-semibold text-[#2E6641]">
+                    <ShieldCheck size={12} strokeWidth={2.4} />
+                    SafePay
+                  </span>
+                  <span className="truncate text-[0.75rem] text-[#9B9E96]">
+                    {job.promoted
+                      ? 'Sponset'
+                      : job.createdAt
+                        ? dateFormatter.toRelative(job.createdAt)
+                        : ''}
+                  </span>
+                </div>
+
+                <h3 className="line-clamp-2 px-2 text-[1.25rem] font-semibold leading-tight tracking-[-0.03em] text-[#0B0B0B]">
+                  {job.title}
+                </h3>
+
+                {job.description && (
+                  <p className="line-clamp-2 px-2 text-[0.875rem] leading-relaxed text-[#63665F]">
+                    {job.description}
+                  </p>
+                )}
+
+                <div className="mx-2 mt-auto flex items-center justify-between gap-3 border-t border-[#E6E7E1] pt-5">
+                  <span className="flex min-w-0 items-center gap-1.5 text-[0.8125rem] text-[#63665F]">
+                    <MapPin size={14} strokeWidth={1.9} className="shrink-0 text-[#9B9E96]" />
+                    <span className="truncate">
+                      {job.location?.city || job.location?.address || 'Norge'}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-[1.0625rem] font-bold tabular-nums tracking-[-0.02em] text-[#0B0B0B]">
+                    {typeof job.price === 'number' ? job.price.toLocaleString('nb-NO') : job.price}{' '}
+                    kr
+                  </span>
+                </div>
+              </button>
+            ))}
       </div>
     </section>
   );

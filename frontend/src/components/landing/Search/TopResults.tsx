@@ -77,7 +77,7 @@ export const TopResults = ({
               subtitle={job.description?.substring(0, 50) + '...' || 'Se jobbdetaljer'}
               price={job.price}
               onClick={() => {
-                onNavigate(`/service/${job._id}`);
+                onNavigate(`/job-listing/${job._id}`);
                 onCloseDropdown();
               }}
             />

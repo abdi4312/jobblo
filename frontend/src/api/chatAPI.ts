@@ -33,12 +33,34 @@ export interface Chat {
     categories?: string[];
     isSold?: boolean;
   };
+  /**
+   * From `getChatById` this is one page of the thread (most recent first page by
+   * default); from the inbox list it is only the single latest message.
+   */
   messages: ChatMessage[];
+  /** Present on getChatById — describes what remains to be loaded. */
+  messagePage?: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
   lastMessage?: string;
   updatedAt?: string;
   deletedFor?: string[];
   orderId?: any;
-  status?: 'requested' | 'agreed' | 'paid' | 'contracted' | 'completed' | 'cancelled';
+  // `in_progress` and `disputed` are real backend values and were missing here, which
+  // is why the conversation badge fell through to its default and read "Forespørsel"
+  // for a job that was actually under way.
+  status?:
+    | 'requested'
+    | 'agreed'
+    | 'paid'
+    | 'contracted'
+    | 'in_progress'
+    | 'completed'
+    | 'disputed'
+    | 'cancelled';
   agreedPrice?: number;
 }
 
@@ -59,10 +81,19 @@ export const getMyChats = async (): Promise<Chat[]> => {
 };
 
 /**
- * Get a specific chat by ID
+ * Get a specific chat by ID.
+ *
+ * The thread is paginated: without `offset` the server returns the most recent page
+ * (50 by default) plus a `messagePage` block describing what is left. Pass
+ * `offset = messages already loaded` to walk further back through the history.
  */
-export const getChatById = async (chatId: string): Promise<Chat> => {
-  const response = await mainLink.get(`/api/chats/${chatId}`);
+export const getChatById = async (
+  chatId: string,
+  opts?: { limit?: number; offset?: number }
+): Promise<Chat> => {
+  const response = await mainLink.get(`/api/chats/${chatId}`, {
+    params: { limit: opts?.limit, offset: opts?.offset },
+  });
   return response.data;
 };
 

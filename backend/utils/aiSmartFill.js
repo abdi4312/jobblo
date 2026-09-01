@@ -290,6 +290,20 @@ function validateSmartFillOutput(raw, ctx = {}) {
   ).slice(0, 5);
   cleaned.skills = skills;
 
+  // 7b. Open questions — what the model chose to ASK instead of inventing.
+  // Bounded the same way skills are: the model is not trusted to keep this
+  // short by itself, and the UI renders them as a list.
+  let openQuestions = Array.isArray(raw && raw.openQuestions) ? raw.openQuestions.slice() : [];
+  openQuestions = Array.from(
+    new Set(
+      openQuestions
+        .map((q) => (q || '').toString().trim())
+        .filter(Boolean)
+        .map((q) => (q.length > 160 ? q.slice(0, 157) + '…' : q))
+    )
+  ).slice(0, 5);
+  cleaned.openQuestions = openQuestions;
+
   // 8. Category — if AI suggested one that is in the allowed list keep it,
   // else fall back to user's existing (don't let AI move jobs to unknown cats).
   const catAllowed = Array.isArray(ctx.categoryAllowList)

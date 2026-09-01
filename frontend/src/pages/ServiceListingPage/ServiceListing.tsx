@@ -10,12 +10,15 @@ import {
   ChevronRight,
   Search,
   X,
-  Tag,
   AlertCircle,
   Locate,
+  ArrowRight,
+  Zap,
 } from 'lucide-react';
 import { Slider } from 'antd';
 import { JobCard } from '../../components/component/jobCard/JobCard';
+import { JobCardSkeleton } from '../../components/Loading/JobCardSkeleton';
+import { CARD, GREEN, LINE, MICRO_LABEL, PILL_PRIMARY } from '../../theme/brand';
 const MapComponent = lazy(() =>
   import('../../components/component/map/MapComponent').then((module) => ({
     default: module.MapComponent,
@@ -24,6 +27,25 @@ const MapComponent = lazy(() =>
 import { useJobs } from '../../features/jobsList/hooks';
 import { useFilterOptions } from '../../features/jobsList/filterHooks';
 import { getLocationTree, getLocationStats, type LocationNode } from '../../api/locationAPI';
+
+/**
+ * The tick in the area tree.
+ *
+ * It used to be a real `<input type="checkbox" readOnly>` inside a clickable `<div>` — an
+ * input that could be focused but never operated, in a container that was not a control at
+ * all. The rows are buttons now, so the state is drawn rather than inputted, and the button
+ * itself carries the semantics.
+ */
+const Box = ({ checked }: { checked: boolean }) => (
+  <span
+    aria-hidden="true"
+    className={`flex size-4 shrink-0 items-center justify-center rounded-[0.3rem] border transition-colors ${
+      checked ? 'border-[#2E6641] bg-[#2E6641] text-white' : 'border-[#D4D6CD] bg-white'
+    }`}
+  >
+    {checked && <Check size={11} strokeWidth={3.5} />}
+  </span>
+);
 
 const ServiceListing = () => {
   const { categoryName } = useParams();
@@ -51,7 +73,6 @@ const ServiceListing = () => {
     decodedCategoryName && decodedCategoryName !== 'all' ? [decodedCategoryName] : []
   );
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [locationSearch, setLocationSearch] = useState('');
   const [priceRange, setPriceRange] = useState({ min: 0, max: 100000 });
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [isUrgent, setIsUrgent] = useState(false);
@@ -241,19 +262,19 @@ const ServiceListing = () => {
     );
   };
 
-  const filteredLocations = useMemo(() => {
-    if (!filterOptions?.locations) return [];
-    if (!locationSearch.trim()) return filterOptions.locations;
-
-    return filterOptions.locations.filter((loc) =>
-      loc.name.toLowerCase().includes(locationSearch.toLowerCase())
-    );
-  }, [filterOptions?.locations, locationSearch]);
-
+  /**
+   * The API is the source of truth for these (see backend/utils/serviceSort.js); this
+   * is only the offline fallback, kept in step with it by hand.
+   *
+   * Before the sort contract was unified, the API served English labels here
+   * ("Newest first", "Price: low to high"), which won over this Norwegian fallback
+   * whenever the request succeeded — so the Norwegian text below was almost never
+   * what users saw.
+   */
   const sortOptions = filterOptions?.sortOptions || [
     { label: 'Nyeste først', value: 'newest' },
-    { label: 'Pris: lav til høy', value: 'price_low' },
-    { label: 'Pris: høy til lav', value: 'price_high' },
+    { label: 'Pris – lavest først', value: 'price_low' },
+    { label: 'Pris – høyest først', value: 'price_high' },
     { label: 'Mest relevant', value: 'relevant' },
   ];
 
@@ -327,12 +348,6 @@ const ServiceListing = () => {
       const target = qs.length ? `/search/job/all?${qs}` : `/search/job/all`;
       navigate(target, { replace: true });
     }
-  };
-
-  const toggleLocation = (locName: string) => {
-    setSelectedLocations((prev) =>
-      prev.includes(locName) ? prev.filter((l) => l !== locName) : [...prev, locName]
-    );
   };
 
   const toggleExpand = (catId: string) => {
@@ -435,156 +450,248 @@ const ServiceListing = () => {
     setPriceRange({ min: 0, max: 100000 });
   };
 
+  // ── Filter drawer, mobile ──────────────────────────────────────────────────
+  // Two flags rather than one: the panel has to be in the DOM for a frame at its
+  // off-screen position before the class that slides it in is applied, or the browser
+  // has nothing to animate from. On the way out the unmount waits for the transition.
+  const [drawerMounted, setDrawerMounted] = useState(false);
+  const [drawerShown, setDrawerShown] = useState(false);
+
+  useEffect(() => {
+    if (isFilterDrawerOpen) {
+      setDrawerMounted(true);
+      const frame = requestAnimationFrame(() => setDrawerShown(true));
+      return () => cancelAnimationFrame(frame);
+    }
+    setDrawerShown(false);
+    const timer = setTimeout(() => setDrawerMounted(false), 300);
+    return () => clearTimeout(timer);
+  }, [isFilterDrawerOpen]);
+
+  // Escape closes it, and the page behind stops scrolling while it is open.
+  useEffect(() => {
+    if (!isFilterDrawerOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setIsFilterDrawerOpen(false);
+    document.addEventListener('keydown', onKey);
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previous;
+    };
+  }, [isFilterDrawerOpen]);
+
+  // ── Active filters ─────────────────────────────────────────────────────────
+  const hasPriceFilter = priceRange.min !== 0 || priceRange.max !== 100000;
+  const areaCount =
+    selectedCountyCodes.length + selectedMunicipalityCodes.length + selectedAreaCodes.length;
+  const activeFilterCount =
+    selectedCategories.length + areaCount + (isUrgent ? 1 : 0) + (hasPriceFilter ? 1 : 0);
+
+  /** Name for a county/municipality/area code, for the removable chips. */
+  const areaName = (code: string) => {
+    for (const county of locationTree) {
+      if (county.code === code) return county.name;
+      for (const municipality of county.children || []) {
+        if (municipality.code === code) return municipality.name;
+        const area = municipality.children?.find((a) => a.code === code);
+        if (area) return area.name;
+      }
+    }
+    return code;
+  };
+
+  const clearAllFilters = () => {
+    setSelectedCountyCodes([]);
+    setSelectedMunicipalityCodes([]);
+    setSelectedAreaCodes([]);
+    setSelectedLocations([]);
+    setIsUrgent(false);
+    setPriceRange({ min: 0, max: 100000 });
+    clearCategoryFilter();
+  };
+
+  /** One row per active filter, each able to remove just itself. */
+  const activeChips: { key: string; label: string; remove: () => void }[] = [
+    ...selectedCategories.map((name) => ({
+      key: `cat-${name}`,
+      label: name,
+      remove: () =>
+        selectedCategories.length === 1 ? clearCategoryFilter() : toggleCategory(name),
+    })),
+    ...selectedCountyCodes.map((code) => ({
+      key: `county-${code}`,
+      label: areaName(code),
+      remove: () => toggleCounty(code),
+    })),
+    ...selectedMunicipalityCodes.map((code) => ({
+      key: `mun-${code}`,
+      label: areaName(code),
+      remove: () => toggleMunicipality(code),
+    })),
+    ...selectedAreaCodes.map((code) => ({
+      key: `area-${code}`,
+      label: areaName(code),
+      remove: () => toggleArea(code),
+    })),
+    ...(isUrgent ? [{ key: 'urgent', label: 'Haster', remove: () => setIsUrgent(false) }] : []),
+    ...(hasPriceFilter
+      ? [
+          {
+            key: 'price',
+            label: `${priceRange.min.toLocaleString('nb-NO')}–${
+              priceRange.max === 100000 ? '∞' : priceRange.max.toLocaleString('nb-NO')
+            } kr`,
+            remove: handlePriceReset,
+          },
+        ]
+      : []),
+  ];
+
+  // ── Shared class strings for this page ─────────────────────────────────────
+  /** A sidebar block: a label, then its controls. No card, no shadow. */
+  const FILTER_SECTION = 'border-t border-[#E6E7E1] pt-6 first:border-t-0 first:pt-0';
+  /** A row in the category or area tree. */
+  const TREE_ROW =
+    'flex-1 rounded-lg px-2.5 py-1.5 text-left text-[0.875rem] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2E6641]/25';
+  const COUNT_PILL = 'ml-auto shrink-0 text-[0.75rem] tabular-nums';
+
   const renderFilterSidebarContent = () => (
-    <div className="space-y-8">
-      {/* 0. Urgent Filter Toggle */}
-      <section
-        className={`p-6 rounded-3xl border-2 transition-all duration-300 flex items-center justify-between cursor-pointer shadow-sm ${
-          isUrgent ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-white'
-        }`}
-        onClick={() => setIsUrgent(!isUrgent)}
-      >
-        <div className="flex items-center gap-4">
-          <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
-              isUrgent
-                ? 'bg-red-500 text-white shadow-lg shadow-red-200'
-                : 'bg-gray-100 text-gray-400'
-            }`}
-          >
-            <AlertCircle size={24} className={isUrgent ? 'animate-pulse' : ''} />
-          </div>
-          <div>
-            <p
-              className={`text-base font-bold transition-colors ${
-                isUrgent ? 'text-red-700' : 'text-gray-700'
+    <div className="space-y-6">
+      {/* ── Haster ─────────────────────────────────────────────────────────── */}
+      <section className={FILTER_SECTION}>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={isUrgent}
+          onClick={() => setIsUrgent(!isUrgent)}
+          className="flex w-full items-center justify-between gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
+        >
+          <span className="flex items-center gap-3">
+            <span
+              className={`flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                isUrgent ? 'bg-[#122A1C] text-white' : 'bg-[#EAF1E9] text-[#2E6641]'
               }`}
             >
-              Haster
-            </p>
-            <p className="text-xs text-gray-500 font-medium">Vis kun hasteoppdrag</p>
-          </div>
-        </div>
-        <div
-          className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 shrink-0 ${
-            isUrgent ? 'bg-red-500' : 'bg-gray-200'
-          }`}
-        >
-          <div
-            className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
-              isUrgent ? 'translate-x-5' : 'translate-x-0'
+              <Zap size={16} strokeWidth={2.2} />
+            </span>
+            <span>
+              <span className="block text-[0.9375rem] font-semibold text-[#0B0B0B]">Haster</span>
+              <span className="block text-[0.8125rem] text-[#63665F]">Vis kun hasteoppdrag</span>
+            </span>
+          </span>
+          <span
+            className={`h-6 w-11 shrink-0 rounded-full p-0.75 transition-colors duration-200 ${
+              isUrgent ? 'bg-[#2E6641]' : 'bg-[#E6E7E1]'
             }`}
-          />
-        </div>
+          >
+            <span
+              className={`block size-4.5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                isUrgent ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </span>
+        </button>
       </section>
 
-      {/* 1. Categories & Subcategories */}
-      <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-xl font-bold mb-5 text-gray-900">Kategorier</h3>
-        <div className="space-y-2">
+      {/* ── Kategorier ─────────────────────────────────────────────────────── */}
+      <section className={FILTER_SECTION}>
+        <h3 className={`${MICRO_LABEL} mb-3`}>Kategorier</h3>
+        <div className="space-y-0.5">
           {isFiltersLoading ? (
-            <div className="flex items-center gap-2 text-gray-400 py-4">
-              <Loader2 size={16} className="animate-spin" />
-              <span className="text-sm">Laster...</span>
+            <div className="space-y-2 py-1">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="jb-skeleton h-7 rounded-lg" />
+              ))}
             </div>
           ) : (
             <>
               {/* Alle (All categories) — first option, default when none selected */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between group">
-                  <button
-                    onClick={clearCategoryFilter}
-                    className={`flex-1 text-left font-medium py-2 px-3 rounded-xl transition-all duration-200 ${
-                      selectedCategories.length === 0
-                        ? 'bg-[#2F7E4711] text-custom-green'
-                        : 'text-gray-700 hover:bg-gray-50 hover:text-custom-green'
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={clearCategoryFilter}
+                  className={`${TREE_ROW} flex items-center gap-2 ${
+                    selectedCategories.length === 0
+                      ? 'bg-[#EAF1E9] font-semibold text-[#2E6641]'
+                      : 'text-[#0B0B0B] hover:bg-[#F4F6F0]'
+                  }`}
+                >
+                  Alle
+                  <span
+                    className={`${COUNT_PILL} ${
+                      selectedCategories.length === 0 ? 'text-[#2E6641]' : 'text-[#9B9E96]'
                     }`}
                   >
-                    <span className="flex items-center gap-2">
-                      Alle
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          selectedCategories.length === 0
-                            ? 'bg-[#2F7E4722] text-custom-green'
-                            : 'bg-gray-100 text-gray-400'
-                        }`}
-                      >
-                        {allCategoryCount || 0}
-                      </span>
-                    </span>
-                  </button>
-                  {/* Alle has no subcategories — keep layout balanced with a spacer */}
-                  <div className="w-[40px] shrink-0" />
-                </div>
+                    {allCategoryCount || 0}
+                  </span>
+                </button>
+                {/* Alle has no subcategories — keep the rows below aligned with a spacer */}
+                <div className="size-7 shrink-0" />
               </div>
 
               {filterCategories.length === 0 ? (
-                <p className="text-sm text-gray-400 pt-2">Ingen kategorier funnet</p>
+                <p className="pt-2 text-[0.875rem] text-[#9B9E96]">Ingen kategorier funnet</p>
               ) : (
                 filterCategories.map((cat) => (
-                  <div key={cat._id} className="space-y-1">
-                    <div className="flex items-center justify-between group">
+                  <div key={cat._id}>
+                    <div className="flex items-center gap-1">
                       <button
                         onClick={() => toggleCategory(cat.name)}
-                        className={`flex-1 text-left font-medium py-2 px-3 rounded-xl transition-all duration-200 ${
+                        className={`${TREE_ROW} flex items-center gap-2 ${
                           selectedCategories.includes(cat.name)
-                            ? 'bg-[#2F7E4711] text-custom-green'
-                            : 'text-gray-700 hover:bg-gray-50 hover:text-custom-green'
+                            ? 'bg-[#EAF1E9] font-semibold text-[#2E6641]'
+                            : 'text-[#0B0B0B] hover:bg-[#F4F6F0]'
                         }`}
                       >
-                        <span className="flex items-center gap-2">
-                          {cat.name}
-                          <span
-                            className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                              selectedCategories.includes(cat.name)
-                                ? 'bg-[#2F7E4722] text-custom-green'
-                                : 'bg-gray-100 text-gray-400'
-                            }`}
-                          >
-                            {cat.count || 0}
-                          </span>
-                        </span>
-                      </button>
-                      {cat.subcategories && cat.subcategories.length > 0 && (
-                        <button
-                          onClick={() => toggleExpand(cat._id)}
-                          className={`p-2 rounded-lg transition-all duration-200 ${
-                            expandedCategories.includes(cat._id)
-                              ? 'bg-[#2F7E4711] text-custom-green'
-                              : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                        <span className="truncate">{cat.name}</span>
+                        <span
+                          className={`${COUNT_PILL} ${
+                            selectedCategories.includes(cat.name)
+                              ? 'text-[#2E6641]'
+                              : 'text-[#9B9E96]'
                           }`}
                         >
+                          {cat.count || 0}
+                        </span>
+                      </button>
+                      {cat.subcategories && cat.subcategories.length > 0 ? (
+                        <button
+                          onClick={() => toggleExpand(cat._id)}
+                          aria-label={`Vis underkategorier for ${cat.name}`}
+                          aria-expanded={expandedCategories.includes(cat._id)}
+                          className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[#9B9E96] transition-colors hover:bg-[#F4F6F0] hover:text-[#0B0B0B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2E6641]/25"
+                        >
                           {expandedCategories.includes(cat._id) ? (
-                            <ChevronDown size={18} />
+                            <ChevronDown size={15} />
                           ) : (
-                            <ChevronRight size={18} />
+                            <ChevronRight size={15} />
                           )}
                         </button>
+                      ) : (
+                        <div className="size-7 shrink-0" />
                       )}
                     </div>
                     {expandedCategories.includes(cat._id) && (
-                      <div className="pl-3 space-y-1 ml-3 border-l-2 border-[#2F7E4722]">
+                      <div className="ml-3.5 space-y-0.5 border-l border-[#E6E7E1] pl-2.5">
                         {cat.subcategories.map((sub) => (
                           <button
                             key={sub._id}
                             onClick={() => toggleCategory(sub.name)}
-                            className={`w-full text-left py-2 px-3 rounded-xl text-sm transition-all duration-200 ${
+                            className={`${TREE_ROW} flex w-full items-center gap-2 ${
                               selectedCategories.includes(sub.name)
-                                ? 'bg-[#2F7E4711] text-custom-green font-semibold'
-                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                                ? 'bg-[#EAF1E9] font-semibold text-[#2E6641]'
+                                : 'text-[#63665F] hover:bg-[#F4F6F0] hover:text-[#0B0B0B]'
                             }`}
                           >
-                            <span className="flex items-center gap-2">
-                              {sub.name}
-                              <span
-                                className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                                  selectedCategories.includes(sub.name)
-                                    ? 'bg-[#2F7E4722] text-custom-green'
-                                    : 'bg-gray-100 text-gray-300'
-                                }`}
-                              >
-                                {sub.count || 0}
-                              </span>
+                            <span className="truncate">{sub.name}</span>
+                            <span
+                              className={`${COUNT_PILL} ${
+                                selectedCategories.includes(sub.name)
+                                  ? 'text-[#2E6641]'
+                                  : 'text-[#9B9E96]'
+                              }`}
+                            >
+                              {sub.count || 0}
                             </span>
                           </button>
                         ))}
@@ -598,130 +705,112 @@ const ServiceListing = () => {
         </div>
       </section>
 
-      {/* 2. Map View Link/Button */}
-      <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:border-custom-green-light transition-all cursor-pointer group overflow-hidden">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.05)] group-hover:scale-105 transition-transform z-10">
-              <MapIcon className="text-custom-green" size={28} strokeWidth={1.5} />
-            </div>
-            <div>
-              <h4 className="text-xl font-bold text-gray-900">Kartvisning</h4>
-              <p className="text-sm text-gray-500 font-medium">Utforsk oppdrag nær deg</p>
-            </div>
-          </div>
-
-          {/* Real Map Preview */}
-          <div className="w-full h-[180px] rounded-2xl overflow-hidden relative border border-gray-50 group-hover:border-[#ff8a7a]/20 transition-all">
-            <Suspense
-              fallback={
-                <div className="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center text-gray-400">
-                  Laster kart...
-                </div>
-              }
-            >
-              <MapComponent coordinates={mapCoordinates} circleRadius={mapRadius} />
-            </Suspense>
-
-            {/* Current location button */}
-            <button
-              onClick={handleUseCurrentLocation}
-              disabled={isLocating}
-              title="Bruk min nåværende posisjon"
-              className="absolute top-2 left-2 z-10 flex items-center gap-1.5 bg-white/95 backdrop-blur rounded-full px-3 py-1.5 shadow-md text-xs font-semibold text-gray-700 hover:bg-white hover:text-custom-green transition-all disabled:opacity-60 cursor-pointer"
-            >
-              {isLocating ? (
-                <Loader2 size={13} className="animate-spin text-custom-green" />
-              ) : (
-                <Locate size={13} className="text-custom-green" />
-              )}
-              {isLocating ? 'Henter...' : 'Min posisjon'}
-            </button>
-          </div>
+      {/* ── Kart ───────────────────────────────────────────────────────────── */}
+      <section className={FILTER_SECTION}>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className={MICRO_LABEL}>Kart</h3>
+          <button
+            onClick={handleUseCurrentLocation}
+            disabled={isLocating}
+            className="inline-flex items-center gap-1.5 rounded-full text-[0.8125rem] font-semibold text-[#2E6641] transition-colors hover:text-[#347028] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2E6641]/25 disabled:opacity-60"
+          >
+            {isLocating ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Locate size={13} strokeWidth={2.2} />
+            )}
+            {isLocating ? 'Henter…' : 'Min posisjon'}
+          </button>
+        </div>
+        <div className="relative h-45 w-full overflow-hidden rounded-2xl border border-[#E6E7E1]">
+          <Suspense fallback={<div className="jb-skeleton size-full" />}>
+            <MapComponent coordinates={mapCoordinates} circleRadius={mapRadius} />
+          </Suspense>
+          <span className="pointer-events-none absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1 text-[0.6875rem] font-semibold text-[#63665F] shadow-sm backdrop-blur-sm">
+            <MapIcon size={11} strokeWidth={2.2} className="text-[#2E6641]" />
+            Oppdrag nær deg
+          </span>
         </div>
       </section>
 
-      {/* 3. Locations/Areas - New hierarchical filter */}
-      <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-xl font-bold mb-4">Område</h3>
-        <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar pr-2">
+      {/* ── Område ─────────────────────────────────────────────────────────── */}
+      <section className={FILTER_SECTION}>
+        <h3 className={`${MICRO_LABEL} mb-3`}>Område</h3>
+        <div className="custom-scrollbar max-h-96 space-y-0.5 overflow-y-auto pr-1">
           {isLoadingLocations ? (
-            <div className="flex items-center gap-2 text-gray-400 py-4">
-              <Loader2 size={16} className="animate-spin" />
-              <span className="text-sm">Laster...</span>
+            <div className="space-y-2 py-1">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="jb-skeleton h-7 rounded-lg" />
+              ))}
             </div>
           ) : locationTree.length === 0 ? (
-            <p className="text-sm text-gray-400">Ingen områder funnet</p>
+            <p className="text-[0.875rem] text-[#9B9E96]">Ingen områder funnet</p>
           ) : (
             locationTree.map((county) => (
-              <div key={county.code} className="space-y-1">
-                <div className="flex items-center justify-between group">
-                  <div
+              <div key={county.code}>
+                <div className="flex items-center gap-1">
+                  <button
                     onClick={() => toggleCounty(county.code)}
-                    className="flex-1 flex items-center gap-2 cursor-pointer font-medium py-1 px-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
+                    className={`${TREE_ROW} flex items-center gap-2.5 ${
+                      selectedCountyCodes.includes(county.code)
+                        ? 'font-semibold text-[#2E6641]'
+                        : 'text-[#0B0B0B] hover:bg-[#F4F6F0]'
+                    }`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={selectedCountyCodes.includes(county.code)}
-                      readOnly
-                      className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green cursor-pointer"
-                    />
-                    <span
-                      className={`text-sm ${selectedCountyCodes.includes(county.code) ? 'text-custom-green font-bold' : 'text-gray-700'}`}
-                    >
-                      {county.name}
-                    </span>
+                    <Box checked={selectedCountyCodes.includes(county.code)} />
+                    <span className="truncate">{county.name}</span>
                     {locationStats && (
-                      <span className="text-[10px] text-gray-400">
-                        ({locationStats.counties[county.code] || 0})
+                      <span className={`${COUNT_PILL} text-[#9B9E96]`}>
+                        {locationStats.counties[county.code] || 0}
                       </span>
                     )}
-                  </div>
-                  {county.children && county.children.length > 0 && (
+                  </button>
+                  {county.children && county.children.length > 0 ? (
                     <button
                       onClick={() => toggleCountyExpand(county.code)}
-                      className="p-1 rounded-lg hover:bg-gray-100 text-gray-400"
+                      aria-label={`Vis kommuner i ${county.name}`}
+                      aria-expanded={expandedCounties.includes(county.code)}
+                      className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[#9B9E96] transition-colors hover:bg-[#F4F6F0] hover:text-[#0B0B0B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2E6641]/25"
                     >
                       {expandedCounties.includes(county.code) ? (
-                        <ChevronDown size={16} />
+                        <ChevronDown size={15} />
                       ) : (
-                        <ChevronRight size={16} />
+                        <ChevronRight size={15} />
                       )}
                     </button>
+                  ) : (
+                    <div className="size-7 shrink-0" />
                   )}
                 </div>
 
                 {/* Municipalities */}
                 {expandedCounties.includes(county.code) && county.children && (
-                  <div className="ml-6 border-l-2 border-gray-100 pl-3 space-y-1">
+                  <div className="ml-3.5 space-y-0.5 border-l border-[#E6E7E1] pl-2.5">
                     {county.children.map((municipality) => (
-                      <div key={municipality.code} className="space-y-1">
-                        <div className="flex items-center justify-between group">
-                          <div
+                      <div key={municipality.code}>
+                        <div className="flex items-center gap-1">
+                          <button
                             onClick={() => toggleMunicipality(municipality.code)}
-                            className="flex-1 flex items-center gap-2 cursor-pointer py-1 px-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
+                            className={`${TREE_ROW} flex items-center gap-2.5 ${
+                              selectedMunicipalityCodes.includes(municipality.code)
+                                ? 'font-semibold text-[#2E6641]'
+                                : 'text-[#63665F] hover:bg-[#F4F6F0] hover:text-[#0B0B0B]'
+                            }`}
                           >
-                            <input
-                              type="checkbox"
-                              checked={selectedMunicipalityCodes.includes(municipality.code)}
-                              readOnly
-                              className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green cursor-pointer"
-                            />
-                            <span
-                              className={`text-sm ${selectedMunicipalityCodes.includes(municipality.code) ? 'text-custom-green font-bold' : 'text-gray-600'}`}
-                            >
-                              {municipality.name}
-                            </span>
+                            <Box checked={selectedMunicipalityCodes.includes(municipality.code)} />
+                            <span className="truncate">{municipality.name}</span>
                             {locationStats && (
-                              <span className="text-[10px] text-gray-400">
-                                ({locationStats.municipalities[municipality.code] || 0})
+                              <span className={`${COUNT_PILL} text-[#9B9E96]`}>
+                                {locationStats.municipalities[municipality.code] || 0}
                               </span>
                             )}
-                          </div>
-                          {municipality.children && municipality.children.length > 0 && (
+                          </button>
+                          {municipality.children && municipality.children.length > 0 ? (
                             <button
                               onClick={() => toggleMunicipalityExpand(municipality.code)}
-                              className="p-1 rounded-lg hover:bg-gray-100 text-gray-400"
+                              aria-label={`Vis områder i ${municipality.name}`}
+                              aria-expanded={expandedMunicipalities.includes(municipality.code)}
+                              className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[#9B9E96] transition-colors hover:bg-[#F4F6F0] hover:text-[#0B0B0B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2E6641]/25"
                             >
                               {expandedMunicipalities.includes(municipality.code) ? (
                                 <ChevronDown size={14} />
@@ -729,40 +818,33 @@ const ServiceListing = () => {
                                 <ChevronRight size={14} />
                               )}
                             </button>
+                          ) : (
+                            <div className="size-7 shrink-0" />
                           )}
                         </div>
 
                         {/* Areas */}
                         {expandedMunicipalities.includes(municipality.code) &&
                           municipality.children && (
-                            <div className="ml-6 border-l-2 border-gray-100 pl-3 space-y-1">
+                            <div className="ml-3.5 space-y-0.5 border-l border-[#E6E7E1] pl-2.5">
                               {municipality.children.map((area) => (
-                                <div
+                                <button
                                   key={area.code}
-                                  className="flex items-center justify-between group"
+                                  onClick={() => toggleArea(area.code)}
+                                  className={`${TREE_ROW} flex w-full items-center gap-2.5 ${
+                                    selectedAreaCodes.includes(area.code)
+                                      ? 'font-semibold text-[#2E6641]'
+                                      : 'text-[#63665F] hover:bg-[#F4F6F0] hover:text-[#0B0B0B]'
+                                  }`}
                                 >
-                                  <div
-                                    onClick={() => toggleArea(area.code)}
-                                    className="flex-1 flex items-center gap-2 cursor-pointer py-1 px-2 rounded-lg transition-all duration-200 hover:bg-gray-50"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedAreaCodes.includes(area.code)}
-                                      readOnly
-                                      className="w-4 h-4 rounded-md border-gray-300 text-custom-green focus:ring-custom-green cursor-pointer"
-                                    />
-                                    <span
-                                      className={`text-sm ${selectedAreaCodes.includes(area.code) ? 'text-custom-green font-bold' : 'text-gray-500'}`}
-                                    >
-                                      {area.name}
+                                  <Box checked={selectedAreaCodes.includes(area.code)} />
+                                  <span className="truncate">{area.name}</span>
+                                  {locationStats && (
+                                    <span className={`${COUNT_PILL} text-[#9B9E96]`}>
+                                      {locationStats.areas[area.code] || 0}
                                     </span>
-                                    {locationStats && (
-                                      <span className="text-[10px] text-gray-400">
-                                        ({locationStats.areas[area.code] || 0})
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
+                                  )}
+                                </button>
                               ))}
                             </div>
                           )}
@@ -775,24 +857,22 @@ const ServiceListing = () => {
           )}
         </div>
       </section>
-      {/* 4. Price Filter */}
-      <section className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Tag className="text-gray-900" size={20} />
-            <h3 className="text-xl font-bold">Price</h3>
-          </div>
-          {(priceRange.min !== 0 || priceRange.max !== 100000) && (
+
+      {/* ── Pris ───────────────────────────────────────────────────────────── */}
+      <section className={FILTER_SECTION}>
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <h3 className={MICRO_LABEL}>Pris</h3>
+          {hasPriceFilter && (
             <button
               onClick={handlePriceReset}
-              className="text-sm font-bold text-custom-green hover:text-custom-green transition-colors"
+              className="text-[0.8125rem] font-semibold text-[#2E6641] transition-colors hover:text-[#347028] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2E6641]/25"
             >
-              Reset
+              Nullstill
             </button>
           )}
         </div>
 
-        <div className="px-2">
+        <div className="px-1">
           <Slider
             range
             min={0}
@@ -806,22 +886,19 @@ const ServiceListing = () => {
               });
             }}
             styles={{
-              track: {
-                background: '#ff8a7a',
-              },
+              rail: { background: LINE },
+              track: { background: GREEN },
               handle: {
-                borderColor: '#ff8a7a',
+                borderColor: GREEN,
                 backgroundColor: '#fff',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                boxShadow: `0 0 0 2px ${GREEN}`,
               },
             }}
           />
-          <div className="flex gap-3 mt-6">
-            <div className="flex-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block ml-1">
-                Min pris
-              </label>
-              <div className="relative">
+          <div className="mt-5 flex gap-3">
+            <label className="flex-1">
+              <span className={`${MICRO_LABEL} mb-1.5 block`}>Fra</span>
+              <span className="relative block">
                 <input
                   type="number"
                   value={priceRange.min}
@@ -829,18 +906,16 @@ const ServiceListing = () => {
                     const val = Math.max(0, parseInt(e.target.value) || 0);
                     setPriceRange((prev) => ({ ...prev, min: val }));
                   }}
-                  className="w-full pl-3 pr-8 py-2.5 bg-gray-50 rounded-xl text-sm font-semibold text-gray-900 border-2 border-transparent focus:border-[#ff8a7a]/20 focus:bg-white transition-all outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="h-11 w-full rounded-xl border border-[#E6E7E1] bg-white pl-3 pr-8 text-[0.875rem] font-semibold tabular-nums text-[#0B0B0B] outline-none transition-colors focus:border-[#2E6641]/45 focus:ring-4 focus:ring-[#2E6641]/10 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400">
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[0.75rem] font-semibold text-[#9B9E96]">
                   kr
                 </span>
-              </div>
-            </div>
-            <div className="flex-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block ml-1">
-                Maks pris
-              </label>
-              <div className="relative">
+              </span>
+            </label>
+            <label className="flex-1">
+              <span className={`${MICRO_LABEL} mb-1.5 block`}>Til</span>
+              <span className="relative block">
                 <input
                   type="number"
                   value={priceRange.max === 100000 ? '' : priceRange.max}
@@ -850,81 +925,127 @@ const ServiceListing = () => {
                     setPriceRange((prev) => ({ ...prev, max: val }));
                   }}
                   placeholder="∞"
-                  className="w-full pl-3 pr-8 py-2.5 bg-gray-50 rounded-xl text-sm font-semibold text-gray-900 border-2 border-transparent focus:border-[#ff8a7a]/20 focus:bg-white transition-all outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="h-11 w-full rounded-xl border border-[#E6E7E1] bg-white pl-3 pr-8 text-[0.875rem] font-semibold tabular-nums text-[#0B0B0B] outline-none transition-colors placeholder:text-[#9B9E96] focus:border-[#2E6641]/45 focus:ring-4 focus:ring-[#2E6641]/10 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400">
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[0.75rem] font-semibold text-[#9B9E96]">
                   kr
                 </span>
-              </div>
-            </div>
+              </span>
+            </label>
           </div>
         </div>
       </section>
     </div>
   );
 
+  const headingText =
+    initialSearch.trim() ||
+    (decodedCategoryName && decodedCategoryName !== 'all' ? decodedCategoryName : 'Alle oppdrag');
+
   return (
-    <div className="max-w-300 mx-auto px-4 md:px-5 pb-10 min-h-screen">
-      <div className="flex flex-col lg:flex-row gap-6 md:gap-8 mt-6 md:mt-8">
-        {/* MOBILE OVERLAY DRAWER */}
-        {isFilterDrawerOpen && (
-          <div className="fixed inset-0 z-1000 lg:hidden">
-            <div
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-              onClick={() => setIsFilterDrawerOpen(false)}
-            />
-            <div className="absolute left-0 top-0 bottom-0 w-[85%] max-w-[320px] bg-white shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-left duration-300">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-bold">Filters</h2>
-                <button
-                  onClick={() => setIsFilterDrawerOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-              {renderFilterSidebarContent()}
+    <div className="min-h-screen bg-[#EFF0EA]">
+      {/* ── Mobile filter drawer ─────────────────────────────────────────────
+          Outside the sticky toolbar below on purpose. A `backdrop-blur` ancestor
+          becomes the containing block for `position: fixed` children, which pins a
+          drawer to the toolbar instead of the viewport. */}
+      {drawerMounted && (
+        <div className="fixed inset-0 z-1000 lg:hidden" role="dialog" aria-modal="true">
+          <div
+            onClick={() => setIsFilterDrawerOpen(false)}
+            className={`absolute inset-0 bg-[#0B0B0B]/45 transition-opacity duration-300 ${
+              drawerShown ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+          <div
+            className={`absolute inset-y-0 left-0 flex w-[86%] max-w-88 flex-col bg-white transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ${
+              drawerShown ? 'translate-x-0' : '-translate-x-full'
+            }`}
+          >
+            <div className="flex h-16 shrink-0 items-center justify-between border-b border-[#E6E7E1] px-5">
+              <h2 className="text-[1.0625rem] font-semibold tracking-[-0.02em] text-[#0B0B0B]">
+                Filtrer
+              </h2>
               <button
                 onClick={() => setIsFilterDrawerOpen(false)}
-                className="w-full bg-[#ff8a7a] text-white font-bold py-4 rounded-2xl mt-8 shadow-lg shadow-[#ff8a7a]/20"
+                aria-label="Lukk filtre"
+                className="flex size-9 items-center justify-center rounded-full text-[#63665F] transition-colors hover:bg-[#F4F6F0] hover:text-[#0B0B0B] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
               >
-                Show Results
+                <X size={19} />
               </button>
             </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6">
+              {renderFilterSidebarContent()}
+            </div>
+
+            <div className="shrink-0 border-t border-[#E6E7E1] bg-white p-4">
+              <button
+                onClick={() => setIsFilterDrawerOpen(false)}
+                className={`${PILL_PRIMARY} w-full`}
+              >
+                Vis {jobs.length}
+                {hasNextPage ? '+' : ''} oppdrag
+              </button>
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={clearAllFilters}
+                  className="mt-2 h-10 w-full rounded-full text-[0.875rem] font-semibold text-[#63665F] transition-colors hover:text-[#0B0B0B]"
+                >
+                  Nullstill alle filtre
+                </button>
+              )}
+            </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* LEFT SIDEBAR - Desktop only */}
-        <aside className="hidden lg:block w-72 shrink-0">{renderFilterSidebarContent()}</aside>
-
-        {/* MAIN CONTENT AREA */}
-        <main className="flex-1">
-          {/* SEARCH & SORT HEADER */}
-          <div className="flex flex-row items-center gap-0 sm:gap-3 mb-6 md:mb-10">
-            {/* 1. Filter Button (Mobile only) */}
+      {/* ── Search, sticky ───────────────────────────────────────────────────
+          The old bar put a 32 px-wide icon box at `left: 32px` over an input padded
+          to 48 px, so the caret and the icon occupied the same pixels and typing ran
+          straight through the magnifier. The icon is inside the padding now, and the
+          field owns a submit control rather than relying on an unlabelled Enter. */}
+      {/* `top-18` and `z-30`, not `top-0`/`z-40`: the app header is itself `sticky top-0
+          z-40` and 72 px tall, so this parks directly beneath it rather than sliding under
+          it. */}
+      <div className="sticky top-18 z-30 border-b border-[#E6E7E1] bg-[#EFF0EA]/90 backdrop-blur-md">
+        <div className="mx-auto w-full max-w-300 px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => setIsFilterDrawerOpen(true)}
-              className="lg:hidden flex items-center justify-center bg-white w-12 h-12 sm:w-14 sm:h-14 rounded-2xl shadow-[0_4px_25px_rgba(0,0,0,0.06)] hover:bg-gray-50 transition-all active:scale-95 flex-shrink-0"
+              className="relative flex h-12 shrink-0 items-center gap-2 rounded-full border border-[#E6E7E1] bg-white px-4 text-[0.875rem] font-semibold text-[#0B0B0B] transition-colors hover:border-[#2E6641]/45 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 lg:hidden"
             >
-              <SlidersHorizontal size={22} className="text-[#ff8a7a]" />
+              <SlidersHorizontal size={17} strokeWidth={2} className="text-[#2E6641]" />
+              <span className="hidden min-[420px]:inline">Filtrer</span>
+              {activeFilterCount > 0 && (
+                <span className="flex size-5 items-center justify-center rounded-full bg-[#2E6641] text-[0.6875rem] font-bold text-white">
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
 
-            {/* 2. Search Bar */}
-            <form onSubmit={handleSearchSubmit} className="relative flex-1 group">
-              <div className="absolute left-8 top-1/2 -translate-y-1/2 text-custom-green transition-all duration-200 z-10 flex items-center justify-center w-8 h-8">
-                <Search size={20} strokeWidth={2} />
-              </div>
+            <form onSubmit={handleSearchSubmit} className="relative min-w-0 flex-1">
+              <Search
+                size={17}
+                strokeWidth={2.2}
+                aria-hidden="true"
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#9B9E96]"
+              />
               <input
-                type="text"
+                type="search"
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
-                placeholder={decodedCategoryName || 'Search...'}
-                className="w-full pl-12 pr-12 h-12 sm:h-14 bg-white rounded-full text-sm sm:text-base shadow-[0_4px_25px_rgba(0,0,0,0.06)] border-2 border-transparent focus:border-[#ff8a7a]/10 focus:ring-4 focus:ring-[#ff8a7a]/5 outline-none transition-all placeholder:text-gray-300 text-gray-900 font-normal no-underline decoration-transparent"
-                style={{ textDecoration: 'none' }}
+                aria-label="Søk etter oppdrag"
+                placeholder={
+                  decodedCategoryName && decodedCategoryName !== 'all'
+                    ? `Søk i ${decodedCategoryName}`
+                    : 'Søk etter oppdrag'
+                }
+                className="h-12 w-full rounded-full border border-[#E6E7E1] bg-white pl-11 pr-24 text-[0.9375rem] text-[#0B0B0B] outline-none transition-colors placeholder:text-[#9B9E96] focus:border-[#2E6641]/45 focus:ring-4 focus:ring-[#2E6641]/10 [&::-webkit-search-cancel-button]:appearance-none"
               />
               {localSearch && (
                 <button
                   type="button"
+                  aria-label="Tøm søket"
                   onClick={() => {
                     setLocalSearch('');
                     setSearchParams({
@@ -932,43 +1053,54 @@ const ServiceListing = () => {
                       search: '',
                     });
                   }}
-                  className="absolute right-8 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 rounded-full text-custom-green transition-colors"
+                  className="absolute right-13 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-[#9B9E96] transition-colors hover:bg-[#F4F6F0] hover:text-[#0B0B0B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2E6641]/25"
                 >
-                  <X size={18} strokeWidth={2.5} />
+                  <X size={15} strokeWidth={2.5} />
                 </button>
               )}
+              <button
+                type="submit"
+                aria-label="Søk"
+                className="absolute right-1.5 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-[#2E6641] text-white transition-colors hover:bg-[#255335] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 active:scale-95"
+              >
+                <ArrowRight size={16} strokeWidth={2.4} />
+              </button>
             </form>
 
-            {/* 3. Sort Button */}
             <div className="relative shrink-0" ref={dropdownRef}>
               <button
                 onClick={() => setIsSortOpen(!isSortOpen)}
-                className="flex items-center justify-center bg-white w-12 h-12 sm:w-14 sm:h-14 rounded-2xl shadow-[0_4px_25px_rgba(0,0,0,0.06)] cursor-pointer transition-all hover:bg-gray-50 active:scale-95"
+                aria-haspopup="listbox"
+                aria-expanded={isSortOpen}
+                className="flex h-12 items-center gap-2 rounded-full border border-[#E6E7E1] bg-white px-4 text-[0.875rem] font-semibold text-[#0B0B0B] transition-colors hover:border-[#2E6641]/45 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
               >
-                <ArrowUpDown size={22} className="text-custom-green" />
+                <ArrowUpDown size={16} strokeWidth={2} className="text-[#2E6641]" />
+                <span className="hidden md:inline">{selectedSort.label}</span>
               </button>
 
               {isSortOpen && (
                 <div
-                  className="absolute right-0 mt-3 w-64 md:w-72 bg-white rounded-[24px] md:rounded-[32px] shadow-[0_10px_40px_rgba(0,0,0,0.15)]
-                 overflow-hidden z-[100] p-2 animate-in fade-in zoom-in duration-200 origin-top-right"
+                  role="listbox"
+                  className={`${CARD} absolute right-0 z-100 mt-2 w-60 overflow-hidden p-1.5 shadow-[0_18px_48px_rgba(11,11,11,0.12)]`}
                 >
                   {sortOptions.map((option) => (
                     <button
                       key={option.value}
+                      role="option"
+                      aria-selected={selectedSort.value === option.value}
                       onClick={() => {
                         setSelectedSort(option);
                         setIsSortOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-4 py-3 md:px-6 md:py-4 rounded-[18px] md:rounded-[24px] text-left font-bold text-sm md:text-[17px] transition-colors ${
+                      className={`flex w-full items-center justify-between gap-2 rounded-xl px-3.5 py-2.5 text-left text-[0.875rem] transition-colors ${
                         selectedSort.value === option.value
-                          ? 'bg-[#2F7E4711] text-custom-green'
-                          : 'text-custom-black hover:bg-gray-50'
+                          ? 'bg-[#EAF1E9] font-semibold text-[#2E6641]'
+                          : 'text-[#0B0B0B] hover:bg-[#F4F6F0]'
                       }`}
                     >
                       <span>{option.label}</span>
                       {selectedSort.value === option.value && (
-                        <Check size={18} className="text-custom-green" />
+                        <Check size={15} strokeWidth={2.6} />
                       )}
                     </button>
                   ))}
@@ -976,67 +1108,133 @@ const ServiceListing = () => {
               )}
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Grid of JobCards */}
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 className="animate-spin text-[#ff8a7a] mb-4" size={48} />
-              <p className="text-gray-500 font-medium">Laster tjenester...</p>
-            </div>
-          ) : isError ? (
-            <div className="text-center py-16 bg-red-50/50 rounded-3xl p-8 border border-red-100 max-w-lg mx-auto my-8">
-              <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertCircle size={32} />
+      <div className="mx-auto w-full max-w-300 px-4 pb-16 pt-6 sm:px-6 lg:px-8 lg:pt-10">
+        <div className="flex flex-col gap-8 lg:flex-row lg:gap-10">
+          {/* ── Sidebar, desktop ─────────────────────────────────────────── */}
+          <aside className="hidden w-70 shrink-0 lg:block">
+            {/* Clears the 72 px header and the 72 px search bar stacked above it. */}
+            <div className="sticky top-40 max-h-[calc(100vh-12rem)] overflow-y-auto pr-1">
+              <div className="mb-6 flex items-center justify-between gap-2">
+                <h2 className="text-[1.0625rem] font-semibold tracking-[-0.02em] text-[#0B0B0B]">
+                  Filtrer
+                </h2>
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={clearAllFilters}
+                    className="text-[0.8125rem] font-semibold text-[#2E6641] transition-colors hover:text-[#347028]"
+                  >
+                    Nullstill ({activeFilterCount})
+                  </button>
+                )}
               </div>
-              <p className="text-red-700 font-bold text-xl mb-2">
-                Kunne ikke laste søkeresultater.
-              </p>
-              <p className="text-red-500/80 text-sm mb-6">
-                {error instanceof Error
-                  ? error.message
-                  : 'Det oppstod en feil under henting av oppdrag.'}
-              </p>
-              <button
-                onClick={() => refetch()}
-                className="bg-[#ff8a7a] hover:bg-[#e07566] text-white px-6 py-2.5 rounded-full font-bold shadow-md transition-all active:scale-95 cursor-pointer"
-              >
-                Prøv igjen
-              </button>
+              {renderFilterSidebarContent()}
             </div>
-          ) : jobs.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Search size={40} className="text-gray-300" />
-              </div>
-              <p className="text-gray-700 font-bold text-xl">Ingen tjenester funnet.</p>
-              <p className="text-gray-400 mt-2 text-sm">
-                Prøv å endre på filtrene dine eller søkeordet for å finne flere resultater.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-x-6 gap-y-10">
-                {jobs.map((job, index) => {
-                  if (jobs.length === index + 1) {
-                    return (
-                      <div ref={lastJobElementRef} key={job._id}>
-                        <JobCard job={job} />
-                      </div>
-                    );
-                  } else {
-                    return <JobCard key={job._id} job={job} />;
-                  }
-                })}
-              </div>
+          </aside>
 
-              {isFetchingNextPage && (
-                <div className="flex justify-center mt-12">
-                  <Loader2 className="animate-spin text-[#ff8a7a]" size={32} />
+          {/* ── Results ──────────────────────────────────────────────────── */}
+          <main className="min-w-0 flex-1">
+            <div className="mb-5">
+              <h1 className="text-[clamp(1.5rem,3.6vw,2.25rem)] font-bold leading-tight tracking-[-0.04em] text-[#0B0B0B]">
+                {headingText}
+              </h1>
+              <p className="mt-1.5 text-[0.875rem] text-[#63665F]">
+                {isLoading
+                  ? 'Henter oppdrag…'
+                  : `${jobs.length}${hasNextPage ? '+' : ''} oppdrag funnet`}
+              </p>
+            </div>
+
+            {/* Active filters, each removable on its own */}
+            {activeChips.length > 0 && (
+              <div className="mb-6 flex flex-wrap items-center gap-2">
+                {activeChips.map((chip) => (
+                  <button
+                    key={chip.key}
+                    onClick={chip.remove}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#2E6641]/30 bg-[#EAF1E9] pl-3.5 pr-2.5 text-[0.8125rem] font-medium text-[#2E6641] transition-colors hover:border-[#2E6641]/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
+                  >
+                    {chip.label}
+                    <X size={13} strokeWidth={2.6} aria-label={`Fjern ${chip.label}`} />
+                  </button>
+                ))}
+                <button
+                  onClick={clearAllFilters}
+                  className="ml-1 text-[0.8125rem] font-semibold text-[#63665F] underline-offset-[3px] transition-colors hover:text-[#0B0B0B] hover:underline"
+                >
+                  Nullstill alle
+                </button>
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 md:grid-cols-4">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <JobCardSkeleton key={index} />
+                ))}
+              </div>
+            ) : isError ? (
+              <div className={`${CARD} mx-auto max-w-lg p-10 text-center`}>
+                <span className="mx-auto mb-4 flex size-11 items-center justify-center rounded-full bg-[#EAF1E9] text-[#2E6641]">
+                  <AlertCircle size={20} strokeWidth={2} />
+                </span>
+                <p className="text-[1.0625rem] font-semibold text-[#0B0B0B]">
+                  Kunne ikke laste søkeresultater
+                </p>
+                <p className="mx-auto mt-2 max-w-sm text-[0.875rem] leading-relaxed text-[#63665F]">
+                  {error instanceof Error
+                    ? error.message
+                    : 'Det oppstod en feil under henting av oppdrag.'}
+                </p>
+                <button onClick={() => refetch()} className={`${PILL_PRIMARY} mt-6`}>
+                  Prøv igjen
+                </button>
+              </div>
+            ) : jobs.length === 0 ? (
+              <div className={`${CARD} mx-auto max-w-lg p-10 text-center`}>
+                <span className="mx-auto mb-4 flex size-11 items-center justify-center rounded-full bg-[#EAF1E9] text-[#2E6641]">
+                  <Search size={20} strokeWidth={2} />
+                </span>
+                <p className="text-[1.0625rem] font-semibold text-[#0B0B0B]">
+                  Ingen oppdrag funnet
+                </p>
+                <p className="mx-auto mt-2 max-w-sm text-[0.875rem] leading-relaxed text-[#63665F]">
+                  Prøv et annet søkeord, eller fjern noen av filtrene dine.
+                </p>
+                {activeFilterCount > 0 && (
+                  <button onClick={clearAllFilters} className={`${PILL_PRIMARY} mt-6`}>
+                    Nullstill filtre
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 md:grid-cols-4">
+                  {jobs.map((job, index) => {
+                    if (jobs.length === index + 1) {
+                      return (
+                        <div ref={lastJobElementRef} key={job._id}>
+                          <JobCard job={job} />
+                        </div>
+                      );
+                    } else {
+                      return <JobCard key={job._id} job={job} />;
+                    }
+                  })}
                 </div>
-              )}
-            </>
-          )}
-        </main>
+
+                {isFetchingNextPage && (
+                  <div className="mt-10 flex items-center justify-center gap-2.5 text-[0.875rem] text-[#63665F]">
+                    <Loader2 size={16} className="animate-spin text-[#2E6641]" />
+                    Henter flere oppdrag…
+                  </div>
+                )}
+              </>
+            )}
+          </main>
+        </div>
       </div>
     </div>
   );

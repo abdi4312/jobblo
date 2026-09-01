@@ -22,7 +22,7 @@ const RelatedJobs: React.FC<RelatedJobsProps> = ({ coordinates, categories, curr
 
   if (isRecommendedLoading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <JobCardSkeleton key={i} />
         ))}
@@ -42,7 +42,7 @@ const RelatedJobs: React.FC<RelatedJobsProps> = ({ coordinates, categories, curr
             Vi fant ingen anbefalte jobber akkurat nå.
           </p>
           <button
-            onClick={() => navigate('/job-listing')}
+            onClick={() => navigate('/home')}
             className="mt-5 text-sm font-semibold text-custom-green hover:underline"
           >
             Se alle tilgjengelige jobber →
@@ -53,7 +53,7 @@ const RelatedJobs: React.FC<RelatedJobsProps> = ({ coordinates, categories, curr
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+    <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
       {recommendedJobs.map((job: Jobs) => (
         <JobCard key={job._id} job={job} />
       ))}

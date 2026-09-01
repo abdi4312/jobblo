@@ -12,15 +12,26 @@ const apiLimiter = rateLimit({
   },
 });
 
-// Stricter limiter for auth routes (login/register)
+// Stricter limiter for auth routes (login/register).
+//
+// This counts only FAILED attempts. It used to count every request — 10 per IP
+// per hour, successes included — which punished the wrong people: a household,
+// an office or a café shares one public IP, so ten ordinary sign-ins locked out
+// everyone behind it for an hour. Behind a CDN or load balancer that is the
+// entire user base sharing one address (see also `app.set('trust proxy')`).
+//
+// `skipSuccessfulRequests` keeps the control aimed at what it is actually for:
+// someone guessing passwords fails, and burns the budget; someone who knows
+// their password never touches it.
 const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // failed attempts only
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     status: 429,
-    message: 'Too many login/register attempts, please try again after an hour',
+    message: 'For mange mislykkede forsøk. Prøv igjen om 15 minutter.',
   },
 });
 

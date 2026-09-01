@@ -1,11 +1,24 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { generateFullJobListing } from '../api/aiAPI';
+import { useTranslate } from '../i18n/useTranslate';
 import { useUserStore } from '../stores/userStore';
 import { usePaymentCalculation } from './usePaymentCalculation';
 import { useForm } from './useForm';
 import { jobValidationSchema, type JobFormValues } from '../validations/jobValidations';
 import { saveFormData, loadFormData, clearFormData } from '../utils/indexedDB';
+import { getErrorMessage } from '../utils/getErrorMessage';
+import { summariseAiFill, clampMessage } from '../utils/aiFillSummary';
+import { scrollToFirstError } from '../utils/scrollToError';
+
+/**
+ * The four keys `validateStep` writes that are not fields of `JobFormValues` — they are held
+ * in their own state (images, the map pin, fylke, kommune) but reported through the same
+ * error channel so the UI has one thing to read and `scrollToFirstError` one thing to find.
+ */
+export type JobFormErrors = Partial<
+  Record<keyof JobFormValues | 'images' | 'coordinates' | 'countyCode' | 'municipalityCode', string>
+>;
 
 interface InitialData {
   title?: string;
@@ -24,6 +37,8 @@ interface InitialData {
   durationValue?: string | number;
   durationUnit?: string;
   paymentType?: string;
+  hourlyRate?: string | number;
+  maxApplicants?: string | number;
   phone?: string;
   email?: string;
   images?: string[];
@@ -35,7 +50,7 @@ export const useCreateJobForm = (
   userId: string,
   initialData?: InitialData,
   isEditMode = false,
-  onSubmit?: (formData: FormData) => void
+  onSubmit?: (formData: FormData) => void | Promise<unknown>
 ) => {
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -67,13 +82,57 @@ export const useCreateJobForm = (
 
   // Individual states that are not part of the primary validation schema or need special handling
   const [equipment, setEquipment] = useState(initialData?.equipment || '');
-  const [countyCode, setCountyCode] = useState(initialData?.countyCode || '');
-  const [municipalityCode, setMunicipalityCode] = useState(initialData?.municipalityCode || '');
+  const [countyCode, setCountyCodeState] = useState(initialData?.countyCode || '');
+  const [municipalityCode, setMunicipalityCodeState] = useState(
+    initialData?.municipalityCode || ''
+  );
   const [areaCode, setAreaCode] = useState(initialData?.areaCode || '');
-  const [coordinates, setCoordinates] = useState<[number, number] | null>(() =>
+  const [coordinates, setCoordinatesState] = useState<[number, number] | null>(() =>
     initialData?.latitude != null && initialData?.longitude != null
       ? [initialData.latitude, initialData.longitude]
       : null
+  );
+
+  /**
+   * Fylke, kommune and the map pin live outside the validation schema, so `useForm` — which
+   * clears a field's error as soon as it changes — never sees them fixed. Without this their
+   * errors would stay red after the person had already put them right, and the scroll would
+   * keep sending them back to a field with nothing wrong with it.
+   */
+  const clearFieldError = useCallback(
+    (field: string) => {
+      setErrors((prev) => {
+        if (!prev[field as keyof JobFormValues]) return prev;
+        const next = { ...prev };
+        delete next[field as keyof JobFormValues];
+        return next;
+      });
+    },
+    [setErrors]
+  );
+
+  const setCountyCode = useCallback(
+    (value: string) => {
+      setCountyCodeState(value);
+      if (value) clearFieldError('countyCode');
+    },
+    [clearFieldError]
+  );
+
+  const setMunicipalityCode = useCallback(
+    (value: string) => {
+      setMunicipalityCodeState(value);
+      if (value) clearFieldError('municipalityCode');
+    },
+    [clearFieldError]
+  );
+
+  const setCoordinates = useCallback(
+    (value: [number, number] | null) => {
+      setCoordinatesState(value);
+      if (value) clearFieldError('coordinates');
+    },
+    [clearFieldError]
   );
   const durationValue = values.durationValue;
   const fromDate = values.fromDate;
@@ -131,12 +190,15 @@ export const useCreateJobForm = (
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [smartFillPrompt, setSmartFillPrompt] = useState('');
   const [showSmartFillInput, setShowSmartFillInput] = useState(false);
+  /** Smart-fill's pricing rationale, rendered under the price field rather than in a toast. */
+  const [smartFillPricingNote, setSmartFillPricingNote] = useState('');
   const [checklistItems, setChecklistItems] = useState<{ id: string; text: string }[]>([]);
 
   // Flag to prevent save effect from running before load completes
   const [isLoaded, setIsLoaded] = useState(false);
 
   const currentUser = useUserStore((state) => state.user);
+  const { locale } = useTranslate();
 
   // Category-based checklist suggestions
   const getCategorySuggestions = (category: string): string[] => {
@@ -183,6 +245,21 @@ export const useCreateJobForm = (
   const setPhone = useCallback((val: string) => handleFormChange('phone', val), [handleFormChange]);
   const setEmail = useCallback((val: string) => handleFormChange('email', val), [handleFormChange]);
 
+  /**
+   * Images sit outside the validation schema, so `useForm` never cleared their error the way
+   * it does for a text field the moment you type in it. `validateStep` only ever merges into
+   * `errors`, so once "Vennligst last opp minst ett bilde" was set it stayed set — the card
+   * kept its red border after the photo was added, and the scroll kept sending the person
+   * back to a field with nothing wrong with it.
+   */
+  const handleImagesChange = useCallback(
+    (files: File[]) => {
+      setSelectedImages(files);
+      if (files.length > 0) clearFieldError('images');
+    },
+    [clearFieldError]
+  );
+
   const handleAiSmartFill = async () => {
     if (!smartFillPrompt || smartFillPrompt.length < 5) {
       toast.error('Vennligst beskriv hva du trenger hjelp med (min. 5 tegn)');
@@ -207,6 +284,7 @@ export const useCreateJobForm = (
     const newFlags: typeof smartFillSuggestionFlags = { ...smartFillSuggestionFlags };
     try {
       const response = await generateFullJobListing(smartFillPrompt, {
+        lang: locale,
         existingTitle: values.title || undefined,
         existingDescription: values.description || undefined,
         existingCategory:
@@ -305,20 +383,15 @@ export const useCreateJobForm = (
 
         setShowSmartFillInput(false);
         setSmartFillPrompt('');
-        const hints: string[] = [];
-        if (newFlags.title) hints.push('tittel');
-        if (newFlags.description) hints.push('beskrivelse');
-        if (newFlags.categories) hints.push('kategori');
-        if (newFlags.price) hints.push('pris');
-        if (newFlags.duration) hints.push('varighet');
-        toast.success(
-          hints.length > 0
-            ? `AI fylte ut: ${hints.join(', ')}. Priser er estimater — rediger fritt.${
-                pricingReasoning ? ` (${pricingReasoning})` : ''
-              }`
-            : `AI ga forslag. Rediger fritt.${pricingReasoning ? ` (${pricingReasoning})` : ''}`,
-          { duration: 6000 }
-        );
+
+        // This toast used to name every field, add "Priser er estimater — rediger fritt."
+        // and then append the model's whole pricing sentence in parentheses — five lines of
+        // rounded slab, for six seconds, over the form the person is trying to read. The
+        // rationale now renders under the price field in `BasicInformation`, where it sits
+        // next to the number it explains and stays until dismissed. The toast is left with
+        // the one thing it is good for: confirming that something happened.
+        setSmartFillPricingNote(pricingReasoning || '');
+        toast.success(summariseAiFill(newFlags), { duration: 3000 });
       }
     } catch (err: any) {
       console.error('SMART FILL ERROR:', err);
@@ -329,7 +402,7 @@ export const useCreateJobForm = (
       const details = err.response?.data?.validationErrors?.length
         ? ` (${err.response.data.validationErrors.slice(0, 2).join(', ')})`
         : '';
-      toast.error(errorMessage + details);
+      toast.error(clampMessage(errorMessage + details));
     } finally {
       setSmartFillSuggestionFlags(newFlags);
       setIsGeneratingFullListing(false);
@@ -399,6 +472,7 @@ export const useCreateJobForm = (
   // Persistence - Save data whenever it changes (only after initial load)
   useEffect(() => {
     if (!isLoaded) return; // Don't save until draft has been loaded
+    if (isEditMode) return; // Edit mode never uses the draft — don't overwrite it
 
     const saveData = async () => {
       try {
@@ -459,6 +533,10 @@ export const useCreateJobForm = (
   ]);
   const validateStep = (step: number) => {
     const currentErrors: Partial<Record<keyof JobFormValues, string>> = {};
+    // `images`, `coordinates`, `countyCode` and `municipalityCode` are validated here but
+    // are not fields of JobFormValues — they live in their own state. Same object, wider
+    // key type, so they can be reported through the one error channel the UI reads.
+    const extraErrors = currentErrors as Record<string, string>;
     let isValid = true;
 
     if (step === 1) {
@@ -479,7 +557,7 @@ export const useCreateJobForm = (
 
       // Special check for images
       if (selectedImages.length === 0 && currentImages.length === 0) {
-        currentErrors['images' as any] = 'Vennligst last opp minst ett bilde.';
+        extraErrors.images = 'Vennligst last opp minst ett bilde.';
         isValid = false;
       }
     } else if (step === 2) {
@@ -520,7 +598,26 @@ export const useCreateJobForm = (
       // on the map (click pin / drag marker / geolocation), otherwise the job
       // silently posts with default coordinates. Coordinates live outside the
       // validation schema, so enforce the requirement here.
+      //
+      // These three used to fail silently: `isValid` went false and the toast named the
+      // field, but nothing on the page turned red, so there was no target to scroll to and
+      // nothing to look at once you got there. They write a message now like any other field.
       if (!coordinates) {
+        extraErrors.coordinates =
+          'Bekreft hvor oppdraget er — velg en adresse fra forslagene eller klikk i kartet.';
+        isValid = false;
+      }
+
+      // Fylke and Kommune are marked required in the UI but sit outside the
+      // schema too. Without them the job never matches the location filter
+      // (serviceController.getAllServices), so it is invisible to the people
+      // searching in that area.
+      if (!countyCode) {
+        extraErrors.countyCode = 'Velg fylke.';
+        isValid = false;
+      }
+      if (!municipalityCode) {
+        extraErrors.municipalityCode = 'Velg kommune.';
         isValid = false;
       }
     } else if (step === 4) {
@@ -550,6 +647,10 @@ export const useCreateJobForm = (
       return;
     }
 
+    // The toast names what is missing; this takes them to it. Without it the page sits
+    // still, and on a step several screens tall the empty field is usually off screen.
+    scrollToFirstError();
+
     // Build a friendlier error message that names the missing/invalid fields
     // so the user knows what to fix instead of just "please fill in everything".
     // We re-run a quick check directly against the current state because
@@ -568,6 +669,8 @@ export const useCreateJobForm = (
       email: 'e-post',
       phone: 'telefon',
       images: 'bilde',
+      countyCode: 'fylke',
+      municipalityCode: 'kommune',
     };
 
     const missing: string[] = [];
@@ -602,13 +705,16 @@ export const useCreateJobForm = (
       } else if (values.fromDate && new Date(values.toDate) < new Date(values.fromDate)) {
         missing.push('gyldig sluttdato (kan ikke være før startdato)');
       }
+      if (!countyCode) missing.push(labels.countyCode);
+      if (!municipalityCode) missing.push(labels.municipalityCode);
       if (!coordinates) missing.push('lokasjon på kartet');
     } else if (currentStep === 4) {
+      // Phone and e-mail are optional here (the step is labelled "Valgfritt" and
+      // neither has a required-rule), so only a malformed e-mail can block.
       if (values.email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(String(values.email).trim())) missing.push(labels.email);
       }
-      if (!values.phone) missing.push(labels.phone);
     }
 
     if (missing.length > 0) {
@@ -634,10 +740,34 @@ export const useCreateJobForm = (
     // failed run that didn't reach `finally`).
     if (isSubmitting) return;
 
-    if (!validateStep(4)) {
-      toast.error('Vennligst fyll ut alle påkrevde felt riktig.');
+    // Publish validates the whole form, not just the step in front of you.
+    //
+    // It used to check step 4 alone, plus a special case for the missing map pin. But
+    // `loadFormData` restores `currentStep`, so a draft saved on step 4 reopens there — and
+    // an empty title from step 1 then sailed past this guard and failed server-side, with
+    // nothing marked anywhere on the page for the person to be sent to. `find` stops at the
+    // first failing step, which is the one worth taking them to. Step 3 is the checklist and
+    // has no required fields.
+    const firstInvalidStep = [1, 2, 4].find((step) => !validateStep(step));
+
+    if (firstInvalidStep) {
+      if (currentStep !== firstInvalidStep) setCurrentStep(firstInvalidStep);
+      toast.error(
+        firstInvalidStep === 2 && !coordinates
+          ? 'Bekreft hvor oppdraget skal utføres på kartet før du publiserer.'
+          : 'Vennligst fyll ut alle påkrevde felt riktig.'
+      );
+      // Sending them back a step is not enough on its own — the step opens at the top and the
+      // field is usually below the fold, and on the frame this runs the new step has not
+      // rendered yet. `scrollToFirstError` keeps looking across a few frames for exactly this.
+      scrollToFirstError();
       return;
     }
+
+    // Narrowing for TypeScript — step 2 above already refuses to pass without a pin, and
+    // publishing without one used to fall back to Oslo city centre, putting the job in the
+    // wrong place with no warning at all.
+    if (!coordinates) return;
 
     if (!onSubmit) {
       toast.error('Kunne ikke sende skjemaet. Prøv igjen.');
@@ -656,8 +786,11 @@ export const useCreateJobForm = (
       formData.append('maxApplicants', maxApplicants.toString());
       formData.append('equipment', equipment);
       formData.append('paymentType', paymentType);
-      formData.append('phone', values.phone);
-      formData.append('email', values.email);
+      // Stored as contactPhone/contactEmail — the Service schema has no `phone`
+      // or `email` path, so the old names were dropped by Mongoose strict mode
+      // and everything typed in the contact step was thrown away.
+      formData.append('contactPhone', values.phone ?? '');
+      formData.append('contactEmail', values.email ?? '');
 
       if (fromDate) formData.append('fromDate', fromDate);
       if (toDate) formData.append('toDate', toDate);
@@ -665,8 +798,8 @@ export const useCreateJobForm = (
       formData.append('location[address]', values.address);
       formData.append('location[city]', values.city);
       formData.append('location[type]', 'Point');
-      formData.append('location[coordinates][0]', (coordinates?.[1] ?? 10.7461).toString()); // lng
-      formData.append('location[coordinates][1]', (coordinates?.[0] ?? 59.9127).toString()); // lat
+      formData.append('location[coordinates][0]', coordinates[1].toString()); // lng
+      formData.append('location[coordinates][1]', coordinates[0].toString()); // lat
       if (countyCode) formData.append('countyCode', countyCode);
       if (municipalityCode) formData.append('municipalityCode', municipalityCode);
       if (areaCode) formData.append('areaCode', areaCode);
@@ -703,10 +836,16 @@ export const useCreateJobForm = (
       // Clear the draft only after a successful POST, best-effort. Awaiting it
       // first would let an IndexedDB hang/failure block the request and leave
       // the Publish button stuck in a loading state forever.
-      clearFormData().catch(() => {});
+      // Edit mode never loads the draft, so clearing it here would throw away an
+      // unrelated half-written job the user has in progress.
+      if (!isEditMode) clearFormData().catch(() => { });
     } catch (error) {
+      // The draft is deliberately left intact here — this catch is the failed
+      // publish path, and it is the only copy of what the user typed.
       console.error('Submission error:', error);
-      toast.error('Det oppstod en feil ved sending av oppdraget. Prøv igjen.');
+      toast.error(
+        getErrorMessage(error, 'Det oppstod en feil ved sending av oppdraget. Prøv igjen.')
+      );
     } finally {
       // Always reset — even if the onSubmit promise never resolves or a
       // previous run crashed before reaching its own finally.
@@ -830,7 +969,8 @@ export const useCreateJobForm = (
     tags,
     setTags,
     selectedImages,
-    setSelectedImages,
+    // The wrapper, not the raw setter — it also clears the "last opp minst ett bilde" error.
+    setSelectedImages: handleImagesChange,
     currentImages,
     setCurrentImages,
     imagesToDelete,
@@ -843,6 +983,8 @@ export const useCreateJobForm = (
     setSmartFillPrompt,
     showSmartFillInput,
     setShowSmartFillInput,
+    smartFillPricingNote,
+    setSmartFillPricingNote,
     handleAiSmartFill,
     handleNext,
     handleBack,
@@ -851,7 +993,14 @@ export const useCreateJobForm = (
     handleCancel,
     previewJobData,
     currentUser,
-    errors, // Exporting errors for validation display
+    /**
+     * `useForm` types its errors as `{ [K in keyof JobFormValues]?: string }`, but
+     * `validateStep` also reports on `images`, `coordinates`, `countyCode` and
+     * `municipalityCode` — four things validated here that live in their own state rather
+     * than in the schema. Consumers read those keys and TypeScript rejected every one of
+     * them; the return type says what the object actually contains.
+     */
+    errors: errors as JobFormErrors,
     checklistItems,
     setChecklistItems,
   };

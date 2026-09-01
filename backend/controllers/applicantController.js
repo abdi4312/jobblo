@@ -1,6 +1,7 @@
 const JobRequest = require('../models/JobRequest');
 const Service = require('../models/Service');
 const Order = require('../models/Order');
+const Notification = require('../models/Notification');
 
 /**
  * GET /api/applicants/:serviceId
@@ -58,13 +59,22 @@ exports.getApplicantsForService = async (req, res) => {
       requests.map(async (reqDoc) => {
         const applicant = reqDoc.customerId;
 
+        // A deleted user leaves a dangling ref that populates to null. Dereferencing it
+        // threw, and the catch returned 500 for the WHOLE applicants page — one removed
+        // account made the job unmanageable. Skip the row instead.
+        if (!applicant?._id) return null;
+
         // Count completed orders where this applicant was the provider
         const completedJobsCount = await Order.countDocuments({
           providerId: applicant._id,
           status: 'completed',
         });
 
-        // Calculate real response rate
+        // Response rate = how promptly this applicant answers requests on jobs THEY
+        // posted. JobRequest.providerId is the job owner, so counting by it here
+        // measured their behaviour as a poster, not as a worker — and every pure
+        // worker (who has never posted) fell to the `: 100` default and was shown to
+        // the hiring owner as a flawless 100%. Report it only when it is real.
         const totalRequests = await JobRequest.countDocuments({
           providerId: applicant._id,
         });
@@ -72,10 +82,10 @@ exports.getApplicantsForService = async (req, res) => {
           providerId: applicant._id,
           status: { $in: ['accepted', 'declined'] },
         });
-        const responseRatePercent =
-          totalRequests > 0 ? Math.round((respondedRequests / totalRequests) * 100) : 100;
-        const responseRate = `${responseRatePercent}%`;
-        const responseTime = '< 1t';
+        const responseRate =
+          totalRequests > 0
+            ? `${Math.round((respondedRequests / totalRequests) * 100)}%`
+            : null;
 
         return {
           _id: reqDoc._id,
@@ -95,16 +105,19 @@ exports.getApplicantsForService = async (req, res) => {
             reviewCount: applicant.reviewCount || 0,
             completedJobs: completedJobsCount,
             responseRate,
-            responseTime,
-            isSafePayUser: true, // Mocked badge
-            isFastResponder: true, // Mocked badge
+            // `responseTime: '< 1t'`, `isSafePayUser: true` and
+            // `isFastResponder: true` used to be sent here, hardcoded, for every
+            // applicant. They were rendered to the poster as fact, which made all
+            // applicants look identically verified and identically fast — the
+            // opposite of what a badge is for. Removed rather than guessed;
+            // completedJobs, responseRate, rating and reviewCount above are real.
           },
         };
       })
     );
 
-    // Apply sorting that depends on the populated data
-    let sortedApplicants = [...applicantsWithStats];
+    // Drop the rows skipped above (applicant account no longer exists).
+    let sortedApplicants = applicantsWithStats.filter(Boolean);
     if (sort === 'rating') {
       sortedApplicants.sort((a, b) => b.applicant.rating - a.applicant.rating);
     } else if (sort === 'completedJobs') {
@@ -119,12 +132,27 @@ exports.getApplicantsForService = async (req, res) => {
         location: service.location,
         status: service.status,
         date: service.fromDate || service.createdAt,
+        // (F-38) Sent so the page can show the real estimate instead of a hardcoded
+        // "Ca. 2 timer".
+        duration: service.duration,
       },
       applicants: sortedApplicants,
+      // ready_for_review and disputed were missing. The moment a provider marked
+      // work ready, activeOrder went null, the page re-armed "Velg og start
+      // SafePay" for every applicant and reset the timeline — and clicking it
+      // returned "Kontrakt finnes allerede" with no way forward.
       activeOrder: await Order.findOne({
         serviceId: service._id,
         status: {
-          $in: ['awaiting_payment', 'paid', 'in_progress', 'completed'],
+          $in: [
+            'awaiting_payment',
+            'paid',
+            'in_progress',
+            'ready_for_review',
+            'waiting_for_approval',
+            'completed',
+            'disputed',
+          ],
         },
       }).select('_id status'),
     });
@@ -163,13 +191,19 @@ exports.getMyServicesWithApplicants = async (req, res) => {
           .populate('customerId', 'avatarUrl name lastName')
           .sort({ createdAt: -1 });
 
-        // Find active order to get selected worker
+        // Find active order to get selected worker.
+        //
+        // `providerId`, not `customerId`. On an Order the two mean the opposite of what
+        // they mean on a JobRequest: here `customerId` is the person who pays — the job
+        // owner, i.e. whoever is looking at this page — and `providerId` is the worker
+        // they picked. Populating `customerId` made "Valgt utfører" show the viewer their
+        // own name on every awarded job.
         const activeOrder = await Order.findOne({
           serviceId: service._id,
           status: {
-            $in: ['awaiting_payment', 'paid', 'in_progress', 'completed'],
+            $in: ['awaiting_payment', 'paid', 'in_progress', 'ready_for_review', 'completed'],
           },
-        }).populate('customerId', 'name lastName avatarUrl');
+        }).populate('providerId', 'name lastName avatarUrl');
 
         // Last activity: use latest between service updatedAt, last request createdAt, last order updatedAt
         let lastActivity = service.updatedAt;
@@ -197,11 +231,21 @@ exports.getMyServicesWithApplicants = async (req, res) => {
           categories: service.categories,
           fromDate: service.fromDate,
           toDate: service.toDate,
-          selectedWorker: activeOrder?.customerId
+          selectedWorker: activeOrder?.providerId
             ? {
-                _id: activeOrder.customerId._id,
-                name: `${activeOrder.customerId.name} ${activeOrder.customerId.lastName || ''}`.trim(),
-                avatarUrl: activeOrder.customerId.avatarUrl,
+                _id: activeOrder.providerId._id,
+                name: `${activeOrder.providerId.name} ${activeOrder.providerId.lastName || ''}`.trim(),
+                avatarUrl: activeOrder.providerId.avatarUrl,
+              }
+            : null,
+          // The order's own state, so the list can say "betalt" or "venter på godkjenning"
+          // rather than only ever "utfører valgt".
+          order: activeOrder
+            ? {
+                _id: activeOrder._id,
+                status: activeOrder.status,
+                paymentStatus: activeOrder.paymentStatus,
+                agreedPrice: activeOrder.agreedPrice,
               }
             : null,
         };
@@ -296,11 +340,39 @@ exports.declineApplicant = async (req, res) => {
       return res.status(403).json({ error: 'Ikke autorisert' });
     }
 
+    // Refuse to decline the applicant who is actually doing the job.
+    //
+    // There was no status check, so an owner could decline the worker mid-contract.
+    // The application then read `declined` while the order read `in_progress`, and
+    // because the applicant's dashboard tests `declined` before the accepted-with-order
+    // branch, the worker was told "Søknad avslått" in the middle of a paid job.
+    const liveOrder = await Order.findOne({
+      serviceId: jobRequest.serviceId,
+      providerId: jobRequest.customerId, // JobRequest.customerId is the applicant
+      status: { $in: ['awaiting_payment', 'paid', 'in_progress', 'ready_for_review', 'disputed'] },
+    }).select('_id status');
+
+    if (liveOrder) {
+      return res.status(409).json({
+        error: 'Denne søkeren har en aktiv kontrakt og kan ikke avslås. Avbryt kontrakten først.',
+        code: 'applicant_has_active_order',
+      });
+    }
+
     jobRequest.status = 'declined';
     if (archive) {
       jobRequest.archived = true;
     }
     await jobRequest.save();
+
+    // Declines were silent — no notification, unlike the accept/decline path in
+    // orderController. The applicant was left waiting on a job already given away.
+    await Notification.create({
+      userId: jobRequest.customerId,
+      senderId: userId,
+      type: 'application',
+      content: `Søknaden din på "${service.title}" ble dessverre ikke valgt.`,
+    }).catch((err) => console.error('declineApplicant notification failed:', err.message));
 
     res.json({ status: jobRequest.status, archived: jobRequest.archived });
   } catch (err) {

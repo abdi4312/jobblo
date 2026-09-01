@@ -104,6 +104,62 @@ const userSchema = new mongoose.Schema(
         providerId: { type: String },
       },
     ],
+
+    /**
+     * Verified real-world identity, from an eID scheme.
+     *
+     * Present means the person completed a full OpenID Connect flow against Idura
+     * Verify and the returned `id_token` passed signature, issuer, audience, expiry
+     * and nonce validation. Absent means unverified. This is the single source of
+     * truth for "is this a verified human" — `verified` and `accountStatus` below are
+     * derived from it (see controllers/iduraAuthController.js), not set independently.
+     *
+     * Deliberately minimal. Idura's Norwegian BankID returns considerably more than
+     * this — `certissuer`, `certsubject`, `nameidentifier`, and, if the `ssn` scope is
+     * requested, `socialno`. Jobblo asks for no `ssn` scope and stores no national
+     * identity number: there is no product or legal requirement for one, and holding
+     * fødselsnummer would put the platform under obligations it has not taken on.
+     * `birthdate` is reduced to a year for the same reason — enough to show an adult
+     * verified, not enough to be an identity document.
+     */
+    identityVerification: {
+      /** Always 'idura' today; named so a second provider does not need a migration. */
+      provider: { type: String, enum: ['idura'] },
+
+      /** Which eID was used. 'no_bankid' is Idura's `identityscheme: nobankid-oidc`. */
+      scheme: { type: String, enum: ['no_bankid'] },
+
+      /**
+       * The OIDC `sub`. Idura documents this as a persistent pseudonym that uniquely
+       * identifies the user *within our tenant* — stable across logins, and not a
+       * national identifier. This is what identifies a returning BankID user.
+       *
+       * Exclusivity is enforced by models/IdentityClaim.js, not by an index here:
+       * Cosmos cannot add a unique index to the non-empty `users` collection.
+       */
+      subject: { type: String },
+
+      /**
+       * Idura's `uniqueuserid`, documented as identifying the legal person and
+       * explicitly "not considered sensitive". Kept because `sub` is tenant-scoped,
+       * so this is the only value that would survive a tenant migration.
+       */
+      uniqueUserId: { type: String },
+
+      /** The name BankID asserts. Not editable by the user. */
+      verifiedName: { type: String },
+
+      /** Year only — never the full date of birth. */
+      birthYear: { type: Number },
+
+      /** The `acr` actually returned, e.g. urn:grn:authn:no:bankid:substantial. */
+      acr: { type: String },
+
+      /** 'high' | 'substantial', derived from the acr above. */
+      assuranceLevel: { type: String, enum: ['high', 'substantial'] },
+
+      verifiedAt: { type: Date },
+    },
     accountStatus: {
       type: String,
       enum: ['active', 'inactive', 'verified'],
@@ -159,7 +215,15 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    // Live-mode Stripe customer. `cus_…` ids are NOT portable between Stripe's test
+    // and live modes, so a single field meant that flipping mode handed every stored
+    // id to the wrong account and Stripe answered resource_missing on the next
+    // purchase. The test-mode id lives in its own field below; nothing needs
+    // backfilling, because existing live ids stay exactly where they were.
     stripeCustomerId: {
+      type: String,
+    },
+    stripeCustomerIdTest: {
       type: String,
     },
 

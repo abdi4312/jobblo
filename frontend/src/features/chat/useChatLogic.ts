@@ -15,7 +15,7 @@ export const useChatLogic = () => {
   const [newMessage, setNewMessage] = useState('');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1200);
 
-  const { userId, user, onlineUsers, chatsQuery, activeChatQuery, sendMutation, playSendSound } =
+  const { userId, user, onlineUsers, chatsQuery, activeChatQuery, sendMutation } =
     useChatSocket(conversationId);
 
   const chats = chatsQuery.data || [];
@@ -56,7 +56,10 @@ export const useChatLogic = () => {
       {
         onSuccess: () => {
           setNewMessage('');
-          playSendSound();
+          // No sound here. You know you sent it — you pressed the button, the input
+          // cleared and the bubble appeared. A tone for your own action is noise, and in
+          // a back-and-forth conversation it doubles the audio for no information.
+          // Sound is reserved for things that happen *to* you.
         },
       }
     );

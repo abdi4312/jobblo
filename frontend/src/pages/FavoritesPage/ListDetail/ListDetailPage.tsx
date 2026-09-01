@@ -30,25 +30,46 @@ export const ListDetailPage: React.FC = () => {
   const [showAddContributorModal, setShowAddContributorModal] = useState(false);
   const [showContributorsModal, setShowContributorsModal] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
-  const [sortOrder, setSortOrder] = useState('Sist lagt til');
+  /**
+   * Sorting is local to this list, but it follows the same rule as the API contract:
+   * the stable key is what state holds and what comparisons run on; the Norwegian
+   * text is display only. This used to store the label itself — `useState('Sist lagt
+   * til')` compared against the same literal three times — so rewording the menu, or
+   * translating it later, would have silently turned sorting into a no-op with
+   * nothing to catch it.
+   */
+  const sortOptions = [
+    { value: 'recent', label: 'Sist lagt til' },
+    { value: 'available_first', label: 'Tilgjengelige først' },
+    { value: 'sold_first', label: 'Solgte først' },
+  ] as const;
 
-  const sortOptions = ['Sist lagt til', 'Tilgjengelige først', 'Solgte først'];
+  const [sortOrder, setSortOrder] = useState<(typeof sortOptions)[number]['value']>('recent');
+
+  const activeSortLabel =
+    sortOptions.find((option) => option.value === sortOrder)?.label ?? sortOptions[0].label;
 
   const sortedServices = React.useMemo(() => {
     if (!list?.services) return [];
 
+    // Copy before ordering: `reverse()` and `sort()` mutate in place, and this array
+    // belongs to the React Query cache.
     const services = [...list.services];
 
-    if (sortOrder === 'Sist lagt til') {
-      // The array in Mongoose is usually in the order added, so reverse it for "last added first"
+    if (sortOrder === 'recent') {
+      // Mongoose keeps the array in insertion order, so newest-added is the tail.
       return services.reverse();
-    } else if (sortOrder === 'Tilgjengelige først') {
+    }
+
+    if (sortOrder === 'available_first') {
       return services.sort((a, b) => {
         if (a.status === 'open' && b.status !== 'open') return -1;
         if (a.status !== 'open' && b.status === 'open') return 1;
         return 0;
       });
-    } else if (sortOrder === 'Solgte først') {
+    }
+
+    if (sortOrder === 'sold_first') {
       return services.sort((a, b) => {
         if (a.status === 'closed' && b.status !== 'closed') return -1;
         if (a.status !== 'closed' && b.status === 'closed') return 1;
@@ -218,7 +239,7 @@ export const ListDetailPage: React.FC = () => {
               onClick={() => setShowSortMenu(!showSortMenu)}
               className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-300 rounded-2xl font-bold text-base hover:bg-gray-50 transition-all active:scale-95"
             >
-              {sortOrder}{' '}
+              {activeSortLabel}{' '}
               <ChevronDown
                 size={20}
                 className={`transition-transform duration-200 ${showSortMenu ? 'rotate-180' : ''}`}
@@ -247,18 +268,18 @@ export const ListDetailPage: React.FC = () => {
                 </div>
                 {sortOptions.map((option) => (
                   <button
-                    key={option}
+                    key={option.value}
                     onClick={() => {
-                      setSortOrder(option);
+                      setSortOrder(option.value);
                       setShowSortMenu(false);
                     }}
                     className={`w-full text-left px-4 py-3.5 text-base font-bold transition-colors ${
-                      sortOrder === option
+                      sortOrder === option.value
                         ? 'text-custom-green bg-[#2F7E4711]'
                         : 'text-gray-700 hover:bg-gray-50'
                     }`}
                   >
-                    {option}
+                    {option.label}
                   </button>
                 ))}
               </div>
@@ -267,7 +288,7 @@ export const ListDetailPage: React.FC = () => {
         </div>
 
         {/* List Items Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-5 md:grid-cols-3 lg:grid-cols-4">
           {sortedServices?.map((job) => (
             <JobCard key={job._id} job={job} />
           ))}

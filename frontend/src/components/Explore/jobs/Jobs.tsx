@@ -91,7 +91,7 @@ export default function JobsContainer({
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full -ml-12 -mb-12 blur-xl" />
         </div>
       )}
-      <div className="grid gap-x-6 gap-y-8 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 justify-start items-start mx-auto w-full">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-5 md:grid-cols-3 lg:grid-cols-4 justify-start items-start mx-auto w-full">
         {isLoading
           ? Array.from({ length: 8 }).map((_, index) => <JobCardSkeleton key={index} />)
           : jobs.map((job) => <JobCard key={job._id} job={job} />)}

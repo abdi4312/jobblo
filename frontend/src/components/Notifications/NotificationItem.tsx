@@ -14,12 +14,14 @@ import {
   Shield,
   ShieldOff,
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import type { AlertType } from '../../features/notifications/types';
 import { dateFormatter } from '../../utils/dateFormatter';
 import { timeFormatter } from '../../utils/timeFormatter';
 import { Button } from '../../components/Ui/button/Button';
 import { useUpdateJobRequestStatusMutation } from '../../features/jobDetail/hook';
 import { useUserStore } from '../../stores/userStore';
+import { customerOrderPath } from '../../constants/statuses';
 
 interface NotificationItemProps {
   alert: AlertType;
@@ -137,12 +139,13 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
     if (isProvider || !isCustomer) {
       return `/provider/orders/${orderId}`;
     }
-    // If customer, go to approval or checkout based on payment status
+    // If customer, follow the order's actual lifecycle stage — not just whether the
+    // money has been taken. "Utføreren har startet oppdraget" used to land the
+    // customer on the approval screen, which then told them the job was finished.
     if (isCustomer) {
-      const paymentStatus = order?.paymentStatus;
-      if (paymentStatus === 'paid') {
-        return `/safepay/approval/${orderId}`;
-      }
+      const path = customerOrderPath(orderId, (order as { status?: string } | null)?.status);
+      if (path) return path;
+      if (order?.paymentStatus === 'paid') return `/safepay/success?orderId=${orderId}`;
       return `/safepay/checkout/${orderId}`;
     }
     return null;

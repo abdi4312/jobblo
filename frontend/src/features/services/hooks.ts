@@ -11,6 +11,28 @@ export const useMyServices = () => {
   });
 };
 
+/**
+ * The message the server actually sent, or a plain fallback.
+ *
+ * The service endpoints answer with `{ error }`; some other controllers use
+ * `{ message }`. Reading only one of them is why a 409 explaining that a listing has
+ * money in SafePay escrow arrived at the user as "Kunne ikke slette annonse".
+ *
+ * Anything that is not a readable string — an HTML error page, a validation object, a
+ * bare status — falls back, so a raw backend payload is never rendered as a toast.
+ */
+const listingErrorMessage = (error: unknown, fallback: string): string => {
+  const data = (error as { response?: { data?: { error?: unknown; message?: unknown } } })?.response
+    ?.data;
+
+  for (const candidate of [data?.error, data?.message]) {
+    if (typeof candidate === 'string' && candidate.trim() && candidate.length < 300) {
+      return candidate;
+    }
+  }
+  return fallback;
+};
+
 export const useServiceActions = () => {
   const queryClient = useQueryClient();
 
@@ -23,8 +45,12 @@ export const useServiceActions = () => {
       toast.success('Annonse slettet!');
     },
     onError: (error: unknown) => {
-      const err = error as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || 'Kunne ikke slette annonse');
+      // The server answers 409 with a finished Norwegian sentence in `error` when the
+      // listing is tied to a contract, an escrowed payment, live work or a dispute.
+      // This used to read only `data.message` — a key the service endpoints never send
+      // — so every refusal collapsed to the generic fallback and the person was told
+      // "Kunne ikke slette annonse" with no reason and nothing to act on.
+      toast.error(listingErrorMessage(error, 'Kunne ikke slette annonsen'));
     },
   });
 
@@ -37,8 +63,7 @@ export const useServiceActions = () => {
       toast.success('Oppdrag oppdatert!');
     },
     onError: (error: unknown) => {
-      const err = error as { response?: { data?: { error?: string } } };
-      toast.error(err.response?.data?.error || 'Kunne ikke oppdatere');
+      toast.error(listingErrorMessage(error, 'Kunne ikke oppdatere annonsen'));
     },
   });
 

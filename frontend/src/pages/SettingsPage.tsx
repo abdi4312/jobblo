@@ -38,7 +38,9 @@ export default function SettingsPage() {
   const location = useLocation();
   const user = useUserStore((state) => state.user);
   const updateUser = useUpdateUser();
-  const [form, setForm] = useState({
+  // Explicitly typed: `skills: []` and `locations: []` were inferred as never[],
+  // so assigning the user's real string arrays in the effect below was an error.
+  const [form, setForm] = useState<Record<string, unknown>>({
     name: '',
     lastName: '',
     bio: '',
@@ -55,11 +57,6 @@ export default function SettingsPage() {
     orgType: '',
     locations: [],
     website: '',
-    payoutMethod: null,
-    bankAccountNumber: '',
-    iban: '',
-    bicSwift: '',
-    vippsHandle: '',
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -83,11 +80,6 @@ export default function SettingsPage() {
       orgType: user.orgType || '',
       locations: user.locations || [],
       website: user.website || '',
-      payoutMethod: (user as any).payoutMethod || null,
-      bankAccountNumber: (user as any).bankAccountNumber || '',
-      iban: (user as any).iban || '',
-      bicSwift: (user as any).bicSwift || '',
-      vippsHandle: (user as any).vippsHandle || '',
     });
   }, [user]);
 
@@ -95,34 +87,50 @@ export default function SettingsPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  /**
+   * Sends only what the user actually changed.
+   *
+   * Every save used to POST all 21 fields, so editing your bio also re-submitted
+   * email, phone, address and orgNumber. Anything stale in this tab silently
+   * overwrote the server's newer value — last-write-wins across tabs and devices.
+   */
   const handleUpdate = () => {
     if (!user?._id) return;
-    updateUser.mutate({
-      userId: user._id,
-      data: {
-        name: form.name,
-        lastName: form.lastName,
-        bio: form.bio,
-        phone: form.phone,
-        address: form.address,
-        postNumber: form.postNumber,
-        postSted: form.postSted,
-        country: form.country,
-        email: form.email,
-        availabilityText: form.availabilityText,
-        skills: form.skills,
-        companyName: form.companyName,
-        orgNumber: form.orgNumber,
-        orgType: form.orgType,
-        locations: form.locations,
-        website: form.website,
-        payoutMethod: form.payoutMethod,
-        bankAccountNumber: form.bankAccountNumber,
-        iban: form.iban,
-        bicSwift: form.bicSwift,
-        vippsHandle: form.vippsHandle,
-      },
-    });
+
+    const current: Record<string, unknown> = {
+      name: user.name || '',
+      lastName: user.lastName || '',
+      bio: user.bio || '',
+      phone: user.phone || '',
+      address: user.address || '',
+      postNumber: user.postNumber || '',
+      postSted: user.postSted || '',
+      country: user.country || '',
+      email: user.email || '',
+      availabilityText: (user as any).availabilityText || '',
+      skills: (user as any).skills || [],
+      companyName: user.companyName || '',
+      orgNumber: user.orgNumber || '',
+      orgType: user.orgType || '',
+      locations: user.locations || [],
+      website: user.website || '',
+    };
+
+    const changed: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(form)) {
+      const isSame =
+        Array.isArray(value) || Array.isArray(current[key])
+          ? JSON.stringify(value) === JSON.stringify(current[key] ?? [])
+          : value === current[key];
+      if (!isSame) changed[key] = value;
+    }
+
+    if (Object.keys(changed).length === 0) {
+      toast('Ingen endringer å lagre.');
+      return;
+    }
+
+    updateUser.mutate({ userId: user._id, data: changed });
   };
 
   const handlePhotoSelect = () => {

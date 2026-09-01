@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import mainLink from '../api/mainURLs';
-import { RevolvingDot } from 'react-loader-spinner';
+import { Spinner } from '../components/Ui/Spinner';
 
 function ContactSuccessPage() {
   const navigate = useNavigate();
@@ -49,7 +49,7 @@ function ContactSuccessPage() {
     <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
       {loading && (
         <>
-          <RevolvingDot height="80" width="80" color="#4fa94d" ariaLabel="loading" />
+          <Spinner size={40} className="text-[#2E6641]" />
           <p className="mt-4 text-gray-700 text-lg">Bekrefter betaling, vennligst vent...</p>
         </>
       )}

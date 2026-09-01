@@ -12,13 +12,11 @@ import {
   AlertTriangle,
   FileText,
   ShieldCheck,
-  Home,
-  MessageCircle,
-  Bell,
   Wallet,
   Camera,
   X,
   ZoomIn,
+  Loader2,
   Image as ImageIcon,
 } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -28,6 +26,85 @@ import { Button } from '../../components/Ui/button/Button';
 import SafePaySteps from '../../components/SafePay/SafePaySteps';
 import { ContractViewModal } from '../../components/SafePay/ContractViewModal';
 import { useUserStore } from '../../stores/userStore';
+import { DisputePanel } from '../../components/SafePay/DisputePanel';
+import { useDispute } from '../../features/disputes/hooks';
+import { disputeReasonOptions } from '../../constants/disputes';
+import { statusLabel } from '../../constants/statuses';
+import { compressImages } from '../../utils/compressImage';
+
+/** Matches MAX_REVIEW_PHOTOS in backend/utils/reviewPhotos.js. */
+const MAX_REVIEW_PHOTOS = 6;
+
+/**
+ * What the customer is actually looking at, per order status.
+ *
+ * The "Jobbstatus" banner was a fixed string — "<utfører> melder jobben som ferdig" —
+ * rendered at every status this page can be reached in. A customer who arrived while
+ * the order was still `paid` or `in_progress` was therefore told the provider had
+ * reported the work finished, when the provider had not pressed "Meld jobb som ferdig"
+ * at all (that button is the only thing that writes `ready_for_review`, see
+ * providerWorkController.markReadyForReview). Every status states its own truth now,
+ * and `approvable` is what decides whether the approve action is live — matching the
+ * backend, which refuses approval from anything but `ready_for_review`.
+ */
+type JobStatusView = {
+  title: (providerName: string) => string;
+  body: string;
+  step: number;
+  approvable: boolean;
+};
+
+const JOB_STATUS_VIEW: Record<string, JobStatusView> = {
+  awaiting_payment: {
+    title: () => 'Venter på betaling',
+    body: 'Oppdraget starter når betalingen er gjennomført og beløpet er sikret hos Jobblo.',
+    step: 2,
+    approvable: false,
+  },
+  paid: {
+    title: (name) => `${name} har ikke startet jobben ennå`,
+    body: 'Beløpet er sikret hos Jobblo. Du får varsel så snart arbeidet er meldt ferdig.',
+    step: 3,
+    approvable: false,
+  },
+  in_progress: {
+    title: (name) => `${name} jobber med oppdraget nå`,
+    body: 'Du kan godkjenne og utbetale når utfører har meldt jobben som ferdig.',
+    step: 3,
+    approvable: false,
+  },
+  ready_for_review: {
+    title: (name) => `${name} melder jobben som ferdig`,
+    body: 'Se over arbeidet under. Godkjenner du, utbetales beløpet til utfører.',
+    step: 4,
+    approvable: true,
+  },
+  completed: {
+    title: () => 'Jobben er godkjent',
+    body: 'Beløpet er frigitt til utfører. Oppdraget er avsluttet.',
+    step: 4,
+    approvable: false,
+  },
+  disputed: {
+    title: () => 'Oppdraget er under tvist',
+    body: 'Utbetalingen står på vent til tvisten er avklart.',
+    step: 4,
+    approvable: false,
+  },
+  cancelled: {
+    title: () => 'Oppdraget er kansellert',
+    body: 'Det er ingenting å godkjenne på dette oppdraget.',
+    step: 2,
+    approvable: false,
+  },
+};
+
+const FALLBACK_STATUS_VIEW: JobStatusView = {
+  title: () => 'Oppdraget er underveis',
+  body: 'Du kan godkjenne og utbetale når utfører har meldt jobben som ferdig.',
+  step: 3,
+  approvable: false,
+};
 
 // Reusable Star Rating Component
 interface StarRatingProps {
@@ -120,16 +197,16 @@ const StarRating: React.FC<StarRatingProps> = ({
                 transition-all duration-200
                 ${!disabled ? 'cursor-pointer' : 'cursor-default'}
                 ${!disabled ? 'hover:scale-115' : ''}
-                ${focusedIndex === star ? 'outline-none ring-2 ring-[#F59E0B] rounded-full' : ''}
+                ${focusedIndex === star ? 'outline-none ring-2 ring-[#2E6641] rounded-full' : ''}
               `}
             >
               <Star
                 size={size}
                 className={`
                   transition-all duration-200
-                  ${isFilled ? 'text-[#F59E0B] fill-[#F59E0B]' : ''}
-                  ${isHovered && !disabled ? 'text-[#F59E0B] fill-[#F59E0B]/50' : ''}
-                  ${isEmpty ? 'text-[#d1d5db] stroke-[#d1d5db] fill-none' : ''}
+                  ${isFilled ? 'text-[#2E6641] fill-[#2E6641]' : ''}
+                  ${isHovered && !disabled ? 'text-[#2E6641] fill-[#2E6641]/50' : ''}
+                  ${isEmpty ? 'text-[#D4D6CD] stroke-[#D4D6CD] fill-none' : ''}
                 `}
               />
             </button>
@@ -171,15 +248,51 @@ const ImageLightbox: React.FC<{ url: string; onClose: () => void }> = ({ url, on
   </div>
 );
 
+/** The full-page states this screen falls back to: load failure, wrong viewer. */
+const ApprovalNotice = ({
+  title,
+  body,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  body: string;
+  actionLabel: string;
+  onAction: () => void;
+}) => (
+  <div className="flex min-h-screen items-center justify-center bg-[#EFF0EA] p-4">
+    <div className="w-full max-w-md rounded-3xl border border-[#E6E7E1] bg-white p-10 text-center">
+      <span className="mx-auto mb-4 flex size-11 items-center justify-center rounded-full bg-[#EAF1E9] text-[#2E6641]">
+        <ShieldCheck size={20} strokeWidth={2} />
+      </span>
+      <p className="text-[1.0625rem] font-semibold text-[#0B0B0B]">{title}</p>
+      <p className="mx-auto mt-2 max-w-sm text-[0.875rem] leading-relaxed text-[#63665F]">{body}</p>
+      <button
+        onClick={onAction}
+        className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-[#2E6641] px-6 text-[0.9375rem] font-semibold text-white transition-colors hover:bg-[#255335]"
+      >
+        {actionLabel}
+      </button>
+    </div>
+  </div>
+);
+
 const SafePayApproval: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { user } = useUserStore();
   const [isSuccess, setIsSuccess] = useState(false);
+  // Set when the approval succeeded but the Stripe transfer to the provider did not.
+  // The backend returns HTTP 200 in that case (the approval itself is valid), so this
+  // must be read from the response body — otherwise we tell the customer the provider
+  // was paid when no money moved.
+  const [payoutWarning, setPayoutWarning] = useState<string | null>(null);
   const [showSkipDialog, setShowSkipDialog] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   // ── Dispute state ────────────────────────────────────────────────────────
+  // Read path (F-47): opening a dispute used to produce a toast and nothing else.
+  const { data: dispute, refetch: refetchDispute } = useDispute(orderId);
   const [showDisputeDialog, setShowDisputeDialog] = useState(false);
   const [disputeForm, setDisputeForm] = useState({
     reasonCategory: '',
@@ -214,18 +327,10 @@ const SafePayApproval: React.FC = () => {
   const disputeIsValid =
     !disputeErrors.reasonCategory && !disputeErrors.title && !disputeErrors.description;
 
-  const DISPUTE_REASON_OPTIONS = [
-    { value: 'work_not_completed', label: 'Jobb ikke fullført' },
-    { value: 'poor_quality', label: 'Dårlig kvalitet' },
-    { value: 'different_from_agreement', label: 'Avviker fra avtalen' },
-    { value: 'customer_not_cooperating', label: 'Kunde samarbeider ikke' },
-    { value: 'provider_not_cooperating', label: 'Tilbyder samarbeider ikke' },
-    { value: 'payment_issue', label: 'Betalingsproblem' },
-    { value: 'unauthorized_payment', label: 'Uautorisert betaling' },
-    { value: 'fraud_or_scam', label: 'Svindel eller bedrageri' },
-    { value: 'damaged_property', label: 'Skadet eiendom' },
-    { value: 'other', label: 'Annet' },
-  ];
+  // Scoped to the customer's side. The list used to offer both
+  // "Kunde samarbeider ikke" and "Tilbyder samarbeider ikke" to everyone, so each
+  // party could file a dispute accusing themselves.
+  const DISPUTE_REASON_OPTIONS = disputeReasonOptions('customer');
 
   const handleOpenDispute = async () => {
     setDisputeTouched({ reasonCategory: true, title: true, description: true });
@@ -237,7 +342,8 @@ const SafePayApproval: React.FC = () => {
         title: disputeForm.title.trim(),
         description: disputeForm.description.trim(),
       });
-      toast.success('Tvist opprettet. Admin vil gjennomgå saken.');
+      toast.success('Tvisten er opprettet. Du finner status og meldinger på denne siden.');
+      refetchDispute();
       setShowDisputeDialog(false);
       setDisputeForm({ reasonCategory: '', title: '', description: '' });
       setDisputeTouched({ reasonCategory: false, title: false, description: false });
@@ -261,6 +367,7 @@ const SafePayApproval: React.FC = () => {
 
   const [comment, setComment] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const [recommendWorker, setRecommendWorker] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -324,13 +431,26 @@ const SafePayApproval: React.FC = () => {
       });
       return res.data;
     },
-    onSuccess: () => {
+    onSuccess: (data: { payoutWarning?: string; payoutErrorCode?: string } | undefined) => {
       setIsSuccess(true);
-      toast.success('Jobb godkjent!');
+      if (data?.payoutWarning) {
+        setPayoutWarning(data.payoutWarning);
+        // Not a success toast: the money did not reach the provider.
+        toast('Jobb godkjent, men utbetalingen er ikke fullført.', { icon: '⚠️' });
+      } else {
+        setPayoutWarning(null);
+        toast.success('Jobb godkjent!');
+      }
     },
     onError: (err: any) => {
       const status = err.response?.status;
-      const message = err.response?.data?.error || 'Kunne ikke godkjenne jobben';
+      // `mutationFn` throws a plain Error for the missing-rating case, which has no
+      // `response` at all. Reading only `response.data.error` turned that specific,
+      // actionable message into the generic "Kunne ikke godkjenne jobben" — and the
+      // skip-checklist path calls `mutate()` directly, so it was the message that path
+      // actually produced.
+      const message =
+        err?.response?.data?.error || err?.message || 'Kunne ikke godkjenne jobben';
       if (status === 403) {
         toast.error('Ikke tilgang. Kun oppdragsgiver kan godkjenne jobben.');
       } else if (status === 400 && message.includes('ready_for_review')) {
@@ -354,6 +474,58 @@ const SafePayApproval: React.FC = () => {
       refetch();
     },
   });
+
+  /**
+   * Review photos go to Cloudinary and only their URLs travel with `approve`.
+   *
+   * They used to be read with `FileReader.readAsDataURL` and posted inline as base64 in the
+   * approve request. Base64 adds ~33 %, so two ordinary phone photos pushed the JSON body
+   * past the server's 12 MB limit and the approval failed with "Innholdet er for stort" —
+   * at the one point in the flow where failing costs the provider their payout. The bytes
+   * also ended up stored in the Review document itself.
+   */
+  const handlePhotoSelect = async (files: File[]) => {
+    if (!files.length || !orderId) return;
+
+    const room = MAX_REVIEW_PHOTOS - photos.length;
+    if (room <= 0) {
+      toast.error(`Maks ${MAX_REVIEW_PHOTOS} bilder.`);
+      return;
+    }
+    if (files.length > room) {
+      toast.error(`Maks ${MAX_REVIEW_PHOTOS} bilder — de første ${room} ble lagt til.`);
+    }
+
+    setIsUploadingPhotos(true);
+    try {
+      // Compress first: a phone photo is 3–8 MB and comes out a few hundred KB, which is
+      // what keeps this well under every limit between here and Cloudinary.
+      const compressed = await compressImages(files.slice(0, room));
+
+      const body = new FormData();
+      compressed.forEach((file) => body.append('photos', file));
+
+      // The header override is required, not decorative: `mainLink` defaults to
+      // `Content-Type: application/json`, and axios 1.x serialises a FormData body to JSON
+      // when it sees a JSON content type — the files would arrive as `{}`. The browser
+      // adapter replaces this with the real boundary before sending.
+      const res = await mainLink.post(`/api/safepay-checkout/review-photos/${orderId}`, body, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const urls: string[] = res.data?.urls ?? [];
+      if (!urls.length) throw new Error('Ingen bilder ble lastet opp.');
+
+      setPhotos((prev) => [...prev, ...urls]);
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        (err as Error)?.message ||
+        'Kunne ikke laste opp bildene. Prøv igjen.';
+      toast.error(message);
+    } finally {
+      setIsUploadingPhotos(false);
+    }
+  };
 
   const handleApprove = () => {
     const allChecked = checklist.every((item) => item.checked);
@@ -386,42 +558,56 @@ const SafePayApproval: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#f5f0e8]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-custom-green"></div>
+      <div className="min-h-screen bg-[#EFF0EA]">
+        <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+          <div className="jb-skeleton h-4 w-24 rounded" />
+          <div className="jb-skeleton mt-8 h-14 w-full rounded-2xl" />
+          <div className="jb-skeleton mt-4 h-64 w-full rounded-3xl" />
+          <div className="jb-skeleton mt-4 h-80 w-full rounded-3xl" />
+        </div>
       </div>
     );
   }
 
-  if (error || !checkoutData) {
+  if (error || !checkoutData?.order || !checkoutData?.calculation) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#f5f0e8] p-4">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Kunne ikke laste oppdraget</h2>
-        <Button onClick={() => navigate(-1)} label="Gå tilbake" />
-      </div>
+      <ApprovalNotice
+        title="Kunne ikke laste oppdraget"
+        body="Sjekk internettforbindelsen din og prøv igjen."
+        actionLabel="Prøv igjen"
+        onAction={() => refetch()}
+      />
     );
   }
 
   const { order: orderData, calculation } = checkoutData;
 
   // Check if current user is the customer (order owner)
-  const isCustomer = String(orderData.customerId._id) === String(user?._id);
+  const isCustomer = String(orderData.customerId?._id) === String(user?._id);
 
   if (!isCustomer) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#f5f0e8] p-4">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Ikke tilgang</h2>
-        <p className="text-gray-600 mb-4">Kun oppdragsgiver kan godkjenne jobber.</p>
-        <button
-          onClick={() => navigate(-1)}
-          className="text-custom-green font-medium flex items-center gap-2"
-        >
-          <ArrowLeft size={18} /> Gå tilbake
-        </button>
-      </div>
+      <ApprovalNotice
+        title="Ikke tilgang"
+        body="Kun oppdragsgiver kan godkjenne en jobb og frigi betalingen."
+        actionLabel="Tilbake til forsiden"
+        onAction={() => navigate('/home')}
+      />
     );
   }
 
   const isOrderCompleted = orderData.status === 'completed';
+
+  // The single source of truth for what this page is allowed to claim and offer.
+  const statusView = JOB_STATUS_VIEW[orderData.status] || FALLBACK_STATUS_VIEW;
+  // Approval is live only from `ready_for_review` — the same rule the backend enforces
+  // in SafePayCheckoutController.approveAndPayout.
+  const canApproveNow = statusView.approvable && !isSuccess;
+  // Mirrors safepayController.updateChecklistItem's EDITABLE_ORDER_STATUSES, so the
+  // customer can tick items off while the work is still running without the request
+  // coming back 409.
+  const canEditChecklist =
+    !isSuccess && !dispute && ['paid', 'in_progress', 'ready_for_review'].includes(orderData.status);
 
   // ── Proof-of-work evidence from the provider ─────────────────────────────
   const beforeImages: string[] = orderData.beforeImages || [];
@@ -430,37 +616,96 @@ const SafePayApproval: React.FC = () => {
   const hasAnyEvidence = beforeImages.length > 0 || afterImages.length > 0 || !!completionNote;
 
   if (isSuccess) {
+    // Two genuinely different outcomes, so they are not dressed the same. When the
+    // transfer failed the headline said "Jobb godkjent!" over the payout amount set in
+    // big green type — the one number on screen, rendered as if it had been paid.
+    const paidOut = !payoutWarning;
     return (
-      <div className="min-h-screen bg-[#f5f0e8] flex items-center justify-center px-6">
-        <div className="max-w-[500px] w-full bg-[#1a3a1a] rounded-3xl p-10 text-center shadow-2xl">
-          <div className="w-16 h-16 bg-[#4ade80] rounded-full flex items-center justify-center mx-auto mb-6">
-            <Check size={32} className="text-[#1a3a1a]" />
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Jobb godkjent!</h1>
-          <p className="text-white/60 mb-8">
-            Pengene er lagt til {orderData.providerId.name} {orderData.providerId.lastName} sin
-            saldo.
+      <div className="flex min-h-screen items-center justify-center bg-[#EFF0EA] px-4 py-12">
+        <div
+          className={`w-full max-w-125 rounded-3xl p-8 text-center sm:p-10 ${
+            paidOut ? 'bg-[#122A1C]' : 'border border-[#E6E7E1] bg-white'
+          }`}
+        >
+          <span
+            className={`mx-auto mb-6 flex size-14 items-center justify-center rounded-full ${
+              paidOut ? 'bg-[#8FBF9A] text-[#122A1C]' : 'bg-[#F4F6F0] text-[#63665F]'
+            }`}
+          >
+            {paidOut ? (
+              <Check size={26} strokeWidth={2.6} />
+            ) : (
+              <AlertTriangle size={24} strokeWidth={2} />
+            )}
+          </span>
+
+          <h1
+            className={`text-[1.5rem] font-bold tracking-[-0.035em] ${
+              paidOut ? 'text-white' : 'text-[#0B0B0B]'
+            }`}
+          >
+            {paidOut ? 'Jobben er godkjent' : 'Godkjent — men utbetalingen stoppet'}
+          </h1>
+          <p
+            className={`mx-auto mt-2.5 max-w-sm text-[0.875rem] leading-relaxed ${
+              paidOut ? 'text-white/65' : 'text-[#63665F]'
+            }`}
+          >
+            {paidOut
+              ? `Beløpet er lagt til saldoen til ${orderData.providerId?.name || 'utføreren'} ${
+                  orderData.providerId?.lastName || ''
+                }.`.trim()
+              : payoutWarning}
           </p>
 
-          <div className="text-[42px] font-bold text-[#4ade80] mb-1">
-            {calculation.providerNet} kr
-          </div>
-          <div className="text-[12px] text-white/40 uppercase tracking-widest mb-10">
-            Tilgjenelig innen 1–2 virkedager
+          <div
+            className={`mt-8 rounded-2xl px-4 py-5 ${paidOut ? 'bg-white/8' : 'bg-[#F4F6F0]'}`}
+          >
+            <p
+              className={`text-[2rem] font-bold tabular-nums tracking-[-0.04em] ${
+                paidOut ? 'text-[#8FBF9A]' : 'text-[#63665F]'
+              }`}
+            >
+              {Number(calculation.providerNet).toLocaleString('nb-NO')} kr
+            </p>
+            <p
+              className={`mt-1 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] ${
+                paidOut ? 'text-white/40' : 'text-[#9B9E96]'
+              }`}
+            >
+              {paidOut ? 'Tilgjengelig innen 1–2 virkedager' : 'Ikke utbetalt ennå'}
+            </p>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <Button
-              onClick={() => navigate('/profile')}
-              label="Se kontrakt"
-              className="w-full bg-[#4ade80] text-[#1a3a1a] rounded-full py-3.5 font-bold"
-            />
-            <Button
-              variant="outline"
+          <div className="mt-8 flex flex-col gap-2.5">
+            {!paidOut && (
+              <button
+                onClick={() => navigate('/support')}
+                className="flex h-12 w-full items-center justify-center rounded-full bg-[#2E6641] text-[0.9375rem] font-semibold text-white transition-colors hover:bg-[#255335]"
+              >
+                Kontakt support
+              </button>
+            )}
+            <button
+              onClick={() => navigate('/my-applicants')}
+              className={`flex h-12 w-full items-center justify-center rounded-full text-[0.9375rem] font-semibold transition-colors ${
+                paidOut
+                  ? 'bg-[#8FBF9A] text-[#122A1C] hover:bg-[#a3cbac]'
+                  : 'border border-[#E6E7E1] bg-white text-[#0B0B0B] hover:border-[#2E6641]/45'
+              }`}
+            >
+              Mine oppdrag
+            </button>
+            <button
               onClick={() => navigate('/home')}
-              label="Tilbake til hjem"
-              className="w-full border-white/20 text-white rounded-full py-3.5 font-bold"
-            />
+              className={`flex h-12 w-full items-center justify-center rounded-full text-[0.9375rem] font-medium transition-colors ${
+                paidOut
+                  ? 'border border-white/20 text-white hover:bg-white/10'
+                  : 'text-[#63665F] hover:text-[#0B0B0B]'
+              }`}
+            >
+              Tilbake til forsiden
+            </button>
           </div>
         </div>
       </div>
@@ -468,23 +713,29 @@ const SafePayApproval: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f0e8] font-sans pb-12">
-      <div className="max-w-[1024px] mx-auto px-6 py-8">
+    <div className="min-h-screen bg-[#EFF0EA] pb-16">
+      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-800 transition-colors mb-6"
+          className="group -ml-1 mb-6 inline-flex items-center gap-1.5 rounded-full py-1 pl-1 pr-2 text-[0.875rem] font-medium text-[#63665F] transition-colors hover:text-[#0B0B0B]"
         >
           <ArrowLeft size={16} /> Tilbake
         </button>
 
-        <SafePaySteps currentStep={4} orderId={orderId} serviceId={orderData.serviceId._id} />
+        <SafePaySteps
+          currentStep={statusView.step}
+          orderId={orderId}
+          serviceId={orderData.serviceId._id}
+        />
+
+        <DisputePanel orderId={orderId} dispute={dispute} viewerRole="customer" />
 
         {/* Contract view link */}
         <div className="flex justify-end mb-2">
           <ContractViewModal
             orderId={orderId!}
             trigger={
-              <span className="flex items-center gap-1.5 text-[13px] text-[#1a3a1a] font-semibold hover:underline cursor-pointer">
+              <span className="flex items-center gap-1.5 text-[13px] text-[#122A1C] font-semibold hover:underline cursor-pointer">
                 <FileText size={14} /> Se kontrakt
               </span>
             }
@@ -496,17 +747,38 @@ const SafePayApproval: React.FC = () => {
           <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
             <CircleCheck size={18} className="text-custom-green" /> Jobbstatus
           </div>
-          <div className="bg-[#f0faf0] border border-[#c6f0d8] rounded-xl p-4 flex items-center gap-4">
-            <div className="w-12 h-12 bg-custom-green rounded-full flex items-center justify-center shrink-0">
-              <Wrench size={24} className="text-white" />
+          <div
+            className={`rounded-xl p-4 flex items-center gap-4 border ${
+              canApproveNow
+                ? 'bg-[#EAF1E9] border-[#EAF1E9]'
+                : 'bg-[#F4F6F0] border-[#E6E7E1]'
+            }`}
+          >
+            <div
+              className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
+                canApproveNow ? 'bg-custom-green text-white' : 'bg-white text-[#63665F]'
+              }`}
+            >
+              <Wrench size={24} />
             </div>
             <div>
-              <h3 className="text-[15px] font-bold text-[#166534] mb-0.5">
-                {orderData.providerId.name} melder jobben som ferdig
+              <h3
+                className={`text-[15px] font-bold mb-0.5 ${
+                  canApproveNow ? 'text-[#2E6641]' : 'text-[#0B0B0B]'
+                }`}
+              >
+                {statusView.title(orderData.providerId.name)}
               </h3>
-              <p className="text-[12px] text-custom-green/80">
+              <p
+                className={`text-[12px] ${
+                  canApproveNow ? 'text-custom-green/80' : 'text-[#63665F]'
+                }`}
+              >
                 {new Date(orderData.updatedAt).toLocaleDateString('no-NO')} •{' '}
                 {orderData.serviceId.title} • {orderData.serviceId.location?.city || 'Oslo'}
+              </p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-[#63665F]">
+                {statusView.body}
               </p>
             </div>
           </div>
@@ -517,8 +789,8 @@ const SafePayApproval: React.FC = () => {
           <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
             <User size={18} className="text-custom-green" /> Oppdragstaker
           </div>
-          <div className="bg-[#f9f9f7] rounded-xl p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#c8d8c8] text-[#1a3a1a] font-bold flex items-center justify-center text-lg overflow-hidden">
+          <div className="bg-[#F4F6F0] rounded-xl p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-[#EAF1E9] text-[#122A1C] font-bold flex items-center justify-center text-lg overflow-hidden">
               {orderData.providerId.avatarUrl ? (
                 <img
                   src={orderData.providerId.avatarUrl}
@@ -553,7 +825,7 @@ const SafePayApproval: React.FC = () => {
             <div className="space-y-4">
               {/* Completion note first */}
               {completionNote && (
-                <div className="bg-[#f9f9f7] rounded-xl p-4 border border-black/5">
+                <div className="bg-[#F4F6F0] rounded-xl p-4 border border-black/5">
                   <p className="text-[11px] text-gray-400 uppercase font-bold tracking-wider mb-1.5">
                     Ferdigstillingsnotat fra utfører
                   </p>
@@ -571,7 +843,7 @@ const SafePayApproval: React.FC = () => {
                     {beforeImages.map((url, i) => (
                       <div
                         key={`b-${i}`}
-                        className="relative aspect-square rounded-xl overflow-hidden bg-[#f9f9f7] group cursor-zoom-in"
+                        className="relative aspect-square rounded-xl overflow-hidden bg-[#F4F6F0] group cursor-zoom-in"
                         onClick={() => setLightboxUrl(url)}
                       >
                         {url.toLowerCase().endsWith('.pdf') ? (
@@ -612,7 +884,7 @@ const SafePayApproval: React.FC = () => {
                     {afterImages.map((url, i) => (
                       <div
                         key={`a-${i}`}
-                        className="relative aspect-square rounded-xl overflow-hidden bg-[#f9f9f7] group cursor-zoom-in"
+                        className="relative aspect-square rounded-xl overflow-hidden bg-[#F4F6F0] group cursor-zoom-in"
                         onClick={() => setLightboxUrl(url)}
                       >
                         {url.toLowerCase().endsWith('.pdf') ? (
@@ -651,14 +923,16 @@ const SafePayApproval: React.FC = () => {
                 Ingen arbeidsbevis lastet opp
               </p>
               <p className="text-[12px] text-gray-400 max-w-md mx-auto">
-                Utfører har ikke lastet opp bilder eller dokumentasjon for denne jobben. Du kan
-                fortsatt godkjenne jobben nedenfor hvis alt er i orden, eller åpne en tvist hvis du
-                forventet visuelt bevis.
+                {canApproveNow
+                  ? 'Utfører har ikke lastet opp bilder eller dokumentasjon for denne jobben. Du kan fortsatt godkjenne jobben nedenfor hvis alt er i orden, eller åpne en tvist hvis du forventet visuelt bevis.'
+                  : 'Utfører har ikke lastet opp bilder eller dokumentasjon ennå. Bevis lastes opp underveis i arbeidet.'}
               </p>
-              <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-gray-400">
-                <ShieldCheck size={14} className="text-custom-green" />
-                <span>Du kan likevel vurdere jobben nedenfor basert på samtale og resultat.</span>
-              </div>
+              {canApproveNow && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-gray-400">
+                  <ShieldCheck size={14} className="text-custom-green" />
+                  <span>Du kan likevel vurdere jobben nedenfor basert på samtale og resultat.</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -672,7 +946,7 @@ const SafePayApproval: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {checklist.map((item) => {
-                const canToggle = !isOrderCompleted && !isSuccess;
+                const canToggle = canEditChecklist;
                 return (
                   <label
                     key={item.id}
@@ -695,9 +969,9 @@ const SafePayApproval: React.FC = () => {
                     }}
                     className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all select-none ${
                       item.checked
-                        ? 'bg-[#f0faf0] border-[#c6f0d8]'
-                        : 'bg-[#f9f9f7] border-transparent'
-                    } ${canToggle ? 'cursor-pointer hover:border-black/10 hover:bg-[#f0faf0]/50' : 'cursor-not-allowed opacity-90'}`}
+                        ? 'bg-[#EAF1E9] border-[#EAF1E9]'
+                        : 'bg-[#F4F6F0] border-transparent'
+                    } ${canToggle ? 'cursor-pointer hover:border-black/10 hover:bg-[#EAF1E9]/50' : 'cursor-not-allowed opacity-90'}`}
                   >
                     <input
                       id={`checklist-${item.id}`}
@@ -714,14 +988,14 @@ const SafePayApproval: React.FC = () => {
                       className={`w-5.5 h-5.5 rounded-md border-2 flex items-center justify-center transition-all ${
                         item.checked
                           ? 'bg-custom-green border-custom-green'
-                          : 'bg-white border-[#c8d8c8]'
+                          : 'bg-white border-[#EAF1E9]'
                       }`}
                     >
                       {item.checked && <Check size={14} className="text-white" strokeWidth={3} />}
                     </span>
                     <span
                       className={`text-[13px] font-medium ${
-                        item.checked ? 'text-[#166534]' : 'text-gray-600'
+                        item.checked ? 'text-[#2E6641]' : 'text-gray-600'
                       }`}
                     >
                       {item.text}
@@ -731,8 +1005,8 @@ const SafePayApproval: React.FC = () => {
               })}
             </div>
 
-            {/* Skip option */}
-            {!isSuccess && !isOrderCompleted && checklist.some((item) => !item.checked) && (
+            {/* Skip option — only meaningful when approving is actually possible. */}
+            {canApproveNow && checklist.some((item) => !item.checked) && (
               <div className="mt-4 text-center">
                 <button
                   onClick={() => setShowSkipDialog(true)}
@@ -745,9 +1019,11 @@ const SafePayApproval: React.FC = () => {
           </div>
         )}
 
-        {/* Rating Section */}
+        {/* Rating Section — a review belongs to finished work, so the form only appears
+            once the provider has actually reported the job done. Before that the same
+            card shows the provider's existing ratings instead. */}
         <div className="bg-white border border-black/5 rounded-2xl p-6 mb-4 shadow-sm">
-          {!isOrderCompleted && !isSuccess ? (
+          {canApproveNow ? (
             <>
               <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
                 <Star size={18} className="text-custom-green" /> Gi {orderData.providerId.name} en
@@ -781,7 +1057,7 @@ const SafePayApproval: React.FC = () => {
                         { id: 'communication', label: 'Kommunikasjon' },
                         { id: 'tidiness', label: 'Ryddighet' },
                       ].map((cat) => (
-                        <div key={cat.id} className="bg-[#f9f9f7] rounded-xl p-3">
+                        <div key={cat.id} className="bg-[#F4F6F0] rounded-xl p-3">
                           <div className="text-[11px] text-gray-400 uppercase font-bold mb-2 tracking-wider">
                             {cat.label}
                           </div>
@@ -848,16 +1124,12 @@ const SafePayApproval: React.FC = () => {
                   <input
                     type="file"
                     multiple
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={isUploadingPhotos}
                     onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      files.forEach((file) => {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                          setPhotos((prev) => [...prev, event.target?.result as string]);
-                        };
-                        reader.readAsDataURL(file);
-                      });
+                      void handlePhotoSelect(Array.from(e.target.files || []));
+                      // Let the same file be picked again after a failed upload.
+                      e.target.value = '';
                     }}
                     className="hidden"
                     id="photo-upload"
@@ -866,10 +1138,23 @@ const SafePayApproval: React.FC = () => {
                 {!isOrderCompleted && (
                   <label
                     htmlFor="photo-upload"
-                    className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-custom-green transition-colors"
+                    aria-busy={isUploadingPhotos}
+                    className={`flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed rounded-xl transition-colors ${
+                      isUploadingPhotos
+                        ? 'border-gray-200 cursor-wait'
+                        : 'border-gray-300 cursor-pointer hover:border-custom-green'
+                    }`}
                   >
-                    <FileText size={18} className="text-gray-400" />
-                    <span className="text-[13px] text-gray-500">Last opp dine egne bilder</span>
+                    {isUploadingPhotos ? (
+                      <Loader2 size={18} className="animate-spin text-gray-400" />
+                    ) : (
+                      <FileText size={18} className="text-gray-400" />
+                    )}
+                    <span className="text-[13px] text-gray-500">
+                      {isUploadingPhotos
+                        ? 'Laster opp…'
+                        : `Last opp dine egne bilder (maks ${MAX_REVIEW_PHOTOS})`}
+                    </span>
                   </label>
                 )}
               </div>
@@ -879,8 +1164,8 @@ const SafePayApproval: React.FC = () => {
                 <div
                   className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${
                     recommendWorker
-                      ? 'bg-[#f0faf0] border-[#c6f0d8]'
-                      : 'bg-[#f9f9f7] border-transparent hover:border-black/10'
+                      ? 'bg-[#EAF1E9] border-[#EAF1E9]'
+                      : 'bg-[#F4F6F0] border-transparent hover:border-black/10'
                   } ${isOrderCompleted ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                   onClick={() => !isOrderCompleted && setRecommendWorker(!recommendWorker)}
                 >
@@ -888,7 +1173,7 @@ const SafePayApproval: React.FC = () => {
                     className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
                       recommendWorker
                         ? 'bg-custom-green border-custom-green'
-                        : 'bg-white border-[#c8d8c8]'
+                        : 'bg-white border-[#EAF1E9]'
                     }`}
                   >
                     {recommendWorker && <Check size={16} className="text-white" strokeWidth={3} />}
@@ -907,14 +1192,14 @@ const SafePayApproval: React.FC = () => {
           ) : (
             <>
               <div className="flex items-center gap-2 text-[15px] font-medium text-gray-900 mb-4.5">
-                <Star size={18} className="text-[#F59E0B]" /> Vurderinger for{' '}
+                <Star size={18} className="text-[#2E6641]" /> Vurderinger for{' '}
                 {orderData.providerId.name}
               </div>
 
               {/* Average Rating Summary */}
-              <div className="bg-[#f9f9f7] rounded-xl p-4 mb-6 flex items-center gap-4">
+              <div className="bg-[#F4F6F0] rounded-xl p-4 mb-6 flex items-center gap-4">
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-[#F59E0B]">
+                  <div className="text-4xl font-bold text-[#2E6641]">
                     {orderData.providerId.averageRating
                       ? orderData.providerId.averageRating.toFixed(1)
                       : '4.7'}
@@ -932,8 +1217,8 @@ const SafePayApproval: React.FC = () => {
                           (orderData.providerId.averageRating
                             ? Math.round(orderData.providerId.averageRating)
                             : 5)
-                            ? 'text-[#F59E0B] fill-[#F59E0B]'
-                            : 'text-[#d1d5db]'
+                            ? 'text-[#2E6641] fill-[#2E6641]'
+                            : 'text-[#D4D6CD]'
                         }
                       />
                     ))}
@@ -959,7 +1244,7 @@ const SafePayApproval: React.FC = () => {
 
           <div className="space-y-4">
             {/* Transaction Info */}
-            <div className="bg-[#f9f9f7] rounded-xl p-4">
+            <div className="bg-[#F4F6F0] rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                   Transaksjons-ID
@@ -980,26 +1265,25 @@ const SafePayApproval: React.FC = () => {
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                   Status
                 </span>
+                {/* Was a three-way guess that collapsed every status except `completed`
+                    and `paid` into "Venter" — including `in_progress` and
+                    `ready_for_review`, the two this page most needs to tell apart. */}
                 <span
                   className={`text-sm font-bold px-3 py-1 rounded-full ${
                     orderData.status === 'completed'
                       ? 'bg-emerald-100 text-emerald-700'
-                      : orderData.status === 'paid'
+                      : orderData.status === 'ready_for_review'
                         ? 'bg-blue-100 text-blue-700'
                         : 'bg-amber-100 text-amber-700'
                   }`}
                 >
-                  {orderData.status === 'completed'
-                    ? 'Fullført'
-                    : orderData.status === 'paid'
-                      ? 'Betalt'
-                      : 'Venter'}
+                  {statusLabel(orderData.status)}
                 </span>
               </div>
             </div>
 
             {/* Payout Breakdown */}
-            <div className="bg-[#f0faf0] border border-[#c6f0d8] rounded-2xl p-6">
+            <div className="bg-[#EAF1E9] border border-[#EAF1E9] rounded-2xl p-6">
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-[13px] border-b border-black/5 pb-2">
                   <span className="text-gray-500">Oppdragsbeløp</span>
@@ -1019,7 +1303,7 @@ const SafePayApproval: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex gap-2 text-[11px] text-[#166534] leading-relaxed">
+              <div className="flex gap-2 text-[11px] text-[#2E6641] leading-relaxed">
                 <Clock size={14} className="shrink-0 mt-0.5" />
                 <p>
                   Pengene utbetales til {orderData.providerId.name} innen 1–2 virkedager etter
@@ -1029,26 +1313,28 @@ const SafePayApproval: React.FC = () => {
             </div>
           </div>
 
-          <Button
-            onClick={handleApprove}
-            loading={approveMutation.isPending}
-            disabled={
-              isOrderCompleted || (!checklist.every((item) => item.checked) && !showSkipDialog)
-            }
-            className={
-              isOrderCompleted
-                ? 'w-full bg-gray-300 text-gray-500 rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 shadow-lg mt-6 cursor-not-allowed'
-                : 'w-full bg-custom-green text-white rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#14532d] transition-all shadow-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed'
-            }
-          >
-            {isOrderCompleted ? (
-              'Jobb allerede godkjent!'
-            ) : (
-              <>
-                <CircleCheck size={20} /> Godkjenn jobb og utbetal {calculation.providerNet} kr
-              </>
-            )}
-          </Button>
+          {/* The button used to be live at every status but `completed`, so a customer
+              who believed the banner pressed it and got "Utfører har ikke meldt jobben
+              som ferdig ennå" back from the server. Nothing to press until there is. */}
+          {canApproveNow ? (
+            <Button
+              onClick={handleApprove}
+              loading={approveMutation.isPending}
+              disabled={!checklist.every((item) => item.checked) && !showSkipDialog}
+              className="w-full bg-custom-green text-white rounded-full py-4 text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-[#255335] transition-all shadow-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <CircleCheck size={20} /> Godkjenn jobb og utbetal {calculation.providerNet} kr
+            </Button>
+          ) : (
+            <div className="mt-6 flex gap-3 rounded-2xl bg-[#F4F6F0] p-4 text-left">
+              <Clock size={16} className="mt-0.5 shrink-0 text-[#63665F]" />
+              <p className="text-[13px] leading-relaxed text-[#63665F]">
+                {isOrderCompleted
+                  ? `Jobben er godkjent og ${calculation.providerNet} kr er utbetalt til ${orderData.providerId.name}.`
+                  : statusView.body}
+              </p>
+            </div>
+          )}
 
           {/* Skip Confirmation Dialog */}
           {showSkipDialog && (
@@ -1076,15 +1362,17 @@ const SafePayApproval: React.FC = () => {
             </div>
           )}
 
-          <div className="text-center mt-5">
-            <button
-              type="button"
-              onClick={() => setShowDisputeDialog(true)}
-              className="inline-flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-red-500 transition-colors"
-            >
-              <AlertTriangle size={14} /> Ikke fornøyd? Opprett en tvist
-            </button>
-          </div>
+          {!dispute && (
+            <div className="text-center mt-5">
+              <button
+                type="button"
+                onClick={() => setShowDisputeDialog(true)}
+                className="inline-flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <AlertTriangle size={14} /> Ikke fornøyd? Opprett en tvist
+              </button>
+            </div>
+          )}
 
           {/* ── Dispute dialog ──────────────────────────────────────────── */}
           {showDisputeDialog && (

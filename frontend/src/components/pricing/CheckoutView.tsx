@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, X, ArrowLeft, Tag, ShoppingCart } from 'lucide-react';
+import { Check, X, ArrowLeft, Tag, ShoppingCart, ShieldCheck } from 'lucide-react';
 import { Button } from '../../components/Ui/button/Button';
 import { Input } from '../../components/Ui/Input';
 import type { Plan } from '../../features/plans/types.ts';
@@ -170,12 +170,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                   disabled={isRedirecting}
                   className="w-full py-4 !bg-white !text-[#1a3a1a] rounded-2xl font-black text-lg hover:!bg-[#f0faf0] transition-all shadow-xl"
                 />
-                <div className="mt-6 flex items-center justify-center gap-4 opacity-60">
-                  <img
-                    src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg"
-                    alt="Stripe"
-                    className="h-6 brightness-0 invert"
-                  />
+                {/* Was the Stripe logo hotlinked from Wikimedia — a third-party
+                    host we don't control, on the checkout screen. */}
+                <div className="mt-6 flex items-center justify-center gap-2 opacity-60 text-white text-[12px]">
+                  <ShieldCheck size={14} />
+                  <span>Sikker betaling med Stripe</span>
                 </div>
               </div>
               <div className="absolute top-0 right-0 -translate-y-1/4 translate-x-1/4 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>

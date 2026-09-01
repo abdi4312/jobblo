@@ -181,7 +181,7 @@ export const SeekerSettingsView = () => {
         <div className="relative group">
           <label
             htmlFor="availability"
-            className="absolute left-4 top-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-tight"
+            className="absolute left-4 top-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]"
           >
             Når er du tilgjengelig?
           </label>
@@ -189,7 +189,7 @@ export const SeekerSettingsView = () => {
             id="availability"
             rows={3}
             placeholder="F.eks. Mandag - Fredag: 08:00 - 16:00"
-            className="w-full bg-gray-100 hover:bg-gray-200 focus:bg-gray-100 outline-none rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors resize-none"
+            className="w-full border border-[#E6E7E1] bg-white outline-none focus:border-[#2E6641] focus:ring-4 focus:ring-[#2E6641]/12 rounded-2xl px-4 pt-6 pb-3 text-gray-900 font-medium transition-colors resize-none"
             value={form.availabilityText}
             onChange={(event) => handleChange('availabilityText', event.target.value)}
           />
@@ -243,7 +243,7 @@ export const SeekerSettingsView = () => {
         className={`w-full font-bold text-lg py-4 rounded-2xl text-white shadow-sm transition-all duration-200
           ${
             isDisabled
-              ? 'bg-custom-green cursor-not-allowed opacity-80'
+              ? 'cursor-not-allowed border border-[#E6E7E1] bg-[#F4F6F0] text-[#9B9E96]!'
               : 'bg-custom-green hover:shadow-md active:scale-[0.98]'
           }`}
       >

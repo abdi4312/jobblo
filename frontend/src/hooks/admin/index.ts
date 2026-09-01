@@ -181,6 +181,17 @@ export const useDeleteAdminService = () => {
     });
 };
 
+export const useUpdateAdminService = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: adminApi.AdminServiceUpdate }) =>
+            adminApi.updateAdminService(id, data),
+        onSuccess: () => { qc.invalidateQueries({ queryKey: adminKeys.all }); toast.success('Tjeneste oppdatert.'); },
+        onError: (e: { response?: { data?: { error?: string } } }) =>
+            toast.error(e?.response?.data?.error || 'Kunne ikke oppdatere tjeneste.'),
+    });
+};
+
 // ── Reviews ───────────────────────────────────────────────────────────────────
 export const useAdminReviews = (query: AdminReviewsQuery) =>
     useQuery({

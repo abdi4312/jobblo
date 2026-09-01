@@ -197,7 +197,8 @@ router.delete('/:id', authenticate, notificationController.deleteNotification);
  *       500:
  *         description: Server-feil
  */
-router.post('/test', notificationController.createTestNotification);
+// (F-53) Was missing `authenticate`, unlike every other route in this file.
+router.post('/test', authenticate, notificationController.createTestNotification);
 
 /**
  * @swagger

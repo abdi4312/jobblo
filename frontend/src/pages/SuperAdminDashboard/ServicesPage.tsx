@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Briefcase } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAdminServices, useUpdateServiceStatus, useDeleteAdminService } from '../../hooks/admin';
 import type { AdminServicesQuery, AdminService } from '../../api/admin';
 import {
@@ -24,6 +25,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function ServicesPage() {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -126,13 +128,16 @@ export default function ServicesPage() {
       className: 'whitespace-nowrap',
       render: (s) => (
         <div className="flex items-center gap-1.5">
-          {/* Quick status toggle open/closed */}
+          <button
+            onClick={() => navigate(`/dashboard/services/${s._id}/edit`)}
+            className="px-2.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+            aria-label={`Rediger ${s.title}`}
+          >
+            Rediger
+          </button>
           <button
             onClick={() =>
-              setStatusTarget({
-                service: s,
-                newStatus: s.status === 'open' ? 'closed' : 'open',
-              })
+              setStatusTarget({ service: s, newStatus: s.status === 'open' ? 'closed' : 'open' })
             }
             className="px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
             aria-label={`${s.status === 'open' ? 'Lukk' : 'Åpne'} ${s.title}`}

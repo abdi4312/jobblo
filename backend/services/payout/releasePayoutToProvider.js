@@ -1,10 +1,12 @@
 /**
  * releasePayoutToProvider — single shared payout service.
  *
- * ALL three release paths must call this and ONLY this to release funds:
+ * ALL release paths must call this and ONLY this to release funds:
  *  - SafePayCheckoutController.approveAndPayout   (customer approves)
- *  - safepayController.completeJobAndPayout       (legacy complete path)
  *  - disputesAdminController resolveDispute       (dispute release_to_provider)
+ *
+ * (safepayController.completeJobAndPayout was the legacy complete path. Removed in
+ * F-32: it released funds without checking paymentStatus, order state or disputes.)
  *
  * Contract:
  *  - Returns { payout, transfer } on success.
@@ -18,6 +20,32 @@ const User    = require('../../models/User');
 const Payment = require('../../models/Payment');
 const { getStripe } = require('../../config/stripe');
 const mongoose = require('mongoose');
+
+/**
+ * The charge behind a PaymentIntent, for `source_transaction`.
+ *
+ * Accepts an id of either shape so a caller that already holds a charge id (or a future
+ * Payment record that stores one) needs no special case. Returns null rather than
+ * throwing: a transfer that cannot be tied to its charge is still worth attempting
+ * against the platform balance, and losing the payout is worse than losing the linkage.
+ */
+async function resolveChargeId(stripe, paymentIntentId) {
+  if (!paymentIntentId) return null;
+  if (/^(ch|py)_/.test(paymentIntentId)) return paymentIntentId;
+
+  try {
+    const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const charge = intent?.latest_charge;
+    return typeof charge === 'string' ? charge : charge?.id || null;
+  } catch (err) {
+    console.error(
+      'releasePayoutToProvider: could not resolve a charge for %s — transferring from balance instead: %s',
+      paymentIntentId,
+      err.message
+    );
+    return null;
+  }
+}
 
 /**
  * @param {object} opts
@@ -158,9 +186,18 @@ async function releasePayoutToProvider(opts) {
       },
     };
 
-    // Attach to source transaction for better reconciliation when available
-    if (stripePaymentIntentId) {
-      transferParams.source_transaction = stripePaymentIntentId;
+    // Attach to the source charge for better reconciliation when available.
+    //
+    // `source_transaction` takes a CHARGE id, but the id carried through this system is
+    // the PaymentIntent's — and Stripe rejects `pi_…` here with
+    // "No such charge: 'pi_…'" (resource_missing). Every release therefore threw, the
+    // caller reported "utbetalingen mislyktes midlertidig", and no provider was ever
+    // actually paid. The PaymentIntent is resolved to its charge first; if that lookup
+    // fails the parameter is simply omitted and the transfer draws on the platform's
+    // available balance instead of failing outright.
+    const chargeId = await resolveChargeId(stripe, stripePaymentIntentId);
+    if (chargeId) {
+      transferParams.source_transaction = chargeId;
     }
 
     transfer = await stripe.transfers.create(transferParams, {

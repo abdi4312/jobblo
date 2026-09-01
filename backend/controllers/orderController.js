@@ -8,15 +8,33 @@ const JobRequest = require('../models/JobRequest');
 
 const User = require('../models/User');
 const { calculatePointsFromService } = require('../utils/points');
+const { notify } = require('../services/notifications');
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
+/**
+ * The id behind an order reference, whether or not it has been populated.
+ *
+ * `getOrderById` populates `customerId` and `providerId` before authorising, so the ref
+ * is a Mongoose document by the time it is checked and `.toString()` returns the whole
+ * document rendered as a string — never an id. The comparison could not match, so the
+ * endpoint answered 403 to the customer and the provider alike on every order.
+ */
+const refId = (ref) => {
+  if (!ref) return null;
+  if (typeof ref === 'string') return ref;
+  return String(ref._id ?? ref);
+};
+
 // Helper to authorize order actions
 function authorizeOrderAction(req, order) {
-  if (!order.customerId || !order.providerId) return false;
+  const customerId = refId(order.customerId);
+  const providerId = refId(order.providerId);
+  if (!customerId || !providerId) return false;
 
-  return order.customerId.toString() === req.userId || order.providerId.toString() === req.userId;
+  const userId = String(req.userId);
+  return customerId === userId || providerId === userId;
 }
 
 /**
@@ -121,10 +139,16 @@ exports.createJobRequest = async (req, res) => {
 
     // ── Create or get Chat so it appears in "Forespørsler Sendt" ──────────────
     const Chat = require('../models/ChatMessage');
+    // Direction-agnostic: match the pair, not the slots. If the owner messaged the
+    // applicant first, the chat exists as { clientId: owner, providerId: applicant },
+    // and a slot-specific lookup here would miss it and open a second conversation for
+    // the same pair and job.
     let chat = await Chat.findOne({
-      clientId: customerId,   // applicant
-      providerId: providerId, // job owner
       serviceId,
+      $or: [
+        { clientId: customerId, providerId }, // applicant applied first
+        { clientId: providerId, providerId: customerId }, // owner messaged first
+      ],
     });
 
     if (!chat) {
@@ -156,21 +180,17 @@ exports.createJobRequest = async (req, res) => {
       });
     }
 
-    // Send notification to provider
-    const notification = await Notification.create({
+    // Tell the job owner someone applied. `notify` creates and delivers in one call, so
+    // this can never again end up written to the database but not sent.
+    await notify({
       userId: providerId,
       senderId: customerId,
       requestId: jobRequest._id,
-      type: 'order',
-      content: `Ny forespørsel: ${jobRequest.customerId.name} ønsker å søke på "${jobRequest.serviceId.title}"`,
+      type: 'application',
+      content: `${jobRequest.customerId.name} har søkt på "${jobRequest.serviceId.title}"`,
+      event: 'new_job_request',
+      payload: jobRequest,
     });
-
-    // Emit socket event
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`user_${providerId}`).emit('new_notification', notification);
-      io.to(`user_${providerId}`).emit('new_job_request', jobRequest);
-    }
 
     res.status(201).json({ ...jobRequest.toObject(), chatId: chat._id });
   } catch (err) {
@@ -213,10 +233,14 @@ exports.updateJobRequestStatus = async (req, res) => {
 
     if (status === 'accepted') {
       // 1. Create Chat
+      // Same direction-agnostic match as createJobRequest — otherwise accepting a
+      // request opens a duplicate conversation whenever the owner messaged first.
       let chat = await Chat.findOne({
-        clientId: jobRequest.customerId,
-        providerId: jobRequest.providerId,
         serviceId: jobRequest.serviceId,
+        $or: [
+          { clientId: jobRequest.customerId, providerId: jobRequest.providerId },
+          { clientId: jobRequest.providerId, providerId: jobRequest.customerId },
+        ],
       });
 
       if (!chat) {
@@ -235,38 +259,28 @@ exports.updateJobRequestStatus = async (req, res) => {
 
       const service = await Service.findById(jobRequest.serviceId);
 
-      // 3. Notify Customer
-      const notification = await Notification.create({
+      // 3. Notify the applicant
+      await notify({
         userId: jobRequest.customerId,
         senderId: jobRequest.providerId,
         requestId: jobRequest._id,
-        type: 'order',
-        content: `Din forespørsel for "${service.title}" er godkjent!`,
+        type: 'application',
+        content: `Søknaden din på "${service.title}" er godkjent`,
+        event: 'order_approved',
+        payload: { requestId: jobRequest._id, chatId: chat._id },
       });
-
-      const io = req.app.get('io');
-      if (io) {
-        io.to(`user_${jobRequest.customerId}`).emit('new_notification', notification);
-        io.to(`user_${jobRequest.customerId}`).emit('order_approved', {
-          requestId: jobRequest._id,
-          chatId: chat._id,
-        });
-      }
     } else {
       // Notify Rejection
       await jobRequest.populate('serviceId');
-      const notification = await Notification.create({
+      await notify({
         userId: jobRequest.customerId,
         senderId: jobRequest.providerId,
         requestId: jobRequest._id,
-        type: 'order',
-        content: `Din forespørsel for "${jobRequest.serviceId.title}" ble avvist.`,
+        type: 'application',
+        content: `Søknaden din på "${jobRequest.serviceId.title}" ble ikke valgt denne gangen`,
+        event: 'request_declined',
+        payload: { requestId: jobRequest._id },
       });
-
-      const io = req.app.get('io');
-      if (io) {
-        io.to(`user_${jobRequest.customerId}`).emit('new_notification', notification);
-      }
     }
 
     res.json(jobRequest);
@@ -307,9 +321,38 @@ exports.getAllOrders = async (req, res) => {
       $or: [{ customerId: userId }, { providerId: userId }],
     })
       .populate('serviceId')
-      .populate('customerId', 'name email')
-      .populate('providerId', 'name email')
-      .sort({ createdAt: -1 });
+      .populate('customerId', 'name avatarUrl')
+      .populate('providerId', 'name avatarUrl')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Email is contact information, and an Order exists from the moment the job is
+    // awarded — before any money moves. Populating 'name email' here handed both
+    // parties each other's address at `awaiting_payment`, which is precisely the
+    // point at which they can agree to settle off-platform. Released only once the
+    // payment is confirmed, which is when they legitimately need to reach each other.
+    const paidOrderIds = orders
+      .filter((o) => o.paymentStatus === 'paid')
+      .map((o) => o._id);
+
+    if (paidOrderIds.length > 0) {
+      const contactIds = new Set();
+      for (const o of orders) {
+        if (o.paymentStatus !== 'paid') continue;
+        if (o.customerId?._id) contactIds.add(String(o.customerId._id));
+        if (o.providerId?._id) contactIds.add(String(o.providerId._id));
+      }
+      const contacts = await User.find({ _id: { $in: [...contactIds] } })
+        .select('email')
+        .lean();
+      const emailById = new Map(contacts.map((u) => [String(u._id), u.email]));
+
+      for (const o of orders) {
+        if (o.paymentStatus !== 'paid') continue;
+        if (o.customerId?._id) o.customerId.email = emailById.get(String(o.customerId._id));
+        if (o.providerId?._id) o.providerId.email = emailById.get(String(o.providerId._id));
+      }
+    }
 
     res.json(orders);
   } catch (err) {
@@ -345,268 +388,41 @@ exports.getOrderById = async (req, res) => {
 };
 
 /**
- * POST /api/orders
- * Opprett ny ordre
+ * REMOVED: POST /api/orders (createOrder)
+ *
+ * Two problems, either of which is disqualifying:
+ *
+ *  1. It built the Order with the roles INVERTED. Every other path treats the job
+ *     owner as the payer (safepayController: "Service owner is the customer"), but
+ *     this set customerId to the CALLER and providerId to the service owner. The
+ *     resulting order sat at status 'pending', which confirmPaidSession accepts, so
+ *     it was fully payable — a second account could order a stranger's 1 kr listing,
+ *     pay it, complete it, and inflate the listing owner's completedJobs and earnings.
+ *
+ *  2. It required no application, no ownership and no service-status check.
+ *
+ * No component called it (the useCreateOrderMutation hook existed but was unused).
+ * Orders are created by the award flow: POST /api/safepay/create-contract, or
+ * POST /api/chats/:chatId/contracts — both of which verify service ownership and
+ * derive payer/payee from the service.
  */
-exports.createOrder = async (req, res) => {
-  try {
-    const { serviceId } = req.body;
-    const customerId = req.userId;
 
-    if (!serviceId) return res.status(400).json({ error: 'Service ID is required' });
-
-    if (!isValidId(serviceId)) return res.status(400).json({ error: 'Invalid service ID format' });
-
-    const service = await Service.findById(serviceId);
-    if (!service) return res.status(404).json({ error: 'Service not found' });
-
-    const providerId = service.userId;
-
-    if (providerId.toString() === customerId)
-      return res.status(400).json({ error: 'Cannot order your own service' });
-
-    // Check if an order already exists for this service and customer
-    const existingOrder = await Order.findOne({ serviceId, customerId });
-    if (existingOrder) {
-      return res.status(400).json({
-        error: 'Du har allerede sendt en forespørsel på dette oppdraget',
-      });
-    }
-
-    const order = await Order.create({
-      serviceId,
-      customerId,
-      providerId,
-      price: service.price,
-      status: 'pending',
-    });
-
-    await order.populate('serviceId');
-    await order.populate('customerId', 'name');
-    await order.populate('providerId', 'name');
-
-    // Send notification to provider
-    const notification = await Notification.create({
-      userId: providerId,
-      senderId: customerId,
-      orderId: order._id,
-      type: 'order',
-      content: `Ny forespørsel: ${order.customerId.name} ønsker å søke på "${order.serviceId.title}"`,
-    });
-
-    // Emit socket event for real-time alert
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`user_${providerId}`).emit('new_notification', notification);
-      io.to(`user_${providerId}`).emit('new_order_request', order);
-    }
-
-    res.status(201).json(order);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
 
 /**
- * PATCH /api/orders/:id
- * Oppdater status eller pris (kun tillatte felter)
+ * REMOVED: PATCH /api/orders/:id (updateOrder)
+ *
+ * Its private statusFlow declared `paid: ['completed']` and authorizeOrderAction
+ * accepts EITHER party, so a provider could complete their own paid order: past
+ * review, past evidence, and past releasePayoutToProvider. approveAndPayout then
+ * refused the customer''s approval as "already completed" and the escrowed money
+ * had no remaining route out.
+ *
+ * Order transitions now go through services/order/orderState.js, which owns the
+ * one legality table and refuses any terminal state that would leave captured
+ * money unaccounted for. The supported paths are the SafePay flow and the admin
+ * routes under /api/admin/orders.
  */
-exports.updateOrder = async (req, res) => {
-  try {
-    const { id } = req.params;
 
-    if (!isValidId(id)) {
-      return res.status(400).json({ error: 'Invalid order ID format' });
-    }
-
-    const order = await Order.findById(id);
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-
-    // 🔐 Authorization
-    if (!authorizeOrderAction(req, order)) {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
-
-    // 🔒 COMPLETED = FINAL STATE
-    if (order.status === 'completed') {
-      return res.status(400).json({
-        error: 'Completed order cannot be modified',
-      });
-    }
-
-    // Allowed fields
-    const allowedFields = ['status', 'price'];
-    const updates = {};
-
-    allowedFields.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        updates[field] = req.body[field];
-      }
-    });
-
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({
-        error: 'No valid fields provided for update',
-      });
-    }
-
-    if (updates.price !== undefined && typeof updates.price !== 'number') {
-      return res.status(400).json({
-        error: 'Price must be a number',
-      });
-    }
-
-    // ✅ Valid status values
-    const validStatus = [
-      'pending',
-      'accepted',
-      'declined',
-      'in_progress',
-      'completed',
-      'cancelled',
-      'awaiting_payment',
-      'paid',
-    ];
-    if (updates.status && !validStatus.includes(updates.status)) {
-      return res.status(400).json({ error: 'Invalid status value' });
-    }
-
-    // 🔁 STRICT STATUS FLOW
-    const statusFlow = {
-      pending: ['accepted', 'declined', 'completed', 'cancelled'],
-      accepted: ['in_progress', 'completed', 'cancelled'],
-      in_progress: ['completed', 'cancelled'],
-      cancelled: [],
-      declined: [],
-      awaiting_payment: ['paid', 'cancelled'],
-      paid: ['completed'],
-    };
-
-    if (updates.status) {
-      const allowedNext = statusFlow[order.status] || [];
-      if (!allowedNext.includes(updates.status)) {
-        return res.status(400).json({
-          error: `Cannot change status from ${order.status} to ${updates.status}`,
-        });
-      }
-
-      // 🚀 Handle APPROVAL logic
-      if (updates.status === 'accepted' && order.status === 'pending') {
-        // 1. Create Chat if it doesn't exist
-        let chat = await Chat.findOne({
-          clientId: order.customerId,
-          providerId: order.providerId,
-          serviceId: order.serviceId,
-        });
-
-        if (!chat) {
-          chat = await Chat.create({
-            clientId: order.customerId,
-            providerId: order.providerId,
-            serviceId: order.serviceId,
-            messages: [
-              {
-                senderId: order.providerId,
-                text: 'Forespørsel godkjent! Vi kan nå starte samtalen.',
-              },
-            ],
-          });
-        }
-
-        await order.populate('serviceId');
-        await order.populate('customerId', 'name');
-        await order.populate('providerId', 'name');
-
-        const orderPrice = order.price || order.serviceId.price || 0;
-
-        // 🚀 3. Start SafePay (optional/pending)
-        await Payment.create({
-          orderId: order._id,
-          amount: orderPrice,
-          status: 'pending', // Escrow status
-        });
-
-        // 4. Notify Customer
-        const notification = await Notification.create({
-          userId: order.customerId._id,
-          senderId: order.providerId._id,
-          orderId: order._id,
-          type: 'order',
-          content: `Din forespørsel for "${order.serviceId.title}" er godkjent! Chat er nå åpen.`,
-        });
-
-        const io = req.app.get('io');
-        if (io) {
-          io.to(`user_${order.customerId._id}`).emit('new_notification', notification);
-          io.to(`user_${order.customerId._id}`).emit('order_approved', {
-            orderId: order._id,
-            chatId: chat._id,
-          });
-        }
-      }
-
-      // ❌ Handle REJECTION logic
-      if (updates.status === 'declined' && order.status === 'pending') {
-        await order.populate('serviceId');
-        await order.populate('providerId', 'name');
-
-        const notification = await Notification.create({
-          userId: order.customerId,
-          senderId: order.providerId._id,
-          orderId: order._id,
-          type: 'order',
-          content: `Din forespørsel for "${order.serviceId.title}" ble dessverre avvist.`,
-        });
-
-        const io = req.app.get('io');
-        if (io) {
-          io.to(`user_${order.customerId}`).emit('new_notification', notification);
-        }
-      }
-    }
-
-    // 🪙 POINTS & PORTFOLIO – SIRF EK DAFA
-    if (updates.status === 'completed' && order.status !== 'completed') {
-      await order.populate('serviceId');
-
-      const service = order.serviceId;
-      const points = calculatePointsFromService(service);
-
-      // 1. Give points to customer
-      await User.findByIdAndUpdate(order.customerId, {
-        $inc: { pointsBalance: points },
-        $push: {
-          pointsHistory: {
-            points,
-            reason: 'Job completed',
-            orderId: order._id,
-            serviceId: service._id,
-          },
-        },
-      });
-
-      // 2. Increment completedJobs for provider
-      await User.findByIdAndUpdate(order.providerId, {
-        $inc: { completedJobs: 1 },
-      });
-
-      updates.completedAt = new Date(); // optional but useful
-    }
-
-    const updatedOrder = await Order.findByIdAndUpdate(id, updates, {
-      new: true,
-    })
-      .populate('serviceId')
-      .populate('customerId', 'name')
-      .populate('providerId', 'name');
-
-    res.json(updatedOrder);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
 
 /**
  * GET /api/orders/:id/completed-details
@@ -635,11 +451,20 @@ exports.getCompletedJobDetails = async (req, res) => {
 
     // Get chat messages
     const ChatMessage = require('../models/ChatMessage');
-    const chat = await ChatMessage.findOne({
-      clientId: order.customerId._id,
-      providerId: order.providerId._id,
-      serviceId: order.serviceId._id,
-    });
+    // Order.customerId is the job OWNER and Order.providerId is the worker, but the
+    // chat created by applying stores them the other way round — so this slot-specific
+    // lookup returned null for every apply-created conversation and the completed-job
+    // view showed no message history at all. Prefer the chat the order already points
+    // at; fall back to a direction-agnostic pair match for older orders.
+    const chat = order.chatId
+      ? await ChatMessage.findById(order.chatId)
+      : await ChatMessage.findOne({
+          serviceId: order.serviceId._id,
+          $or: [
+            { clientId: order.customerId._id, providerId: order.providerId._id },
+            { clientId: order.providerId._id, providerId: order.customerId._id },
+          ],
+        });
 
     // Get all transactions (optional, from Transaction model if exists)
     let transactions = [];
@@ -669,29 +494,11 @@ exports.getCompletedJobDetails = async (req, res) => {
 };
 
 /**
- * DELETE /api/orders/:id
- * Kunde eller tilbyder kan slette (avlyse) ordre
+ * REMOVED: DELETE /api/orders/:id (deleteOrder)
+ *
+ * Set status to cancelled from ANY state — including paid, in_progress and
+ * ready_for_review — with no refund, no payout and no dispute check, available to
+ * either party. Cancelling a paid order is now only reachable through the dispute
+ * resolution flow, which records where the money went.
  */
-exports.deleteOrder = async (req, res) => {
-  try {
-    const { id } = req.params;
 
-    if (!isValidId(id)) return res.status(400).json({ error: 'Invalid order ID format' });
-
-    const order = await Order.findById(id);
-    if (!order) return res.status(404).json({ error: 'Order not found' });
-
-    // Authorization
-    if (!authorizeOrderAction(req, order)) {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
-
-    // Instead of hard delete → set status cancelled
-    order.status = 'cancelled';
-    await order.save();
-
-    res.status(200).json({ message: 'Order cancelled successfully', order });
-  } catch (err) {
-    res.status(500).json({ error: 'Server error' });
-  }
-};

@@ -3,6 +3,7 @@ import styles from './CoinsPage.module.css';
 import { ProfileTitleWrapper } from '../../components/layout/body/profile/ProfileTitleWrapper';
 import { useUserStore } from '../../stores/userStore';
 import { buyItem, getJobbloShop } from '../../api/jobbloShop';
+import { toast } from 'react-hot-toast';
 
 interface Level {
   name: string;
@@ -97,7 +98,7 @@ export default function CoinsPage() {
       // Update user pointsBalance
       fetchProfile();
     } else {
-      alert('Du har ikke nok coins for denne belønningen');
+      toast.error('Du har ikke nok coins for denne belønningen.');
     }
   };
 

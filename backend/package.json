@@ -5,8 +5,13 @@
   "scripts": {
     "build": "tsc",
     "dev": "ts-node-dev --respawn --transpile-only server.js",
-    "start": "node server.js",
-    "test": "jest --forceExit --detectOpenHandles"
+    "start": "nodemon server.js",
+    "test": "jest --forceExit --detectOpenHandles",
+    "check:payments": "node scripts/check-payment-config.js",
+    "e2e:flow": "node scripts/e2e-job-flow.js",
+    "dedupe:payments": "node scripts/dedupe-payment-records.js",
+    "dedupe:subscriptions": "node scripts/dedupe-subscriptions.js",
+    "merge:chats": "node scripts/merge-duplicate-chats.js"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.29.1",
@@ -14,11 +19,13 @@
     "bcryptjs": "^2.4.3",
     "body-parser": "^2.3.0",
     "cloudinary": "^1.41.3",
+    "connect-mongo": "6.0.0",
     "cookie-parser": "~1.4.4",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "debug": "~2.6.9",
     "dotenv": "^17.2.0",
+    "expo-server-sdk": "^6.1.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.1",
     "express-session": "^1.18.2",
@@ -33,6 +40,7 @@
     "nodemailer": "^9.0.3",
     "nodemon": "^3.1.11",
     "openai": "^6.34.0",
+    "openid-client": "6.8.5",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "request-ip": "^3.3.0",

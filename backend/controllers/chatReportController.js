@@ -1,7 +1,15 @@
 const mongoose = require('mongoose');
 const rateLimit = require('express-rate-limit');
 const Chat = require('../models/ChatMessage');
-const { ChatReport, VALID_REPORT_TYPES } = require('../models/ChatReport');
+// models/ChatReport default-exports the Mongoose model, so `ChatReport` cannot be
+// destructured out of it — that read `undefined`, and every ChatReport.findOne /
+// .create / .find below threw "Cannot read properties of undefined". The whole
+// user-side reporting endpoint returned 500 as a result. The four admin controllers
+// that use this model already import it this way.
+//
+// VALID_REPORT_TYPES is declared as a schema static, so it is a property of the model.
+const ChatReport = require('../models/ChatReport');
+const { VALID_REPORT_TYPES } = ChatReport;
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const { parseObjectId } = require('../utils/pagination');

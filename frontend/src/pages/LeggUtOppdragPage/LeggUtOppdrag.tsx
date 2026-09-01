@@ -3,9 +3,10 @@ import mainLink from '../../api/mainURLs';
 import { useUserStore } from '../../stores/userStore';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { BriefcaseBusiness } from 'lucide-react';
 import { useJobDetailQuery } from '../../features/jobDetail/hook.ts';
 import { Spinner } from '../../components/Ui/Spinner';
+import { BackLink } from '../../components/Ui/BackLink';
+import { MICRO_LABEL } from '../../theme/brand';
 
 export default function LeggUtOppdrag() {
   const { id } = useParams();
@@ -50,19 +51,26 @@ export default function LeggUtOppdrag() {
             },
           });
 
-      if (response.data) {
-        console.log(isEditMode ? 'Job updated' : 'Job created');
-        toast.success(isEditMode ? 'Oppdrag oppdatert!' : 'Oppdrag publisert!');
-        navigate('/');
-      } else {
-        console.error('Failed. Status:', response.status);
-        toast.error(`Kunne ikke lagre oppdrag. Status: ${response.status}`);
+      if (!response.data) {
+        // Treat "no body" as a failure like any other, so the caller keeps the
+        // draft instead of clearing it on a response we can't confirm.
+        throw new Error(`Uventet svar fra serveren (status ${response.status})`);
       }
+
+      toast.success(isEditMode ? 'Oppdrag oppdatert!' : 'Oppdrag publisert!');
+      navigate('/');
     } catch (error) {
+      // Re-thrown on purpose: useCreateJobForm only preserves the IndexedDB
+      // draft if this promise rejects. Swallowing the error here made every
+      // failed publish look like a success to the caller, which then wiped
+      // everything the user had typed. It also owns the error toast, so we
+      // deliberately don't show one too.
       console.error('Error saving job:', error);
-      toast.error('Det oppstod en feil ved kommunikasjon med serveren');
+      throw error;
     }
   };
+
+  const coordinates = job?.location?.coordinates; // GeoJSON order: [lng, lat]
 
   const initialData = job
     ? {
@@ -71,7 +79,12 @@ export default function LeggUtOppdrag() {
         price: job.price,
         address: job.location?.address,
         city: job.location?.city,
-        categories: job.categories?.[0] || job.categories, // Component expects single category string usually
+        countyCode: job.countyCode,
+        municipalityCode: job.municipalityCode,
+        areaCode: job.areaCode,
+        latitude: coordinates?.[1],
+        longitude: coordinates?.[0],
+        categories: job.categories,
         urgent: job.urgent,
         equipment: job.equipment,
         fromDate: job.fromDate,
@@ -79,42 +92,36 @@ export default function LeggUtOppdrag() {
         durationValue: job.duration?.value,
         durationUnit: job.duration?.unit,
         paymentType: job.paymentType,
-        phone: job.phone,
-        email: job.email,
+        hourlyRate: job.hourlyRate,
+        maxApplicants: job.maxApplicants,
         images: job.images,
       }
     : undefined;
 
   return (
-    <>
-      <div className="max-w-300 mx-auto">
-        <div className="flex flex-col gap-4 px-4 md:px-6">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <span className="p-4.5 shadow-md text-custom-green bg-[#FFFFFF1A] rounded-[14px] inline-flex items-center justify-center">
-              <BriefcaseBusiness size={20} />
-            </span>
+    <div className="min-h-screen bg-[#EFF0EA]">
+      <div className="mx-auto w-full max-w-3xl px-4 pt-8 sm:px-6">
+        <BackLink fallback="/home" />
 
-            <h2 className="text-[28px] md:text-[42px] font-bold leading-tight">
-              {isEditMode ? 'Rediger oppdrag' : 'Legg ut oppdrag'}
-            </h2>
-          </div>
-
-          <p className="text-[#4A5565] text-[16px] md:text-[18px] font-normal leading-relaxed">
+        <header className="mt-6 mb-8">
+          <p className={MICRO_LABEL}>{isEditMode ? 'Rediger' : 'Nytt oppdrag'}</p>
+          <h1 className="mt-2 text-[clamp(1.75rem,4vw,2.5rem)] font-bold leading-tight tracking-[-0.04em] text-[#0B0B0B]">
+            {isEditMode ? 'Rediger oppdraget' : 'Legg ut et oppdrag'}
+          </h1>
+          <p className="mt-2 max-w-lg text-[0.9375rem] leading-relaxed text-[#63665F]">
             {isEditMode
-              ? 'Oppdater informasjonen under for å endre ditt oppdrag'
-              : 'Fyll ut informasjonen under for å legge ut ditt oppdrag'}
+              ? 'Endringene blir synlige for alle som ser oppdraget.'
+              : 'Fire korte steg. Du kan forhåndsvise underveis, og utkastet lagres automatisk.'}
           </p>
-        </div>
-
-        <div>
-          <CreateJobForm
-            onSubmit={handleFormSubmit}
-            userId={userId}
-            initialData={initialData}
-            isEditMode={isEditMode}
-          />
-        </div>
+        </header>
       </div>
-    </>
+
+      <CreateJobForm
+        onSubmit={handleFormSubmit}
+        userId={userId}
+        initialData={initialData}
+        isEditMode={isEditMode}
+      />
+    </div>
   );
 }
