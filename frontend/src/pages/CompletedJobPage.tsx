@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import mainLink from '../api/mainURLs';
 import { useUserStore } from '../stores/userStore';
-import { Button } from '../components/Ui/button/Button';
 import SafePaySteps from '../components/SafePay/SafePaySteps';
 
 interface TimelineItem {
@@ -45,14 +44,6 @@ export default function CompletedJobPage() {
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
-
-  const downloadInvoice = () => {
-    alert('Invoice download coming soon!');
-  };
-
-  const downloadReceipt = () => {
-    alert('Receipt download coming soon!');
   };
 
   useEffect(() => {
@@ -101,7 +92,21 @@ export default function CompletedJobPage() {
       </div>
     );
   }
-  if (!data) return null;
+  // Was `return null` — a blank white page with no explanation whenever the
+  // order or its Service had been deleted.
+  if (!data || !data.service) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 text-center">
+        <h2 className="text-lg font-bold text-gray-900 mb-2">Fant ikke oppdraget</h2>
+        <p className="text-sm text-gray-500 mb-5">
+          Oppdraget kan ha blitt slettet, eller du har ikke tilgang til det.
+        </p>
+        <button onClick={() => navigate(-1)} className="text-custom-green font-medium">
+          Gå tilbake
+        </button>
+      </div>
+    );
+  }
 
   const { service, order, customer, provider, payment, chat, timeline, reviews = [] } = data;
 
@@ -114,7 +119,7 @@ export default function CompletedJobPage() {
             <ChevronLeft size={20} />
           </button>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">{service.title}</h1>
+            <h1 className="text-xl font-bold text-gray-900">{service.title || 'Oppdrag'}</h1>
             <p className="text-sm text-gray-500">
               {order ? `Fullført ${formatDate(order.updatedAt)}` : 'Fullført oppdrag'}
             </p>
@@ -128,7 +133,7 @@ export default function CompletedJobPage() {
           <SafePaySteps
             currentStep={4}
             orderId={order._id}
-            serviceId={order.serviceId._id || service._id}
+            serviceId={order.serviceId?._id || service._id}
           />
         </div>
       )}
@@ -417,27 +422,14 @@ export default function CompletedJobPage() {
                       </div>
                     </div>
 
-                    <div className="flex gap-3 mt-6">
-                      <Button
-                        label="Last ned faktura"
-                        variant="default"
-                        className="flex items-center gap-2"
-                        onClick={downloadInvoice}
-                      >
-                        <Download size={16} />
-                        Last ned faktura
-                      </Button>
-
-                      <Button
-                        label="Last ned kvittering"
-                        variant="default"
-                        className="flex items-center gap-2"
-                        onClick={downloadReceipt}
-                      >
-                        <Download size={16} />
-                        Last ned kvittering
-                      </Button>
-                    </div>
+                    {/* "Last ned faktura" / "Last ned kvittering" fired
+                        alert('Invoice download coming soon!') — a native English
+                        browser alert on the invoice for a completed, paid job.
+                        Removed until there is a document to download. */}
+                    <p className="text-[13px] text-gray-500 mt-6">
+                      Trenger du faktura eller kvittering? Ta kontakt med kundeservice, så sender
+                      vi den til deg.
+                    </p>
                   </div>
                 ) : (
                   <div className="text-center py-12">

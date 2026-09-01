@@ -20,7 +20,24 @@ export type Jobs = {
   urgent: boolean;
   promoted?: boolean;
   favCount?: number;
-  status: 'open' | 'closed';
+  /**
+   * Mirrors the `status` enum on `backend/models/Service.js`. It was typed as
+   * `'open' | 'closed'` — two of the eleven values the server can actually send — so any
+   * code that checked for a completed or cancelled job was reported as an impossible
+   * comparison and had to be cast away.
+   */
+  status:
+    | 'open'
+    | 'closed'
+    | 'awaiting_payment'
+    | 'paid'
+    | 'in_progress'
+    | 'completed'
+    | 'pending'
+    | 'waiting_for_approval'
+    | 'cancelled'
+    | 'expired'
+    | 'draft';
   tags: string[];
   maxApplicants?: number;
   currentApplicants?: number;

@@ -1,32 +1,40 @@
 import { useNavigate } from 'react-router-dom';
+import { CONTAINER, DISPLAY } from '../../theme/brand';
 
 export function CTABand() {
   const navigate = useNavigate();
 
+  const action =
+    'flex h-13 items-center justify-center rounded-full px-6 text-[0.9375rem] font-semibold transition duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/30 active:scale-[0.995]';
+
   return (
-    <div className="bg-[#1a3a1a] rounded-[20px] px-3 py-12 sm:p-12 flex flex-col md:flex-row items-center justify-between mx-5 sm:mx-12 mb-15 max-w-275 lg:mx-auto">
-      <div className="text-center md:text-left mb-6 md:mb-0">
-        <h2 className="text-[26px] font-normal text-white mb-1.5 leading-tight">
-          Klar til å komme
-          <br />i <em className="text-[#4ade80] not-italic">gang?</em>
-        </h2>
-        <p className="text-[13px] text-white/60">
-          Gratis å registrere seg – ingen abonnement nødvendig
-        </p>
-      </div>
-      <div className="flex gap-2.5">
-        <button
-          onClick={() => navigate('/search/job/all')}
-          className="px-6 py-3 bg-[#4ade80] text-[#1a3a1a] rounded-full text-sm font-medium cursor-pointer hover:bg-[#3ce673] transition-colors"
-        >
-          Finn oppdrag
-        </button>
-        <button
-          onClick={() => navigate('/publish-job')}
-          className="px-6 py-3 bg-transparent text-white border border-white/40 rounded-full text-sm font-medium cursor-pointer hover:bg-white/10 transition-colors"
-        >
-          Legg ut oppdrag
-        </button>
+    <div className={`${CONTAINER} pb-16 sm:pb-20`}>
+      {/* The one saturated block on the page, in the logo's own green rather than the
+          #1a3a1a and #4ade80 pair it used before — neither of which appeared anywhere else. */}
+      <div className="grid items-center gap-12 rounded-3xl bg-[#2E6641] px-7 py-14 sm:px-12 sm:py-20 lg:grid-cols-[1.2fr_0.8fr] lg:gap-14">
+        <div>
+          <h2 className={`text-white ${DISPLAY}`}>Klar til å komme i gang?</h2>
+          <p className="mt-5 max-w-[46ch] text-[1rem] leading-relaxed text-white/75">
+            Gratis å registrere seg — ingen abonnement nødvendig.
+          </p>
+        </div>
+
+        <div className="grid gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/Publish-job')}
+            className={`${action} bg-white text-[#0B0B0B] hover:bg-[#EFF0EA]`}
+          >
+            Legg ut oppdrag
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/search/job/all')}
+            className={`${action} border border-white/40 text-white hover:bg-white/10`}
+          >
+            Finn oppdrag
+          </button>
+        </div>
       </div>
     </div>
   );

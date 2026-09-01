@@ -1,156 +1,152 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import SocialAuthButtons from '../SocialAuthButtons/AuthButton.tsx';
-import { Input } from '../Ui/Input.tsx';
-import { Button } from '../Ui/button/Button';
+import AuthField from './AuthField.tsx';
+import { FIELD_ICON_BUTTON, PRIMARY_BUTTON, TEXT_LINK } from './authStyles.ts';
 import { useAuth } from '../../features/auth/hook/useAuth.ts';
 import { useForm } from '../../hooks/useForm.ts';
+import { getErrorMessage } from '../../utils/getErrorMessage.ts';
 import { loginValidationSchema, type LoginFormValues } from '../../validations/authValidations';
+import { oauthErrorMessage } from '../../features/auth/oauthErrors.ts';
 
 export const LoginForm = () => {
   const navigate = useNavigate();
   const { login, isLoggingIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [searchParams] = useSearchParams();
+
+  // Vipps and Google redirect here with ?error=<code> when they refuse a sign-in.
+  // Nothing read it before, so the person landed on a blank form with no idea why.
+  const oauthError = oauthErrorMessage(searchParams.get('error'));
 
   const { values, errors, handleChange, validate } = useForm<LoginFormValues>(
-    {
-      email: '',
-      password: '',
-    },
+    { email: '', password: '' },
     loginValidationSchema
   );
 
-  const handleLogin = () => {
+  const handleLogin = (e: React.FormEvent) => {
+    // A real <form> so Enter submits and password managers recognise the pair.
+    e.preventDefault();
     if (!validate()) return;
     setServerError('');
+
     login(
       { email: values.email, password: values.password },
       {
-        onError: (error: unknown) => {
-          const err = error as { response?: { data?: { error?: string; message?: string } } };
-          const msg =
-            err.response?.data?.error ||
-            err.response?.data?.message ||
-            'Innlogging mislyktes. Sjekk e-post og passord.';
-          setServerError(msg);
-        },
+        // getErrorMessage handles both backend error shapes. The old read was
+        // `err.response?.data?.error`, which hands the object-shaped envelope from the
+        // Express error handler straight to React as a child — a white screen on
+        // exactly the request the user most needs to work.
+        onError: (error: unknown) =>
+          setServerError(getErrorMessage(error, 'Innlogging mislyktes. Sjekk e-post og passord.')),
       }
     );
   };
 
   return (
-    <div className="w-full lg:w-[50%] flex items-center justify-center p-4">
-      <div className="w-full max-w-120 p-8">
-        <div className="mb-8">
-          <h1 className="text-[28px] font-bold text-black leading-tight mb-2">Finn en ekspert</h1>
-          <p className="text-base text-[#6B7280]">
-            Logg inn for å legge ut oppdrag eller tilby dine ferdigheter.
-          </p>
-        </div>
+    <div>
+      <h1 className="text-[1.625rem] font-bold leading-tight tracking-[-0.025em] text-[#0B0B0B]">
+        Velkommen tilbake
+      </h1>
+      <p className="mt-1.5 text-[0.875rem] leading-relaxed text-[#63665F]">
+        Logg inn for å legge ut oppdrag eller finne ditt neste.
+      </p>
 
-        <div className="flex flex-col gap-6">
-          {/* Server error banner */}
-          {serverError && (
-            <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-              <span>{serverError}</span>
-            </div>
-          )}
-
-          {/* Email Input */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wider">
-              E-postadresse
-            </label>
-            <Input
-              type="email"
-              value={values.email}
-              placeholder="deg@eksempel.no"
-              onChange={(e) => { handleChange('email', e.target.value); setServerError(''); }}
-              error={errors.email}
-              className="rounded-lg border-black focus:border-black placeholder:text-gray-400 h-12"
-            />
-          </div>
-
-          {/* Password Input */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex justify-between items-center">
-              <label className="text-[12px] font-bold text-[#6B7280] uppercase tracking-wider">
-                Passord
-              </label>
-              <button
-                type="button"
-                onClick={() => navigate('/forgot-password')}
-                className="text-[12px] font-bold text-black uppercase tracking-wider hover:underline"
-              >
-                Glemt?
-              </button>
-            </div>
-            <Input
-              type={showPassword ? 'text' : 'password'}
-              value={values.password}
-              placeholder="Ditt passord"
-              onChange={(e) => handleChange('password', e.target.value)}
-              error={errors.password}
-              className="rounded-lg border-black focus:border-black placeholder:text-gray-400 h-12"
-              rightIcon={
-                <button
-                  type="button"
-                  className="text-gray-400 hover:text-black transition-colors"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              }
-            />
-          </div>
-
-          {/* Remember Me */}
-          {/* <div className="flex items-center gap-3 mt-1">
-            <div
-              className={`w-5 h-5 rounded-full border border-black flex items-center justify-center cursor-pointer ${
-                rememberMe ? "bg-black" : "bg-white"
-              }`}
-              onClick={() => setRememberMe(!rememberMe)}
-            >
-              {rememberMe && <div className="w-2 h-2 rounded-full bg-white" />}
-            </div>
-            <span className="text-sm text-[#4B5563]">Husk meg i 30 dager</span>
-          </div> */}
-
-          {/* Sign In Button */}
-          <Button
-            onClick={handleLogin}
-            loading={isLoggingIn}
-            // className="w-full h-12 bg-black text-white rounded-lg font-bold text-base hover:bg-black/90 transition-all mt-2"
-            className="py-3 rounded-lg font-bold"
-            label="Logg inn"
-          />
-
-          <div className="relative flex py-2 items-center">
-            <div className="grow border-t border-gray-200"></div>
-            <span className="shrink mx-4 text-gray-400 text-sm font-normal">eller</span>
-            <div className="grow border-t border-gray-200"></div>
-          </div>
-
-          <div>
-            <SocialAuthButtons />
-          </div>
-        </div>
-
-        <div className="mt-8 text-center">
-          <p className="text-sm text-[#6B7280]">
-            Har du ikke konto?{' '}
-            <button
-              onClick={() => navigate('/register')}
-              className="font-bold text-black hover:underline"
-            >
-              Opprett en gratis
-            </button>
-          </p>
-        </div>
+      <div className="mt-7">
+        <SocialAuthButtons />
       </div>
+
+      <div className="my-6 flex items-center gap-3">
+        <span className="h-px flex-1 bg-[#E6E7E1]" />
+        <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[#9B9E96]">
+          eller
+        </span>
+        <span className="h-px flex-1 bg-[#E6E7E1]" />
+      </div>
+
+      <form onSubmit={handleLogin} noValidate className="flex flex-col gap-4">
+        {oauthError && !serverError && (
+          <p
+            role="alert"
+            className="rounded-xl bg-[#FCF4F3] px-3.5 py-2.5 text-[0.8125rem] leading-snug text-[#B0453B]"
+          >
+            {oauthError}
+          </p>
+        )}
+
+        {serverError && (
+          <p
+            role="alert"
+            className="rounded-xl bg-[#FCF4F3] px-3.5 py-2.5 text-[0.8125rem] leading-snug text-[#B0453B]"
+          >
+            {serverError}
+          </p>
+        )}
+
+        <AuthField
+          label="E-postadresse"
+          type="email"
+          name="email"
+          autoComplete="email"
+          inputMode="email"
+          autoCapitalize="none"
+          spellCheck={false}
+          placeholder="deg@eksempel.no"
+          value={values.email}
+          error={errors.email}
+          onChange={(e) => {
+            handleChange('email', e.target.value);
+            setServerError('');
+          }}
+        />
+
+        <AuthField
+          label="Passord"
+          type={showPassword ? 'text' : 'password'}
+          name="password"
+          autoComplete="current-password"
+          placeholder="Ditt passord"
+          value={values.password}
+          error={errors.password}
+          onChange={(e) => {
+            handleChange('password', e.target.value);
+            setServerError('');
+          }}
+          labelAction={
+            <button
+              type="button"
+              onClick={() => navigate('/forgot-password')}
+              className={`text-[0.78125rem] ${TEXT_LINK}`}
+            >
+              Glemt passord?
+            </button>
+          }
+          trailing={
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? 'Skjul passord' : 'Vis passord'}
+              className={FIELD_ICON_BUTTON}
+            >
+              {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+            </button>
+          }
+        />
+
+        <button type="submit" disabled={isLoggingIn} className={`mt-2 ${PRIMARY_BUTTON}`}>
+          {isLoggingIn && <Loader2 size={16} className="animate-spin" />}
+          {isLoggingIn ? 'Logger inn…' : 'Logg inn'}
+        </button>
+      </form>
+
+      <p className="mt-6 text-center text-[0.875rem] text-[#63665F]">
+        Ny på Jobblo?{' '}
+        <Link to="/register" className={TEXT_LINK}>
+          Opprett gratis konto
+        </Link>
+      </p>
     </div>
   );
 };

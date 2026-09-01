@@ -8,6 +8,7 @@ const usersAdminController = require('../../controllers/admin/usersAdminControll
 const activityAdminController = require('../../controllers/admin/activityAdminController');
 const ordersAdminController = require('../../controllers/admin/ordersAdminController');
 const servicesAdminController = require('../../controllers/admin/servicesAdminController');
+const upload = require('../../middleware/upload');
 const reviewsAdminController = require('../../controllers/admin/reviewsAdminController');
 const categoriesAdminController = require('../../controllers/admin/categoriesAdminController');
 const transactionsAdminController = require('../../controllers/admin/transactionsAdminController');
@@ -46,6 +47,7 @@ router.put('/orders/:id/status', ordersAdminController.updateOrderStatus);
 // ── Services ───────────────────────────────────────────────────────────────
 router.get('/services', servicesAdminController.getServices);
 router.get('/services/:id', servicesAdminController.getServiceById);
+router.put('/services/:id', upload.array('images', 6), servicesAdminController.updateService);
 router.put('/services/:id/status', servicesAdminController.updateServiceStatus);
 router.delete('/services/:id', servicesAdminController.deleteService);
 

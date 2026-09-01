@@ -10,6 +10,9 @@ const mongoose = require('mongoose');
 const JobRequest = require('../models/JobRequest');
 const Order = require('../models/Order');
 const Chat = require('../models/ChatMessage');
+const Service = require('../models/Service');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -163,7 +166,53 @@ exports.withdrawApplication = async (req, res) => {
       return res.status(400).json({ error: 'Kan kun trekke tilbake ventende søknader' });
     }
 
-    await JobRequest.findByIdAndDelete(requestId);
+    // Refuse if a contract already exists for this applicant on this job. `pending`
+    // alone is not proof there is no order — the award path can leave the request in a
+    // state the applicant should not be able to erase underneath a live contract.
+    const liveOrder = await Order.findOne({
+      serviceId: jobRequest.serviceId,
+      providerId: jobRequest.customerId, // JobRequest.customerId is the applicant
+      status: { $in: ['awaiting_payment', 'paid', 'in_progress', 'ready_for_review', 'disputed'] },
+    }).select('_id');
+
+    if (liveOrder) {
+      return res.status(409).json({
+        error: 'Du har en aktiv kontrakt på dette oppdraget og kan ikke trekke søknaden.',
+        code: 'application_has_active_order',
+      });
+    }
+
+    const service = await Service.findById(jobRequest.serviceId).select('title userId');
+
+    // Mark withdrawn rather than hard-deleting.
+    //
+    // `findByIdAndDelete` erased the audit trail of who applied, orphaned the chat
+    // created at application time (whose system message still references this id), and
+    // left the owner's applicant list one row shorter with no explanation. Keeping the
+    // row preserves the history; the partial unique index only covers `pending`, so the
+    // applicant can still re-apply later.
+    jobRequest.status = 'declined';
+    jobRequest.archived = true;
+    jobRequest.withdrawnAt = new Date();
+    await jobRequest.save();
+
+    // Give the contact quota back. It was charged when the application was sent, and
+    // withdrawing before anyone acted on it should not cost the applicant a contact.
+    await User.updateOne(
+      { _id: userId, monthlyContactUsage: { $gt: 0 } },
+      { $inc: { monthlyContactUsage: -1 } }
+    );
+
+    // The owner was never told. Their applicant list simply lost a row.
+    if (service?.userId) {
+      await Notification.create({
+        userId: service.userId,
+        senderId: userId,
+        type: 'application',
+        content: `En søker har trukket søknaden sin på "${service.title}".`,
+      }).catch((err) => console.error('withdrawApplication notification failed:', err.message));
+    }
+
     res.json({ message: 'Søknad trukket tilbake' });
   } catch (err) {
     console.error('[myApplications] withdrawApplication error:', err);

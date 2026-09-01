@@ -5,6 +5,7 @@ const Chat = require('../../models/ChatMessage');
 const Dispute = require('../../models/Dispute');
 const Notification = require('../../models/Notification');
 const { logActivity } = require('./activityService');
+const { notify } = require('../../services/notifications');
 
 /**
  * Order statuses a user-initiated dispute may be opened from.
@@ -14,25 +15,17 @@ const { logActivity } = require('./activityService');
 const DISPUTE_ELIGIBLE_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed'];
 
 /**
- * Allowed Order status transitions.
- * Key: current status → Value: array of permitted next statuses
+ * Transition legality now lives in services/order/orderState.js so there is one
+ * table rather than one per caller. The local copy here was missing
+ * `ready_for_review` entirely, which meant this admin sync path could not move an
+ * order that was sitting in it — the single most common place for an order to be
+ * stuck.
  */
-const ORDER_TRANSITIONS = {
-  awaiting_payment: ['paid', 'cancelled'],
-  paid: ['in_progress', 'cancelled', 'disputed'],
-  in_progress: ['completed', 'cancelled', 'disputed'],
-  completed: ['disputed'],          // post-completion dispute allowed
-  disputed: ['in_progress', 'completed', 'cancelled'],
-  cancelled: [],
-  declined: [],
-};
-
-/**
- * Validate whether a transition is allowed.
- */
-function isValidTransition(current, next) {
-  return (ORDER_TRANSITIONS[current] || []).includes(next);
-}
+const {
+  ORDER_TRANSITIONS,
+  isValidTransition,
+  assertTerminalIsMoneySafe,
+} = require('../order/orderState');
 
 /**
  * Synchronize all related models when an order status changes.
@@ -57,6 +50,12 @@ async function syncSafePayStatus({ orderId, newOrderStatus, adminId, reason, ip,
   if (!isValidTransition(order.status, newOrderStatus)) {
     throw new Error(`Ugyldig statusovergang: ${order.status} → ${newOrderStatus}`);
   }
+
+  // An admin moving an order to a terminal state is still bound by the money
+  // invariant: completing without a payout, or cancelling without a refund, would
+  // leave captured money with no recorded destination. Disputes are resolved
+  // through resolveDispute, which records the outcome and passes it explicitly.
+  await assertTerminalIsMoneySafe(order, newOrderStatus);
 
   const prev = order.status;
   order.status = newOrderStatus;
@@ -170,6 +169,9 @@ async function openDispute({
     description,
     status: 'open',
     payoutFrozen: true,
+    // Remembered so a `no_action` resolution can put the order back where it was
+    // rather than cancelling it.
+    previousOrderStatus: order.status,
     openedAt: new Date(),
     timeline: [{
       action: 'dispute_opened',
@@ -216,18 +218,22 @@ async function openDispute({
   // Notifications (failure should not fail the main operation)
   try {
     await Promise.all([
-      Notification.create({
+      notify({
         userId: openedAgainst,
-        type: 'order',
-        content: `En tvist er åpnet for oppdrag. Tittel: ${title}`,
+        type: 'alert',
+        content: `Det er åpnet en tvist på oppdraget "${title}".`,
         orderId,
         senderId: openedByUserId,
+        event: 'dispute_opened',
+        payload: { orderId: String(orderId) },
       }),
-      Notification.create({
+      notify({
         userId: order.customerId,
-        type: 'system',
-        content: `Tvist åpnet for kontrakt. Admin er varslet.`,
+        type: 'alert',
+        content: 'Tvist åpnet. Support er varslet og tar kontakt.',
         orderId,
+        event: 'dispute_opened',
+        payload: { orderId: String(orderId) },
       }),
     ]);
   } catch {

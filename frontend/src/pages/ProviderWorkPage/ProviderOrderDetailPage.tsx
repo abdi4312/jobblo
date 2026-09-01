@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -11,17 +11,58 @@ import { toast } from 'react-hot-toast';
 import { useUserStore } from '../../stores/userStore';
 import { Button } from '../../components/Ui/button/Button';
 import { ContractViewModal } from '../../components/SafePay/ContractViewModal';
+import { DisputePanel } from '../../components/SafePay/DisputePanel';
+import { useDispute } from '../../features/disputes/hooks';
+import { disputeReasonOptions } from '../../constants/disputes';
+import { compressImages } from '../../utils/compressImage';
 
 // ── Status config ──────────────────────────────────────────────────────────────
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-    awaiting_payment: { label: 'Venter på betaling', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
-    paid: { label: 'Betalt — jobb kan starte', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
-    in_progress: { label: 'Jobb pågår', color: 'text-indigo-700', bg: 'bg-indigo-50 border-indigo-200' },
-    ready_for_review: { label: 'Klar for gjennomgang', color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200' },
-    completed: { label: 'Fullført', color: 'text-green-700', bg: 'bg-green-50 border-green-200' },
-    disputed: { label: 'Under tvist', color: 'text-red-700', bg: 'bg-red-50 border-red-200' },
-    refunded: { label: 'Refundert', color: 'text-gray-600', bg: 'bg-gray-100 border-gray-200' },
-    cancelled: { label: 'Kansellert', color: 'text-gray-500', bg: 'bg-gray-100 border-gray-200' },
+//
+// Eight statuses used to mean eight colours — amber, blue, indigo, purple, green, red and
+// two greys — none of which appear anywhere else on the site, and none of which told the
+// worker the one thing that matters here: whether the next move is theirs. There are four
+// tones now, read from the provider's seat. `action` is "you are holding this up".
+const STATUS_CONFIG: Record<string, { label: string; cls: string; note: string }> = {
+    awaiting_payment: {
+        label: 'Venter på betaling',
+        cls: 'bg-[#F4F6F0] text-[#63665F]',
+        note: 'Oppdragsgiver har ikke betalt ennå. Du får beskjed så snart pengene er sikret.',
+    },
+    paid: {
+        label: 'Betalt — klar til å starte',
+        cls: 'bg-[#122A1C] text-white',
+        note: 'Pengene er sikret hos Jobblo. Start jobben når du er klar.',
+    },
+    in_progress: {
+        label: 'Jobb pågår',
+        cls: 'bg-[#EAF1E9] text-[#2E6641]',
+        note: 'Last opp bilder underveis, og meld fra når du er ferdig.',
+    },
+    ready_for_review: {
+        label: 'Meldt ferdig',
+        cls: 'bg-[#F4F6F0] text-[#63665F]',
+        note: 'Oppdragsgiver går gjennom arbeidet. Utbetalingen skjer etter godkjenning.',
+    },
+    completed: {
+        label: 'Fullført',
+        cls: 'bg-[#EAF1E9] text-[#2E6641]',
+        note: 'Jobben er godkjent og beløpet er lagt til saldoen din.',
+    },
+    disputed: {
+        label: 'Under tvist',
+        cls: 'bg-[#122A1C] text-white',
+        note: 'Utbetalingen står på vent til tvisten er avklart.',
+    },
+    refunded: {
+        label: 'Refundert',
+        cls: 'border border-[#E6E7E1] bg-white text-[#9B9E96]',
+        note: 'Beløpet er tilbakeført til oppdragsgiver.',
+    },
+    cancelled: {
+        label: 'Kansellert',
+        cls: 'border border-[#E6E7E1] bg-white text-[#9B9E96]',
+        note: 'Oppdraget er avlyst.',
+    },
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -37,18 +78,9 @@ const ACTION_LABELS: Record<string, string> = {
     payout_approved: 'Utbetaling godkjent',
 };
 
-const DISPUTE_REASON_OPTIONS = [
-    { value: 'work_not_completed', label: 'Jobb ikke fullført' },
-    { value: 'poor_quality', label: 'Dårlig kvalitet' },
-    { value: 'different_from_agreement', label: 'Avviker fra avtalen' },
-    { value: 'customer_not_cooperating', label: 'Kunde samarbeider ikke' },
-    { value: 'provider_not_cooperating', label: 'Tilbyder samarbeider ikke' },
-    { value: 'payment_issue', label: 'Betalingsproblem' },
-    { value: 'unauthorized_payment', label: 'Uautorisert betaling' },
-    { value: 'fraud_or_scam', label: 'Svindel eller bedrageri' },
-    { value: 'damaged_property', label: 'Skadet eiendom' },
-    { value: 'other', label: 'Annet' },
-];
+// Scoped to the provider's side — the shared list let the provider file
+// "Tilbyder samarbeider ikke", i.e. a dispute accusing themselves.
+const DISPUTE_REASON_OPTIONS = disputeReasonOptions('provider');
 
 const MAX_IMAGES_PER_TYPE = 10;
 const ALLOWED_MIME = 'image/jpeg,image/png,image/webp,application/pdf';
@@ -78,7 +110,7 @@ const MiniStarRating: React.FC<{ value: number; onChange: (v: number) => void; s
                 >
                     <Star
                         size={size}
-                        className={s <= display ? 'text-[#F59E0B] fill-[#F59E0B]' : 'text-[#d1d5db]'}
+                        className={s <= display ? 'text-[#2E6641] fill-[#2E6641]' : 'text-[#D4D6CD]'}
                     />
                 </button>
             ))}
@@ -126,7 +158,8 @@ const ProviderOrderDetailPage: React.FC = () => {
     const [reviewRating, setReviewRating] = useState(0);
     const [reviewComment, setReviewComment] = useState('');
 
-    // Dispute state
+    // Dispute state — read path added with F-47; opening one used to be write-only.
+    const { data: dispute, refetch: refetchDispute } = useDispute(orderId);
     const [showDisputeDialog, setShowDisputeDialog] = useState(false);
     const [disputeForm, setDisputeForm] = useState({
         reasonCategory: '',
@@ -212,7 +245,8 @@ const ProviderOrderDetailPage: React.FC = () => {
             return res.data;
         },
         onSuccess: () => {
-            toast.success('Tvist opprettet. Admin vil gjennomgå saken.');
+            toast.success('Tvisten er opprettet. Du finner status og meldinger på denne siden.');
+            refetchDispute();
             setShowDisputeDialog(false);
             setDisputeForm({ reasonCategory: '', title: '', description: '' });
             setDisputeTouched({ reasonCategory: false, title: false, description: false });
@@ -291,8 +325,12 @@ const ProviderOrderDetailPage: React.FC = () => {
     };
 
     // ── Evidence helpers ───────────────────────────────────────────────────────
-    const addPendingFiles = (fl: FileList | File[]) => {
-        const list = Array.from(fl);
+    const addPendingFiles = async (fl: FileList | File[]) => {
+        // Proof-of-work photos come off the same phone cameras as everything else, so they
+        // get the same treatment: scaled down before the size check rather than measured
+        // as-is and refused. PDFs and anything the canvas cannot decode pass through
+        // untouched — see utils/compressImage.ts.
+        const list = await compressImages(Array.from(fl));
         const tabUploadedCount = data?.order
             ? (evidenceTab === 'before' ? (data.order.beforeImages?.length || 0) : (data.order.afterImages?.length || 0))
             : 0;
@@ -303,6 +341,9 @@ const ProviderOrderDetailPage: React.FC = () => {
         }
         const accepted: PendingFile[] = [];
         for (const f of list) {
+            // `allowedSlots` was measured before the await above, so it can be stale if a
+            // second selection landed while these were compressing. The cap is re-applied
+            // against the live list when the state actually commits, below.
             if (accepted.length >= allowedSlots) break;
             // Frontend validation mirrors backend — user gets fast feedback
             const okMime = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(f.type);
@@ -314,7 +355,15 @@ const ProviderOrderDetailPage: React.FC = () => {
                 id: `${f.name}-${f.size}-${Math.random().toString(36).slice(2, 8)}`,
             });
         }
-        setPendingFiles((prev) => [...prev, ...accepted]);
+        setPendingFiles((prev) => {
+            const room = MAX_IMAGES_PER_TYPE - tabUploadedCount - prev.length;
+            if (room <= 0) {
+                accepted.forEach((p) => p.preview && URL.revokeObjectURL(p.preview));
+                return prev;
+            }
+            accepted.slice(room).forEach((p) => p.preview && URL.revokeObjectURL(p.preview));
+            return [...prev, ...accepted.slice(0, room)];
+        });
     };
 
     const removePendingFile = (id: string) => {
@@ -327,24 +376,48 @@ const ProviderOrderDetailPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-[#f5f0e8]">
-                <Loader2 className="animate-spin text-custom-green" size={36} />
+            <div className="min-h-screen bg-[#EFF0EA]">
+                <div className="mx-auto w-full max-w-3xl px-4 py-8">
+                    <div className="jb-skeleton h-4 w-20 rounded" />
+                    <div className="jb-skeleton mt-6 h-28 w-full rounded-2xl" />
+                    <div className="jb-skeleton mt-4 h-24 w-full rounded-2xl" />
+                    <div className="jb-skeleton mt-4 h-56 w-full rounded-2xl" />
+                </div>
             </div>
         );
     }
 
-    if (error || !data) {
+    if (error || !data?.order) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-[#f5f0e8] p-6">
-                <p className="text-red-500 mb-4">Kunne ikke laste oppdrag</p>
-                <Button onClick={() => navigate(-1)} label="Gå tilbake" />
+            <div className="flex min-h-screen items-center justify-center bg-[#EFF0EA] p-4">
+                <div className="w-full max-w-md rounded-3xl border border-[#E6E7E1] bg-white p-10 text-center">
+                    <span className="mx-auto mb-4 flex size-11 items-center justify-center rounded-full bg-[#EAF1E9] text-[#2E6641]">
+                        <AlertTriangle size={20} strokeWidth={2} />
+                    </span>
+                    <p className="text-[1.0625rem] font-semibold text-[#0B0B0B]">
+                        Kunne ikke laste oppdraget
+                    </p>
+                    <p className="mx-auto mt-2 max-w-sm text-[0.875rem] leading-relaxed text-[#63665F]">
+                        Sjekk internettforbindelsen din og prøv igjen.
+                    </p>
+                    <button
+                        onClick={() => invalidate()}
+                        className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-[#2E6641] px-6 text-[0.9375rem] font-semibold text-white transition-colors hover:bg-[#255335]"
+                    >
+                        Prøv igjen
+                    </button>
+                </div>
             </div>
         );
     }
 
     const { order, calculation, isProvider, isCustomer, activeDispute } = data;
     const status = order.status as string;
-    const statusConf = STATUS_CONFIG[status] || { label: status, color: 'text-gray-600', bg: 'bg-gray-50 border-gray-200' };
+    const statusConf = STATUS_CONFIG[status] || {
+        label: status,
+        cls: 'bg-[#F4F6F0] text-[#63665F]',
+        note: '',
+    };
 
     const canStart = isProvider && status === 'paid' && order.paymentStatus === 'paid' && !activeDispute;
     const canUpload = isProvider && ['paid', 'in_progress'].includes(status);
@@ -366,7 +439,7 @@ const ProviderOrderDetailPage: React.FC = () => {
     const evidenceLocked = !canUpload;
 
     return (
-        <div className="min-h-screen bg-[#f5f0e8] pb-16">
+        <div className="min-h-screen bg-[#EFF0EA] pb-16">
             <div className="max-w-3xl mx-auto px-4 py-8">
 
                 {/* Back + contract view */}
@@ -377,15 +450,17 @@ const ProviderOrderDetailPage: React.FC = () => {
                     <ContractViewModal
                         orderId={orderId!}
                         trigger={
-                            <span className="flex items-center gap-1.5 text-[13px] text-[#1a3a1a] font-semibold hover:underline cursor-pointer">
+                            <span className="flex items-center gap-1.5 text-[13px] text-[#122A1C] font-semibold hover:underline cursor-pointer">
                                 <FileText size={14} /> Se kontrakt
                             </span>
                         }
                     />
                 </div>
 
+                <DisputePanel orderId={orderId} dispute={dispute} viewerRole="provider" />
+
                 {/* Header card */}
-                <div className="bg-[#1a3a1a] rounded-2xl p-5 mb-4 text-white">
+                <div className="bg-[#122A1C] rounded-2xl p-5 mb-4 text-white">
                     <div className="flex items-start justify-between gap-4">
                         <div>
                             <h1 className="text-[18px] font-bold mb-1">{order.serviceId?.title}</h1>
@@ -394,19 +469,31 @@ const ProviderOrderDetailPage: React.FC = () => {
                             </p>
                         </div>
                         <div className="text-right shrink-0">
-                            <div className="text-[22px] font-bold text-[#4ade80]">{order.agreedPrice} kr</div>
+                            <div className="text-[22px] font-bold text-[#8FBF9A]">{order.agreedPrice} kr</div>
                             <div className="text-white/50 text-[11px]">Du mottar: {calculation?.providerNet} kr</div>
                         </div>
                     </div>
                 </div>
 
-                {/* Status banner */}
-                <div className={`border rounded-xl p-4 mb-4 flex items-center gap-3 ${statusConf.bg}`}>
-                    <ShieldCheck size={20} className={statusConf.color} />
-                    <div>
-                        <p className={`font-semibold text-[14px] ${statusConf.color}`}>{statusConf.label}</p>
-                        {activeDispute && <p className="text-red-600 text-[12px] mt-0.5">Tvist er åpnet — utbetaling er fryst</p>}
-                    </div>
+                {/* Status banner. The badge says where the job is; the line under it says
+                    what that means for the person reading, which the colour alone never did. */}
+                <div className="mb-4 rounded-2xl border border-[#E6E7E1] bg-white p-5">
+                    <span
+                        className={`inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-[0.75rem] font-semibold ${statusConf.cls}`}
+                    >
+                        <ShieldCheck size={13} strokeWidth={2.2} />
+                        {statusConf.label}
+                    </span>
+                    {statusConf.note && (
+                        <p className="mt-2.5 text-[0.875rem] leading-relaxed text-[#63665F]">
+                            {statusConf.note}
+                        </p>
+                    )}
+                    {activeDispute && (
+                        <p className="mt-2.5 flex items-center gap-1.5 text-[0.8125rem] font-medium text-[#B4453A]">
+                            <AlertTriangle size={13} /> Tvist er åpnet — utbetalingen er fryst.
+                        </p>
+                    )}
                 </div>
 
                 {/* Parties */}
@@ -417,8 +504,8 @@ const ProviderOrderDetailPage: React.FC = () => {
                             { label: 'Oppdragsgiver', u: order.customerId },
                             { label: 'Utfører', u: order.providerId },
                         ].map(({ label, u }) => (
-                            <div key={label} className="bg-[#f9f9f7] rounded-xl p-3 text-center">
-                                <div className="w-10 h-10 rounded-full bg-[#c8d8c8] mx-auto mb-2 overflow-hidden flex items-center justify-center text-[#1a3a1a] font-bold">
+                            <div key={label} className="bg-[#F4F6F0] rounded-xl p-3 text-center">
+                                <div className="w-10 h-10 rounded-full bg-[#EAF1E9] mx-auto mb-2 overflow-hidden flex items-center justify-center text-[#122A1C] font-bold">
                                     {u?.avatarUrl
                                         ? <img src={u.avatarUrl} alt="" className="w-full h-full object-cover" />
                                         : (u?.name?.[0] || '?')}
@@ -481,8 +568,8 @@ const ProviderOrderDetailPage: React.FC = () => {
                                                 checklistMutation.mutate({ itemId: item.id, val: !completed });
                                             }
                                         }}
-                                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all select-none ${completed ? 'bg-[#f0faf0] border-[#c6f0d8]' : 'bg-[#f9f9f7] border-transparent'
-                                            } ${canToggle ? 'cursor-pointer hover:border-black/10 hover:bg-[#f0faf0]/50' : 'cursor-default opacity-90'}`}
+                                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all select-none ${completed ? 'bg-[#EAF1E9] border-[#c6f0d8]' : 'bg-[#F4F6F0] border-transparent'
+                                            } ${canToggle ? 'cursor-pointer hover:border-black/10 hover:bg-[#EAF1E9]/50' : 'cursor-default opacity-90'}`}
                                     >
                                         <input
                                             id={`provider-check-${item.id}`}
@@ -540,7 +627,7 @@ const ProviderOrderDetailPage: React.FC = () => {
                                         onClick={() => setEvidenceTab(tab)}
                                         className={`flex-1 py-2 px-3 rounded-xl text-[13px] font-medium transition-colors ${active
                                             ? 'bg-custom-green text-white shadow-sm'
-                                            : 'bg-[#f9f9f7] text-gray-600 hover:bg-gray-100'
+                                            : 'bg-[#F4F6F0] text-gray-600 hover:bg-gray-100'
                                             }`}
                                     >
                                         {tab === 'before' ? 'Før arbeid' : 'Etter arbeid'}
@@ -562,7 +649,7 @@ const ProviderOrderDetailPage: React.FC = () => {
                             />
                         )}
                         {evidenceTab === 'after' && order.completionNote && (
-                            <p className="mb-3 text-[13px] text-gray-600 bg-[#f9f9f7] p-3 rounded-xl border border-black/5">
+                            <p className="mb-3 text-[13px] text-gray-600 bg-[#F4F6F0] p-3 rounded-xl border border-black/5">
                                 <span className="font-medium text-gray-700">Notat: </span>
                                 {order.completionNote}
                             </p>
@@ -578,7 +665,7 @@ const ProviderOrderDetailPage: React.FC = () => {
                                     {tabUploadedUrls.map((url, i) => (
                                         <div
                                             key={url}
-                                            className="relative aspect-square rounded-xl overflow-hidden bg-[#f9f9f7] group"
+                                            className="relative aspect-square rounded-xl overflow-hidden bg-[#F4F6F0] group"
                                         >
                                             {url.toLowerCase().endsWith('.pdf') ? (
                                                 <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
@@ -625,7 +712,7 @@ const ProviderOrderDetailPage: React.FC = () => {
                                     {pendingFiles.map((pf) => (
                                         <div
                                             key={pf.id}
-                                            className="relative aspect-square rounded-xl overflow-hidden bg-[#f0faf0] border border-dashed border-[#c6f0d8]"
+                                            className="relative aspect-square rounded-xl overflow-hidden bg-[#EAF1E9] border border-dashed border-[#c6f0d8]"
                                         >
                                             {pf.preview ? (
                                                 <img src={pf.preview} alt="Forhåndsvisning" className="w-full h-full object-cover" />
@@ -668,7 +755,7 @@ const ProviderOrderDetailPage: React.FC = () => {
                                 <label
                                     className={`block w-full border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${tabTotalUsed >= MAX_IMAGES_PER_TYPE
                                         ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
-                                        : 'border-gray-200 hover:border-custom-green bg-[#fafaf8] hover:bg-[#f0faf0]/40'
+                                        : 'border-gray-200 hover:border-custom-green bg-[#fafaf8] hover:bg-[#EAF1E9]/40'
                                         }`}
                                 >
                                     <input
@@ -676,7 +763,13 @@ const ProviderOrderDetailPage: React.FC = () => {
                                         multiple
                                         accept={ALLOWED_MIME}
                                         disabled={tabTotalUsed >= MAX_IMAGES_PER_TYPE || evidenceMutation.isPending}
-                                        onChange={(e) => e.target.files && addPendingFiles(e.target.files)}
+                                        onChange={(e) => {
+                                            const files = Array.from(e.target.files ?? []);
+                                            // Clear first so picking the same file again still fires
+                                            // `change`; the File references above stay valid.
+                                            e.target.value = '';
+                                            if (files.length) void addPendingFiles(files);
+                                        }}
                                         className="hidden"
                                     />
                                     <Upload size={18} className="mx-auto mb-1.5 text-custom-green" />
@@ -805,7 +898,7 @@ const ProviderOrderDetailPage: React.FC = () => {
                         <Button
                             onClick={() => readyMutation.mutate()}
                             loading={readyMutation.isPending}
-                            className="w-full bg-[#1a3a1a] text-white rounded-full py-3.5 text-[15px] font-bold flex items-center justify-center gap-2"
+                            className="w-full bg-[#122A1C] text-white rounded-full py-3.5 text-[15px] font-bold flex items-center justify-center gap-2"
                         >
                             <CheckSquare size={17} /> Meld jobb som ferdig
                         </Button>
@@ -844,11 +937,11 @@ const ProviderOrderDetailPage: React.FC = () => {
                             onClick={() => setShowReviewForm(true)}
                             className="w-full bg-white border border-black/10 text-gray-800 rounded-full py-3.5 text-[14px] font-bold flex items-center justify-center gap-2"
                         >
-                            <Star size={17} className="text-[#F59E0B]" /> Vurder oppdragsgiver
+                            <Star size={17} className="text-[#2E6641]" /> Vurder oppdragsgiver
                         </Button>
                     )}
                     {status === 'completed' && isProvider && providerHasReviewed && (
-                        <div className="bg-[#f9f9f7] border border-black/5 rounded-xl p-4 text-center text-[13px] text-gray-500">
+                        <div className="bg-[#F4F6F0] border border-black/5 rounded-xl p-4 text-center text-[13px] text-gray-500">
                             ✓ Du har vurdert oppdragsgiver
                         </div>
                     )}
@@ -857,7 +950,7 @@ const ProviderOrderDetailPage: React.FC = () => {
                     {showReviewForm && (
                         <div className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-black/5">
                             <h3 className="font-semibold text-[14px] text-gray-800 mb-3 flex items-center gap-2">
-                                <Star size={15} className="text-[#F59E0B]" /> Vurder oppdragsgiver
+                                <Star size={15} className="text-[#2E6641]" /> Vurder oppdragsgiver
                             </h3>
                             <p className="text-[12px] text-gray-500 mb-4">
                                 Hvordan var din opplevelse med {data?.order?.customerId?.name}?

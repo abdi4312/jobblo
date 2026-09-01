@@ -4,6 +4,10 @@ export interface ReverseGeocodeResult {
   address: string;
   city: string;
   postNumber?: string;
+  /** Fylke — administrative_area_level_1. */
+  county?: string;
+  /** Kommune — administrative_area_level_2. */
+  municipality?: string;
 }
 
 export const reverseGeocode = async (
@@ -37,6 +41,11 @@ export const reverseGeocode = async (
       address: [street, number].filter(Boolean).join(' ') || result.formatted_address || '',
       city,
       postNumber,
+      // Returned so that moving the pin can put fylke and kommune back in step with it.
+      // Without these the dropdowns kept whatever was chosen before the pin moved, and the
+      // job was filed under one kommune while its coordinates sat in another.
+      county: pick(['administrative_area_level_1']),
+      municipality: pick(['administrative_area_level_2']) || pick(['locality']),
     };
   } catch {
     return null;

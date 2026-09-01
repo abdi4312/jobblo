@@ -19,11 +19,6 @@ export const startJob = async (orderId: string) => {
   return res.data;
 };
 
-export const completeJobAndPayout = async (orderId: string) => {
-  const res = await mainLink.post(`/api/safepay/contract/${orderId}/complete`);
-  return res.data;
-};
-
 export const getSafePayHistory = async (userId: string) => {
   const res = await mainLink.get(`/api/safepay/history/${userId}`);
   return res.data;

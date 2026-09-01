@@ -10,6 +10,10 @@ import { routes } from './routing/Routes.tsx';
 // TanStack Query Imports
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { initCookieConsent } from './utils/cookieConsent';
+
+// Re-inject the ad script for a returning visitor who already accepted.
+initCookieConsent();
 
 // 1. QueryClient ka instance create kiya
 const queryClient = new QueryClient({
@@ -42,8 +46,10 @@ createRoot(document.getElementById('root')!).render(
         <RouterProvider router={router} />
       </ConfigProvider>
 
-      {/* Devtools debugging ke liye best hain */}
-      <ReactQueryDevtools initialIsOpen={false} />
+      {/* Dev only. This shipped to production unguarded, putting a floating
+          logo on every page that let any visitor inspect the whole query
+          cache — profile, orders, chats. */}
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   </StrictMode>
 );

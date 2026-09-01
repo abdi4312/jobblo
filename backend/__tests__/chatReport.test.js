@@ -38,6 +38,12 @@ jest.mock('../models/ChatMessage', () => ({
   distinct: jest.fn(),
 }));
 
+// Mirrors the real model's shape: models/ChatReport default-exports the Mongoose
+// model, and declares VALID_REPORT_TYPES / VALID_STATUSES / VALID_PRIORITIES as
+// schema statics — which Mongoose copies onto the model itself. The mock previously
+// exposed only schema.path() and the query methods, so a controller reading those
+// statics saw `undefined` here while working against the real model. That gap hid a
+// genuine production bug rather than reproducing it.
 jest.mock('../models/ChatReport', () => ({
   schema: {
     path: (p) => {
@@ -47,6 +53,10 @@ jest.mock('../models/ChatReport', () => ({
       return {};
     },
   },
+  // Schema statics, present on the real model.
+  VALID_REPORT_TYPES,
+  VALID_STATUSES,
+  VALID_PRIORITIES,
   findById: jest.fn(),
   find: jest.fn(),
   findOne: jest.fn(),
@@ -169,12 +179,18 @@ function makeReport(overrides = {}) {
 }
 
 function makeReq(overrides = {}) {
+  // middleware/auth.js sets `req.user = user` and `req.userId = user._id.toString()`,
+  // so these two always describe the SAME person in production. This helper used to
+  // generate two independent ObjectIds, which meant a fixture marking the chat
+  // participant as `req.userId` could never match a controller reading
+  // `req.user._id` — an unsatisfiable setup rather than a real 403.
+  const _id = new mongoose.Types.ObjectId();
   return {
     params: {},
     body: {},
     query: {},
-    userId: String(new mongoose.Types.ObjectId()),
-    user: { _id: new mongoose.Types.ObjectId(), name: 'Admin Test', role: 'superAdmin' },
+    userId: String(_id),
+    user: { _id, name: 'Admin Test', role: 'superAdmin' },
     ip: '127.0.0.1',
     headers: { 'user-agent': 'test-agent' },
     ...overrides,
@@ -212,6 +228,21 @@ describe('Chat Report System', () => {
   describe('submitReport (user-side)', () => {
     let chatReportController;
 
+    /**
+     * Title and description that satisfy submitChatReport's documented minimums
+     * (title >= 5 chars, description >= 20). Several fixtures below used values like
+     * 'Test' / 'Test desc', which the endpoint rejects with 400 — so those tests were
+     * asserting 404/403/201/429 against a request that never got past validation.
+     * They only looked green historically because an earlier throw made every case in
+     * this block a 500. Spelled out here so a length rule change fails loudly in one
+     * place instead of silently short-circuiting six tests.
+     */
+    const VALID_REPORT_BODY = {
+      title: 'Mistenkelig oppførsel',
+      description:
+        'Motparten ba om betaling utenfor plattformen og sluttet å svare etterpå.',
+    };
+
     beforeAll(() => {
       chatReportController = require('../controllers/chatReportController');
     });
@@ -227,7 +258,7 @@ describe('Chat Report System', () => {
     test('returns 404 when chat does not exist', async () => {
       const chatId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
-      req.body = { scope: 'chat', reportType: 'spam', title: 'Test', description: 'Test description' };
+      req.body = { scope: 'chat', reportType: 'spam', ...VALID_REPORT_BODY };
       Chat.findById.mockReturnValue(mockQuery(null));
       await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
@@ -236,7 +267,7 @@ describe('Chat Report System', () => {
     test('non-participant returns 403', async () => {
       const chatId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
-      req.body = { scope: 'chat', reportType: 'spam', title: 'Test', description: 'Test' };
+      req.body = { scope: 'chat', reportType: 'spam', ...VALID_REPORT_BODY };
       Chat.findById.mockReturnValue(mockQuery({
         _id: chatId, clientId: new mongoose.Types.ObjectId(), providerId: new mongoose.Types.ObjectId(), messages: [],
       }));
@@ -267,7 +298,7 @@ describe('Chat Report System', () => {
       const clientId = req.userId;
       const providerId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
-      req.body = { scope: 'chat', reportType: 'scam_or_fraud', title: 'Suspicious', description: 'Test desc' };
+      req.body = { scope: 'chat', reportType: 'scam_or_fraud', ...VALID_REPORT_BODY };
       Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId, providerId, orderId: null, serviceId: null, messages: [] }));
       ChatReport.findOne.mockReturnValue(mockQuery(null));
       ChatReport.create.mockResolvedValue({ _id: new mongoose.Types.ObjectId(), chatId, scope: 'chat', reportType: 'scam_or_fraud', reportedBy: clientId, reportedUser: providerId });
@@ -283,7 +314,7 @@ describe('Chat Report System', () => {
       const providerId = new mongoose.Types.ObjectId();
       const messageId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
-      req.body = { scope: 'message', messageId: String(messageId), reportType: 'harassment', title: 'Bad msg', description: 'Inappropriate' };
+      req.body = { scope: 'message', messageId: String(messageId), reportType: 'harassment', ...VALID_REPORT_BODY };
       Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId, providerId, orderId: null, serviceId: null, messages: [{ _id: messageId }] }));
       ChatReport.findOne.mockReturnValue(mockQuery(null));
       ChatReport.create.mockResolvedValue({ _id: new mongoose.Types.ObjectId(), chatId, scope: 'message', messageId: String(messageId) });
@@ -292,19 +323,39 @@ describe('Chat Report System', () => {
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
-    test('invalid message ID returns 400', async () => {
+    // The messageId branch runs AFTER the title/description rules, so both of these
+    // need an otherwise-valid body or they never reach it. The original single test
+    // here sent title 'Test' and asserted 400 — it passed on the title rule and never
+    // exercised messageId at all, which is why it never revealed that a message
+    // missing from the chat answers 404, not 400.
+    test('missing message ID returns 400 when scope is message', async () => {
       const chatId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
-      req.body = { scope: 'message', messageId: 'nonexistent', reportType: 'harassment', title: 'Test', description: 'Test' };
+      req.body = { scope: 'message', reportType: 'harassment', ...VALID_REPORT_BODY };
       Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId: req.userId, providerId: new mongoose.Types.ObjectId(), messages: [{ _id: new mongoose.Types.ObjectId() }] }));
       await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.stringMatching(/messageId/i) })
+      );
+    });
+
+    test('message ID not present in the chat returns 404', async () => {
+      const chatId = new mongoose.Types.ObjectId();
+      req.params.chatId = chatId;
+      req.body = { scope: 'message', messageId: 'nonexistent', reportType: 'harassment', ...VALID_REPORT_BODY };
+      Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId: req.userId, providerId: new mongoose.Types.ObjectId(), messages: [{ _id: new mongoose.Types.ObjectId() }] }));
+      await chatReportController.submitChatReport(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.stringMatching(/melding/i) })
+      );
     });
 
     test('duplicate report within 24h returns 429', async () => {
       const chatId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
-      req.body = { scope: 'chat', reportType: 'spam', title: 'Spam', description: 'Duplicate' };
+      req.body = { scope: 'chat', reportType: 'spam', ...VALID_REPORT_BODY };
       Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId: req.userId, providerId: new mongoose.Types.ObjectId(), orderId: null, serviceId: null, messages: [] }));
       ChatReport.findOne.mockReturnValue(mockQuery({ _id: new mongoose.Types.ObjectId() }));
       await chatReportController.submitChatReport(req, res);
@@ -318,7 +369,7 @@ describe('Chat Report System', () => {
       const serviceId = new mongoose.Types.ObjectId();
       const orderId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
-      req.body = { scope: 'chat', reportType: 'payment_issue', title: 'Payment problem', description: 'Not paid' };
+      req.body = { scope: 'chat', reportType: 'payment_issue', ...VALID_REPORT_BODY };
       Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId, providerId, orderId, serviceId, messages: [] }));
       ChatReport.findOne.mockReturnValue(mockQuery(null));
       ChatReport.create.mockResolvedValue({ _id: new mongoose.Types.ObjectId(), chatId, orderId, serviceId, safePayOrderId: orderId });

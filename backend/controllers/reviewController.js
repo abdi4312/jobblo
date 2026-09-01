@@ -1,7 +1,9 @@
 const Review = require('../models/Review');
 const Service = require('../models/Service');
 const User = require('../models/User');
+const Order = require('../models/Order');
 const mongoose = require('mongoose');
+const { normaliseReviewPhotos } = require('../utils/reviewPhotos');
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -23,10 +25,16 @@ exports.createReview = async (req, res) => {
       revieweeRole,
       rating,
       comment,
-      photos,
       recommendWorker,
     } = req.body;
     const reviewerId = req.userId;
+
+    // Photos are Cloudinary URLs, never image bytes — see utils/reviewPhotos.js.
+    const photoResult = normaliseReviewPhotos(req.body.photos);
+    if (!photoResult.ok) {
+      return res.status(400).json({ error: photoResult.error });
+    }
+    const photos = photoResult.photos;
 
     // Validate IDs
     if (!isValidId(revieweeId)) {
@@ -38,20 +46,44 @@ exports.createReview = async (req, res) => {
       return res.status(400).json({ error: 'Rating must be a number between 1 and 5' });
     }
 
-    console.log('createReview: Creating review with data:', {
-      orderId,
-      serviceId,
-      reviewerId,
-      revieweeId,
-      revieweeRole,
-      rating,
-      comment,
-      photos,
-      recommendWorker,
-    });
+    // ── Eligibility (F-34) ────────────────────────────────────────────────────
+    // This endpoint previously validated only the reviewee id and the rating, so any
+    // authenticated account could post a 1-star review against any user and move their
+    // public averageRating. A review is only legitimate when the reviewer took part in
+    // a completed order and is rating the other party in that same order.
+    if (!isValidId(orderId)) {
+      return res.status(400).json({ error: 'Vurderinger må knyttes til et oppdrag.' });
+    }
+
+    const order = await Order.findById(orderId).select('customerId providerId serviceId status');
+    if (!order) {
+      return res.status(404).json({ error: 'Oppdraget ble ikke funnet.' });
+    }
+
+    const isCustomer = String(order.customerId) === String(reviewerId);
+    const isProvider = String(order.providerId) === String(reviewerId);
+    if (!isCustomer && !isProvider) {
+      return res.status(403).json({ error: 'Du kan bare vurdere oppdrag du selv har deltatt i.' });
+    }
+
+    if (order.status !== 'completed') {
+      return res
+        .status(400)
+        .json({ error: 'Oppdraget må være fullført før du kan gi en vurdering.' });
+    }
+
+    const counterpartyId = isCustomer ? order.providerId : order.customerId;
+    if (!counterpartyId || String(revieweeId) !== String(counterpartyId)) {
+      return res
+        .status(400)
+        .json({ error: 'Du kan bare vurdere den andre parten i oppdraget.' });
+    }
+
     const review = await Review.create({
       orderId,
-      serviceId,
+      // Derived from the order, not the request body — the client must not be able to
+      // attach a review to an unrelated service.
+      serviceId: order.serviceId,
       reviewerId,
       revieweeId,
       revieweeRole,
@@ -60,17 +92,11 @@ exports.createReview = async (req, res) => {
       photos: photos || [],
       recommendWorker: recommendWorker || false,
     });
-    console.log('createReview: Review created:', review);
 
     // Update reviewee stats
     const allReviews = await Review.find({ revieweeId });
-    console.log('createReview: All reviews for reviewee:', allReviews);
     const reviewCount = allReviews.length;
     const averageRating = reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
-    console.log('createReview: Calculated stats:', {
-      reviewCount,
-      averageRating,
-    });
 
     // Update the main user stats
     const updatedUser = await User.findByIdAndUpdate(
@@ -81,7 +107,6 @@ exports.createReview = async (req, res) => {
       },
       { new: true }
     );
-    console.log('createReview: Updated user:', updatedUser);
 
     const populatedReview = await Review.findById(review._id)
       .populate('reviewerId', 'name lastName username avatarUrl')
@@ -131,7 +156,13 @@ exports.updateReview = async (req, res) => {
     }
 
     if (photos !== undefined) {
-      review.photos = photos;
+      // Same rule as create: URLs only. Without this, editing a review was a way back in
+      // for the base64 payloads the create path now refuses.
+      const photoResult = normaliseReviewPhotos(photos);
+      if (!photoResult.ok) {
+        return res.status(400).json({ error: photoResult.error });
+      }
+      review.photos = photoResult.photos;
     }
 
     if (recommendWorker !== undefined) {
@@ -208,6 +239,25 @@ exports.getReviewByOrder = async (req, res) => {
 exports.getReviewByOrderId = async (req, res) => {
   try {
     const { orderId } = req.params;
+
+    // (F-34) This route was unauthenticated and populated both parties' names and
+    // avatars, so anyone holding an order id could deanonymise the pair. Restricted to
+    // the two participants — public reputation is served by GET /users/:userId/reviews.
+    if (!isValidId(orderId)) {
+      return res.status(400).json({ error: 'Ugyldig ordre-ID' });
+    }
+
+    const order = await Order.findById(orderId).select('customerId providerId');
+    if (!order) {
+      return res.status(404).json({ error: 'Oppdraget ble ikke funnet.' });
+    }
+
+    const isParticipant =
+      String(order.customerId) === String(req.userId) ||
+      String(order.providerId) === String(req.userId);
+    if (!isParticipant) {
+      return res.status(403).json({ error: 'Ikke tilgang.' });
+    }
 
     const reviews = await Review.find({ orderId })
       .populate('reviewerId', 'name lastName username avatarUrl')

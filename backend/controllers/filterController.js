@@ -1,5 +1,6 @@
 const Service = require('../models/Service');
 const Category = require('../models/Category');
+const { getSortOptionsForClient, resolveSort } = require('../utils/serviceSort');
 
 /**
  * @desc Hent tilgjengelige filtervalg
@@ -88,16 +89,17 @@ exports.getFilterOptions = async (req, res) => {
         locations: locCountMap.sort((a, b) => a.name.localeCompare(b.name)),
         urgentCount,
         priceRange: { min: 0, max: 100000 },
-        sortOptions: [
-          { label: 'Newest first', value: 'newest' },
-          { label: 'Price: low to high', value: 'price_low' },
-          { label: 'Price: high to low', value: 'price_high' },
-          { label: 'Most relevant', value: 'relevant' },
-        ],
+        // Served from utils/serviceSort.js so the values advertised here are exactly
+        // the values GET /api/services accepts. They were maintained separately and
+        // had drifted apart entirely, which is why sorting silently did nothing.
+        //
+        // `value` is the stable API key and must stay language-independent; `label`
+        // is display text. Never send a translated label as the query value.
+        sortOptions: getSortOptionsForClient(),
         types: [
-          { label: 'Buy', value: 'sale', count: 0 },
-          { label: 'Free', value: 'free', count: 0 },
-          { label: 'Wanted', value: 'wanted', count: 0 },
+          { label: 'Kjøp', value: 'sale', count: 0 },
+          { label: 'Gratis', value: 'free', count: 0 },
+          { label: 'Ønskes kjøpt', value: 'wanted', count: 0 },
         ],
       },
     });
@@ -193,13 +195,12 @@ exports.applyFilters = async (req, res) => {
       // query.type = type;
     }
 
-    // SORT LOGIC
-    let sortQuery = { createdAt: -1 };
-
-    if (sortBy === 'price_low') sortQuery = { price: 1 };
-    if (sortBy === 'price_high') sortQuery = { price: -1 };
-    if (sortBy === 'newest') sortQuery = { createdAt: -1 };
-    // "relevant" uses default sort or text search score if searchKeyword is present
+    // SORT LOGIC — shared with GET /api/services so the two endpoints cannot answer
+    // the same `sortBy` differently. This hand-rolled copy already omitted the
+    // createdAt tiebreaker on price sorts, which made paginated price results
+    // unstable: equal-priced listings could repeat on one page and be skipped on
+    // the next.
+    const { sort: sortQuery } = resolveSort(sortBy);
 
     const skip = (page - 1) * limit;
 

@@ -77,7 +77,7 @@ export const usePricingLogic = () => {
       const res = await mainLink.post('/api/stripe/create-checkout-session', payload);
       window.location.href = res.data.url;
     } catch {
-      toast.error('Could not start payment. Please try again later.');
+      toast.error('Kunne ikke starte betalingen. Prøv igjen om litt.');
       setIsRedirecting(false);
     }
   };

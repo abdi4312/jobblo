@@ -1,60 +1,124 @@
-import { EmptyState } from './EmptyState';
+import { useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Star,
-  Mail,
-  Phone,
-  Building,
-  Globe,
-  MapPin,
   Award,
   Briefcase,
-  ShieldCheck,
+  CalendarClock,
+  Globe,
+  Mail,
+  MapPin,
   Pencil,
-  Bookmark,
+  Phone,
   Plus,
-  User,
+  ShieldCheck,
+  Star,
+  TrendingUp,
 } from 'lucide-react';
-import { useParams } from 'react-router-dom';
-import { useUserProfile, useUserReviews } from '../../../features/profile/hooks';
-import { useFavoriteLists } from '../../../features/favoriteLists/hooks';
-import { JobDetailCardSkeleton } from '../../Loading/JobDetailCardSkeleton.tsx';
-import { useNavigate } from 'react-router-dom';
+import { EmptyState } from './EmptyState';
+import { useUserReviews } from '../../../features/profile/hooks';
 import { useJobs } from '../../../features/jobsList/hooks';
+import { useUserStore } from '../../../stores/userStore';
 import { JobCard } from '../../component/jobCard/JobCard.tsx';
-import type { Jobs } from '../../../../types/Jobs.ts';
-import { useUserStore } from '../../../stores/userStore.ts';
-import { Button } from '../../Ui/Button.tsx';
-import { useEffect, useRef } from 'react';
+import { JobCardSkeleton } from '../../Loading/JobCardSkeleton.tsx';
+import type { Jobs } from '../../../types/Jobs.ts';
+import type { EditSection } from '../EditProfileSheet';
+import { IdentityVerificationCard } from '../IdentityVerificationCard';
 
-interface List {
-  _id: string;
-  name: string;
-  services?: {
-    images?: string[];
-  }[];
+/**
+ * Everything below the tabs on a profile.
+ *
+ * The "Om meg" tab used to be three cards of invented data — a fallback skills list that
+ * showed "Maling, Snekkering, Hagearbeid, Rengjøring, Flytting" for anyone who had never
+ * entered a skill, a Mon/Wed/Fri/Sat availability grid hardcoded in the component with no
+ * way to change it, and a rating histogram whose five-star bar was `width: 100%` no matter
+ * what the reviews said. A stranger deciding whether to let this person into their home
+ * was reading fiction.
+ *
+ * Now nothing is drawn that the API did not return, the histogram counts real ratings, and
+ * the trust card surfaces the four figures `getUserById` already computes and the old page
+ * ignored: hire rate, completion rate, repeat customers and applications received.
+ */
+
+const CARD = 'rounded-3xl border border-[#E6E7E1] bg-white';
+const MICRO = 'text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-[#9B9E96]';
+
+/** Section shell. `onEdit` renders the owner's affordance in the header, aligned across cards. */
+function Panel({
+  title,
+  icon: Icon,
+  onEdit,
+  editLabel = 'Rediger',
+  children,
+}: {
+  title: string;
+  icon: typeof Star;
+  onEdit?: () => void;
+  editLabel?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={`${CARD} p-5 sm:p-6`}>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2.5 text-[0.9375rem] font-semibold tracking-[-0.01em] text-[#0B0B0B]">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-[#EAF1E9] text-[#2E6641]">
+            <Icon size={14} strokeWidth={2.2} />
+          </span>
+          {title}
+        </h2>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[0.8125rem] font-semibold text-[#2E6641] transition-colors hover:bg-[#EAF1E9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2E6641]/25"
+          >
+            <Pencil size={12} strokeWidth={2.4} />
+            {editLabel}
+          </button>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** "Ingen X lagt til" — with a shortcut when it is your own profile. */
+function Blank({ text, onAdd, addLabel }: { text: string; onAdd?: () => void; addLabel?: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <p className="text-[0.875rem] text-[#9B9E96]">{text}</p>
+      {onAdd && (
+        <button
+          type="button"
+          onClick={onAdd}
+          className="inline-flex h-8 items-center gap-1 rounded-full border border-dashed border-[#D4D6CD] px-3 text-[0.8125rem] font-medium text-[#63665F] transition-colors hover:border-[#2E6641] hover:text-[#2E6641] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2E6641]/25"
+        >
+          <Plus size={13} strokeWidth={2.6} />
+          {addLabel}
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function ItemsGrid({
   activeTab,
   user,
   profileType,
+  onEdit,
 }: {
   activeTab: string;
   user: any;
   profileType?: 'seeker' | 'poster';
+  /** Present only on your own profile. Opens the edit sheet on the given section. */
+  onEdit?: (section?: EditSection) => void;
 }) {
   const navigate = useNavigate();
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const currentUser = useUserStore((state) => state.user);
-  const isOwner = user?._id === currentUser?._id;
+  const isOwner = !!onEdit && user?._id === currentUser?._id;
+  const isCompany = user?.role === 'company';
 
-  const { data: realReviews } = useUserReviews(user?._id, profileType);
-
-  const {
-    data: lists = [],
-    isLoading: isListsLoading,
-    isError: isListsError,
-  } = useFavoriteLists(user?._id);
+  const { data: fetchedReviews } = useUserReviews(user?._id, profileType);
 
   const {
     data: jobsData,
@@ -65,458 +129,418 @@ export function ItemsGrid({
     isFetchingNextPage,
   } = useJobs({ userId: user?._id });
 
+  const isJobsTab = ['Oppdrag', 'Aktive', 'Fullførte', 'Tidligere'].includes(activeTab);
+
   useEffect(() => {
-    if (!hasNextPage || isFetchingNextPage || (activeTab !== 'Oppdrag' && activeTab !== 'Aktive'))
-      return;
+    if (!hasNextPage || isFetchingNextPage || !isJobsTab) return;
 
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          fetchNextPage();
-        }
-      },
+      (entries) => entries[0].isIntersecting && fetchNextPage(),
       { threshold: 0.1 }
     );
-
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
-
+    if (loadMoreRef.current) observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, activeTab]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, isJobsTab]);
 
   const jobs = (jobsData?.pages.flatMap((page) => page.data) || []) as unknown as Jobs[];
 
-  // Company Portfolio View
-  if (user?.role === 'company' && activeTab === 'Portfolio') {
-    const userSkills = user?.skills || [];
-    const userLocations = user?.locations || [];
+  // `getUserById` embeds the reviews; the hook is the fallback for payloads that do not.
+  const reviews: any[] = useMemo(() => {
+    if (Array.isArray(user?.reviews) && user.reviews.length) return user.reviews;
+    return Array.isArray(fetchedReviews) ? fetchedReviews : [];
+  }, [user?.reviews, fetchedReviews]);
+
+  /** Real counts per star, so the bars mean something. */
+  const distribution = useMemo(() => {
+    const counts = [0, 0, 0, 0, 0];
+    reviews.forEach((review) => {
+      const rating = Math.round(Number(review?.rating));
+      if (rating >= 1 && rating <= 5) counts[rating - 1] += 1;
+    });
+    return counts;
+  }, [reviews]);
+
+  const reviewCount = reviews.length || user?.reviewCount || 0;
+  const skills: string[] = Array.isArray(user?.skills) ? user.skills : [];
+
+  // ── Om meg / Om oss ────────────────────────────────────────────────────────
+  if (activeTab === 'Om meg' || activeTab === 'Om oss') {
+    const locations: string[] = Array.isArray(user?.locations) ? user.locations : [];
+
+    const trustSignals = [
+      typeof user?.hireRate === 'number' && user.hireRate > 0
+        ? { label: 'Blir hyret', value: `${user.hireRate} %` }
+        : null,
+      typeof user?.completionRate === 'number' && user.completionRate > 0
+        ? { label: 'Fullfører', value: `${user.completionRate} %` }
+        : null,
+      user?.repeatCustomersCount
+        ? { label: 'Gjengangere', value: String(user.repeatCustomersCount) }
+        : null,
+      user?.jobsThisMonth ? { label: 'Denne måneden', value: String(user.jobsThisMonth) } : null,
+    ].filter(Boolean) as { label: string; value: string }[];
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] gap-4 sm:gap-5">
-        {/* Left Side */}
-        <div className="flex flex-col gap-4 sm:gap-5">
-          {/* Services */}
-          <section className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-black/5">
-            <h3 className="text-[10px] sm:text-[11px] font-bold text-black/40 mb-2.5 sm:mb-3 uppercase tracking-wider">Tjenester</h3>
-            {userSkills.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {userSkills.map((skill: string) => (
-                  <span key={skill} className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-[#f5f0e8] rounded-md text-[11px] sm:text-[12px] font-medium text-[#1a3a1a]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_20rem]">
+        <div className="flex flex-col gap-4">
+          <Panel
+            title={isCompany ? 'Om oss' : 'Om meg'}
+            icon={Briefcase}
+            onEdit={isOwner ? () => onEdit?.('bio') : undefined}
+          >
+            {user?.bio ? (
+              <p className="wrap-break-word text-[0.9375rem] leading-relaxed text-[#63665F]">
+                {user.bio}
+              </p>
+            ) : (
+              <Blank
+                text={isOwner ? 'Du har ikke skrevet noe om deg selv ennå.' : 'Ingen beskrivelse.'}
+                onAdd={isOwner ? () => onEdit?.('bio') : undefined}
+                addLabel="Skriv en bio"
+              />
+            )}
+          </Panel>
+
+          <Panel
+            title={isCompany ? 'Tjenester' : 'Ferdigheter'}
+            icon={Award}
+            onEdit={isOwner && skills.length > 0 ? () => onEdit?.('skills') : undefined}
+          >
+            {skills.length > 0 ? (
+              <ul className="flex flex-wrap gap-2">
+                {skills.map((skill) => (
+                  <li
+                    key={skill}
+                    className="inline-flex h-9 items-center rounded-full bg-[#F4F6F0] px-4 text-[0.8125rem] font-medium text-[#0B0B0B]"
+                  >
                     {skill}
-                  </span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             ) : (
-              <p className="text-[11px] sm:text-[12px] text-black/30">Ingen tjenester lagt til.</p>
+              <Blank
+                text={isOwner ? 'Ingen ferdigheter lagt til.' : 'Ingen ferdigheter oppgitt.'}
+                onAdd={isOwner ? () => onEdit?.('skills') : undefined}
+                addLabel="Legg til"
+              />
             )}
-          </section>
+          </Panel>
 
-          {/* Locations */}
-          <section className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-black/5">
-            <h3 className="text-[10px] sm:text-[11px] font-bold text-black/40 mb-2.5 sm:mb-3 uppercase tracking-wider">Lokasjoner</h3>
-            {userLocations.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {userLocations.map((loc: string) => (
-                  <span key={loc} className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-[#f5f0e8] rounded-md text-[11px] sm:text-[12px] font-medium text-[#1a3a1a] flex items-center gap-1 sm:gap-1.5">
-                    <MapPin size={10} /> {loc}
-                  </span>
+          {locations.length > 0 && (
+            <Panel title="Områder" icon={MapPin}>
+              <ul className="flex flex-wrap gap-2">
+                {locations.map((location) => (
+                  <li
+                    key={location}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#F4F6F0] px-4 text-[0.8125rem] font-medium text-[#0B0B0B]"
+                  >
+                    <MapPin size={13} strokeWidth={2} className="text-[#9B9E96]" />
+                    {location}
+                  </li>
                 ))}
-              </div>
-            ) : (
-              <p className="text-[11px] sm:text-[12px] text-black/30">Ingen lokasjoner lagt til.</p>
-            )}
-          </section>
+              </ul>
+            </Panel>
+          )}
 
-          {/* About */}
-          <section className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-black/5">
-            <h3 className="text-[10px] sm:text-[11px] font-bold text-black/40 mb-2.5 sm:mb-3 uppercase tracking-wider">Om oss</h3>
-            <p className="text-[12px] sm:text-[13px] text-black/60 leading-relaxed">
-              {user?.bio || 'Ingen beskrivelse lagt til.'}
-            </p>
-          </section>
+          {(user?.availabilityText || isOwner) && (
+            <Panel
+              title="Tilgjengelighet"
+              icon={CalendarClock}
+              onEdit={isOwner && user?.availabilityText ? () => onEdit?.('availability') : undefined}
+            >
+              {user?.availabilityText ? (
+                <p className="text-[0.9375rem] leading-relaxed text-[#63665F]">
+                  {user.availabilityText}
+                </p>
+              ) : (
+                <Blank
+                  text="Fortell når du kan ta oppdrag."
+                  onAdd={() => onEdit?.('availability')}
+                  addLabel="Legg til"
+                />
+              )}
+            </Panel>
+          )}
         </div>
 
-        {/* Right Side - Contact */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-black/5 h-fit">
-          <h3 className="text-[10px] sm:text-[11px] font-bold text-black/40 mb-3 sm:mb-4 uppercase tracking-wider">Kontakt</h3>
-          <div className="flex flex-col gap-2.5 sm:gap-3">
-            {user?.phone && (
-              <div className="flex items-center gap-2.5 sm:gap-3 text-[11px] sm:text-[12px] text-black/60">
-                <Phone size={13} className="text-[#1a3a1a]" /> {user.phone}
+        <div className="flex flex-col gap-4">
+          {/* Identity above Vurdering: it is the first thing a stranger deciding whether
+              to let this person into their home wants to know, and it is the owner's
+              most valuable unfinished action.
+
+              Hidden below lg because the single-column stack puts this whole column
+              after "Om meg" — too far down to be discoverable. ProfilePage renders the
+              same card high in the mobile flow instead, so exactly one is ever visible. */}
+          <IdentityVerificationCard
+            user={user}
+            isOwnProfile={isOwner}
+            className="hidden lg:block"
+          />
+
+          <section className={`${CARD} p-5`}>
+            <h2 className={MICRO}>Vurdering</h2>
+            {reviewCount > 0 ? (
+              <>
+                <div className="mt-3 flex items-baseline gap-2.5">
+                  <span className="text-[2rem] font-bold leading-none tabular-nums tracking-[-0.03em] text-[#0B0B0B]">
+                    {Number(user?.averageRating ?? 0).toFixed(1)}
+                  </span>
+                  <span className="text-[0.8125rem] text-[#63665F]">
+                    {reviewCount} {reviewCount === 1 ? 'vurdering' : 'vurderinger'}
+                  </span>
+                </div>
+                <div className="mt-4 flex flex-col gap-1.5">
+                  {[5, 4, 3, 2, 1].map((star) => {
+                    const count = distribution[star - 1];
+                    const share = reviewCount ? (count / reviewCount) * 100 : 0;
+                    return (
+                      <div
+                        key={star}
+                        className="flex items-center gap-2 text-[0.75rem] tabular-nums text-[#9B9E96]"
+                      >
+                        <span className="w-2.5 text-right">{star}</span>
+                        <Star size={10} className="text-[#9B9E96]" fill="currentColor" />
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#F0F1EB]">
+                          <div
+                            className="h-full rounded-full bg-[#2E6641]"
+                            style={{ width: `${share}%` }}
+                          />
+                        </div>
+                        <span className="w-4 text-right">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <p className="mt-3 text-[0.875rem] leading-relaxed text-[#9B9E96]">
+                Ingen vurderinger ennå.
+              </p>
+            )}
+          </section>
+
+          {trustSignals.length > 0 && (
+            <section className={`${CARD} p-5`}>
+              <h2 className={MICRO}>Pålitelighet</h2>
+              <dl className="mt-3 flex flex-col gap-2.5">
+                {trustSignals.map((signal) => (
+                  <div key={signal.label} className="flex items-baseline justify-between gap-3">
+                    <dt className="text-[0.875rem] text-[#63665F]">{signal.label}</dt>
+                    <dd className="text-[0.9375rem] font-semibold tabular-nums text-[#0B0B0B]">
+                      {signal.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+
+          {isCompany && (user?.phone || user?.email || user?.website) && (
+            <section className={`${CARD} p-5`}>
+              <h2 className={MICRO}>Kontakt</h2>
+              <div className="mt-3 flex flex-col gap-2.5 text-[0.875rem] text-[#63665F]">
+                {user?.phone && (
+                  <span className="flex items-center gap-2.5">
+                    <Phone size={14} strokeWidth={2} className="shrink-0 text-[#2E6641]" />
+                    {user.phone}
+                  </span>
+                )}
+                {user?.email && (
+                  <span className="flex items-center gap-2.5">
+                    <Mail size={14} strokeWidth={2} className="shrink-0 text-[#2E6641]" />
+                    <span className="truncate">{user.email}</span>
+                  </span>
+                )}
+                {user?.website && (
+                  <a
+                    href={user.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2.5 font-semibold text-[#2E6641] hover:underline"
+                  >
+                    <Globe size={14} strokeWidth={2} className="shrink-0" />
+                    Besøk nettside
+                  </a>
+                )}
               </div>
-            )}
-            {user?.email && (
-              <div className="flex items-center gap-2.5 sm:gap-3 text-[11px] sm:text-[12px] text-black/60">
-                <Mail size={13} className="text-[#1a3a1a]" /> <span className="truncate">{user.email}</span>
-              </div>
-            )}
-            {user?.postSted && (
-              <div className="flex items-center gap-2.5 sm:gap-3 text-[11px] sm:text-[12px] text-black/60">
-                <MapPin size={13} className="text-[#1a3a1a]" /> {user.postSted}
-              </div>
-            )}
-            {user?.orgNumber && (
-              <div className="flex items-center gap-2.5 sm:gap-3 text-[11px] sm:text-[12px] text-black/60">
-                <Award size={13} className="text-[#1a3a1a]" /> Org.nr: {user.orgNumber}
-              </div>
-            )}
-            {user?.website && (
-              <a href={user.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 sm:gap-3 text-[11px] sm:text-[12px] text-[#1a3a1a] font-medium hover:underline">
-                <Globe size={13} /> Besøk nettside
-              </a>
-            )}
-          </div>
+            </section>
+          )}
+
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => navigate('/settings/safepay')}
+              className={`${CARD} p-5 text-left transition-colors hover:border-[#2E6641]/45 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15`}
+            >
+              <span className="flex items-center gap-2">
+                <ShieldCheck size={13} strokeWidth={2.4} className="text-[#2E6641]" />
+                <span className={MICRO}>SafePay</span>
+              </span>
+              <span className="mt-3 block text-[1.5rem] font-bold leading-none tabular-nums tracking-[-0.03em] text-[#0B0B0B]">
+                {Number(user?.totalEarned || 0).toLocaleString('nb-NO')} kr
+              </span>
+              <span className="mt-1.5 block text-[0.8125rem] text-[#63665F]">
+                Utbetalt til deg. Se historikken →
+              </span>
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
-  // Seeker Specific Content
-  if (profileType === 'seeker') {
-    if (activeTab === 'Om meg') {
-      const userSkills = (user as any)?.skills || ['Maling', 'Snekkering', 'Hagearbeid', 'Rengjøring', 'Flytting'];
-      const availability = [
-        { name: 'Man', on: true },
-        { name: 'Tir', on: false },
-        { name: 'Ons', on: true },
-        { name: 'Tor', on: false },
-        { name: 'Fre', on: true },
-        { name: 'Lør', on: true },
-        { name: 'Søn', on: false },
-      ];
-
+  // ── Vurderinger ────────────────────────────────────────────────────────────
+  if (activeTab === 'Vurderinger') {
+    if (reviews.length === 0) {
       return (
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] gap-4 sm:gap-5">
-          <div className="flex flex-col gap-3 sm:gap-4">
-            {/* Bio */}
-            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-black/5">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="text-[12px] sm:text-[13px] font-bold text-gray-900 flex items-center gap-1.5 sm:gap-2">
-                  <span className="w-5 h-5 sm:w-6 sm:h-6 bg-[#1a3a1a] rounded-md flex items-center justify-center">
-                    <User size={10} className="text-white sm:hidden" />
-                    <User size={12} className="text-white hidden sm:block" />
-                  </span>
-                  Om meg
-                </h3>
-                {isOwner && (
-                  <button onClick={() => navigate('/settings/bio')} className="text-[10px] sm:text-[11px] text-[#1a3a1a] font-semibold hover:underline flex items-center gap-1 bg-[#f5f0e8] px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md">
-                    <Pencil size={9} className="sm:hidden" /> <Pencil size={10} className="hidden sm:block" /> Rediger
-                  </button>
-                )}
-              </div>
-              <p className="text-[12px] sm:text-[13px] text-black/55 leading-[1.6] sm:leading-[1.7] pl-6 sm:pl-8">
-                {user?.bio || 'Ingen beskrivelse lagt til.'}
-              </p>
-            </div>
-
-            {/* Skills */}
-            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-black/5">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="text-[12px] sm:text-[13px] font-bold text-gray-900 flex items-center gap-1.5 sm:gap-2">
-                  <span className="w-5 h-5 sm:w-6 sm:h-6 bg-[#1a3a1a] rounded-md flex items-center justify-center">
-                    <Briefcase size={10} className="text-white sm:hidden" />
-                    <Briefcase size={12} className="text-white hidden sm:block" />
-                  </span>
-                  Ferdigheter
-                </h3>
-                {isOwner && (
-                  <button onClick={() => navigate('/settings/seeker')} className="text-[10px] sm:text-[11px] text-[#1a3a1a] font-semibold hover:underline flex items-center gap-1 bg-[#f5f0e8] px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md">
-                    <Plus size={9} className="sm:hidden" /> <Plus size={10} className="hidden sm:block" /> Legg til
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2 pl-6 sm:pl-8">
-                {userSkills.map((skill: string) => (
-                  <span key={skill} className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-[#f5f0e8] rounded-lg text-[11px] sm:text-[12px] font-semibold text-[#1a3a1a] border border-[#e8e0d0] hover:bg-[#ece5d8] transition-colors cursor-default">
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Availability */}
-            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-black/5">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="text-[12px] sm:text-[13px] font-bold text-gray-900 flex items-center gap-1.5 sm:gap-2">
-                  <span className="w-5 h-5 sm:w-6 sm:h-6 bg-[#1a3a1a] rounded-md flex items-center justify-center">
-                    <Star size={10} className="text-white sm:hidden" />
-                    <Star size={12} className="text-white hidden sm:block" />
-                  </span>
-                  Tilgjengelighet
-                </h3>
-                {isOwner && (
-                  <button onClick={() => navigate('/settings/seeker')} className="text-[10px] sm:text-[11px] text-[#1a3a1a] font-semibold hover:underline flex items-center gap-1 bg-[#f5f0e8] px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md">
-                    <Pencil size={9} className="sm:hidden" /> <Pencil size={10} className="hidden sm:block" /> Rediger
-                  </button>
-                )}
-              </div>
-              <div className="grid grid-cols-7 gap-1 sm:gap-2 pl-6 sm:pl-8">
-                {availability.map((day) => (
-                  <div key={day.name} className={`rounded-md sm:rounded-lg p-1.5 sm:p-2.5 text-center transition-all ${day.on ? 'bg-[#1a3a1a] text-white shadow-sm' : 'bg-black/5 text-black/25'}`}>
-                    <div className="font-bold text-[8px] sm:text-[10px] uppercase tracking-wider mb-0.5 sm:mb-1">{day.name}</div>
-                    <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mx-auto ${day.on ? 'bg-white' : 'bg-black/10'}`} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:gap-4">
-            {/* Rating */}
-            <div className="bg-white rounded-xl p-3.5 sm:p-4 shadow-sm border border-black/5">
-              <h3 className="text-[10px] sm:text-[11px] font-bold text-black/40 mb-2.5 sm:mb-3 uppercase tracking-wider">Vurdering</h3>
-              <div className="flex items-center gap-2.5 sm:gap-3 mb-2.5 sm:mb-3">
-                <div className="text-xl sm:text-2xl font-bold text-gray-900">{user?.averageRating != null ? user.averageRating.toFixed(1) : '0.0'}</div>
-                <div>
-                  <div className="text-amber-500 text-[11px] sm:text-xs">★★★★★</div>
-                  <div className="text-[9px] sm:text-[10px] text-black/30">{user?.reviewCount || 0} vurderinger</div>
-                </div>
-              </div>
-              <div className="flex flex-col gap-0.5 sm:gap-1">
-                {[5, 4, 3, 2, 1].map((s) => (
-                  <div key={s} className="flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] text-black/30">
-                    <span className="w-2.5 sm:w-3">{s}</span>
-                    <div className="flex-1 h-1 bg-black/5 rounded-full overflow-hidden">
-                      <div className="h-full bg-amber-500" style={{ width: s === 5 ? '100%' : '0%' }} />
-                    </div>
-                    <span className="w-2.5 sm:w-3 text-right">{s === 5 ? user?.reviewCount || 0 : 0}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* SafePay */}
-            {isOwner && (
-              <div className="bg-white rounded-xl p-3.5 sm:p-4 shadow-sm border border-black/5 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/settings/safepay')}>
-                <h3 className="text-[10px] sm:text-[11px] font-bold text-black/40 mb-2.5 sm:mb-3 uppercase tracking-wider">SafePay</h3>
-                <div className="text-center">
-                  <div className="text-lg sm:text-xl font-bold text-[#1a3a1a]">{(user as any)?.totalEarned || 0} kr</div>
-                  <div className="text-[9px] sm:text-[10px] text-black/30 mt-0.5 sm:mt-1">Utbetalt via SafePay</div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <EmptyState
+          title="Ingen vurderinger ennå"
+          description="Vurderinger fra fullførte oppdrag vises her."
+          icon={<Star size={26} strokeWidth={1.8} />}
+        />
       );
     }
-  }
-
-  if (activeTab === 'Portfolio' && profileType === 'seeker') {
-    const portfolioItems = (user as any)?.portfolio || [];
-    const previousProjects = (user as any)?.previousProjects || [];
-
-    if (portfolioItems.length === 0 && previousProjects.length === 0) {
-      return <EmptyState title="Ingen portfolio" description="Denne brukeren har ikke lagt til noe i sin portfolio" />;
-    }
 
     return (
-      <div className="flex flex-col gap-5 sm:gap-6">
-        {portfolioItems.length > 0 && (
-          <section>
-            <h3 className="text-[10px] sm:text-[11px] font-bold text-black/40 mb-3 sm:mb-4 uppercase tracking-wider">Portfolio</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
-              {portfolioItems.map((project: any) => (
-                <div key={project._id || project.id} className="group relative aspect-square bg-white rounded-lg sm:rounded-xl overflow-hidden shadow-sm border border-black/5 cursor-pointer">
-                  <img src={project.imageUrl || project.image} alt={project.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2.5 sm:p-3">
-                    <h4 className="text-white font-medium text-[11px] sm:text-[12px]">{project.title}</h4>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {previousProjects.length > 0 && (
-          <section>
-            <h3 className="text-[10px] sm:text-[11px] font-bold text-black/40 mb-3 sm:mb-4 uppercase tracking-wider">Tidligere prosjekter</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
-              {previousProjects.map((project: any) => (
-                <div key={project._id || project.id} className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-black/5 flex gap-2.5 sm:gap-3">
-                  {project.imageUrl && <img src={project.imageUrl} className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg object-cover shrink-0" alt="" />}
-                  <div className="min-w-0">
-                    <h4 className="font-semibold text-[12px] sm:text-[13px] text-gray-900 truncate">{project.title}</h4>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1 mb-1 sm:mb-1.5">
-                      <span className="text-[9px] sm:text-[10px] font-medium text-[#1a3a1a] bg-[#f5f0e8] px-1.5 sm:px-2 py-0.5 rounded">{project.category}</span>
-                      <span className="text-[9px] sm:text-[10px] text-black/30">{project.date ? new Date(project.date).getFullYear() : project.year}</span>
-                    </div>
-                    <p className="text-[11px] sm:text-[12px] text-black/40 line-clamp-2">{project.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-      </div>
-    );
-  }
-
-  if (activeTab === 'Sertifiseringer') {
-    const certifications = (user as any)?.certifications || [];
-
-    if (certifications.length === 0) {
-      return <EmptyState title="Ingen sertifiseringer" description="Brukeren har ikke lagt til noen sertifiseringer" />;
-    }
-
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
-        {certifications.map((cert: any) => (
-          <div key={cert._id || cert.id} className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-black/5 flex items-center gap-3 sm:gap-4">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#f5f0e8] rounded-lg flex items-center justify-center text-[#1a3a1a] shrink-0">
-              <Award size={18} className="sm:hidden" />
-              <Award size={20} className="hidden sm:block" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-[12px] sm:text-[13px] text-gray-900 truncate">{cert.title}</h4>
-              <p className="text-[10px] sm:text-[11px] text-black/40 truncate">{cert.issuedBy}</p>
-              {cert.date && (
-                <p className="text-[9px] sm:text-[10px] text-black/30 mt-0.5">
-                  {new Date(cert.date).toLocaleDateString('no-NO', { year: 'numeric', month: 'short' })}
-                </p>
-              )}
-            </div>
-            {cert.url && (
-              <a href={cert.url} target="_blank" rel="noopener noreferrer" className="text-[10px] sm:text-[11px] text-[#1a3a1a] font-medium hover:underline shrink-0">
-                Vis
-              </a>
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  // Poster Specific Content
-  if (profileType === 'poster') {
-    // Basic credibility signals
-    if (activeTab === 'Aktive') {
-      // Reuse jobs logic but filtered or as is
-    }
-  }
-
-  // Common or fallback content
-  const emptyStateContent: Record<string, { title: string; description: string }> = {
-    Oppdrag: {
-      title: 'Brukeren har ikke lagt ut noen oppdrag ennå',
-      description: 'Når brukeren legger ut oppdrag, vil de vises her',
-    },
-    Aktive: {
-      title: 'Ingen aktive oppdrag',
-      description: 'Brukeren har ingen aktive oppdrag ute akkurat nå',
-    },
-    Fullførte: {
-      title: 'Ingen fullførte oppdrag',
-      description: 'Fullførte oppdrag vil vises her',
-    },
-    Vurderinger: {
-      title: 'Ingen vurderinger ennå',
-      description: 'Vurderinger fra tidligere arbeid vil vises her',
-    },
-    Lister: {
-      title: 'Listene er for øyeblikket tomme',
-      description: 'Lagrede elementer og samlinger vil vises her',
-    },
-  };
-
-  const currentEmptyState = emptyStateContent[activeTab] || emptyStateContent['Oppdrag'];
-
-  if (activeTab === 'Vurderinger') {
-    const displayReviews = realReviews || [];
-
-    if (displayReviews.length === 0) {
-      return <EmptyState title="Ingen vurderinger" description="Vurderinger vil vises her" icon={<Star size={36} className="text-custom-green" />} />;
-    }
-
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
-        {displayReviews.map((review: any) => (
-          <div key={review._id || review.id} className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-black/5">
-            <div className="flex items-center justify-between mb-2.5 sm:mb-3">
-              <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full overflow-hidden bg-[#c8d8c8] flex items-center justify-center text-[9px] sm:text-[10px] font-medium text-[#1a3a1a] shrink-0">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {reviews.map((review: any) => (
+          <article key={review._id || review.id} className={`${CARD} p-5`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9] text-[0.8125rem] font-semibold text-[#2E6641]">
                   {review.reviewerId?.avatarUrl || review.avatar ? (
-                    <img src={review.reviewerId?.avatarUrl || review.avatar} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={review.reviewerId?.avatarUrl || review.avatar}
+                      alt=""
+                      className="size-full object-cover"
+                    />
                   ) : (
-                    (review.reviewerId?.name || review.author)?.[0] || 'U'
+                    (review.reviewerId?.name || review.author)?.[0]?.toUpperCase() || 'U'
                   )}
                 </div>
                 <div className="min-w-0">
-                  <h4 className="text-[11px] sm:text-[12px] font-medium text-gray-900 truncate">{review.reviewerId?.name || review.author}</h4>
-                  <p className="text-[9px] sm:text-[10px] text-black/30">
-                    {review.createdAt ? new Date(review.createdAt).toLocaleDateString('no-NO') : review.date}
+                  <h3 className="truncate text-[0.875rem] font-semibold text-[#0B0B0B]">
+                    {review.reviewerId?.name || review.author || 'Bruker'}
+                  </h3>
+                  <p className="text-[0.75rem] text-[#9B9E96]">
+                    {review.createdAt
+                      ? new Date(review.createdAt).toLocaleDateString('nb-NO', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : review.date}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-[11px] font-medium text-amber-600 shrink-0">
-                <Star size={10} fill="currentColor" className="sm:hidden" /> <Star size={11} fill="currentColor" className="hidden sm:block" /> {review.rating}.0
-              </div>
+              <span className="flex shrink-0 items-center gap-1 rounded-full bg-[#F4F6F0] px-2.5 py-1 text-[0.75rem] font-semibold tabular-nums text-[#0B0B0B]">
+                <Star size={11} className="text-[#2E6641]" fill="currentColor" />
+                {Number(review.rating || 0).toFixed(1)}
+              </span>
             </div>
-            <p className="text-[11px] sm:text-[12px] text-black/50 leading-relaxed">"{review.comment}"</p>
-            {review.serviceId?.title && (
-              <div className="mt-2 pt-2 border-t border-black/5">
-                <span className="text-[9px] sm:text-[10px] text-[#1a3a1a] bg-[#f0f5f0] px-2 py-0.5 rounded-full font-medium">
-                  {review.serviceId.title}
-                </span>
-              </div>
+
+            {review.comment && (
+              <p className="mt-3.5 wrap-break-word text-[0.875rem] leading-relaxed text-[#63665F]">
+                {review.comment}
+              </p>
             )}
-          </div>
+
+            {review.serviceId?.title && (
+              <p className="mt-3.5 border-t border-[#E6E7E1] pt-3 text-[0.75rem] text-[#9B9E96]">
+                {review.serviceId.title}
+              </p>
+            )}
+          </article>
         ))}
       </div>
     );
   }
 
-  if (activeTab === 'Lister') {
-    if (isListsLoading) return <JobDetailCardSkeleton />;
-    if (isListsError)
-      return <p className="text-center py-20 text-red-500">Kunne ikke laste lister.</p>;
-  }
+  // ── Oppdrag ────────────────────────────────────────────────────────────────
+  if (isJobsTab) {
+    if (isJobsLoading) {
+      return (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <JobCardSkeleton key={i} />
+          ))}
+        </div>
+      );
+    }
 
-  if (['Oppdrag', 'Aktive', 'Fullførte', 'Tidligere'].includes(activeTab)) {
-    if (isJobsLoading) return <JobDetailCardSkeleton />;
-    if (isJobsError)
-      return <p className="text-center py-20 text-red-500">Kunne ikke laste oppdrag.</p>;
-  }
+    if (isJobsError) {
+      return (
+        <EmptyState
+          title="Kunne ikke laste oppdrag"
+          description="Noe gikk galt hos oss. Last siden på nytt for å prøve igjen."
+          icon={<Briefcase size={26} strokeWidth={1.8} />}
+        />
+      );
+    }
 
-  const showJobs =
-    (activeTab === 'Oppdrag' || activeTab === 'Aktive' || activeTab === 'Fullførte' || activeTab === 'Tidligere') &&
-    jobs.length > 0;
-
-  if (showJobs) {
     const displayJobs =
       activeTab === 'Fullførte' || activeTab === 'Tidligere'
         ? jobs.filter((job) => job.status === 'completed' || job.status === 'closed')
         : jobs;
 
+    if (displayJobs.length === 0) {
+      const blank: Record<string, { title: string; description: string }> = {
+        Aktive: {
+          title: 'Ingen aktive oppdrag',
+          description: 'Oppdrag som ligger ute akkurat nå vises her.',
+        },
+        Fullførte: {
+          title: 'Ingen fullførte oppdrag',
+          description: 'Fullførte oppdrag vises her når de er godkjent.',
+        },
+        Tidligere: {
+          title: 'Ingen tidligere oppdrag',
+          description: 'Avsluttede oppdrag vises her.',
+        },
+      };
+      const copy = blank[activeTab] || {
+        title: 'Ingen oppdrag ennå',
+        description: 'Oppdrag vises her når de er lagt ut.',
+      };
+
+      return (
+        <EmptyState
+          title={copy.title}
+          description={copy.description}
+          icon={<Briefcase size={26} strokeWidth={1.8} />}
+          action={
+            isOwner ? (
+              <button
+                type="button"
+                onClick={() => navigate('/publish-job')}
+                className="flex h-11 items-center gap-2 rounded-full bg-[#2E6641] px-5 text-[0.9375rem] font-semibold text-white transition-colors hover:bg-[#255335]"
+              >
+                <Plus size={16} strokeWidth={2.6} />
+                Legg ut oppdrag
+              </button>
+            ) : undefined
+          }
+        />
+      );
+    }
+
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
-        {displayJobs.map((job: Jobs) => (
-          <div key={job._id} className="cursor-pointer group" onClick={() => navigate(`/job-listing/${job._id}`)}>
-            <div className="relative aspect-[4/5] rounded-lg sm:rounded-xl overflow-hidden bg-white shadow-sm border border-black/5 mb-1.5 sm:mb-2">
-              {job.mediaUrl || (job as any).images?.[0] ? (
-                <img src={job.mediaUrl || (job as any).images?.[0]} alt={job.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-[#f5f0e8] text-black/10">
-                  <Briefcase size={24} strokeWidth={1} className="sm:hidden" />
-                  <Briefcase size={28} strokeWidth={1} className="hidden sm:block" />
-                </div>
-              )}
-            </div>
-            <h4 className="text-[11px] sm:text-[12px] font-medium text-gray-900 truncate">{job.title}</h4>
-            <div className="text-[11px] sm:text-[12px] font-bold text-gray-900">{job.price} kr</div>
-            <p className="text-[10px] sm:text-[11px] text-black/30 truncate">
-              {typeof job.location === 'object' ? job.location.city || job.location.address : job.location || 'Oslo'}
-            </p>
-          </div>
-        ))}
+      <>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
+          {displayJobs.map((job) => (
+            <JobCard key={job._id} job={job} isOwner={isOwner} />
+          ))}
+        </div>
         {hasNextPage && <div ref={loadMoreRef} className="h-4 w-full" />}
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[200px]">
-      <EmptyState title={currentEmptyState.title} description={currentEmptyState.description} />
-    </div>
+    <EmptyState
+      title="Ingenting her ennå"
+      description="Innholdet i denne fanen vises når det finnes noe å vise."
+      icon={<TrendingUp size={26} strokeWidth={1.8} />}
+    />
   );
 }

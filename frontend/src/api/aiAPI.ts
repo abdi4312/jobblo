@@ -1,6 +1,12 @@
 import mainLink from './mainURLs';
 
 export interface AISmartFillContext {
+  /**
+   * UI locale from LanguageContext. The backend answers in this language.
+   * When omitted the backend sniffs the prompt text instead, so this is an
+   * override rather than a requirement.
+   */
+  lang?: 'no' | 'en';
   existingTitle?: string;
   existingDescription?: string;
   existingCategory?: string;
@@ -25,6 +31,11 @@ export interface AIJobListingResponse {
     description: string;
     category: string;
     skills: string[];
+    /**
+     * What the model chose to ASK about rather than invent. Empty when the
+     * user's input was already complete enough.
+     */
+    openQuestions?: string[];
     duration: AIDuration;
     locationRelevance: 'on-site' | 'remote';
     priceRange: { min: number; max: number };
@@ -48,6 +59,7 @@ export const generateFullJobListing = async (
 ): Promise<AIJobListingResponse> => {
   const response = await mainLink.post('/api/ai/generate-full-listing', {
     prompt,
+    lang: ctx.lang,
     existingTitle: ctx.existingTitle,
     existingDescription: ctx.existingDescription,
     existingCategory: ctx.existingCategory,

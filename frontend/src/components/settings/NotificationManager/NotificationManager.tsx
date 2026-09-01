@@ -1,3 +1,5 @@
+import { toast } from 'react-hot-toast';
+import { getErrorMessage } from '../../../utils/getErrorMessage';
 import React from 'react';
 import { useUserStore } from '../../../stores/userStore';
 import { NotificationToggle } from '../NotificationToggle/NotificationToggle';
@@ -21,7 +23,7 @@ export function NotificationManager() {
       if (permission === 'granted') {
         setBrowserNotificationsEnabled(true);
       } else {
-        alert('Du må tillate varsler i nettleseren for å aktivere denne funksjonen.');
+        toast.error('Du må tillate varsler i nettleseren for å aktivere denne funksjonen.');
         setBrowserNotificationsEnabled(false);
       }
     } else {
@@ -31,16 +33,16 @@ export function NotificationManager() {
 
   const sendTestNotification = () => {
     if (!browserNotificationsEnabled) {
-      alert('Aktiver nettleservarsler først!');
+      toast.error('Aktiver nettleservarsler først.');
       return;
     }
 
     if (Notification.permission !== 'granted') {
-      alert('Du har ikke gitt tillatelse til varsler i nettleseren.');
+      toast.error('Du har ikke gitt tillatelse til varsler i nettleseren.');
       return;
     }
 
-    alert('Test-varsel sendes om 5 sekunder. Bytt fane eller minimer nettleseren nå!');
+    toast('Test-varsel sendes om 5 sekunder. Bytt fane eller minimer nettleseren nå.');
 
     setTimeout(() => {
       try {
@@ -59,11 +61,11 @@ export function NotificationManager() {
 
         notification.onerror = (err) => {
           console.error('Notification error:', err);
-          alert('Notification error: ' + JSON.stringify(err));
+          toast.error(getErrorMessage(err, 'Kunne ikke sende testvarselet.'));
         };
       } catch (err) {
         console.error('Catch error sending notification:', err);
-        alert('Catch error: ' + err);
+        toast.error(getErrorMessage(err, 'Kunne ikke sende testvarselet.'));
       }
     }, 5000);
   };

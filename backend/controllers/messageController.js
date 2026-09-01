@@ -209,6 +209,16 @@ exports.markOrderMessagesAsRead = async (req, res) => {
 
     if (!isValidId(orderId)) return res.status(400).json({ error: 'Invalid order ID format' });
 
+    // No authorization at all: any authenticated user could stamp read receipts on any
+    // order's messages — fabricating "the customer read this" records that dispute
+    // resolution relies on, and growing readReceipts without bound on a conversation
+    // they have nothing to do with. The same helper the read endpoints already use.
+    const order = await Order.findById(orderId).select('customerId providerId');
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (!isUserRelatedToOrder({ userId: req.userId, order })) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
     await Message.updateMany(
       {
         orderId,
@@ -229,6 +239,18 @@ exports.markOrderMessagesAsRead = async (req, res) => {
 exports.deleteForMe = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!isValidId(id)) return res.status(400).json({ error: 'Invalid message ID format' });
+
+    // Same missing check as markOrderMessagesAsRead: anyone could append themselves to
+    // any message's `deletedFor`. Only a party to the message's order may hide it.
+    const message = await Message.findById(id).select('orderId');
+    if (!message) return res.status(404).json({ error: 'Message not found' });
+
+    const order = await Order.findById(message.orderId).select('customerId providerId');
+    if (!order || !isUserRelatedToOrder({ userId: req.userId, order })) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
 
     await Message.findByIdAndUpdate(id, {
       $addToSet: { deletedFor: req.userId },

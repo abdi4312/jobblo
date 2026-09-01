@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const User = require('../models/User');
 const Service = require('../models/Service');
 const JobRequest = require('../models/JobRequest');
@@ -7,6 +8,7 @@ const Category = require('../models/Category');
 const List = require('../models/List');
 const Notification = require('../models/Notification');
 const notificationController = require('./notificationController');
+const { sendMongoError } = require('../utils/mongoErrors');
 const {
   PUBLIC_USER_SELECT,
   OWN_USER_SELECT,
@@ -526,6 +528,11 @@ exports.getUserById = async (req, res) => {
     const userObj = { ...sanitized };
     userObj.postedJobsCount = postedJobsCount;
     userObj.completedJobs = completedJobs;
+    // `responseRate` is 100 when there are no requests to respond to, which is the right
+    // default for sorting but reads as a boast on a profile — a brand-new account claimed
+    // "Svarprosent 100 %" before anyone had ever contacted it. The client needs the
+    // denominator to tell "answers everyone" apart from "has never been asked".
+    userObj.totalJobRequests = totalJobRequests;
     userObj.responseRate = responseRate;
     userObj.averageResponseTimeMinutes = averageResponseTimeMinutes;
     userObj.repeatCustomersCount = repeatCustomersCount;
@@ -593,6 +600,26 @@ exports.updateUser = async (req, res) => {
       }
     }
 
+    // Normalize Norwegian post numbers on the server side.
+    //
+    // Postnummer is kept as a STRING throughout because Norwegian codes like
+    // "0150" have a meaningful leading zero that `Number` / Mongo number types
+    // would destroy. Clients are asked to submit digits only (max 4), and the
+    // schema defines `trim: true`, but no previous code actually enforced
+    // digits. This normalization is deliberately minimal:
+    //   - strip everything that is not a digit
+    //   - cap at 4 characters
+    //   - accept empty / undefined as "no postcode set" — field is optional
+    //
+    // It avoids breaking any existing profile data because already-stored
+    // values are not re-written on an UPDATE that does not include
+    // `postNumber`.
+    if (updates.postNumber !== undefined && updates.postNumber !== null) {
+      const raw = String(updates.postNumber);
+      const digits = raw.replace(/\D/g, '').slice(0, 4);
+      updates.postNumber = digits;
+    }
+
     // ⭐ HANDLE AVATAR UPLOAD
     if (req.files) {
       if (req.files.avatar && req.files.avatar[0]) {
@@ -637,8 +664,10 @@ exports.updateUser = async (req, res) => {
     });
     res.json(sanitizeUserOwner(updatedUser));
   } catch (err) {
+    // Was `res.status(400).json({ error: err.message })`, which forwarded the raw
+    // driver string (E11000 duplicate key ... index: email_1 ...) to a toast.
     console.error('updateUser Error:', err);
-    res.status(400).json({ error: err.message });
+    sendMongoError(res, err, 'Kunne ikke lagre endringene. Prøv igjen.');
   }
 };
 
@@ -649,17 +678,161 @@ exports.deleteUser = async (req, res) => {
       return res.status(400).json({ error: 'Invalid user ID format' });
     }
 
-    // Authorization check
     if (!authorizeUser(req, id)) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const user = await User.findByIdAndDelete(id);
+    const user = await User.findById(id).select(
+      'isDeleted email avatarPublicId bannerPublicId certifications'
+    );
+    if (!user || user.isDeleted) return res.status(404).json({ error: 'Fant ikke brukeren.' });
 
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ message: 'User deleted' });
+    const blockingOrders = await Order.countDocuments({
+      $or: [{ customerId: id }, { providerId: id }],
+      status: {
+        $in: ['awaiting_payment', 'paid', 'in_progress', 'ready_for_review', 'disputed'],
+      },
+    });
+
+    if (blockingOrders > 0) {
+      return res.status(409).json({
+        error:
+          'Du har pågående oppdrag eller betalinger. Fullfør eller avslutt disse først, ' +
+          'eller kontakt kundeservice, så hjelper vi deg med slettingen.',
+        code: 'active_orders_exist',
+      });
+    }
+
+    const { findBillingCapableSubscription } = require('../services/stripe/subscriptionState');
+    let stripe;
+    try {
+      stripe = require('../config/stripe');
+    } catch {
+      stripe = null;
+    }
+    if (stripe) {
+      try {
+        const capable = await findBillingCapableSubscription(stripe, id);
+        if (capable.blocking) {
+          return res.status(409).json({
+            error:
+              'Du har et aktivt abonnement. Si opp abonnementet og vent til abonnementsperioden er avsluttet før du sletter profilen.',
+            code: 'active_subscription_exists',
+          });
+        }
+      } catch (subErr) {
+        if (subErr?.code === 'subscription_check_unavailable') {
+          return res.status(503).json({
+            error: 'Kunne ikke verifisere abonnementsstatus akkurat nå. Prøv igjen litt senere.',
+            code: 'subscription_check_unavailable',
+          });
+        }
+        throw subErr;
+      }
+    }
+
+    const cloudinary = require('../config/cloudinary');
+    const destroyPublicId = async (publicId) => {
+      if (!publicId) return;
+      try {
+        await cloudinary.uploader.destroy(publicId);
+      } catch (cdnErr) {
+        console.error('Cloudinary destroy failed for %s: %s', publicId, cdnErr.message);
+      }
+    };
+
+    const assetCleanup = [];
+    if (user.avatarPublicId) assetCleanup.push(destroyPublicId(user.avatarPublicId));
+    if (user.bannerPublicId) assetCleanup.push(destroyPublicId(user.bannerPublicId));
+    for (const cert of user.certifications || []) {
+      if (cert?.publicId) assetCleanup.push(destroyPublicId(cert.publicId));
+    }
+    await Promise.allSettled(assetCleanup);
+
+    const anonymised = {
+      isDeleted: true,
+      deletedAt: new Date(),
+      accountStatus: 'deactivated',
+      name: 'Slettet bruker',
+      lastName: '',
+      email: `slettet+${id}@jobblo.invalid`,
+      phone: null,
+      avatarUrl: null,
+      avatarPublicId: null,
+      bannerUrl: null,
+      bannerPublicId: null,
+      bio: null,
+      about: null,
+      address: null,
+      postNumber: null,
+      postSted: null,
+      country: null,
+      birthDate: null,
+      gender: null,
+      website: null,
+      companyName: null,
+      orgNumber: null,
+      orgType: null,
+      skills: [],
+      locations: [],
+      portfolio: [],
+      previousProjects: [],
+      certifications: [],
+      experience: [],
+      blockedUsers: [],
+      favorites: [],
+      pointsBalance: 0,
+      pointsHistory: [],
+      monthlyContactUsage: 0,
+      password: crypto.randomBytes(32).toString('hex'),
+      refreshTokens: [],
+      passwordResetToken: null,
+      passwordResetExpires: null,
+      oauthProviders: [],
+      identityVerification: undefined,
+      availability: [],
+      availabilityText: null,
+    };
+
+    await User.findByIdAndUpdate(id, anonymised, { runValidators: false });
+
+    try {
+      await require('../models/Session').deleteMany({ userId: id });
+    } catch (sessionErr) {
+      console.error('Session cleanup on delete failed:', sessionErr.message);
+    }
+
+    try {
+      await require('../models/PushToken').deleteMany({ userId: id });
+    } catch (pushErr) {
+      console.error('PushToken cleanup on delete failed:', pushErr.message);
+    }
+
+    try {
+      const IdentityClaim = require('../models/IdentityClaim');
+      await IdentityClaim.deleteMany({ userId: id });
+    } catch (claimErr) {
+      console.error('IdentityClaim cleanup on delete failed:', claimErr.message);
+    }
+
+    try {
+      const { getIO } = require('../sockets/io');
+      const io = getIO();
+      if (io && io.sockets && io.sockets.sockets) {
+        for (const [, sock] of io.sockets.sockets) {
+          if (sock.userId && String(sock.userId) === String(id)) {
+            sock.disconnect(true);
+          }
+        }
+      }
+    } catch (socketErr) {
+      console.error('Socket disconnect on delete failed:', socketErr.message);
+    }
+
+    res.json({ message: 'Profilen din er slettet.' });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    console.error('deleteUser Error:', err);
+    res.status(500).json({ error: 'Kunne ikke slette profilen. Prøv igjen.' });
   }
 };
 

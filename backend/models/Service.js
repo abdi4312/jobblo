@@ -37,6 +37,13 @@ const serviceSchema = new mongoose.Schema(
       city: { type: String },
     },
 
+    // Contact details from step 4 of the job form. `select: false` keeps them out
+    // of every public read by default — the job listing is served unauthenticated,
+    // and the poster's phone number has no business being in that payload. The
+    // owner-scoped route (/api/services/my-posted) opts back in explicitly.
+    contactPhone: { type: String, select: false },
+    contactEmail: { type: String, select: false },
+
     // Norway location codes
     countyCode: { type: String, index: true },
     municipalityCode: { type: String, index: true },

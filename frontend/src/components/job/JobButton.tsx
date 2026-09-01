@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../Ui/button/Button';
 import { Bookmark, MessageCircle, AlertCircle } from 'lucide-react';
-import { TailSpin } from 'react-loader-spinner';
+import { Spinner } from '../Ui/Spinner';
 import { useUserStore } from '../../stores/userStore';
 import AddToListModal from '../Explore/jobs/AddToListModal';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +18,7 @@ interface JobButtonProps {
   job?: Jobs; // Added job prop to pass to modal
   hasRequested?: boolean;
   isTimerActive?: boolean; // Added for cooldown state
+  wasDeclined?: boolean;
 }
 
 const JobButton: React.FC<JobButtonProps> = ({
@@ -28,6 +29,7 @@ const JobButton: React.FC<JobButtonProps> = ({
   job,
   hasRequested,
   isTimerActive,
+  wasDeclined,
 }) => {
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const navigate = useNavigate();
@@ -58,6 +60,15 @@ const JobButton: React.FC<JobButtonProps> = ({
           <span>Søknadsfristen er nådd. Dette oppdraget tar ikke imot flere søknader.</span>
         </div>
       )}
+
+      {/* Applicants are mass-declined when someone else wins the contract, and
+          were never told. The button just stayed greyed out forever. */}
+      {wasDeclined && !hasRequested && !isOwnJob && !isLimitReached && (
+        <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-center gap-2 text-amber-700 text-xs font-medium">
+          <AlertCircle size={14} className="shrink-0" />
+          <span>Forespørselen din ble ikke valgt denne gangen. Du kan søke på nytt.</span>
+        </div>
+      )}
       <div className="flex gap-3">
         {/* Søk / Apply Button */}
         <Button
@@ -76,18 +87,13 @@ const JobButton: React.FC<JobButtonProps> = ({
                       ? 'Cooldown'
                       : 'Send forespørsel'
           }
-          icon={
-            isMsgLoading ? (
-              <TailSpin height={18} width={18} color="#ffffff" />
-            ) : (
-              <MessageCircle size={18} />
-            )
-          }
+          icon={isMsgLoading ? <Spinner size={18} label={null} /> : <MessageCircle size={18} />}
           className={`flex-1 h-12 text-[14px]! rounded-xl font-semibold! transition-all! whitespace-nowrap
-                        ${!isOwnJob && (hasRequested || isLimitReached || isTimerActive)
-              ? 'bg-gray-100! text-gray-400! cursor-not-allowed!'
-              : 'bg-custom-green! text-white! hover:bg-[#266b3c]!'
-            } 
+                        ${
+                          !isOwnJob && (hasRequested || isLimitReached || isTimerActive)
+                            ? 'bg-gray-100! text-gray-400! cursor-not-allowed!'
+                            : 'bg-custom-green! text-white! hover:bg-[#266b3c]!'
+                        } 
                     `}
         />
 

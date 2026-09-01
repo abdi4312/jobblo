@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import mainLink from '../../api/mainURLs';
+import { useUserStore } from '../../stores/userStore';
+import { getErrorMessage } from '../../utils/getErrorMessage';
 import {
-  ArrowLeft, Search, Mail, Phone, MessageCircle, Send, ChevronDown, CheckCircle2, ShieldCheck,
+  ArrowLeft, Search, Mail, Send, ChevronDown, CheckCircle2, ShieldCheck,
 } from 'lucide-react';
 
 type FAQ = { id: number; question: string; answer: string; search: string };
@@ -13,16 +16,20 @@ const FAQ_ITEMS: FAQ[] = [
   { id: 3, question: 'Er det trygt å betale gjennom Jobblo?', answer: 'Ja. Betalinger håndteres via SafePay og Stripe. Pengene holdes i escrow til jobben er godkjent — du betaler aldri for noe du ikke er fornøyd med.', search: 'betaling trygt sikker safepay stripe' },
   { id: 4, question: 'Hvordan fungerer vurderingssystemet?', answer: 'Etter et fullført oppdrag kan begge parter legge igjen en vurdering. Dette bidrar til trygghet og bedre valg for hele Jobblo-fellesskapet.', search: 'anmeldelser vurderinger review' },
   { id: 5, question: 'Hva koster det å bruke Jobblo?', answer: 'Det er gratis å komme i gang. Du kan oppgradere til et medlemskap for flere kontakter, bedre synlighet og ekstra funksjoner.', search: 'pris koste medlemskap planer' },
-  { id: 6, question: 'Hvordan sier jeg opp abonnementet?', answer: 'Gå til Innstillinger → Abonnementer, og velg «Si opp». Tilgangen varer ut inneværende periode.', search: 'si opp abonnement kansellere' },
+  { id: 6, question: 'Hvordan sier jeg opp abonnementet?', answer: 'Gå til Jobblo medlemskap og velg «Si opp abonnementet». Tilgangen varer ut perioden du allerede har betalt for, og du blir ikke belastet igjen.', search: 'si opp abonnement kansellere' },
 ];
 
-type FormState = { subject: string; message: string };
+type FormState = { subject: string; message: string; email: string };
+
+const SUPPORT_EMAIL = 'support@jobblo.no';
 
 export default function SupportPage() {
   const navigate = useNavigate();
   const [openId, setOpenId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
-  const [form, setForm] = useState<FormState>({ subject: '', message: '' });
+  const [form, setForm] = useState<FormState>({ subject: '', message: '', email: '' });
+  const [sending, setSending] = useState(false);
+  const currentUser = useUserStore((state) => state.user);
   const [sent, setSent] = useState(false);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }, []);
@@ -35,12 +42,35 @@ export default function SupportPage() {
     );
   }, [search]);
 
-  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+  // This form used to call nothing at all and then report "Saken din er sendt",
+  // so customers with a payment or dispute problem believed they had reached
+  // support and waited. It now posts to POST /api/support/tickets.
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!form.subject.trim() || !form.message.trim()) { toast.error('Fyll ut alle feltene.'); return; }
-    setSent(true);
-    setForm({ subject: '', message: '' });
-    toast.success('Saken din er sendt. Vi svarer innen 24 timer.');
+    if (!form.subject.trim() || !form.message.trim()) {
+      toast.error('Fyll ut emne og melding.');
+      return;
+    }
+    // Signed-in users are answered on their account address; visitors must give one.
+    if (!currentUser && !form.email.trim()) {
+      toast.error('Oppgi en e-postadresse vi kan svare på.');
+      return;
+    }
+
+    setSending(true);
+    try {
+      await mainLink.post('/api/support/tickets', {
+        subject: form.subject.trim(),
+        message: form.message.trim(),
+        ...(currentUser ? {} : { email: form.email.trim() }),
+      });
+      setSent(true);
+      setForm({ subject: '', message: '', email: '' });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Kunne ikke sende saken. Prøv igjen.'));
+    } finally {
+      setSending(false);
+    }
   };
 
   const inputCls = 'w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#1a3a1a] focus:ring-2 focus:ring-[#1a3a1a]/10 transition-all disabled:bg-gray-50 disabled:text-gray-400 placeholder:text-gray-400';
@@ -73,10 +103,11 @@ export default function SupportPage() {
 
               {/* Contact cards */}
               <div className="space-y-3">
+                {/* "Live Chat" opened a toast saying it doesn't exist, and the
+                    phone number was the placeholder +47 123 45 678. Both removed:
+                    e-mail is the only channel that actually reaches anyone. */}
                 {[
-                  { icon: MessageCircle, label: 'Live Chat', sub: 'Vanligvis svar med en gang', action: 'Start chat', href: null as string | null },
-                  { icon: Mail, label: 'E-post', sub: 'support@jobblo.no', action: 'Send e-post', href: 'mailto:support@jobblo.no' },
-                  { icon: Phone, label: 'Telefon', sub: '+47 123 45 678 · Man–fre 08–17', action: 'Ring nå', href: 'tel:+4712345678' },
+                  { icon: Mail, label: 'E-post', sub: SUPPORT_EMAIL, action: 'Send e-post', href: `mailto:${SUPPORT_EMAIL}` },
                 ].map(({ icon: Icon, label, sub, action, href }) => (
                   <div
                     key={label}
@@ -89,22 +120,12 @@ export default function SupportPage() {
                       <p className="font-black text-gray-900 text-sm">{label}</p>
                       <p className="text-xs text-gray-400">{sub}</p>
                     </div>
-                    {href ? (
-                      <a
-                        href={href}
-                        className="shrink-0 px-4 py-2 rounded-xl border-2 border-gray-200 text-xs font-bold hover:border-[#1a3a1a] hover:text-[#1a3a1a] transition-all"
-                      >
-                        {action}
-                      </a>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => toast('Live chat kommer snart.')}
-                        className="shrink-0 px-4 py-2 rounded-xl border-2 border-gray-200 text-xs font-bold hover:border-[#1a3a1a] hover:text-[#1a3a1a] transition-all"
-                      >
-                        {action}
-                      </button>
-                    )}
+                    <a
+                      href={href}
+                      className="shrink-0 px-4 py-2 rounded-xl border-2 border-gray-200 text-xs font-bold hover:border-[#1a3a1a] hover:text-[#1a3a1a] transition-all"
+                    >
+                      {action}
+                    </a>
                   </div>
                 ))}
               </div>
@@ -164,8 +185,10 @@ export default function SupportPage() {
               {sent ? (
                 <div className="text-center py-8">
                   <CheckCircle2 size={36} className="text-[#1a3a1a] mx-auto mb-3" />
-                  <p className="font-bold text-gray-900 text-sm mb-1">Saken din er sendt!</p>
-                  <p className="text-xs text-gray-400 mb-5">Vi tar kontakt innen 24 timer.</p>
+                  <p className="font-bold text-gray-900 text-sm mb-1">Saken din er registrert</p>
+                  <p className="text-xs text-gray-400 mb-5">
+                    Vi svarer normalt innen 24 timer på hverdager.
+                  </p>
                   <button type="button" onClick={() => setSent(false)} className="text-xs font-bold text-[#1a3a1a] hover:underline">
                     Send en ny sak
                   </button>
@@ -182,6 +205,20 @@ export default function SupportPage() {
                       className={inputCls}
                     />
                   </div>
+                  {!currentUser && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                        Din e-post
+                      </label>
+                      <input
+                        type="email"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        placeholder="din@epost.no"
+                        className={inputCls}
+                      />
+                    </div>
+                  )}
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1.5">Melding</label>
                     <textarea
@@ -195,13 +232,16 @@ export default function SupportPage() {
                   </div>
                   <button
                     type="submit"
-                    className="w-full flex items-center justify-center gap-2 bg-[#1a3a1a] text-white font-bold py-3.5 rounded-xl hover:bg-[#254d25] transition-colors text-sm"
+                    disabled={sending}
+                    className="w-full flex items-center justify-center gap-2 bg-[#1a3a1a] text-white font-bold py-3.5 rounded-xl hover:bg-[#254d25] transition-colors text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <Send size={15} /> Send sak
+                    <Send size={15} /> {sending ? 'Sender ...' : 'Send sak'}
                   </button>
+                  {/* Was "Gjennomsnittlig svartid: 2–4 timer" — a number nothing
+                      measures. The page already promises 24 timer elsewhere. */}
                   <p className="text-[11px] text-gray-400 text-center mt-1 flex items-center justify-center gap-1.5">
                     <ShieldCheck size={12} className="text-[#1a3a1a]" />
-                    Gjennomsnittlig svartid: 2–4 timer
+                    Vi svarer normalt innen 24 timer på hverdager
                   </p>
                 </form>
               )}

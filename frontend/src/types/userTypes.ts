@@ -11,12 +11,34 @@ export type User = {
   bannerPublicId?: string;
   companyName?: string;
   orgNumber?: string;
+  // Present on the backend User model and edited in Settings, but missing here,
+  // so every read of them was a type error.
+  orgType?: string;
+  locations?: string[];
+  website?: string;
+  availabilityText?: string;
+  skills?: string[];
   bio?: string;
   role?: string;
   subscription?: string;
   planType?: 'business' | 'private';
   monthlyContactUsage?: number;
   verified?: boolean;
+
+  /**
+   * BankID verification state, as the server chooses to expose it.
+   *
+   * The raw `identityVerification` subdocument is NOT sent: `utils/userProjections.js`
+   * reduces it to these three fields and strips the OIDC subject, Idura's uniqueuserid,
+   * the acr, the asserted name and the birth year. A badge needs none of that.
+   *
+   * `identityVerified` is derived from a real Idura identity, NOT from `verified` above
+   * — that older flag is set by other paths and would put a BankID badge on accounts
+   * that never completed BankID.
+   */
+  identityVerified?: boolean;
+  identityVerificationProvider?: 'idura' | null;
+  identityVerifiedAt?: string | null;
   birthDate?: string;
   gender?: string;
   address?: string;

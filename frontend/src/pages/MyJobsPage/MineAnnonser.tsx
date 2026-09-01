@@ -1,13 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CreateJobForm from '../../components/CreateJobForm/CreateJobForm';
-import { Clock4, MapPin, Pencil, Search, Trash2 } from 'lucide-react';
-import { useMyServices } from '../../features/services/hooks';
-import { useServiceActions } from '../../features/services/hooks';
-import type { Service } from '../../features/services/types';
-import { JobDetailCardSkeleton } from '../../components/Loading/JobDetailCardSkeleton';
-import mainLink from '../../api/mainURLs';
 import { useQuery } from '@tanstack/react-query';
+import { Plus, RotateCw, Search, TriangleAlert } from 'lucide-react';
+
+import mainLink from '../../api/mainURLs';
+import { useMyServices, useServiceActions } from '../../features/services/hooks';
+import type { Service } from '../../features/services/types';
 import EmptyState from '../../components/Ui/EmptyState';
 import {
   Select,
@@ -16,9 +14,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/Ui/select';
-import ConfirmDialog from '../../components/Ui/ConfirmDialog';
+import { MyListingCard } from '../../components/listing/MyListingCard';
+import { MyListingGridSkeleton } from '../../components/listing/MyListingCardSkeleton';
 
-// Define the tabs configuration
+/**
+ * "Mine annonser" — the owner's listing management page.
+ *
+ * The page kept its filters, its search and its tab vocabulary. What changed is the
+ * card and the states around it:
+ *
+ *   - management actions moved off the photo and out of the price row into one
+ *     overflow menu with real labels and touch-sized targets
+ *     (`components/listing/ListingOwnerActions`);
+ *   - every card now shows its status, using the canonical Norwegian labels from
+ *     `constants/statuses.ts`. Previously the only way to know a listing's state was to
+ *     notice which filter was selected;
+ *   - loading renders the grid's own silhouette instead of one differently shaped
+ *     skeleton for the whole page;
+ *   - the error state was the literal string "Feil ved lasting av annonser" in an
+ *     unstyled div, with no way to retry.
+ *
+ * Editing now goes to `/Publish-job/:id`, the real edit page, rather than swapping this
+ * page's contents for a bare `CreateJobForm`. That form had no header, no back link and
+ * no indication you had left the list — and it meant the same action behaved differently
+ * here than from a job card anywhere else in the product.
+ */
+
 type TabConfig = {
   id: string;
   label: string;
@@ -46,19 +67,19 @@ const tabs: TabConfig[] = [
   { id: 'draft', label: 'Utkast', statuses: ['draft'] },
 ];
 
+const FILTER_CONTROL =
+  'h-11 w-full rounded-full border-[#E6E7E1] bg-white text-[0.8125rem] font-medium text-[#0B0B0B] sm:w-[220px]';
+
 export default function MineAnnonser() {
   const navigate = useNavigate();
-  const [editingService, setEditingService] = useState<Service | null>(null);
   const [activeTab, setActiveTab] = useState<string>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'price_high' | 'price_low'>(
     'newest'
   );
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  // Tanstack Hooks (called first, no conditionals before!)
-  const { data: services = [], isLoading, error } = useMyServices();
-  const { deleteMutation, updateMutation } = useServiceActions();
+  const { data: services = [], isLoading, error, refetch, isFetching } = useMyServices();
+  const { deleteMutation } = useServiceActions();
 
   const { data: orders = [] } = useQuery({
     queryKey: ['my-orders'],
@@ -68,32 +89,27 @@ export default function MineAnnonser() {
     },
   });
 
-  // Find current tab's statuses and filter/sort BEFORE any conditionals!
   const currentTab = tabs.find((tab) => tab.id === activeTab)!;
 
-  // Filter and sort services (must be called unconditionally!)
   const filteredAndSortedServices = useMemo(() => {
     let filtered = services.filter((service) => currentTab.statuses.includes(service.status));
 
-    // Apply search filter
     if (searchQuery) {
       const lowercasedQuery = searchQuery.toLowerCase();
       filtered = filtered.filter((service) => {
-        // Search by job title
         const matchesTitle = service.title.toLowerCase().includes(lowercasedQuery);
-        // Search by category
         const matchesCategory =
           service.categories &&
           service.categories.some((cat: string) => cat.toLowerCase().includes(lowercasedQuery));
-        // Search by job ID
         const matchesId = service._id.toLowerCase().includes(lowercasedQuery);
 
         return matchesTitle || matchesCategory || matchesId;
       });
     }
 
-    // Apply sorting
-    filtered.sort((a, b) => {
+    // Copy before sorting: `services` is React Query's cached array, and sorting it in
+    // place mutates the cache every other consumer reads.
+    return [...filtered].sort((a, b) => {
       switch (sortOption) {
         case 'newest':
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -107,267 +123,190 @@ export default function MineAnnonser() {
           return 0;
       }
     });
+  }, [services, currentTab, searchQuery, sortOption]);
 
-    return filtered;
-  }, [services, activeTab, searchQuery, sortOption]);
+  /** A completed job's card opens its order, which is where the receipt and review are. */
+  const openListing = (job: Service) => {
+    if (job.status === 'completed') {
+      const matchingOrder = orders.find((o: { serviceId?: unknown; _id: string }) => {
+        const raw = o.serviceId as { _id?: string } | string | null | undefined;
+        const orderServiceId =
+          raw && typeof raw === 'object' ? (raw._id ?? '') : raw ? String(raw) : '';
+        return String(orderServiceId) === String(job._id);
+      });
 
-  const categoryColorMap: Record<string, string> = {
-    Rørlegger: '#2F7E47',
-    Renhold: '#2F7E47',
-    Maling: '#238CEB',
-    Hagearbeid: '#2F7E47',
-    Flytting: '#2F7E47',
-  };
-
-  const handleEdit = (service: Service) => {
-    setEditingService(service);
-  };
-
-  const handleDelete = (serviceId: string) => {
-    setDeleteTargetId(serviceId);
-  };
-  const confirmDelete = async () => {
-    if (deleteTargetId) {
-      deleteMutation.mutate(deleteTargetId);
-      setDeleteTargetId(null);
-    }
-  };
-
-  const handleFormSubmit = (jobData: FormData) => {
-    if (editingService) {
-      updateMutation.mutate(
-        { id: editingService._id, data: jobData as unknown as Service },
-        { onSuccess: () => setEditingService(null) }
+      navigate(
+        matchingOrder
+          ? `/completed-job/${matchingOrder._id}`
+          : `/completed-job?serviceId=${job._id}`
       );
+      return;
     }
+
+    navigate(`/job-listing/${job._id}`);
   };
 
-  if (isLoading) return <JobDetailCardSkeleton />;
-  if (error) return <div>Feil ved lasting av annonser</div>;
+  const filters = (
+    <div className="sticky top-0 z-10 border-b border-[#E6E7E1] bg-white/90 px-4 py-4 backdrop-blur-sm">
+      <div className="mx-auto flex w-full max-w-300 flex-col gap-3 sm:flex-row">
+        <Select value={activeTab} onValueChange={(v) => setActiveTab(v)}>
+          <SelectTrigger className={FILTER_CONTROL} aria-label="Filtrer på status">
+            <SelectValue placeholder="Filter status" />
+          </SelectTrigger>
+          <SelectContent className="rounded-2xl">
+            {tabs.map((tab) => (
+              <SelectItem key={tab.id} value={tab.id}>
+                {tab.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-  if (editingService) {
-    return (
-      <>
-        {/* Form Container */}
-        <div className="p-2 max-w-300 mx-auto">
-          <CreateJobForm
-            onSubmit={handleFormSubmit}
-            userId=""
-            isEditMode={true}
-            initialData={{
-              title: editingService.title,
-              description: editingService.description,
-              price: editingService.price.toString(),
-              address: editingService.location.address,
-              city: editingService.location.city,
-              categories: editingService.categories.join(', '),
-              urgent: editingService.urgent,
-              equipment: editingService.equipment || '',
-              fromDate: editingService.fromDate
-                ? new Date(editingService.fromDate).toISOString().split('T')[0]
-                : '',
-              toDate: editingService.toDate
-                ? new Date(editingService.toDate).toISOString().split('T')[0]
-                : '',
-              durationValue: editingService.duration?.value?.toString() || '',
-              durationUnit: editingService.duration?.unit || 'hours',
-              images: editingService.images || [],
-            }}
+        <Select value={sortOption} onValueChange={(v) => setSortOption(v as typeof sortOption)}>
+          <SelectTrigger
+            className={`${FILTER_CONTROL} sm:w-[180px]`}
+            aria-label="Sorter annonsene"
+          >
+            <SelectValue placeholder="Sorter" />
+          </SelectTrigger>
+          <SelectContent className="rounded-2xl">
+            <SelectItem value="newest">Nyeste først</SelectItem>
+            <SelectItem value="oldest">Eldste først</SelectItem>
+            <SelectItem value="price_high">Høyeste pris</SelectItem>
+            <SelectItem value="price_low">Laveste pris</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <div className="relative flex-1">
+          <Search
+            size={16}
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9B9E96]"
+          />
+          <input
+            type="search"
+            aria-label="Søk i annonsene dine"
+            placeholder="Søk etter tittel, kategori eller ID …"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-11 w-full rounded-full border border-[#E6E7E1] bg-white pl-10 pr-4 text-[0.8125rem] text-[#0B0B0B] placeholder:text-[#9B9E96] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
           />
         </div>
-      </>
-    );
-  }
-
-  return (
-    <div className="p-0 max-w-300 mx-auto min-h-screen">
-      {/* Filters — Select dropdowns */}
-      <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200 px-4 py-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Status filter */}
-          <Select value={activeTab} onValueChange={(v) => setActiveTab(v)}>
-            <SelectTrigger className="w-full sm:w-[220px] rounded-full border-black/10 bg-white text-[13px] font-medium h-10">
-              <SelectValue placeholder="Filter status" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              {tabs.map((tab) => (
-                <SelectItem key={tab.id} value={tab.id}>
-                  {tab.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Sort */}
-          <Select value={sortOption} onValueChange={(v) => setSortOption(v as any)}>
-            <SelectTrigger className="w-full sm:w-[180px] rounded-full border-black/10 bg-white text-[13px] font-medium h-10">
-              <SelectValue placeholder="Sorter" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="newest">Nyeste først</SelectItem>
-              <SelectItem value="oldest">Eldste først</SelectItem>
-              <SelectItem value="price_high">Høyeste pris</SelectItem>
-              <SelectItem value="price_low">Laveste pris</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Søk etter jobbnavn, kategori eller jobb-ID..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-full text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-custom-green/30"
-            />
-          </div>
-        </div>
       </div>
+    </div>
+  );
 
-      {filteredAndSortedServices.length === 0 ? (
+  const body = () => {
+    if (isLoading) return <MyListingGridSkeleton />;
+
+    if (error) {
+      // Never the raw axios/backend message — a friendly sentence and a way out.
+      return (
+        <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
+          <div className="mb-5 flex size-20 items-center justify-center rounded-full bg-[#FCF4F3]">
+            <TriangleAlert size={34} strokeWidth={1.8} className="text-[#B0453B]" />
+          </div>
+          <h3 className="mb-2 text-[1.125rem] font-bold text-[#0B0B0B]">
+            Vi fikk ikke hentet annonsene dine
+          </h3>
+          <p className="mb-6 max-w-sm text-[0.875rem] leading-relaxed text-[#63665F]">
+            Noe gikk galt underveis. Sjekk nettforbindelsen din og prøv igjen.
+          </p>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            className="flex h-11.5 items-center justify-center gap-2 rounded-xl bg-[#2E6641] px-5 text-[0.9375rem] font-semibold text-white transition duration-150 hover:bg-[#255335] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/20 active:scale-[0.995] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+          >
+            <RotateCw
+              size={16}
+              strokeWidth={2}
+              className={isFetching ? 'animate-spin motion-reduce:animate-none' : undefined}
+            />
+            Prøv igjen
+          </button>
+        </div>
+      );
+    }
+
+    if (filteredAndSortedServices.length === 0) {
+      const isSearching = searchQuery.trim().length > 0;
+
+      if (isSearching) {
+        return (
+          <EmptyState
+            type="jobs"
+            title="Ingen treff"
+            description={`Vi fant ingen annonser som matcher «${searchQuery}» i ${currentTab.label.toLowerCase()}.`}
+          />
+        );
+      }
+
+      return (
         <EmptyState
           type="jobs"
-          title="Ingen oppdrag i denne kategorien"
-          description={`Det ser ut som du ikke har noen oppdrag i "${currentTab.label}" ennå.`}
-          actionLabel={activeTab === 'active' ? 'Lag din første annonse' : undefined}
-          onActionClick={activeTab === 'active' ? () => navigate('/publish-job') : undefined}
+          title={
+            activeTab === 'active'
+              ? 'Du har ingen aktive annonser ennå'
+              : 'Ingen oppdrag i denne kategorien'
+          }
+          description={
+            activeTab === 'active'
+              ? 'Opprett en jobb og finn riktig person til oppdraget.'
+              : `Du har ingen oppdrag under «${currentTab.label}» ennå.`
+          }
+          actionLabel={activeTab === 'active' ? 'Opprett annonse' : undefined}
+          onActionClick={activeTab === 'active' ? () => navigate('/Publish-job') : undefined}
         />
-      ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 m-2 gap-2.5">
-          {filteredAndSortedServices.map((job: Service) => {
-            const catName = Array.isArray(job.categories) ? job.categories[0] : job.categories;
-            const badgeColor = categoryColorMap[catName as string] || '#2F7E47';
-            const handleCardClick = () => {
-              if (job.status === 'completed') {
-                const matchingOrder = orders.find((o: any) => {
-                  let orderServiceId;
-                  if (typeof o.serviceId === 'object' && o.serviceId !== null) {
-                    orderServiceId = o.serviceId._id
-                      ? o.serviceId._id.toString()
-                      : o.serviceId.toString();
-                  } else {
-                    orderServiceId = o.serviceId ? o.serviceId.toString() : '';
-                  }
-                  return orderServiceId === job._id.toString();
-                });
-                if (matchingOrder) {
-                  navigate(`/completed-job/${matchingOrder._id}`);
-                  return;
-                } else {
-                  // If no order, navigate with serviceId as query param
-                  navigate(`/completed-job?serviceId=${job._id}`);
-                  return;
-                }
-              }
-              navigate(`/job-listing/${job._id}`);
-            };
+      );
+    }
 
-            return (
-              <div
-                key={job._id}
-                onClick={handleCardClick}
-                className={`mx-auto bg-[#FFFFFF1A] w-full rounded-xl shadow-md cursor-pointer overflow-hidden`}
-              >
-                {/* Bildeseksjon */}
-                <div className="relative w-full h-45 bg-[#f0f0f0] flex items-center justify-center">
-                  {job.images[0] ? (
-                    <img
-                      src={job.images[0]}
-                      alt={job.title}
-                      className="w-full h-full p-2 object-cover rounded-t-2xl"
-                    />
-                  ) : (
-                    <span className="text-[#666] text-base">Ingen bilde tilgjengelig</span>
-                  )}
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {filteredAndSortedServices.map((job) => (
+          <MyListingCard
+            key={job._id}
+            service={job}
+            onOpen={() => openListing(job)}
+            onDelete={() => deleteMutation.mutateAsync(job._id)}
+            isDeleting={deleteMutation.isPending && deleteMutation.variables === job._id}
+          />
+        ))}
+      </div>
+    );
+  };
 
-                  <div
-                    className="absolute top-4 right-2 bg-custom-green px-3 py-1.5 text-white rounded-[20px] flex items-center justify-center"
-                    style={{ backgroundColor: badgeColor }}
-                  >
-                    <span className="text-[12px]">{catName || 'Rørlegger'}</span>
-                  </div>
+  return (
+    <div className="min-h-screen">
+      {filters}
 
-                  <div className="absolute flex justify-between items-center text-custom-black bottom-4 left-4.5 right-4.5">
-                    {/* Venstre side: Lokasjonsmerke */}
-                    <div className="bg-[#D9D9D9]/80 px-3 py-1.5 rounded-[20px] flex items-center justify-center gap-1.5 backdrop-blur-sm">
-                      <MapPin size={13} />
-                      <span className="text-[12px] font-normal">{job.location.city}</span>
-                    </div>
+      <div className="mx-auto w-full max-w-300 px-4 py-6">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-[1.375rem] font-bold tracking-[-0.03em] text-[#0B0B0B]">
+              Mine annonser
+            </h1>
+            <p className="mt-1 text-[0.875rem] text-[#63665F]">
+              {isLoading
+                ? 'Henter annonsene dine …'
+                : `${filteredAndSortedServices.length} ${
+                    filteredAndSortedServices.length === 1 ? 'annonse' : 'annonser'
+                  } i «${currentTab.label}»`}
+            </p>
+          </div>
 
-                    {/* Høyre side: Redigeringsikon */}
-                    <div
-                      className="px-2 py-1.5 bg-[#D9D9D9]/80 backdrop-blur-sm rounded-2xl cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(job);
-                      }}
-                    >
-                      <Pencil size={20} className="text-custom-green" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tittel */}
-                <div className="gap-3 p-4">
-                  <h2 className="text-custom-black whitespace-nowrap overflow-hidden text-ellipsis font-bold text-[20px]">
-                    {job.title}
-                  </h2>
-
-                  <p className="text-custom-black text-base font-light line-clamp-2">
-                    {job.description}
-                  </p>
-                </div>
-
-                {/* Jobbdetaljer */}
-                <div className="flex justify-between p-4 pt-0">
-                  <div className="flex flex-col gap-1 flex-1">
-                    <div className="flex items-center gap-1">
-                      <Clock4 size={13} />
-                      <h3 className="m-0 whitespace-nowrap overflow-hidden text-ellipsis text-[12px] font-normal">
-                        {job.duration.value
-                          ? `${job.duration.value} ${job.duration.unit}`
-                          : 'Ikke angitt'}
-                      </h3>
-                    </div>
-                    <div className="text-[11px] text-gray-500">
-                      Opprettet: {new Date(job.createdAt).toLocaleDateString('no-NO')}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <p className="text-[24px] font-bold">{job.price}Kr</p>
-                    <button
-                      className="w-8 h-8 flex items-center justify-center rounded-full bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(job._id);
-                      }}
-                      title="Slett annonse"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          <button
+            type="button"
+            onClick={() => navigate('/Publish-job')}
+            className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#2E6641] px-4 text-[0.875rem] font-semibold text-white transition duration-150 hover:bg-[#255335] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/20 active:scale-[0.995] motion-reduce:transition-none motion-reduce:active:scale-100"
+          >
+            <Plus size={16} strokeWidth={2.4} />
+            Ny annonse
+          </button>
         </div>
-      )}
 
-      {/* Delete Confirm Dialog */}
-      <ConfirmDialog
-        title="Slett annonse?"
-        description="Er du sikker på at du vil slette denne annonsen? Handlingen kan ikke angres."
-        confirmText="Ja, slett"
-        cancelText="Avbryt"
-        variant="destructive"
-        onConfirm={confirmDelete}
-        isOpen={!!deleteTargetId}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTargetId(null);
-        }}
-      />
+        {body()}
+      </div>
     </div>
   );
 }

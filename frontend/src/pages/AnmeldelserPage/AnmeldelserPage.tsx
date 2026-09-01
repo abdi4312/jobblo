@@ -11,6 +11,18 @@ interface DisplayReview {
   jobTitle: string;
 }
 
+/**
+ * ⚠️ NOT ROUTED — renders FAKE data. Do not re-enable as-is. (F-36)
+ *
+ * Every review below is invented and hardcoded, together with a hardcoded 4.5 average
+ * and a review count of 2. There is no API call anywhere in this file. The route was
+ * removed from routing/Routes.tsx for launch.
+ *
+ * To bring it back: read GET /api/users/:userId/reviews (see features/profile/api.ts),
+ * split received vs given by the reviewer/reviewee ids, add loading/empty/error states,
+ * and register it behind a ProtectedRoute — the page shows the signed-in user's own
+ * reviews, so it cannot be public.
+ */
 export default function AnmeldelserPage() {
   const [activeTab, setActiveTab] = useState<'received' | 'given'>('received');
   const [receivedReviews, setReceivedReviews] = useState<DisplayReview[]>([]);

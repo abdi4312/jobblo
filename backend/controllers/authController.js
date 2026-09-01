@@ -2,11 +2,30 @@ const Subscription = require('../models/Subscription');
 const User = require('../models/User');
 const Session = require('../models/Session');
 const bcrypt = require('bcryptjs');
+const { isBcryptHash } = require('../utils/passwordUtils');
+const { ensureDefaultSubscription } = require('../utils/subscription');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { generateTokens, createSession } = require('../utils/tokenUtils');
 const { sendOtpEmail } = require('../utils/emailService');
 const { OWN_USER_SELECT, sanitizeUserOwner, SENSITIVE_STRIP } = require('../utils/userProjections');
+
+/**
+ * Mirrors the client-side rule in frontend/src/utils/validationLogic.ts.
+ *
+ * The backend only ever checked length >= 8, so anything that wasn't the browser
+ * form — curl, a script, a mobile client — could create "aaaaaaaa" accounts. The
+ * strength requirement is only real if the server enforces it too.
+ */
+const validatePasswordStrength = (password) => {
+  if (typeof password !== 'string' || password.length < 8) {
+    return 'Passordet må være minst 8 tegn.';
+  }
+  if (!/[a-zæøå]/.test(password)) return 'Passordet må inneholde minst én liten bokstav.';
+  if (!/[A-ZÆØÅ]/.test(password)) return 'Passordet må inneholde minst én stor bokstav.';
+  if (!/\d/.test(password)) return 'Passordet må inneholde minst ett tall.';
+  return null;
+};
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -76,9 +95,8 @@ const validateRegisterInput = ({ name, email, password, role, companyName, orgNu
     return 'Valid email is required';
   }
 
-  if (typeof password !== 'string' || password.length < 8) {
-    return 'Password must be at least 8 characters';
-  }
+  const passwordError = validatePasswordStrength(password);
+  if (passwordError) return passwordError;
 
   if (role && !allowedRoles.includes(role)) {
     return 'Invalid role';
@@ -153,16 +171,10 @@ exports.register = async (req, res) => {
 
     const { accessToken, refreshToken } = await createSession(req, user._id);
 
-    await Subscription.create({
-      userId: user._id,
-      currentPlan: {
-        plan: role === 'company' ? 'Start' : 'Standard',
-        planType: role === 'company' ? 'business' : 'private',
-        startDate: new Date(),
-        status: 'active',
-        autoRenew: false,
-      },
-    });
+    // Shared with the Google and Vipps signup paths so all three provision the same
+    // plan the same way. Atomic upsert with everything inside $setOnInsert, so a retry
+    // or a concurrent request cannot produce a second subscription row.
+    await ensureDefaultSubscription(user);
 
     setAuthCookies(res, accessToken, refreshToken);
 
@@ -208,10 +220,31 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    /**
+     * Refuse anything in `password` that is not actually a bcrypt hash.
+     *
+     * OAuth-created accounts used to carry a placeholder there -- the literal string
+     * 'oauth-user' for Google and Idura, a random hex string for Vipps. Neither can be
+     * used to log in today, because `bcrypt.compare` returns false when the stored
+     * value will not parse as a hash (verified against bcryptjs 2.4.3), so this guard
+     * changes no behaviour for any existing account.
+     *
+     * It is here so that stays true. 'oauth-user' was a constant shared by every Google
+     * account on the platform, and the obvious "we should hash these" migration would
+     * have handed all of them the working password `oauth-user`. New OAuth accounts get
+     * a real hash of random bytes nobody kept (utils/passwordUtils.js); this line makes
+     * the remaining legacy rows fail closed rather than depending on a library's
+     * behaviour with malformed input.
+     */
+    const isPasswordValid =
+      isBcryptHash(user.password) && (await bcrypt.compare(password, user.password));
 
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    if (user.isDeleted || user.accountStatus === 'deactivated') {
+      return res.status(401).json({ error: 'Kontoen er deaktivert eller slettet.' });
     }
 
     const { accessToken, refreshToken } = await createSession(req, user._id);
@@ -499,8 +532,9 @@ exports.changePasswordVerifyOtp = async (req, res) => {
       return res.status(400).json({ error: 'Kode og nytt passord er påkrevd' });
     }
 
-    if (typeof newPassword !== 'string' || newPassword.length < 8) {
-      return res.status(400).json({ error: 'Passordet må være minst 8 tegn' });
+    const newPasswordError = validatePasswordStrength(newPassword);
+    if (newPasswordError) {
+      return res.status(400).json({ error: newPasswordError });
     }
 
     const hashedOtp = crypto.createHash('sha256').update(String(otp)).digest('hex');
@@ -637,8 +671,9 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ error: 'Token og passord er påkrevd' });
     }
 
-    if (typeof password !== 'string' || password.length < 8) {
-      return res.status(400).json({ error: 'Passordet må være minst 8 tegn' });
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) {
+      return res.status(400).json({ error: passwordError });
     }
 
     const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');

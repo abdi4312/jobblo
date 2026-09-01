@@ -3,6 +3,7 @@ import type { SettingsContextType } from '../../../pages/SettingsPage';
 import { Camera, Image as ImageIcon, Plus, X } from 'lucide-react';
 import { Input } from '../../Ui/Input';
 import { useState } from 'react';
+import { DEFAULT_BANNER } from '../../../constants/assets';
 
 export const BannerView = () => {
   const {
@@ -60,7 +61,7 @@ export const BannerView = () => {
           <img
             src={
               user?.bannerUrl ||
-              'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200'
+              DEFAULT_BANNER
             }
             alt="Banner"
             className="w-full h-full object-cover group-hover:opacity-75 transition-opacity"

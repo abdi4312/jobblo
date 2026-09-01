@@ -1,6 +1,5 @@
-import { Paperclip, Image, Send } from 'lucide-react';
+import { ArrowUp } from 'lucide-react';
 import React, { useRef, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
 
 interface MessageInputProps {
   newMessage: string;
@@ -16,7 +15,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
   sending,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Focus input on mount and whenever sending finishes
   useEffect(() => {
@@ -25,53 +23,44 @@ const MessageInput: React.FC<MessageInputProps> = ({
     }
   }, [sending]);
 
-  const handleAttachClick = () => {
-    toast('Attachment feature coming soon!');
-  };
-
-  const handleImageClick = () => {
-    toast('Image upload feature coming soon!');
-  };
+  const canSend = !!newMessage.trim() && !sending;
 
   return (
-    <div className="bg-white border-t border-black/[0.08] px-[14px] py-[10px] flex items-center gap-[8px] shrink-0">
-      <button
-        onClick={handleAttachClick}
-        className="w-[30px] h-[30px] rounded-[7px] border-none bg-transparent flex items-center justify-center cursor-pointer text-[#888] hover:bg-[#f5f0e8] transition-colors"
-      >
-        <Paperclip size={17} />
-      </button>
-      <button
-        onClick={handleImageClick}
-        className="w-[30px] h-[30px] rounded-[7px] border-none bg-transparent flex items-center justify-center cursor-pointer text-[#888] hover:bg-[#f5f0e8] transition-colors"
-      >
-        <Image size={17} />
-      </button>
-      <input
-        ref={inputRef}
-        type="text"
-        value={newMessage}
-        autoFocus
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-          }
-        }}
-        onChange={(e) => setNewMessage(e.target.value)}
-        placeholder="Skriv en melding..."
-        className="flex-1 bg-[#f9f9f7] border border-black/[0.08] rounded-full px-[14px] py-[8px] text-[13px] text-custom-black outline-none placeholder:text-[#888] font-sans"
-        disabled={sending}
-      />
-      <button
-        title="Send"
-        type="submit"
-        className={`w-[34px] h-[34px] bg-[#16a34a] rounded-full border-none flex items-center justify-center cursor-pointer shrink-0 hover:bg-[#138e3f] transition-colors`}
-        disabled={!newMessage.trim() || sending}
-        onClick={handleSend}
-      >
-        <Send size={15} className="text-white" />
-      </button>
+    <div className="shrink-0 border-t border-[#E6E7E1] bg-white px-4 py-3 sm:px-6">
+      {/* The paperclip and image buttons only ever fired
+          toast('Attachment feature coming soon!') — in English, in a live
+          composer. Removed until there is an upload path behind them. */}
+      <div className="flex items-center gap-2">
+        <input
+          ref={inputRef}
+          type="text"
+          value={newMessage}
+          autoFocus
+          aria-label="Skriv en melding"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+          onChange={(e) => setNewMessage(e.target.value)}
+          placeholder="Skriv en melding…"
+          className="h-11 min-w-0 flex-1 rounded-full border border-[#E6E7E1] bg-white px-4 text-[0.9375rem] text-[#0B0B0B] outline-none transition-colors placeholder:text-[#9B9E96] focus:border-[#2E6641]/45 focus:ring-4 focus:ring-[#2E6641]/10 disabled:bg-[#F4F6F0]"
+          disabled={sending}
+        />
+        <button
+          title="Send"
+          type="submit"
+          // The old button was a flat green circle at full strength whether or not there
+          // was anything to send, so "disabled" was invisible and pressing it did nothing
+          // with no explanation.
+          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#2E6641] text-white transition-colors hover:bg-[#255335] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 active:scale-95 disabled:cursor-not-allowed disabled:bg-[#D4D6CD]"
+          disabled={!canSend}
+          onClick={handleSend}
+        >
+          <ArrowUp size={18} strokeWidth={2.4} />
+        </button>
+      </div>
     </div>
   );
 };

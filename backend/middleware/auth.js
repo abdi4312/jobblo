@@ -104,6 +104,38 @@ const authenticate = async (req, res, next) => {
 };
 
 /**
+ * Authenticate when the caller happens to be signed in, but never block them.
+ *
+ * For routes that serve logged-out visitors *and* want to recognise a member —
+ * e.g. support tickets, where someone who cannot log in is the person most
+ * likely to need help. A missing, expired or revoked token simply means the
+ * request continues anonymously with `req.userId` unset.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+const optionalAuthenticate = (req, res, next) => {
+  const hasToken =
+    req.cookies?.accessToken ||
+    req.cookies?.token ||
+    (req.headers.authorization || '').startsWith('Bearer ');
+
+  if (!hasToken) return next();
+
+  // Reuse `authenticate` verbatim rather than re-implementing token handling,
+  // but swallow the rejection it would have sent so a bad token degrades to
+  // "anonymous" instead of "denied". Exactly one `next()` runs either way.
+  const silentRes = {
+    status: () => silentRes,
+    json: () => next(),
+    clearCookie: () => silentRes,
+  };
+
+  authenticate(req, silentRes, next);
+};
+
+/**
  * Middleware to require admin role
  * Must be used AFTER authenticate middleware
  *
@@ -129,4 +161,4 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, requireAdmin };
+module.exports = { authenticate, optionalAuthenticate, requireAdmin };

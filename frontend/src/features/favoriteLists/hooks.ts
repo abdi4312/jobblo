@@ -3,6 +3,15 @@ import { favoriteListsApi } from './api';
 import type { CreateListDTO, AddServiceToListDTO, UpdateListDTO } from './types';
 import { useUserStore } from '../../stores/userStore';
 import { toast } from 'react-hot-toast';
+import { getErrorMessage } from '../../utils/getErrorMessage';
+
+/**
+ * Four of these eight mutations had no onError at all, and their callers also
+ * swallowed the rejection — a failed save was doubly silent. All eight now share
+ * one handler, and the toasts are in Norwegian rather than English.
+ */
+const onErrorToast = (fallback: string) => (error: unknown) =>
+  toast.error(getErrorMessage(error, fallback));
 
 export const favoriteListsKeys = {
   all: ['favoriteLists'] as const,
@@ -34,12 +43,9 @@ export const useCreateFavoriteList = () => {
     mutationFn: (data: CreateListDTO) => favoriteListsApi.createList(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: favoriteListsKeys.all });
-      toast.success('List created successfully');
+      toast.success('Listen ble opprettet.');
     },
-    onError: (error: unknown) => {
-      const err = error as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || 'Failed to create list');
-    },
+    onError: onErrorToast('Kunne ikke opprette listen.'),
   });
 };
 
@@ -53,8 +59,9 @@ export const useUpdateFavoriteList = () => {
       queryClient.invalidateQueries({
         queryKey: favoriteListsKeys.list(variables.listId),
       });
-      toast.success('List updated successfully');
+      toast.success('Listen ble oppdatert.');
     },
+    onError: onErrorToast('Kunne ikke oppdatere listen.'),
   });
 };
 
@@ -67,12 +74,9 @@ export const useAddContributor = () => {
       queryClient.invalidateQueries({
         queryKey: favoriteListsKeys.list(variables.listId),
       });
-      toast.success('Contributor added successfully');
+      toast.success('Deltakeren ble lagt til.');
     },
-    onError: (error: unknown) => {
-      const err = error as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || 'Failed to add contributor');
-    },
+    onError: onErrorToast('Kunne ikke legge til deltakeren.'),
   });
 };
 
@@ -85,8 +89,9 @@ export const useRemoveContributor = () => {
       queryClient.invalidateQueries({
         queryKey: favoriteListsKeys.list(variables.listId),
       });
-      toast.success('Contributor removed');
+      toast.success('Deltakeren ble fjernet.');
     },
+    onError: onErrorToast('Kunne ikke fjerne deltakeren.'),
   });
 };
 
@@ -96,12 +101,9 @@ export const useAddServiceToFavoriteList = () => {
     mutationFn: (data: AddServiceToListDTO) => favoriteListsApi.addServiceToList(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: favoriteListsKeys.all });
-      toast.success('Added to list');
+      toast.success('Lagt til i listen.');
     },
-    onError: (error: unknown) => {
-      const err = error as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || 'Failed to add to list');
-    },
+    onError: onErrorToast('Kunne ikke legge til i listen.'),
   });
 };
 
@@ -115,8 +117,9 @@ export const useRemoveServiceFromFavoriteList = () => {
       queryClient.invalidateQueries({
         queryKey: favoriteListsKeys.list(variables.listId),
       });
-      toast.success('Removed from list');
+      toast.success('Fjernet fra listen.');
     },
+    onError: onErrorToast('Kunne ikke fjerne fra listen.'),
   });
 };
 
@@ -126,7 +129,8 @@ export const useDeleteFavoriteList = () => {
     mutationFn: (listId: string) => favoriteListsApi.deleteList(listId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: favoriteListsKeys.all });
-      toast.success('List deleted successfully');
+      toast.success('Listen ble slettet.');
     },
+    onError: onErrorToast('Kunne ikke slette listen.'),
   });
 };
