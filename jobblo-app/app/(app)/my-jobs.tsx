@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Eye, MapPin, Search, ShieldCheck, Trash2, Users, X } from 'lucide-react-native';
+import { ArrowLeft, Eye, MapPin, Pencil, Search, ShieldCheck, Trash2, Users, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useDeleteMyJobMutation, useMyJobs } from '../../src/hooks/useMyJobs';
 import { useMyApplicantsOverview } from '../../src/hooks/useMyApplicantsOverview';
@@ -90,6 +90,7 @@ function MyJobCard({
   deleting,
   onOpen,
   onApplicants,
+  onEdit,
   onOrder,
   onDelete,
 }: {
@@ -99,6 +100,7 @@ function MyJobCard({
   deleting: boolean;
   onOpen: () => void;
   onApplicants: () => void;
+  onEdit: () => void;
   onOrder: () => void;
   onDelete: () => void;
 }) {
@@ -196,6 +198,17 @@ function MyJobCard({
           <Text className="text-[0.8125rem] font-semibold text-[#0B0B0B]">Se søkere</Text>
         </Pressable>
         <Pressable
+          onPress={onEdit}
+          disabled={job.capabilities?.canEdit === false}
+          className={[
+            'flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border px-3 py-3',
+            job.capabilities?.canEdit === false ? 'border-[#E6E7E1] bg-[#F4F6F0] opacity-60' : 'border-[#E6E7E1] bg-white',
+          ].join(' ')}
+        >
+          <Pencil size={15} color={job.capabilities?.canEdit === false ? '#9B9E96' : '#0B0B0B'} />
+          <Text className={['text-[0.8125rem] font-semibold', job.capabilities?.canEdit === false ? 'text-[#9B9E96]' : 'text-[#0B0B0B]'].join(' ')}>Rediger</Text>
+        </Pressable>
+        <Pressable
           onPress={onDelete}
           disabled={!canDelete || deleting}
           className={[
@@ -221,7 +234,7 @@ function MyJobCard({
         </Pressable>
       </View>
 
-      {!canDelete && blockedReason ? (
+      {(!canDelete || job.capabilities?.canEdit === false) && blockedReason ? (
         <Text className="mt-2.5 text-[0.75rem] leading-5 text-[#63665F]">{blockedReason}</Text>
       ) : null}
     </Pressable>
@@ -444,6 +457,7 @@ export default function MyJobsScreen() {
                       params: { serviceId: job._id },
                     })
                   }
+                  onEdit={() => router.push({ pathname: '/(app)/create-job', params: { editId: job._id } })}
                   onOrder={() => {
                     if (extra?.order) router.push(orderRouteFor(extra.order));
                   }}

@@ -42,6 +42,7 @@ const COLUMNS: { title: string; links: { name: string; to: string }[] }[] = [
       { name: 'Om oss', to: '/about' },
       { name: 'Teamet', to: '/team' },
       { name: 'Kundesenter', to: '/support' },
+      { name: 'Slett konto', to: '/delete-account' },
       { name: 'Kommer snart', to: '/upcoming' },
     ],
   },

@@ -20,6 +20,7 @@ import { SearchHeader } from '../../src/components/search/SearchHeader';
 import { SearchResultsHeader } from '../../src/components/search/SearchResultsHeader';
 import { ActiveFiltersDisplay } from '../../src/components/search/ActiveFiltersDisplay';
 import { SearchFilterSheet } from '../../src/components/search/SearchFilterSheet';
+import { NORWAY_SEARCH_CENTERS } from '../../src/components/search/SearchAreaMap';
 import { SaveToListSheet } from '../../src/components/domain/SaveToListSheet';
 
 /**
@@ -27,10 +28,22 @@ import { SaveToListSheet } from '../../src/components/domain/SaveToListSheet';
  */
 export default function ExploreScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ search?: string | string[] }>();
+  const params = useLocalSearchParams<{ search?: string | string[]; lat?: string | string[]; lng?: string | string[] }>();
   const initialSearch = (Array.isArray(params.search) ? params.search[0] : params.search) ?? '';
 
   const filters = useSearchFilters(initialSearch);
+  const seededLocation = React.useRef(false);
+  const routeLat = Array.isArray(params.lat) ? params.lat[0] : params.lat;
+  const routeLng = Array.isArray(params.lng) ? params.lng[0] : params.lng;
+  React.useEffect(() => {
+    if (seededLocation.current || !routeLat || !routeLng) return;
+    const lat = Number(routeLat);
+    const lng = Number(routeLng);
+    if (Number.isFinite(lat) && lat >= -90 && lat <= 90 && Number.isFinite(lng) && lng >= -180 && lng <= 180) {
+      filters.setUserLocation({ lat, lng });
+      seededLocation.current = true;
+    }
+  }, [filters, routeLat, routeLng]);
   const [sheetVisible, setSheetVisible] = React.useState(false);
   const [saveSheetServiceId, setSaveSheetServiceId] = React.useState<string | null>(null);
 
@@ -65,6 +78,15 @@ export default function ExploreScreen() {
   const allJobs = data?.pages.flatMap((page) => page.data) ?? [];
   const totalCount = data?.pages[0]?.pagination?.total ?? 0;
   const filterCategories = filterOptions?.categories ?? [];
+  const mapCenter = React.useMemo<[number, number]>(() => {
+    if (filters.userLocation) return [filters.userLocation.lng, filters.userLocation.lat];
+    const code = filters.selectedAreaCodes[0] || filters.selectedMunicipalityCodes[0] || filters.selectedCountyCodes[0];
+    const selected = code ? NORWAY_SEARCH_CENTERS[code] : undefined;
+    if (selected) return selected;
+    const coordinates = allJobs.find((job) => job.location?.coordinates)?.location.coordinates;
+    return coordinates || [10.7522, 59.9139];
+  }, [allJobs, filters.selectedAreaCodes, filters.selectedMunicipalityCodes, filters.selectedCountyCodes, filters.userLocation]);
+  const mapRadius = filters.userLocation ? 5000 : filters.selectedAreaCodes.length ? 2000 : filters.selectedMunicipalityCodes.length ? 5000 : filters.selectedCountyCodes.length ? 20000 : 5000;
 
   const handleLoadMore = () => {
     if (!isFetchingNextPage && hasNextPage) {
@@ -97,6 +119,7 @@ export default function ExploreScreen() {
           (filters.isUrgent ? 1 : 0) +
           filters.selectedCountyCodes.length +
           filters.selectedMunicipalityCodes.length +
+          filters.selectedAreaCodes.length +
           (filters.userLocation ? 1 : 0)
         }
       />
@@ -267,6 +290,8 @@ export default function ExploreScreen() {
         onResetAllFilters={filters.resetAll}
         jobsCount={allJobs.length}
         hasNextPage={hasNextPage}
+        mapCenter={mapCenter}
+        mapRadius={mapRadius}
       />
 
       <FlatList

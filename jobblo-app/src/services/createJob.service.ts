@@ -48,7 +48,7 @@ export interface CreateServiceResponse {
 
 type NativeFilePart = { uri: string; name: string; type: string };
 
-export async function createJob(values: CreateJobFormValues, images: CreateJobImage[]): Promise<CreateServiceResponse> {
+export function buildJobFormData(values: CreateJobFormValues, images: CreateJobImage[], imagesToDelete: string[] = []) {
   const formData = new FormData();
   const append = (name: string, value: string) => formData.append(name, value);
   const duration = Number(values.durationValue);
@@ -87,10 +87,25 @@ export async function createJob(values: CreateJobFormValues, images: CreateJobIm
     const part: NativeFilePart = { uri: image.uri, name: image.name, type: image.type };
     (formData as FormData & { append(name: string, value: NativeFilePart): void }).append('images', part);
   });
+  imagesToDelete.forEach((imageUrl) => formData.append('imagesToDelete', imageUrl));
+
+  return formData;
+}
+
+export async function createJob(values: CreateJobFormValues, images: CreateJobImage[]): Promise<CreateServiceResponse> {
+  const formData = buildJobFormData(values, images);
 
   const response = await apiClient.post<CreateServiceResponse>('/services', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   if (!response.data?._id) throw new Error('Oppdraget ble opprettet uten gyldig ID');
+  return response.data;
+}
+
+export async function updateJob(serviceId: string, values: CreateJobFormValues, images: CreateJobImage[], imagesToDelete: string[]): Promise<CreateServiceResponse> {
+  if (!serviceId.trim()) throw new Error('Mangler gyldig annonse-ID');
+  const response = await apiClient.put<CreateServiceResponse>(`/services/${serviceId.trim()}`, buildJobFormData(values, images, imagesToDelete), {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
   return response.data;
 }

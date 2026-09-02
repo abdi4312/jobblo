@@ -4,6 +4,7 @@ import { Home, MessageCircle, PlusCircle, UserRound, Bell } from 'lucide-react-n
 import { useAuthStore } from '@/store/authStore';
 import { useUnreadCount } from '@/hooks/useNotifications';
 import { useUnreadConversations } from '@/hooks/useUnreadConversations';
+import { userTerms } from '@/content/userTerms';
 
 function BellIcon({ color, size }: { color: string; size: number }) {
   const { data } = useUnreadCount();
@@ -67,6 +68,7 @@ function MessageIcon({ color, size }: { color: string; size: number }) {
 export default function AppLayout() {
   const hydrated = useAuthStore((s) => s.hydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
 
   // Until the persisted session is read back, "not authenticated" is unknown rather than
   // false. Redirecting here would kick a signed-in user to the login screen on every cold
@@ -77,6 +79,11 @@ export default function AppLayout() {
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)/login" />;
+  }
+
+  const needsTermsAcceptance = !(user && user.acceptedTerms === true && user.termsVersion === userTerms.currentVersion);
+  if (needsTermsAcceptance) {
+    return <Redirect href="/(auth)/terms-acceptance" />;
   }
 
   return (
@@ -137,6 +144,7 @@ export default function AppLayout() {
       />
       {/* Hidden flat screens */}
       <Tabs.Screen name="explore" options={{ href: null }} />
+      <Tabs.Screen name="recommended-taskers" options={{ href: null }} />
       <Tabs.Screen name="my-applications" options={{ href: null }} />
       <Tabs.Screen name="my-jobs" options={{ href: null }} />
       {/* Folder-based sections each have their own _layout.tsx (Stack).

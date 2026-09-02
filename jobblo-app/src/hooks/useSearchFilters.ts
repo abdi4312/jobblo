@@ -72,6 +72,10 @@ export function useSearchFilters(initialSearch = '') {
   }, []);
 
   const toggleCategory = useCallback((category: string) => {
+    if (!category) {
+      setFilters((prev) => ({ ...prev, selectedCategories: [] }));
+      return;
+    }
     setFilters((prev) => ({
       ...prev,
       selectedCategories: prev.selectedCategories.includes(category)

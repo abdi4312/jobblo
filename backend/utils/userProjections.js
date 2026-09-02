@@ -59,6 +59,9 @@ const SAFE_BASE = [
   'onboardingStatus',
   'onboardingStep',
   'settings',
+  'acceptedTerms',
+  'termsVersion',
+  'termsAcceptedAt',
   'googleId',
   'createdAt',
   'updatedAt',
@@ -112,13 +115,7 @@ const PUBLIC_USER_SELECT = SAFE_BASE.filter(
  * stored with select:false and the UI should use Stripe Connect instead of
  * raw credentials; but if needed for admin audit, fetch explicitly.
  */
-const OWN_USER_SELECT = [
-  ...SAFE_BASE,
-  'phone',
-  'email',
-  'stripeCustomerId',
-].join(' ');
-
+const OWN_USER_SELECT = [...SAFE_BASE, 'phone', 'email', 'stripeCustomerId'].join(' ');
 
 /**
  * BankID verification, reduced to what a badge needs.
@@ -164,7 +161,19 @@ function sanitizeUserPublic(user) {
   for (const k of Object.keys(o)) {
     if (!SAFE_BASE.includes(k) && k !== 'id') {
       // If field is outside known safe set, strip unless it's a computed/standard key
-      if (!['id', 'counts', 'nearby', 'postedJobsCount', 'completedJobs', 'responseRate', 'averageResponseTime', 'repeatCustomersCount', 'hireRate'].includes(k)) {
+      if (
+        ![
+          'id',
+          'counts',
+          'nearby',
+          'postedJobsCount',
+          'completedJobs',
+          'responseRate',
+          'averageResponseTime',
+          'repeatCustomersCount',
+          'hireRate',
+        ].includes(k)
+      ) {
         // keep field if explicitly listed in PUBLIC_USER_SELECT
         if (!PUBLIC_USER_SELECT.split(' ').includes(k)) delete o[k];
       }

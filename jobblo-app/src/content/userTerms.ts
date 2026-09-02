@@ -7,6 +7,7 @@ export type TermsSection = {
 export const userTerms = {
   title: 'Brukervilkår – Jobblo',
   lastUpdated: '2026-01-08',
+  currentVersion: '2026-01-08',
   lastUpdatedDisplay: '8. januar 2026',
   company: 'Jobblo AS',
   organisationNumber: '931684930',

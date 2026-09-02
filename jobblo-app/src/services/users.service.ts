@@ -15,6 +15,7 @@ export type TopUser = {
 
 type TopUsersResponse = {
   data?: TopUser[];
+  pagination?: { total: number; page?: number; limit?: number };
 };
 
 export type BlockedUser = {

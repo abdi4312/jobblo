@@ -59,7 +59,7 @@ export function LocationFilter({
     <View className="border-b border-[#E6E7E1] py-4">
       <View className="mb-3 flex-row items-center justify-between">
         <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">
-          Plassering
+          Område
         </Text>
         {hasLocationFilter && (
           <Text
@@ -77,12 +77,13 @@ export function LocationFilter({
             {/* County Row */}
             <Pressable
               onPress={() => onToggleCounty(county.code)}
-              className="flex-row items-center gap-2.5 py-2"
+              className={`flex-row items-center gap-2.5 rounded-lg px-2.5 py-2 ${selectedCountyCodes.includes(county.code) ? 'bg-[#EAF1E9]' : ''}`}
             >
               <Checkbox checked={selectedCountyCodes.includes(county.code)} />
               <Text className="flex-1 text-[0.875rem] font-medium text-[#0B0B0B]">
                 {county.name}
               </Text>
+              {typeof county.count === 'number' ? <Text className="text-[0.75rem] text-[#9B9E96]">{county.count}</Text> : null}
               {county.children && county.children.length > 0 && (
                 <Pressable onPress={() => onToggleCountyExpand(county.code)}>
                   {expandedCounties.includes(county.code) ? (
@@ -101,7 +102,7 @@ export function LocationFilter({
                 <View key={municipality.code}>
                   <Pressable
                     onPress={() => onToggleMunicipality(municipality.code)}
-                    className="ml-8 flex-row items-center gap-2.5 py-1.5"
+                    className={`ml-8 flex-row items-center gap-2.5 rounded-lg px-2.5 py-1.5 ${selectedMunicipalityCodes.includes(municipality.code) ? 'bg-[#EAF1E9]' : ''}`}
                   >
                     <Checkbox
                       checked={selectedMunicipalityCodes.includes(
@@ -111,6 +112,7 @@ export function LocationFilter({
                     <Text className="flex-1 text-[0.8125rem] text-[#63665F]">
                       {municipality.name}
                     </Text>
+                    {typeof municipality.count === 'number' ? <Text className="text-[0.75rem] text-[#9B9E96]">{municipality.count}</Text> : null}
                     {municipality.children &&
                       municipality.children.length > 0 && (
                         <Pressable
@@ -144,7 +146,7 @@ export function LocationFilter({
                       <Pressable
                         key={area.code}
                         onPress={() => onToggleArea(area.code)}
-                        className="ml-16 flex-row items-center gap-2.5 py-1"
+                        className={`ml-16 flex-row items-center gap-2.5 rounded-lg px-2.5 py-1 ${selectedAreaCodes.includes(area.code) ? 'bg-[#EAF1E9]' : ''}`}
                       >
                         <Checkbox
                           checked={selectedAreaCodes.includes(area.code)}
@@ -152,6 +154,7 @@ export function LocationFilter({
                         <Text className="flex-1 text-[0.75rem] text-[#9B9E96]">
                           {area.name}
                         </Text>
+                        {typeof area.count === 'number' ? <Text className="text-[0.75rem] text-[#9B9E96]">{area.count}</Text> : null}
                       </Pressable>
                     ))}
                 </View>
