@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -24,7 +24,9 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [serverError, setServerError] = useState('');
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState<string[]>(() => Array(6).fill(''));
+  const otpInputRefs = useRef<Array<TextInput | null>>([]);
+  const lastSubmittedOtpRef = useRef<string | null>(null);
   const [otpError, setOtpError] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [password, setPassword] = useState('');
@@ -65,6 +67,7 @@ export default function ForgotPasswordScreen() {
   const emailValid = useMemo(() => emailPattern.test(email.trim()), [email]);
 
   const handleSendOtp = () => {
+    if (sendOtpMutation.isPending) return;
     if (!email.trim()) {
       setEmailError('Vennligst skriv inn e-post');
       return;
@@ -82,15 +85,53 @@ export default function ForgotPasswordScreen() {
     });
   };
 
-  const handleVerifyOtp = () => {
-    if (otp.length < 6) {
-      setOtpError('Skriv inn alle 6 siffer');
+  const handleOtpChange = (index: number, value: string) => {
+    const digits = value.replace(/\D/g, '');
+    setOtpError('');
+    if (!digits) {
+      setOtp((current) => current.map((digit, currentIndex) => (currentIndex === index ? '' : digit)));
       return;
     }
 
+    const next = [...otp];
+    digits.slice(0, 6 - index).split('').forEach((digit, offset) => {
+      next[index + offset] = digit;
+    });
+    setOtp(next);
+    const nextIndex = Math.min(index + digits.length, 5);
+    otpInputRefs.current[nextIndex]?.focus();
+  };
+
+  const handleOtpKeyPress = (index: number, key: string) => {
+    if (key !== 'Backspace' || otp[index] || index === 0) return;
+    const previousIndex = index - 1;
+    setOtp((current) => current.map((digit, currentIndex) => (currentIndex === previousIndex ? '' : digit)));
+    setOtpError('');
+    otpInputRefs.current[previousIndex]?.focus();
+  };
+
+  const handleResendOtp = () => {
+    if (sendOtpMutation.isPending) return;
+    setServerError('');
+    sendOtpMutation.mutate(email.trim().toLowerCase(), {
+      onSuccess: () => {
+        setOtp(Array(6).fill(''));
+        setOtpError('');
+        lastSubmittedOtpRef.current = null;
+        setStep('otp');
+      },
+    });
+  };
+
+  const submitOtp = (otpValue: string) => {
+    if (!/^\d{6}$/.test(otpValue) || verifyOtpMutation.isPending || lastSubmittedOtpRef.current === otpValue) {
+      return;
+    }
+
+    lastSubmittedOtpRef.current = otpValue;
     setOtpError('');
     verifyOtpMutation.mutate(
-      { targetEmail: email.trim().toLowerCase(), targetOtp: otp },
+      { targetEmail: email.trim().toLowerCase(), targetOtp: otpValue },
       {
         onSuccess: (data) => {
           setResetToken(data.resetToken);
@@ -98,6 +139,22 @@ export default function ForgotPasswordScreen() {
         },
       }
     );
+  };
+
+  useEffect(() => {
+    if (step !== 'otp') return;
+    const otpValue = otp.join('');
+    if (/^\d{6}$/.test(otpValue)) submitOtp(otpValue);
+  }, [otp, step, verifyOtpMutation.isPending]);
+
+  const handleVerifyOtp = () => {
+    const otpValue = otp.join('');
+    if (!/^\d{6}$/.test(otpValue)) {
+      setOtpError('Skriv inn alle 6 siffer');
+      return;
+    }
+
+    submitOtp(otpValue);
   };
 
   const handleResetPassword = () => {
@@ -238,20 +295,23 @@ export default function ForgotPasswordScreen() {
                     <View className="mt-6 gap-4">
                       <View className="flex-row justify-between gap-2">
                         {Array.from({ length: 6 }).map((_, index) => {
-                          const digit = otp[index] ?? '';
+                          const digit = otp[index];
                           return (
                             <TextInput
                               key={index}
-                              value={digit}
-                              maxLength={1}
-                              keyboardType="number-pad"
-                              onChangeText={(value) => {
-                                const next = otp.slice(0, index) + value.replace(/\D/g, '').slice(-1) + otp.slice(index + 1);
-                                const filtered = next.replace(/\D/g, '').slice(0, 6);
-                                setOtp(filtered);
-                                setOtpError('');
+                              ref={(input) => {
+                                otpInputRefs.current[index] = input;
                               }}
-                              className="h-[52px] flex-1 rounded-xl border bg-[#F5F6F1] text-center text-[18px] font-semibold text-ink ${otpError ? 'border-[#D8B0AB] bg-[#FCF5F4]' : 'border-transparent'}"
+                              value={digit}
+                              maxLength={6 - index}
+                              keyboardType="number-pad"
+                              onChangeText={(value) => handleOtpChange(index, value)}
+                              onKeyPress={(event) => handleOtpKeyPress(index, event.nativeEvent.key)}
+                              textContentType={index === 0 ? 'oneTimeCode' : 'none'}
+                              autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                              className={`h-[52px] flex-1 rounded-xl border bg-[#F5F6F1] text-center text-[18px] font-semibold text-ink ${
+                                otpError ? 'border-[#D8B0AB] bg-[#FCF5F4]' : 'border-transparent'
+                              }`}
                             />
                           );
                         })}
@@ -261,9 +321,9 @@ export default function ForgotPasswordScreen() {
 
                       <Pressable
                         onPress={handleVerifyOtp}
-                        disabled={verifyOtpMutation.isPending || otp.length < 6}
+                        disabled={verifyOtpMutation.isPending || otp.join('').length !== 6}
                         className={`h-[46px] items-center justify-center rounded-xl bg-brand ${
-                          verifyOtpMutation.isPending || otp.length < 6 ? 'opacity-80' : ''
+                          verifyOtpMutation.isPending || otp.join('').length !== 6 ? 'opacity-80' : ''
                         }`}
                       >
                         {verifyOtpMutation.isPending ? (
@@ -273,8 +333,14 @@ export default function ForgotPasswordScreen() {
                         )}
                       </Pressable>
 
-                      <Pressable onPress={() => handleSendOtp()} className="items-center">
-                        <Text className="text-[14px] font-medium text-brand">Send ny kode</Text>
+                      <Pressable
+                        onPress={handleResendOtp}
+                        disabled={sendOtpMutation.isPending}
+                        className="items-center"
+                      >
+                        <Text className="text-[14px] font-medium text-brand">
+                          {sendOtpMutation.isPending ? 'Sender ny kode…' : 'Send ny kode'}
+                        </Text>
                       </Pressable>
                     </View>
                   </>

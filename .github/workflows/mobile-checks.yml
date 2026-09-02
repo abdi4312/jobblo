@@ -1,0 +1,41 @@
+name: Mobile checks
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "jobblo-app/**"
+      - ".github/workflows/mobile-checks.yml"
+  workflow_dispatch:
+
+jobs:
+  mobile-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: jobblo-app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: jobblo-app/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          echo '### Install: passed' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: TypeScript
+        run: |
+          npm run typecheck
+          echo '### TypeScript: passed' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Expo config
+        run: |
+          npx expo config --type public > /dev/null
+          echo '### Expo config: passed' >> "$GITHUB_STEP_SUMMARY"

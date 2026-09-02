@@ -1,0 +1,47 @@
+name: Backend checks
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-checks.yml"
+  workflow_dispatch:
+
+jobs:
+  backend-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          echo '### Install: passed' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build
+        run: |
+          npm run build
+          echo '### Build: passed' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Jest
+        run: |
+          npm run test:ci > test.log 2>&1
+          cat test.log
+          echo '### Tests: passed' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Docker build
+        run: |
+          docker build -f backend/Dockerfile -t jobblo-backend-test .
+          echo '### Docker build: passed' >> "$GITHUB_STEP_SUMMARY"

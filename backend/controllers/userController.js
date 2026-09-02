@@ -105,6 +105,7 @@ exports.searchUsers = async (req, res) => {
         { email: { $regex: query, $options: 'i' } },
       ],
       _id: { $ne: req.userId }, // Exclude current user
+      isDeleted: { $ne: true },
     })
       .select(PUBLIC_USER_SELECT)
       .limit(10);
@@ -124,6 +125,7 @@ exports.getTopUsers = async (req, res) => {
 
     const filter = {
       _id: { $ne: req.userId },
+      isDeleted: { $ne: true },
       // TODO: Uncomment below when paid users exist to restrict to paid only
       // subscription: { $ne: 'Standard' },
     };
@@ -317,6 +319,7 @@ exports.searchAll = async (req, res) => {
         const queryObj = {
           $or: [{ name: regex }, { lastName: regex }, { email: regex }],
           _id: { $ne: req.userId },
+          isDeleted: { $ne: true },
         };
         total = await User.countDocuments(queryObj);
         results = (
@@ -378,11 +381,13 @@ exports.searchAll = async (req, res) => {
     const peopleCount = await User.countDocuments({
       $or: [{ name: regex }, { lastName: regex }, { email: regex }],
       _id: { $ne: req.userId },
+      isDeleted: { $ne: true },
     });
     const people = (
       await User.find({
         $or: [{ name: regex }, { lastName: regex }, { email: regex }],
         _id: { $ne: req.userId },
+        isDeleted: { $ne: true },
       })
         .select('name lastName avatarUrl email averageRating reviewCount')
         .limit(3)
@@ -424,7 +429,7 @@ exports.getUserById = async (req, res) => {
 
     const user = isSelf
       ? await User.findById(id).select(OWN_USER_SELECT)
-      : await User.findById(id).select(PUBLIC_USER_SELECT);
+      : await User.findOne({ _id: id, isDeleted: { $ne: true } }).select(PUBLIC_USER_SELECT);
 
     if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -813,6 +818,49 @@ exports.deleteUser = async (req, res) => {
       await IdentityClaim.deleteMany({ userId: id });
     } catch (claimErr) {
       console.error('IdentityClaim cleanup on delete failed:', claimErr.message);
+    }
+
+    // Cascade delete Services owned by this user. This must happen before Orders
+    // cascade via Service deletion, so we don't try to delete Orders twice.
+    try {
+      const deletedServices = await Service.deleteMany({ userId: id });
+      if (deletedServices.deletedCount > 0) {
+        console.log(`deleteUser: deleted ${deletedServices.deletedCount} services for user ${id}`);
+      }
+    } catch (serviceErr) {
+      console.error('Service cascade delete on user delete failed:', serviceErr.message);
+    }
+
+    // Delete Favorite records created by this user (not favorites OF this user).
+    try {
+      const deletedFavorites = await List.deleteMany({ userId: id });
+      if (deletedFavorites.deletedCount > 0) {
+        console.log(`deleteUser: deleted ${deletedFavorites.deletedCount} favorite lists for user ${id}`);
+      }
+    } catch (favoriteErr) {
+      console.error('Favorite cascade delete on user delete failed:', favoriteErr.message);
+    }
+
+    // Cancel (don't delete) Orders involving this user to preserve audit trail.
+    // Delete only completed/cancelled/disputed orders that no longer need audit context.
+    try {
+      const cancelledOrders = await Order.updateMany(
+        {
+          $or: [{ customerId: id }, { providerId: id }],
+          status: { $in: ['pending', 'accepted'] }
+        },
+        {
+          $set: {
+            status: 'cancelled',
+            cancelledAt: new Date()
+          }
+        }
+      );
+      if (cancelledOrders.modifiedCount > 0) {
+        console.log(`deleteUser: cancelled ${cancelledOrders.modifiedCount} pending orders for user ${id}`);
+      }
+    } catch (orderErr) {
+      console.error('Order cascade cancel on user delete failed:', orderErr.message);
     }
 
     try {

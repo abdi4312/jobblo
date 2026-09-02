@@ -1,6 +1,7 @@
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Alert, Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Image, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
 import {
   Bookmark,
   Briefcase,
@@ -49,6 +50,11 @@ export default function ProfileScreen() {
   const router = useRouter();
   const logout = useAuthStore((state) => state.logout);
   const { data: profile, isLoading, isError, refetch } = useProfile();
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try { await refetch(); } finally { setRefreshing(false); }
+  };
 
   if (isLoading)
     return (
@@ -114,7 +120,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#EFF0EA]">
-      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 32 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />}>
         <View className="border-b border-[#E6E7E1] bg-[#EAF1E9] px-5 pb-8 pt-8">
           <View className="items-center">
             <View className="h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-[#DCEBDD]">
