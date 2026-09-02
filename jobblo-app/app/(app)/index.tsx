@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { Image, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { Image, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronRight, Star } from 'lucide-react-native';
+import { FileText, Locate, ShieldCheck, Star } from 'lucide-react-native';
 import { useJobs } from '../../src/hooks/useJobs';
 import { useTopUsers } from '../../src/hooks/useTopUsers';
 import { useCategories } from '../../src/hooks/useCategories';
@@ -10,6 +11,8 @@ import { useAuthStore } from '../../src/store/authStore';
 import { JobCard } from '../../src/components/JobCard';
 import { CategoryChip } from '../../src/components/CategoryChip';
 import { SaveToListSheet } from '../../src/components/domain/SaveToListSheet';
+import { Select } from '../../src/components/ui/Select';
+import { useDashboardStats } from '../../src/hooks/useDashboardStats';
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Nyeste først' },
@@ -20,7 +23,7 @@ const SORT_OPTIONS = [
 
 const SEASONS = [
   {
-    months: [10, 11, 0, 1],
+    months: [11, 0, 1],
     label: 'Vinter',
     line: 'Frosne rør, snø på oppkjørselen eller storrengjøring før jul?',
     category: 'Rørlegger',
@@ -38,7 +41,7 @@ const SEASONS = [
     category: 'Maling',
   },
   {
-    months: [8, 9],
+    months: [8, 9, 10],
     label: 'Høst',
     line: 'Mørkere kvelder. Tid for å ta tak innendørs.',
     category: 'Rengjøring',
@@ -80,6 +83,7 @@ export default function HomeScreen() {
   const [saveSheetServiceId, setSaveSheetServiceId] = useState<string | null>(null);
 
   const { data: filterOptions, isLoading: categoriesLoading, refetch: refetchCategories } = useCategories();
+  const dashboardStats = useDashboardStats();
 
   const {
     data: jobsData,
@@ -94,16 +98,6 @@ export default function HomeScreen() {
 
   const jobs = jobsData?.data || [];
 
-  const [refreshing, setRefreshing] = useState(false);
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([refetchJobs(), refetchCategories(), recommendedWorkers.refetch()]);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
   const recommendedWorkers = useTopUsers({
     page: 1,
     limit: 4,
@@ -112,7 +106,17 @@ export default function HomeScreen() {
     address: typeof user?.address === 'string' ? user.address : '',
   });
 
-  const categories = filterOptions?.categories ?? [];
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchJobs(), refetchCategories(), recommendedWorkers.refetch(), dashboardStats.refetch()]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const categories = (filterOptions?.categories ?? []).filter((cat) => !['alle', 'all', 'alle kategorier', 'all categories', 'ingen'].includes(cat.name.trim().toLowerCase()));
   const season = useMemo(() => {
     const month = new Date().getMonth();
     const seasonOptions: Array<{ months: number[]; label: string; line: string; category: string }> = SEASONS as any;
@@ -120,7 +124,7 @@ export default function HomeScreen() {
   }, []);
 
   const userName = String(user?.name ?? 'der');
-  const userLocation = String(user?.postSted ?? 'Norge');
+  const userLocation = typeof user?.postSted === 'string' ? user.postSted : user?.postSted && typeof user.postSted === 'object' && 'city' in user.postSted ? String(user.postSted.city ?? 'Norge') : 'Norge';
   const greeting = getGreeting();
   const seasonalCategory = categories.find(
     (cat) => cat.name?.toLowerCase() === season.category.toLowerCase()
@@ -163,6 +167,20 @@ export default function HomeScreen() {
       </View>
     </View>
   );
+  const seasonImage = season.category === 'Rørlegger' ? require('../../assets/category-showcase/rorlegger.webp') : season.category === 'Hagearbeid' ? require('../../assets/category-showcase/hagearbeid.webp') : season.category === 'Maling' ? require('../../assets/category-showcase/maling.webp') : require('../../assets/category-showcase/rengjoring.webp');
+  const handleNearbyJobs = async () => {
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.granted) {
+        const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        router.push({ pathname: '/(app)/explore', params: { lat: String(position.coords.latitude), lng: String(position.coords.longitude) } });
+        return;
+      }
+    } catch {
+      Alert.alert('Posisjon ikke tilgjengelig', 'Utforsk alle oppdrag i stedet.');
+    }
+    router.push('/(app)/explore');
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-[#EFF0EA]">
@@ -172,9 +190,8 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />}
       >
         <View className="relative overflow-hidden rounded-[28px] bg-[#2E6641]">
-          <View className="absolute inset-y-0 right-0 w-2/3 opacity-25">
-            <View className="h-full w-full rounded-l-[28px] bg-[#EAF1E9]" />
-          </View>
+          <Image source={seasonImage} className="absolute inset-y-0 right-0 h-full w-2/3 opacity-25" resizeMode="cover" />
+          <View className="absolute inset-y-0 right-0 w-2/3 bg-[#2E6641]/70" />
           <View className="relative px-6 py-8">
             <Text className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-[#8FBF9A]">
               {season.label} · {userLocation}
@@ -189,7 +206,7 @@ export default function HomeScreen() {
 
             <View className="mt-7 flex-row flex-wrap gap-2.5">
               <TouchableOpacity
-                onPress={() => router.push('/(app)/explore')}
+                onPress={() => void handleNearbyJobs()}
                 className="rounded-full bg-white px-5 py-3.5"
                 activeOpacity={0.9}
               >
@@ -206,6 +223,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               )}
             </View>
+            {dashboardStats.data ? <View className="mt-6 flex-row gap-5 border-t border-white/20 pt-4">{[[dashboardStats.data.activeJobs, 'Aktive oppdrag'], [dashboardStats.data.totalUsers, 'Brukere'], [dashboardStats.data.averageRating.toFixed(1), 'Snittrating']].map(([value, label]) => <View key={label}><Text className="text-base font-bold text-white">{value}</Text><Text className="mt-0.5 text-[0.6875rem] text-white/70">{label}</Text></View>)}</View> : null}
           </View>
         </View>
 
@@ -247,22 +265,7 @@ export default function HomeScreen() {
             action={() => router.push('/(app)/explore')}
           />
 
-          <View className="mb-5 flex-row items-center justify-end">
-            <Text className="mr-2 text-[0.8125rem] font-medium text-[#63665F]">Sorter</Text>
-            <View className="flex-row items-center rounded-xl border border-[#E6E7E1] bg-white px-2 py-1.5">
-              {SORT_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  onPress={() => setSortValue(option.value)}
-                  className={`rounded-lg px-2.5 py-1.5 ${sortValue === option.value ? 'bg-[#2E6641]' : ''}`}
-                  activeOpacity={0.9}
-                >
-                  <Text className={`text-[0.75rem] font-medium ${sortValue === option.value ? 'text-white' : 'text-[#0B0B0B]'}`}>
-                    {option.label.split(' ')[0]}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <View className="flex-row items-center justify-end"><Text className="mr-2 text-[0.8125rem] font-medium text-[#63665F]">Sorter</Text><Select value={sortValue} options={SORT_OPTIONS.map((option) => ({ ...option }))} onValueChange={setSortValue} />
           </View>
 
           {jobsLoading && (
@@ -312,7 +315,7 @@ export default function HomeScreen() {
 
         {workerCards.length > 0 && (
           <View className="mt-14">
-            <SectionHeader eyebrow="03 — I nærheten" title="Anbefalte oppdragstakere" actionLabel="Se alle" action={() => router.push('/(app)/explore')} />
+            <SectionHeader eyebrow="03 — I nærheten" title="Anbefalte oppdragstakere" actionLabel="Se alle" action={() => router.push('/(app)/recommended-taskers')} />
 
             <View className="space-y-4">
               {workerCards.map((worker: {
@@ -362,6 +365,12 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
+
+        <View className="mt-14"><SectionHeader eyebrow="" title="Tryggere sammen" actionLabel="" action={() => undefined} />{[
+          [ShieldCheck, 'Trygg betaling med SafePay', 'Pengene holdes sikkert til jobben er godkjent. Du betaler aldri for noe du ikke er fornøyd med.'],
+          [FileText, 'Automatisk kontrakt', 'Hver avtale genererer en digital kontrakt som beskytter både deg og oppdragstakeren.'],
+          [Star, 'Verifiserte ratings', 'Alle anmeldelser er fra ekte fullførte oppdrag. Du ser alltid hvem du leier inn.'],
+        ].map(([Icon, title, body]) => <View key={title as string} className="mb-3 flex-row items-start rounded-2xl border border-[#E6E7E1] bg-white p-4"><View className="h-10 w-10 items-center justify-center rounded-xl bg-[#EAF1E9]"><Icon size={18} color="#2E6641" /></View><View className="ml-3 flex-1"><Text className="text-sm font-semibold text-[#0B0B0B]">{title as string}</Text><Text className="mt-1 text-xs leading-5 text-[#63665F]">{body as string}</Text></View></View>)}</View>
       </ScrollView>
 
       <SaveToListSheet

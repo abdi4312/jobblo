@@ -85,6 +85,9 @@ export const queryKeys = {
      */
     all: ['categories', 'all'] as const,
   },
+  explore: {
+    stats: ['explore', 'stats'] as const,
+  },
   locations: {
     /**
      * Query key for location tree (counties → municipalities → areas).

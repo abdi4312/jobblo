@@ -28,10 +28,22 @@ import { SaveToListSheet } from '../../src/components/domain/SaveToListSheet';
  */
 export default function ExploreScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ search?: string | string[] }>();
+  const params = useLocalSearchParams<{ search?: string | string[]; lat?: string | string[]; lng?: string | string[] }>();
   const initialSearch = (Array.isArray(params.search) ? params.search[0] : params.search) ?? '';
 
   const filters = useSearchFilters(initialSearch);
+  const seededLocation = React.useRef(false);
+  const routeLat = Array.isArray(params.lat) ? params.lat[0] : params.lat;
+  const routeLng = Array.isArray(params.lng) ? params.lng[0] : params.lng;
+  React.useEffect(() => {
+    if (seededLocation.current || !routeLat || !routeLng) return;
+    const lat = Number(routeLat);
+    const lng = Number(routeLng);
+    if (Number.isFinite(lat) && lat >= -90 && lat <= 90 && Number.isFinite(lng) && lng >= -180 && lng <= 180) {
+      filters.setUserLocation({ lat, lng });
+      seededLocation.current = true;
+    }
+  }, [filters, routeLat, routeLng]);
   const [sheetVisible, setSheetVisible] = React.useState(false);
   const [saveSheetServiceId, setSaveSheetServiceId] = React.useState<string | null>(null);
 

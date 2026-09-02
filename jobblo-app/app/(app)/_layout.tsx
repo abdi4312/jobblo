@@ -137,6 +137,7 @@ export default function AppLayout() {
       />
       {/* Hidden flat screens */}
       <Tabs.Screen name="explore" options={{ href: null }} />
+      <Tabs.Screen name="recommended-taskers" options={{ href: null }} />
       <Tabs.Screen name="my-applications" options={{ href: null }} />
       <Tabs.Screen name="my-jobs" options={{ href: null }} />
       {/* Folder-based sections each have their own _layout.tsx (Stack).
