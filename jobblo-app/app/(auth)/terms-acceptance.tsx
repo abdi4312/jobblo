@@ -60,7 +60,7 @@ export default function TermsAcceptanceScreen() {
 
           <View className="mt-5 gap-3">
             <Pressable
-              onPress={() => router.push('/(app)/profile/settings/terms')}
+              onPress={() => router.push('/(auth)/terms')}
               className="h-[46px] items-center justify-center rounded-xl border border-line bg-white"
             >
               <Text className="text-[15px] font-semibold text-brand">Vis full tekst</Text>
