@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import {
   ArrowLeft,
   ChevronRight,
@@ -169,6 +169,11 @@ type Feedback = { tone: 'info' | 'error'; text: string } | null;
 export default function ActiveSessionsScreen() {
   const router = useRouter();
   const sessionsQuery = useActiveSessions();
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try { await sessionsQuery.refetch(); } finally { setRefreshing(false); }
+  };
   const revokeOne = useRevokeSessionMutation();
   const revokeOthers = useRevokeOtherSessionsMutation();
 
@@ -262,6 +267,7 @@ export default function ActiveSessionsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: 36 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />}
       >
         <Pressable
           onPress={() => router.back()}

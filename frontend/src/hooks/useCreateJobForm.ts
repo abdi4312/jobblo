@@ -5,7 +5,7 @@ import { useTranslate } from '../i18n/useTranslate';
 import { useUserStore } from '../stores/userStore';
 import { usePaymentCalculation } from './usePaymentCalculation';
 import { useForm } from './useForm';
-import { jobValidationSchema, type JobFormValues } from '../validations/jobValidations';
+import { JOB_LIMITS, jobValidationSchema, type JobFormValues } from '../validations/jobValidations';
 import { saveFormData, loadFormData, clearFormData } from '../utils/indexedDB';
 import { getErrorMessage } from '../utils/getErrorMessage';
 import { summariseAiFill, clampMessage } from '../utils/aiFillSummary';
@@ -576,7 +576,10 @@ export const useCreateJobForm = (
           for (const rule of rules) {
             if (!rule.test(values)) {
               if (field === 'price') {
-                if (paymentType === 'Anbud') {
+                const priceNumber = Number(values.price);
+                if (Number.isFinite(priceNumber) && priceNumber > JOB_LIMITS.PRICE_MAX) {
+                  currentErrors[field] = rule.message;
+                } else if (paymentType === 'Anbud') {
                   currentErrors[field] =
                     'Vennligst oppgi et antatt budsjett større enn 0 kr for anbudet';
                 } else if (paymentType === 'Timepris') {
@@ -619,6 +622,16 @@ export const useCreateJobForm = (
       if (!municipalityCode) {
         extraErrors.municipalityCode = 'Velg kommune.';
         isValid = false;
+      }
+      if (paymentType === 'Timepris') {
+        const hourlyRateNumber = Number(hourlyRate);
+        if (!Number.isFinite(hourlyRateNumber) || hourlyRateNumber <= 0) {
+          extraErrors.price = 'Vennligst oppgi en timepris større enn 0 kr';
+          isValid = false;
+        } else if (hourlyRateNumber > JOB_LIMITS.PRICE_MAX) {
+          extraErrors.price = 'Timepris kan ikke overstige 1000000 kr.';
+          isValid = false;
+        }
       }
     } else if (step === 4) {
       // Validate Step 4 fields (Contact Information)
@@ -677,8 +690,14 @@ export const useCreateJobForm = (
 
     // Re-check fields with their validation rules to know exactly which ones failed.
     if (currentStep === 1) {
-      if (!values.title || values.title.length < 5) missing.push(labels.title);
-      if (!values.description || values.description.length < 20) missing.push(labels.description);
+      const titleLength = String(values.title ?? '').trim().length;
+      if (titleLength < JOB_LIMITS.TITLE_MIN || titleLength > JOB_LIMITS.TITLE_MAX) missing.push(labels.title);
+      const descriptionLength = String(values.description ?? '').trim().length;
+      if (
+        descriptionLength < JOB_LIMITS.DESCRIPTION_MIN ||
+        descriptionLength > JOB_LIMITS.DESCRIPTION_MAX
+      )
+        missing.push(labels.description);
       const catOk = Array.isArray(values.categories)
         ? values.categories.length > 0
         : !!values.categories && String(values.categories).trim() !== '';
@@ -688,7 +707,14 @@ export const useCreateJobForm = (
       if (!values.address) missing.push(labels.address);
       if (!values.city) missing.push(labels.city);
       const priceVal = values.price;
-      if (!priceVal || priceVal === '0' || Number(priceVal) <= 0 || isNaN(Number(priceVal))) {
+      const priceNumber = Number(priceVal);
+      if (
+        !priceVal ||
+        (typeof priceVal === 'string' && priceVal.trim() === '') ||
+        !Number.isFinite(priceNumber) ||
+        priceNumber <= 0 ||
+        priceNumber > JOB_LIMITS.PRICE_MAX
+      ) {
         if (paymentType === 'Anbud') {
           missing.push('antatt budsjett for anbud');
         } else if (paymentType === 'Timepris') {
@@ -698,15 +724,36 @@ export const useCreateJobForm = (
         }
       }
       const durVal = values.durationValue;
-      if (!durVal || durVal === '0' || Number(durVal) <= 0) missing.push(labels.durationValue);
-      if (!values.fromDate) missing.push(labels.fromDate);
+      const durationNumber = Number(durVal);
+      if (
+        !durVal ||
+        (typeof durVal === 'string' && durVal.trim() === '') ||
+        !Number.isFinite(durationNumber) ||
+        durationNumber <= 0 ||
+        durationNumber > JOB_LIMITS.DURATION_MAX
+      )
+        missing.push(labels.durationValue);
+      if (!values.fromDate || Number.isNaN(new Date(values.fromDate).getTime())) missing.push(labels.fromDate);
       if (!values.toDate) {
+        missing.push(labels.toDate);
+      } else if (Number.isNaN(new Date(values.toDate).getTime())) {
         missing.push(labels.toDate);
       } else if (values.fromDate && new Date(values.toDate) < new Date(values.fromDate)) {
         missing.push('gyldig sluttdato (kan ikke være før startdato)');
       }
       if (!countyCode) missing.push(labels.countyCode);
       if (!municipalityCode) missing.push(labels.municipalityCode);
+      if (paymentType === 'Timepris') {
+        const hourlyRateNumber = Number(hourlyRate);
+        if (
+          !hourlyRate ||
+          (typeof hourlyRate === 'string' && hourlyRate.trim() === '') ||
+          !Number.isFinite(hourlyRateNumber) ||
+          hourlyRateNumber <= 0 ||
+          hourlyRateNumber > JOB_LIMITS.PRICE_MAX
+        )
+          missing.push('timepris');
+      }
       if (!coordinates) missing.push('lokasjon på kartet');
     } else if (currentStep === 4) {
       // Phone and e-mail are optional here (the step is labelled "Valgfritt" and

@@ -1,0 +1,14 @@
+**/node_modules
+.git
+.github
+frontend
+jobblo-app
+coverage
+logs
+**/dist
+**/.env
+**/.env.*
+!backend/package.json
+!backend/package-lock.json
+!backend/Dockerfile
+!backend/server.js

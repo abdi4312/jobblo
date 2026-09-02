@@ -1,20 +1,15 @@
-# Use official Node.js image as a base
-FROM node:16
+FROM node:20-bookworm-slim
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Copy the package.json from the backend directory
 COPY backend/package*.json ./
 
-# Install dependencies
-RUN npm install
+RUN npm ci --omit=dev
 
-# Copy the rest of the application code from backend/ to /app
 COPY backend/ ./
 
-# Expose port (adjust if necessary)
-EXPOSE 3000
+EXPOSE 5001
 
-# Command to run the app (adjust as needed)
-CMD ["npm", "start"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD ["node", "-e", "require('http').get('http://127.0.0.1:5001/api/test', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+
+CMD ["node", "server.js"]

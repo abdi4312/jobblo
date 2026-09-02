@@ -48,6 +48,7 @@ exports.getFeaturedFavourites = async (req, res) => {
     const topRatedUsers = await User.find({
       verified: true,
       accountStatus: { $in: ['active', 'verified'] },
+      isDeleted: { $ne: true },
     })
       .sort({ averageRating: -1, reviewCount: -1 })
       .limit(6);
@@ -58,6 +59,7 @@ exports.getFeaturedFavourites = async (req, res) => {
       finalUsers = await User.find({
         role: 'provider',
         accountStatus: { $in: ['active', 'verified'] },
+        isDeleted: { $ne: true },
       })
         .sort({ averageRating: -1, reviewCount: -1 })
         .limit(6);
@@ -112,10 +114,13 @@ exports.getDashboardStats = async (req, res) => {
     });
 
     // Count total users
-    const totalUsersCount = await User.countDocuments();
+    const totalUsersCount = await User.countDocuments({ isDeleted: { $ne: true } });
 
     // Calculate average rating across all users who have reviews
-    const usersWithRatings = await User.find({ reviewCount: { $gt: 0 } });
+    const usersWithRatings = await User.find({
+      reviewCount: { $gt: 0 },
+      isDeleted: { $ne: true },
+    });
     let averageRating = 0;
     if (usersWithRatings.length > 0) {
       const totalRating = usersWithRatings.reduce((sum, user) => sum + user.averageRating, 0);

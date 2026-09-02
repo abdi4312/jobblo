@@ -63,12 +63,12 @@ describe('the BankID endpoints are live and correctly guarded', () => {
     expect(routerCode).toMatch(/router\.post\(\s*['"]\/logout['"]/);
     expect(routerCode).toMatch(/router\.post\(\s*['"]\/refresh-token['"]/);
     expect(routerCode).toMatch(
-      /router\.get\(\s*['"]\/vipps['"]\s*,[\s\S]{0,80}?vippsController\.redirectToVipps/
+      /router\.get\(\s*['"]\/vipps['"]\s*,[\s\S]{0,160}?vippsController\.redirectToVipps[\s\S]{0,80}?platform:\s*['"]web['"]/
     );
     expect(routerCode).toMatch(
-      /router\.get\(\s*['"]\/vipps\/callback['"]\s*,\s*vippsController\.vippsCallback/
+      /router\.get\(\s*['"]\/vipps\/callback['"]\s*,[\s\S]{0,160}?vippsController\.vippsCallback[\s\S]{0,80}?platform:\s*['"]web['"]/
     );
-    expect(routerCode).toMatch(/passport\.authenticate\(\s*['"]google['"]/);
+    expect(routerCode).toMatch(/webOAuth\.googleStart/);
   });
 });
 
@@ -191,14 +191,17 @@ describe('the frontend never constructs the flow', () => {
      * profile card below is untouched, and that is the primary use case.
      */
     const authButtons = stripComments(
-      fs.readFileSync(path.join(FRONTEND, 'components', 'SocialAuthButtons', 'AuthButton.tsx'), 'utf8')
+      fs.readFileSync(
+        path.join(FRONTEND, 'components', 'SocialAuthButtons', 'AuthButton.tsx'),
+        'utf8'
+      )
     );
     expect(authButtons).not.toMatch(/Fortsett med BankID/);
     expect(authButtons).not.toMatch(/go\('\/api\/auth\/idura'\)/);
 
     // Vipps and Google are unaffected.
-    expect(authButtons).toMatch(/go\('\/api\/auth\/vipps'\)/);
-    expect(authButtons).toMatch(/go\('\/api\/auth\/google'\)/);
+    expect(authButtons).toMatch(/go\('\/api\/auth\/web\/vipps'\)/);
+    expect(authButtons).toMatch(/go\('\/api\/auth\/web\/google'\)/);
   });
 
   it('the commented-out block is intact and restorable', () => {
@@ -301,9 +304,9 @@ describe('verification state reaches the frontend, safely', () => {
 
   it('a partial or foreign identity does not count', () => {
     for (const iv of [
-      { provider: 'idura' },                              // no subject
-      { subject: 'abc' },                                 // no provider
-      { provider: 'vipps', subject: 'abc' },              // wrong provider
+      { provider: 'idura' }, // no subject
+      { subject: 'abc' }, // no provider
+      { provider: 'vipps', subject: 'abc' }, // wrong provider
       {},
       null,
     ]) {
@@ -324,7 +327,9 @@ describe('verification state reaches the frontend, safely', () => {
 
 describe('the session store does not collide with the auth Session collection', () => {
   const appSource = stripComments(fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8'));
-  const sessionModel = stripComments(fs.readFileSync(path.join(ROOT, 'models', 'Session.js'), 'utf8'));
+  const sessionModel = stripComments(
+    fs.readFileSync(path.join(ROOT, 'models', 'Session.js'), 'utf8')
+  );
 
   it('express-session uses its own collection', () => {
     /**

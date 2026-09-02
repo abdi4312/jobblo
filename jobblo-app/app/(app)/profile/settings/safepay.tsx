@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import {
   ArrowLeft,
   ChevronDown,
@@ -140,6 +140,11 @@ function Detail({ label, value }: { label: string; value: string }) {
 export default function SafePayHistoryScreen() {
   const router = useRouter();
   const query = useSafePayHistory();
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try { await query.refetch(); } finally { setRefreshing(false); }
+  };
   if (query.isLoading)
     return (
       <SafeAreaView className="flex-1 bg-[#EFF0EA]">
@@ -159,7 +164,7 @@ export default function SafePayHistoryScreen() {
   const data = query.data;
   return (
     <SafeAreaView className="flex-1 bg-[#EFF0EA]">
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 36 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 36 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />}>
         <Pressable
           onPress={() => router.back()}
           className="mb-5 flex-row items-center self-start py-2"

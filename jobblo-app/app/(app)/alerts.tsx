@@ -87,6 +87,7 @@ export default function AlertsScreen() {
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [deleteAllVisible, setDeleteAllVisible] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const typeFilter = activeCategory === 'all' ? undefined : activeCategory;
 
@@ -98,16 +99,19 @@ export default function AlertsScreen() {
     isLoading,
     isError,
     refetch,
-    isRefetching,
   } = useNotifications(typeFilter);
 
-  const { data: unreadCountData } = useUnreadCount();
+  const { data: unreadCountData, refetch: refetchUnreadCount } = useUnreadCount();
   const markAsRead = useMarkAsRead();
   const markAll = useMarkAllAsRead();
   const deleteSingle = useDeleteNotification();
   const deleteAll = useDeleteAllNotifications();
 
   const unreadCount = unreadCountData?.count ?? 0;
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try { await Promise.all([refetch(), refetchUnreadCount()]); } finally { setRefreshing(false); }
+  };
 
   const allNotifications: Notification[] = useMemo(() => {
     if (!data?.pages) return [];
@@ -410,8 +414,8 @@ export default function AlertsScreen() {
           contentContainerStyle={{ paddingBottom: 40 }}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching && !isFetchingNextPage}
-              onRefresh={refetch}
+              refreshing={refreshing}
+              onRefresh={() => void handleRefresh()}
               tintColor="#2E6641"
               colors={['#2E6641']}
             />

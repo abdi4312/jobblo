@@ -1,11 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Image, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
 import { ChevronRight, Star } from 'lucide-react-native';
-import apiClient from '../../src/api/client';
 import { useJobs } from '../../src/hooks/useJobs';
+import { useTopUsers } from '../../src/hooks/useTopUsers';
 import { useCategories } from '../../src/hooks/useCategories';
 import { useAuthStore } from '../../src/store/authStore';
 import { JobCard } from '../../src/components/JobCard';
@@ -53,6 +52,26 @@ function getGreeting() {
   return 'God kveld';
 }
 
+function WorkerAvatar({ avatarUrl, initials }: { avatarUrl?: string; initials: string }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = typeof avatarUrl === 'string' && avatarUrl.trim().length > 0 && !imageFailed;
+
+  return (
+    <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9]">
+      {showImage ? (
+        <Image
+          source={{ uri: avatarUrl }}
+          className="h-full w-full"
+          resizeMode="cover"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <Text className="text-[0.9375rem] font-semibold text-[#2E6641]">{initials}</Text>
+      )}
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
@@ -60,7 +79,7 @@ export default function HomeScreen() {
   const [sortValue, setSortValue] = useState('newest');
   const [saveSheetServiceId, setSaveSheetServiceId] = useState<string | null>(null);
 
-  const { data: filterOptions, isLoading: categoriesLoading } = useCategories();
+  const { data: filterOptions, isLoading: categoriesLoading, refetch: refetchCategories } = useCategories();
 
   const {
     data: jobsData,
@@ -75,21 +94,22 @@ export default function HomeScreen() {
 
   const jobs = jobsData?.data || [];
 
-  const recommendedWorkers = useQuery({
-    queryKey: ['topUsers', 'home', user?.postNumber ?? '', user?.postSted ?? '', user?.address ?? ''],
-    queryFn: async () => {
-      const response = await apiClient.get('/users/top', {
-        params: {
-          page: 1,
-          limit: 4,
-          postNumber: user?.postNumber ?? '',
-          postSted: user?.postSted ?? '',
-          address: user?.address ?? '',
-        },
-      });
-      return response.data?.data ?? [];
-    },
-    enabled: !!user,
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchJobs(), refetchCategories(), recommendedWorkers.refetch()]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const recommendedWorkers = useTopUsers({
+    page: 1,
+    limit: 4,
+    postNumber: typeof user?.postNumber === 'string' ? user.postNumber : '',
+    postSted: typeof user?.postSted === 'string' ? user.postSted : '',
+    address: typeof user?.address === 'string' ? user.address : '',
   });
 
   const categories = filterOptions?.categories ?? [];
@@ -115,9 +135,8 @@ export default function HomeScreen() {
     count: number;
     rate: string;
     location: string;
-    sponsored: boolean;
     avatarUrl?: string;
-  }> = (recommendedWorkers.data ?? []).slice(0, 4).map((worker: any, index: number) => ({
+  }> = (recommendedWorkers.data?.data ?? []).slice(0, 4).map((worker) => ({
     _id: worker._id,
     initials: `${String(worker.name ?? '').charAt(0)}${String(worker.lastName ?? '').charAt(0)}`.toUpperCase(),
     name: `${worker.name ?? ''} ${worker.lastName ?? ''}`.trim() || 'Oppdragstaker',
@@ -126,7 +145,6 @@ export default function HomeScreen() {
     count: Number(worker.reviewCount ?? 0),
     rate: worker.hourlyRate ? `${worker.hourlyRate} kr/t` : 'Tilgjengelig',
     location: worker.postSted || worker.locations?.[0] || 'Norge',
-    sponsored: index === 0,
     avatarUrl: worker.avatarUrl,
   }));
 
@@ -151,6 +169,7 @@ export default function HomeScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 28 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />}
       >
         <View className="relative overflow-hidden rounded-[28px] bg-[#2E6641]">
           <View className="absolute inset-y-0 right-0 w-2/3 opacity-25">
@@ -305,7 +324,6 @@ export default function HomeScreen() {
                 count: number;
                 rate: string;
                 location: string;
-                sponsored: boolean;
                 avatarUrl?: string;
               }) => (
                 <TouchableOpacity
@@ -318,22 +336,11 @@ export default function HomeScreen() {
                     router.push({ pathname: '/(app)/profile/[userId]', params: { userId: worker._id } });
                   }}
                 >
-                  <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9]">
-                    {worker.avatarUrl ? (
-                      <View className="h-full w-full rounded-full bg-[#EAF1E9]" />
-                    ) : (
-                      <Text className="text-[0.9375rem] font-semibold text-[#2E6641]">{worker.initials}</Text>
-                    )}
-                  </View>
+                  <WorkerAvatar avatarUrl={worker.avatarUrl} initials={worker.initials} />
 
                   <View className="flex-1">
                     <View className="flex-row items-center gap-2">
                       <Text className="truncate text-[0.9375rem] font-semibold text-[#0B0B0B]">{worker.name}</Text>
-                      {worker.sponsored && (
-                        <View className="rounded-full bg-[#F4F6F0] px-2 py-0.5">
-                          <Text className="text-[0.6875rem] font-semibold text-[#63665F]">Sponset</Text>
-                        </View>
-                      )}
                     </View>
 
                     <Text className="mt-0.5 text-[0.8125rem] text-[#63665F]">{worker.role}</Text>
@@ -342,7 +349,7 @@ export default function HomeScreen() {
                       <View className="mt-1.5 flex-row items-center gap-1.5">
                         <Star size={13} color="#2E6641" fill="#2E6641" />
                         <Text className="text-[0.8125rem] font-semibold text-[#0B0B0B]">{worker.rating.toFixed(1)}</Text>
-                        <Text className="text-[0.8125rem] text-[#63665F]">({worker.count} oppdrag)</Text>
+                        <Text className="text-[0.8125rem] text-[#63665F]">({worker.count} {worker.count === 1 ? 'anmeldelse' : 'anmeldelser'})</Text>
                       </View>
                     )}
 

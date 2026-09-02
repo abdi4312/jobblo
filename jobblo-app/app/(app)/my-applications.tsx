@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Pressable,
   ScrollView,
+  RefreshControl,
   Text,
   TextInput,
   View,
@@ -58,6 +59,16 @@ export default function MyApplicationsScreen() {
     isError: ownerError,
     refetch: refetchOwnerServices,
   } = useMyApplicantsOverview(activeTab === 'mine-sokere');
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      if (onOwnerTab) await refetchOwnerServices();
+      else await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const withdrawMutation = useWithdrawApplicationMutation();
 
   // This is a hidden tab route, so a caller arriving with `?tab=` does not remount the screen:
@@ -156,6 +167,7 @@ export default function MyApplicationsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 120 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />}
       >
         <View className="mb-5">
           <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[#63665F]">

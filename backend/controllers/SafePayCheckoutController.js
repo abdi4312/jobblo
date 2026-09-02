@@ -429,6 +429,49 @@ exports.createSafePaySession = async (req, res) => {
       }
     }
 
+    // ponytail: atomic session creation. Replaces check-then-create race with
+    // findOneAndUpdate comparing status before Stripe session creation (impact:
+    // multiple concurrent requests creating duplicate sessions).
+    
+    // First, try to atomically claim the checkout-in-progress slot for this order.
+    // If checkoutSessionId is unset OR expired, we own it. If it's set and open,
+    // we fall back to reusing the existing session (single source of truth).
+    const reclaimedOrder = await Order.findOneAndUpdate(
+      {
+        _id: orderId,
+        $or: [
+          { checkoutSessionId: null },
+          { checkoutSessionStatus: { $ne: 'open' } }
+        ]
+      },
+      {
+        $set: {
+          checkoutSessionId: 'PENDING_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+          checkoutSessionStatus: 'pending',
+          checkoutSessionCreatedAt: new Date()
+        }
+      },
+      { new: true }
+    );
+
+    // If the update succeeded, we own the slot. If it returned null, the order
+    // already has an open session from another request — reuse it.
+    if (!reclaimedOrder) {
+      const currentOrder = await Order.findById(orderId).select('checkoutSessionId checkoutSessionStatus serviceId');
+      if (currentOrder && currentOrder.checkoutSessionId && currentOrder.checkoutSessionStatus === 'open') {
+        try {
+          const existingSession = await stripe.checkout.sessions.retrieve(currentOrder.checkoutSessionId);
+          if (existingSession.status === 'open' && sameRedirectTarget(existingSession.success_url, redirects.success)) {
+            return res.json({ url: existingSession.url, reused: true });
+          }
+        } catch (_) {
+          // Session invalid — fall through to create new one
+        }
+      }
+      // Neither our update succeeded nor could we reuse existing session.
+      // This should be rare. Fall through to create fresh session.
+    }
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'Bruker ble ikke funnet' });
