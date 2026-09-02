@@ -20,6 +20,7 @@ import { SearchHeader } from '../../src/components/search/SearchHeader';
 import { SearchResultsHeader } from '../../src/components/search/SearchResultsHeader';
 import { ActiveFiltersDisplay } from '../../src/components/search/ActiveFiltersDisplay';
 import { SearchFilterSheet } from '../../src/components/search/SearchFilterSheet';
+import { NORWAY_SEARCH_CENTERS } from '../../src/components/search/SearchAreaMap';
 import { SaveToListSheet } from '../../src/components/domain/SaveToListSheet';
 
 /**
@@ -65,6 +66,15 @@ export default function ExploreScreen() {
   const allJobs = data?.pages.flatMap((page) => page.data) ?? [];
   const totalCount = data?.pages[0]?.pagination?.total ?? 0;
   const filterCategories = filterOptions?.categories ?? [];
+  const mapCenter = React.useMemo<[number, number]>(() => {
+    if (filters.userLocation) return [filters.userLocation.lng, filters.userLocation.lat];
+    const code = filters.selectedAreaCodes[0] || filters.selectedMunicipalityCodes[0] || filters.selectedCountyCodes[0];
+    const selected = code ? NORWAY_SEARCH_CENTERS[code] : undefined;
+    if (selected) return selected;
+    const coordinates = allJobs.find((job) => job.location?.coordinates)?.location.coordinates;
+    return coordinates || [10.7522, 59.9139];
+  }, [allJobs, filters.selectedAreaCodes, filters.selectedMunicipalityCodes, filters.selectedCountyCodes, filters.userLocation]);
+  const mapRadius = filters.userLocation ? 5000 : filters.selectedAreaCodes.length ? 2000 : filters.selectedMunicipalityCodes.length ? 5000 : filters.selectedCountyCodes.length ? 20000 : 5000;
 
   const handleLoadMore = () => {
     if (!isFetchingNextPage && hasNextPage) {
@@ -97,6 +107,7 @@ export default function ExploreScreen() {
           (filters.isUrgent ? 1 : 0) +
           filters.selectedCountyCodes.length +
           filters.selectedMunicipalityCodes.length +
+          filters.selectedAreaCodes.length +
           (filters.userLocation ? 1 : 0)
         }
       />
@@ -267,6 +278,8 @@ export default function ExploreScreen() {
         onResetAllFilters={filters.resetAll}
         jobsCount={allJobs.length}
         hasNextPage={hasNextPage}
+        mapCenter={mapCenter}
+        mapRadius={mapRadius}
       />
 
       <FlatList

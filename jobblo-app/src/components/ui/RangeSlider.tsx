@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, PanResponder, Animated } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, PanResponder } from 'react-native';
 
 interface RangeSliderProps {
   min: number;
@@ -56,7 +56,9 @@ export const RangeSlider = ({
 
   return (
     <View className="w-full items-center py-2">
-      <View className="relative h-1 w-[280px] rounded-full bg-[#E6E7E1]">
+      <View
+        className="relative h-1 w-[280px] rounded-full bg-[#E6E7E1]"
+      >
         {/* Active track (between min and max) */}
         <View
           className="absolute h-1 rounded-full bg-[#2E6641]"
@@ -100,6 +102,17 @@ function PressableThumb({
   trackWidth,
 }: PressableThumbProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const positionRef = useRef((position / 100) * trackWidth);
+  positionRef.current = (position / 100) * trackWidth;
+  const dragStart = useRef(positionRef.current);
+  const responder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => { dragStart.current = positionRef.current; setIsDragging(true); },
+    onPanResponderMove: (_, gesture) => onMove(dragStart.current + gesture.dx),
+    onPanResponderRelease: () => setIsDragging(false),
+    onPanResponderTerminate: () => setIsDragging(false),
+  })).current;
 
   return (
     <View
@@ -109,13 +122,7 @@ function PressableThumb({
         transform: [{ translateX: -8 }], // Half of thumb width for center alignment
         top: -6, // Center vertically
       }}
-      onTouchStart={() => setIsDragging(true)}
-      onTouchEnd={() => setIsDragging(false)}
-      onTouchMove={(e) => {
-        if (!isDragging) return;
-        const x = e.nativeEvent.locationX;
-        onMove(x);
-      }}
+      {...responder.panHandlers}
       className={`h-4 w-4 rounded-full border-2 border-[#2E6641] bg-white shadow-sm ${
         isDragging ? 'border-4' : ''
       }`}
