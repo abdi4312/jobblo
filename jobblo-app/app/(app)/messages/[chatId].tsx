@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Briefcase, Send, ShieldCheck } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../src/store/authStore';
 import { messageIdentity, upsertChatMessage, useChatDetail, useSendChatMessage } from '../../../src/hooks/useChatDetail';
 import { getChatSocket } from '../../../src/services/chatSocket.service';
-import type { ChatDetail, ChatMessage, MessageParticipant } from '../../../src/services/messages.service';
+import { submitChatReport, type ChatDetail, type ChatMessage, type MessageParticipant } from '../../../src/services/messages.service';
 import { queryKeys } from '../../../src/queryKeys';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { orderRouteForRole } from '../../../src/utils/orderRoute';
@@ -61,6 +61,7 @@ export default function ChatDetailScreen() {
   const sendMutation = useSendChatMessage(chatId);
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const [text, setText] = useState('');
+  const [reporting, setReporting] = useState(false);
 
   useEffect(() => {
     if (!chatId) return;
@@ -101,6 +102,42 @@ export default function ChatDetailScreen() {
     router.push(orderRouteForRole(orderId, chat.serviceId?.userId === userId, order?.status || chat.status, order?.paymentStatus));
   };
 
+  const reportChat = () => {
+    Alert.alert(
+      'Rapporter samtale',
+      'Denne rapporten sendes til Jobblo for vurdering. Vi bruker den eksisterende rapportkontrakten, og bare den andre parten i samtalen blir markert som rapportert.',
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        {
+          text: 'Send rapport',
+          onPress: async () => {
+            if (!chatId) return;
+            try {
+              setReporting(true);
+              const result = await submitChatReport(chatId, {
+                scope: 'chat',
+                reportType: 'other',
+                title: 'Rapportering av samtale',
+                description: 'Jeg rapporterer denne samtalen fordi den inkluderer uønsket eller upassende innhold som trenger vurdering av Jobblo.',
+              });
+
+              Alert.alert('Rapport sendt', result.message || 'Jobblo har mottatt rapporten og vil vurdere den.');
+            } catch (error) {
+              const serverMessage = error && typeof error === 'object' && 'response' in error
+                ? (error as { response?: { data?: { message?: string; error?: string } } }).response?.data?.message
+                  ?? (error as { response?: { data?: { message?: string; error?: string } } }).response?.data?.error
+                : undefined;
+
+              Alert.alert('Kunne ikke sende rapport', serverMessage || 'Prøv igjen senere.');
+            } finally {
+              setReporting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (query.isLoading) return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><View className="flex-1 items-center justify-center"><ActivityIndicator color="#2E6641" /><Text className="mt-3 text-[#63665F]">Laster samtale...</Text></View></SafeAreaView>;
   if (query.isError || !chat) return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ErrorState title="Samtale ikke funnet" message="Kunne ikke laste denne samtalen." actionLabel="Tilbake" onAction={() => router.back()} /></SafeAreaView>;
 
@@ -108,7 +145,7 @@ export default function ChatDetailScreen() {
   return (
     <SafeAreaView className="flex-1 bg-[#EFF0EA]">
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View className="flex-row items-center gap-3 border-b border-[#E6E7E1] bg-white px-4 py-3"><Pressable onPress={() => router.back()} className="h-9 w-9 items-center justify-center"><ArrowLeft size={19} color="#0B0B0B" /></Pressable><View className="h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9]">{other?.avatarUrl ? <Image source={{ uri: other.avatarUrl }} className="h-full w-full" /> : <Text className="font-semibold text-[#2E6641]">{initials(nameOf(other))}</Text>}</View><Text className="flex-1 text-[1rem] font-semibold text-[#0B0B0B]" numberOfLines={1}>{nameOf(other)}</Text></View>
+        <View className="flex-row items-center gap-3 border-b border-[#E6E7E1] bg-white px-4 py-3"><Pressable onPress={() => router.back()} className="h-9 w-9 items-center justify-center"><ArrowLeft size={19} color="#0B0B0B" /></Pressable><View className="h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9]">{other?.avatarUrl ? <Image source={{ uri: other.avatarUrl }} className="h-full w-full" /> : <Text className="font-semibold text-[#2E6641]">{initials(nameOf(other))}</Text>}</View><Text className="flex-1 text-[1rem] font-semibold text-[#0B0B0B]" numberOfLines={1}>{nameOf(other)}</Text><Pressable onPress={reportChat} disabled={reporting} className="rounded-full border border-[#E6E7E1] bg-[#F4F6F0] px-3 py-1.5 disabled:opacity-60"><Text className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[#63665F]">{reporting ? 'Sender…' : 'Rapporter'}</Text></Pressable></View>
         <FlatList ref={listRef} data={messages} keyExtractor={messageKey} contentContainerStyle={{ padding: 16, paddingBottom: 18, flexGrow: messages.length ? 0 : 1 }} onContentSizeChange={() => { if (!query.isFetchingNextPage) listRef.current?.scrollToEnd({ animated: false }); }} onScroll={(event) => { if (event.nativeEvent.contentOffset.y < 80 && query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage(); }} scrollEventThrottle={200} maintainVisibleContentPosition={{ minIndexForVisible: 1 }} ListHeaderComponent={<JobContext chat={chat} userId={userId} onPress={openOrder} />} ListEmptyComponent={<View className="flex-1 items-center justify-center"><Text className="text-[0.875rem] text-[#63665F]">Ingen meldinger i denne samtalen.</Text></View>} renderItem={({ item }) => { const own = idOf(item.senderId) === userId; if (isSystem(item)) return <View className="my-2 rounded-full bg-[#F4F6F0] px-4 py-2"><Text className="text-center text-[0.75rem] text-[#63665F]">{item.text || 'Status oppdatert'}</Text></View>; return <View className={['mb-2 max-w-[82%] rounded-2xl px-4 py-3', own ? 'self-end rounded-br-md bg-[#2E6641]' : 'self-start rounded-bl-md bg-white'].join(' ')}><Text className={own ? 'text-[0.9375rem] leading-relaxed text-white' : 'text-[0.9375rem] leading-relaxed text-[#0B0B0B]'}>{item.text || ''}</Text><Text className={['mt-1 text-[0.625rem]', own ? 'text-white/70' : 'text-[#9B9E96]'].join(' ')}>{formatTime(item.createdAt)}</Text></View>; }} />
         <View className="flex-row items-end gap-2 border-t border-[#E6E7E1] bg-white px-4 py-3"><TextInput value={text} onChangeText={setText} placeholder="Skriv en melding..." placeholderTextColor="#9B9E96" multiline className="max-h-28 min-h-[44px] flex-1 rounded-2xl border border-[#E6E7E1] bg-[#F4F6F0] px-4 py-3 text-[0.9375rem] text-[#0B0B0B]" /><Pressable onPress={send} disabled={!text.trim() || sendMutation.isPending} className="h-11 w-11 items-center justify-center rounded-full bg-[#2E6641] disabled:opacity-50"><Send size={17} color="#FFF" /></Pressable></View>
       </KeyboardAvoidingView>

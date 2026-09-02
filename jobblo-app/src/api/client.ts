@@ -18,7 +18,17 @@ declare module 'axios' {
   }
 }
 
-const rawBaseUrl = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001/api').replace(/\/$/, '');
+const rawBaseUrl = (() => {
+  const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (configuredUrl) return configuredUrl.replace(/\/$/, '');
+
+  if (process.env.EAS_BUILD_PROFILE === 'production') {
+    throw new Error('EXPO_PUBLIC_API_URL is required for production builds. Set the EAS production environment before building.');
+  }
+
+  return 'http://localhost:5001/api';
+})();
+
 const baseUrl = rawBaseUrl.endsWith('/api') ? rawBaseUrl : `${rawBaseUrl}/api`;
 export const apiBaseUrl = baseUrl;
 

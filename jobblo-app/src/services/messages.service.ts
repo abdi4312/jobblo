@@ -74,3 +74,26 @@ export async function sendChatMessage(chatId: string, text: string): Promise<Cha
   const response = await apiClient.post<ChatMessage>(`/chats/${chatId.trim()}/message`, { text: text.trim() });
   return response.data;
 }
+
+export type ChatReportPayload = {
+  scope: 'chat' | 'message';
+  reportType: string;
+  title: string;
+  description: string;
+  messageId?: string;
+};
+
+export type ChatReportResponse = {
+  success: boolean;
+  message: string;
+  data?: {
+    reportId?: string;
+    status?: string;
+    createdAt?: string;
+  };
+};
+
+export async function submitChatReport(chatId: string, payload: ChatReportPayload): Promise<ChatReportResponse> {
+  const response = await apiClient.post<ChatReportResponse>(`/chats/${chatId.trim()}/reports`, payload);
+  return response.data;
+}

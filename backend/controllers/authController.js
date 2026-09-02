@@ -50,6 +50,7 @@ const clearCookieOptions = {
 };
 
 const allowedRoles = ['user', 'company'];
+const CURRENT_TERMS_VERSION = '2026-01-08';
 
 const sanitizeUser = (user) => {
   if (!user) return null;
@@ -83,7 +84,7 @@ const sendServerError = (res, error, context = 'Server error') => {
   });
 };
 
-const validateRegisterInput = ({ name, email, password, role, companyName, orgNumber }) => {
+const validateRegisterInput = ({ name, email, password, role, companyName, orgNumber, acceptedTerms }) => {
   // If role is company, we use companyName as the primary name
   const effectiveName = role === 'company' ? companyName : name;
 
@@ -112,6 +113,10 @@ const validateRegisterInput = ({ name, email, password, role, companyName, orgNu
     }
   }
 
+  if (acceptedTerms !== true) {
+    return 'Du må godta Brukervilkårene for å opprette konto.';
+  }
+
   return null;
 };
 
@@ -119,6 +124,8 @@ const setAuthCookies = (res, accessToken, refreshToken) => {
   res.cookie('accessToken', accessToken, accessCookieOptions);
   res.cookie('refreshToken', refreshToken, refreshCookieOptions);
 };
+
+exports.validateRegisterInput = validateRegisterInput;
 
 const clearAuthCookies = (res) => {
   res.clearCookie('accessToken', clearCookieOptions);
@@ -129,7 +136,16 @@ exports.register = async (req, res) => {
   let createdUserId = null;
 
   try {
-    const { name, lastName, email, password, role = 'user', companyName, orgNumber } = req.body;
+    const {
+      name,
+      lastName,
+      email,
+      password,
+      role = 'user',
+      companyName,
+      orgNumber,
+      acceptedTerms,
+    } = req.body;
 
     const normalizedEmail = String(email || '')
       .trim()
@@ -142,6 +158,7 @@ exports.register = async (req, res) => {
       role,
       companyName,
       orgNumber,
+      acceptedTerms,
     });
 
     if (validationError) {
@@ -164,6 +181,9 @@ exports.register = async (req, res) => {
       role,
       companyName: role === 'company' ? String(companyName).trim() : undefined,
       orgNumber: role === 'company' ? String(orgNumber).trim() : undefined,
+      acceptedTerms: true,
+      termsVersion: CURRENT_TERMS_VERSION,
+      termsAcceptedAt: new Date(),
       planType: role === 'company' ? 'business' : 'private',
     });
 
@@ -442,6 +462,38 @@ exports.getProfile = async (req, res) => {
     return res.json(sanitizeUserOwner(user));
   } catch (error) {
     return sendServerError(res, error, 'Get profile failed');
+  }
+};
+
+exports.acceptTerms = async (req, res) => {
+  try {
+    const userId = req.user?._id || req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        acceptedTerms: true,
+        termsVersion: CURRENT_TERMS_VERSION,
+        termsAcceptedAt: new Date(),
+      },
+      { new: true }
+    ).select(OWN_USER_SELECT);
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json({
+      user: sanitizeUserOwner(updatedUser),
+      acceptedTerms: true,
+      termsVersion: CURRENT_TERMS_VERSION,
+    });
+  } catch (error) {
+    return sendServerError(res, error, 'Accept terms failed');
   }
 };
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -16,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import DateTimePicker, { type DateTimePickerChangeEvent } from '@expo/ui/community/datetime-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AlertCircle,
@@ -41,8 +42,10 @@ import {
 } from 'lucide-react-native';
 import { useCategories } from '../../src/hooks/useCategories';
 import { useLocationTree } from '../../src/hooks/useLocationTree';
-import { useCreateJobMutation } from '../../src/hooks/useCreateJob';
+import { useCreateJobMutation, useUpdateJobMutation } from '../../src/hooks/useCreateJob';
+import { useMyJobs } from '../../src/hooks/useMyJobs';
 import { useSmartFillMutation } from '../../src/hooks/useSmartFill';
+import { ErrorState } from '../../src/components/ui/ErrorState';
 import { CreateJobLocationMap } from '../../src/components/create-job/CreateJobLocationMap';
 import { Select } from '../../src/components/ui/Select';
 import { Button } from '../../src/components/ui/Button';
@@ -240,16 +243,25 @@ function DateField({
 
 export default function CreateJobScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ editId?: string | string[] }>();
+  const editId = Array.isArray(params.editId) ? params.editId[0] : params.editId;
+  const isEditMode = Boolean(editId);
   const insets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
   const categoriesQuery = useCategories();
   const locationsQuery = useLocationTree();
   const createMutation = useCreateJobMutation();
+  const updateMutation = useUpdateJobMutation();
+  const ownerJobsQuery = useMyJobs();
   const smartFillMutation = useSmartFillMutation();
   const [step, setStep] = useState(1);
   const [values, setValues] = useState<CreateJobFormValues>(emptyValues);
   const [images, setImages] = useState<CreateJobImage[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [editLoaded, setEditLoaded] = useState(false);
+  const [editUnavailable, setEditUnavailable] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showSmartFill, setShowSmartFill] = useState(true);
   const [smartMinimized, setSmartMinimized] = useState(false);
@@ -263,6 +275,33 @@ export default function CreateJobScreen() {
   const [isGeocoding, setIsGeocoding] = useState(false);
 
   useEffect(() => {
+    if (!isEditMode) return;
+    const job = ownerJobsQuery.data?.find((item) => item._id === editId);
+    if (!job) return;
+    if (job.capabilities?.canEdit === false) {
+      setEditUnavailable(true);
+      setEditLoaded(true);
+      return;
+    }
+    setValues({
+      title: job.title || '', description: job.description || '', categories: job.categories || [], tags: job.tags || [],
+      equipment: job.equipment || 'utstyrfri', maxApplicants: String(job.maxApplicants ?? 0), urgent: Boolean(job.urgent),
+      address: job.location?.address || '', city: job.location?.city || '', countyCode: job.countyCode || '', municipalityCode: job.municipalityCode || '', areaCode: job.areaCode || '',
+      coordinates: job.location?.coordinates?.length === 2 ? [job.location.coordinates[1], job.location.coordinates[0]] : [0, 0],
+      fromDate: job.fromDate?.slice(0, 10) || '', toDate: job.toDate?.slice(0, 10) || '', durationValue: String(job.duration?.value ?? ''), durationUnit: job.duration?.unit || 'hours',
+      paymentType: (job.paymentType as CreateJobFormValues['paymentType']) || 'Fastpris', price: job.price != null ? String(job.price) : '', hourlyRate: job.hourlyRate != null ? String(job.hourlyRate) : '',
+      contactPhone: job.contactPhone || '', contactEmail: job.contactEmail || '', checklist: (job.checklist || []).map((item) => ({ id: item.id, text: item.text })),
+    });
+    setExistingImages(job.images || []);
+    setImagesToDelete([]);
+    setEditLoaded(true);
+  }, [editId, isEditMode, ownerJobsQuery.data]);
+
+  useEffect(() => {
+    if (isEditMode) {
+      setDraftLoaded(true);
+      return;
+    }
     void draftStorage.getItem(DRAFT_KEY).then((raw) => {
       if (raw) {
         try {
@@ -276,11 +315,11 @@ export default function CreateJobScreen() {
       }
       setDraftLoaded(true);
     });
-  }, []);
+  }, [isEditMode]);
   useEffect(() => {
-    if (draftLoaded)
+    if (draftLoaded && !isEditMode)
       void draftStorage.setItem(DRAFT_KEY, JSON.stringify({ ...values, images } satisfies Draft));
-  }, [draftLoaded, values, images]);
+  }, [draftLoaded, isEditMode, values, images]);
 
   const update = <K extends keyof CreateJobFormValues>(key: K, value: CreateJobFormValues[K]) => {
     setValues((current) => ({ ...current, [key]: value }));
@@ -342,7 +381,7 @@ export default function CreateJobScreen() {
   const validate = (target: number) => {
     const next: CreateJobErrors = {};
     if (target === 2) {
-      if (!images.length) next.images = 'Vennligst last opp minst ett bilde.';
+      if (!images.length && !existingImages.length) next.images = 'Vennligst last opp minst ett bilde.';
       if (values.title.trim().length < 5) next.title = 'Tittelen må være minst 5 tegn.';
       if (values.title.trim().length > 200)
         next.title = 'Tittelen kan ikke være lengre enn 200 tegn.';
@@ -382,7 +421,7 @@ export default function CreateJobScreen() {
     return Object.keys(next).length === 0;
   };
   const pickImages = async () => {
-    const room = 6 - images.length;
+    const room = 6 - existingImages.length - images.length;
     if (!room) return Alert.alert('Maks 6 bilder', 'Du kan laste opp inntil 6 bilder.');
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -508,6 +547,16 @@ export default function CreateJobScreen() {
   };
   const publish = () => {
     if (!validate(2) || !validate(3) || !validate(5)) return;
+    if (isEditMode && editId) {
+      updateMutation.mutate(
+        { serviceId: editId, values: { ...values, contactPhone: phone }, images, imagesToDelete },
+        {
+          onSuccess: () => Alert.alert('Oppdrag oppdatert', 'Endringene dine er lagret.', [{ text: 'OK', onPress: () => router.back() }]),
+          onError: (error) => Alert.alert('Kunne ikke oppdatere', getError(error) ?? 'Prøv igjen. Utkastet er beholdt.'),
+        }
+      );
+      return;
+    }
     createMutation.mutate(
       { values: { ...values, contactPhone: phone }, images },
       {
@@ -528,6 +577,9 @@ export default function CreateJobScreen() {
     );
   };
   const discard = () =>
+    isEditMode
+      ? router.back()
+      :
     Alert.alert('Forkast utkast?', 'Utkastet blir slettet.', [
       { text: 'Fortsett å redigere' },
       {
@@ -553,6 +605,20 @@ export default function CreateJobScreen() {
     if (datePicker === 'fromDate' && values.toDate && values.toDate < value) update('toDate', '');
     setDatePicker(null);
   };
+  const saving = createMutation.isPending || updateMutation.isPending;
+
+  if (isEditMode && ownerJobsQuery.isLoading && !editLoaded) {
+    return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><View className="flex-1 items-center justify-center"><ActivityIndicator color="#2E6641" size="large" /><Text className="mt-3 text-sm text-[#63665F]">Laster oppdrag...</Text></View></SafeAreaView>;
+  }
+  if (isEditMode && ownerJobsQuery.isError) {
+    return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ErrorState title="Kunne ikke laste oppdraget" message="Sjekk internettforbindelsen din og prøv igjen." actionLabel="Prøv igjen" onAction={() => void ownerJobsQuery.refetch()} /></SafeAreaView>;
+  }
+  if (isEditMode && !editLoaded) {
+    return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ErrorState title="Oppdraget ble ikke funnet" message="Annonsen er ikke tilgjengelig for redigering." actionLabel="Tilbake" onAction={() => router.back()} /></SafeAreaView>;
+  }
+  if (isEditMode && editUnavailable) {
+    return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ErrorState title="Oppdraget kan ikke redigeres" message={ownerJobsQuery.data?.find((item) => item._id === editId)?.capabilities?.blockedReason ?? 'Serveren tillater ikke redigering av dette oppdraget.'} actionLabel="Tilbake" onAction={() => router.back()} /></SafeAreaView>;
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-[#EFF0EA]">
@@ -565,10 +631,10 @@ export default function CreateJobScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Text className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-[#63665F]">
-            Nytt oppdrag
+            {isEditMode ? 'Rediger oppdrag' : 'Nytt oppdrag'}
           </Text>
           <Text className="mt-2 text-[1.9rem] font-bold leading-tight text-[#0B0B0B]">
-            Legg ut et oppdrag
+            {isEditMode ? 'Rediger oppdraget ditt' : 'Legg ut et oppdrag'}
           </Text>
           <Text className="mt-2 text-[0.9375rem] leading-relaxed text-[#63665F]">
             Fire korte steg. Du kan forhåndsvise underveis, og utkastet lagres automatisk.
@@ -673,6 +739,12 @@ export default function CreateJobScreen() {
                   Vis frem oppdraget med inntil 6 bilder
                 </Text>
                 <View className="mt-4 flex-row flex-wrap gap-2">
+                  {existingImages.map((imageUrl) => (
+                    <View key={imageUrl} className="relative h-24 w-[31%] overflow-hidden rounded-xl">
+                      <Image source={{ uri: imageUrl }} className="h-full w-full" resizeMode="cover" />
+                      <Pressable onPress={() => { setExistingImages((current) => current.filter((url) => url !== imageUrl)); setImagesToDelete((current) => [...current, imageUrl]); }} className="absolute right-1 top-1 h-6 w-6 items-center justify-center rounded-full bg-black/60"><X size={13} color="#FFF" /></Pressable>
+                    </View>
+                  ))}
                   {images.map((image, index) => (
                     <View
                       key={`${image.uri}-${index}`}
@@ -684,9 +756,7 @@ export default function CreateJobScreen() {
                         resizeMode="cover"
                       />
                       <Pressable
-                        onPress={() =>
-                          setImages((current) => current.filter((_, i) => i !== index))
-                        }
+                        onPress={() => setImages((current) => current.filter((_, i) => i !== index))}
                         className="absolute right-1 top-1 h-6 w-6 items-center justify-center rounded-full bg-black/60"
                       >
                         <X size={13} color="#FFF" />
@@ -1139,7 +1209,7 @@ export default function CreateJobScreen() {
           <View className="flex-row items-center gap-1">
             <Pressable
               onPress={step === 1 ? discard : () => setStep(step - 1)}
-              disabled={createMutation.isPending}
+              disabled={saving}
               className="h-11 flex-1 flex-row items-center justify-center gap-1"
             >
               <ArrowLeft size={17} color="#63665F" />
@@ -1149,7 +1219,7 @@ export default function CreateJobScreen() {
             </Pressable>
             <Pressable
               onPress={() => setShowPreview(true)}
-              disabled={createMutation.isPending}
+              disabled={saving}
               className="h-11 flex-1 flex-row items-center justify-center gap-1 rounded-full border border-[#E6E7E1] bg-white"
             >
               <Eye size={16} color="#0B0B0B" />
@@ -1157,14 +1227,14 @@ export default function CreateJobScreen() {
             </Pressable>
             <Pressable
               onPress={next}
-              disabled={createMutation.isPending}
+              disabled={saving}
               className="h-11 flex-1 flex-row items-center justify-center gap-1 rounded-full bg-[#2E6641]"
             >
               <Text className="text-[0.75rem] font-semibold text-white">
-                {createMutation.isPending
-                  ? 'Publiserer…'
+                {saving
+                  ? isEditMode ? 'Lagrer…' : 'Publiserer…'
                   : step === 4
-                    ? 'Publiser oppdrag'
+                    ? isEditMode ? 'Lagre endringer' : 'Publiser oppdrag'
                     : 'Neste'}
               </Text>
               {step < 4 ? <ChevronRight size={17} color="#FFF" /> : null}
@@ -1244,9 +1314,9 @@ export default function CreateJobScreen() {
                 <X size={20} color="#63665F" />
               </Pressable>
             </View>
-            {images[0] ? (
+            {existingImages[0] || images[0] ? (
               <Image
-                source={{ uri: images[0].uri }}
+                source={{ uri: existingImages[0] || images[0].uri }}
                 className="h-56 w-full rounded-2xl"
                 resizeMode="cover"
               />

@@ -80,6 +80,7 @@ const jwt = require('jsonwebtoken');
  *         description: Ugyldig input
  */
 router.post('/register', authLimiter, authController.register);
+router.post('/accept-terms', authenticate, authController.acceptTerms);
 
 /**
  * @swagger
@@ -119,9 +120,24 @@ router.post('/verify-otp', otpVerifyLimiter, authController.verifyOtp);
 router.post('/reset-password', otpVerifyLimiter, authController.resetPassword);
 
 // Change Password (authenticated — requires current password + OTP)
-router.post('/change-password/send-otp', authenticate, otpSendLimiter, authController.changePasswordSendOtp);
-router.post('/change-password/send-otp-no-password', authenticate, otpSendLimiter, authController.changePasswordSendOtpNoPassword);
-router.post('/change-password/verify-otp', authenticate, otpVerifyLimiter, authController.changePasswordVerifyOtp);
+router.post(
+  '/change-password/send-otp',
+  authenticate,
+  otpSendLimiter,
+  authController.changePasswordSendOtp
+);
+router.post(
+  '/change-password/send-otp-no-password',
+  authenticate,
+  otpSendLimiter,
+  authController.changePasswordSendOtpNoPassword
+);
+router.post(
+  '/change-password/verify-otp',
+  authenticate,
+  otpVerifyLimiter,
+  authController.changePasswordVerifyOtp
+);
 
 /**
  * PUBLIC on purpose — no `authenticate`.

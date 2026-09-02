@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Alert, AppState, Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, AppState, Linking, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import {
   ArrowLeft,
   BadgeCheck,
@@ -29,6 +29,7 @@ import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 
 type PlanType = 'private' | 'business';
+const canPurchaseMembershipInApp = Platform.OS !== 'android';
 
 const money = (value: number) =>
   `${new Intl.NumberFormat('nb-NO', { maximumFractionDigits: 0 }).format(Number(value) || 0)} kr`;
@@ -227,6 +228,7 @@ export default function MembershipScreen() {
   }, [queryClient]);
 
   const handleApplyCoupon = () => {
+    if (!canPurchaseMembershipInApp) return;
     const code = couponInput.trim();
     if (!code || !selectedPlan) return;
     setCouponError(null);
@@ -251,6 +253,7 @@ export default function MembershipScreen() {
   };
 
   const handleCheckout = () => {
+    if (!canPurchaseMembershipInApp) return;
     // Re-assert every precondition at the call site. The render tree already
     // hides the button in these states, but the invariant should not depend on
     // the button being the only possible trigger.
@@ -529,7 +532,7 @@ export default function MembershipScreen() {
         )}
 
         {/* Coupon — only meaningful for a paid plan we can actually buy */}
-        {selectedPlan && !isFree && !alreadyPaid ? (
+        {canPurchaseMembershipInApp && selectedPlan && !isFree && !alreadyPaid ? (
           <View className="mt-5 rounded-3xl border border-[#E6E7E1] bg-white p-5">
             <View className="flex-row items-center">
               <Tag size={16} color="#63665F" />
@@ -678,7 +681,7 @@ export default function MembershipScreen() {
                   </Text>
                 </View>
               </View>
-            ) : (
+            ) : canPurchaseMembershipInApp ? (
               <Pressable
                 onPress={handleCheckout}
                 disabled={checkoutPending}
@@ -704,6 +707,12 @@ export default function MembershipScreen() {
                   </>
                 )}
               </Pressable>
+            ) : (
+              <View className="mt-4 rounded-2xl bg-[#F4F6F0] px-4 py-3.5">
+                <Text className="text-center text-[0.875rem] leading-5 text-[#63665F]">
+                  Abonnementskjøp i Android-appen er ikke tilgjengelig akkurat nå.
+                </Text>
+              </View>
             )}
           </View>
         ) : null}
@@ -729,7 +738,7 @@ export default function MembershipScreen() {
           </Pressable>
         ) : null}
 
-        <View className="mt-5 flex-row items-start px-1">
+        {canPurchaseMembershipInApp ? <View className="mt-5 flex-row items-start px-1">
           <View className="mt-0.5">
             <Info size={14} color="#9B9E96" />
           </View>
@@ -738,7 +747,7 @@ export default function MembershipScreen() {
             Stripe har bekreftet betalingen — det kan ta noen sekunder etter at du kommer tilbake til
             appen.
           </Text>
-        </View>
+        </View> : null}
       </ScrollView>
     </SafeAreaView>
   );

@@ -72,6 +72,9 @@ const ListDetailPage = lazy(() =>
 );
 const TeamPage = lazy(() => import('../pages/TeamPage/TeamPage.tsx'));
 const SupportPage = lazy(() => import('../pages/SupportPage/SupportPage.tsx'));
+const DeleteAccountRequestPage = lazy(
+  () => import('../pages/DeleteAccountRequestPage/DeleteAccountRequestPage.tsx')
+);
 const MineAnnonser = lazy(() => import('../pages/MyJobsPage/MineAnnonser.tsx'));
 const JobListingDetailPage = lazy(
   () => import('../pages/JobListingDetailPage/JobListingDetailPage.tsx')
@@ -295,6 +298,7 @@ export const routes: RouteObject[] = [
       { path: 'team', element: withSuspense(TeamPage) },
       { path: 'contact/success', element: withSuspense(ContactSuccessPage) },
       { path: 'support', element: withSuspense(SupportPage) },
+      { path: 'delete-account', element: withSuspense(DeleteAccountRequestPage) },
       {
         path: 'messages',
         element: <ProtectedRoute>{withSuspense(MessagesPageSplit)}</ProtectedRoute>,

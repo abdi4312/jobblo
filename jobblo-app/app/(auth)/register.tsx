@@ -13,6 +13,7 @@ import { ArrowLeft, Eye, EyeOff, Loader2, ShieldCheck } from 'lucide-react-nativ
 import { useRouter } from 'expo-router';
 import { useRegisterMutation } from '@/hooks/useRegisterMutation';
 import { useRegistrationStore } from '@/store/registrationStore';
+import { userTerms } from '@/content/userTerms';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -36,6 +37,7 @@ export default function RegisterScreen() {
   const [step, setStep] = useState<Step>('identity');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverMessage, setServerMessage] = useState('');
 
@@ -89,6 +91,10 @@ export default function RegisterScreen() {
       nextErrors.confirmPassword = 'Passordene matcher ikke';
     }
 
+    if (!formData.acceptedTerms) {
+      nextErrors.acceptedTerms = 'Du må godta Brukervilkårene for å opprette konto.';
+    }
+
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -109,6 +115,8 @@ export default function RegisterScreen() {
         lastName: formData.lastName,
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
+        acceptedTerms: formData.acceptedTerms,
+        termsVersion: userTerms.currentVersion,
         role: formData.role,
         ...(isCompany && {
           companyName: formData.companyName,
@@ -401,6 +409,47 @@ export default function RegisterScreen() {
                       </View>
                       {errors.confirmPassword ? (
                         <Text className="text-[12px] text-[#B0453B]">{errors.confirmPassword}</Text>
+                      ) : null}
+                    </View>
+
+                    <View className="rounded-xl border border-line bg-[#F5F6F1] p-3">
+                      <Pressable onPress={() => setShowTerms((current) => !current)} className="flex-row items-center justify-between gap-3">
+                        <Text className="flex-1 text-[13px] font-medium text-ink">Jeg godtar Brukervilkårene</Text>
+                        <Text className="text-[12px] font-semibold text-brand">{showTerms ? 'Skjul' : 'Vis'}</Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => setFormData({ acceptedTerms: !formData.acceptedTerms })}
+                        className="mt-3 flex-row items-center gap-2"
+                      >
+                        <View
+                          className={`h-5 w-5 items-center justify-center rounded border ${formData.acceptedTerms ? 'border-brand bg-brand' : 'border-[#9B9E96] bg-white'}`}
+                        >
+                          {formData.acceptedTerms ? <Text className="text-[10px] font-bold text-white">✓</Text> : null}
+                        </View>
+                        <Text className="flex-1 text-[12px] leading-5 text-muted">
+                          Jeg godtar Brukervilkårene og bekrefter at jeg vil følge Jobblos regler for brukergenerert innhold.
+                        </Text>
+                      </Pressable>
+
+                      {showTerms ? (
+                        <View className="mt-3 max-h-52 rounded-xl border border-line bg-white p-3">
+                          <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} className="max-h-52">
+                            <Text className="text-[12px] font-semibold text-ink">{userTerms.title}</Text>
+                            <Text className="mt-2 text-[11px] text-muted">Sist oppdatert: {userTerms.lastUpdatedDisplay}</Text>
+                            <Text className="mt-3 text-[11px] leading-5 text-muted">{userTerms.intro}</Text>
+                            {userTerms.sections.map((section) => (
+                              <View key={section.id} className="mt-3">
+                                <Text className="text-[11px] font-semibold text-ink">{section.id}. {section.title}</Text>
+                                <Text className="mt-1 text-[11px] leading-5 text-muted">{section.content}</Text>
+                              </View>
+                            ))}
+                          </ScrollView>
+                        </View>
+                      ) : null}
+
+                      {errors.acceptedTerms ? (
+                        <Text className="mt-2 text-[12px] text-[#B0453B]">{errors.acceptedTerms}</Text>
                       ) : null}
                     </View>
 

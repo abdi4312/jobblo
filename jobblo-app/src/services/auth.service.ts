@@ -10,6 +10,8 @@ export type RegisterRequest = {
   lastName: string;
   email: string;
   password: string;
+  acceptedTerms: boolean;
+  termsVersion?: string;
   role?: string;
   companyName?: string;
   orgNumber?: string;
@@ -36,6 +38,11 @@ export async function loginUser(credentials: LoginRequest): Promise<LoginRespons
 
 export async function registerUser(payload: RegisterRequest): Promise<LoginResponse> {
   const response = await apiClient.post<LoginResponse>('/auth/register', payload);
+  return response.data;
+}
+
+export async function acceptTerms(): Promise<{ user: AuthUser; acceptedTerms: boolean; termsVersion: string }> {
+  const response = await apiClient.post<{ user: AuthUser; acceptedTerms: boolean; termsVersion: string }>('/auth/accept-terms', {});
   return response.data;
 }
 

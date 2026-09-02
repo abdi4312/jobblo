@@ -50,6 +50,9 @@ export interface Job {
   hourlyRate?: number;
   paymentType?: string;
   location: JobLocation;
+  countyCode?: string;
+  municipalityCode?: string;
+  areaCode?: string;
   duration: JobDuration;
   categories: string[];
   images: string[];

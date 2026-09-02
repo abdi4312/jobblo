@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 export default function CookiePolicyPage() {
   const sections = [
     {
@@ -98,8 +100,12 @@ export default function CookiePolicyPage() {
             Dette dokumentet gir et sammendrag av hvilke data vi samler inn, hvorfor vi samler dem
             inn, hvem de kan deles med, og hvordan du f\u00E5r tilgang til dine rettigheter knyttet til
             dine personopplysninger.
-          </p>
-        </div>
+          </p>          <p style={styles.paragraph}>
+            Du kan be om sletting av Jobblo-kontoen din her:{' '}
+            <Link to="/delete-account" style={styles.inlineLink}>
+              /delete-account
+            </Link>
+          </p>        </div>
 
         {sections.map((section) => (
           <div key={section.id} id={`section-${section.id}`} style={{ marginBottom: '40px' }}>
@@ -149,6 +155,11 @@ const styles = {
     fontSize: '18px',
     lineHeight: '1.6',
     marginBottom: '20px',
+  },
+  inlineLink: {
+    color: '#1a3a1a',
+    textDecoration: 'underline',
+    fontWeight: 600,
   },
   sectionTitle: {
     fontSize: '28px',

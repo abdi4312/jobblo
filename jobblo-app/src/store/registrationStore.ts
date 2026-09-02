@@ -6,6 +6,7 @@ export type RegistrationFormData = {
   email: string;
   password: string;
   confirmPassword: string;
+  acceptedTerms: boolean;
   role: 'user' | 'company';
   companyName?: string;
   orgNumber?: string;
@@ -23,6 +24,7 @@ const initialState: RegistrationFormData = {
   email: '',
   password: '',
   confirmPassword: '',
+  acceptedTerms: false,
   role: 'user',
   companyName: '',
   orgNumber: '',
