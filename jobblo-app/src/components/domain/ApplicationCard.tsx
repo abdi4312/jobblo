@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, Text, View } from 'react-native';
 import {
   ArrowRight,
   Briefcase,
@@ -127,9 +127,7 @@ export function ApplicationCard({
               <View className="mt-2.5 flex-row items-center gap-2">
                 {service.customer.avatarUrl ? (
                   <View className="h-6 w-6 overflow-hidden rounded-full border border-[#E6E7E1] bg-[#EAF1E9]">
-                    <Text className="text-center text-[0.625rem] font-semibold text-[#2E6641]">
-                      {getInitials(service.customer.name, service.customer.lastName)}
-                    </Text>
+                    <Image source={{ uri: service.customer.avatarUrl }} className="h-full w-full" />
                   </View>
                 ) : (
                   <View className="h-6 w-6 items-center justify-center rounded-full bg-[#EAF1E9]">

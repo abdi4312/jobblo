@@ -157,6 +157,7 @@ export const queryKeys = {
   },
   users: {
     profile: (userId: string) => ['users', 'profile', userId] as const,
+    blocked: (page: number, limit: number) => ['users', 'blocked', page, limit] as const,
     services: (userId: string) => ['users', 'services', userId] as const,
     top: (params: { page?: number; limit?: number; postNumber?: string; postSted?: string; address?: string }) =>
       ['users', 'top', params] as const,

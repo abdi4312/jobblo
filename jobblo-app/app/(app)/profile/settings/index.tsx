@@ -181,8 +181,16 @@ export default function SettingsOverviewScreen() {
             icon={ShieldCheck}
             onPress={() => router.push('/profile/settings/privacy')}
           />
-          <SettingsRow title="Søkemotorsynlighet" icon={Eye} />
-          <SettingsRow title="Blokkerte brukere" icon={ShieldCheck} />
+          <SettingsRow
+            title="Søkemotorsynlighet"
+            icon={Eye}
+            onPress={() => router.push('/profile/settings/visibility')}
+          />
+          <SettingsRow
+            title="Blokkerte brukere"
+            icon={ShieldCheck}
+            onPress={() => router.push('/profile/settings/blocked-users')}
+          />
         </Group>
         <Group title="Annet">
           <SettingsRow

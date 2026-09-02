@@ -41,7 +41,7 @@ export default function MyApplicationsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ tab?: string | string[] }>();
   const requestedTab = Array.isArray(params.tab) ? params.tab[0] : params.tab;
-  const initialTab: OverviewTabKey = requestedTab === 'mine-sokere' ? 'mine-sokere' : 'mine-soknader';
+  const initialTab: OverviewTabKey = requestedTab === 'mine-soknader' ? 'mine-soknader' : 'mine-sokere';
   const [activeTab, setActiveTab] = useState<OverviewTabKey>(initialTab);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [searchText, setSearchText] = useState('');
