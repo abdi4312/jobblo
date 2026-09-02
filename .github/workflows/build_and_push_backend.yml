@@ -1,14 +1,15 @@
 name: build_and_push_container
-#test
+
 on:
   workflow_call:
 
+# Disabled: the project deploys manually through deploy.sh to Linode.
 permissions:
-  id-token: write
-  contents: write
+  contents: read
 
 jobs:
   build-and-push:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -75,7 +76,7 @@ jobs:
           az containerapp show \
             --name jobblo-container-app \
             --resource-group jobblo-rg \
-            || (echo "❌ Container App does not exist" && exit 1)
+            || (echo "Container App does not exist" && exit 1)
 
       - name: Configure container registry for Container App
         run: |
@@ -106,8 +107,3 @@ jobs:
             --resource-group jobblo-rg \
             --image $IMAGE_NAME:$IMAGE_TAG \
             --container-name $CONTAINER_NAME
-
-      # Optional: restart revision to rollout immediately
-      # - name: Restart container app revision
-      #   run: |
-      #     az containerappp revision restart --name jobblo-container-app --resource-group jobblo-rg

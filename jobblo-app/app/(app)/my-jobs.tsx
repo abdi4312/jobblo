@@ -236,11 +236,16 @@ export default function MyJobsScreen() {
   const [pendingDelete, setPendingDelete] = useState<MyJob | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const { data, isLoading, isError, refetch, isRefetching } = useMyJobs();
+  const { data, isLoading, isError, refetch } = useMyJobs();
   // Applicant counts and the real order id live on the applicants overview —
   // /services/my-posted returns neither, so SafePay routing reuses this source
   // instead of guessing an orderId.
-  const { data: overview } = useMyApplicantsOverview();
+  const { data: overview, refetch: refetchOverview } = useMyApplicantsOverview();
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try { await Promise.all([refetch(), refetchOverview()]); } finally { setRefreshing(false); }
+  };
   const deleteMutation = useDeleteMyJobMutation();
 
   const jobs = data ?? [];
@@ -344,8 +349,8 @@ export default function MyJobsScreen() {
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 120 }}
         refreshControl={
           <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={() => void refetch()}
+            refreshing={refreshing}
+            onRefresh={() => void handleRefresh()}
             tintColor="#2E6641"
           />
         }

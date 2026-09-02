@@ -6,17 +6,12 @@ on:
       - main
   workflow_dispatch:
 
+# Disabled: deployments are handled manually through deploy.sh on Linode.
 permissions:
-  id-token: write
-  contents: write
+  contents: read
 
 jobs:
-  #call-run-tests:
-  #uses: ./.github/workflows/run_tests.yml
-  #secrets: inherit
-
   call-build-and-push-backend:
-    #needs: call-run-tests
-    #if: ${{ needs.call-run-tests.resdult == 'success' }}
+    if: ${{ false }}
     uses: ./.github/workflows/build_and_push_backend.yml
     secrets: inherit

@@ -237,7 +237,11 @@ exports.getAllServices = async (req, res) => {
     // find() and countDocuments() ran sequentially for no reason.
     const [services, total] = await Promise.all([
       Service.find(query)
-        .populate('userId', 'name avatarUrl verified role orgNumber companyName')
+        .populate({
+          path: 'userId',
+          select: 'name avatarUrl verified role orgNumber companyName',
+          match: { isDeleted: { $ne: true } },
+        })
         .skip((safePage - 1) * safeLimit)
         .limit(safeLimit)
         .sort(sortOption),
@@ -275,10 +279,11 @@ exports.getServiceById = async (req, res) => {
     // id — exactly the set the list endpoint was hardened to hide — and the counter
     // rose on the owner's own refreshes and on every crawler hit, while `views` is a
     // sortable public field.
-    const service = await Service.findById(id).populate(
-      'userId',
-      'name avatarUrl averageRating verified role orgNumber companyName'
-    );
+    const service = await Service.findById(id).populate({
+      path: 'userId',
+      select: 'name avatarUrl averageRating verified role orgNumber companyName',
+      match: { isDeleted: { $ne: true } },
+    });
 
     if (!service) return res.status(404).json({ error: 'Service not found' });
 
@@ -820,6 +825,31 @@ exports.deleteService = async (req, res) => {
     }
 
     await service.deleteOne();
+
+    // Cascade cleanup: delete Orders and Reviews referencing this service.
+    // Orders are not deleted but cancelled to preserve audit trail of completed work.
+    try {
+      const cancelledOrders = await require('../models/Order').updateMany(
+        { serviceId: id, status: { $in: ['pending', 'accepted'] } },
+        { $set: { status: 'cancelled', cancelledAt: new Date() } }
+      );
+      if (cancelledOrders.modifiedCount > 0) {
+        console.log(`deleteService: cancelled ${cancelledOrders.modifiedCount} pending orders for service ${id}`);
+      }
+    } catch (orderErr) {
+      console.error('Order cascade cancel on service delete failed:', orderErr.message);
+    }
+
+    // Delete all Reviews for this service. Reviews become meaningless once the service
+    // is gone, and preserving them orphaned clutters the database.
+    try {
+      const deletedReviews = await require('../models/Review').deleteMany({ serviceId: id });
+      if (deletedReviews.deletedCount > 0) {
+        console.log(`deleteService: deleted ${deletedReviews.deletedCount} reviews for service ${id}`);
+      }
+    } catch (reviewErr) {
+      console.error('Review cascade delete on service delete failed:', reviewErr.message);
+    }
 
     res.json({ message: 'Service deleted' });
   } catch (err) {

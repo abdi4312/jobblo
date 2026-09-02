@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowLeft,
@@ -147,7 +147,12 @@ export default function PublicProfileScreen() {
   }, [isSelf]);
 
   const { data: user, isLoading, isError, refetch } = usePublicProfile(isSelf ? null : userId ?? null);
-  const { data: services = [], isLoading: servicesLoading } = usePublicUserServices(isSelf ? null : userId ?? null);
+  const { data: services = [], isLoading: servicesLoading, refetch: refetchServices } = usePublicUserServices(isSelf ? null : userId ?? null);
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try { await Promise.all([refetch(), refetchServices()]); } finally { setRefreshing(false); }
+  };
 
   if (selfLoading && !isSelf) {
     return (
@@ -213,7 +218,7 @@ export default function PublicProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#EFF0EA]" edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />}>
         {/* This screen is pushed from Home, alerts and chat with headerShown: false, so the
             back control has to live in the content. */}
         <Pressable

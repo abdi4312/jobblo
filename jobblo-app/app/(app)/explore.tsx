@@ -5,6 +5,7 @@ import {
   FlatList,
   Pressable,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
@@ -44,6 +45,7 @@ export default function ExploreScreen() {
     fetchNextPage,
     isFetchingNextPage,
     refetch,
+    isRefetching,
   } = useInfiniteJobs({
     search: filters.searchText,
     categories: filters.selectedCategories,
@@ -289,6 +291,7 @@ export default function ExploreScreen() {
         onEndReachedThreshold={0.5}
         contentContainerStyle={{ paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefetching && !isFetchingNextPage} onRefresh={() => void refetch()} tintColor="#2E6641" />}
         ListEmptyComponent={
           !isLoading && !isError && allJobs.length === 0 ? (
             <View className="mx-4 rounded-[24px] border border-[#E6E7E1] bg-white p-6">
