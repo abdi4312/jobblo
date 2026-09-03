@@ -43,6 +43,7 @@ router.put('/users/:id/status', usersAdminController.updateUserStatus);
 router.put('/users/:id/verify', usersAdminController.verifyUser);
 router.delete('/users/:id', usersAdminController.softDeleteUser);
 router.put('/users/:id/restore', usersAdminController.restoreUser);
+router.put('/users/:id/reactivate', usersAdminController.reactivateUser);
 router.delete('/users/:id/sessions', usersAdminController.revokeUserSessions);
 
 // ── Orders ─────────────────────────────────────────────────────────────────
@@ -104,8 +105,14 @@ router.patch('/chat-reports/:reportId/assign', chatReportsAdminController.assign
 router.patch('/chat-reports/:reportId/priority', chatReportsAdminController.updatePriority);
 router.patch('/chat-reports/:reportId/status', chatReportsAdminController.updateStatus);
 router.post('/chat-reports/:reportId/internal-notes', chatReportsAdminController.addInternalNote);
-router.post('/chat-reports/:reportId/request-information', chatReportsAdminController.requestInformation);
-router.post('/chat-reports/:reportId/official-message', chatReportsAdminController.addOfficialMessage);
+router.post(
+  '/chat-reports/:reportId/request-information',
+  chatReportsAdminController.requestInformation
+);
+router.post(
+  '/chat-reports/:reportId/official-message',
+  chatReportsAdminController.addOfficialMessage
+);
 router.post('/chat-reports/:reportId/resolve', chatReportsAdminController.resolveReport);
 router.post('/chat-reports/:reportId/dismiss', chatReportsAdminController.resolveReport); // dismiss via resolve with no_violation outcome
 router.post('/chat-reports/:reportId/reopen', chatReportsAdminController.reopenReport);

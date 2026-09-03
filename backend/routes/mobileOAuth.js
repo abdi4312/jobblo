@@ -30,11 +30,17 @@ function googleCallback(req, res, next) {
       return res.redirect(oauthDestination({ req, platform: 'mobile', error: 'google_failed' }));
     }
     if (!user) {
-      return res.redirect(oauthDestination({ req, platform: 'mobile', error: info?.code || 'google_failed' }));
+      return res.redirect(
+        oauthDestination({ req, platform: 'mobile', error: info?.code || 'google_failed' })
+      );
     }
 
-    if (user.isDeleted || user.accountStatus === 'deactivated') {
-      return res.redirect(oauthDestination({ req, platform: 'mobile', error: 'account_deactivated' }));
+    if (
+      user.isDeleted ||
+      user.accountStatus === 'inactive' ||
+      user.accountStatus === 'deactivated'
+    ) {
+      return res.redirect(oauthDestination({ req, platform: 'mobile', error: 'account_inactive' }));
     }
 
     try {
@@ -61,8 +67,12 @@ function googleCallback(req, res, next) {
 
 router.get('/google', optionalAuthenticate, googleStart);
 router.get('/google/callback', googleCallback);
-router.get('/vipps', optionalAuthenticate, (req, res) => vippsController.redirectToVipps(req, res, { platform: 'mobile' }));
-router.get('/vipps/callback', (req, res) => vippsController.vippsCallback(req, res, { platform: 'mobile' }));
+router.get('/vipps', optionalAuthenticate, (req, res) =>
+  vippsController.redirectToVipps(req, res, { platform: 'mobile' })
+);
+router.get('/vipps/callback', (req, res) =>
+  vippsController.vippsCallback(req, res, { platform: 'mobile' })
+);
 
 module.exports = router;
 module.exports.googleStart = googleStart;

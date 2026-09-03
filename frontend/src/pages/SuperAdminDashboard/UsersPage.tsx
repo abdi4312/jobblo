@@ -1,7 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Users, UserPlus, Calendar, Plus, Loader2 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-import { useAdminUsers, useCreateAdminUser, useChangeUserRole, useSoftDeleteUser, useVerifyUser, useUpdateUserStatus } from '../../hooks/admin';
+import { useAdminUsers, useCreateAdminUser, useChangeUserRole, useVerifyUser, useUpdateUserStatus } from '../../hooks/admin';
 import { AdminDataTable, AdminSearchInput, AdminFilterSelect, AdminStatusBadge, AdminConfirmDialog, AdminPageHeader, AdminStatCard } from '../../components/admin';
 import type { AdminUser } from '../../types/admin';
 import type { ColumnDef } from '../../components/admin/AdminDataTable';
@@ -50,7 +49,7 @@ export default function UsersPage() {
 
   // Dialog state
   const [createOpen, setCreateOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
+  const [statusTarget, setStatusTarget] = useState<AdminUser | null>(null);
   const [roleTarget, setRoleTarget] = useState<{ user: AdminUser; newRole: string } | null>(null);
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', role: 'user' });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -67,7 +66,6 @@ export default function UsersPage() {
   // Mutations
   const createMutation = useCreateAdminUser();
   const roleMutation = useChangeUserRole();
-  const deleteMutation = useSoftDeleteUser();
   const verifyMutation = useVerifyUser();
   const statusMutation = useUpdateUserStatus();
 
@@ -140,14 +138,16 @@ export default function UsersPage() {
             {/* Toggle status */}
             {!isSelf && (
               <button
-                onClick={() =>
-                  statusMutation.mutate({
-                    id: u._id,
-                    accountStatus: u.accountStatus === 'active' ? 'inactive' : 'active',
-                  })
-                }
+                onClick={() => {
+                  if (u.accountStatus === 'active') setStatusTarget(u);
+                  else statusMutation.mutate({ id: u._id, accountStatus: 'active' });
+                }}
                 disabled={statusMutation.isPending}
-                className="px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+                className={`px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${
+                  u.accountStatus === 'active'
+                    ? 'text-red-600 bg-red-50 hover:bg-red-100'
+                    : 'text-gray-600 bg-gray-100 hover:bg-gray-200'
+                }`}
                 aria-label={`${u.accountStatus === 'active' ? 'Deaktiver' : 'Aktiver'} ${u.name}`}
               >
                 {u.accountStatus === 'active' ? 'Deaktiver' : 'Aktiver'}
@@ -172,17 +172,6 @@ export default function UsersPage() {
                   </option>
                 ))}
               </select>
-            )}
-            {/* Delete */}
-            {!isSelf && (
-              <button
-                onClick={() => setDeleteTarget(u)}
-                disabled={deleteMutation.isPending}
-                className="px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
-                aria-label={`Arkiver ${u.name}`}
-              >
-                Arkiver
-              </button>
             )}
           </div>
         );
@@ -365,6 +354,21 @@ export default function UsersPage() {
 
       {/* Role change confirm */}
       <AdminConfirmDialog
+        title="Deaktiver bruker?"
+        description={`"${statusTarget?.name}" mister tilgangen, men historiske data beholdes.`}
+        confirmText="Ja, deaktiver"
+        cancelText="Avbryt"
+        variant="destructive"
+        isOpen={!!statusTarget}
+        onOpenChange={(open) => !open && setStatusTarget(null)}
+        onConfirm={async () => {
+          if (!statusTarget) return;
+          await statusMutation.mutateAsync({ id: statusTarget._id, accountStatus: 'inactive' });
+          setStatusTarget(null);
+        }}
+      />
+
+      <AdminConfirmDialog
         title="Endre brukerrolle?"
         description={`Vil du endre rollen til "${roleTarget?.user.name}" til "${roleTarget?.newRole}"?`}
         confirmText="Ja, endre rolle"
@@ -378,21 +382,6 @@ export default function UsersPage() {
         }}
       />
 
-      {/* Delete confirm */}
-      <AdminConfirmDialog
-        title="Arkiver bruker?"
-        description={`"${deleteTarget?.name}" vil bli deaktivert og arkivert. Alle tilhørende data bevares.`}
-        confirmText="Ja, arkiver"
-        cancelText="Avbryt"
-        variant="destructive"
-        isOpen={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-        onConfirm={async () => {
-          if (!deleteTarget) return;
-          await deleteMutation.mutateAsync(deleteTarget._id);
-          setDeleteTarget(null);
-        }}
-      />
     </div>
   );
 }

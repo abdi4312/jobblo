@@ -168,6 +168,8 @@ const userSchema = new mongoose.Schema(
       enum: ['active', 'inactive', 'verified'],
       default: 'active',
     },
+    deactivatedAt: { type: Date, default: null },
+    deactivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
     averageRating: {
       type: Number,
