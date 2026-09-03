@@ -31,6 +31,12 @@ const couponSchema = new mongoose.Schema(
     activeDate: { type: Date, default: Date.now },
     expiresDate: { type: Date, required: true },
     usedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    source: { type: String, enum: ['legacy', 'stripe'], default: 'legacy' },
+    stripeCouponId: { type: String, default: null },
+    stripePromotionCodeId: { type: String, default: null },
+    stripeMode: { type: String, enum: ['test', 'live'], default: null },
+    duration: { type: String, enum: ['once', 'forever', 'repeating'], default: null },
+    durationInMonths: { type: Number, default: null },
   },
   { timestamps: true }
 );

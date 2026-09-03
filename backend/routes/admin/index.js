@@ -21,9 +21,15 @@ const systemAdminController = require('../../controllers/admin/systemAdminContro
 const contentAdminController = require('../../controllers/admin/contentAdminController');
 const evidenceUploadController = require('../../controllers/admin/evidenceUploadController');
 const shopAdminController = require('../../controllers/admin/shopAdminController');
+const promotionCodeController = require('../../controllers/admin/promotionCodeController');
 
 // Apply auth + admin check + rate limiter to ALL routes
 router.use(authenticate, requireAdmin, adminLimiter);
+
+// ── Stripe membership promotion codes ─────────────────────────────────────
+router.get('/promotion-codes', promotionCodeController.listPromotionCodes);
+router.post('/promotion-codes', promotionCodeController.createPromotionCode);
+router.post('/promotion-codes/:id/deactivate', promotionCodeController.deactivatePromotionCode);
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 router.get('/overview', dashboardController.getOverview);

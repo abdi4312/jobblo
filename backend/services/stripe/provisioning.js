@@ -6,10 +6,28 @@ const { upsertTransaction } = require('../../utils/transaction');
 const { upsertSubscription } = require('../../utils/subscription');
 const { notify } = require('../../services/notifications');
 const { getStripe } = require('../../config/stripe');
-const {
-  retrieveLiveSubscription,
-  isBillingCapableStripeStatus,
-} = require('./subscriptionState');
+const { retrieveLiveSubscription, isBillingCapableStripeStatus } = require('./subscriptionState');
+const SubscriptionPlan = require('../../models/SubscriptionPlan');
+const { resolveAllowedPlanType } = require('../../utils/planAccess');
+
+function promotionCodeFromSession(session) {
+  const discount = session?.discounts?.find((item) => item?.promotion_code);
+  const promotionCode = discount?.promotion_code;
+  return promotionCode && typeof promotionCode === 'object' ? promotionCode.code || null : null;
+}
+
+async function finalizedCheckoutSession(session) {
+  if (
+    !session?.id ||
+    (!session?.discounts?.length && !(session.total_details?.amount_discount > 0))
+  ) {
+    return session;
+  }
+  const stripe = await getStripe();
+  return stripe.checkout.sessions.retrieve(session.id, {
+    expand: ['discounts.promotion_code'],
+  });
+}
 
 /**
  * Provisioning for the two non-SafePay purchase types.
@@ -100,7 +118,8 @@ async function detectConflictingLiveSubscription({ userId, stripeSubscriptionId 
  * never from the client — every value below is trusted.
  */
 async function provisionSubscriptionFromSession(session) {
-  const metadata = session.metadata || {};
+  const finalizedSession = await finalizedCheckoutSession(session);
+  const metadata = finalizedSession.metadata || {};
 
   const userId = metadata.userId;
   if (!userId) return { ok: false, reason: 'missing_user_metadata' };
@@ -109,13 +128,22 @@ async function provisionSubscriptionFromSession(session) {
   const planName = metadata.planName;
   const planType = metadata.planType;
 
-  const discountAmount = Number(metadata.discountAmount || 0);
-  const discountCoupon = metadata.coupon || null;
-  const couponId = metadata.couponId || null;
+  const [plan, user] = await Promise.all([
+    SubscriptionPlan.findById(planId),
+    User.findById(userId),
+  ]);
+  if (!plan || plan.type !== planType) return { ok: false, reason: 'plan_metadata_mismatch' };
+  if (!user || resolveAllowedPlanType(user) !== plan.type) {
+    return { ok: false, reason: 'plan_type_not_allowed' };
+  }
+
+  const discountAmount = Number(finalizedSession.total_details?.amount_discount || 0) / 100;
+  const discountCoupon = promotionCodeFromSession(finalizedSession);
+  const couponId = null;
   const autoRenew = metadata.autoRenew === 'true';
 
-  const amount = session.amount_total ? session.amount_total / 100 : 0;
-  const stripeSubscriptionId = idOf(session.subscription);
+  const amount = Number(finalizedSession.amount_total || 0) / 100;
+  const stripeSubscriptionId = idOf(finalizedSession.subscription);
 
   // Keyed on the unique stripeSessionId, so a replay updates in place.
   await upsertTransaction({
@@ -123,9 +151,9 @@ async function provisionSubscriptionFromSession(session) {
     planId,
     planName,
     planType,
-    stripeSessionId: session.id,
+    stripeSessionId: finalizedSession.id,
     amount,
-    currency: session.currency || 'nok',
+    currency: finalizedSession.currency || 'nok',
     status: 'succeeded',
     type: 'subscription',
     discountAmount,

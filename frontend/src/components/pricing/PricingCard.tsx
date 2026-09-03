@@ -5,10 +5,11 @@ import type { Plan } from '../../features/plans/types';
 interface PricingCardProps {
   plan: Plan;
   isPopular: boolean;
+  canPurchase: boolean;
   onUpgradeClick: (plan: Plan) => void;
 }
 
-export const PricingCard: React.FC<PricingCardProps> = ({ plan, isPopular, onUpgradeClick }) => {
+export const PricingCard: React.FC<PricingCardProps> = ({ plan, isPopular, canPurchase, onUpgradeClick }) => {
   const isFree = plan.price === 0;
 
   return (
@@ -72,6 +73,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({ plan, isPopular, onUpg
         {/* CTA */}
         <button
           onClick={() => onUpgradeClick(plan)}
+          disabled={!canPurchase}
           className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${isPopular
               ? 'bg-white text-[#1a3a1a] hover:bg-[#f0faf0]'
               : isFree
@@ -79,8 +81,14 @@ export const PricingCard: React.FC<PricingCardProps> = ({ plan, isPopular, onUpg
                 : 'bg-[#1a3a1a] text-white hover:bg-[#254d25]'
             }`}
         >
-          {isFree ? 'Kom i gang gratis' : 'Velg denne planen'}
-          <ArrowRight size={15} />
+          {!canPurchase
+            ? plan.type === 'business'
+              ? 'Kun for bedriftskonto'
+              : 'Kun for privatkonto'
+            : isFree
+              ? 'Kom i gang gratis'
+              : 'Velg denne planen'}
+          {canPurchase && <ArrowRight size={15} />}
         </button>
       </div>
     </div>

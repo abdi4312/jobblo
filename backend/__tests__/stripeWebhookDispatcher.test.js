@@ -260,6 +260,27 @@ describe('routing by session type — the tab-close path', () => {
 
     expect(confirmPaidSession).not.toHaveBeenCalled();
   });
+
+  it('routes a zero-due membership session to provisioning', async () => {
+    provisioning.provisionSubscriptionFromSession.mockResolvedValue({ ok: true });
+    mockStripeConstructing({
+      id: 'evt_free_sub',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'cs_free_sub',
+          mode: 'subscription',
+          payment_status: 'no_payment_required',
+          metadata: { userId: 'u1', type: 'subscription' },
+        },
+      },
+    });
+
+    await stripeWebhook(makeReq(), makeRes());
+
+    expect(provisioning.provisionSubscriptionFromSession).toHaveBeenCalledTimes(1);
+    expect(confirmPaidSession).not.toHaveBeenCalled();
+  });
 });
 
 describe('subscription lifecycle events', () => {

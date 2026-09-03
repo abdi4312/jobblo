@@ -14,19 +14,14 @@ export default function PricingPage() {
   const {
     userType,
     setUserType,
+    canPurchase,
     selectedPlan,
     step,
     setStep,
-    promoCode,
-    setPromoCode,
-    isApplyingPromo,
-    discountInfo,
-    setDiscountInfo,
     isRedirecting,
     isLoading,
     currentPlans,
     handleUpgradeClick,
-    handleApplyPromo,
     handleCheckout,
     getIsPopular,
   } = usePricingLogic();
@@ -37,13 +32,7 @@ export default function PricingPage() {
         selectedPlan={selectedPlan}
         step={step}
         setStep={setStep}
-        promoCode={promoCode}
-        setPromoCode={setPromoCode}
-        isApplyingPromo={isApplyingPromo}
-        discountInfo={discountInfo}
-        setDiscountInfo={setDiscountInfo}
         isRedirecting={isRedirecting}
-        handleApplyPromo={handleApplyPromo}
         handleCheckout={handleCheckout}
       />
     );
@@ -97,6 +86,7 @@ export default function PricingPage() {
                 key={plan._id}
                 plan={plan}
                 isPopular={getIsPopular(plan)}
+                canPurchase={canPurchase(plan)}
                 onUpgradeClick={handleUpgradeClick}
               />
             ))}

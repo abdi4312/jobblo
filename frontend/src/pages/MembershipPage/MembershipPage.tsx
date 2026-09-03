@@ -5,8 +5,6 @@ import {
   Check,
   ShieldCheck,
   Loader2,
-  Tag,
-  X,
   AlertCircle,
   Sparkles,
   RotateCcw,
@@ -102,8 +100,13 @@ export default function MembershipPage() {
       toast.error(err?.response?.data?.message || 'Kunne ikke gjenoppta abonnementet'),
   });
 
-  const defaultType: 'private' | 'business' = user?.role === 'company' ? 'business' : 'private';
-  const [userType, setUserType] = useState<'private' | 'business'>(defaultType);
+  const allowedPlanType: 'private' | 'business' = user?.role === 'company' ? 'business' : 'private';
+  const [userType, setUserType] = useState<'private' | 'business'>(allowedPlanType);
+
+  useEffect(() => {
+    setUserType(allowedPlanType);
+    setSelectedId(null);
+  }, [allowedPlanType]);
 
   const typePlans = useMemo(
     () => (plans || []).filter((p) => p.type === userType).sort((a, b) => a.price - b.price),
@@ -111,16 +114,6 @@ export default function MembershipPage() {
   );
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [promoCode, setPromoCode] = useState('');
-  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
-  const [discount, setDiscount] = useState<{
-    originalPrice: number;
-    discountAmount: number;
-    finalPrice: number;
-    code: string;
-    type: 'percentage' | 'fixed';
-    amount: number;
-  } | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   /** The plan the account is actually on, matched by name — what the backend stores. */
@@ -139,10 +132,9 @@ export default function MembershipPage() {
   }, [typePlans, currentPlanId, selectedId]);
 
   const selectedPlan: Plan | null = typePlans.find((p) => p._id === selectedId) ?? null;
+  const isAllowedForAccount = selectedPlan?.type === allowedPlanType;
   const isFree = selectedPlan?.price === 0;
   const isCurrent = !!selectedPlan && selectedPlan._id === currentPlanId;
-  const finalPrice = discount ? discount.finalPrice : (selectedPlan?.price ?? 0);
-
   /**
    * Whether the account already holds a Stripe subscription that can bill it.
    *
@@ -173,43 +165,12 @@ export default function MembershipPage() {
     return true;
   }, [mySub]);
 
-  /**
-   * A coupon can discount a paid plan all the way to 0 kr. `calculateDiscount` clamps at
-   * zero, and Stripe rejects a recurring line item of `unit_amount: 0`, so the server
-   * refuses this with `zero_total_subscription`. Don't advertise it as purchasable.
-   */
-  const couponMakesFree = !isFree && finalPrice <= 0;
-
   /** Paid checkout is offered only where the server would actually accept it. */
   const canCheckout =
-    !!selectedPlan && !isFree && !isCurrent && !hasPaidSubscription && !couponMakesFree;
-
-  const resetPromo = () => {
-    setDiscount(null);
-    setPromoCode('');
-  };
+    !!selectedPlan && isAllowedForAccount && !isFree && !isCurrent && !hasPaidSubscription;
 
   const selectPlan = (id: string) => {
     setSelectedId(id);
-    resetPromo();
-  };
-
-  const handleApplyPromo = async () => {
-    if (!promoCode.trim() || !selectedPlan) return;
-    setIsApplyingPromo(true);
-    try {
-      const res = await mainLink.post('/api/coupons/validate', {
-        planId: selectedPlan._id,
-        code: promoCode.trim(),
-      });
-      setDiscount({ ...res.data.data, code: promoCode.trim() });
-      toast.success('Rabattkoden er aktivert');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || 'Ugyldig kode');
-      setDiscount(null);
-    } finally {
-      setIsApplyingPromo(false);
-    }
   };
 
   const handleCheckout = async () => {
@@ -218,9 +179,9 @@ export default function MembershipPage() {
     if (!selectedPlan || !canCheckout) return;
     setIsRedirecting(true);
     try {
-      const payload: { planId: string; couponCode?: string } = { planId: selectedPlan._id };
-      if (discount) payload.couponCode = discount.code;
-      const res = await mainLink.post('/api/stripe/create-checkout-session', payload);
+      const res = await mainLink.post('/api/stripe/create-checkout-session', {
+        planId: selectedPlan._id,
+      });
       if (!res.data?.url) throw new Error('Ingen betalingslenke i svaret');
       window.location.href = res.data.url;
     } catch (err: any) {
@@ -240,6 +201,10 @@ export default function MembershipPage() {
       // A plan retired since the catalogue was cached. `usePlans` holds it forever
       // (`staleTime: Infinity`), so it has to be asked again explicitly.
       if (err?.response?.data?.code === 'plan_inactive') {
+        void refetch();
+      }
+      if (err?.response?.data?.code === 'plan_type_not_allowed') {
+        setSelectedId(null);
         void refetch();
       }
       setIsRedirecting(false);
@@ -263,7 +228,6 @@ export default function MembershipPage() {
                 Bytt plan når du vil, og si opp når som helst. Ingen bindingstid.
               </p>
 
-              {/* Type switcher */}
               <div
                 role="tablist"
                 aria-label="Kontotype"
@@ -278,18 +242,16 @@ export default function MembershipPage() {
                     onClick={() => {
                       setUserType(type);
                       setSelectedId(null);
-                      resetPromo();
                     }}
                     className={`h-10 rounded-full px-5 text-[0.875rem] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${
-                      userType === type
-                        ? 'bg-[#2E6641] text-white'
-                        : 'text-[#63665F] hover:text-[#0B0B0B]'
+                      userType === type ? 'bg-[#2E6641] text-white' : 'text-[#63665F] hover:text-[#0B0B0B]'
                     }`}
                   >
                     {type === 'private' ? 'Privatperson' : 'Bedrift'}
                   </button>
                 ))}
               </div>
+
             </div>
 
             {isLoading ? (
@@ -421,56 +383,6 @@ export default function MembershipPage() {
               </div>
             )}
 
-            {/* ── Promo code ─────────────────────────────────────────────── */}
-            {selectedPlan && !isFree && (
-              <div className={`${CARD} p-5`}>
-                <p className="mb-3 flex items-center gap-1.5 text-[0.875rem] font-semibold text-[#0B0B0B]">
-                  <Tag size={14} strokeWidth={2} className="text-[#2E6641]" />
-                  Har du en rabattkode?
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleApplyPromo();
-                      }
-                    }}
-                    aria-label="Rabattkode"
-                    placeholder="SKRIV INN KODE"
-                    disabled={!!discount}
-                    className="h-11 min-w-0 flex-1 rounded-xl border border-[#E6E7E1] bg-white px-3.5 text-[0.875rem] font-medium uppercase tracking-[0.06em] text-[#0B0B0B] outline-none transition-colors placeholder:tracking-normal placeholder:text-[#9B9E96] focus:border-[#2E6641]/45 focus:ring-4 focus:ring-[#2E6641]/10 disabled:bg-[#F4F6F0] disabled:text-[#9B9E96]"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleApplyPromo}
-                    disabled={!promoCode.trim() || !!discount || isApplyingPromo}
-                    className="flex h-11 w-24 shrink-0 items-center justify-center rounded-xl bg-[#2E6641] text-[0.875rem] font-semibold text-white transition-colors hover:bg-[#255335] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/25 disabled:opacity-45"
-                  >
-                    {isApplyingPromo ? <Loader2 size={15} className="animate-spin" /> : 'Bruk'}
-                  </button>
-                </div>
-                {discount && (
-                  <div className="mt-2.5 flex items-center justify-between gap-2 rounded-xl bg-[#EAF1E9] px-3.5 py-2.5">
-                    <span className="text-[0.8125rem] text-[#2E6641]">
-                      <strong className="font-semibold">{discount.code}</strong> aktivert — du sparer{' '}
-                      {discount.discountAmount.toLocaleString('nb-NO')} kr
-                    </span>
-                    <button
-                      type="button"
-                      onClick={resetPromo}
-                      aria-label="Fjern rabattkoden"
-                      className="flex size-6 shrink-0 items-center justify-center rounded-full text-[#2E6641] transition-colors hover:bg-white"
-                    >
-                      <X size={13} strokeWidth={2.6} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* ══ RIGHT — subscription state + summary ═══════════════════════ */}
@@ -558,25 +470,25 @@ export default function MembershipPage() {
                         {isFree ? '0' : selectedPlan.price.toLocaleString('nb-NO')} kr
                       </span>
                     </div>
-                    {discount && (
-                      <div className="flex items-center justify-between gap-3 text-[#2E6641]">
-                        <span>Rabatt ({discount.code})</span>
-                        <span className="font-semibold tabular-nums">
-                          −{discount.discountAmount.toLocaleString('nb-NO')} kr
-                        </span>
-                      </div>
-                    )}
                     <div className="flex items-baseline justify-between gap-3 border-t border-[#E6E7E1] pt-3">
                       <span className="font-semibold text-[#0B0B0B]">
                         {isFree ? 'Totalt' : 'Trekkes i dag'}
                       </span>
                       <span className="text-[1.25rem] font-bold tabular-nums tracking-[-0.03em] text-[#0B0B0B]">
-                        {isFree ? '0' : finalPrice.toLocaleString('nb-NO')} kr
+                        {isFree ? '0' : selectedPlan.price.toLocaleString('nb-NO')} kr
                       </span>
                     </div>
                   </div>
 
-                  {isCurrent ? (
+                  {!isAllowedForAccount ? (
+                    <div className="mt-6 rounded-xl bg-[#F4F6F0] px-4 py-3.5 text-center">
+                      <p className="text-[0.875rem] font-semibold text-[#0B0B0B]">
+                        {selectedPlan.type === 'business'
+                          ? 'Denne planen er kun tilgjengelig for bedriftskontoer.'
+                          : 'Denne planen er kun tilgjengelig for privatkontoer.'}
+                      </p>
+                    </div>
+                  ) : isCurrent ? (
                     <div className="mt-6 rounded-xl bg-[#F4F6F0] px-4 py-3.5 text-center">
                       <p className="text-[0.875rem] font-semibold text-[#0B0B0B]">
                         Dette er planen du har nå
@@ -614,26 +526,6 @@ export default function MembershipPage() {
                             ville gitt deg to abonnement som begge trekkes hver måned, så det
                             er ikke mulig. Si opp det eksisterende abonnementet fra
                             abonnementskortet på denne siden først.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : couponMakesFree ? (
-                    <div className="mt-6 rounded-xl border border-[#E6E7E1] bg-[#F4F6F0] px-4 py-3.5">
-                      <div className="flex items-start gap-2.5">
-                        <AlertCircle
-                          size={15}
-                          strokeWidth={2.2}
-                          className="mt-0.5 shrink-0 text-[#63665F]"
-                        />
-                        <div>
-                          <p className="text-[0.875rem] font-semibold text-[#0B0B0B]">
-                            Rabatten gjør betalingen gratis
-                          </p>
-                          <p className="mt-1 text-[0.8125rem] leading-relaxed text-[#63665F]">
-                            Et abonnement må trekke minst 1 øre, så denne koden kan ikke
-                            brukes på {selectedPlan?.name}. Fjern koden for å fortsette, eller
-                            kontakt support.
                           </p>
                         </div>
                       </div>

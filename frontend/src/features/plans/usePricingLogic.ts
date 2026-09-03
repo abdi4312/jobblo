@@ -1,64 +1,43 @@
-import { useState } from 'react';
-import mainLink from '../../api/mainURLs';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import mainLink from '../../api/mainURLs';
 import { usePlans } from './hooks';
 import type { Plan } from './types';
+import { useUserStore } from '../../stores/userStore';
 
 export const usePricingLogic = () => {
-  const [userType, setUserType] = useState<'business' | 'private'>('business');
+  const user = useUserStore((state) => state.user);
+  const accountType: 'business' | 'private' | null =
+    user?.role === 'company'
+      ? 'business'
+      : user?.role === 'user' || user?.role === 'provider'
+        ? 'private'
+        : null;
+  const [publicType, setPublicType] = useState<'business' | 'private'>('business');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [step, setStep] = useState<'pricing' | 'checkout'>('pricing');
 
-  // Checkout States
-  const [promoCode, setPromoCode] = useState('');
-  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
-  const [discountInfo, setDiscountInfo] = useState<{
-    originalPrice: number;
-    discountAmount: number;
-    finalPrice: number;
-    code: string;
-    type: 'percentage' | 'fixed';
-    amount: number;
-  } | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   const { data: plans, isLoading } = usePlans();
+  const userType = accountType ?? publicType;
+
+  useEffect(() => {
+    setSelectedPlan(null);
+    setStep('pricing');
+  }, [accountType]);
 
   const handleUpgradeClick = (plan: Plan) => {
+    if (accountType && plan.type !== accountType) {
+      toast.error(
+        plan.type === 'business'
+          ? 'Denne planen er kun tilgjengelig for bedriftskontoer.'
+          : 'Denne planen er kun tilgjengelig for privatkontoer.'
+      );
+      return;
+    }
     setSelectedPlan(plan);
     setStep('checkout');
-    // Reset checkout states
-    setPromoCode('');
-    setDiscountInfo(null);
-  };
-
-  const handleApplyPromo = async () => {
-    if (!promoCode.trim() || !selectedPlan) return;
-
-    setIsApplyingPromo(true);
-    try {
-      const res = await mainLink.post('/api/coupons/validate', {
-        planId: selectedPlan._id,
-        code: promoCode.trim(),
-      });
-
-      // Backend returns { success: true, data: { ... } }
-      setDiscountInfo({
-        ...res.data.data,
-        code: promoCode.trim(),
-      });
-      toast.success(res.data.message || 'Promo code activated! 🎉');
-    } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { error?: string; message?: string } };
-      };
-      toast.error(
-        err?.response?.data?.error || err?.response?.data?.message || 'Invalid coupon code'
-      );
-      setDiscountInfo(null);
-    } finally {
-      setIsApplyingPromo(false);
-    }
   };
 
   const handleCheckout = async () => {
@@ -66,18 +45,18 @@ export const usePricingLogic = () => {
 
     setIsRedirecting(true);
     try {
-      const payload: { planId: string; couponCode?: string } = {
+      const res = await mainLink.post('/api/stripe/create-checkout-session', {
         planId: selectedPlan._id,
-      };
-
-      if (discountInfo) {
-        payload.couponCode = discountInfo.code;
-      }
-
-      const res = await mainLink.post('/api/stripe/create-checkout-session', payload);
+      });
       window.location.href = res.data.url;
-    } catch {
-      toast.error('Kunne ikke starte betalingen. Prøv igjen om litt.');
+    } catch (err: any) {
+      if (err?.response?.data?.code === 'plan_type_not_allowed') {
+        toast.error('Denne planen er ikke tilgjengelig for kontotypen din.');
+        setSelectedPlan(null);
+        setStep('pricing');
+      } else {
+        toast.error(err?.response?.data?.message || 'Kunne ikke starte betalingen. Prøv igjen om litt.');
+      }
       setIsRedirecting(false);
     }
   };
@@ -93,23 +72,19 @@ export const usePricingLogic = () => {
 
   return {
     userType,
-    setUserType,
+    setUserType: setPublicType,
+    isAccountSpecific: accountType !== null,
     selectedPlan,
     setSelectedPlan,
     step,
     setStep,
-    promoCode,
-    setPromoCode,
-    isApplyingPromo,
-    discountInfo,
-    setDiscountInfo,
     isRedirecting,
     plans,
     isLoading,
     currentPlans,
     handleUpgradeClick,
-    handleApplyPromo,
     handleCheckout,
     getIsPopular,
+    canPurchase: (plan: Plan) => !accountType || plan.type === accountType,
   };
 };

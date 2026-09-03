@@ -28,6 +28,7 @@ const planHistorySchema = new mongoose.Schema(
       default: Date.now,
     },
     discountAmount: Number,
+    discountCoupon: String,
     coupon: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Coupon',
@@ -74,6 +75,7 @@ const subscriptionSchema = new mongoose.Schema(
         default: 'active',
       },
       discountAmount: Number,
+      discountCoupon: String,
       coupon: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Coupon',

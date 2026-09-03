@@ -64,7 +64,10 @@ function makeRes() {
 }
 
 function makeReq(body = {}) {
-  return { body: { planId: PLAN_ID, ...body }, user: { _id: USER_ID, email: 'a@b.no', name: 'A' } };
+  return {
+    body: { planId: PLAN_ID, ...body },
+    user: { _id: USER_ID, email: 'a@b.no', name: 'A', role: 'user' },
+  };
 }
 
 function paidPlan(overrides = {}) {
@@ -73,7 +76,10 @@ function paidPlan(overrides = {}) {
 
 /** The row every account gets at signup: a free default plan, no Stripe id. */
 function freeDefaultRow() {
-  return { userId: USER_ID, currentPlan: { plan: 'Standard', planType: 'private', status: 'active' } };
+  return {
+    userId: USER_ID,
+    currentPlan: { plan: 'Standard', planType: 'private', status: 'active' },
+  };
 }
 
 function paidRow(stripeSubscriptionId = 'sub_existing') {
@@ -157,6 +163,40 @@ describe('A — a user with no paid subscription can buy an active paid plan', (
     await createCheckoutSession(makeReq(), res);
 
     expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('role-to-plan authorization', () => {
+  it.each([
+    ['user', 'private', 200],
+    ['provider', 'private', 200],
+    ['superAdmin', 'private', 200],
+    ['company', 'business', 200],
+  ])('%s can buy %s plans', async (role, type, expectedStatus) => {
+    SubscriptionPlan.findById.mockResolvedValue(paidPlan({ type }));
+
+    const res = makeRes();
+    await createCheckoutSession({ ...makeReq(), user: { _id: USER_ID, role } }, res);
+
+    expect(res.statusCode).toBe(expectedStatus);
+    expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['user', 'business'],
+    ['provider', 'business'],
+    ['superAdmin', 'business'],
+    ['company', 'private'],
+  ])('%s cannot buy %s plans before Stripe is touched', async (role, type) => {
+    SubscriptionPlan.findById.mockResolvedValue(paidPlan({ type }));
+
+    const res = makeRes();
+    await createCheckoutSession({ ...makeReq(), user: { _id: USER_ID, role } }, res);
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBe('plan_type_not_allowed');
+    expect(resolveStripeCustomer).not.toHaveBeenCalled();
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
   });
 });
 
@@ -300,7 +340,9 @@ describe('D — a settled subscription does not block', () => {
     expect(res.body.code).toBe('subscription_check_unavailable');
     expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
     // The customer gets the generic payment message, not a raw Stripe error code.
-    expect(res.body.message).toBe('Kunne ikke starte betalingen. Prøv igjen, eller kontakt support.');
+    expect(res.body.message).toBe(
+      'Kunne ikke starte betalingen. Prøv igjen, eller kontakt support.'
+    );
   });
 });
 
@@ -360,127 +402,18 @@ describe('F — a free plan is still refused', () => {
   });
 });
 
-describe('G — a coupon that leaves something to pay is honoured', () => {
-  it('bills the discounted amount', async () => {
-    Coupon.findOne.mockResolvedValue(validCoupon());
-
+describe('G — Stripe owns promotion codes and discounting', () => {
+  it('uses the normal plan price and enables native promotion codes', async () => {
     const res = makeRes();
-    await createCheckoutSession(makeReq({ couponCode: 'spar20' }), res);
+    await createCheckoutSession(makeReq({ couponCode: 'IGNORED' }), res);
 
-    expect(stripe.checkout.sessions.create).toHaveBeenCalledTimes(1);
-    // 299 less 20% = 239.20 kr.
-    expect(sentUnitAmount()).toBe(23920);
-    expect(res.body).toEqual({ url: 'https://checkout.stripe.com/pay/cs_1' });
-  });
-
-  it('looks the code up case-insensitively', async () => {
-    Coupon.findOne.mockResolvedValue(validCoupon());
-
-    await createCheckoutSession(makeReq({ couponCode: 'spar20' }), makeRes());
-
-    expect(Coupon.findOne).toHaveBeenCalledWith({ code: 'SPAR20' });
-  });
-});
-
-describe('H — a coupon that zeroes the total is refused', () => {
-  it('rejects a 100% discount with zero_total_subscription', async () => {
-    Coupon.findOne.mockResolvedValue(validCoupon({ amount: 100 }));
-
-    const res = makeRes();
-    await createCheckoutSession(makeReq({ couponCode: 'SPAR20' }), res);
-
-    expect(res.statusCode).toBe(400);
-    expect(res.body.code).toBe('zero_total_subscription');
-    expect(res.body.message).toBe(
-      'Rabatten gjør betalingen gratis, og kan ikke behandles som et Stripe-abonnement.'
-    );
-    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
-  });
-
-  it('rejects a fixed discount worth at least the plan price', async () => {
-    // calculateDiscount clamps at zero, so an over-large fixed coupon lands on 0 too.
-    Coupon.findOne.mockResolvedValue(validCoupon({ type: 'fixed', amount: 400 }));
-
-    const res = makeRes();
-    await createCheckoutSession(makeReq({ couponCode: 'SPAR20' }), res);
-
-    expect(res.statusCode).toBe(400);
-    expect(res.body.code).toBe('zero_total_subscription');
-  });
-
-  it('rejects a sub-øre remainder, which Stripe would round to zero', async () => {
-    SubscriptionPlan.findById.mockResolvedValue(paidPlan({ price: 100 }));
-    Coupon.findOne.mockResolvedValue(validCoupon({ type: 'fixed', amount: 99.999 }));
-
-    const res = makeRes();
-    await createCheckoutSession(makeReq({ couponCode: 'SPAR20' }), res);
-
-    expect(res.statusCode).toBe(400);
-    expect(res.body.code).toBe('zero_total_subscription');
-  });
-
-  it('does not invent a free subscription instead', async () => {
-    // There is no server-side "activate a free plan" operation to fall back on, so the
-    // only safe answer is a refusal.
-    Coupon.findOne.mockResolvedValue(validCoupon({ amount: 100 }));
-    const { upsertSubscription } = require('../utils/subscription');
-
-    await createCheckoutSession(makeReq({ couponCode: 'SPAR20' }), makeRes());
-
-    expect(upsertSubscription).not.toHaveBeenCalled();
-  });
-});
-
-describe('I — existing coupon validation is unchanged', () => {
-  it('passes an expired coupon message straight through as a 400', async () => {
-    Coupon.findOne.mockResolvedValue(
-      validCoupon({ expiresDate: new Date(Date.now() - 86400000) })
-    );
-
-    const res = makeRes();
-    await createCheckoutSession(makeReq({ couponCode: 'SPAR20' }), res);
-
-    expect(res.statusCode).toBe(400);
-    expect(res.body.message).toBe('Coupon has expired');
-    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
-  });
-
-  it('rejects an unknown code', async () => {
-    Coupon.findOne.mockResolvedValue(null);
-
-    const res = makeRes();
-    await createCheckoutSession(makeReq({ couponCode: 'NOPE' }), res);
-
-    expect(res.statusCode).toBe(400);
-    expect(res.body.message).toBe('Invalid or inactive coupon');
-  });
-
-  it('rejects a coupon the user has already used', async () => {
-    Coupon.findOne.mockResolvedValue(validCoupon({ usedBy: [USER_ID] }));
-
-    const res = makeRes();
-    await createCheckoutSession(makeReq({ couponCode: 'SPAR20' }), res);
-
-    expect(res.statusCode).toBe(400);
-    expect(res.body.message).toBe('You have already used this coupon');
-  });
-
-  it('rejects a coupon meant for the other plan type', async () => {
-    Coupon.findOne.mockResolvedValue(validCoupon({ targetPlanType: 'business' }));
-
-    const res = makeRes();
-    await createCheckoutSession(makeReq({ couponCode: 'SPAR20' }), res);
-
-    expect(res.statusCode).toBe(400);
-    expect(res.body.message).toBe('This coupon is only valid for business plans');
-  });
-
-  it('treats a non-string code as invalid rather than crashing', async () => {
-    const res = makeRes();
-    await createCheckoutSession(makeReq({ couponCode: { $ne: null } }), res);
-
-    expect(res.statusCode).toBe(400);
+    const params = stripe.checkout.sessions.create.mock.calls[0][0];
+    expect(params.allow_promotion_codes).toBe(true);
+    expect(params.line_items[0].price_data.unit_amount).toBe(29900);
     expect(Coupon.findOne).not.toHaveBeenCalled();
+    expect(params.metadata.discountAmount).toBeUndefined();
+    expect(params.metadata.coupon).toBeUndefined();
+    expect(params.metadata.couponId).toBeUndefined();
   });
 });
 
@@ -495,7 +428,7 @@ describe('J — the server, not the client, decides what is charged', () => {
     expect(sentUnitAmount()).toBe(29900);
     const metadata = stripe.checkout.sessions.create.mock.calls[0][0].metadata;
     expect(metadata.planPrice).toBe(299);
-    expect(metadata.discountAmount).toBe(0);
+    expect(metadata.discountAmount).toBeUndefined();
   });
 
   it('ignores a client-supplied userId and bills the authenticated user', async () => {
@@ -514,7 +447,10 @@ describe('J — the server, not the client, decides what is charged', () => {
     const params = stripe.checkout.sessions.create.mock.calls[0][0];
     expect(params.customer).toBe('cus_1');
     // The only place a customer id can come from is resolveStripeCustomer.
-    expect(resolveStripeCustomer).toHaveBeenCalledWith(stripe, expect.objectContaining({ _id: USER_ID }));
+    expect(resolveStripeCustomer).toHaveBeenCalledWith(
+      stripe,
+      expect.objectContaining({ _id: USER_ID })
+    );
   });
 
   it('never accepts a client-supplied return URL', async () => {
@@ -546,11 +482,10 @@ describe('double-submit protection', () => {
     expect(options.idempotencyKey).toContain(`sub_checkout_${USER_ID}_${PLAN_ID}_nocoupon_`);
   });
 
-  it('varies the key by coupon so applying one gets a correctly priced session', async () => {
-    Coupon.findOne.mockResolvedValue(validCoupon());
+  it('does not vary by a client-supplied coupon because coupons are Stripe-native', async () => {
     await createCheckoutSession(makeReq({ couponCode: 'SPAR20' }), makeRes());
 
-    expect(stripe.checkout.sessions.create.mock.calls[0][1].idempotencyKey).toContain('_SPAR20_');
+    expect(stripe.checkout.sessions.create.mock.calls[0][1].idempotencyKey).toContain('_nocoupon_');
   });
 
   it('answers a simultaneous duplicate with 409 checkout_in_progress', async () => {

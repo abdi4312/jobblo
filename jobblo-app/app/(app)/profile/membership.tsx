@@ -10,8 +10,6 @@ import {
   Info,
   Loader2,
   Sparkles,
-  Tag,
-  X,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -21,10 +19,8 @@ import { queryKeys } from '../../../src/queryKeys';
 import {
   useCreateCheckoutSessionMutation,
   usePlans,
-  useValidateCouponMutation,
 } from '../../../src/hooks/useMembership';
 import type { SubscriptionPlan } from '../../../src/services/plans.service';
-import type { CouponValidation } from '../../../src/services/membership.service';
 import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 
@@ -88,116 +84,72 @@ function hasPaidSubscription(sub: {
   if (localStatus) return !dead.includes(localStatus);
   return true;
 }
+  export default function MembershipScreen() {
+    const router = useRouter();
+    const user = useAuthStore((state) => state.user);
+    const plansQuery = usePlans();
+    const subscriptionQuery = useCurrentSubscription();
+    const checkoutMutation = useCreateCheckoutSessionMutation();
+    const subscription = subscriptionQuery.data;
+    const role = typeof user?.role === 'string' ? user.role : undefined;
+    const defaultType: PlanType = subscription?.planType ?? (role === 'company' ? 'business' : 'private');
+    const [userType, setUserType] = useState<PlanType | null>(null);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const activeType = userType ?? defaultType;
+    const typePlans = useMemo(
+      () => (plansQuery.data ?? []).filter((plan) => plan.type === activeType),
+      [plansQuery.data, activeType]
+    );
+    const currentPlanId = useMemo(() => {
+      if (!subscription) return null;
+      if (subscription.planId) {
+        const byId = typePlans.find((plan) => plan._id === subscription.planId);
+        if (byId) return byId._id;
+      }
+      return typePlans.find((plan) => plan.name === subscription.plan)?._id ?? null;
+    }, [subscription, typePlans]);
 
-/** Feature list straight from the model. `featuresText` is the only real source. */
+
 function planFeatures(plan: SubscriptionPlan): string[] {
   if (plan.featuresText?.length) return plan.featuresText;
-  const derived: string[] = [];
+  const features: string[] = [];
   const freeContact = plan.entitlements?.freeContact;
   if (typeof freeContact === 'number') {
-    derived.push(
-      freeContact > 0 ? `${freeContact} gratis kontakter` : 'Ingen gratis kontakter inkludert'
-    );
+    features.push(freeContact > 0 ? `${freeContact} gratis kontakter` : 'Ingen gratis kontakter inkludert');
   }
   const radius = plan.entitlements?.radius;
-  if (typeof radius === 'number' && radius > 0) derived.push(`Søkeradius ${radius} km`);
+  if (typeof radius === 'number' && radius > 0) features.push(`Søkeradius ${radius} km`);
   const perContact = plan.entitlements?.perContactPrice;
-  if (typeof perContact === 'number' && perContact > 0) {
-    derived.push(`${money(perContact)} per ekstra kontakt`);
-  }
-  if (plan.entitlements?.hasBadge) derived.push('Verifisert merke på profilen');
-  if (plan.entitlements?.hasAnalytics) derived.push('Tilgang til statistikk');
-  return derived;
+  if (typeof perContact === 'number' && perContact > 0) features.push(`${money(perContact)} per ekstra kontakt`);
+  if (plan.entitlements?.hasBadge) features.push('Verifisert merke på profilen');
+  if (plan.entitlements?.hasAnalytics) features.push('Tilgang til statistikk');
+  return features;
 }
+    useEffect(() => {
+      if (selectedId || typePlans.length === 0) return;
+      const firstPaid = typePlans.find((plan) => plan.price > 0);
+      setSelectedId(currentPlanId ?? firstPaid?._id ?? typePlans[0]._id);
+    }, [selectedId, typePlans, currentPlanId]);
 
-export default function MembershipScreen() {
-  const router = useRouter();
-  const user = useAuthStore((state) => state.user);
-  const plansQuery = usePlans();
-  const subscriptionQuery = useCurrentSubscription();
-  const couponMutation = useValidateCouponMutation();
-  const checkoutMutation = useCreateCheckoutSessionMutation();
+    const selectedPlan = typePlans.find((plan) => plan._id === selectedId) ?? null;
+    const isFree = !!selectedPlan && selectedPlan.price <= 0;
+    const isCurrent = !!selectedPlan && selectedPlan._id === currentPlanId;
+    const alreadyPaid = hasPaidSubscription(subscription);
 
-  const subscription = subscriptionQuery.data;
+    const selectPlan = (id: string) => {
+      if (id === selectedId) return;
+      setSelectedId(id);
+    };
 
-  // Server-owned planType wins; the auth store role is only a fallback for a
-  // user who somehow has no subscription row yet.
-  const role = typeof user?.role === 'string' ? user.role : undefined;
-  const defaultType: PlanType =
-    subscription?.planType ?? (role === 'company' ? 'business' : 'private');
+    const switchType = (type: PlanType) => {
+      if (type === activeType) return;
+      setUserType(type);
+      setSelectedId(null);
+    };
 
-  const [userType, setUserType] = useState<PlanType | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [couponInput, setCouponInput] = useState('');
-  const [coupon, setCoupon] = useState<(CouponValidation & { code: string }) | null>(null);
-  const [couponError, setCouponError] = useState<string | null>(null);
+    // Additional logic can be added here if needed
+    // ...
 
-  const activeType = userType ?? defaultType;
-
-  const typePlans = useMemo(
-    () => (plansQuery.data ?? []).filter((plan) => plan.type === activeType),
-    [plansQuery.data, activeType]
-  );
-
-  // Match the current plan by id when the server gives us one, and fall back to
-  // the plan name only when it does not (older rows predate planId).
-  const currentPlanId = useMemo(() => {
-    if (!subscription) return null;
-    if (subscription.planId) {
-      const byId = typePlans.find((plan) => plan._id === subscription.planId);
-      if (byId) return byId._id;
-    }
-    return typePlans.find((plan) => plan.name === subscription.plan)?._id ?? null;
-  }, [subscription, typePlans]);
-
-  const resetCoupon = () => {
-    setCoupon(null);
-    setCouponError(null);
-    setCouponInput('');
-    couponMutation.reset();
-  };
-
-  // Pick a sensible default selection once plans have loaded.
-  useEffect(() => {
-    if (selectedId || typePlans.length === 0) return;
-    const firstPaid = typePlans.find((plan) => plan.price > 0);
-    setSelectedId(currentPlanId ?? firstPaid?._id ?? typePlans[0]._id);
-  }, [selectedId, typePlans, currentPlanId]);
-
-  const selectedPlan = typePlans.find((plan) => plan._id === selectedId) ?? null;
-  const isFree = !!selectedPlan && selectedPlan.price <= 0;
-  const isCurrent = !!selectedPlan && selectedPlan._id === currentPlanId;
-  const alreadyPaid = hasPaidSubscription(subscription);
-
-  /**
-   * A coupon that wipes out the whole price cannot be checked out.
-   *
-   * `createCheckoutSession` rejects a zero-price PLAN, but it computes the
-   * discount afterwards and does not re-check the discounted total, so a 100%
-   * (or fixed >= price) coupon reaches Stripe as `unit_amount: 0`. Stripe
-   * rejects a recurring line item priced at zero — the backend's own comment
-   * says so. Blocking here keeps the user out of an opaque server error; the
-   * real fix belongs server-side and is recorded in MOBILE_FLOW.md.
-   */
-  const couponMakesFree = !!coupon && coupon.finalPrice <= 0;
-
-  const selectPlan = (id: string) => {
-    if (id === selectedId) return;
-    setSelectedId(id);
-    // A coupon is validated against one specific plan, so it cannot carry over.
-    resetCoupon();
-  };
-
-  const switchType = (type: PlanType) => {
-    if (type === activeType) return;
-    setUserType(type);
-    setSelectedId(null);
-    resetCoupon();
-  };
-
-  // ---------------------------------------------------------------------------
-  // Returning from Stripe Checkout
-  //
   // There is no mobile-aware return URL: the backend sends Stripe to the WEB
   // success/cancel pages (FRONTEND_URL), and no deep-link allow-list exists. So
   // we cannot be told the outcome. We only refetch server state when the app
@@ -227,39 +179,14 @@ export default function MembershipScreen() {
     return () => sub.remove();
   }, [queryClient]);
 
-  const handleApplyCoupon = () => {
-    if (!canPurchaseMembershipInApp) return;
-    const code = couponInput.trim();
-    if (!code || !selectedPlan) return;
-    setCouponError(null);
-    couponMutation.mutate(
-      { code, planId: selectedPlan._id },
-      {
-        onSuccess: (data) => {
-          setCoupon({ ...data, code });
-          setCouponError(null);
-        },
-        onError: (error) => {
-          const info = getErrorInfo(error);
-          setCoupon(null);
-          setCouponError(
-            info.status === 401
-              ? 'Du må være innlogget for å bruke rabattkode.'
-              : info.message || 'Rabattkoden kunne ikke bekreftes.'
-          );
-        },
-      }
-    );
-  };
-
   const handleCheckout = () => {
     if (!canPurchaseMembershipInApp) return;
     // Re-assert every precondition at the call site. The render tree already
     // hides the button in these states, but the invariant should not depend on
     // the button being the only possible trigger.
-    if (!selectedPlan || isFree || isCurrent || alreadyPaid || couponMakesFree) return;
+    if (!selectedPlan || isFree || isCurrent || alreadyPaid) return;
     checkoutMutation.mutate(
-      { planId: selectedPlan._id, couponCode: coupon?.code },
+      { planId: selectedPlan._id },
       {
         onSuccess: async (response) => {
           if (typeof response.url !== 'string' || !response.url.trim()) {
@@ -315,18 +242,6 @@ export default function MembershipScreen() {
             Alert.alert(
               'Planen er ikke tilgjengelig',
               info.message || 'Denne planen er ikke tilgjengelig lenger. Velg en annen plan.'
-            );
-            return;
-          }
-
-          // Backstop for the coupon-to-zero case. The screen already blocks this before
-          // the request (see `couponMakesFree`), so getting here means the coupon's
-          // value changed server-side between validation and checkout.
-          if (info.code === 'zero_total_subscription') {
-            Alert.alert(
-              'Rabatten gjør betalingen gratis',
-              info.message ||
-                'Rabatten gjør betalingen gratis, og kan ikke behandles som et Stripe-abonnement.'
             );
             return;
           }
@@ -532,63 +447,6 @@ export default function MembershipScreen() {
         )}
 
         {/* Coupon — only meaningful for a paid plan we can actually buy */}
-        {canPurchaseMembershipInApp && selectedPlan && !isFree && !alreadyPaid ? (
-          <View className="mt-5 rounded-3xl border border-[#E6E7E1] bg-white p-5">
-            <View className="flex-row items-center">
-              <Tag size={16} color="#63665F" />
-              <Text className="ml-2 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[#63665F]">
-                Rabattkode
-              </Text>
-            </View>
-
-            {coupon ? (
-              <View className="mt-3 flex-row items-center justify-between rounded-2xl border border-[#D1E7D9] bg-[#F2F9F4] px-4 py-3">
-                <View className="min-w-0 flex-1">
-                  <Text className="text-[0.875rem] font-bold text-[#173A24]">{coupon.code}</Text>
-                  <Text className="mt-0.5 text-[0.75rem] text-[#173A24]">
-                    −{money(coupon.discountAmount)} rabatt
-                  </Text>
-                </View>
-                <Pressable onPress={resetCoupon} className="ml-3 h-8 w-8 items-center justify-center rounded-full active:bg-[#DCEBE1]">
-                  <X size={16} color="#173A24" />
-                </Pressable>
-              </View>
-            ) : (
-              <View className="mt-3 flex-row items-center gap-2">
-                <TextInput
-                  value={couponInput}
-                  onChangeText={(text) => {
-                    setCouponInput(text);
-                    if (couponError) setCouponError(null);
-                  }}
-                  placeholder="Skriv inn kode"
-                  placeholderTextColor="#9B9E96"
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                  className="flex-1 rounded-2xl border border-[#E6E7E1] bg-[#F8F9F5] px-4 py-3 text-[0.875rem] text-[#0B0B0B]"
-                />
-                <Pressable
-                  onPress={handleApplyCoupon}
-                  disabled={!couponInput.trim() || couponMutation.isPending}
-                  className={[
-                    'rounded-2xl px-4 py-3',
-                    !couponInput.trim() || couponMutation.isPending ? 'opacity-50' : '',
-                  ].join(' ')}
-                  style={{ backgroundColor: '#2E6641' }}
-                >
-                  <Text className="text-[0.875rem] font-semibold text-white">
-                    {couponMutation.isPending ? 'Sjekker...' : 'Bruk'}
-                  </Text>
-                </Pressable>
-              </View>
-            )}
-
-            {couponError ? (
-              <Text className="mt-2 text-[0.75rem] leading-4 text-[#B4544A]">{couponError}</Text>
-            ) : null}
-          </View>
-        ) : null}
-
         {/* Summary + CTA */}
         {selectedPlan ? (
           <View className="mt-5 rounded-3xl border border-[#E6E7E1] bg-white p-5">
@@ -599,21 +457,10 @@ export default function MembershipScreen() {
               </Text>
             </View>
 
-            {coupon && !isFree ? (
-              <View className="mt-2 flex-row items-center justify-between">
-                <Text className="text-[0.875rem] text-[#2E6641]">Rabatt ({coupon.code})</Text>
-                <Text className="text-[0.875rem] font-medium text-[#2E6641]">
-                  −{money(coupon.discountAmount)}
-                </Text>
-              </View>
-            ) : null}
-
             <View className="mt-3 flex-row items-center justify-between border-t border-[#E6E7E1] pt-3">
               <Text className="text-[0.9375rem] font-bold text-[#0B0B0B]">Å betale</Text>
               <Text className="text-[1.125rem] font-bold text-[#0B0B0B]">
-                {isFree
-                  ? 'Gratis'
-                  : money(coupon ? coupon.finalPrice : selectedPlan.price)}
+                {isFree ? 'Gratis' : money(selectedPlan.price)}
               </Text>
             </View>
             {!isFree ? (
@@ -668,18 +515,6 @@ export default function MembershipScreen() {
                   </Text>
                   <ChevronRight size={17} color="#0B0B0B" />
                 </Pressable>
-              </View>
-            ) : couponMakesFree ? (
-              <View className="mt-4 rounded-2xl border border-[#F1E1C4] bg-[#FBF5E9] px-4 py-3.5">
-                <View className="flex-row items-start">
-                  <View className="mt-0.5">
-                    <Info size={16} color="#B7791F" />
-                  </View>
-                  <Text className="ml-2 flex-1 text-[0.8125rem] leading-5 text-[#614109]">
-                    Denne rabattkoden dekker hele beløpet, og et abonnement kan ikke opprettes med 0
-                    kr. Fjern koden for å fortsette, eller kontakt support.
-                  </Text>
-                </View>
               </View>
             ) : canPurchaseMembershipInApp ? (
               <Pressable
