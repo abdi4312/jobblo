@@ -7,7 +7,7 @@ export const usePlans = () => {
     queryKey: ['plans'],
     queryFn: getPlans,
 
-    staleTime: Infinity,
+    staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 60,
 
     refetchOnWindowFocus: false,

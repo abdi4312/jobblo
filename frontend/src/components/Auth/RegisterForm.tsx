@@ -38,6 +38,7 @@ export const RegisterForm = () => {
       password: '',
       confirmPassword: '',
       role: 'user',
+      acceptedTerms: false,
       companyName: '',
       orgNumber: '',
     },
@@ -91,6 +92,7 @@ export const RegisterForm = () => {
         email: values.email,
         password: values.password,
         role: values.role,
+        acceptedTerms: values.acceptedTerms,
         ...(isCompany && {
           companyName: values.companyName,
           orgNumber: values.orgNumber,
@@ -293,6 +295,28 @@ export const RegisterForm = () => {
             onChange={(e) => handleChange('confirmPassword', e.target.value)}
             trailing={passwordToggle(showConfirmPassword, () => setShowConfirmPassword((p) => !p))}
           />
+
+          <div>
+            <label className="flex items-start gap-2.5 text-[0.8125rem] leading-relaxed text-[#63665F]">
+              <input
+                type="checkbox"
+                checked={values.acceptedTerms}
+                onChange={(e) => handleChange('acceptedTerms', e.target.checked)}
+                className="mt-0.5 size-4 shrink-0 rounded border-[#D4D6CD] text-[#2E6641] focus:ring-[#2E6641]"
+              />
+              <span>
+                Jeg godtar{' '}
+                <Link to="/user-term" target="_blank" rel="noreferrer" className={TEXT_LINK}>
+                  Brukervilkårene
+                </Link>
+              </span>
+            </label>
+            {errors.acceptedTerms && (
+              <p className="mt-1.5 text-[0.75rem] text-[#B0453B]" role="alert">
+                {errors.acceptedTerms}
+              </p>
+            )}
+          </div>
 
           <button type="submit" disabled={isRegistering} className={`mt-2 ${PRIMARY_BUTTON}`}>
             {isRegistering && <Loader2 size={16} className="animate-spin" />}

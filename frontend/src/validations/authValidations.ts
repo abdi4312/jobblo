@@ -12,6 +12,7 @@ export type RegisterFormValues = {
   password: string;
   confirmPassword: string;
   role: string;
+  acceptedTerms: boolean;
   companyName?: string;
   orgNumber?: string;
 };
@@ -70,6 +71,13 @@ export const registerValidationSchema = {
   ],
 
   role: [required<RegisterFormValues>('role', 'Vennligst velg brukertype')],
+
+  acceptedTerms: [
+    {
+      test: (values: RegisterFormValues) => values.acceptedTerms === true,
+      message: 'Du må godta Brukervilkårene for å opprette konto.',
+    },
+  ],
 
   companyName: [
     {

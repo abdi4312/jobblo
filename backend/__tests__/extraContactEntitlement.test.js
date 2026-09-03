@@ -8,8 +8,12 @@
  *      unlocked that service for that user permanently and without limit.
  */
 
-jest.mock('../models/User', () => ({ findById: jest.fn() }));
-jest.mock('../models/SubscriptionPlan', () => ({ findOne: jest.fn() }));
+jest.mock('../models/User', () => ({
+  findById: jest.fn(),
+  findOneAndUpdate: jest.fn(),
+  updateOne: jest.fn(),
+}));
+jest.mock('../models/SubscriptionPlan', () => ({ findById: jest.fn(), findOne: jest.fn() }));
 jest.mock('../models/Subscription', () => ({ findOne: jest.fn() }));
 jest.mock('../models/Transaction', () => ({ findOneAndUpdate: jest.fn(), updateOne: jest.fn() }));
 jest.mock('../models/Service', () => ({ findById: jest.fn() }));
@@ -22,6 +26,7 @@ const Subscription = require('../models/Subscription');
 const Transaction = require('../models/Transaction');
 const GlobalConfig = require('../models/GlobalConfig');
 const JobRequest = require('../models/JobRequest');
+const Service = require('../models/Service');
 const { checkSubscription } = require('../middleware/checkSubscription');
 
 const mongoose = require('mongoose');
@@ -66,18 +71,17 @@ beforeEach(() => {
     monthlyContactUsage: 99,
     lastContactReset: new Date(),
     createdAt: new Date(),
-    planType: 'private',
+    role: 'user',
     save: jest.fn().mockResolvedValue(),
   });
-  Subscription.findOne.mockResolvedValue(null);
-  SubscriptionPlan.findOne.mockReturnValue({
-    sort: jest.fn().mockResolvedValue({
-      entitlements: { freeContact: 0, perContactPrice: 49, ContactUnlock: 60 },
-    }),
+  Subscription.findOne.mockResolvedValue({
+    currentPlan: { plan: 'Standard', planType: 'private' },
   });
   SubscriptionPlan.findOne.mockResolvedValue({
     entitlements: { freeContact: 0, perContactPrice: 49, ContactUnlock: 60 },
+    type: 'private',
   });
+  User.findOneAndUpdate.mockResolvedValue(null);
   GlobalConfig.findOne.mockResolvedValue(null);
   JobRequest.findOne.mockReturnValue({ sort: jest.fn().mockResolvedValue(null) });
   Transaction.updateOne.mockResolvedValue({});
@@ -138,7 +142,9 @@ describe('entitlement consumption', () => {
 
   it('refuses a second use of the same purchase', async () => {
     // First call claims it; the second finds nothing unconsumed.
-    Transaction.findOneAndUpdate.mockResolvedValueOnce({ _id: 'txn_1' }).mockResolvedValueOnce(null);
+    Transaction.findOneAndUpdate
+      .mockResolvedValueOnce({ _id: 'txn_1' })
+      .mockResolvedValueOnce(null);
 
     const firstNext = jest.fn();
     await checkSubscription(makeReq({ serviceId: SERVICE_ID }), makeRes(), firstNext);
@@ -193,6 +199,31 @@ describe('independence from Stripe configuration', () => {
 });
 
 describe('free monthly quota still works', () => {
+  it('requires a subscription for a company with no selected plan', async () => {
+    User.findById.mockResolvedValue({
+      _id: USER_ID, role: 'company', monthlyContactUsage: 0,
+      lastContactReset: new Date(), createdAt: new Date(), save: jest.fn().mockResolvedValue(),
+    });
+    Subscription.findOne.mockResolvedValue({ currentPlan: null });
+    Transaction.findOneAndUpdate.mockResolvedValue({ _id: 'paid_contact' });
+
+    const res = makeRes();
+    const next = jest.fn();
+    await checkSubscription(makeReq({ serviceId: SERVICE_ID }), res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(402);
+    expect(res.body).toEqual(expect.objectContaining({
+      code: 'subscription_required',
+      paymentRequired: true,
+      upgradeRequired: true,
+      limit: 0,
+      usage: 0,
+      remaining: 0,
+    }));
+    expect(Transaction.findOneAndUpdate).not.toHaveBeenCalled();
+  });
+
   it('lets a user through while they have free contacts left', async () => {
     User.findById.mockResolvedValue({
       _id: USER_ID,
@@ -200,16 +231,183 @@ describe('free monthly quota still works', () => {
       lastContactReset: new Date(),
       createdAt: new Date(),
       planType: 'private',
+      role: 'user',
       save: jest.fn().mockResolvedValue(),
     });
     SubscriptionPlan.findOne.mockResolvedValue({
       entitlements: { freeContact: 5, perContactPrice: 49, ContactUnlock: 60 },
+      type: 'private',
     });
     Transaction.findOneAndUpdate.mockResolvedValue(null);
+    User.findOneAndUpdate.mockResolvedValue({ _id: USER_ID });
 
     const next = jest.fn();
     await checkSubscription(makeReq({ serviceId: SERVICE_ID }), makeRes(), next);
 
     expect(next).toHaveBeenCalled();
+  });
+
+  it('blocks a company with a live business plan whose freeContact is zero', async () => {
+    User.findById.mockResolvedValue({
+      _id: USER_ID,
+      role: 'company',
+      planType: 'private',
+      monthlyContactUsage: 0,
+      lastContactReset: new Date(),
+      createdAt: new Date(),
+      save: jest.fn().mockResolvedValue(),
+    });
+    Subscription.findOne.mockResolvedValue({
+      currentPlan: { planId: 'business_pro', plan: 'Pro', planType: 'business' },
+    });
+    SubscriptionPlan.findOne.mockResolvedValue({
+      name: 'Pro',
+      type: 'business',
+      entitlements: { freeContact: 0, perContactPrice: 39, ContactUnlock: 0 },
+    });
+    SubscriptionPlan.findById.mockResolvedValue({
+      name: 'Pro',
+      type: 'business',
+      entitlements: { freeContact: 0, perContactPrice: 39, ContactUnlock: 0 },
+    });
+    Transaction.findOneAndUpdate.mockResolvedValue(null);
+    User.findOneAndUpdate.mockResolvedValue(null);
+    const res = makeRes();
+    const next = jest.fn();
+
+    await checkSubscription(makeReq({ serviceId: SERVICE_ID }), res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(402);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        code: 'contact_limit_reached',
+        paymentRequired: true,
+        upgradeRequired: true,
+        limit: 0,
+        usage: 0,
+        remaining: 0,
+        perContactPrice: 39,
+      })
+    );
+    expect(User.findOneAndUpdate).toHaveBeenCalledWith(
+      { _id: USER_ID, monthlyContactUsage: { $lt: 0 } },
+      { $inc: { monthlyContactUsage: 1 } },
+      { new: true }
+    );
+  });
+
+  it('does not apply the private under-10k exception to a company with stale planType', async () => {
+    User.findById.mockResolvedValue({
+      _id: USER_ID,
+      role: 'company',
+      planType: 'private',
+      monthlyContactUsage: 0,
+      lastContactReset: new Date(),
+      createdAt: new Date(),
+      save: jest.fn().mockResolvedValue(),
+    });
+    Subscription.findOne.mockResolvedValue({
+      currentPlan: { planId: 'business_start', plan: 'Start', planType: 'business' },
+    });
+    SubscriptionPlan.findOne.mockResolvedValue({
+      name: 'Start',
+      type: 'business',
+      entitlements: { freeContact: 0, perContactPrice: 49, ContactUnlock: 120 },
+    });
+    SubscriptionPlan.findById.mockResolvedValue({
+      name: 'Start',
+      type: 'business',
+      entitlements: { freeContact: 0, perContactPrice: 49, ContactUnlock: 120 },
+    });
+    GlobalConfig.findOne.mockResolvedValue({ key: 'FREE_PRIVATE_JOBS_UNDER_10000', value: true });
+    Service.findById.mockResolvedValue({ price: 100 });
+    User.findOneAndUpdate.mockResolvedValue(null);
+
+    const res = makeRes();
+    const next = jest.fn();
+    await checkSubscription(makeReq({ serviceId: SERVICE_ID }), res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(402);
+    expect(res.body.remaining).toBe(0);
+  });
+
+  it('does not turn an expired zero-contact cooldown into free access', async () => {
+    User.findById.mockResolvedValue({
+      _id: USER_ID,
+      role: 'company',
+      monthlyContactUsage: 0,
+      lastContactReset: new Date(),
+      createdAt: new Date(),
+      save: jest.fn().mockResolvedValue(),
+    });
+    Subscription.findOne.mockResolvedValue({
+      currentPlan: { planId: 'business_start', plan: 'Start', planType: 'business' },
+    });
+    SubscriptionPlan.findOne.mockResolvedValue({
+      name: 'Start',
+      type: 'business',
+      entitlements: { freeContact: 0, perContactPrice: 49, ContactUnlock: 120 },
+    });
+    SubscriptionPlan.findById.mockResolvedValue({
+      name: 'Start',
+      type: 'business',
+      entitlements: { freeContact: 0, perContactPrice: 49, ContactUnlock: 120 },
+    });
+    JobRequest.findOne.mockReturnValue({
+      sort: jest.fn().mockResolvedValue({ createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000) }),
+    });
+    User.findOneAndUpdate.mockResolvedValue(null);
+
+    const res = makeRes();
+    const next = jest.fn();
+    await checkSubscription(makeReq({ serviceId: SERVICE_ID }), res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(402);
+  });
+
+  it('allows exactly one included contact when the live limit is one', async () => {
+    let userReads = 0;
+    User.findById.mockImplementation(async () => ({
+      _id: USER_ID,
+      role: 'company',
+      monthlyContactUsage: userReads++ < 2 ? 0 : 1,
+      lastContactReset: new Date(),
+      createdAt: new Date(),
+      save: jest.fn().mockResolvedValue(),
+    }));
+    Subscription.findOne.mockResolvedValue({
+      currentPlan: { planId: 'business_start', plan: 'Start', planType: 'business' },
+    });
+    SubscriptionPlan.findOne.mockResolvedValue({
+      name: 'Start',
+      type: 'business',
+      entitlements: { freeContact: 1, perContactPrice: 49, ContactUnlock: 0 },
+    });
+    SubscriptionPlan.findById.mockResolvedValue({
+      name: 'Start',
+      type: 'business',
+      entitlements: { freeContact: 1, perContactPrice: 49, ContactUnlock: 0 },
+    });
+    Transaction.findOneAndUpdate.mockResolvedValue(null);
+    User.findOneAndUpdate.mockResolvedValueOnce({ _id: USER_ID }).mockResolvedValueOnce(null);
+
+    const first = makeRes();
+    const firstNext = jest.fn();
+    await checkSubscription(makeReq({ serviceId: SERVICE_ID }), first, firstNext);
+    const second = makeRes();
+    const secondNext = jest.fn();
+    await checkSubscription(
+      makeReq({ serviceId: String(new mongoose.Types.ObjectId()) }),
+      second,
+      secondNext
+    );
+
+    expect(firstNext).toHaveBeenCalled();
+    expect(secondNext).not.toHaveBeenCalled();
+    expect(second.statusCode).toBe(402);
+    expect(second.body.remaining).toBe(0);
   });
 });

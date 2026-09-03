@@ -172,17 +172,17 @@ describe('plan defaults match the e-mail signup path', () => {
     });
   });
 
-  it('a company account starts on Start/business', async () => {
+  it('a company account starts with no selected plan', async () => {
     await ensureDefaultSubscription({ _id: 'u2', role: 'company' });
-    expect(collection.docs[0].currentPlan).toMatchObject({
-      plan: 'Start',
-      planType: 'business',
-    });
+    expect(collection.docs[0].currentPlan).toBeNull();
   });
 
-  it('planType: business is honoured even when role is not company', async () => {
+  it('stale planType does not make a normal account a company', async () => {
     await ensureDefaultSubscription({ _id: 'u3', role: 'user', planType: 'business' });
-    expect(collection.docs[0].currentPlan.plan).toBe('Start');
+    expect(collection.docs[0].currentPlan).toMatchObject({
+      plan: 'Standard',
+      planType: 'private',
+    });
   });
 });
 

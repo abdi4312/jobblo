@@ -9,6 +9,7 @@ export async function registerUser(userData: {
   name: string;
   email: string;
   password: string;
+  acceptedTerms: boolean;
   lastName: string;
   role?: string;
   companyName?: string;

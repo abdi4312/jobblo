@@ -13,6 +13,7 @@ const {
   subscriptionPeriodEnd,
 } = require('../services/stripe/provisioning');
 const { resolveAllowedPlanType } = require('../utils/planAccess');
+const { resolveCurrentSubscriptionEntitlements } = require('../utils/subscriptionEntitlements');
 
 const now = new Date();
 const nextMonth = new Date();
@@ -305,11 +306,23 @@ exports.createExtraContactPayment = async (req, res) => {
   try {
     const stripe = await getStripe();
     const user = req.user;
-    const { amount, serviceId } = req.body;
+    const { serviceId } = req.body;
 
     // Validate required fields
-    if (!amount || !serviceId) {
-      return res.status(400).json({ message: 'Amount and serviceId are required' });
+    if (!serviceId) {
+      return res.status(400).json({ message: 'serviceId is required' });
+    }
+
+    const resolved = await resolveCurrentSubscriptionEntitlements(user._id);
+    if (!resolved?.hasPlan) {
+      return res.status(403).json({
+        message: 'Du trenger et aktivt abonnement for å kjøpe ekstra kontakter.',
+        code: 'subscription_required',
+      });
+    }
+    const amount = resolved?.entitlements?.perContactPrice;
+    if (!resolved || !Number.isFinite(amount) || amount < 0) {
+      return res.status(403).json({ message: 'Invalid subscription plan', code: 'plan_invalid' });
     }
 
     const service = await Service.findById(serviceId);

@@ -64,6 +64,7 @@ const subscriptionSchema = new mongoose.Schema(
         enum: ['business', 'private'],
         required: true,
       },
+      isPlaceholder: { type: Boolean, default: false },
       stripeSubscriptionId: String,
       startDate: Date,
       endDate: Date,

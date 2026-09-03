@@ -26,4 +26,16 @@ describe('terms acceptance validation', () => {
 
     expect(result).toBeNull();
   });
+
+  it.each([undefined, false, 'true', 1, 'yes'])('rejects non-boolean true value %p', (acceptedTerms) => {
+    const result = authController.validateRegisterInput({
+      name: 'Ada',
+      email: 'ada@example.com',
+      password: 'Password1',
+      role: 'user',
+      acceptedTerms,
+    });
+
+    expect(result).toMatch(/godta|brukervilkårene/i);
+  });
 });

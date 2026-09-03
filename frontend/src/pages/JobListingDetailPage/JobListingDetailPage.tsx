@@ -114,8 +114,9 @@ const JobListingDetailPage = () => {
   useEffect(() => {
     if (isAuth && currentUser && plans && jobRequests && job) {
       // Bypass cooldown if job is under 10k and toggle is ON (Private users only)
+      const accountPlanType = currentUser.role === 'company' ? 'business' : 'private';
       const isFreeUnder10k =
-        currentUser.planType === 'private' && freeJobsToggle && job.price < 10000;
+        accountPlanType === 'private' && freeJobsToggle && job.price < 10000;
 
       if (isFreeUnder10k) {
         setIsTimerActive(false);
@@ -126,7 +127,7 @@ const JobListingDetailPage = () => {
       const currentPlan = plans.find(
         (p) =>
           p.name === (currentUser.subscription || 'Standard') &&
-          p.type === (currentUser.planType || 'private')
+          p.type === accountPlanType
       );
 
       const usage = currentUser.monthlyContactUsage || 0;

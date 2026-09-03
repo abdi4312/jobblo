@@ -6,6 +6,7 @@ const Transaction = require('../models/Transaction');
 const Service = require('../models/Service');
 const JobRequest = require('../models/JobRequest');
 const GlobalConfig = require('../models/GlobalConfig');
+const { resolveCurrentSubscriptionEntitlements } = require('../utils/subscriptionEntitlements');
 
 /**
  * No Stripe client is constructed here any more.
@@ -38,6 +39,22 @@ exports.checkSubscription = async (req, res, next) => {
       await user.save();
     }
 
+    const resolved = await resolveCurrentSubscriptionEntitlements(userId);
+    if (!resolved) return res.status(403).json({ message: 'Invalid subscription plan' });
+    if (!resolved.hasPlan) {
+      req.entitlementSource = 'blocked_quota';
+      return res.status(402).json({
+        message: 'Du trenger et aktivt abonnement for å sende forespørsler.',
+        code: 'subscription_required',
+        paymentRequired: true,
+        upgradeRequired: true,
+        limit: 0,
+        usage: resolved.usage,
+        remaining: 0,
+        perContactPrice: 0,
+      });
+    }
+
     // --- PAID EXTRA-CONTACT ENTITLEMENT ---
     //
     // Claimed atomically: the filter requires `consumedAt: null` and the update sets
@@ -65,6 +82,7 @@ exports.checkSubscription = async (req, res, next) => {
 
       if (claimed) {
         req.consumedEntitlementId = claimed._id;
+        req.entitlementSource = 'paid_extra_contact';
         // This contact was PAID for, so it must not also spend a free monthly one.
         // The free-under-10k branch below sets this flag; the paid branch did not, so
         // buying an extra contact charged the user cash AND incremented their counter.
@@ -72,8 +90,7 @@ exports.checkSubscription = async (req, res, next) => {
         res.on('finish', () => {
           if (res.statusCode >= 400) {
             Transaction.updateOne({ _id: claimed._id }, { $set: { consumedAt: null } }).catch(
-              (err) =>
-                console.error('Could not release extra-contact entitlement: %s', err.message)
+              (err) => console.error('Could not release extra-contact entitlement: %s', err.message)
             );
           }
         });
@@ -81,34 +98,7 @@ exports.checkSubscription = async (req, res, next) => {
       }
     }
 
-    // 2. Check Subscription Plan
-    const subscription = await Subscription.findOne({ userId });
-    // Default to Standard if no subscription found
-    const currentPlanName = subscription?.currentPlan?.plan || 'Standard';
-    const currentPlanType = user.planType || 'private';
-
-    // 3. Get Plan Details
-    let planDoc = await SubscriptionPlan.findOne({
-      name: currentPlanName,
-      type: currentPlanType,
-      isActive: true,
-    });
-
-    // Fallback: if the exact plan name doesn't exist for this type
-    // (e.g. company users default to "Standard" but business plans are
-    // Start/Pro/Premium), use the cheapest active plan of the same type.
-    if (!planDoc) {
-      planDoc = await SubscriptionPlan.findOne({
-        type: currentPlanType,
-        isActive: true,
-      }).sort({ price: 1 });
-    }
-
-    if (!planDoc) {
-      return res.status(403).json({ message: 'Invalid subscription plan' });
-    }
-
-    const { freeContact, perContactPrice, ContactUnlock } = planDoc.entitlements;
+    const { freeContact, perContactPrice, ContactUnlock } = resolved.entitlements;
 
     // ── Removed: raw Stripe sessionId bypass ─────────────────────────────────
     //
@@ -125,7 +115,7 @@ exports.checkSubscription = async (req, res, next) => {
 
     // --- FREE JOBS UNDER 10,000 NOK RULE (Private Users Only) ---
     let isFreeUnder10k = false;
-    if (serviceId && currentPlanType === 'private') {
+    if (serviceId && resolved.planType === 'private') {
       const freeUnder10kConfig = await GlobalConfig.findOne({
         key: 'FREE_PRIVATE_JOBS_UNDER_10000',
       });
@@ -134,6 +124,7 @@ exports.checkSubscription = async (req, res, next) => {
         const service = await Service.findById(serviceId);
         if (service && service.price < 10000) {
           req.isFreeContact = true; // Mark as free for controller
+          req.entitlementSource = 'free_private_under_10k';
           isFreeUnder10k = true;
           return next(); // Free access for jobs under 10k for private users
         }
@@ -141,14 +132,31 @@ exports.checkSubscription = async (req, res, next) => {
     }
 
     // 5. Check Monthly Limit
-    const currentUsage = user.monthlyContactUsage || 0;
-    const hasFreeContactsLeft = currentUsage < freeContact;
+    const currentUsage = resolved.usage;
+    const reserved = await User.findOneAndUpdate(
+      { _id: userId, monthlyContactUsage: { $lt: freeContact } },
+      { $inc: { monthlyContactUsage: 1 } },
+      { new: true }
+    );
 
-    if (hasFreeContactsLeft) {
+    if (reserved) {
+      req.isFreeContact = true;
+      req.entitlementSource = 'included_free_contact';
+      res.on('finish', () => {
+        if (res.statusCode >= 400) {
+          User.updateOne(
+            { _id: userId, monthlyContactUsage: { $gt: 0 } },
+            { $inc: { monthlyContactUsage: -1 } }
+          ).catch((err) =>
+            console.error('Could not release monthly contact quota: %s', err.message)
+          );
+        }
+      });
       return next(); // Still has monthly free contacts
     }
 
     // 6. Contact Unlock Cooldown (ONLY applies after free contacts are exhausted)
+    req.entitlementSource = 'blocked_quota';
     if (typeof ContactUnlock === 'number' && ContactUnlock > 0) {
       const lastRequest = await JobRequest.findOne({ customerId: userId }).sort({
         createdAt: -1,
@@ -172,10 +180,12 @@ exports.checkSubscription = async (req, res, next) => {
     // If we are here, monthly limit is reached AND cooldown is over (if any)
     return res.status(402).json({
       message: 'Du har nådd din månedlige grense for kontakter.',
+      code: 'contact_limit_reached',
       paymentRequired: true,
       upgradeRequired: true,
       limit: freeContact,
       usage: currentUsage,
+      remaining: Math.max(freeContact - currentUsage, 0),
       perContactPrice,
     });
   } catch (error) {
