@@ -66,7 +66,8 @@ function resolveVippsRoute(req, explicitPlatform) {
     explicitPlatform ||
     (requestPlatform === 'mobile' ? 'mobile' : undefined) ||
     ((req?.baseUrl || '').includes('/mobile') ? 'mobile' : 'web');
-  const redirectVar = routePlatform === 'mobile' ? 'VIPPS_MOBILE_REDIRECT_URI' : 'VIPPS_WEB_REDIRECT_URI';
+  const redirectVar =
+    routePlatform === 'mobile' ? 'VIPPS_MOBILE_REDIRECT_URI' : 'VIPPS_WEB_REDIRECT_URI';
   const redirectUri = (process.env[redirectVar] || process.env.VIPPS_REDIRECT_URI || '').trim();
   return { platform: routePlatform, redirectUri };
 }
@@ -128,10 +129,14 @@ exports.redirectToVipps = async (req, res, options = {}) => {
 exports.vippsCallback = async (req, res, options = {}) => {
   const { code, state, error } = req.query;
   const platformFromState = takeOAuthPlatform(req);
-  const { platform: routePlatform, redirectUri: configuredRedirectUri } = resolveVippsRoute(req, options.platform || platformFromState);
+  const { platform: routePlatform, redirectUri: configuredRedirectUri } = resolveVippsRoute(
+    req,
+    options.platform || platformFromState
+  );
   const platform = options.platform || platformFromState || routePlatform;
   const succeeded = (accessToken) => oauthDestination({ req, platform, accessToken });
-  const failed = (errorCode, webPath) => oauthDestination({ req, platform, error: errorCode, webPath });
+  const failed = (errorCode, webPath) =>
+    oauthDestination({ req, platform, error: errorCode, webPath });
   const cancelled = () => (platform === 'mobile' ? failed(ERRORS.CANCELLED) : frontendUrl('login'));
 
   /**
@@ -210,10 +215,9 @@ exports.vippsCallback = async (req, res, options = {}) => {
 
     // The userinfo endpoint is called server-to-server over TLS with a token we just
     // obtained ourselves, so its response is the identity assertion here.
-    const { data: profile } = await axios.get(
-      `${vippsBaseUrl}/vipps-userinfo-api/userinfo`,
-      { headers: { Authorization: `Bearer ${vippsAccessToken}` } }
-    );
+    const { data: profile } = await axios.get(`${vippsBaseUrl}/vipps-userinfo-api/userinfo`, {
+      headers: { Authorization: `Bearer ${vippsAccessToken}` },
+    });
 
     /**
      * Decide what this identity is allowed to do. `resolveOAuthLogin` refuses a
@@ -291,8 +295,12 @@ exports.vippsCallback = async (req, res, options = {}) => {
         return res.redirect(failed(ERRORS.FAILED));
     }
 
-    if (user?.isDeleted || user?.accountStatus === 'deactivated') {
-      return res.redirect(failed('account_deactivated'));
+    if (
+      user?.isDeleted ||
+      user?.accountStatus === 'inactive' ||
+      user?.accountStatus === 'deactivated'
+    ) {
+      return res.redirect(failed('account_inactive'));
     }
 
     // Idempotent by construction -- everything writable is inside `$setOnInsert`, so

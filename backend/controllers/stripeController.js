@@ -1,12 +1,9 @@
-const Coupon = require('../models/Coupon');
 const Subscription = require('../models/Subscription');
 const User = require('../models/User');
 const Service = require('../models/Service');
 const mongoose = require('mongoose');
 const { getStripe } = require('../config/stripe');
 const SubscriptionPlan = require('../models/SubscriptionPlan');
-const calculateDiscount = require('../utils/calculateDiscount');
-const { validateCouponLogic } = require('../utils/couponValidation');
 const { upsertTransaction } = require('../utils/transaction');
 const { upsertSubscription } = require('../utils/subscription');
 const { findBillingCapableSubscription } = require('../services/stripe/subscriptionState');
@@ -15,6 +12,8 @@ const {
   provisionExtraContactFromSession,
   subscriptionPeriodEnd,
 } = require('../services/stripe/provisioning');
+const { resolveAllowedPlanType } = require('../utils/planAccess');
+const { resolveCurrentSubscriptionEntitlements } = require('../utils/subscriptionEntitlements');
 
 const now = new Date();
 const nextMonth = new Date();
@@ -73,13 +72,12 @@ const CHECKOUT_IDEMPOTENCY_WINDOW_MS = 60 * 1000;
  * A key that is stable across an accidental double-submit and different across a
  * deliberate retry.
  *
- * Every component is server-derived: the authenticated user, the plan we looked up
- * ourselves, and the coupon code after server-side validation. Nothing the client sent
- * as an authority contributes to it.
+ * Every component is server-derived: the authenticated user and the plan we looked up
+ * ourselves. Nothing the client sent as an authority contributes to it.
  */
-function subscriptionIdempotencyKey({ userId, planId, couponCode }) {
+function subscriptionIdempotencyKey({ userId, planId }) {
   const window = Math.floor(Date.now() / CHECKOUT_IDEMPOTENCY_WINDOW_MS);
-  return `sub_checkout_${userId}_${planId}_${couponCode || 'nocoupon'}_${window}`;
+  return `sub_checkout_${userId}_${planId}_nocoupon_${window}`;
 }
 
 /** Stripe's two "you are already using this key" signals, which mean: they tapped twice. */
@@ -90,16 +88,13 @@ function isIdempotencyCollision(error) {
 /**
  * Start a Stripe Checkout session for a paid subscription plan.
  *
- * The request body is read for `planId` and `couponCode` and nothing else. Price,
- * discount, plan type, the Stripe customer and the owning user are all resolved
- * server-side from the authenticated session — a client that posts `price`,
- * `finalPrice`, `userId` or `stripeCustomerId` is simply ignored, and the coupon is
- * revalidated here even if the UI already validated it for display.
+ * The request body is read for `planId` and nothing else. Price, plan type, the
+ * Stripe customer and the owning user are all resolved server-side.
  */
 exports.createCheckoutSession = async (req, res) => {
   try {
     const stripe = await getStripe();
-    const { planId, couponCode } = req.body;
+    const { planId } = req.body;
     const user = req.user;
 
     if (!planId) return res.status(400).json({ message: 'planId mangler' });
@@ -122,6 +117,14 @@ exports.createCheckoutSession = async (req, res) => {
     // 1️⃣ Get plan
     const plan = await SubscriptionPlan.findById(planId);
     if (!plan) return res.status(404).json({ message: 'Plan not found' });
+
+    const allowedPlanType = resolveAllowedPlanType(user);
+    if (!allowedPlanType || plan.type !== allowedPlanType) {
+      return res.status(403).json({
+        message: 'Denne planen er ikke tilgjengelig for kontotypen din.',
+        code: 'plan_type_not_allowed',
+      });
+    }
 
     // A retired plan must not be purchasable, and this is the only place that can
     // actually enforce it. `GET /api/plans` returns inactive plans on purpose — the
@@ -168,56 +171,10 @@ exports.createCheckoutSession = async (req, res) => {
       });
     }
 
-    // 3️⃣ Determine final price
-    let finalPrice = plan.price; // default price
-    let appliedCoupon = null;
-    let couponId = null; // ✅ declare here
-
-    if (couponCode) {
-      // Only a string can be upper-cased; anything else would throw and be reported as
-      // a 500 rather than as the invalid code it is.
-      if (typeof couponCode !== 'string') {
-        return res.status(400).json({ message: 'Invalid or inactive coupon' });
-      }
-
-      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
-
-      // logic moved to utils/couponValidation.js
-      validateCouponLogic(coupon, plan, user._id);
-
-      // Calculate discounted price
-      const pricing = calculateDiscount(plan.price, coupon);
-      finalPrice = pricing.finalPrice;
-      appliedCoupon = coupon.code;
-      couponId = coupon._id;
-    }
-
-    // 4️⃣ Refuse a total Stripe cannot bill.
-    //
-    // The free-plan guard above checks `plan.price`, which is not the same number.
-    // `calculateDiscount` clamps at zero, so a 100% coupon — or a fixed coupon worth at
-    // least the plan price — brings `finalPrice` to 0 while `plan.price` stays positive.
-    // That reached Stripe as a recurring line item of `unit_amount: 0`, which Stripe
-    // rejects, and the customer saw "contact support". Sub-øre totals round to the same
-    // zero, so the guard is on the amount actually sent rather than on `finalPrice`.
-    //
-    // There is no "activate a free subscription" operation to fall back on: every user
-    // already holds a free default plan from signup, and nothing in the codebase
-    // upgrades an account without a Stripe subscription behind it. So this is refused
-    // rather than quietly turned into something else.
-    const unitAmount = Math.round(finalPrice * 100);
-    if (!Number.isFinite(unitAmount) || unitAmount < 1) {
-      console.warn(
-        'createCheckoutSession blocked: coupon %s reduced plan %s to a zero total',
-        appliedCoupon,
-        String(planId)
-      );
-      return res.status(400).json({
-        message:
-          'Rabatten gjør betalingen gratis, og kan ikke behandles som et Stripe-abonnement.',
-        code: 'zero_total_subscription',
-      });
-    }
+    // Stripe owns discounts. The recurring line item always starts at the
+    // server-controlled plan price, including when a promotion code makes the
+    // first Checkout payment due at zero.
+    const unitAmount = Math.round(plan.price * 100);
 
     // 5️⃣ Reuse the user's Stripe customer, creating it only on the first purchase
     const customerId = await resolveStripeCustomer(stripe, user);
@@ -227,6 +184,8 @@ exports.createCheckoutSession = async (req, res) => {
       {
         customer: customerId,
         payment_method_types: ['card'],
+        allow_promotion_codes: true,
+        billing_address_collection: 'auto',
         line_items: [
           {
             price_data: {
@@ -246,15 +205,12 @@ exports.createCheckoutSession = async (req, res) => {
           planId: String(planId),
           planName: plan.name,
           planPrice: plan.price,
-          discountAmount: plan.price - finalPrice,
           planType: plan.type,
           // `SubscriptionPlan` has no `autoRenew` field, so this has always been the
           // literal string "undefined" and provisioning has always read it as false.
           // Left as-is rather than removed: changing it would change the metadata
           // contract, which is not what this hardening pass is for.
           autoRenew: String(plan.autoRenew),
-          coupon: appliedCoupon || '',
-          couponId: couponId ? String(couponId) : '', // ✅ safe
         },
       },
       {
@@ -264,7 +220,6 @@ exports.createCheckoutSession = async (req, res) => {
         idempotencyKey: subscriptionIdempotencyKey({
           userId: user._id,
           planId,
-          couponCode: appliedCoupon,
         }),
       }
     );
@@ -281,16 +236,10 @@ exports.createCheckoutSession = async (req, res) => {
       });
     }
 
-    // A coupon that is expired, used up or not valid for this plan throws from
-    // `validateCouponLogic` with a message written for the user; those are worth passing
-    // through. A Stripe or database failure is not — it used to be echoed verbatim, which
-    // put internal detail in front of the customer and told them nothing useful.
-    const isCouponIssue = Boolean(error?.isCouponError || error?.statusCode === 400);
+    // A Stripe or database failure is not safe to echo verbatim to the customer.
     console.error('createCheckoutSession failed [plan=%s]: %s', req.body?.planId, error?.message);
-    res.status(isCouponIssue ? 400 : 500).json({
-      message: isCouponIssue
-        ? error.message
-        : 'Kunne ikke starte betalingen. Prøv igjen, eller kontakt support.',
+    res.status(500).json({
+      message: 'Kunne ikke starte betalingen. Prøv igjen, eller kontakt support.',
       code: error?.code || 'stripe_session_failed',
     });
   }
@@ -313,7 +262,12 @@ exports.checkoutSessionStatus = async (req, res) => {
       return res.status(403).json({ error: 'Denne betalingen tilhører en annen bruker' });
     }
 
-    if (session.payment_status !== 'paid') {
+    const isMembership =
+      session.mode === 'subscription' || session.metadata?.type === 'subscription';
+    if (
+      session.payment_status !== 'paid' &&
+      !(isMembership && session.payment_status === 'no_payment_required')
+    ) {
       return res.json({ payment_status: session.payment_status });
     }
 
@@ -324,7 +278,9 @@ exports.checkoutSessionStatus = async (req, res) => {
     const result = await provisionSubscriptionFromSession(session);
     if (!result.ok) {
       console.error('checkoutSessionStatus: could not provision %s: %s', sessionId, result.reason);
-      return res.status(400).json({ message: 'Kunne ikke aktivere abonnementet', code: result.reason });
+      return res
+        .status(400)
+        .json({ message: 'Kunne ikke aktivere abonnementet', code: result.reason });
     }
 
     // The success page showed one line of green text and nothing about the purchase.
@@ -350,11 +306,23 @@ exports.createExtraContactPayment = async (req, res) => {
   try {
     const stripe = await getStripe();
     const user = req.user;
-    const { amount, serviceId } = req.body;
+    const { serviceId } = req.body;
 
     // Validate required fields
-    if (!amount || !serviceId) {
-      return res.status(400).json({ message: 'Amount and serviceId are required' });
+    if (!serviceId) {
+      return res.status(400).json({ message: 'serviceId is required' });
+    }
+
+    const resolved = await resolveCurrentSubscriptionEntitlements(user._id);
+    if (!resolved?.hasPlan) {
+      return res.status(403).json({
+        message: 'Du trenger et aktivt abonnement for å kjøpe ekstra kontakter.',
+        code: 'subscription_required',
+      });
+    }
+    const amount = resolved?.entitlements?.perContactPrice;
+    if (!resolved || !Number.isFinite(amount) || amount < 0) {
+      return res.status(403).json({ message: 'Invalid subscription plan', code: 'plan_invalid' });
     }
 
     const service = await Service.findById(serviceId);
@@ -493,8 +461,11 @@ exports.getMySubscription = async (req, res) => {
       } catch (err) {
         // A subscription Stripe no longer knows about is worth reporting as unknown rather
         // than failing the whole request — the local record is still useful.
-        console.error('getMySubscription: Stripe lookup failed for %s: %s',
-          current.stripeSubscriptionId, err.message);
+        console.error(
+          'getMySubscription: Stripe lookup failed for %s: %s',
+          current.stripeSubscriptionId,
+          err.message
+        );
         payload.stripeStatus = 'unknown';
       }
     }
@@ -516,9 +487,7 @@ exports.cancelMySubscription = async (req, res) => {
       return res.status(400).json({ message: 'Du har ingen aktivt abonnement å si opp' });
     }
     if (!current.stripeSubscriptionId) {
-      return res
-        .status(400)
-        .json({ message: 'Denne planen er gratis og har ingenting å si opp' });
+      return res.status(400).json({ message: 'Denne planen er gratis og har ingenting å si opp' });
     }
 
     const stripe = await getStripe();

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit3, Trash2, Ticket, Percent, InfinityIcon, Calendar } from 'lucide-react';
+import { Plus, Ban, Ticket, Percent, InfinityIcon, Calendar } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import mainLink from '../../api/mainURLs';
 import {
@@ -24,6 +24,12 @@ interface Voucher {
     activeDate: string;
     expiresDate: string;
     usedBy: string[];
+    source?: 'legacy' | 'stripe';
+    stripeMode?: 'test' | 'live' | null;
+    duration?: 'once' | 'forever' | 'repeating' | null;
+    durationInMonths?: number | null;
+    redemptions?: number;
+    maxRedemptions?: number;
 }
 
 interface VoucherForm {
@@ -36,12 +42,14 @@ interface VoucherForm {
     active: boolean;
     activeDate: string;
     expiresDate: string;
+    duration: 'once' | 'forever' | 'repeating';
+    durationInMonths: string;
 }
 
 const emptyForm: VoucherForm = {
     name: '', code: '', amount: '', type: 'percentage',
     usageLimit: '0', targetPlanType: 'all', active: true,
-    activeDate: '', expiresDate: '',
+    activeDate: '', expiresDate: '', duration: 'once', durationInMonths: '',
 };
 
 export default function VoucherPage() {
@@ -56,16 +64,16 @@ export default function VoucherPage() {
     const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ['admin-coupons', page],
         queryFn: async () => {
-            const resp = await mainLink.get(`/api/coupons?page=${page}&limit=15`);
-            return { vouchers: resp.data.coupons as Voucher[], total: resp.data.totalCoupons ?? 0, totalPages: resp.data.totalPages ?? 1 };
+            const resp = await mainLink.get('/api/admin/promotion-codes');
+            return { vouchers: resp.data.promotions as Voucher[], mode: resp.data.mode as string };
         },
         staleTime: 30_000,
     });
 
-    const deleteMutation = useMutation({
-        mutationFn: (id: string) => mainLink.delete(`/api/coupons/${id}`),
-        onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-coupons'] }); toast.success('Kupong slettet.'); },
-        onError: () => toast.error('Kunne ikke slette kupong.'),
+    const deactivateMutation = useMutation({
+        mutationFn: (id: string) => mainLink.post(`/api/admin/promotion-codes/${id}/deactivate`),
+        onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-coupons'] }); toast.success('Rabattkode deaktivert.'); },
+        onError: (err: { response?: { data?: { error?: string } } }) => toast.error(err.response?.data?.error || 'Kunne ikke deaktivere rabattkoden.'),
     });
 
     const saveMutation = useMutation({
@@ -76,15 +84,12 @@ export default function VoucherPage() {
                 amount: parseFloat(values.amount),
                 usageLimit: parseInt(values.usageLimit, 10) || 0,
             };
-            if (editTarget) {
-                await mainLink.put(`/api/coupons/${editTarget._id}`, payload);
-            } else {
-                await mainLink.post('/api/coupons', payload);
-            }
+            if (editTarget) throw new Error('Stripe-rabattkoder kan ikke redigeres. Deaktiver og opprett en ny kode.');
+            await mainLink.post('/api/admin/promotion-codes', payload);
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ['admin-coupons'] });
-            toast.success(editTarget ? 'Kupong oppdatert.' : 'Kupong opprettet.');
+            toast.success('Stripe-rabattkode opprettet.');
             setCreateOpen(false);
             setEditTarget(null);
         },
@@ -112,14 +117,16 @@ export default function VoucherPage() {
             targetPlanType: v.targetPlanType, active: v.active,
             activeDate: v.activeDate ? new Date(v.activeDate).toISOString().split('T')[0] : '',
             expiresDate: v.expiresDate ? new Date(v.expiresDate).toISOString().split('T')[0] : '',
+            duration: v.duration || 'once',
+            durationInMonths: v.durationInMonths ? String(v.durationInMonths) : '',
         });
         setFormError('');
         setCreateOpen(true);
     };
 
     const handleSave = async () => {
-        if (!form.name.trim() || !form.code.trim() || !form.amount || !form.expiresDate) {
-            setFormError('Navn, kode, beløp og utløpsdato er påkrevd.');
+        if (!form.name.trim() || !form.code.trim() || !form.amount) {
+            setFormError('Navn, kode og beløp er påkrevd.');
             return;
         }
         await saveMutation.mutateAsync(form);
@@ -144,7 +151,7 @@ export default function VoucherPage() {
             header: 'Bruk',
             render: (v) => (
                 <span className="text-sm font-medium text-gray-700">
-                    {v.usedBy.length} / {v.usageLimit || <InfinityIcon size={14} className="inline text-gray-400" />}
+                    {(v.redemptions ?? v.usedBy?.length ?? 0)} / {(v.maxRedemptions ?? v.usageLimit) || <InfinityIcon size={14} className="inline text-gray-400" />}
                 </span>
             ),
         },
@@ -160,12 +167,17 @@ export default function VoucherPage() {
         },
         {
             key: 'target',
-            header: 'Målgruppe',
+            header: 'Kilde / modus',
             render: (v) => (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 capitalize">
-                    {v.targetPlanType}
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
+                    {v.source === 'stripe' ? `Stripe · ${v.stripeMode === 'test' ? 'SANDBOX' : 'LIVE'}` : 'Legacy'}
                 </span>
             ),
+        },
+        {
+            key: 'duration',
+            header: 'Varighet',
+            render: (v) => <span className="text-xs text-gray-600">{v.duration === 'repeating' ? `${v.durationInMonths} måneder` : v.duration || '–'}</span>,
         },
         {
             key: 'status',
@@ -179,7 +191,7 @@ export default function VoucherPage() {
                 <div className="text-xs text-gray-500">
                     <span>{v.activeDate ? new Date(v.activeDate).toLocaleDateString('nb-NO') : '–'}</span>
                     <span className="mx-1">→</span>
-                    <span>{new Date(v.expiresDate).toLocaleDateString('nb-NO')}</span>
+                    <span>{v.expiresDate ? new Date(v.expiresDate).toLocaleDateString('nb-NO') : '–'}</span>
                 </div>
             ),
         },
@@ -189,14 +201,10 @@ export default function VoucherPage() {
             className: 'whitespace-nowrap',
             render: (v) => (
                 <div className="flex items-center gap-1.5">
-                    <button onClick={() => openEdit(v)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
-                        <Edit3 size={12} /> Rediger
-                    </button>
-                    <button onClick={() => setDeleteTarget(v)}
+                            {v.source === 'stripe' && v.active ? <button onClick={() => setDeleteTarget(v)}
                         className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-                        <Trash2 size={12} /> Slett
-                    </button>
+                                <Ban size={12} /> Deaktiver
+                            </button> : null}
                 </div>
             ),
         },
@@ -208,7 +216,7 @@ export default function VoucherPage() {
         <div className="space-y-6">
             <AdminPageHeader
                 title="Kuponger"
-                description="Administrer rabattkuponger og tilbudskoder"
+                description={`Stripe-rabattkoder for medlemskap · ${data?.mode === 'test' ? 'SANDBOX' : data?.mode === 'live' ? 'LIVE' : 'Stripe-modus ukjent'}`}
                 actions={
                     <button onClick={openCreate}
                         className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#2d4a3e] hover:bg-[#233b31] rounded-xl transition-colors">
@@ -284,14 +292,8 @@ export default function VoucherPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label htmlFor="v-target" className="block text-sm font-medium text-gray-700 mb-1">Målgruppe *</label>
-                                <select id="v-target" value={form.targetPlanType}
-                                    onChange={(e) => setForm((f) => ({ ...f, targetPlanType: e.target.value as 'all' | 'private' | 'business' }))}
-                                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50">
-                                    <option value="all">Alle planer</option>
-                                    <option value="private">Privat</option>
-                                    <option value="business">Bedrift</option>
-                                </select>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Målgruppe</label>
+                                <p className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-600">Alle medlemsplaner</p>
                             </div>
                             <div>
                                 <label htmlFor="v-usage" className="block text-sm font-medium text-gray-700 mb-1">Bruksgrense (0 = ubegrenset)</label>
@@ -303,11 +305,24 @@ export default function VoucherPage() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label htmlFor="v-active" className="block text-sm font-medium text-gray-700 mb-1">Aktiv fra</label>
-                                <input id="v-active" type="date" value={form.activeDate}
-                                    onChange={(e) => setForm((f) => ({ ...f, activeDate: e.target.value }))}
-                                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                <label htmlFor="v-duration" className="block text-sm font-medium text-gray-700 mb-1">Varighet *</label>
+                                <select id="v-duration" value={form.duration}
+                                    onChange={(e) => setForm((f) => ({ ...f, duration: e.target.value as VoucherForm['duration'] }))}
+                                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50">
+                                    <option value="once">Én gang</option>
+                                    <option value="forever">For alltid</option>
+                                    <option value="repeating">Gjentakende</option>
+                                </select>
                             </div>
+                            {form.duration === 'repeating' ? <div>
+                                <label htmlFor="v-months" className="block text-sm font-medium text-gray-700 mb-1">Antall måneder *</label>
+                                <input id="v-months" type="number" min="1" step="1" value={form.durationInMonths}
+                                    onChange={(e) => setForm((f) => ({ ...f, durationInMonths: e.target.value }))}
+                                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                            </div> : <div />}
+                        </div>
+
+                        <div>
                             <div>
                                 <label htmlFor="v-expires" className="block text-sm font-medium text-gray-700 mb-1">Utløper *</label>
                                 <input id="v-expires" type="date" value={form.expiresDate}
@@ -339,16 +354,16 @@ export default function VoucherPage() {
             )}
 
             <AdminConfirmDialog
-                title="Slett kupong?"
-                description={`"${deleteTarget?.name}" vil bli permanent slettet.`}
-                confirmText="Ja, slett"
+                title="Deaktiver rabattkode?"
+                description={`"${deleteTarget?.name}" kan ikke brukes i nye Stripe Checkout-sesjoner.`}
+                confirmText="Deaktiver"
                 cancelText="Avbryt"
                 variant="destructive"
                 isOpen={!!deleteTarget}
                 onOpenChange={(open) => !open && setDeleteTarget(null)}
                 onConfirm={async () => {
                     if (!deleteTarget) return;
-                    await deleteMutation.mutateAsync(deleteTarget._id);
+                    if (deleteTarget.source === 'stripe') await deactivateMutation.mutateAsync(deleteTarget._id);
                     setDeleteTarget(null);
                 }}
             />

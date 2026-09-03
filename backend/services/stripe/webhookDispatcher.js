@@ -65,13 +65,18 @@ async function handleEvent(event, { io } = {}) {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object;
-      if (session.payment_status !== 'paid') {
+      const isMembership =
+        session.mode === 'subscription' || session.metadata?.type === 'subscription';
+      if (
+        session.payment_status !== 'paid' &&
+        !(isMembership && session.payment_status === 'no_payment_required')
+      ) {
         return { handled: 'ignored_unpaid' };
       }
 
       const type = session.metadata?.type;
 
-      if (session.mode === 'subscription' || type === 'subscription') {
+      if (isMembership) {
         return { handled: 'subscription', result: await provisionSubscriptionFromSession(session) };
       }
       if (type === 'extra_contact') {

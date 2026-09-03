@@ -21,9 +21,15 @@ const systemAdminController = require('../../controllers/admin/systemAdminContro
 const contentAdminController = require('../../controllers/admin/contentAdminController');
 const evidenceUploadController = require('../../controllers/admin/evidenceUploadController');
 const shopAdminController = require('../../controllers/admin/shopAdminController');
+const promotionCodeController = require('../../controllers/admin/promotionCodeController');
 
 // Apply auth + admin check + rate limiter to ALL routes
 router.use(authenticate, requireAdmin, adminLimiter);
+
+// ── Stripe membership promotion codes ─────────────────────────────────────
+router.get('/promotion-codes', promotionCodeController.listPromotionCodes);
+router.post('/promotion-codes', promotionCodeController.createPromotionCode);
+router.post('/promotion-codes/:id/deactivate', promotionCodeController.deactivatePromotionCode);
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 router.get('/overview', dashboardController.getOverview);
@@ -37,6 +43,7 @@ router.put('/users/:id/status', usersAdminController.updateUserStatus);
 router.put('/users/:id/verify', usersAdminController.verifyUser);
 router.delete('/users/:id', usersAdminController.softDeleteUser);
 router.put('/users/:id/restore', usersAdminController.restoreUser);
+router.put('/users/:id/reactivate', usersAdminController.reactivateUser);
 router.delete('/users/:id/sessions', usersAdminController.revokeUserSessions);
 
 // ── Orders ─────────────────────────────────────────────────────────────────
@@ -98,8 +105,14 @@ router.patch('/chat-reports/:reportId/assign', chatReportsAdminController.assign
 router.patch('/chat-reports/:reportId/priority', chatReportsAdminController.updatePriority);
 router.patch('/chat-reports/:reportId/status', chatReportsAdminController.updateStatus);
 router.post('/chat-reports/:reportId/internal-notes', chatReportsAdminController.addInternalNote);
-router.post('/chat-reports/:reportId/request-information', chatReportsAdminController.requestInformation);
-router.post('/chat-reports/:reportId/official-message', chatReportsAdminController.addOfficialMessage);
+router.post(
+  '/chat-reports/:reportId/request-information',
+  chatReportsAdminController.requestInformation
+);
+router.post(
+  '/chat-reports/:reportId/official-message',
+  chatReportsAdminController.addOfficialMessage
+);
 router.post('/chat-reports/:reportId/resolve', chatReportsAdminController.resolveReport);
 router.post('/chat-reports/:reportId/dismiss', chatReportsAdminController.resolveReport); // dismiss via resolve with no_violation outcome
 router.post('/chat-reports/:reportId/reopen', chatReportsAdminController.reopenReport);

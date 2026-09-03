@@ -34,17 +34,19 @@ exports.ensureDefaultSubscription = async (user) => {
   const userId = user?._id || user?.id || user;
   if (!userId) throw new Error('ensureDefaultSubscription requires a user');
 
-  const isCompany = user?.role === 'company' || user?.planType === 'business';
+  const isCompany = user?.role === 'company';
 
   const insert = {
     userId,
-    currentPlan: {
-      plan: isCompany ? 'Start' : 'Standard',
-      planType: isCompany ? 'business' : 'private',
-      startDate: new Date(),
-      status: 'active',
-      autoRenew: false,
-    },
+    currentPlan: isCompany
+      ? null
+      : {
+          plan: 'Standard',
+          planType: 'private',
+          startDate: new Date(),
+          status: 'active',
+          autoRenew: false,
+        },
   };
 
   try {

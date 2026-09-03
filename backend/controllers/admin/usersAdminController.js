@@ -1,7 +1,12 @@
 const bcrypt = require('bcryptjs');
 const User = require('../../models/User');
 const Session = require('../../models/Session');
-const { asyncHandler, sendSuccess, sendError, buildPagination } = require('../../utils/apiResponse');
+const {
+  asyncHandler,
+  sendSuccess,
+  sendError,
+  buildPagination,
+} = require('../../utils/apiResponse');
 const { parsePagination, parseObjectId, parseSort, parseDate } = require('../../utils/pagination');
 const { logActivity } = require('../../services/admin/activityService');
 
@@ -37,7 +42,10 @@ const getUsers = asyncHandler(async (req, res) => {
     query.role = req.query.role;
   }
 
-  if (req.query.accountStatus && ['active', 'inactive', 'verified'].includes(req.query.accountStatus)) {
+  if (
+    req.query.accountStatus &&
+    ['active', 'inactive', 'verified'].includes(req.query.accountStatus)
+  ) {
     query.accountStatus = req.query.accountStatus;
   }
 
@@ -60,12 +68,7 @@ const getUsers = asyncHandler(async (req, res) => {
 
   const [total, users] = await Promise.all([
     User.countDocuments(query),
-    User.find(query)
-      .select(SENSITIVE_SELECT)
-      .sort(sort)
-      .skip(skip)
-      .limit(limit)
-      .lean(),
+    User.find(query).select(SENSITIVE_SELECT).sort(sort).skip(skip).limit(limit).lean(),
   ]);
 
   return sendSuccess(res, { users }, 'Brukere hentet.', buildPagination(total, page, limit));
@@ -147,11 +150,7 @@ const changeUserRole = asyncHandler(async (req, res) => {
 
   const { role } = req.body;
   if (!role || !ALL_ROLES.includes(role)) {
-    return sendError(
-      res,
-      `Ugyldig rolle. Tilgjengelige roller: ${ALL_ROLES.join(', ')}.`,
-      400
-    );
+    return sendError(res, `Ugyldig rolle. Tilgjengelige roller: ${ALL_ROLES.join(', ')}.`, 400);
   }
 
   // Prevent demoting self
@@ -209,7 +208,11 @@ const updateUserStatus = asyncHandler(async (req, res) => {
 
   const { accountStatus } = req.body;
   if (!accountStatus || !['active', 'inactive', 'verified'].includes(accountStatus)) {
-    return sendError(res, 'Ugyldig kontostatus. Tillatte verdier: active, inactive, verified.', 400);
+    return sendError(
+      res,
+      'Ugyldig kontostatus. Tillatte verdier: active, inactive, verified.',
+      400
+    );
   }
 
   if (id.equals(req.user._id)) {
@@ -218,11 +221,15 @@ const updateUserStatus = asyncHandler(async (req, res) => {
 
   const user = await User.findByIdAndUpdate(
     id,
-    { accountStatus },
+    accountStatus === 'inactive'
+      ? { accountStatus, deactivatedAt: new Date(), deactivatedBy: req.user._id }
+      : { accountStatus, deactivatedAt: null, deactivatedBy: null },
     { new: true }
   ).select(SENSITIVE_SELECT);
 
   if (!user) return sendError(res, 'Bruker ikke funnet.', 404);
+
+  if (accountStatus === 'inactive') await Session.deleteMany({ userId: id });
 
   const action = accountStatus === 'inactive' ? 'user_deactivated' : 'user_activated';
   await logActivity({
@@ -270,8 +277,7 @@ const verifyUser = asyncHandler(async (req, res) => {
 
 /**
  * DELETE /api/admin/users/:id
- * Soft delete — sets isDeleted, deletedAt, accountStatus=inactive.
- * Never hard-deletes a user with associated data.
+ * Deactivate the account without deleting the user or historical data.
  * Cannot delete self or the last superAdmin.
  */
 const softDeleteUser = asyncHandler(async (req, res) => {
@@ -300,23 +306,40 @@ const softDeleteUser = asyncHandler(async (req, res) => {
   }
 
   await User.findByIdAndUpdate(id, {
-    isDeleted: true,
-    deletedAt: new Date(),
     accountStatus: 'inactive',
+    deactivatedAt: new Date(),
+    deactivatedBy: req.user._id,
   });
+  await Session.deleteMany({ userId: id });
 
   await logActivity({
     adminId: req.user._id,
-    action: 'user_deleted',
+    action: 'user_deactivated',
     targetModel: 'User',
     targetId: id,
-    description: `Bruker (myk sletting): ${targetUser.email}`,
+    description: `Bruker deaktivert: ${targetUser.email}`,
     metadata: { role: targetUser.role },
     ip: req.ip,
     userAgent: req.headers['user-agent'],
   });
 
-  return sendSuccess(res, {}, 'Bruker deaktivert og arkivert.');
+  return sendSuccess(res, {}, 'Bruker deaktivert. Historiske data er beholdt.');
+});
+
+const reactivateUser = asyncHandler(async (req, res) => {
+  const id = parseObjectId(req.params.id);
+  if (!id) return sendError(res, 'Ugyldig bruker-ID.', 400);
+  if (id.equals(req.user._id))
+    return sendError(res, 'Du kan ikke endre din egen kontostatus.', 403);
+
+  const user = await User.findByIdAndUpdate(
+    id,
+    { accountStatus: 'active', deactivatedAt: null, deactivatedBy: null },
+    { new: true }
+  ).select(SENSITIVE_SELECT);
+  if (!user) return sendError(res, 'Bruker ikke funnet.', 404);
+  await Session.deleteMany({ userId: id });
+  return sendSuccess(res, { user }, 'Bruker aktivert. Logg inn på nytt.');
 });
 
 /**
@@ -380,5 +403,6 @@ module.exports = {
   verifyUser,
   softDeleteUser,
   restoreUser,
+  reactivateUser,
   revokeUserSessions,
 };

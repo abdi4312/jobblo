@@ -17,7 +17,8 @@
 
 jest.mock('../models/Subscription', () => ({ findOne: jest.fn() }));
 jest.mock('../models/Coupon', () => ({ findByIdAndUpdate: jest.fn() }));
-jest.mock('../models/User', () => ({ findByIdAndUpdate: jest.fn() }));
+jest.mock('../models/User', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
+jest.mock('../models/SubscriptionPlan', () => ({ findById: jest.fn() }));
 jest.mock('../models/Notification', () => ({}));
 jest.mock('../config/stripe', () => ({ getStripe: jest.fn(), isTestMode: jest.fn() }));
 jest.mock('../utils/transaction', () => ({ upsertTransaction: jest.fn() }));
@@ -31,6 +32,8 @@ jest.mock('../services/stripe/customers', () => ({
 }));
 
 const Subscription = require('../models/Subscription');
+const SubscriptionPlan = require('../models/SubscriptionPlan');
+const User = require('../models/User');
 const { getStripe } = require('../config/stripe');
 const { upsertTransaction } = require('../utils/transaction');
 const { upsertSubscription } = require('../utils/subscription');
@@ -69,11 +72,16 @@ function resourceMissing() {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  stripe = { subscriptions: { retrieve: jest.fn() } };
+  stripe = {
+    subscriptions: { retrieve: jest.fn() },
+    checkout: { sessions: { retrieve: jest.fn() } },
+  };
   getStripe.mockResolvedValue(stripe);
   upsertSubscription.mockResolvedValue({ currentPlan: { plan: 'Premium' } });
   upsertTransaction.mockResolvedValue({});
   Subscription.findOne.mockResolvedValue(storedRow(null));
+  SubscriptionPlan.findById.mockResolvedValue({ _id: PLAN_ID, type: 'private' });
+  User.findById.mockResolvedValue({ _id: USER_ID, role: 'user' });
 });
 
 describe('K — a paid session cannot silently orphan a live subscription', () => {
@@ -148,6 +156,37 @@ describe('the guard does not break normal provisioning', () => {
     expect(stripe.subscriptions.retrieve).not.toHaveBeenCalled();
   });
 
+  it('records Stripe total and native promotion discount, never a Jobblo coupon id', async () => {
+    const session = paidSession('sub_new');
+    session.discounts = [{ promotion_code: 'promo_1' }];
+    stripe.checkout.sessions = {
+      retrieve: jest.fn().mockResolvedValue({
+        ...session,
+        amount_total: 23920,
+        total_details: { amount_discount: 5980 },
+        discounts: [{ promotion_code: { code: 'JOBBLO20' } }],
+      }),
+    };
+
+    const result = await provisionSubscriptionFromSession(session);
+
+    expect(result.ok).toBe(true);
+    expect(upsertTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amount: 239.2,
+        discountAmount: 59.8,
+        discountCoupon: 'JOBBLO20',
+        coupon: null,
+      })
+    );
+    expect(upsertSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({ discountAmount: 59.8, discountCoupon: 'JOBBLO20', couponId: null })
+    );
+    expect(stripe.checkout.sessions.retrieve).toHaveBeenCalledWith('cs_new', {
+      expand: ['discounts.promotion_code'],
+    });
+  });
+
   it.each(['canceled', 'incomplete_expired'])(
     'replaces a stored subscription that is %s',
     async (status) => {
@@ -193,5 +232,28 @@ describe('the guard does not break normal provisioning', () => {
 
     expect(result).toEqual({ ok: false, reason: 'missing_user_metadata' });
     expect(upsertTransaction).not.toHaveBeenCalled();
+  });
+});
+
+describe('webhook plan metadata remains defensive', () => {
+  it('rejects metadata whose type disagrees with the database plan', async () => {
+    const session = paidSession('sub_new');
+    session.metadata.planType = 'business';
+
+    const result = await provisionSubscriptionFromSession(session);
+
+    expect(result).toEqual({ ok: false, reason: 'plan_metadata_mismatch' });
+    expect(upsertTransaction).not.toHaveBeenCalled();
+    expect(upsertSubscription).not.toHaveBeenCalled();
+  });
+
+  it('rejects a private plan when the account role is company', async () => {
+    User.findById.mockResolvedValue({ _id: USER_ID, role: 'company' });
+
+    const result = await provisionSubscriptionFromSession(paidSession('sub_new'));
+
+    expect(result).toEqual({ ok: false, reason: 'plan_type_not_allowed' });
+    expect(upsertTransaction).not.toHaveBeenCalled();
+    expect(upsertSubscription).not.toHaveBeenCalled();
   });
 });

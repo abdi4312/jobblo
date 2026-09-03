@@ -1,4 +1,4 @@
-import { Upload, Camera, Loader2 } from 'lucide-react';
+import { Upload, Camera, Loader2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import React, { useState, useRef, useEffect } from 'react';
 import { compressImages } from '../../utils/compressImage';
@@ -167,9 +167,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                   e.stopPropagation();
                   onExistingImageRemove?.(url);
                 }}
-                className="absolute top-1 right-1 bg-red-600/70 hover:bg-red-600 text-white border-none rounded-full w-5 h-5 flex items-center justify-center text-[12px] cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                aria-label="Slett bilde"
+                className="absolute top-1 right-1 z-10 bg-red-600/90 hover:bg-red-600 text-white border-none rounded-full w-7 h-7 flex items-center justify-center cursor-pointer shadow-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
-                ✕
+                <X size={15} strokeWidth={2.5} />
               </button>
               <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-[10px] py-0.5 text-center">
                 Eksisterende
@@ -196,9 +197,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                   e.stopPropagation();
                   removeImage(index);
                 }}
-                className="absolute top-1 right-1 bg-red-600/70 hover:bg-red-600 text-white border-none rounded-full w-5 h-5 flex items-center justify-center text-[12px] cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                aria-label="Slett bilde"
+                className="absolute top-1 right-1 z-10 bg-red-600/90 hover:bg-red-600 text-white border-none rounded-full w-7 h-7 flex items-center justify-center cursor-pointer shadow-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
-                ✕
+                <X size={15} strokeWidth={2.5} />
               </button>
             </div>
           ))}

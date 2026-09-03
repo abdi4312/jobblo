@@ -82,6 +82,18 @@ const authenticate = async (req, res, next) => {
       });
     }
 
+    if (
+      user.accountStatus === 'inactive' ||
+      user.accountStatus === 'deactivated' ||
+      user.isDeleted
+    ) {
+      return res.status(403).json({
+        error: 'Account inactive',
+        message: 'Kontoen din er deaktivert.',
+        code: 'account_inactive',
+      });
+    }
+
     // Attach user to request object
     req.user = user;
     req.userId = user._id.toString();

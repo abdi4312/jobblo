@@ -28,6 +28,7 @@ const planHistorySchema = new mongoose.Schema(
       default: Date.now,
     },
     discountAmount: Number,
+    discountCoupon: String,
     coupon: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Coupon',
@@ -63,6 +64,7 @@ const subscriptionSchema = new mongoose.Schema(
         enum: ['business', 'private'],
         required: true,
       },
+      isPlaceholder: { type: Boolean, default: false },
       stripeSubscriptionId: String,
       startDate: Date,
       endDate: Date,
@@ -74,6 +76,7 @@ const subscriptionSchema = new mongoose.Schema(
         default: 'active',
       },
       discountAmount: Number,
+      discountCoupon: String,
       coupon: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Coupon',

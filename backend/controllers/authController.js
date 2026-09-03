@@ -84,7 +84,15 @@ const sendServerError = (res, error, context = 'Server error') => {
   });
 };
 
-const validateRegisterInput = ({ name, email, password, role, companyName, orgNumber, acceptedTerms }) => {
+const validateRegisterInput = ({
+  name,
+  email,
+  password,
+  role,
+  companyName,
+  orgNumber,
+  acceptedTerms,
+}) => {
   // If role is company, we use companyName as the primary name
   const effectiveName = role === 'company' ? companyName : name;
 
@@ -263,8 +271,16 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    if (user.isDeleted || user.accountStatus === 'deactivated') {
-      return res.status(401).json({ error: 'Kontoen er deaktivert eller slettet.' });
+    if (
+      user.isDeleted ||
+      user.accountStatus === 'inactive' ||
+      user.accountStatus === 'deactivated'
+    ) {
+      return res.status(403).json({
+        error: 'Account inactive',
+        message: 'Kontoen din er deaktivert.',
+        code: 'account_inactive',
+      });
     }
 
     const { accessToken, refreshToken } = await createSession(req, user._id);
@@ -338,11 +354,24 @@ exports.refreshToken = async (req, res) => {
       return res.status(401).json({ error: 'Invalid refresh token' });
     }
 
-    const user = await User.findById(decoded.id).select('_id');
+    const user = await User.findById(decoded.id).select('_id accountStatus isDeleted');
 
     if (!user) {
       clearAuthCookies(res);
       return res.status(401).json({ error: 'User not found' });
+    }
+
+    if (
+      user.accountStatus === 'inactive' ||
+      user.accountStatus === 'deactivated' ||
+      user.isDeleted
+    ) {
+      clearAuthCookies(res);
+      return res.status(403).json({
+        error: 'Account inactive',
+        message: 'Kontoen din er deaktivert.',
+        code: 'account_inactive',
+      });
     }
 
     const { accessToken, refreshToken: newRefreshToken } = generateTokens(user._id, session._id);

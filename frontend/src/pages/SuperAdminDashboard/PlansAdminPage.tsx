@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Edit, ShieldCheck, Settings, Info, Plus, Trash2, CreditCard } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
@@ -18,6 +18,10 @@ import type { ColumnDef } from '../../components/admin/AdminDataTable';
 
 interface PlanEntitlements {
     freeContact: number;
+    perContactPrice: number;
+    ContactUnlock: number;
+    maxJobsValue?: number;
+    maxContact: number;
     radius: number;
     visibilityLevel: number;
     locationPrecision: string;
@@ -48,6 +52,10 @@ interface PlanForm {
     type: 'private' | 'business';
     isActive: boolean;
     freeContact: string;
+    perContactPrice: string;
+    ContactUnlock: string;
+    maxJobsValue: string;
+    maxContact: string;
     radius: string;
     visibilityLevel: string;
     locationPrecision: string;
@@ -87,7 +95,8 @@ export default function PlansAdminPage() {
     const [showEdit, setShowEdit] = useState(false);
     const [form, setForm] = useState<PlanForm>({
         name: '', price: '', type: 'private', isActive: true,
-        freeContact: '', radius: '', visibilityLevel: '', locationPrecision: 'approximate',
+        freeContact: '', perContactPrice: '', ContactUnlock: '', maxJobsValue: '', maxContact: '',
+        radius: '', visibilityLevel: '', locationPrecision: 'approximate',
         hasBadge: false, hasAnalytics: false, featuresText: [],
     });
     const [newFeature, setNewFeature] = useState('');
@@ -122,6 +131,10 @@ export default function PlansAdminPage() {
             type: plan.type,
             isActive: plan.isActive,
             freeContact: String(plan.entitlements?.freeContact ?? 0),
+            perContactPrice: String(plan.entitlements?.perContactPrice ?? 0),
+            ContactUnlock: String(plan.entitlements?.ContactUnlock ?? 0),
+            maxJobsValue: String(plan.entitlements?.maxJobsValue ?? ''),
+            maxContact: String(plan.entitlements?.maxContact ?? 0),
             radius: String(plan.entitlements?.radius ?? 0),
             visibilityLevel: String(plan.entitlements?.visibilityLevel ?? 0),
             locationPrecision: plan.entitlements?.locationPrecision ?? 'approximate',
@@ -144,6 +157,10 @@ export default function PlansAdminPage() {
                 entitlements: {
                     ...editTarget.entitlements,
                     freeContact: parseInt(form.freeContact, 10) || 0,
+                    perContactPrice: parseFloat(form.perContactPrice) || 0,
+                    ContactUnlock: parseInt(form.ContactUnlock, 10) || 0,
+                    maxJobsValue: form.maxJobsValue.trim() === '' ? null : parseFloat(form.maxJobsValue),
+                    maxContact: parseInt(form.maxContact, 10) || 0,
                     radius: parseInt(form.radius, 10) || 0,
                     visibilityLevel: parseInt(form.visibilityLevel, 10) || 0,
                     locationPrecision: form.locationPrecision,
@@ -386,6 +403,30 @@ export default function PlansAdminPage() {
                                     <label htmlFor="ep-radius" className="block text-sm font-medium text-gray-700 mb-1">Søkeradius (km)</label>
                                     <input id="ep-radius" type="number" min="0" value={form.radius}
                                         onChange={(e) => setForm((f) => ({ ...f, radius: e.target.value }))}
+                                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                </div>
+                                <div>
+                                    <label htmlFor="ep-extra-price" className="block text-sm font-medium text-gray-700 mb-1">Ekstra kontakt (NOK)</label>
+                                    <input id="ep-extra-price" type="number" min="0" step="0.01" value={form.perContactPrice}
+                                        onChange={(e) => setForm((f) => ({ ...f, perContactPrice: e.target.value }))}
+                                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                </div>
+                                <div>
+                                    <label htmlFor="ep-unlock" className="block text-sm font-medium text-gray-700 mb-1">Tilgangsforsinkelse (min)</label>
+                                    <input id="ep-unlock" type="number" min="0" value={form.ContactUnlock}
+                                        onChange={(e) => setForm((f) => ({ ...f, ContactUnlock: e.target.value }))}
+                                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                </div>
+                                <div>
+                                    <label htmlFor="ep-max-jobs" className="block text-sm font-medium text-gray-700 mb-1">Maks jobbverdi (NOK)</label>
+                                    <input id="ep-max-jobs" type="number" min="0" step="0.01" value={form.maxJobsValue}
+                                        onChange={(e) => setForm((f) => ({ ...f, maxJobsValue: e.target.value }))}
+                                        className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
+                                </div>
+                                <div>
+                                    <label htmlFor="ep-max-contact" className="block text-sm font-medium text-gray-700 mb-1">Maks kontakter</label>
+                                    <input id="ep-max-contact" type="number" min="0" value={form.maxContact}
+                                        onChange={(e) => setForm((f) => ({ ...f, maxContact: e.target.value }))}
                                         className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50" />
                                 </div>
                                 <div>
