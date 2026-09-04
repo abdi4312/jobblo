@@ -286,14 +286,6 @@ exports.sendMessage = async (req, res) => {
 
     const recipientId =
       chat.clientId.toString() === id ? chat.providerId.toString() : chat.clientId.toString();
-    if (mongoose.connection.readyState === 1) {
-      void notify({
-        userId: recipientId,
-        type: 'message',
-        content: trimmed,
-        data: { type: 'chat_message', chatId },
-      });
-    }
 
     res.status(201).json(messagePayload);
   } catch (error) {

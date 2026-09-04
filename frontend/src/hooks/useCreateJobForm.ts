@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { generateFullJobListing } from '../api/aiAPI';
+import { analyzeJobImage, generateFullJobListing } from '../api/aiAPI';
 import { useTranslate } from '../i18n/useTranslate';
 import { useUserStore } from '../stores/userStore';
 import { usePaymentCalculation } from './usePaymentCalculation';
@@ -175,6 +175,11 @@ export const useCreateJobForm = (
 
   const [tags, setTags] = useState<string[]>([]);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imageAnalysis, setImageAnalysis] = useState<{
+    status: 'idle' | 'loading' | 'success' | 'error';
+    message?: string;
+    durationRange?: { min: number; max: number; unit: string };
+  }>({ status: 'idle' });
   const [currentImages, setCurrentImages] = useState<string[]>(initialData?.images || []);
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
@@ -259,6 +264,41 @@ export const useCreateJobForm = (
     },
     [clearFieldError]
   );
+
+  const handleImageSelection = async (files: File[]) => {
+    handleImagesChange(files);
+    if (!files[0]) {
+      setImageAnalysis({ status: 'idle' });
+    }
+  };
+
+  const triggerImageAnalysis = async () => {
+    const file = selectedImages[0];
+    if (!file) return;
+    setImageAnalysis({ status: 'loading' });
+    try {
+      const response = await analyzeJobImage(file, locale);
+      if (!response.success || !response.data) throw new Error(response.message || response.error);
+      const suggestion = response.data;
+      setTitle(suggestion.title);
+      setDescription(suggestion.description);
+      setCategories(suggestion.category);
+      setDurationValue(String(suggestion.duration.value));
+      setDurationUnit(suggestion.duration.unit);
+      setHourlyRate(String(suggestion.hourlyRate));
+      if (paymentType !== 'Timepris') setPrice(String(suggestion.suggestedPrice));
+      setSmartFillPricingNote(suggestion.pricingReasoning);
+      setImageAnalysis({ status: 'success', durationRange: suggestion.durationRange });
+    } catch (err: any) {
+      setImageAnalysis({
+        status: 'error',
+        message:
+          err.response?.data?.message ||
+          err.response?.data?.error ||
+          'Bildet kunne ikke analyseres. Fyll ut skjemaet manuelt.',
+      });
+    }
+  };
 
   const handleAiSmartFill = async () => {
     if (!smartFillPrompt || smartFillPrompt.length < 5) {
@@ -1018,6 +1058,9 @@ export const useCreateJobForm = (
     selectedImages,
     // The wrapper, not the raw setter — it also clears the "last opp minst ett bilde" error.
     setSelectedImages: handleImagesChange,
+    handleImageSelection,
+    triggerImageAnalysis,
+    imageAnalysis,
     currentImages,
     setCurrentImages,
     imagesToDelete,

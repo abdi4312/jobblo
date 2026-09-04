@@ -146,13 +146,6 @@ exports.createMessage = async (req, res) => {
     const otherUser =
       order.customerId.toString() === senderId ? order.providerId : order.customerId;
 
-    // Create notification for recipient
-    await notificationController.createAndEmitNotification(req.app.get('io'), {
-      userId: otherUser,
-      type: 'message',
-      content: `New message from ${message.senderId.name}`,
-    });
-
     // Emit message for real-time delivery to connected users
     const io = req.app.get('io');
     if (io) {

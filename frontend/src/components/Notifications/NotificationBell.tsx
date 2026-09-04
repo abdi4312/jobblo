@@ -90,9 +90,8 @@ export function NotificationBell() {
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={unreadCount > 0 ? `Varsler, ${unreadCount} uleste` : 'Varsler'}
-        className={`relative flex size-10 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${
-          open ? 'bg-[#F0F1EB] text-[#0B0B0B]' : 'text-[#63665F] hover:bg-[#F0F1EB] hover:text-[#0B0B0B]'
-        }`}
+        className={`relative flex size-10 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 ${open ? 'bg-[#F0F1EB] text-[#0B0B0B]' : 'text-[#63665F] hover:bg-[#F0F1EB] hover:text-[#0B0B0B]'
+          }`}
       >
         <Bell size={19} strokeWidth={2} />
         {unreadCount > 0 && (
@@ -191,11 +190,10 @@ export function NotificationBell() {
                         className="flex w-full items-start gap-3 rounded-2xl p-2.5 text-left transition-colors hover:bg-[#F4F6F0] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15"
                       >
                         <span
-                          className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${
-                            isUnread
-                              ? 'bg-[#EAF1E9] text-[#2E6641]'
-                              : 'bg-[#F4F6F0] text-[#9B9E96]'
-                          }`}
+                          className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${isUnread
+                            ? 'bg-[#EAF1E9] text-[#2E6641]'
+                            : 'bg-[#F4F6F0] text-[#9B9E96]'
+                            }`}
                         >
                           <Icon size={15} strokeWidth={2} />
                         </span>
@@ -210,9 +208,8 @@ export function NotificationBell() {
                             </span>
                           </span>
                           <span
-                            className={`mt-0.5 line-clamp-2 block text-[0.8125rem] leading-relaxed ${
-                              isUnread ? 'font-medium text-[#0B0B0B]' : 'text-[#63665F]'
-                            }`}
+                            className={`mt-0.5 line-clamp-2 block text-[0.8125rem] leading-relaxed ${isUnread ? 'font-medium text-[#0B0B0B]' : 'text-[#63665F]'
+                              }`}
                           >
                             {notification.content}
                           </span>

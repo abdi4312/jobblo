@@ -53,6 +53,36 @@ export interface AIJobListingResponse {
   validationErrors?: string[];
 }
 
+export interface AIImageJobResponse {
+  success: boolean;
+  data: {
+    title: string;
+    description: string;
+    category: string;
+    duration: AIDuration;
+    durationRange: { min: number; max: number; unit: AIDuration['unit'] };
+    suggestedPrice: number;
+    priceMin: number;
+    priceMax: number;
+    hourlyRate: number;
+    pricingReasoning: string;
+    isEstimate: true;
+  };
+  error?: string;
+  message?: string;
+}
+
+export const analyzeJobImage = async (
+  image: File,
+  lang?: 'no' | 'en'
+): Promise<AIImageJobResponse> => {
+  const formData = new FormData();
+  formData.append('image', image);
+  if (lang) formData.append('lang', lang);
+  const response = await mainLink.post('/api/ai/analyze-job-image', formData);
+  return response.data;
+};
+
 export const generateFullJobListing = async (
   prompt: string,
   ctx: AISmartFillContext = {}

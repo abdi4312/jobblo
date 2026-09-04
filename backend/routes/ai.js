@@ -2,6 +2,14 @@ const express = require('express');
 const router = express.Router();
 const aiController = require('../controllers/aiController');
 const { authenticate } = require('../middleware/auth');
+const imageUpload = require('../middleware/multer');
+
+router.post(
+	'/analyze-job-image',
+	authenticate,
+	imageUpload.single('image'),
+	aiController.analyzeJobImage
+);
 
 /**
  * @swagger

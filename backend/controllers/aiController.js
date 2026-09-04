@@ -35,6 +35,7 @@ function getClient() {
 // evals/results/after-gpt35.json.
 const DEFAULT_MODEL = 'gpt-4o-mini';
 const MODEL = process.env.OPENAI_MODEL || DEFAULT_MODEL;
+const VISION_MODEL = process.env.OPENAI_VISION_MODEL || MODEL;
 
 let _warnedAboutModel = false;
 function warnIfWeakModel() {
@@ -158,6 +159,182 @@ async function _callAi(context) {
   }
   return { parsed, usage: completion.usage };
 }
+
+/** Same allowlist used by jobListingPrompt.js — models that support strict json_schema. */
+function _visionSupportsStrictSchema(model) {
+  const m = String(model || '');
+  if (/^gpt-3\.5/.test(m)) return false;
+  if (/^gpt-4-/.test(m) || m === 'gpt-4') return false;
+  if (/^gpt-4o-mini-(search|transcribe|tts)/.test(m)) return false;
+  return /^(gpt-4o|gpt-4\.1|gpt-5|o[134])/.test(m);
+}
+
+async function _callVisionAi(file, categoryNames, lang) {
+  const useStrictSchema = _visionSupportsStrictSchema(VISION_MODEL);
+
+  const systemContent =
+    `You are Jobblo's image-based job creation assistant. Analyze only the visible work. ` +
+    `Return Norwegian bokmål unless the requested language is English. Do not invent ` +
+    `specific measurements, materials, dates, or conditions. Category must be exactly one ` +
+    `of these active Jobblo categories, or an empty string if unclear: ${JSON.stringify(categoryNames)}. ` +
+    `Prices and time are estimates, never guarantees.` +
+    (!useStrictSchema
+      ? ` Respond with a single JSON object with keys: title (string), description (string), ` +
+        `category (string), duration ({value: number, unit: "minutes"|"hours"|"days"}), ` +
+        `durationRange ({min: number, max: number, unit: "minutes"|"hours"|"days"}), ` +
+        `suggestedPrice (number), priceMin (number), priceMax (number), ` +
+        `hourlyRate (number), pricingReasoning (string).`
+      : '');
+
+  const visionSchema = {
+    type: 'object',
+    additionalProperties: false,
+    required: [
+      'title', 'description', 'category', 'duration', 'durationRange',
+      'suggestedPrice', 'priceMin', 'priceMax', 'hourlyRate', 'pricingReasoning',
+    ],
+    properties: {
+      title: { type: 'string' },
+      description: { type: 'string' },
+      category: { type: 'string' },
+      duration: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['value', 'unit'],
+        properties: {
+          value: { type: 'number' },
+          unit: { type: 'string', enum: ['minutes', 'hours', 'days'] },
+        },
+      },
+      durationRange: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['min', 'max', 'unit'],
+        properties: {
+          min: { type: 'number' },
+          max: { type: 'number' },
+          unit: { type: 'string', enum: ['minutes', 'hours', 'days'] },
+        },
+      },
+      suggestedPrice: { type: 'number' },
+      priceMin: { type: 'number' },
+      priceMax: { type: 'number' },
+      hourlyRate: { type: 'number' },
+      pricingReasoning: { type: 'string' },
+    },
+  };
+
+  const response = await getClient().chat.completions.create({
+    model: VISION_MODEL,
+    temperature: 0.2,
+    max_tokens: 500,
+    messages: [
+      {
+        role: 'system',
+        content: systemContent,
+      },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: `Requested language: ${lang === 'en' ? 'English' : 'Norwegian bokmål'}. ` +
+              'Suggest an editable draft for the work shown in this image.',
+          },
+          {
+            type: 'image_url',
+            image_url: { url: `data:${file.mimetype};base64,${file.buffer.toString('base64')}` },
+          },
+        ],
+      },
+    ],
+    response_format: useStrictSchema
+      ? { type: 'json_schema', json_schema: { name: 'jobblo_image_job_suggestion', strict: true, schema: visionSchema } }
+      : { type: 'json_object' },
+  });
+
+  const choice = response.choices && response.choices[0];
+  if (choice?.message?.refusal) throw new Error(`AI declined to answer: ${choice.message.refusal}`);
+  const content = choice?.message?.content?.toString().trim();
+  if (!content) throw new Error('OpenAI returnerte tomt svar');
+  try {
+    return JSON.parse(content);
+  } catch {
+    throw new Error('AI returnerte et svar som ikke kunne tolkes');
+  }
+}
+
+exports.analyzeJobImage = async (req, res) => {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({
+        success: false,
+        error: 'AI-tjenesten er ikke konfigurert',
+        message: 'Prøv igjen, eller fyll ut feltene manuelt.',
+      });
+    }
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ success: false, error: 'Et bilde er påkrevd.' });
+    }
+    if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(req.file.mimetype)) {
+      return res.status(400).json({ success: false, error: 'Ugyldig bildefil.' });
+    }
+
+    const { names: categoryNames } = await _loadCategoryContext();
+    const raw = await _callVisionAi(req.file, categoryNames, _resolveLang(req.body));
+    console.error('[analyze-job-image] raw AI output:', JSON.stringify(raw));
+    const firstPass = validateSmartFillOutput(raw, { categoryAllowList: categoryNames });
+    if (!firstPass.valid) {
+      return res.status(500).json({ success: false, error: 'AI returnerte ugyldige verdier. Prøv igjen.' });
+    }
+
+    // category is best-effort from a photo — empty is acceptable, the user can
+    // pick one manually. Only re-validate with the category context when we have one.
+    const validationCtx = {
+      categoryAllowList: categoryNames,
+      ...(firstPass.cleaned.category && {
+        categoryName: firstPass.cleaned.category,
+        userCategory: firstPass.cleaned.category,
+      }),
+    };
+    const validated = validateSmartFillOutput(raw, validationCtx);
+    if (!validated.valid) {
+      return res.status(500).json({ success: false, error: 'AI returnerte ugyldige verdier. Prøv igjen.' });
+    }
+
+    const c = validated.cleaned;
+    const range = raw.durationRange || {};
+    const rangeUnit = ['minutes', 'hours', 'days'].includes(String(range.unit))
+      ? range.unit
+      : c.duration.unit;
+    const min = Number(range.min);
+    const max = Number(range.max);
+    const durationRange = {
+      min: Number.isFinite(min) && min > 0 ? Math.min(min, 240) : c.duration.value,
+      max: Number.isFinite(max) && max >= min ? Math.min(max, 240) : c.duration.value,
+      unit: rangeUnit,
+    };
+
+    return res.json({
+      success: true,
+      data: {
+        title: c.title,
+        description: c.description,
+        category: c.category,
+        duration: c.duration,
+        durationRange,
+        suggestedPrice: c.suggestedPrice,
+        priceMin: c.priceMin,
+        priceMax: c.priceMax,
+        hourlyRate: c.hourlyRate,
+        pricingReasoning: c.pricingReasoning,
+        isEstimate: true,
+      },
+    });
+  } catch (err) {
+    return _respondWithAiError(res, err, 'analyze-job-image');
+  }
+};
 
 /** Fields every endpoint returns, so the three responses stay consistent. */
 function _sharedPayload(c) {
