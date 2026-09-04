@@ -1,10 +1,13 @@
 import { Redirect, Stack, usePathname } from 'expo-router';
+
 import { useAuthStore } from '@/store/authStore';
 
 export default function AuthLayout() {
   const hydrated = useAuthStore((state) => state.hydrated);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const pathname = usePathname();
+
+  const isTermsAcceptance = pathname === '/terms-acceptance';
 
   // Wait for the persisted session before deciding: rendering the login form first and
   // redirecting afterwards would flash sign-in UI at an already signed-in user.
@@ -26,7 +29,8 @@ export default function AuthLayout() {
    */
   return (
     <>
-      {isAuthenticated && pathname !== '/terms-acceptance' ? <Redirect href="/(app)" /> : null}
+      {isAuthenticated && !isTermsAcceptance ? <Redirect href="/(app)" /> : null}
+
       <Stack
         screenOptions={{
           headerShown: false,
