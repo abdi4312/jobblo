@@ -66,4 +66,25 @@ async function resolveCurrentSubscriptionEntitlements(userId) {
   };
 }
 
-module.exports = { resolveCurrentSubscriptionEntitlements };
+function summarizePaidExtraContacts(transactions) {
+  const eligible = (transactions || []).filter(
+    (transaction) =>
+      transaction?.type === 'extra_contact' &&
+      transaction.status === 'succeeded' &&
+      transaction.refunded !== true
+  );
+  const paidPurchased = eligible.length;
+  const paidUsed = eligible.filter((transaction) => transaction.consumedAt != null).length;
+
+  return {
+    paidPurchased,
+    paidUsed,
+    paidAvailable: Math.max(paidPurchased - paidUsed, 0),
+    totalPaidForExtraContacts: eligible.reduce(
+      (total, transaction) => total + (Number.isFinite(transaction.amount) ? transaction.amount : 0),
+      0
+    ),
+  };
+}
+
+module.exports = { resolveCurrentSubscriptionEntitlements, summarizePaidExtraContacts };
