@@ -44,7 +44,7 @@ import { useCategories } from '../../src/hooks/useCategories';
 import { useLocationTree } from '../../src/hooks/useLocationTree';
 import { useCreateJobMutation, useUpdateJobMutation } from '../../src/hooks/useCreateJob';
 import { useMyJobs } from '../../src/hooks/useMyJobs';
-import { useSmartFillMutation } from '../../src/hooks/useSmartFill';
+import { useSmartFillMutation, useAnalyzeImageMutation } from '../../src/hooks/useSmartFill';
 import { ErrorState } from '../../src/components/ui/ErrorState';
 import { CreateJobLocationMap } from '../../src/components/create-job/CreateJobLocationMap';
 import { Select } from '../../src/components/ui/Select';
@@ -66,15 +66,15 @@ const PAYMENT_CARDS: Array<{
   description: string;
   icon: typeof Banknote;
 }> = [
-  {
-    value: 'Fastpris',
-    label: 'Fastpris',
-    description: 'Én avtalt sum for hele jobben',
-    icon: Banknote,
-  },
-  { value: 'Timepris', label: 'Timepris', description: 'Betal per time som brukes', icon: Clock3 },
-  { value: 'Anbud', label: 'Anbud', description: 'La flere gi deg tilbud', icon: Gavel },
-];
+    {
+      value: 'Fastpris',
+      label: 'Fastpris',
+      description: 'Én avtalt sum for hele jobben',
+      icon: Banknote,
+    },
+    { value: 'Timepris', label: 'Timepris', description: 'Betal per time som brukes', icon: Clock3 },
+    { value: 'Anbud', label: 'Anbud', description: 'La flere gi deg tilbud', icon: Gavel },
+  ];
 const DURATIONS = [
   { label: 'Minutter', value: 'minutes' },
   { label: 'Timer', value: 'hours' },
@@ -254,6 +254,7 @@ export default function CreateJobScreen() {
   const updateMutation = useUpdateJobMutation();
   const ownerJobsQuery = useMyJobs();
   const smartFillMutation = useSmartFillMutation();
+  const analyzeImageMutation = useAnalyzeImageMutation();
   const [step, setStep] = useState(1);
   const [values, setValues] = useState<CreateJobFormValues>(emptyValues);
   const [images, setImages] = useState<CreateJobImage[]>([]);
@@ -580,19 +581,19 @@ export default function CreateJobScreen() {
     isEditMode
       ? router.back()
       :
-    Alert.alert('Forkast utkast?', 'Utkastet blir slettet.', [
-      { text: 'Fortsett å redigere' },
-      {
-        text: 'Forkast',
-        style: 'destructive',
-        onPress: () => {
-          void draftStorage.removeItem(DRAFT_KEY);
-          setValues(emptyValues());
-          setImages([]);
-          router.replace('/(app)');
+      Alert.alert('Forkast utkast?', 'Utkastet blir slettet.', [
+        { text: 'Fortsett å redigere' },
+        {
+          text: 'Forkast',
+          style: 'destructive',
+          onPress: () => {
+            void draftStorage.removeItem(DRAFT_KEY);
+            setValues(emptyValues());
+            setImages([]);
+            router.replace('/(app)');
+          },
         },
-      },
-    ]);
+      ]);
   const next = () => {
     if (step < 4) {
       if (validate(step + 1)) setStep(step + 1);
@@ -771,6 +772,48 @@ export default function CreateJobScreen() {
                     <Text className="mt-1 text-[0.6875rem] text-[#63665F]">Last opp</Text>
                   </Pressable>
                 </View>
+                {/* AI analyze button — shown when at least one image is selected */}
+                {(images.length > 0 || existingImages.length > 0) && (
+                  <Pressable
+                    onPress={() => {
+                      const img = images[0] ?? null;
+                      if (!img) return;
+                      analyzeImageMutation.mutate(
+                        { uri: img.uri, name: img.name, type: img.type },
+                        {
+                          onSuccess: (result) => {
+                            if (result.title) update('title', result.title);
+                            if (result.description) update('description', result.description);
+                            if (result.category) update('categories', [result.category]);
+                            if (result.duration?.value) {
+                              update('durationValue', String(result.duration.value));
+                              update('durationUnit', result.duration.unit);
+                            }
+                            if (result.suggestedPrice) update('price', String(result.suggestedPrice));
+                            if (result.hourlyRate) update('hourlyRate', String(result.hourlyRate));
+                            Alert.alert(
+                              'AI-analyse ferdig',
+                              'Feltene er fylt ut basert på bildet. Sjekk og juster før du går videre.',
+                            );
+                          },
+                          onError: (error) =>
+                            Alert.alert('Analyse feilet', getError(error) ?? 'Prøv igjen.'),
+                        },
+                      );
+                    }}
+                    disabled={analyzeImageMutation.isPending}
+                    className="mt-2 flex-row items-center justify-center gap-2 rounded-2xl border border-[#2E6641] bg-[#EAF1E9] px-4 py-3"
+                  >
+                    {analyzeImageMutation.isPending ? (
+                      <ActivityIndicator size="small" color="#2E6641" />
+                    ) : (
+                      <Sparkles size={16} color="#2E6641" />
+                    )}
+                    <Text className="text-[0.875rem] font-semibold text-[#2E6641]">
+                      {analyzeImageMutation.isPending ? 'Analyserer bilde...' : 'Analyser bilde med AI'}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
               <View className="gap-4 rounded-3xl bg-white p-5">
                 <View className="flex-row items-center justify-between">

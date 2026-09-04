@@ -104,6 +104,9 @@ export default function CreateJobForm({
     setEmail,
     selectedImages,
     setSelectedImages,
+    handleImageSelection,
+    triggerImageAnalysis,
+    imageAnalysis,
     currentImages,
     handleExistingImageRemove,
     showPreview,
@@ -304,9 +307,8 @@ export default function CreateJobForm({
                   scrolled into view. */}
               <div
                 data-invalid={errors?.images ? 'true' : undefined}
-                className={`box-card-custom p-5 md:p-6 transition-colors ${
-                  errors?.images ? 'border-[#B4453A]' : ''
-                }`}
+                className={`box-card-custom p-5 md:p-6 transition-colors ${errors?.images ? 'border-[#B4453A]' : ''
+                  }`}
               >
                 <div className="mb-5 flex items-start gap-3">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#EAF1E9] text-[#2E6641]">
@@ -322,11 +324,34 @@ export default function CreateJobForm({
                   </div>
                 </div>
                 <ImageUpload
-                  onImagesChange={(files) => setSelectedImages(files)}
+                  onImagesChange={handleImageSelection}
                   existingImages={currentImages}
                   onExistingImageRemove={handleExistingImageRemove}
                   initialFiles={selectedImages}
                 />
+                {/* AI analyse button — shown when at least one image is ready */}
+                {(selectedImages.length > 0 || currentImages.length > 0) && imageAnalysis.status !== 'loading' && (
+                  <button
+                    type="button"
+                    onClick={() => void triggerImageAnalysis()}
+                    className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#2E6641] bg-[#EAF1E9] px-4 py-2 text-[0.8125rem] font-semibold text-[#2E6641] transition-colors hover:bg-[#d6eadc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2E6641]/25"
+                  >
+                    <Sparkles size={15} strokeWidth={2} />
+                    Analyser bilde med AI
+                  </button>
+                )}
+                {imageAnalysis.status === 'loading' && (
+                  <span className="mt-3 inline-flex items-center gap-2 text-[0.8125rem] text-[#63665F]">
+                    <Loader2 size={15} className="animate-spin text-[#2E6641]" />
+                    Analyserer bildet…
+                  </span>
+                )}
+                {imageAnalysis.status === 'success' && imageAnalysis.durationRange && (
+                  <p className="mt-2 text-xs text-[#63665F]">
+                    Estimert tid: {imageAnalysis.durationRange.min}–{imageAnalysis.durationRange.max}{' '}
+                    {imageAnalysis.durationRange.unit === 'hours' ? 'timer' : imageAnalysis.durationRange.unit}. Pris og tid er estimater.
+                  </p>
+                )}
                 {errors?.images && (
                   <p className="mt-4 flex items-center gap-1.5 text-[0.8125rem] font-medium text-[#B4453A]">
                     <AlertCircle size={14} /> {errors.images}

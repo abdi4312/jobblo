@@ -12,6 +12,36 @@ export interface SmartFillResult {
   paymentType: 'Timepris' | 'Fastpris' | 'Anbud';
 }
 
+export interface ImageAnalysisResult {
+  title: string;
+  description: string;
+  category: string;
+  duration: { value: number; unit: 'minutes' | 'hours' | 'days' };
+  durationRange: { min: number; max: number; unit: 'minutes' | 'hours' | 'days' };
+  suggestedPrice: number;
+  priceMin: number;
+  priceMax: number;
+  hourlyRate: number;
+  pricingReasoning: string;
+}
+
+export async function analyzeJobImage(
+  imageUri: string,
+  imageName: string,
+  imageType: string,
+): Promise<ImageAnalysisResult> {
+  const formData = new FormData();
+  formData.append('image', { uri: imageUri, name: imageName, type: imageType } as unknown as Blob);
+  formData.append('lang', 'no');
+  const response = await apiClient.post<{ success: boolean; data: ImageAnalysisResult; error?: string }>(
+    '/ai/analyze-job-image',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  );
+  if (!response.data.success || !response.data.data) throw new Error(response.data.error ?? 'Kunne ikke analysere bildet');
+  return response.data.data;
+}
+
 export async function generateFullJobListing(prompt: string, context: {
   title?: string;
   description?: string;
