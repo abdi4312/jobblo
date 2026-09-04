@@ -201,8 +201,12 @@ describe('independence from Stripe configuration', () => {
 describe('free monthly quota still works', () => {
   it('requires a subscription for a company with no selected plan', async () => {
     User.findById.mockResolvedValue({
-      _id: USER_ID, role: 'company', monthlyContactUsage: 0,
-      lastContactReset: new Date(), createdAt: new Date(), save: jest.fn().mockResolvedValue(),
+      _id: USER_ID,
+      role: 'company',
+      monthlyContactUsage: 0,
+      lastContactReset: new Date(),
+      createdAt: new Date(),
+      save: jest.fn().mockResolvedValue(),
     });
     Subscription.findOne.mockResolvedValue({ currentPlan: null });
     Transaction.findOneAndUpdate.mockResolvedValue({ _id: 'paid_contact' });
@@ -213,14 +217,16 @@ describe('free monthly quota still works', () => {
 
     expect(next).not.toHaveBeenCalled();
     expect(res.statusCode).toBe(402);
-    expect(res.body).toEqual(expect.objectContaining({
-      code: 'subscription_required',
-      paymentRequired: true,
-      upgradeRequired: true,
-      limit: 0,
-      usage: 0,
-      remaining: 0,
-    }));
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        code: 'subscription_required',
+        paymentRequired: true,
+        upgradeRequired: true,
+        limit: 0,
+        usage: 0,
+        remaining: 0,
+      })
+    );
     expect(Transaction.findOneAndUpdate).not.toHaveBeenCalled();
   });
 

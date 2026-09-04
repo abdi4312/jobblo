@@ -7,7 +7,7 @@ const JobRequest = require('../models/JobRequest');
 const { getStripe } = require('../config/stripe');
 const { resolveStripeCustomer } = require('../services/stripe/customers');
 const mongoose = require('mongoose');
-const { sendPushToUser } = require('../services/pushNotifications');
+const { notify } = require('../services/notifications');
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -272,9 +272,8 @@ exports.sendMessage = async (req, res) => {
 
     await chat.save();
 
-    const messagePayload = typeof savedMessage.toObject === 'function'
-      ? savedMessage.toObject()
-      : savedMessage;
+    const messagePayload =
+      typeof savedMessage.toObject === 'function' ? savedMessage.toObject() : savedMessage;
 
     // Emit socket event to notify users in the chat room
     const io = req.app.get('io');
@@ -285,14 +284,16 @@ exports.sendMessage = async (req, res) => {
       });
     }
 
-    const recipientId = chat.clientId.toString() === id
-      ? chat.providerId.toString()
-      : chat.clientId.toString();
-    void sendPushToUser(recipientId, {
-      title: 'Ny melding på Jobblo',
-      body: trimmed,
-      data: { type: 'chat_message', chatId },
-    });
+    const recipientId =
+      chat.clientId.toString() === id ? chat.providerId.toString() : chat.clientId.toString();
+    if (mongoose.connection.readyState === 1) {
+      void notify({
+        userId: recipientId,
+        type: 'message',
+        content: trimmed,
+        data: { type: 'chat_message', chatId },
+      });
+    }
 
     res.status(201).json(messagePayload);
   } catch (error) {
@@ -474,7 +475,14 @@ exports.createContract = async (req, res) => {
     const blockingOrder = await Order.findOne({
       serviceId: chat.serviceId._id,
       status: {
-        $in: ['awaiting_payment', 'paid', 'in_progress', 'ready_for_review', 'disputed', 'completed'],
+        $in: [
+          'awaiting_payment',
+          'paid',
+          'in_progress',
+          'ready_for_review',
+          'disputed',
+          'completed',
+        ],
       },
     });
     if (blockingOrder) {
@@ -582,9 +590,7 @@ exports.updateAgreedPrice = async (req, res) => {
       return res.status(400).json({ error: 'Prisen må være et positivt beløp.' });
     }
     if (agreedPrice > MAX_AGREED_PRICE) {
-      return res
-        .status(400)
-        .json({ error: `Prisen kan ikke overstige ${MAX_AGREED_PRICE} kr.` });
+      return res.status(400).json({ error: `Prisen kan ikke overstige ${MAX_AGREED_PRICE} kr.` });
     }
 
     const chat = await Chat.findById(chatId);
@@ -672,7 +678,10 @@ exports.deleteChat = async (req, res) => {
         'ready_for_review',
         'disputed',
       ];
-      if (order && (PROTECTED_ORDER_STATUSES.includes(order.status) || order.paymentStatus === 'paid')) {
+      if (
+        order &&
+        (PROTECTED_ORDER_STATUSES.includes(order.status) || order.paymentStatus === 'paid')
+      ) {
         return res.status(409).json({
           error:
             'Samtalen er knyttet til et aktivt oppdrag med betaling og kan ikke slettes. Du kan skjule den for deg selv i stedet.',

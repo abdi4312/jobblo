@@ -74,7 +74,9 @@ test('does not replace a dangling planId with a same-name fallback', async () =>
   });
   SubscriptionPlan.findById.mockResolvedValue(null);
   SubscriptionPlan.findOne.mockResolvedValue({
-    name: 'Plus', type: 'private', entitlements: { freeContact: 15 },
+    name: 'Plus',
+    type: 'private',
+    entitlements: { freeContact: 15 },
   });
 
   const result = await resolveCurrentSubscriptionEntitlements(USER_ID);
@@ -84,15 +86,17 @@ test('does not replace a dangling planId with a same-name fallback', async () =>
 });
 
 test('summarizes only successful, non-refunded extra contacts using stored amounts', () => {
-  expect(summarizePaidExtraContacts([
-    { type: 'extra_contact', status: 'succeeded', amount: 49, consumedAt: new Date() },
-    { type: 'extra_contact', status: 'succeeded', amount: 29, consumedAt: new Date() },
-    { type: 'extra_contact', status: 'succeeded', amount: 19, consumedAt: null },
-    { type: 'extra_contact', status: 'pending', amount: 99, consumedAt: null },
-    { type: 'extra_contact', status: 'failed', amount: 99, consumedAt: null },
-    { type: 'extra_contact', status: 'succeeded', amount: 15, refunded: true, consumedAt: null },
-    { type: 'subscription', status: 'succeeded', amount: 99, consumedAt: null },
-  ])).toEqual({
+  expect(
+    summarizePaidExtraContacts([
+      { type: 'extra_contact', status: 'succeeded', amount: 49, consumedAt: new Date() },
+      { type: 'extra_contact', status: 'succeeded', amount: 29, consumedAt: new Date() },
+      { type: 'extra_contact', status: 'succeeded', amount: 19, consumedAt: null },
+      { type: 'extra_contact', status: 'pending', amount: 99, consumedAt: null },
+      { type: 'extra_contact', status: 'failed', amount: 99, consumedAt: null },
+      { type: 'extra_contact', status: 'succeeded', amount: 15, refunded: true, consumedAt: null },
+      { type: 'subscription', status: 'succeeded', amount: 99, consumedAt: null },
+    ])
+  ).toEqual({
     paidPurchased: 3,
     paidUsed: 2,
     paidAvailable: 1,
@@ -104,6 +108,9 @@ test.each([
   [15, 6, 9],
   [0, 0, 0],
   [5, 6, 0],
-])('calculates a non-negative included remainder for %i limit and %i used', (limit, used, remaining) => {
-  expect(Math.max(limit - used, 0)).toBe(remaining);
-});
+])(
+  'calculates a non-negative included remainder for %i limit and %i used',
+  (limit, used, remaining) => {
+    expect(Math.max(limit - used, 0)).toBe(remaining);
+  }
+);

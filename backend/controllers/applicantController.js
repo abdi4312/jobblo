@@ -1,7 +1,6 @@
 const JobRequest = require('../models/JobRequest');
 const Service = require('../models/Service');
 const Order = require('../models/Order');
-const Notification = require('../models/Notification');
 
 /**
  * GET /api/applicants/:serviceId
@@ -83,9 +82,7 @@ exports.getApplicantsForService = async (req, res) => {
           status: { $in: ['accepted', 'declined'] },
         });
         const responseRate =
-          totalRequests > 0
-            ? `${Math.round((respondedRequests / totalRequests) * 100)}%`
-            : null;
+          totalRequests > 0 ? `${Math.round((respondedRequests / totalRequests) * 100)}%` : null;
 
         return {
           _id: reqDoc._id,
@@ -367,12 +364,16 @@ exports.declineApplicant = async (req, res) => {
 
     // Declines were silent — no notification, unlike the accept/decline path in
     // orderController. The applicant was left waiting on a job already given away.
-    await Notification.create({
+    const { notify } = require('../services/notifications');
+    await notify({
       userId: jobRequest.customerId,
       senderId: userId,
+      requestId: jobRequest._id,
       type: 'application',
       content: `Søknaden din på "${service.title}" ble dessverre ikke valgt.`,
-    }).catch((err) => console.error('declineApplicant notification failed:', err.message));
+      event: 'request_declined',
+      payload: { requestId: jobRequest._id, serviceId: jobRequest.serviceId },
+    });
 
     res.json({ status: jobRequest.status, archived: jobRequest.archived });
   } catch (err) {

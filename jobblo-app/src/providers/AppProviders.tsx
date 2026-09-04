@@ -6,12 +6,13 @@ import Toast from "react-native-toast-message";
 import { StyleSheet, View } from "react-native";
 import { useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
-import { registerPushNotifications } from '../services/pushNotifications.service';
+import { configurePushNotifications, registerPushNotifications } from '../services/pushNotifications.service';
 import { queryClient } from './queryClient';
 
 function PushRegistration() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   useEffect(() => {
+    void configurePushNotifications().catch((error) => console.error('[push] bootstrap failed:', error));
     if (isAuthenticated) void registerPushNotifications().catch(() => undefined);
   }, [isAuthenticated]);
   return null;

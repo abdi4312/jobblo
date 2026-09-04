@@ -1,24 +1,55 @@
-const { Expo } = require('expo-server-sdk');
 const PushToken = require('../models/PushToken');
+const { getFirebaseMessaging } = require('./firebaseAdmin');
 
-const expo = new Expo({ accessToken: process.env.EXPO_ACCESS_TOKEN });
+function stringData(data) {
+  return Object.fromEntries(Object.entries(data || {}).map(([key, value]) => [key, String(value)]));
+}
 
 async function sendPushToUser(userId, message) {
-  const tokens = await PushToken.find({ userId, active: true }).select('token').lean();
-  const valid = tokens.filter(({ token }) => Expo.isExpoPushToken(token));
-  if (!valid.length) return;
+  const tokens = await PushToken.find({ userId, provider: 'fcm', active: true })
+    .select('token')
+    .lean();
+  if (!tokens.length) return;
 
-  const messages = valid.map(({ token }) => ({ to: token, sound: 'default', ...message }));
-  for (const chunk of expo.chunkPushNotifications(messages)) {
-    try {
-      const tickets = await expo.sendPushNotificationsAsync(chunk);
-      const invalidTokens = tickets
-        .map((ticket, index) => ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered' ? chunk[index].to : null)
-        .filter(Boolean);
-      if (invalidTokens.length) await PushToken.updateMany({ token: { $in: invalidTokens } }, { $set: { active: false } });
-    } catch (error) {
-      console.error('Push delivery failed:', error.message);
+  try {
+    const response = await getFirebaseMessaging().sendEachForMulticast({
+      tokens: tokens.map(({ token }) => token),
+      notification: {
+        title: String(message.title || ''),
+        body: String(message.body || ''),
+      },
+      data: stringData(message.data),
+      android: {
+        priority: message.priority === 'normal' ? 'normal' : 'high',
+        notification: {
+          sound: 'default',
+          channelId: message.channelId || 'messages',
+        },
+      },
+    });
+
+    const invalidTokens = response.responses
+      .map((result, index) => {
+        const code = result.error?.code;
+        return code === 'messaging/registration-token-not-registered' ||
+          code === 'messaging/invalid-registration-token'
+          ? tokens[index].token
+          : null;
+      })
+      .filter(Boolean);
+    if (invalidTokens.length) {
+      await PushToken.updateMany({ token: { $in: invalidTokens } }, { $set: { active: false } });
     }
+
+    if (response.failureCount) {
+      console.error(
+        'FCM push delivery had %d failures (%d accepted)',
+        response.failureCount,
+        response.successCount
+      );
+    }
+  } catch (error) {
+    console.error('FCM push delivery failed:', error.message);
   }
 }
 
