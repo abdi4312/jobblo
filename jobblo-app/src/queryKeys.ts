@@ -108,6 +108,8 @@ export const queryKeys = {
      */
     all: ['applications', 'all'] as const,
 
+    requests: ['applications', 'requests'] as const,
+
     /**
      * Query key for the current user's application list with optional filters.
      */

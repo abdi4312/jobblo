@@ -21,6 +21,7 @@ import {
 } from 'lucide-react-native';
 import { useJobDetails } from '../../../src/hooks/useJobDetails';
 import { useApplyMutation } from '../../../src/hooks/useApplyMutation';
+import { useMyJobRequests } from '../../../src/hooks/useMyApplications';
 import { useIsServiceSaved } from '../../../src/hooks/useFavoriteLists';
 import { useAuthStore } from '../../../src/store/authStore';
 import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
@@ -57,6 +58,7 @@ export default function JobDetailsScreen() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
   const { data: job, isLoading, isError, refetch } = useJobDetails(id ?? '');
+  const requestsQuery = useMyJobRequests(isAuthenticated && !!id);
   const [isApplyModalOpen, setIsApplyModalOpen] = React.useState(false);
   const [applyError, setApplyError] = React.useState<string | null>(null);
   const [saveSheetVisible, setSaveSheetVisible] = React.useState(false);
@@ -92,6 +94,13 @@ export default function JobDetailsScreen() {
   const poster = typeof job?.userId === 'object' && job.userId ? job.userId : null;
   const isOwner = !!poster && !!user && String((user as any)._id ?? (user as any).id) === String(poster._id ?? '');
   const isClosed = job?.status === 'closed' || job?.status === 'completed' || job?.status === 'cancelled' || job?.status === 'expired';
+  const currentUserId = user ? String((user as any)._id ?? (user as any).id ?? '') : '';
+  const hasPendingRequest = (requestsQuery.data ?? []).some((request) => {
+    const serviceId = typeof request.serviceId === 'object' ? request.serviceId._id : request.serviceId;
+    const customerId = typeof request.customerId === 'object' ? request.customerId._id : request.customerId;
+    return String(serviceId) === String(id) && String(customerId) === currentUserId && request.status === 'pending';
+  });
+  const requestStateLoading = isAuthenticated && !isOwner && requestsQuery.isLoading;
   const imageList = Array.isArray(job?.images) && job.images.length > 0 ? job.images : [];
 
   const primaryCtaLabel = !isAuthenticated
@@ -100,6 +109,10 @@ export default function JobDetailsScreen() {
       ? 'Dette er ditt oppdrag'
       : isClosed
         ? 'Oppdraget er lukket'
+          : requestStateLoading
+            ? 'Sjekker forespørsel...'
+            : hasPendingRequest
+              ? 'Forespørsel sendt'
         : 'Søk på oppdraget';
 
   const handlePrimaryAction = () => {
@@ -108,7 +121,7 @@ export default function JobDetailsScreen() {
       return;
     }
 
-    if (isOwner || isClosed) {
+    if (isOwner || isClosed || requestStateLoading || hasPendingRequest) {
       return;
     }
 
@@ -371,15 +384,15 @@ export default function JobDetailsScreen() {
       <View className="absolute inset-x-0 bottom-0 border-t border-[#E6E7E1] bg-white px-4 pb-5 pt-3">
         <TouchableOpacity
           onPress={handlePrimaryAction}
-          disabled={!isAuthenticated || isOwner || isClosed}
+          disabled={!isAuthenticated || isOwner || isClosed || requestStateLoading || hasPendingRequest}
           className={`rounded-full px-4 py-3.5 ${
-            !isAuthenticated || isOwner || isClosed ? 'bg-[#EAF1E9]' : 'bg-[#2E6641]'
+            !isAuthenticated || isOwner || isClosed || requestStateLoading || hasPendingRequest ? 'bg-[#EAF1E9]' : 'bg-[#2E6641]'
           }`}
           activeOpacity={0.9}
         >
           <Text
             className={`text-center text-[0.9375rem] font-semibold ${
-              !isAuthenticated || isOwner || isClosed ? 'text-[#63665F]' : 'text-white'
+              !isAuthenticated || isOwner || isClosed || requestStateLoading || hasPendingRequest ? 'text-[#63665F]' : 'text-white'
             }`}
           >
             {primaryCtaLabel}
