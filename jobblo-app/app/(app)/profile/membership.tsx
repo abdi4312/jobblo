@@ -92,7 +92,8 @@ function hasPaidSubscription(sub: {
     const checkoutMutation = useCreateCheckoutSessionMutation();
     const subscription = subscriptionQuery.data;
     const role = typeof user?.role === 'string' ? user.role : undefined;
-    const defaultType: PlanType = subscription?.planType ?? (role === 'company' ? 'business' : 'private');
+    const allowedPlanType: PlanType = role === 'company' ? 'business' : 'private';
+    const defaultType: PlanType = allowedPlanType;
     const [userType, setUserType] = useState<PlanType | null>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const activeType = userType ?? defaultType;
@@ -132,9 +133,12 @@ function planFeatures(plan: SubscriptionPlan): string[] {
     }, [selectedId, typePlans, currentPlanId]);
 
     const selectedPlan = typePlans.find((plan) => plan._id === selectedId) ?? null;
+    const isAllowedForAccount = selectedPlan?.type === allowedPlanType;
     const isFree = !!selectedPlan && selectedPlan.price <= 0;
     const isCurrent = !!selectedPlan && selectedPlan._id === currentPlanId;
     const alreadyPaid = hasPaidSubscription(subscription?.hasPlan ? subscription : null);
+    const canCheckout =
+      !!selectedPlan && isAllowedForAccount && !isFree && !isCurrent && !alreadyPaid;
 
     const selectPlan = (id: string) => {
       if (id === selectedId) return;
@@ -184,7 +188,7 @@ function planFeatures(plan: SubscriptionPlan): string[] {
     // Re-assert every precondition at the call site. The render tree already
     // hides the button in these states, but the invariant should not depend on
     // the button being the only possible trigger.
-    if (!selectedPlan || isFree || isCurrent || alreadyPaid) return;
+    if (!selectedPlan || !isAllowedForAccount || isFree || isCurrent || alreadyPaid) return;
     checkoutMutation.mutate(
       { planId: selectedPlan._id },
       {
@@ -242,6 +246,19 @@ function planFeatures(plan: SubscriptionPlan): string[] {
             Alert.alert(
               'Planen er ikke tilgjengelig',
               info.message || 'Denne planen er ikke tilgjengelig lenger. Velg en annen plan.'
+            );
+            return;
+          }
+
+          if (info.code === 'plan_type_not_allowed') {
+            setSelectedId(null);
+            void Promise.all([plansQuery.refetch(), subscriptionQuery.refetch()]);
+            Alert.alert(
+              'Planen passer ikke kontotypen',
+              info.message ||
+                (allowedPlanType === 'business'
+                  ? 'Privatplaner er tilgjengelige for privatkontoer.'
+                  : 'Bedriftsplaner er tilgjengelige for bedriftskontoer.')
             );
             return;
           }
@@ -492,6 +509,14 @@ function planFeatures(plan: SubscriptionPlan): string[] {
                   </Text>
                 </View>
               </View>
+            ) : !isAllowedForAccount ? (
+              <View className="mt-4 rounded-2xl border border-[#E6E7E1] bg-[#F4F6F0] px-4 py-3.5">
+                <Text className="text-center text-[0.875rem] leading-5 text-[#63665F]">
+                  {allowedPlanType === 'business'
+                    ? 'Privatplaner er tilgjengelige for privatkontoer.'
+                    : 'Bedriftsplaner er tilgjengelige for bedriftskontoer.'}
+                </Text>
+              </View>
             ) : alreadyPaid ? (
               <View className="mt-4">
                 <View className="rounded-2xl border border-[#F1E1C4] bg-[#FBF5E9] px-4 py-3.5">
@@ -516,7 +541,7 @@ function planFeatures(plan: SubscriptionPlan): string[] {
                   <ChevronRight size={17} color="#0B0B0B" />
                 </Pressable>
               </View>
-            ) : canPurchaseMembershipInApp ? (
+            ) : canCheckout && canPurchaseMembershipInApp ? (
               <Pressable
                 onPress={handleCheckout}
                 disabled={checkoutPending}

@@ -1,7 +1,11 @@
 const PushToken = require('../models/PushToken');
 
 function validToken(token) {
-  return typeof token === 'string' && /^Expo(nent)?PushToken\[.+\]$/.test(token.trim());
+  if (typeof token !== 'string') return false;
+  const value = token.trim();
+  // FCM registration tokens are opaque strings. Keep a bounded, printable format check
+  // without assuming the ExpoPushToken/ExponentPushToken prefix.
+  return value.length >= 20 && value.length <= 4096 && /^[A-Za-z0-9:_-]+$/.test(value);
 }
 
 exports.register = async (req, res) => {
@@ -13,7 +17,14 @@ exports.register = async (req, res) => {
   try {
     const pushToken = await PushToken.findOneAndUpdate(
       { token: token.trim() },
-      { userId: req.userId, platform, deviceId: typeof deviceId === 'string' ? deviceId : undefined, active: true, lastSeenAt: new Date() },
+      {
+        provider: 'fcm',
+        userId: req.userId,
+        platform,
+        deviceId: typeof deviceId === 'string' ? deviceId : undefined,
+        active: true,
+        lastSeenAt: new Date(),
+      },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     return res.status(200).json({ registered: Boolean(pushToken) });
@@ -28,7 +39,10 @@ exports.deactivateCurrent = async (req, res) => {
   if (!validToken(token)) return res.status(400).json({ error: 'Ugyldig push-token' });
 
   try {
-    await PushToken.updateOne({ token: token.trim(), userId: req.userId }, { $set: { active: false } });
+    await PushToken.updateOne(
+      { token: token.trim(), userId: req.userId },
+      { $set: { active: false } }
+    );
     return res.json({ deactivated: true });
   } catch (error) {
     console.error('Push token deactivation failed:', error.message);

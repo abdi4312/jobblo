@@ -81,7 +81,8 @@ function summarizePaidExtraContacts(transactions) {
     paidUsed,
     paidAvailable: Math.max(paidPurchased - paidUsed, 0),
     totalPaidForExtraContacts: eligible.reduce(
-      (total, transaction) => total + (Number.isFinite(transaction.amount) ? transaction.amount : 0),
+      (total, transaction) =>
+        total + (Number.isFinite(transaction.amount) ? transaction.amount : 0),
       0
     ),
   };

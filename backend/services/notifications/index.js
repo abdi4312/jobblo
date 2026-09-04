@@ -30,6 +30,7 @@ const Notification = require('../../models/Notification');
 
 const { userRooms } = require('../../sockets/rooms');
 const { getIO } = require('../../sockets/io');
+const { sendPushToUser } = require('../pushNotifications');
 
 /**
  * The notification catalogue.
@@ -61,6 +62,60 @@ const TYPES = {
 };
 
 const isKnownType = (type) => Object.prototype.hasOwnProperty.call(TYPES, type);
+
+const PUSH_TITLES = {
+  message: 'Ny melding på Jobblo',
+  application: 'Ny forespørsel',
+  order: 'Ordreoppdatering',
+  payment: 'Betalingsoppdatering',
+  review: 'Ny vurdering',
+  job_update: 'Oppdrag oppdatert',
+  follow: 'Ny følger',
+  favorite: 'Ny favoritt',
+  promotion: 'Ny oppdatering',
+  alert: 'Varsel fra Jobblo',
+  system: 'Jobblo',
+  system_update: 'Jobblo',
+  general: 'Jobblo',
+};
+
+function pushData({ type, event, payload, requestId, orderId, data }) {
+  if (data && typeof data === 'object') {
+    return Object.fromEntries(
+      Object.entries(data).filter(
+        ([key, value]) =>
+          [
+            'type',
+            'chatId',
+            'serviceId',
+            'jobId',
+            'orderId',
+            'requestId',
+            'applicationId',
+          ].includes(key) &&
+          (typeof value === 'string' || typeof value === 'number')
+      )
+    );
+  }
+
+  const serviceId = payload?.serviceId?._id || payload?.serviceId;
+  const chatId = payload?.chatId;
+  const pushType =
+    type === 'message'
+      ? 'chat_message'
+      : event === 'new_job_request'
+        ? 'job_request'
+        : event
+          ? 'application_status'
+          : type;
+  return {
+    type: pushType,
+    ...(chatId ? { chatId: String(chatId) } : {}),
+    ...(serviceId ? { serviceId: String(serviceId), jobId: String(serviceId) } : {}),
+    ...(requestId ? { requestId: String(requestId), applicationId: String(requestId) } : {}),
+    ...(orderId ? { orderId: String(orderId) } : {}),
+  };
+}
 
 /** What the tray shows on the sender chip, plus the ids the client routes on. */
 const POPULATE = [
@@ -116,7 +171,20 @@ async function unreadCount(userId) {
  *   created — callers are not expected to check, that is the point.
  */
 async function notify(input = {}) {
-  const { userId, type, content, senderId, orderId, requestId, event, payload } = input;
+  const {
+    userId,
+    type,
+    content,
+    senderId,
+    orderId,
+    requestId,
+    event,
+    payload,
+    title,
+    data,
+    channelId,
+    priority,
+  } = input;
 
   try {
     if (!userId || !type || !content) {
@@ -153,6 +221,15 @@ async function notify(input = {}) {
 
     if (count !== null) emitToUser(userId, 'notification_count', { count });
     if (event) emitToUser(userId, event, payload ?? {});
+
+    // Mongo is the source of truth; FCM is best-effort delivery of this same alert.
+    void sendPushToUser(userId, {
+      title: title || PUSH_TITLES[type],
+      body: content,
+      data: pushData({ type, event, payload, requestId, orderId, data }),
+      ...(channelId ? { channelId } : {}),
+      ...(priority ? { priority } : {}),
+    });
 
     return populated;
   } catch (err) {

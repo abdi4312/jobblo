@@ -440,7 +440,9 @@ exports.getMySubscription = async (req, res) => {
       .select('amount consumedAt type status refunded')
       .lean();
     const paid = summarizePaidExtraContacts(extraTransactions);
-    const includedLimit = resolved.hasPlan ? Math.max(0, Number(resolved.entitlements.freeContact) || 0) : 0;
+    const includedLimit = resolved.hasPlan
+      ? Math.max(0, Number(resolved.entitlements.freeContact) || 0)
+      : 0;
     const includedUsed = resolved.hasPlan ? Math.max(0, resolved.usage) : 0;
     const includedRemaining = Math.max(includedLimit - includedUsed, 0);
 

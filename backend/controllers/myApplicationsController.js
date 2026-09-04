@@ -12,7 +12,7 @@ const Order = require('../models/Order');
 const Chat = require('../models/ChatMessage');
 const Service = require('../models/Service');
 const User = require('../models/User');
-const Notification = require('../models/Notification');
+const { notify } = require('../services/notifications');
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -116,9 +116,7 @@ exports.getMyApplications = async (req, res) => {
                 chatId: order.chatId,
               }
             : null,
-          chat: chat
-            ? { _id: chat._id, status: chat.status, lastMessage: chat.lastMessage }
-            : null,
+          chat: chat ? { _id: chat._id, status: chat.status, lastMessage: chat.lastMessage } : null,
           nextAction,
         };
       })
@@ -205,11 +203,13 @@ exports.withdrawApplication = async (req, res) => {
 
     // The owner was never told. Their applicant list simply lost a row.
     if (service?.userId) {
-      await Notification.create({
+      await notify({
         userId: service.userId,
         senderId: userId,
+        requestId: jobRequest._id,
         type: 'application',
         content: `En søker har trukket søknaden sin på "${service.title}".`,
+        payload: { requestId: jobRequest._id, serviceId: jobRequest.serviceId },
       }).catch((err) => console.error('withdrawApplication notification failed:', err.message));
     }
 
