@@ -126,9 +126,9 @@ describe('what a client is allowed to say at the start endpoint', () => {
   });
 
   it('degrades to web when there is no session to record the intent in', async () => {
-    await expect(rememberOAuthPlatform({ query: { platform: 'mobile' }, session: null })).resolves.toBe(
-      'web'
-    );
+    await expect(
+      rememberOAuthPlatform({ query: { platform: 'mobile' }, session: null })
+    ).resolves.toBe('web');
     expect(error).toHaveBeenCalled();
   });
 
@@ -139,9 +139,9 @@ describe('what a client is allowed to say at the start endpoint', () => {
    */
   it('degrades to web when the store write fails', async () => {
     const session = { save: (cb) => setImmediate(() => cb(new Error('store down'))) };
-    await expect(
-      rememberOAuthPlatform({ query: { platform: 'mobile' }, session })
-    ).resolves.toBe('web');
+    await expect(rememberOAuthPlatform({ query: { platform: 'mobile' }, session })).resolves.toBe(
+      'web'
+    );
     expect(error).toHaveBeenCalled();
   });
 });
@@ -297,7 +297,9 @@ describe('the destination for a finished flow', () => {
    */
   it('sends the website exactly where it always went', () => {
     expect(web({ accessToken: TOKEN })).toBe(`https://jobblo.example/oauth-success?token=${TOKEN}`);
-    expect(web({ error: 'google_failed' })).toBe('https://jobblo.example/login?error=google_failed');
+    expect(web({ error: 'google_failed' })).toBe(
+      'https://jobblo.example/login?error=google_failed'
+    );
   });
 
   it('puts a link conflict on the profile page, where the connect button is', () => {
@@ -308,7 +310,9 @@ describe('the destination for a finished flow', () => {
 
   it('tolerates FRONTEND_URL with or without a trailing slash', () => {
     process.env.FRONTEND_URL = 'https://jobblo.example';
-    expect(web({ error: 'google_failed' })).toBe('https://jobblo.example/login?error=google_failed');
+    expect(web({ error: 'google_failed' })).toBe(
+      'https://jobblo.example/login?error=google_failed'
+    );
   });
 
   it('sends a mobile flow to the bridge on this origin', () => {
@@ -392,30 +396,23 @@ describe('the bridge page', () => {
   it('locks the page down with a per-response nonce', () => {
     const res = render({ state: 'success', token: TOKEN });
     const csp = res.headers['Content-Security-Policy'];
-    const nonce = /script-src 'nonce-([^']+)'/.exec(csp)?.[1];
+    const nonce = /style-src 'nonce-([^']+)'/.exec(csp)?.[1];
 
     expect(csp).toContain("default-src 'none'");
     expect(csp).toContain("base-uri 'none'");
     expect(csp).toContain("form-action 'none'");
     expect(nonce).toBeTruthy();
-    expect(res.body).toContain(`<script nonce="${nonce}">`);
     expect(res.body).toContain(`<style nonce="${nonce}">`);
 
     const second = render({ state: 'success', token: TOKEN });
     expect(second.headers['Content-Security-Policy']).not.toBe(csp);
   });
 
-  /**
-   * `location.replace` dropped this page from the browser's history, so once the app had
-   * taken over there was nothing left in the Custom Tab but the provider's account chooser —
-   * which is what came back over the signed-in app. Assigning `href` leaves the page in
-   * place, one tap from finishing the trip.
-   */
-  it('assigns location.href rather than replacing this page', () => {
+  it('offers one explicit handoff and does not auto-launch the app', () => {
     const body = render({ state: 'success', token: TOKEN }).body;
-    expect(body).toContain('window.location.href');
-    expect(body).not.toContain('location.replace');
     expect(body).toContain('Åpne Jobblo');
+    expect(body).not.toContain('window.location');
+    expect(body).not.toContain('<script');
   });
 });
 describe('the bridge page refuses to invent a success', () => {
@@ -550,4 +547,3 @@ describe('no return URL is ever taken from the caller', () => {
     }
   });
 });
-
