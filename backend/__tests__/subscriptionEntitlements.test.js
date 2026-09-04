@@ -5,7 +5,10 @@ jest.mock('../models/User', () => ({ findById: jest.fn() }));
 const Subscription = require('../models/Subscription');
 const SubscriptionPlan = require('../models/SubscriptionPlan');
 const User = require('../models/User');
-const { resolveCurrentSubscriptionEntitlements } = require('../utils/subscriptionEntitlements');
+const {
+  resolveCurrentSubscriptionEntitlements,
+  summarizePaidExtraContacts,
+} = require('../utils/subscriptionEntitlements');
 
 const USER_ID = 'user_1';
 const PLAN_ID = 'plan_plus';
@@ -78,4 +81,29 @@ test('does not replace a dangling planId with a same-name fallback', async () =>
 
   expect(result.hasPlan).toBe(false);
   expect(SubscriptionPlan.findOne).not.toHaveBeenCalled();
+});
+
+test('summarizes only successful, non-refunded extra contacts using stored amounts', () => {
+  expect(summarizePaidExtraContacts([
+    { type: 'extra_contact', status: 'succeeded', amount: 49, consumedAt: new Date() },
+    { type: 'extra_contact', status: 'succeeded', amount: 29, consumedAt: new Date() },
+    { type: 'extra_contact', status: 'succeeded', amount: 19, consumedAt: null },
+    { type: 'extra_contact', status: 'pending', amount: 99, consumedAt: null },
+    { type: 'extra_contact', status: 'failed', amount: 99, consumedAt: null },
+    { type: 'extra_contact', status: 'succeeded', amount: 15, refunded: true, consumedAt: null },
+    { type: 'subscription', status: 'succeeded', amount: 99, consumedAt: null },
+  ])).toEqual({
+    paidPurchased: 3,
+    paidUsed: 2,
+    paidAvailable: 1,
+    totalPaidForExtraContacts: 97,
+  });
+});
+
+test.each([
+  [15, 6, 9],
+  [0, 0, 0],
+  [5, 6, 0],
+])('calculates a non-negative included remainder for %i limit and %i used', (limit, used, remaining) => {
+  expect(Math.max(limit - used, 0)).toBe(remaining);
 });

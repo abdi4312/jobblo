@@ -23,6 +23,8 @@ export function useApplyMutation(options?: UseApplyMutationOptions) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.applications.all,
       });
+      queryClient.invalidateQueries({ queryKey: ['applications'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.subscription.current });
 
       // Invalidate the specific job's detail query so the button state updates
       if (typeof data.serviceId === 'object' && data.serviceId._id) {

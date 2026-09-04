@@ -57,6 +57,81 @@ function historyAmount(item: PurchaseHistoryItem): string {
   return `${new Intl.NumberFormat('nb-NO', { maximumFractionDigits: 0 }).format(item.amount)} ${currency}`;
 }
 
+function unlockLabel(minutes: number | null): string {
+  if (minutes === null) return 'Ikke aktuelt';
+  return minutes === 0 ? 'Tilgang i sanntid' : `Tilgang etter ${minutes} min`;
+}
+
+function ContactDetails({ subscription }: { subscription: CurrentSubscription }) {
+  const contacts = subscription.contacts ?? {
+    includedLimit: 0,
+    includedUsed: 0,
+    includedRemaining: 0,
+    perContactPrice: null,
+    contactUnlockMinutes: null,
+    paidPurchased: 0,
+    paidUsed: 0,
+    paidAvailable: 0,
+    totalPaidForExtraContacts: 0,
+    currency: 'nok',
+  };
+  const progress = contacts.includedLimit > 0
+    ? Math.min(contacts.includedUsed / contacts.includedLimit, 1)
+    : 0;
+  const amount = new Intl.NumberFormat('nb-NO', { maximumFractionDigits: 0 }).format(
+    contacts.totalPaidForExtraContacts
+  );
+
+  return (
+    <View className="mt-5 rounded-3xl border border-[#E6E7E1] bg-white p-5">
+      <Text className="text-sm font-semibold text-[#0B0B0B]">Kontakter</Text>
+      <View className="mt-4 flex-row gap-2">
+        {[
+          ['Inkludert', contacts.includedLimit],
+          ['Brukt', contacts.includedUsed],
+          ['Igjen', contacts.includedRemaining],
+        ].map(([label, value]) => (
+          <View key={String(label)} className="min-w-0 flex-1 rounded-2xl bg-[#F5F6F1] p-3">
+            <Text className="text-2xl font-bold text-[#0B0B0B]">{value}</Text>
+            <Text className="mt-1 text-xs text-[#63665F]">{label}</Text>
+          </View>
+        ))}
+      </View>
+      <Text className="mt-4 text-xs font-medium text-[#63665F]">
+        {contacts.includedUsed} / {contacts.includedLimit} brukt
+      </Text>
+      <View className="mt-2 h-2 overflow-hidden rounded-full bg-[#E6E7E1]">
+        <View className="h-full rounded-full bg-[#2E6641]" style={{ width: `${progress * 100}%` }} />
+      </View>
+
+      <View className="mt-5 border-t border-[#E6E7E1] pt-4">
+        <View className="flex-row items-center justify-between gap-3">
+          <Text className="text-sm text-[#63665F]">Ekstra kontakt</Text>
+          <Text className="text-sm font-semibold text-[#0B0B0B]">
+            {contacts.perContactPrice === null ? 'Abonnement kreves' : `${contacts.perContactPrice} NOK`}
+          </Text>
+        </View>
+        {contacts.contactUnlockMinutes !== null ? (
+          <View className="mt-2 flex-row items-center justify-between gap-3">
+            <Text className="text-sm text-[#63665F]">Tilgang til nye oppdrag</Text>
+            <Text className="text-sm font-semibold text-[#0B0B0B]">{unlockLabel(contacts.contactUnlockMinutes)}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      <View className="mt-5 border-t border-[#E6E7E1] pt-4">
+        <Text className="text-sm font-semibold text-[#0B0B0B]">Betalte ekstra kontakter</Text>
+        <View className="mt-3 gap-2">
+          <View className="flex-row justify-between gap-3"><Text className="text-sm text-[#63665F]">Kjøpt</Text><Text className="text-sm font-semibold text-[#0B0B0B]">{contacts.paidPurchased}</Text></View>
+          <View className="flex-row justify-between gap-3"><Text className="text-sm text-[#63665F]">Brukt</Text><Text className="text-sm font-semibold text-[#0B0B0B]">{contacts.paidUsed}</Text></View>
+          <View className="flex-row justify-between gap-3"><Text className="text-sm text-[#63665F]">Tilgjengelig</Text><Text className="text-sm font-semibold text-[#0B0B0B]">{contacts.paidAvailable}</Text></View>
+          <View className="flex-row justify-between gap-3"><Text className="text-sm text-[#63665F]">Betalt for ekstra kontakter</Text><Text className="text-sm font-semibold text-[#0B0B0B]">{amount} NOK</Text></View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function HistoryRow({ item }: { item: PurchaseHistoryItem }) {
   const plan = typeof item.planName === 'string' ? item.planName : 'Medlemskap';
   const status = historyStatus(item.status);
@@ -133,7 +208,7 @@ export default function SubscriptionScreen() {
   return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 36 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />}>
     <Pressable onPress={() => router.back()} className="mb-5 flex-row items-center self-start py-2"><ArrowLeft size={18} color="#63665F" /><Text className="ml-2 text-sm font-medium text-[#63665F]">Innstillinger</Text></Pressable>
     <View className="mb-5 flex-row items-center"><View className="h-11 w-11 items-center justify-center rounded-xl bg-[#EAF1E9]"><CreditCard size={21} color="#2E6641" /></View><View className="ml-3 flex-1"><Text className="text-2xl font-bold text-[#0B0B0B]">Abonnement</Text><Text className="mt-1 text-sm text-[#63665F]">Administrer ditt nåværende abonnement</Text></View></View>
-    {!subscription ? <EmptyState title="Ingen aktivt abonnement" message="Du har ingen nåværende abonnement å administrere." /> : <><View className="rounded-3xl border border-[#E6E7E1] bg-white p-5"><Text className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9B9E96]">Gjeldende plan</Text><Text className="mt-2 text-2xl font-bold text-[#0B0B0B]">{subscription.plan}</Text><Text className="mt-1 text-sm text-[#63665F]">{subscription.planType === 'business' ? 'Bedrift' : 'Privatperson'}</Text><View className="mt-5 flex-row items-center"><CheckCircle2 size={17} color={planStatus?.color} /><Text className="ml-2 text-sm font-semibold" style={{ color: planStatus?.color }}>{planStatus?.label}</Text></View>{cancelDate ? <View className="mt-4 flex-row items-center"><CalendarDays size={16} color="#63665F" /><Text className="ml-2 text-sm text-[#63665F]">{subscription.cancelAtPeriodEnd ? 'Tilgang til' : 'Neste fornyelse'}: {cancelDate}</Text></View> : null}</View>{subscription.cancelAtPeriodEnd ? <Pressable onPress={confirmResume} disabled={resume.isPending} className="mt-4 flex-row items-center justify-center rounded-xl bg-[#2E6641] px-4 py-3.5 disabled:opacity-50"><RefreshCcw size={17} color="#FFFFFF" /><Text className="ml-2 text-sm font-semibold text-white">{resume.isPending ? 'Gjenopptar...' : 'Gjenoppta abonnement'}</Text></Pressable> : subscription.stripeSubscriptionId && subscription.status === 'active' ? <Pressable onPress={confirmCancel} disabled={cancel.isPending} className="mt-4 flex-row items-center justify-center rounded-xl border border-[#E6E7E1] bg-white px-4 py-3.5 disabled:opacity-50"><XCircle size={17} color="#B4544A" /><Text className="ml-2 text-sm font-semibold text-[#B4544A]">{cancel.isPending ? 'Sier opp...' : 'Si opp abonnement'}</Text></Pressable> : null}</>}
+    {!subscription || !subscription.hasPlan ? <><EmptyState title="Ingen aktivt abonnement" message="Du har ingen nåværende abonnement å administrere." /><Pressable onPress={() => router.push('/profile/membership')} className="mt-4 flex-row items-center justify-center rounded-xl bg-[#2E6641] px-4 py-3.5"><Text className="text-sm font-semibold text-white">{subscription?.planType === 'business' ? 'Se bedriftsabonnementer' : 'Se abonnementer'}</Text></Pressable><ContactDetails subscription={subscription ?? { hasPlan: false, plan: null, planType: 'private', status: 'inactive', autoRenew: false, cancelAtPeriodEnd: false, contacts: { includedLimit: 0, includedUsed: 0, includedRemaining: 0, perContactPrice: null, contactUnlockMinutes: null, paidPurchased: 0, paidUsed: 0, paidAvailable: 0, totalPaidForExtraContacts: 0, currency: 'nok' } }} /></> : <><View className="rounded-3xl border border-[#E6E7E1] bg-white p-5"><Text className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9B9E96]">Gjeldende plan</Text><Text className="mt-2 text-2xl font-bold text-[#0B0B0B]">{subscription.plan}</Text><Text className="mt-1 text-sm text-[#63665F]">{subscription.planType === 'business' ? 'Bedrift' : 'Privatperson'}</Text><View className="mt-5 flex-row items-center"><CheckCircle2 size={17} color={planStatus?.color} /><Text className="ml-2 text-sm font-semibold" style={{ color: planStatus?.color }}>{planStatus?.label}</Text></View>{cancelDate ? <View className="mt-4 flex-row items-center"><CalendarDays size={16} color="#63665F" /><Text className="ml-2 text-sm text-[#63665F]">{subscription.cancelAtPeriodEnd ? 'Tilgang til' : 'Neste fornyelse'}: {cancelDate}</Text></View> : null}</View><ContactDetails subscription={subscription} />{subscription.cancelAtPeriodEnd ? <Pressable onPress={confirmResume} disabled={resume.isPending} className="mt-4 flex-row items-center justify-center rounded-xl bg-[#2E6641] px-4 py-3.5 disabled:opacity-50"><RefreshCcw size={17} color="#FFFFFF" /><Text className="ml-2 text-sm font-semibold text-white">{resume.isPending ? 'Gjenopptar...' : 'Gjenoppta abonnement'}</Text></Pressable> : subscription.stripeSubscriptionId && subscription.status === 'active' ? <Pressable onPress={confirmCancel} disabled={cancel.isPending} className="mt-4 flex-row items-center justify-center rounded-xl border border-[#E6E7E1] bg-white px-4 py-3.5 disabled:opacity-50"><XCircle size={17} color="#B4544A" /><Text className="ml-2 text-sm font-semibold text-[#B4544A]">{cancel.isPending ? 'Sier opp...' : 'Si opp abonnement'}</Text></Pressable> : null}</>}
     <HistorySection history={history} />
   </ScrollView></SafeAreaView>;
 }

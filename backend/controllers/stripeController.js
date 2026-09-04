@@ -1,4 +1,5 @@
 const Subscription = require('../models/Subscription');
+const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 const Service = require('../models/Service');
 const mongoose = require('mongoose');
@@ -13,7 +14,10 @@ const {
   subscriptionPeriodEnd,
 } = require('../services/stripe/provisioning');
 const { resolveAllowedPlanType } = require('../utils/planAccess');
-const { resolveCurrentSubscriptionEntitlements } = require('../utils/subscriptionEntitlements');
+const {
+  resolveCurrentSubscriptionEntitlements,
+  summarizePaidExtraContacts,
+} = require('../utils/subscriptionEntitlements');
 
 const now = new Date();
 const nextMonth = new Date();
@@ -423,29 +427,54 @@ exports.extraContactPaymentStatus = async (req, res) => {
 /** The user's live subscription, joined with what Stripe currently believes about it. */
 exports.getMySubscription = async (req, res) => {
   try {
-    const subscription = await Subscription.findOne({ userId: req.userId });
-    const current = subscription?.currentPlan;
+    const resolved = await resolveCurrentSubscriptionEntitlements(req.userId);
+    if (!resolved) return res.status(404).json({ message: 'Brukeren ble ikke funnet' });
 
-    if (!current?.plan) {
-      return res.json({ subscription: null });
-    }
+    const current = resolved.subscription?.currentPlan;
+    const extraTransactions = await Transaction.find({
+      userId: req.userId,
+      type: 'extra_contact',
+      status: 'succeeded',
+      refunded: { $ne: true },
+    })
+      .select('amount consumedAt type status refunded')
+      .lean();
+    const paid = summarizePaidExtraContacts(extraTransactions);
+    const includedLimit = resolved.hasPlan ? Math.max(0, Number(resolved.entitlements.freeContact) || 0) : 0;
+    const includedUsed = resolved.hasPlan ? Math.max(0, resolved.usage) : 0;
+    const includedRemaining = Math.max(includedLimit - includedUsed, 0);
 
     const payload = {
-      plan: current.plan,
-      planType: current.planType,
-      planId: current.planId,
-      status: current.status,
-      autoRenew: current.autoRenew,
-      startDate: current.startDate,
-      renewalDate: current.renewalDate,
-      stripeSubscriptionId: current.stripeSubscriptionId || null,
+      hasPlan: resolved.hasPlan,
+      plan: resolved.hasPlan ? resolved.planName : null,
+      planName: resolved.hasPlan ? resolved.planName : null,
+      planType: resolved.planType,
+      planId: resolved.hasPlan ? resolved.planId : null,
+      status: current?.status || 'inactive',
+      autoRenew: current?.autoRenew || false,
+      startDate: current?.startDate || null,
+      renewalDate: current?.renewalDate || null,
+      stripeSubscriptionId: current?.stripeSubscriptionId || null,
       cancelAtPeriodEnd: false,
-      currentPeriodEnd: current.renewalDate || current.endDate || null,
+      currentPeriodEnd: current?.renewalDate || current?.endDate || null,
+      contacts: {
+        includedLimit,
+        includedUsed,
+        includedRemaining,
+        perContactPrice: resolved.hasPlan
+          ? Math.max(0, Number(resolved.entitlements.perContactPrice) || 0)
+          : null,
+        contactUnlockMinutes: resolved.hasPlan
+          ? Math.max(0, Number(resolved.entitlements.ContactUnlock) || 0)
+          : null,
+        ...paid,
+        currency: 'nok',
+      },
     };
 
     // Stripe is the source of truth for whether a renewal will actually happen. The local
     // document can drift — a card that failed, a cancellation made in the dashboard.
-    if (current.stripeSubscriptionId) {
+    if (current?.stripeSubscriptionId) {
       try {
         const stripe = await getStripe();
         const live = await stripe.subscriptions.retrieve(current.stripeSubscriptionId);

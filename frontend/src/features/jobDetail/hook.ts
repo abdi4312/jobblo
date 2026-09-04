@@ -39,6 +39,8 @@ export const useCreateJobRequestMutation = () => {
     mutationFn: createJobRequest,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['my-subscription'] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
   });
 };

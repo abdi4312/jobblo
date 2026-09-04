@@ -327,14 +327,12 @@ function escapeHtml(value) {
  *
  * That button is not decoration. `expo-web-browser` cannot close an Android Custom Tab
  * programmatically (its own source says so), so what actually returns the user to the app
- * is the deep link foregrounding it. A page that has fully loaded and offers a real link
- * is the difference between "the tab closed" and "the tab sat there spinning".
+ * is one explicit deep-link navigation from the page. The page must not auto-launch the
+ * scheme: a second browser navigation can leave the provider/custom-tab task eligible to
+ * resurface after the app has already taken focus.
  *
- * The deep link appears only inside HTML attributes; the script reads it back off the DOM
- * (`a.href`) instead of having it interpolated into JavaScript, so no value ever reaches a
- * scripting context. A per-response nonce lets the CSP stay at `default-src 'none'` while
- * still allowing this one inline script and stylesheet. The token is never rendered as
- * text and never logged.
+ * The deep link appears only inside the anchor attribute, so no token reaches a scripting
+ * context. The token is never rendered as text and never logged.
  */
 function mobileReturnPage({ nonce, target, failed }) {
   const href = escapeHtml(target);
@@ -382,25 +380,6 @@ function mobileReturnPage({ nonce, target, failed }) {
   ${target ? `<a class="btn" id="app" href="${href}">Åpne Jobblo</a>` : ''}
   <p class="hint">${hint}</p>
 </main>
-${
-  target
-    ? `<script nonce="${nonce}">
-(function () {
-  var a = document.getElementById('app');
-  if (!a || window.__jobbloHandedOff) return;
-  window.__jobbloHandedOff = true;
-  // Read back off the DOM: the URL exists in this page only as an attribute value.
-  //
-  // Assigning \`href\` rather than calling \`replace\`, and firing exactly once. \`replace\`
-  // drops this page from the browser's history, so once the app had taken over there was
-  // nothing left in the Custom Tab but the provider's own account chooser — which is what
-  // the person saw come back. Assigning leaves this page in place, so a tab that resurfaces
-  // shows "Åpne Jobblo" and is one tap from finishing the trip.
-  try { window.location.href = a.href; } catch (e) {}
-})();
-</script>`
-    : ''
-}
 </body>
 </html>`;
 }
@@ -458,8 +437,8 @@ function mobileReturn(req, res) {
   const nonce = crypto.randomBytes(16).toString('base64');
   res.set(
     'Content-Security-Policy',
-    `default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; ` +
-      `img-src 'none'; base-uri 'none'; form-action 'none'`
+    `default-src 'none'; style-src 'nonce-${nonce}'; img-src 'none'; ` +
+      `base-uri 'none'; form-action 'none'`
   );
 
   // A page renders in every case — somebody is standing in front of it, mid-sign-in — but
@@ -480,4 +459,3 @@ module.exports = {
   resolveAppLinkPrefix,
   resolveMobileReturnBase,
 };
-

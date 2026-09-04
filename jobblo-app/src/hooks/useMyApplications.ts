@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../queryKeys';
-import { getMyApplications, withdrawApplication } from '../services/applications.service';
+import { getMyApplications, getMyJobRequests, withdrawApplication } from '../services/applications.service';
 import type { MyApplicationsResponse } from '../types/Application';
 
 export function useMyApplications(params?: { page?: number; limit?: number; status?: string; enabled?: boolean }) {
@@ -9,6 +9,16 @@ export function useMyApplications(params?: { page?: number; limit?: number; stat
   return useQuery<MyApplicationsResponse>({
     queryKey: queryKeys.applications.list(queryParams),
     queryFn: () => getMyApplications(queryParams),
+    enabled,
+    staleTime: 30_000,
+    refetchOnMount: 'always',
+  });
+}
+
+export function useMyJobRequests(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.applications.requests,
+    queryFn: getMyJobRequests,
     enabled,
     staleTime: 30_000,
     refetchOnMount: 'always',

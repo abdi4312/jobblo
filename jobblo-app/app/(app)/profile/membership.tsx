@@ -134,7 +134,7 @@ function planFeatures(plan: SubscriptionPlan): string[] {
     const selectedPlan = typePlans.find((plan) => plan._id === selectedId) ?? null;
     const isFree = !!selectedPlan && selectedPlan.price <= 0;
     const isCurrent = !!selectedPlan && selectedPlan._id === currentPlanId;
-    const alreadyPaid = hasPaidSubscription(subscription);
+    const alreadyPaid = hasPaidSubscription(subscription?.hasPlan ? subscription : null);
 
     const selectPlan = (id: string) => {
       if (id === selectedId) return;
@@ -314,7 +314,7 @@ function planFeatures(plan: SubscriptionPlan): string[] {
         </View>
 
         {/* Current plan, straight from the server */}
-        {subscription ? (
+        {subscription?.hasPlan ? (
           <View className="rounded-3xl border border-[#E6E7E1] bg-white p-5">
             <Text className="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[#9B9E96]">
               Din nåværende plan
