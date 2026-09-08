@@ -6,16 +6,15 @@ import {
   ArrowLeft,
   BadgeCheck,
   MapPin,
-  ShieldCheck,
   Star,
-  Briefcase,
-  ChevronRight,
 } from 'lucide-react-native';
-import { usePublicProfile, usePublicUserServices } from '../../../src/hooks/usePublicProfile';
+import { usePublicProfile } from '../../../src/hooks/usePublicProfile';
+import { useJobs } from '../../../src/hooks/useJobs';
 import { useProfile } from '../../../src/hooks/useProfile';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
+import { JobCard } from '../../../src/components/JobCard';
 import type { PublicUser, Review, ExperienceItem } from '../../../src/types/UserProfile';
 
 function initials(name: string) {
@@ -147,11 +146,18 @@ export default function PublicProfileScreen() {
   }, [isSelf]);
 
   const { data: user, isLoading, isError, refetch } = usePublicProfile(isSelf ? null : userId ?? null);
-  const { data: services = [], isLoading: servicesLoading, refetch: refetchServices } = usePublicUserServices(isSelf ? null : userId ?? null);
+  const {
+    data: jobsData,
+    isLoading: jobsLoading,
+    isError: jobsError,
+    refetch: refetchJobs,
+  } = useJobs({ userId: userId ?? '', limit: 20, enabled: !isSelf && !!userId });
+  const activeJobs = jobsData?.data ?? [];
+
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = async () => {
     setRefreshing(true);
-    try { await Promise.all([refetch(), refetchServices()]); } finally { setRefreshing(false); }
+    try { await Promise.all([refetch(), refetchJobs()]); } finally { setRefreshing(false); }
   };
 
   if (selfLoading && !isSelf) {
@@ -359,42 +365,23 @@ export default function PublicProfileScreen() {
 
           {activeTab === 'Aktive' && (
             <View>
-              {servicesLoading ? (
-                <LoadingIndicator message="Laster tjenester..." />
-              ) : services.length === 0 ? (
-                <EmptyState title="Ingen aktive tjenester" message="Denne brukeren har ingen tjenester ute akkurat nå." />
+              {jobsLoading ? (
+                <LoadingIndicator message="Laster aktive oppdrag..." />
+              ) : jobsError ? (
+                <ErrorState
+                  title="Kunne ikke laste oppdrag"
+                  message="Prøv igjen."
+                  actionLabel="Prøv igjen"
+                  onAction={() => void refetchJobs()}
+                />
+              ) : activeJobs.length === 0 ? (
+                <EmptyState title="Ingen aktive oppdrag" message="Denne brukeren har ingen aktive oppdrag ute akkurat nå." />
               ) : (
-                <View className="gap-3">
-                  {services.map((svc) => (
-                    <Pressable
-                      key={svc._id}
-                      onPress={() =>
-                        router.push({ pathname: '/(app)/jobs/[id]', params: { id: svc._id } })
-                      }
-                      className="flex-row items-center rounded-3xl border border-[#E6E7E1] bg-white p-4"
-                    >
-                      {svc.imageUrl ? (
-                        <Image source={{ uri: svc.imageUrl }} className="h-12 w-12 rounded-xl" />
-                      ) : (
-                        <View className="h-12 w-12 items-center justify-center rounded-xl bg-[#EAF1E9]">
-                          <Briefcase size={18} color="#2E6641" />
-                        </View>
-                      )}
-                      <View className="ml-3 flex-1">
-                        <Text className="text-sm font-semibold text-[#0B0B0B]" numberOfLines={1}>
-                          {svc.title}
-                        </Text>
-                        {svc.category ? (
-                          <Text className="mt-0.5 text-xs text-[#63665F]">{svc.category}</Text>
-                        ) : null}
-                        {typeof svc.price === 'number' ? (
-                          <Text className="mt-1 text-xs font-semibold text-[#2E6641]">
-                            kr {svc.price}{svc.unit ? `/${svc.unit}` : ''}
-                          </Text>
-                        ) : null}
-                      </View>
-                      <ChevronRight size={16} color="#63665F" />
-                    </Pressable>
+                <View className="flex-row flex-wrap gap-3">
+                  {activeJobs.map((job) => (
+                    <View key={job._id} className="w-[47%]">
+                      <JobCard job={job} compact />
+                    </View>
                   ))}
                 </View>
               )}
