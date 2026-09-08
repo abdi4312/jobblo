@@ -1,6 +1,6 @@
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Alert, Image, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useState } from 'react';
 import {
   Bookmark,
@@ -19,6 +19,7 @@ import { useAuthStore } from '../../../src/store/authStore';
 import { Button } from '../../../src/components/ui/Button';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
+import { ConfirmDialog } from '../../../src/components/ui/ConfirmDialog';
 
 function initials(name: string) {
   return (
@@ -51,11 +52,24 @@ export default function ProfileScreen() {
   const logout = useAuthStore((state) => state.logout);
   const { data: profile, isLoading, isError, refetch } = useProfile();
   const [refreshing, setRefreshing] = useState(false);
+  const [logoutVisible, setLogoutVisible] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleRefresh = async () => {
     setRefreshing(true);
     try { await refetch(); } finally { setRefreshing(false); }
   };
 
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setIsLoggingOut(false);
+      setLogoutVisible(false);
+      router.replace('/(auth)/login');
+    }
+  };
   if (isLoading)
     return (
       <SafeAreaView className="flex-1 bg-[#EFF0EA]">
@@ -95,28 +109,6 @@ export default function ProfileScreen() {
       ? { label: 'Anmeldelser', value: profile.reviewCount.toString() }
       : null,
   ].filter(Boolean) as { label: string; value: string }[];
-
-  const confirmLogout = () =>
-    Alert.alert('Logg ut?', 'Du må logge inn igjen for å bruke Jobblo.', [
-      { text: 'Avbryt', style: 'cancel' },
-      {
-        // Leaves the group explicitly, exactly like deleting an account does. Signing out
-        // otherwise depended on the guard in app/(app)/_layout.tsx, which swaps `<Tabs>` for a
-        // `<Redirect>` the instant the session goes — so the navigation was dispatched from a
-        // route whose navigator had already been unmounted, and could go nowhere.
-        text: 'Logg ut',
-        style: 'destructive',
-        onPress: () => {
-          void (async () => {
-            try {
-              await logout();
-            } finally {
-              router.replace('/(auth)/login');
-            }
-          })();
-        },
-      },
-    ]);
 
   return (
     <SafeAreaView className="flex-1 bg-[#EFF0EA]">
@@ -237,14 +229,29 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
           <Pressable
-            onPress={confirmLogout}
+            onPress={() => setLogoutVisible(true)}
             className="mt-4 flex-row items-center justify-center rounded-xl border border-[#E6E7E1] bg-white px-4 py-3.5"
+            accessibilityRole="button"
+            accessibilityLabel="Logg ut"
           >
             <LogOut size={17} color="#B4544A" />
             <Text className="ml-2 text-sm font-semibold text-[#B4544A]">Logg ut</Text>
           </Pressable>
         </View>
       </ScrollView>
+
+      <ConfirmDialog
+        visible={logoutVisible}
+        title="Logg ut?"
+        message="Vil du logge ut av Jobblo?"
+        confirmLabel="Ja, logg ut"
+        pendingLabel="Logger ut..."
+        cancelLabel="Avbryt"
+        destructive
+        isPending={isLoggingOut}
+        onConfirm={() => void handleLogout()}
+        onClose={() => !isLoggingOut && setLogoutVisible(false)}
+      />
     </SafeAreaView>
   );
 }
