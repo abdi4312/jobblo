@@ -73,7 +73,7 @@ export default function JobDetailsScreen() {
     onError: (error: any) => {
       const errorData = error.response?.data;
       let errorMessage = 'Kunne ikke sende forespørsel. Prøv igjen senere.';
-      
+
       if (error.response?.status === 403 && errorData?.isDelayed) {
         const minutesLeft = Math.ceil((new Date(errorData.unlockAt).getTime() - Date.now()) / 60000);
         errorMessage = `Du må vente ${minutesLeft} minutter før du kan søke på nytt.`;
@@ -86,7 +86,7 @@ export default function JobDetailsScreen() {
       } else if (error.message) {
         errorMessage = String(error.message);
       }
-      
+
       setApplyError(errorMessage);
     },
   });
@@ -96,8 +96,9 @@ export default function JobDetailsScreen() {
   const isClosed = job?.status === 'closed' || job?.status === 'completed' || job?.status === 'cancelled' || job?.status === 'expired';
   const currentUserId = user ? String((user as any)._id ?? (user as any).id ?? '') : '';
   const hasPendingRequest = (requestsQuery.data ?? []).some((request) => {
-    const serviceId = typeof request.serviceId === 'object' ? request.serviceId._id : request.serviceId;
-    const customerId = typeof request.customerId === 'object' ? request.customerId._id : request.customerId;
+    const serviceId = typeof request.serviceId === 'object' ? request.serviceId?._id : request.serviceId;
+    const customerId = typeof request.customerId === 'object' ? request.customerId?._id : request.customerId;
+    if (!serviceId || !customerId) return false;
     return String(serviceId) === String(id) && String(customerId) === currentUserId && request.status === 'pending';
   });
   const requestStateLoading = isAuthenticated && !isOwner && requestsQuery.isLoading;
@@ -109,11 +110,11 @@ export default function JobDetailsScreen() {
       ? 'Dette er ditt oppdrag'
       : isClosed
         ? 'Oppdraget er lukket'
-          : requestStateLoading
-            ? 'Sjekker forespørsel...'
-            : hasPendingRequest
-              ? 'Forespørsel sendt'
-        : 'Søk på oppdraget';
+        : requestStateLoading
+          ? 'Sjekker forespørsel...'
+          : hasPendingRequest
+            ? 'Forespørsel sendt'
+            : 'Søk på oppdraget';
 
   const handlePrimaryAction = () => {
     if (!isAuthenticated) {
@@ -385,15 +386,13 @@ export default function JobDetailsScreen() {
         <TouchableOpacity
           onPress={handlePrimaryAction}
           disabled={!isAuthenticated || isOwner || isClosed || requestStateLoading || hasPendingRequest}
-          className={`rounded-full px-4 py-3.5 ${
-            !isAuthenticated || isOwner || isClosed || requestStateLoading || hasPendingRequest ? 'bg-[#EAF1E9]' : 'bg-[#2E6641]'
-          }`}
+          className={`rounded-full px-4 py-3.5 ${!isAuthenticated || isOwner || isClosed || requestStateLoading || hasPendingRequest ? 'bg-[#EAF1E9]' : 'bg-[#2E6641]'
+            }`}
           activeOpacity={0.9}
         >
           <Text
-            className={`text-center text-[0.9375rem] font-semibold ${
-              !isAuthenticated || isOwner || isClosed || requestStateLoading || hasPendingRequest ? 'text-[#63665F]' : 'text-white'
-            }`}
+            className={`text-center text-[0.9375rem] font-semibold ${!isAuthenticated || isOwner || isClosed || requestStateLoading || hasPendingRequest ? 'text-[#63665F]' : 'text-white'
+              }`}
           >
             {primaryCtaLabel}
           </Text>

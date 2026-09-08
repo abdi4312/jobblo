@@ -140,7 +140,15 @@ export default function AppLayout() {
         options={{
           title: 'Profil',
           tabBarIcon: ({ color, size }) => <UserRound size={size} color={color} />,
+          href: '/(app)/profile',
         }}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            // Pop the profile stack to root so tapping the Profile tab always
+            // shows the user's own profile, not a previously viewed provider.
+            navigation.navigate('profile', { screen: 'index' });
+          },
+        })}
       />
       {/* Hidden flat screens */}
       <Tabs.Screen name="explore" options={{ href: null }} />
