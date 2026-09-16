@@ -226,14 +226,25 @@ describe('1–4. initiation mints and stores the transaction server-side', () =>
     expect(res.redirectedTo).toContain('nonce=nonce-random-value');
   });
 
-  it('requests Norwegian BankID and never the ssn scope', async () => {
+  it('omits acr_values when no method is configured and never requests ssn', async () => {
+    delete process.env.IDURA_ACR_VALUES;
     const res = makeRes();
     await controller.startIduraAuth(makeReq({ session: {} }), res);
 
     const url = new URL(res.redirectedTo);
-    expect(url.searchParams.get('acr_values')).toBe('urn:grn:authn:no:bankid');
+    expect(url.searchParams.has('acr_values')).toBe(false);
     expect(url.searchParams.get('scope')).toBe('openid');
     expect(url.searchParams.get('scope')).not.toMatch(/ssn/);
+  });
+
+  it('sends an explicitly configured acr_values unchanged', async () => {
+    process.env.IDURA_ACR_VALUES = 'urn:grn:authn:no:bankid';
+    const res = makeRes();
+    await controller.startIduraAuth(makeReq({ session: {} }), res);
+
+    expect(new URL(res.redirectedTo).searchParams.get('acr_values')).toBe(
+      'urn:grn:authn:no:bankid'
+    );
   });
 
   it('persists the session before redirecting, so the callback can find it', async () => {

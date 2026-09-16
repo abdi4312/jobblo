@@ -39,18 +39,6 @@ const { load: loadClient } = require('./oidcModule');
 let configPromise = null;
 let configKey = null;
 
-/**
- * Norwegian BankID, as Idura names it.
- *
- *   urn:grn:authn:no:bankid              kodebrikke / code device
- *   urn:grn:authn:no:bankid:high         kodebrikke, explicitly high assurance
- *   urn:grn:authn:no:bankid:substantial  BankID Biometrics, substantial assurance
- *
- * Default is the plain kodebrikke value, which is the broadest — biometrics is not
- * available to every holder. `IDURA_ACR_VALUES` overrides it without a code change.
- */
-const DEFAULT_ACR = 'urn:grn:authn:no:bankid';
-
 /** Map the returned acr onto the two levels the User schema records. */
 function assuranceLevelFor(acr) {
   if (typeof acr !== 'string') return undefined;
@@ -162,7 +150,7 @@ async function buildAuthorizationUrl({ state, nonce, codeChallenge }, env = proc
   const client = await loadClient();
   const config = await getIduraConfig(env);
 
-  return client.buildAuthorizationUrl(config, {
+  const params = {
     redirect_uri: String(env.IDURA_REDIRECT_URI),
     scope: 'openid',
     response_type: 'code',
@@ -170,8 +158,11 @@ async function buildAuthorizationUrl({ state, nonce, codeChallenge }, env = proc
     nonce,
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
-    acr_values: String(env.IDURA_ACR_VALUES || DEFAULT_ACR),
-  });
+  };
+  const acrValues = String(env.IDURA_ACR_VALUES || '').trim();
+  if (acrValues) params.acr_values = acrValues;
+
+  return client.buildAuthorizationUrl(config, params);
 }
 
 /**
@@ -216,5 +207,4 @@ module.exports = {
   buildAuthorizationUrl,
   exchangeCode,
   assuranceLevelFor,
-  DEFAULT_ACR,
 };
