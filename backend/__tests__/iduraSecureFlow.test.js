@@ -100,17 +100,15 @@ describe('each defect of the old implementation stays fixed', () => {
     expect(controllerCode).not.toMatch(/axios/);
   });
 
-  it('an account is never found by e-mail in order to be linked', () => {
-    // The one e-mail lookup that remains decides whether a NEW account can be created;
-    // finding an existing one stops the flow rather than adopting it.
-    const emailLookups = controllerCode.match(/User\.findOne\(\{\s*email/g) || [];
-    expect(emailLookups).toHaveLength(1);
-    expect(controllerCode).toMatch(/ACCOUNT_EXISTS/);
+  it('only the authenticated session chooses the account to verify', () => {
+    expect(controllerCode).toMatch(/User\.findById\(pending\.jobbloUserId\)/);
+    expect(controllerCode).not.toMatch(/User\.findOne/);
+    expect(controllerCode).not.toMatch(/verifiedEmailFrom/);
   });
 
   it('no plaintext placeholder is written into password', () => {
     expect(controllerCode).not.toMatch(/password:\s*'oauth-user'/);
-    expect(controllerCode).toMatch(/createUnusablePassword\(\)/);
+    expect(controllerCode).not.toMatch(/createUnusablePassword/);
   });
 
   it('verified is only ever set alongside a validated identity', () => {
@@ -120,7 +118,7 @@ describe('each defect of the old implementation stays fixed', () => {
     expect(occurrences).toHaveLength(1);
     const applyBlock = controllerCode.slice(
       controllerCode.indexOf('function applyVerification'),
-      controllerCode.indexOf('async function completeLogin')
+      controllerCode.indexOf('exports.iduraCallback')
     );
     expect(applyBlock).toMatch(/verified:\s*true/);
     expect(applyBlock).toMatch(/identityVerification: identity/);
@@ -177,7 +175,7 @@ describe('the frontend never constructs the flow', () => {
   });
 
   it('starts the flow only by navigating to the backend endpoint', () => {
-    expect(verifiedCode).toMatch(/apiUrl\('\/api\/auth\/idura\?link=1'\)/);
+    expect(verifiedCode).toMatch(/apiUrl\('\/api\/auth\/idura'\)/);
   });
 
   it('the login screen does not offer BankID while it is commented out', () => {
@@ -218,7 +216,7 @@ describe('the frontend never constructs the flow', () => {
 
   it('the profile verification entry point is still live', () => {
     // Only the login/register entry point was hidden.
-    expect(verifiedCode).toMatch(/apiUrl\('\/api\/auth\/idura\?link=1'\)/);
+    expect(verifiedCode).toMatch(/apiUrl\('\/api\/auth\/idura'\)/);
   });
 
   it('no VITE_IDURA_* variables remain anywhere in the frontend', () => {
