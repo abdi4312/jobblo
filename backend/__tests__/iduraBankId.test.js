@@ -132,7 +132,12 @@ function makeRes() {
   };
 }
 
-function makeReq({ query = {}, session = {}, userId, url = '/api/auth/idura/callback' } = {}) {
+function makeReq({
+  query = {},
+  session = {},
+  userId = 'session-user',
+  url = '/api/auth/idura/callback',
+} = {}) {
   if (session && typeof session.save !== 'function') {
     session.save = (cb) => cb(null);
   }
@@ -151,8 +156,8 @@ function sessionWithTransaction(overrides = {}) {
   return {
     save: (cb) => cb(null),
     iduraTransaction: {
-      intent: 'login',
-      jobbloUserId: null,
+      intent: 'link',
+      jobbloUserId: 'session-user',
       state: 'state-random-value',
       nonce: 'nonce-random-value',
       codeVerifier: 'verifier-random-value',
@@ -203,7 +208,8 @@ describe('1–4. initiation mints and stores the transaction server-side', () =>
       state: 'state-random-value',
       nonce: 'nonce-random-value',
       codeVerifier: 'verifier-random-value',
-      intent: 'login',
+      intent: 'link',
+      jobbloUserId: 'session-user',
     });
 
     // The verifier must never leave the server — only the S256 challenge does.
@@ -263,14 +269,14 @@ describe('1–4. initiation mints and stores the transaction server-side', () =>
     expect(res.redirectedTo).toBe('http://localhost:5173/profile?error=bankid_verification_failed');
   });
 
-  it('a failed LOGIN start still goes to /login', async () => {
+  it('a failed verification start still goes to /profile', async () => {
     const res = makeRes();
     await controller.startIduraAuth(
       makeReq({ session: { save: (cb) => cb(new Error('boom')) } }),
       res
     );
 
-    expect(res.redirectedTo).toBe('http://localhost:5173/login?error=bankid_verification_failed');
+    expect(res.redirectedTo).toBe('http://localhost:5173/profile?error=bankid_verification_failed');
   });
 
   it('answers unavailable rather than crashing when Idura is not configured', async () => {
@@ -285,9 +291,9 @@ describe('1–4. initiation mints and stores the transaction server-side', () =>
   });
 });
 
-describe('5–6. intent binding at initiation', () => {
-  it('a link request from an authenticated caller records that account', async () => {
-    const req = makeReq({ query: { link: '1' }, userId: 'user-42', session: {} });
+describe('5–6. verification target binding at initiation', () => {
+  it('an authenticated caller records that account', async () => {
+    const req = makeReq({ userId: 'user-42', session: {} });
     await controller.startIduraAuth(req, makeRes());
 
     expect(req.session.iduraTransaction).toMatchObject({
@@ -296,20 +302,13 @@ describe('5–6. intent binding at initiation', () => {
     });
   });
 
-  it('a link request without a session is refused, not downgraded to a login', async () => {
-    const req = makeReq({ query: { link: '1' }, session: {} });
+  it('an unauthenticated request is refused, not downgraded to login', async () => {
+    const req = makeReq({ userId: null, session: {} });
     const res = makeRes();
     await controller.startIduraAuth(req, res);
 
     expect(res.redirectedTo).toContain('error=bankid_auth_required');
     expect(req.session.iduraTransaction).toBeUndefined();
-  });
-
-  it('a login request works unauthenticated and records no target account', async () => {
-    const req = makeReq({ session: {} });
-    await controller.startIduraAuth(req, makeRes());
-
-    expect(req.session.iduraTransaction).toMatchObject({ intent: 'login', jobbloUserId: null });
   });
 });
 
@@ -317,29 +316,10 @@ describe('5–6. intent binding at initiation', () => {
 // CALLBACK — happy paths
 // ════════════════════════════════════════════════════════════════════════════════
 
-describe('7. a valid BankID login', () => {
-  it('logs in the account already holding that subject', async () => {
-    grantReturns(VALID_CLAIMS);
-    User.findOne.mockResolvedValue({ _id: 'existing-user' });
-
-    const res = makeRes();
-    await controller.iduraCallback(
-      makeReq({ query: cbQuery(), session: sessionWithTransaction() }),
-      res
-    );
-
-    expect(User.findOne).toHaveBeenCalledWith({
-      'identityVerification.provider': 'idura',
-      'identityVerification.subject': 'bankid-subject-1',
-    });
-    expect(createSession).toHaveBeenCalledWith(expect.anything(), 'existing-user');
-    expect(res.redirectedTo).toContain('/oauth-success');
-    expect(res.cookies.accessToken).toBe('jobblo-at');
-  });
-
+describe('7. a valid BankID verification', () => {
   it('passes the stored nonce, state and verifier to the token exchange', async () => {
     grantReturns(VALID_CLAIMS);
-    User.findOne.mockResolvedValue({ _id: 'existing-user' });
+    User.findById.mockReturnValue({ select: async () => ({ _id: 'session-user' }) });
 
     await controller.iduraCallback(
       makeReq({ query: cbQuery(), session: sessionWithTransaction() }),
@@ -356,7 +336,7 @@ describe('7. a valid BankID login', () => {
   });
 });
 
-describe('8. a valid account link', () => {
+describe('8. a valid account verification', () => {
   it('attaches the identity to the account from the SESSION and marks it verified', async () => {
     grantReturns(VALID_CLAIMS);
     User.findById.mockReturnValue({ select: async () => ({ _id: 'session-user' }) });
@@ -462,13 +442,13 @@ describe('9–11. state handling', () => {
 
   it('REPLAY: the same callback presented twice fails the second time', async () => {
     grantReturns(VALID_CLAIMS);
-    User.findOne.mockResolvedValue({ _id: 'existing-user' });
+    User.findById.mockReturnValue({ select: async () => ({ _id: 'session-user' }) });
 
     const session = sessionWithTransaction();
     const req1 = makeReq({ query: cbQuery(), session });
     const res1 = makeRes();
     await controller.iduraCallback(req1, res1);
-    expect(res1.redirectedTo).toContain('/oauth-success');
+    expect(res1.redirectedTo).toContain('/profile?verified=bankid');
 
     // Same captured URL, same session — the transaction is gone.
     jest.clearAllMocks();
@@ -532,9 +512,7 @@ describe('12–13. token validation failures', () => {
       res
     );
 
-    expect(res.redirectedTo).toBe(
-      'http://localhost:5173/login?error=bankid_verification_failed'
-    );
+    expect(res.redirectedTo).toBe('http://localhost:5173/profile?error=bankid_verification_failed');
     for (const leak of ['iss', 'idura.broker', 'auth-code', 'verifier-random-value', 'JWT']) {
       expect(res.redirectedTo).not.toContain(leak);
     }
@@ -610,56 +588,12 @@ describe('15 & 20. one identity belongs to at most one account', () => {
     expect(User.findByIdAndUpdate).toHaveBeenCalled();
   });
 
-  it('a login that loses the claim race deletes the account it just made', async () => {
-    grantReturns({ ...VALID_CLAIMS, email: 'ny@example.no' });
-    User.findOne
-      .mockResolvedValueOnce(null) // no user holds the subject
-      .mockReturnValueOnce({ select: async () => null }); // e-mail is free
-    User.create.mockResolvedValue({ _id: 'brand-new' });
-
-    const duplicate = Object.assign(new Error('E11000'), { code: 11000 });
-    IdentityClaim.create.mockRejectedValue(duplicate);
-    // The orphan-claim check runs BEFORE the account is created and must find nothing —
-    // this test is about losing the race afterwards, inside claimIdentity.
-    IdentityClaim.findById
-      .mockReturnValueOnce({ lean: async () => null })
-      .mockReturnValue({ lean: async () => ({ userId: 'other-user' }) });
-
-    const res = makeRes();
-    await controller.iduraCallback(
-      makeReq({ query: cbQuery(), session: sessionWithTransaction() }),
-      res
-    );
-
-    expect(User.deleteOne).toHaveBeenCalledWith({ _id: 'brand-new' });
-    expect(res.redirectedTo).toContain('error=bankid_already_linked');
-    expect(createSession).not.toHaveBeenCalled();
-  });
-
   it('the claim key is namespaced by provider and scheme', () => {
     expect(IdentityClaim.keyFor('idura', 'no_bankid', 'abc')).toBe('idura:no_bankid:abc');
   });
 });
 
 describe('16 & 21. e-mail and callback parameters cannot choose the account', () => {
-  it('a matching e-mail does NOT auto-link an existing account', async () => {
-    grantReturns({ ...VALID_CLAIMS, email: 'offer@example.no' });
-    User.findOne
-      .mockResolvedValueOnce(null) // nobody holds this subject
-      .mockReturnValueOnce({ select: async () => ({ _id: 'victim' }) }); // e-mail taken
-
-    const res = makeRes();
-    await controller.iduraCallback(
-      makeReq({ query: cbQuery(), session: sessionWithTransaction() }),
-      res
-    );
-
-    expect(res.redirectedTo).toContain('error=bankid_account_exists');
-    expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
-    expect(IdentityClaim.create).not.toHaveBeenCalled();
-    expect(createSession).not.toHaveBeenCalled();
-  });
-
   it('callback query parameters cannot redirect the link to another account', async () => {
     grantReturns(VALID_CLAIMS);
     User.findById.mockReturnValue({ select: async () => ({ _id: 'session-user' }) });
@@ -692,20 +626,6 @@ describe('16 & 21. e-mail and callback parameters cannot choose the account', ()
 
     expect(res.redirectedTo).toContain('error=bankid_invalid_state');
     expectNothingWritten();
-  });
-
-  it('BankID with no e-mail cannot create an account silently', async () => {
-    grantReturns(VALID_CLAIMS); // kodebrikke returns no e-mail
-    User.findOne.mockResolvedValueOnce(null);
-
-    const res = makeRes();
-    await controller.iduraCallback(
-      makeReq({ query: cbQuery(), session: sessionWithTransaction() }),
-      res
-    );
-
-    expect(res.redirectedTo).toContain('error=bankid_no_email');
-    expect(User.create).not.toHaveBeenCalled();
   });
 });
 
@@ -793,7 +713,7 @@ describe('18–19. failure never marks anyone verified; cancellation is handled'
       makeReq({ query: { error: 'access_denied' }, session: sessionWithTransaction() }),
       loginRes
     );
-    expect(loginRes.redirectedTo).toBe('http://localhost:5173/login?error=bankid_cancelled');
+    expect(loginRes.redirectedTo).toBe('http://localhost:5173/profile?error=bankid_cancelled');
 
     const linkRes = makeRes();
     await controller.iduraCallback(
@@ -838,7 +758,7 @@ describe('the old insecure implementation is gone', () => {
 
   it('no plaintext placeholder password', () => {
     expect(controllerSource).not.toMatch(/password:\s*'oauth-user'/);
-    expect(controllerSource).toMatch(/createUnusablePassword\(\)/);
+    expect(controllerSource).not.toMatch(/createUnusablePassword/);
   });
 
   it('the routes point at the new controller', () => {
@@ -861,7 +781,9 @@ describe('the old insecure implementation is gone', () => {
   });
 
   it('there is no development bypass that skips BankID', () => {
-    expect(controllerSource).not.toMatch(/NODE_ENV\s*[!=]==?\s*'production'[\s\S]{0,200}verified:\s*true/);
+    expect(controllerSource).not.toMatch(
+      /NODE_ENV\s*[!=]==?\s*'production'[\s\S]{0,200}verified:\s*true/
+    );
     expect(controllerSource).not.toMatch(/skipVerification|bypassBankId|FAKE_BANKID/i);
   });
 });

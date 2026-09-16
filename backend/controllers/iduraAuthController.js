@@ -1,7 +1,5 @@
 const User = require('../models/User');
 const IdentityClaim = require('../models/IdentityClaim');
-const { createSession } = require('../utils/tokenUtils');
-const { createUnusablePassword } = require('../utils/passwordUtils');
 const {
   isIduraConfigured,
   createTransactionSecrets,
@@ -15,11 +13,7 @@ const {
   validateTransaction,
   INTENTS,
 } = require('../utils/iduraTransaction');
-const {
-  buildIdentityVerification,
-  findNationalIdClaims,
-  verifiedEmailFrom,
-} = require('../utils/iduraIdentity');
+const { buildIdentityVerification, findNationalIdClaims } = require('../utils/iduraIdentity');
 
 /**
  * Norwegian BankID via Idura Verify — OpenID Connect authorization code + PKCE.
@@ -39,14 +33,9 @@ const {
  *             with the verifier, let openid-client validate signature/iss/aud/exp/nonce,
  *             then and only then touch an account
  *
- * Two intents share the machinery and differ in exactly one respect: which account the
- * verified identity ends up on.
- *
- *   link  — the account is the one whose session started the flow. Read from
- *           `req.userId` at START, held server-side, read back at the end.
- *   login — the account is the one already holding this `sub`. If none holds it, a new
- *           account may be created; an existing account is never adopted on the
- *           strength of a matching e-mail.
+ * This flow is verification-only. It never signs a user in, creates an account, or
+ * links an Idura identity by e-mail. The account is read from the authenticated session
+ * at START and held server-side until the callback.
  */
 
 /** Error codes handed to the frontend. Stable, opaque, and mapped to Norwegian there. */
@@ -58,8 +47,6 @@ const ERRORS = {
   VERIFICATION_FAILED: 'bankid_verification_failed',
   IDENTITY: 'bankid_identity',
   ALREADY_LINKED: 'bankid_already_linked',
-  ACCOUNT_EXISTS: 'bankid_account_exists',
-  NO_EMAIL: 'bankid_no_email',
 };
 
 function frontendUrl(pathAndQuery) {
@@ -88,8 +75,7 @@ function logFailure(req, reason, extra = {}) {
 // ── Start ──────────────────────────────────────────────────────────────────────
 
 /**
- * `GET /api/auth/idura`         — sign in with BankID
- * `GET /api/auth/idura?link=1`  — attach BankID to the account already signed in
+ * `GET /api/auth/idura` — verify the account already signed in
  *
  * The route runs `optionalAuthenticate`, so `req.userId` is present when the caller
  * has a valid session. A link request without one is refused here rather than being
@@ -97,22 +83,7 @@ function logFailure(req, reason, extra = {}) {
  * silently doing something else with a BankID identity is not an acceptable fallback.
  */
 exports.startIduraAuth = async (req, res) => {
-  const wantsLink = req.query.link === '1' || req.query.intent === 'link';
-
-  /**
-   * Where a failure sends them.
-   *
-   * A signed-in person verifying from their profile must go BACK to the profile. This
-   * used to send every failure to `/login`, which looks harmless and is not: the
-   * frontend wraps `/login` in `PublicRoute`, which redirects an already-authenticated
-   * user to `/home`. The error parameter went with it, so a failed verification
-   * silently dumped the user on the home page with no explanation at all — which is
-   * exactly how the express-session collection collision presented.
-   *
-   * `bankid_auth_required` is the deliberate exception below: that caller is NOT signed
-   * in, so `/login` is both correct and reachable.
-   */
-  const failureTarget = wantsLink && req.userId ? 'profile' : 'login';
+  const failureTarget = 'profile';
 
   if (!isIduraConfigured()) {
     // Not an error condition in development — BankID simply is not set up here.
@@ -125,7 +96,7 @@ exports.startIduraAuth = async (req, res) => {
     return res.redirect(frontendUrl(`${failureTarget}?error=${ERRORS.VERIFICATION_FAILED}`));
   }
 
-  if (wantsLink && !req.userId) {
+  if (!req.userId) {
     return res.redirect(frontendUrl(`login?error=${ERRORS.AUTH_REQUIRED}`));
   }
 
@@ -136,8 +107,8 @@ exports.startIduraAuth = async (req, res) => {
     const { state, nonce, codeVerifier, codeChallenge } = await createTransactionSecrets();
 
     startTransaction(req, {
-      intent: wantsLink ? INTENTS.LINK : INTENTS.LOGIN,
-      jobbloUserId: wantsLink ? req.userId : null,
+      intent: INTENTS.LINK,
+      jobbloUserId: req.userId,
       state,
       nonce,
       codeVerifier,
@@ -220,22 +191,6 @@ async function applyVerification(userId, identity) {
   );
 }
 
-/** Issue Jobblo's own session cookies and hand back the redirect target. */
-async function completeLogin(req, res, user, target) {
-  const { accessToken, refreshToken } = await createSession(req, user._id);
-
-  const cookie = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  };
-
-  res.cookie('accessToken', accessToken, { ...cookie, maxAge: 60 * 60 * 1000 });
-  res.cookie('refreshToken', refreshToken, { ...cookie, maxAge: 7 * 24 * 60 * 60 * 1000 });
-
-  return res.redirect(frontendUrl(`${target}?token=${accessToken}`));
-}
-
 exports.iduraCallback = async (req, res) => {
   /**
    * Consume the transaction FIRST, before anything else can go wrong.
@@ -250,7 +205,7 @@ exports.iduraCallback = async (req, res) => {
   const { code, state, error: providerError } = req.query;
 
   const intent = pending?.intent;
-  const failureTarget = intent === INTENTS.LINK ? 'profile' : 'login';
+  const failureTarget = 'profile';
 
   if (!isIduraConfigured()) {
     return res.redirect(frontendUrl(`login?error=${ERRORS.UNAVAILABLE}`));
@@ -269,6 +224,11 @@ exports.iduraCallback = async (req, res) => {
     return res.redirect(frontendUrl(`${failureTarget}?error=${ERRORS.INVALID_STATE}`));
   }
 
+  if (intent !== INTENTS.LINK) {
+    logFailure(req, 'unsupported_intent');
+    return res.redirect(frontendUrl(`${failureTarget}?error=${ERRORS.INVALID_STATE}`));
+  }
+
   if (!code) {
     logFailure(req, 'missing_code');
     return res.redirect(frontendUrl(`${failureTarget}?error=${ERRORS.VERIFICATION_FAILED}`));
@@ -281,9 +241,7 @@ exports.iduraCallback = async (req, res) => {
      * it and checks `state` against `expectedState` itself, so the match is enforced
      * twice — once above for our own reason codes, once inside the library.
      */
-    const currentUrl = new URL(
-      `${req.protocol}://${req.get('host')}${req.originalUrl}`
-    );
+    const currentUrl = new URL(`${req.protocol}://${req.get('host')}${req.originalUrl}`);
 
     const tokens = await exchangeCode(currentUrl, {
       state: pending.state,
@@ -324,108 +282,21 @@ exports.iduraCallback = async (req, res) => {
   const identity = built.identity;
 
   try {
-    // ── Intent: link to the account that started the flow ──────────────────────
-    if (pending.intent === INTENTS.LINK) {
-      /**
-       * The target comes from the session, recorded at START from an authenticated
-       * request. Never from the callback query string, never from a returned e-mail,
-       * never from the returned name.
-       */
-      const user = await User.findById(pending.jobbloUserId).select('_id');
-      if (!user) {
-        logFailure(req, 'link_target_gone');
-        return res.redirect(frontendUrl(`login?error=${ERRORS.VERIFICATION_FAILED}`));
-      }
-
-      const claimed = await claimIdentity(identity.subject, user._id);
-      if (!claimed.ok) {
-        logFailure(req, 'identity_already_linked');
-        return res.redirect(frontendUrl(`profile?error=${ERRORS.ALREADY_LINKED}`));
-      }
-
-      await applyVerification(user._id, identity);
-      return res.redirect(frontendUrl('profile?verified=bankid'));
+    // The target comes only from the authenticated session captured at START.
+    const user = await User.findById(pending.jobbloUserId).select('_id');
+    if (!user) {
+      logFailure(req, 'link_target_gone');
+      return res.redirect(frontendUrl(`${failureTarget}?error=${ERRORS.VERIFICATION_FAILED}`));
     }
 
-    // ── Intent: sign in with BankID ────────────────────────────────────────────
-
-    // A returning BankID user: the subject is already attached to an account.
-    const existing = await User.findOne({
-      'identityVerification.provider': 'idura',
-      'identityVerification.subject': identity.subject,
-    });
-
-    if (existing) {
-      // Refresh the assurance level and timestamp, then log them in.
-      await applyVerification(existing._id, identity);
-      if (existing.isDeleted || existing.accountStatus === 'deactivated') {
-        return res.redirect(frontendUrl(`${failureTarget}?error=account_deactivated`));
-      }
-      return completeLogin(req, res, existing, 'oauth-success');
-    }
-
-    /**
-     * The subject is unknown to the users collection but may still be claimed — a
-     * crash between the claim write and the user write would leave exactly that.
-     * Checking here keeps one identity on one account even in that window.
-     */
-    const claimKey = IdentityClaim.keyFor('idura', 'no_bankid', identity.subject);
-    const orphanClaim = await IdentityClaim.findById(claimKey).lean();
-    if (orphanClaim) {
-      const owner = await User.findById(orphanClaim.userId).select('_id');
-      if (owner) {
-        logFailure(req, 'identity_claimed_by_other_account');
-        return res.redirect(frontendUrl(`login?error=${ERRORS.ALREADY_LINKED}`));
-      }
-      // The owner no longer exists; release the claim so the identity is usable again.
-      await IdentityClaim.deleteOne({ _id: claimKey });
-    }
-
-    /**
-     * A brand new BankID identity.
-     *
-     * The e-mail is used ONLY to decide whether a new account can be created without
-     * asking for one — never to find an existing account to adopt. This is the same
-     * policy `utils/oauthLinking.js` enforces for Vipps and Google, and the reason the
-     * old Idura controller was disabled: it linked on e-mail equality and then marked
-     * the account verified, which handed over any account whose address was known.
-     */
-    const email = verifiedEmailFrom(claims);
-
-    if (!email) {
-      // Norwegian BankID over kodebrikke returns no e-mail at all, and `User.email` is
-      // required and unique. Ask them to sign in normally and link from the profile —
-      // recoverable without support, and the session then proves ownership.
-      logFailure(req, 'no_email_for_signup');
-      return res.redirect(frontendUrl(`login?error=${ERRORS.NO_EMAIL}`));
-    }
-
-    const emailOwner = await User.findOne({ email }).select('_id');
-    if (emailOwner) {
-      // Stop. Linking here on e-mail equality is exactly the takeover this replaces.
-      logFailure(req, 'email_collision_not_linked');
-      return res.redirect(frontendUrl(`login?error=${ERRORS.ACCOUNT_EXISTS}`));
-    }
-
-    const created = await User.create({
-      name: identity.verifiedName || 'BankID-bruker',
-      email,
-      // Not a credential: a bcrypt hash of random bytes that were discarded.
-      password: await createUnusablePassword(),
-    });
-
-    const claimed = await claimIdentity(identity.subject, created._id);
+    const claimed = await claimIdentity(identity.subject, user._id);
     if (!claimed.ok) {
-      // Lost a race with a concurrent callback for the same identity. The account we
-      // just made has no identity and no password anyone knows — remove it rather than
-      // leaving an orphan.
-      await User.deleteOne({ _id: created._id });
-      logFailure(req, 'identity_race_lost');
-      return res.redirect(frontendUrl(`login?error=${ERRORS.ALREADY_LINKED}`));
+      logFailure(req, 'identity_already_linked');
+      return res.redirect(frontendUrl(`${failureTarget}?error=${ERRORS.ALREADY_LINKED}`));
     }
 
-    await applyVerification(created._id, identity);
-    return completeLogin(req, res, created, 'oauth-success');
+    await applyVerification(user._id, identity);
+    return res.redirect(frontendUrl(`${failureTarget}?verified=bankid`));
   } catch (err) {
     logFailure(req, 'account_stage_failed', { message: err.message });
     return res.redirect(frontendUrl(`${failureTarget}?error=${ERRORS.VERIFICATION_FAILED}`));

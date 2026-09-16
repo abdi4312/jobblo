@@ -30,7 +30,7 @@ import type { User } from '../../types/userTypes';
  *
  * ── What this component does NOT do ────────────────────────────────────────────
  * It builds no authorization URL, holds no client id, and knows nothing about OIDC. It
- * navigates to `/api/auth/idura?link=1` and the server does the rest — state, nonce and
+ * navigates to `/api/auth/idura` and the server does the rest — state, nonce and
  * the PKCE verifier are minted and held server-side. A browser-built authorize URL was
  * the original defect; there is deliberately nothing here to get wrong.
  */
@@ -99,7 +99,7 @@ export function IdentityVerificationCard({
     // failure for somebody who simply double-tapped.
     if (isStarting) return;
     setIsStarting(true);
-    window.location.href = apiUrl('/api/auth/idura?link=1');
+    window.location.href = apiUrl('/api/auth/idura');
   };
 
   return (
