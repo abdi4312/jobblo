@@ -12,6 +12,8 @@ interface ShareModalProps {
 export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, url, title }) => {
   if (!isOpen) return null;
 
+  const shareText = `${title}\n${url}`;
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(url);
@@ -20,7 +22,6 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, url, ti
       toast.error('Kunne ikke kopiere lenke');
     }
   };
-
   const shareOptions = [
     {
       name: 'Embed',
@@ -36,7 +37,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, url, ti
       name: 'Messages',
       icon: <MessageCircle size={24} fill="currentColor" />,
       color: 'bg-blue-500 text-white',
-      action: () => window.open(`sms:?&body=${encodeURIComponent(title + ' ' + url)}`),
+      action: () => window.open(`sms:?&body=${encodeURIComponent(shareText)}`),
     },
     {
       name: 'WhatsApp',
@@ -46,7 +47,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, url, ti
         </svg>
       ),
       color: 'bg-[#25D366] text-white',
-      action: () => window.open(`https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`),
+      action: () => window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`),
     },
     {
       name: 'Facebook',
