@@ -34,6 +34,8 @@ import { BackLink } from '../../components/Ui/BackLink';
 import { dateFormatter } from '../../utils/dateFormatter';
 import { isClosedService, statusLabel } from '../../constants/statuses';
 import { apiUrl } from '../../config/env';
+
+const SITE_URL = (import.meta.env.VITE_PUBLIC_SITE_URL as string | undefined)?.replace(/\/$/, '') || 'https://jobblo.no';
 import { ShareModal } from '../../components/shared/ShareModal/ShareModal';
 import { UpgradeModal } from '../../components/shared/UpgradeModal';
 import { BuyContactModal } from '../../components/shared/BuyContactModal';
@@ -848,11 +850,11 @@ const JobListingDetailPage = () => {
         </div>
       </div>
 
-      {/* For reliable social previews, share the backend preview endpoint which returns server-rendered OG tags */}
+      {/* Canonical frontend URL so WhatsApp/Facebook fetch OG tags from the nginx-routed preview route */}
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
-        url={apiUrl(`/job-listing/${job._id}`)}
+        url={`${SITE_URL}/job-listing/${job._id}`}
         title={job.title || 'Jobblo Oppdrag'}
       />
 

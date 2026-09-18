@@ -6,6 +6,7 @@ import {
   Image,
   TouchableOpacity,
   Pressable,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -16,6 +17,7 @@ import {
   Clock3,
   MapPin,
   ShieldCheck,
+  Share2,
   Star,
   Zap,
 } from 'lucide-react-native';
@@ -116,6 +118,13 @@ export default function JobDetailsScreen() {
             ? 'Forespørsel sendt'
             : 'Søk på oppdraget';
 
+  const handleShare = async () => {
+    if (!job) return;
+    const url = `https://jobblo.no/job-listing/${id}`;
+    const message = `${job.title}\n\n${url}`;
+    await Share.share({ message, url });
+  };
+
   const handlePrimaryAction = () => {
     if (!isAuthenticated) {
       router.push('/(auth)/login');
@@ -185,7 +194,14 @@ export default function JobDetailsScreen() {
           <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[#63665F]">
             Oppdrag
           </Text>
-          <View className="h-10 w-10" />
+          <TouchableOpacity
+            onPress={handleShare}
+            className="h-10 w-10 items-center justify-center rounded-full border border-[#E6E7E1] bg-white"
+            accessibilityRole="button"
+            accessibilityLabel="Del oppdrag"
+          >
+            <Share2 size={18} color="#0B0B0B" />
+          </TouchableOpacity>
         </View>
 
         <View className="overflow-hidden rounded-[28px] border border-[#E6E7E1] bg-white">
