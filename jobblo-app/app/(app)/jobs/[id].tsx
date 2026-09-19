@@ -120,7 +120,7 @@ export default function JobDetailsScreen() {
 
   const handleShare = async () => {
     if (!job) return;
-    const url = `https://jobblo.no/job-listing/${id}`;
+    const url = `https://jobblo.no/jobs/${id}`;
     const message = `${job.title}\n\n${url}`;
     await Share.share({ message, url });
   };

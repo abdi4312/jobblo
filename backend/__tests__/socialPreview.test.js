@@ -35,7 +35,9 @@ const listing = (overrides = {}) => ({
 /** Pull a meta tag's content out of rendered HTML. */
 const metaOf = (html, key) => {
   const m = html.match(
-    new RegExp(`<meta (?:property|name)="${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}" content="([^"]*)"`)
+    new RegExp(
+      `<meta (?:property|name)="${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}" content="([^"]*)"`
+    )
   );
   return m ? m[1] : null;
 };
@@ -52,7 +54,7 @@ describe('1. a public listing returns correct preview HTML', () => {
 
   it('carries every tag the brief requires', () => {
     for (const [key, value] of [
-      ['og:type', 'website'],
+      ['og:type', 'article'],
       ['og:site_name', 'Jobblo'],
       ['twitter:card', 'summary_large_image'],
     ]) {
@@ -73,7 +75,7 @@ describe('1. a public listing returns correct preview HTML', () => {
 
   it('is indexable and declares its canonical URL', () => {
     expect(metaOf(html, 'robots')).toBe('index, follow');
-    expect(html).toContain(`<link rel="canonical" href="https://jobblo.no/job-listing/${ID}" />`);
+    expect(html).toContain(`<link rel="canonical" href="https://jobblo.no/jobs/${ID}" />`);
   });
 
   it('contains no script tag at all', () => {
@@ -169,22 +171,19 @@ describe('4. the listing image is used, absolute', () => {
 
 // ── 5 ───────────────────────────────────────────────────────────────────────────
 describe('5. fallback image behaviour', () => {
-  it('omits og:image entirely when the listing has no photo and no fallback is configured', () => {
-    // Jobblo has no social share asset. The old route pointed at /favicon.svg — an SVG,
-    // which Facebook, WhatsApp, LinkedIn and Twitter all reject, at 27x14 against
-    // Facebook's 200x200 floor. That rendered a broken grey box; omitting the tag
-    // renders a clean text card instead.
+  it('uses the branded fallback image when the listing has no photo', () => {
     const meta = buildListingPreview(listing({ images: [] }), ID, ENV);
 
-    expect(meta.image).toBeNull();
+    expect(meta.image).toBe('https://jobblo.no/assets/share-image.png');
     const html = renderPreviewHtml(meta);
-    expect(metaOf(html, 'og:image')).toBeNull();
+    expect(metaOf(html, 'og:image')).toBe('https://jobblo.no/assets/share-image.png');
     expect(html).not.toMatch(/favicon\.svg/);
   });
 
-  it('downgrades the Twitter card to summary when there is no image', () => {
-    // summary_large_image with no image renders as an empty banner.
-    expect(buildListingPreview(listing({ images: [] }), ID, ENV).twitterCard).toBe('summary');
+  it('keeps the Twitter card large when the fallback image is present', () => {
+    expect(buildListingPreview(listing({ images: [] }), ID, ENV).twitterCard).toBe(
+      'summary_large_image'
+    );
   });
 
   it('uses SOCIAL_SHARE_IMAGE when one is configured', () => {
@@ -211,7 +210,7 @@ describe('5. fallback image behaviour', () => {
 // ── 6 ───────────────────────────────────────────────────────────────────────────
 describe('6. the canonical Jobblo URL', () => {
   it('is the public site URL, not the API host', () => {
-    expect(canonicalListingUrl(ID, ENV)).toBe(`https://jobblo.no/job-listing/${ID}`);
+    expect(canonicalListingUrl(ID, ENV)).toBe(`https://jobblo.no/jobs/${ID}`);
   });
 
   it('prefers PUBLIC_SITE_URL over FRONTEND_URL', () => {
@@ -225,7 +224,7 @@ describe('6. the canonical Jobblo URL', () => {
 
   it('strips trailing slashes so the URL never doubles up', () => {
     expect(canonicalListingUrl(ID, { PUBLIC_SITE_URL: 'https://jobblo.no///' })).toBe(
-      `https://jobblo.no/job-listing/${ID}`
+      `https://jobblo.no/jobs/${ID}`
     );
   });
 
@@ -269,9 +268,7 @@ describe('7. malicious HTML is escaped', () => {
   });
 
   it('a hostile description cannot inject tags either', () => {
-    const html = renderPreviewHtml(
-      renderable({ description: '</head><body onload=alert(1)>' })
-    );
+    const html = renderPreviewHtml(renderable({ description: '</head><body onload=alert(1)>' }));
     expect(html).not.toMatch(/<body onload/i);
     expect(html).not.toMatch(/<\/head><body/i);
   });
@@ -415,7 +412,7 @@ describe('10. malformed or unknown ids are handled safely', () => {
     'undefined',
     'null',
     '../../etc/passwd',
-    '507f1f77bcf86cd79943901',  // 23 chars
+    '507f1f77bcf86cd79943901', // 23 chars
     '507f1f77bcf86cd7994390111', // 25 chars
     '<script>alert(1)</script>',
   ])('rejects %p before it reaches the database', (bad) => {

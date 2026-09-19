@@ -74,14 +74,14 @@ function siteOrigin(env = process.env) {
   return trimmed;
 }
 
-/** `https://jobblo.no/job-listing/:id`, or null when the origin is unknown. */
+/** `https://jobblo.no/jobs/:id`, or null when the origin is unknown. */
 function canonicalListingUrl(id, env = process.env) {
   const origin = siteOrigin(env);
   if (!origin) return null;
   // The id is validated as an ObjectId before this is called, so it contributes only
   // [0-9a-f] and needs no escaping — but encode anyway so a future caller cannot make
   // this a URL-injection point.
-  return `${origin}/job-listing/${encodeURIComponent(String(id))}`;
+  return `${origin}/jobs/${encodeURIComponent(String(id))}`;
 }
 
 /**
@@ -126,7 +126,8 @@ function absoluteImageUrl(image, env = process.env) {
  * site origin) to switch it on the moment the asset exists.
  */
 function fallbackImageUrl(env = process.env) {
-  return absoluteImageUrl(env.SOCIAL_SHARE_IMAGE, env);
+  const configured = env.SOCIAL_SHARE_IMAGE || 'https://jobblo.no/assets/share-image.png';
+  return absoluteImageUrl(configured, env);
 }
 
 /**
@@ -180,7 +181,9 @@ function buildListingPreview(service, id, env = process.env) {
     'Se oppdraget på Jobblo. Trygg betaling med SafePay.';
 
   const listingImage = absoluteImageUrl(
-    Array.isArray(service.images) ? service.images.find((i) => typeof i === 'string' && i.trim()) : null,
+    Array.isArray(service.images)
+      ? service.images.find((i) => typeof i === 'string' && i.trim())
+      : null,
     env
   );
   const image = listingImage || fallbackImage;
@@ -192,9 +195,7 @@ function buildListingPreview(service, id, env = process.env) {
     image,
     url,
     siteName: 'Jobblo',
-    // 'website' rather than 'article'. A job listing is not editorial content, and
-    // 'article' makes Facebook look for author/published_time it will never find.
-    type: 'website',
+    type: 'article',
     twitterCard: image ? 'summary_large_image' : 'summary',
   };
 }
@@ -238,7 +239,9 @@ ${meta.url ? `    <p><a href="${escapeHtml(meta.url)}">Åpne annonsen på Jobblo
 
 /** Is this a string Mongo can turn into an _id without throwing? */
 function isValidObjectId(id) {
-  return typeof id === 'string' && mongoose.Types.ObjectId.isValid(id) && /^[0-9a-fA-F]{24}$/.test(id);
+  return (
+    typeof id === 'string' && mongoose.Types.ObjectId.isValid(id) && /^[0-9a-fA-F]{24}$/.test(id)
+  );
 }
 
 module.exports = {
