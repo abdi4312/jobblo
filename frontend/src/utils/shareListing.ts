@@ -32,11 +32,18 @@ import { toast } from 'react-hot-toast';
  * variable is configured.
  */
 function siteOrigin(): string {
-  const configured = import.meta.env.VITE_PUBLIC_SITE_URL;
+  const importMetaEnv = (typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined) ?? {};
+  const configured = importMetaEnv.VITE_PUBLIC_SITE_URL ?? (typeof process !== 'undefined' ? process.env?.VITE_PUBLIC_SITE_URL : undefined);
+
   if (typeof configured === 'string' && /^https?:\/\//i.test(configured.trim())) {
     return configured.trim().replace(/\/+$/, '');
   }
-  return window.location.origin.replace(/\/+$/, '');
+
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin.replace(/\/+$/, '');
+  }
+
+  return 'https://jobblo.no';
 }
 
 /**
@@ -47,7 +54,19 @@ function siteOrigin(): string {
  * card to the other URL, or decline to render one.
  */
 export function listingUrl(serviceId: string): string {
-  return `${siteOrigin()}/job-listing/${encodeURIComponent(serviceId)}`;
+  return `${siteOrigin()}/jobs/${encodeURIComponent(serviceId)}`;
+}
+
+export function buildSharePayload(serviceId: string, title?: string): ShareData & { text: string } {
+  const url = listingUrl(serviceId);
+  const resolvedTitle = title?.trim() || 'Oppdrag på Jobblo';
+  const text = `${resolvedTitle}\n\n${url}`;
+
+  return {
+    title: resolvedTitle,
+    text,
+    url,
+  };
 }
 
 /**
@@ -94,7 +113,7 @@ async function copyToClipboard(text: string): Promise<boolean> {
  */
 export async function shareListing(serviceId: string, title?: string): Promise<'shared' | 'copied' | 'failed'> {
   const url = listingUrl(serviceId);
-  const payload: ShareData = { title: title || 'Oppdrag på Jobblo', url };
+  const payload = buildSharePayload(serviceId, title);
 
   if (canUseNativeShare(payload)) {
     try {

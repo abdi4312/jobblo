@@ -190,6 +190,7 @@ export const routes: RouteObject[] = [
       { path: 'search', element: withSuspense(ServiceListingPage) },
       { path: 'search/job', element: withSuspense(ServiceListingPage) },
       { path: 'search/job/:categoryName', element: withSuspense(ServiceListingPage) },
+      { path: 'jobs/:id', element: withSuspense(JobListingDetailPage) },
       { path: 'job-listing/:id', element: withSuspense(JobListingDetailPage) },
       {
         path: 'completed-job/:orderId?',

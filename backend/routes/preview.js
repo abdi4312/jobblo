@@ -49,12 +49,13 @@ const {
  */
 const PREVIEW_FIELDS = 'title description images status';
 
-router.get('/job-listing/:id', async (req, res) => {
-  const { id } = req.params;
+const isCrawlerUserAgent = (ua = '') =>
+  /facebookexternalhit|facebot|twitterbot|slackbot|linkedinbot|discordbot|telegrambot|whatsapp|applebot|googlebot|bingbot|duckduckbot|skypeuripreview|viber|embedly|iframely|pinterest|signal/i.test(
+    ua
+  );
 
+const renderPreviewResponse = async (req, res, id) => {
   try {
-    // Validated before the query, so a hand-typed or truncated link degrades to the
-    // generic Jobblo card instead of a 500.
     const service = isValidObjectId(id)
       ? await Service.findById(id).select(PREVIEW_FIELDS).lean()
       : null;
@@ -63,31 +64,35 @@ router.get('/job-listing/:id', async (req, res) => {
     const html = renderPreviewHtml(meta);
 
     res.set('Content-Type', 'text/html; charset=utf-8');
-    // Vary on User-Agent: the proxy routes by it, so a shared cache must not hand this
-    // crawler HTML to a browser (or the SPA shell to a crawler) for the same URL.
     res.set('Vary', 'User-Agent');
     res.set(
       'Cache-Control',
-      meta.found
-        ? 'public, max-age=300, stale-while-revalidate=600'
-        : // Do not let a card for a listing that is missing or private stick around.
-          'public, max-age=60'
+      meta.found ? 'public, max-age=300, stale-while-revalidate=600' : 'public, max-age=60'
     );
 
     return res.status(200).send(html);
   } catch (err) {
     console.error('Preview route error for id %s: %s', id, err.message);
-
-    /**
-     * Still answer with a valid generic card. A 500 here is worse than useless: the
-     * crawler caches the failure, so a database blip while somebody pastes a link
-     * leaves that link previewless long after the blip is over.
-     */
     const meta = buildListingPreview(null, id);
     res.set('Content-Type', 'text/html; charset=utf-8');
     res.set('Cache-Control', 'no-store');
     return res.status(200).send(renderPreviewHtml(meta));
   }
+};
+
+const previewRoutes = ['/jobs/:id', '/job-listing/:id', '/share/job/:id'];
+
+previewRoutes.forEach((routePath) => {
+  router.get(routePath, async (req, res) => {
+    const { id } = req.params;
+
+    if (routePath === '/share/job/:id' && !isCrawlerUserAgent(req.get('User-Agent') || '')) {
+      const origin = process.env.PUBLIC_SITE_URL || process.env.FRONTEND_URL || 'https://jobblo.no';
+      return res.redirect(302, `${origin.replace(/\/+$/, '')}/jobs/${encodeURIComponent(id)}`);
+    }
+
+    return renderPreviewResponse(req, res, id);
+  });
 });
 
 module.exports = router;
