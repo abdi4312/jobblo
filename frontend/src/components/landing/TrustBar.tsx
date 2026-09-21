@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AppleMark, BankIdMark, StripeMark, VippsMark } from './paymentMarks';
+import { AppleMark, BankIdMark, StripeMark, ToyenUnlimitedMark, VippsMark } from './paymentMarks';
 
 /**
  * The strip under the hero: the payment and identity systems Jobblo runs on, moving.
@@ -37,6 +37,7 @@ const SYSTEMS: { name: string; colour: string; mark: ReactNode }[] = [
   { name: 'BankID', colour: '#39134C', mark: <BankIdMark /> },
   { name: 'Vipps', colour: '#FF5B24', mark: <VippsMark /> },
   { name: 'Stripe', colour: '#635BFF', mark: <StripeMark /> },
+  { name: 'Tøyen Unlimited', colour: '#111111', mark: <ToyenUnlimitedMark /> },
 ];
 
 function Track({ ariaHidden = false }: { ariaHidden?: boolean }) {
@@ -67,7 +68,7 @@ export function TrustBar() {
   return (
     <div
       role="group"
-      aria-label="Betaling og innlogging: Apple Pay, BankID, Vipps, Stripe"
+      aria-label="Betaling og innlogging: Apple Pay, BankID, Vipps, Stripe, Tøyen Unlimited"
       className="overflow-hidden border-y border-[#E6E7E1] bg-white py-6"
     >
       <div
