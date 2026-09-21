@@ -92,11 +92,11 @@ export default function TransactionsPage() {
       render: (t) => (
         <div>
           <p className="text-sm font-semibold text-gray-800">
-            {(t.amount / 100).toLocaleString('nb-NO')} {t.currency.toUpperCase()}
+            {t.amount.toLocaleString('nb-NO')} {t.currency.toUpperCase()}
           </p>
           {t.discountAmount > 0 && (
             <p className="text-xs text-green-600">
-              -{(t.discountAmount / 100).toLocaleString('nb-NO')} rabatt
+              -{t.discountAmount.toLocaleString('nb-NO')} rabatt
             </p>
           )}
         </div>
