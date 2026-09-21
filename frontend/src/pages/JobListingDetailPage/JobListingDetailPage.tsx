@@ -34,6 +34,7 @@ import { BackLink } from '../../components/Ui/BackLink';
 import { dateFormatter } from '../../utils/dateFormatter';
 import { isClosedService, statusLabel } from '../../constants/statuses';
 import { apiUrl } from '../../config/env';
+import { listingUrl } from '../../utils/shareListing';
 
 const SITE_URL = (import.meta.env.VITE_PUBLIC_SITE_URL as string | undefined)?.replace(/\/$/, '') || 'https://jobblo.no';
 import { ShareModal } from '../../components/shared/ShareModal/ShareModal';
@@ -47,6 +48,81 @@ import mainLink from '../../api/mainURLs';
 
 import { usePlans } from '../../features/plans/hooks';
 import { getConfigByKey } from '../../features/plans/api';
+
+const DEFAULT_SHARE_IMAGE = `${SITE_URL}/assets/share-image.png`;
+
+function truncateText(value: string | undefined | null, limit: number): string {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (text.length <= limit) return text;
+  const cut = text.slice(0, limit - 1);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > limit * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd() + '…';
+}
+
+function absoluteImageUrl(image: unknown): string | null {
+  if (!image || typeof image !== 'string') return null;
+  const trimmed = image.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('//')) return `https:${trimmed}`;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed.replace(/^http:\/\//i, 'https://');
+  if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return null;
+  return `${SITE_URL}/${trimmed.replace(/^\/+/, '')}`;
+}
+
+function upsertMeta(attr: 'name' | 'property', key: string, value: string | null) {
+  if (typeof document === 'undefined') return;
+  const selector = `meta[${attr}="${key}"]`;
+  let el = document.head.querySelector<HTMLMetaElement>(selector);
+  if (!el && value) {
+    el = document.createElement('meta');
+    el.setAttribute(attr, key);
+    document.head.appendChild(el);
+  }
+  if (el) {
+    if (value) el.setAttribute('content', value);
+    else el.remove();
+  }
+}
+
+function useListingSeo(job: any, serviceId: string | undefined) {
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const title = job?.title?.trim() || 'Oppdrag på Jobblo';
+    const displayTitle = `${title} – Jobblo`;
+    const baseDescription =
+      job?.description ||
+      'Finn eller legg ut oppdrag i Norge. Trygg betaling med SafePay på Jobblo.';
+    const description = truncateText(baseDescription, 200);
+    const firstImage =
+      absoluteImageUrl(Array.isArray(job?.images) ? job.images.find((i: unknown) => typeof i === 'string' && i.trim()) : null) ||
+      DEFAULT_SHARE_IMAGE;
+    const url = serviceId ? listingUrl(serviceId) : SITE_URL;
+
+    document.title = displayTitle;
+    upsertMeta('name', 'description', description);
+    upsertMeta('property', 'og:title', title);
+    upsertMeta('property', 'og:description', description);
+    upsertMeta('property', 'og:url', url);
+    upsertMeta('property', 'og:image', firstImage);
+    upsertMeta('property', 'og:image:secure_url', firstImage);
+    upsertMeta('property', 'og:type', 'article');
+    upsertMeta('property', 'og:site_name', 'Jobblo');
+    upsertMeta('property', 'og:locale', 'nb_NO');
+    upsertMeta('name', 'twitter:card', 'summary_large_image');
+    upsertMeta('name', 'twitter:title', title);
+    upsertMeta('name', 'twitter:description', description);
+    upsertMeta('name', 'twitter:image', firstImage);
+
+    let link = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'canonical';
+      document.head.appendChild(link);
+    }
+    link.href = url;
+  }, [job, serviceId]);
+}
 
 const JobListingDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -100,6 +176,8 @@ const JobListingDetailPage = () => {
   } = useFavoriteToggle(id!, isAuth);
   const { data: job, isLoading: isJobLoading } = useJobDetailQuery(id!);
   const isOwnJob = job?.userId?._id === currentUser?._id;
+
+  useListingSeo(job, id);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -854,7 +932,7 @@ const JobListingDetailPage = () => {
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
-        url={`${SITE_URL}/job-listing/${job._id}`}
+        url={id ? listingUrl(id) : ''}
         title={job.title || 'Jobblo Oppdrag'}
       />
 

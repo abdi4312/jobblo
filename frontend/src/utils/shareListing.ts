@@ -49,12 +49,28 @@ function siteOrigin(): string {
 /**
  * The link a listing is shared as.
  *
- * Must match `og:url` in backend/utils/socialPreview.js exactly — a crawler that is
- * handed one URL and finds a different canonical in the document may attribute the
- * card to the other URL, or decline to render one.
+ * This uses the `/share/job/:id` path format on purpose. The backend preview
+ * route at this path runs its own crawler UA check (see
+ * `backend/routes/preview.js` → `isCrawlerUserAgent` + line 89 branch) and
+ * answers directly with the server-rendered Open Graph HTML for crawlers, then
+ * 302-redirects human visitors to the canonical `/jobs/:id` SPA listing.
+ *
+ * Using this path means the correct per-listing card is delivered to WhatsApp,
+ * Facebook, iMessage etc. regardless of whether the reverse proxy in front of
+ * the app has the UA-detect nginx map deployed. The crawler path has no JS
+ * requirement, so the backend's own UA regex is the single source of truth.
+ *
+ * A short `?v=` cache-buster is appended per share. Messaging apps cache OG
+ * previews for days or weeks per URL; a unique query per share forces the
+ * crawler to re-fetch fresh meta instead of serving a stale card from an
+ * earlier version of the listing. The rendered preview HTML still claims the
+ * clean `/jobs/:id` URL as canonical via `og:url` and <link rel="canonical">,
+ * so the transient query never leaks into search indexes or link equity.
  */
 export function listingUrl(serviceId: string): string {
-  return `${siteOrigin()}/jobs/${encodeURIComponent(serviceId)}`;
+  const base = `${siteOrigin()}/share/job/${encodeURIComponent(serviceId)}`;
+  const v = Date.now().toString(36);
+  return `${base}?v=${v}`;
 }
 
 export function buildSharePayload(serviceId: string, title?: string): ShareData & { text: string } {
