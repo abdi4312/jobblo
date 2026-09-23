@@ -185,9 +185,9 @@ const getSystemErrors = asyncHandler(async (req, res) => {
 const getDiskInfo = asyncHandler(async (req, res) => {
   return sendSuccess(res, {
     storage: {
-      provider: 'Cloudinary / Azure Blob Storage',
+      provider: 'Azure Blob Storage',
       description:
-        'File storage is handled externally via Cloudinary (images/documents) and Azure Blob Storage (backups/assets). Direct disk usage metrics are not exposed for security reasons.',
+        'File storage is handled externally via Azure Blob Storage. Direct disk usage metrics are not exposed for security reasons.',
       status: 'configured',
     },
   });

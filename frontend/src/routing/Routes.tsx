@@ -129,8 +129,6 @@ const OrdersPage = lazy(() => import('../pages/SuperAdminDashboard/OrdersPage.ts
 const ReviewsPage = lazy(() => import('../pages/SuperAdminDashboard/ReviewsPage.tsx'));
 const CategoriesPage = lazy(() => import('../pages/SuperAdminDashboard/CategoriesPage.tsx'));
 const VoucherPage = lazy(() => import('../pages/SuperAdminDashboard/VoucherPage.tsx'));
-const CarouselPage = lazy(() => import('../pages/SuperAdminDashboard/CarouselPage.tsx'));
-const HomeHeroPage = lazy(() => import('../pages/SuperAdminDashboard/HomeHeroPage.tsx'));
 const NotificationsPage = lazy(() => import('../pages/SuperAdminDashboard/NotificationsPage.tsx'));
 const TransactionsPage = lazy(() => import('../pages/SuperAdminDashboard/TransactionsPage.tsx'));
 const RoadmapAdminPage = lazy(() => import('../pages/SuperAdminDashboard/RoadmapAdminPage.tsx'));
@@ -353,8 +351,6 @@ export const routes: RouteObject[] = [
       { path: 'reviews', element: withSuspense(ReviewsPage) },
       { path: 'categories', element: withSuspense(CategoriesPage) },
       { path: 'voucher', element: withSuspense(VoucherPage) },
-      { path: 'carousel', element: withSuspense(CarouselPage) },
-      { path: 'home-hero', element: withSuspense(HomeHeroPage) },
       { path: 'transactions', element: withSuspense(TransactionsPage) },
       { path: 'notifications', element: withSuspense(NotificationsPage) },
       { path: 'roadmap', element: withSuspense(RoadmapAdminPage) },

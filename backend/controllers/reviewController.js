@@ -18,18 +18,11 @@ function authorizeReviewAction(req, review) {
 
 exports.createReview = async (req, res) => {
   try {
-    const {
-      orderId,
-      serviceId,
-      revieweeId,
-      revieweeRole,
-      rating,
-      comment,
-      recommendWorker,
-    } = req.body;
+    const { orderId, serviceId, revieweeId, revieweeRole, rating, comment, recommendWorker } =
+      req.body;
     const reviewerId = req.userId;
 
-    // Photos are Cloudinary URLs, never image bytes — see utils/reviewPhotos.js.
+    // Photos are Azure blob URLs, never image bytes — see utils/reviewPhotos.js.
     const photoResult = normaliseReviewPhotos(req.body.photos);
     if (!photoResult.ok) {
       return res.status(400).json({ error: photoResult.error });
@@ -74,9 +67,7 @@ exports.createReview = async (req, res) => {
 
     const counterpartyId = isCustomer ? order.providerId : order.customerId;
     if (!counterpartyId || String(revieweeId) !== String(counterpartyId)) {
-      return res
-        .status(400)
-        .json({ error: 'Du kan bare vurdere den andre parten i oppdraget.' });
+      return res.status(400).json({ error: 'Du kan bare vurdere den andre parten i oppdraget.' });
     }
 
     const review = await Review.create({
@@ -96,7 +87,8 @@ exports.createReview = async (req, res) => {
     // Update reviewee stats
     const allReviews = await Review.find({ revieweeId });
     const reviewCount = allReviews.length;
-    const averageRating = reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
+    const averageRating =
+      reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
 
     // Update the main user stats
     const updatedUser = await User.findByIdAndUpdate(
@@ -174,7 +166,8 @@ exports.updateReview = async (req, res) => {
     // Update reviewee stats
     const allReviews = await Review.find({ revieweeId: review.revieweeId });
     const reviewCount = allReviews.length;
-    const averageRating = reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
+    const averageRating =
+      reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
 
     await User.findByIdAndUpdate(review.revieweeId, {
       reviewCount,
@@ -309,7 +302,8 @@ exports.deleteReview = async (req, res) => {
     // Update reviewee stats
     const allReviews = await Review.find({ revieweeId: review.revieweeId });
     const reviewCount = allReviews.length;
-    const averageRating = reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
+    const averageRating =
+      reviewCount > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
 
     await User.findByIdAndUpdate(review.revieweeId, {
       reviewCount,

@@ -166,12 +166,17 @@ exports.getAllServices = async (req, res) => {
     const locationConditions = [];
 
     if (countyCodes) {
-      const codes = countyCodes.split(',').map((c) => c.trim()).filter(Boolean);
+      const codes = countyCodes
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean);
       if (codes.length > 0) {
         // Match jobs stored directly with countyCode OR jobs stored with a municipality
         // that belongs to the selected county (for backwards compatibility)
         const NorwayMunicipality = require('../models/NorwayMunicipality');
-        const munisInCounty = await NorwayMunicipality.find({ countyCode: { $in: codes } }).select('code').lean();
+        const munisInCounty = await NorwayMunicipality.find({ countyCode: { $in: codes } })
+          .select('code')
+          .lean();
         const munCodes = munisInCounty.map((m) => m.code);
 
         const countyOrConditions = [{ countyCode: { $in: codes } }];
@@ -183,14 +188,20 @@ exports.getAllServices = async (req, res) => {
     }
 
     if (municipalityCodes) {
-      const codes = municipalityCodes.split(',').map((c) => c.trim()).filter(Boolean);
+      const codes = municipalityCodes
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean);
       if (codes.length > 0) {
         locationConditions.push({ municipalityCode: { $in: codes } });
       }
     }
 
     if (areaCodes) {
-      const codes = areaCodes.split(',').map((c) => c.trim()).filter(Boolean);
+      const codes = areaCodes
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean);
       if (codes.length > 0) {
         locationConditions.push({ areaCode: { $in: codes } });
       }
@@ -200,7 +211,15 @@ exports.getAllServices = async (req, res) => {
     const latNum = Number(lat);
     const lngNum = Number(lng);
     const radiusNum = Number(radius);
-    if (lat && lng && radius && !isNaN(latNum) && !isNaN(lngNum) && !isNaN(radiusNum) && radiusNum > 0) {
+    if (
+      lat &&
+      lng &&
+      radius &&
+      !isNaN(latNum) &&
+      !isNaN(lngNum) &&
+      !isNaN(radiusNum) &&
+      radiusNum > 0
+    ) {
       query['location.coordinates'] = {
         $geoWithin: { $centerSphere: [[lngNum, latNum], radiusNum / 6378100] },
       };
@@ -264,7 +283,6 @@ exports.getAllServices = async (req, res) => {
 };
 
 // ------------------- Get Service By ID -------------------
-
 
 exports.getServiceById = async (req, res) => {
   try {
@@ -485,17 +503,31 @@ exports.createService = async (req, res) => {
     // Validate paymentType & price (especially Anbud estimated budget)
     const priceNum = Number(serviceData.price);
     if (serviceData.paymentType === 'Anbud') {
-      if (serviceData.price === undefined || serviceData.price === null || isNaN(priceNum) || priceNum <= 0) {
-        return res.status(400).json({ error: 'Anbud oppdrag må ha et antatt budsjett større enn 0 kr' });
+      if (
+        serviceData.price === undefined ||
+        serviceData.price === null ||
+        isNaN(priceNum) ||
+        priceNum <= 0
+      ) {
+        return res
+          .status(400)
+          .json({ error: 'Anbud oppdrag må ha et antatt budsjett større enn 0 kr' });
       }
     } else if (serviceData.paymentType === 'Fastpris') {
-      if (serviceData.price === undefined || serviceData.price === null || isNaN(priceNum) || priceNum <= 0) {
+      if (
+        serviceData.price === undefined ||
+        serviceData.price === null ||
+        isNaN(priceNum) ||
+        priceNum <= 0
+      ) {
         return res.status(400).json({ error: 'Fastpris oppdrag må ha en pris større enn 0 kr' });
       }
     } else if (serviceData.paymentType === 'Timepris') {
       const hourlyNum = Number(serviceData.hourlyRate || serviceData.price);
       if (isNaN(hourlyNum) || hourlyNum <= 0) {
-        return res.status(400).json({ error: 'Timepris oppdrag må ha en timepris større enn 0 kr' });
+        return res
+          .status(400)
+          .json({ error: 'Timepris oppdrag må ha en timepris større enn 0 kr' });
       }
     }
 
@@ -508,7 +540,7 @@ exports.createService = async (req, res) => {
       serviceData.urgent = false;
     }
 
-    // Add images from Multer (Cloudinary)
+    // Add images from Multer (Azure)
     if (req.files && req.files.length > 0) {
       serviceData.images = req.files.map((file) => file.path);
       serviceData.imageMetadata = req.files.map((file) => ({
@@ -556,9 +588,22 @@ exports.createService = async (req, res) => {
     // client could set `promoted: true` (a paid placement), inflate `views`, or choose
     // its own `status`. The UPDATE path was hardened with a whitelist; create was not.
     const SERVICE_CREATABLE_FIELDS = [
-      'title', 'description', 'price', 'hourlyRate', 'paymentType', 'location',
-      'categories', 'tags', 'duration', 'fromDate', 'toDate', 'equipment',
-      'maxApplicants', 'images', 'imageMetadata', 'urgent',
+      'title',
+      'description',
+      'price',
+      'hourlyRate',
+      'paymentType',
+      'location',
+      'categories',
+      'tags',
+      'duration',
+      'fromDate',
+      'toDate',
+      'equipment',
+      'maxApplicants',
+      'images',
+      'imageMetadata',
+      'urgent',
     ];
     const safeServiceData = {};
     for (const field of SERVICE_CREATABLE_FIELDS) {
@@ -622,16 +667,21 @@ exports.updateService = async (req, res) => {
     const updatedPrice = req.body.price !== undefined ? Number(req.body.price) : service.price;
     if (updatedPaymentType === 'Anbud') {
       if (!updatedPrice || isNaN(updatedPrice) || updatedPrice <= 0) {
-        return res.status(400).json({ error: 'Anbud oppdrag må ha et antatt budsjett større enn 0 kr' });
+        return res
+          .status(400)
+          .json({ error: 'Anbud oppdrag må ha et antatt budsjett større enn 0 kr' });
       }
     } else if (updatedPaymentType === 'Fastpris') {
       if (!updatedPrice || isNaN(updatedPrice) || updatedPrice <= 0) {
         return res.status(400).json({ error: 'Fastpris oppdrag må ha en pris større enn 0 kr' });
       }
     } else if (updatedPaymentType === 'Timepris') {
-      const updatedHourly = req.body.hourlyRate !== undefined ? Number(req.body.hourlyRate) : service.hourlyRate;
+      const updatedHourly =
+        req.body.hourlyRate !== undefined ? Number(req.body.hourlyRate) : service.hourlyRate;
       if (!updatedHourly || isNaN(updatedHourly) || updatedHourly <= 0) {
-        return res.status(400).json({ error: 'Timepris oppdrag må ha en timepris større enn 0 kr' });
+        return res
+          .status(400)
+          .json({ error: 'Timepris oppdrag må ha en timepris større enn 0 kr' });
       }
     }
 
@@ -644,20 +694,16 @@ exports.updateService = async (req, res) => {
 
     // ⭐ HANDLE IMAGE DELETION
     if (req.body.imagesToDelete) {
-      const cloudinary = require('../config/cloudinary');
+      const { deleteFromAzure } = require('../utils/azureUpload');
       const toDelete = Array.isArray(req.body.imagesToDelete)
         ? req.body.imagesToDelete
         : [req.body.imagesToDelete];
 
       for (const imageUrl of toDelete) {
-        // Find metadata to get public_id
+        // Find metadata to get the blob name
         const meta = service.imageMetadata.find((m) => m.url === imageUrl);
         if (meta && meta.blobName) {
-          try {
-            await cloudinary.uploader.destroy(meta.blobName);
-          } catch (err) {
-            console.error('Cloudinary deletion error:', err);
-          }
+          await deleteFromAzure(meta.blobName);
         }
         // Remove from arrays
         service.images = service.images.filter((url) => url !== imageUrl);
@@ -810,17 +856,11 @@ exports.deleteService = async (req, res) => {
       });
     }
 
-    // ⭐ DELETE ALL IMAGES FROM CLOUDINARY
+    // ⭐ DELETE ALL IMAGES FROM AZURE
     if (service.imageMetadata && service.imageMetadata.length > 0) {
-      const cloudinary = require('../config/cloudinary');
+      const { deleteFromAzure } = require('../utils/azureUpload');
       for (const meta of service.imageMetadata) {
-        if (meta.blobName) {
-          try {
-            await cloudinary.uploader.destroy(meta.blobName);
-          } catch (err) {
-            console.error('Cloudinary bulk deletion error:', err);
-          }
-        }
+        if (meta.blobName) await deleteFromAzure(meta.blobName);
       }
     }
 
@@ -834,7 +874,9 @@ exports.deleteService = async (req, res) => {
         { $set: { status: 'cancelled', cancelledAt: new Date() } }
       );
       if (cancelledOrders.modifiedCount > 0) {
-        console.log(`deleteService: cancelled ${cancelledOrders.modifiedCount} pending orders for service ${id}`);
+        console.log(
+          `deleteService: cancelled ${cancelledOrders.modifiedCount} pending orders for service ${id}`
+        );
       }
     } catch (orderErr) {
       console.error('Order cascade cancel on service delete failed:', orderErr.message);
@@ -845,7 +887,9 @@ exports.deleteService = async (req, res) => {
     try {
       const deletedReviews = await require('../models/Review').deleteMany({ serviceId: id });
       if (deletedReviews.deletedCount > 0) {
-        console.log(`deleteService: deleted ${deletedReviews.deletedCount} reviews for service ${id}`);
+        console.log(
+          `deleteService: deleted ${deletedReviews.deletedCount} reviews for service ${id}`
+        );
       }
     } catch (reviewErr) {
       console.error('Review cascade delete on service delete failed:', reviewErr.message);

@@ -16,7 +16,7 @@ router.post('/create-session', authenticate, SafePayCheckoutController.createSaf
 // against /status/:sessionId. See the handler for the full reasoning.
 router.get('/mobile-return', SafePayCheckoutController.mobileReturn);
 
-// Review photos: multipart in, Cloudinary URLs back. `approve` then carries the URLs.
+// Review photos: multipart in, Azure URLs back. `approve` then carries the URLs.
 // The 8 MB cap is the server's own floor — the browser compresses to a few hundred KB
 // before it gets here (frontend/src/utils/compressImage.ts), so hitting this means
 // something other than the web form is calling.

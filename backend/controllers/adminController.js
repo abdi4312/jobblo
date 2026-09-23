@@ -1,4 +1,3 @@
-const Hero = require('../models/Hero');
 const bcrypt = require('bcryptjs');
 const Service = require('../models/Service');
 const User = require('../models/User');
@@ -39,7 +38,11 @@ exports.getAllUsers = async (req, res) => {
     const [totalUsers, activeThisMonth, users] = await Promise.all([
       User.countDocuments(query),
       User.countDocuments({ isDeleted: { $ne: true }, createdAt: { $gte: startOfMonth } }),
-      User.find(query).select('-password -passwordResetToken -passwordResetExpires').skip(skip).limit(limit).sort({ createdAt: -1 }),
+      User.find(query)
+        .select('-password -passwordResetToken -passwordResetExpires')
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 }),
     ]);
 
     res.json({
@@ -61,7 +64,9 @@ exports.createUser = async (req, res) => {
 
     const ASSIGNABLE_ROLES = ['user', 'provider', 'company'];
     if (role && !ASSIGNABLE_ROLES.includes(role)) {
-      return res.status(400).json({ message: `Ugyldig rolle. Tillatte roller: ${ASSIGNABLE_ROLES.join(', ')}.` });
+      return res
+        .status(400)
+        .json({ message: `Ugyldig rolle. Tillatte roller: ${ASSIGNABLE_ROLES.join(', ')}.` });
     }
 
     const hashed = await bcrypt.hash(password, 12);
@@ -170,79 +175,14 @@ exports.getSystemNotificationsHistory = async (req, res) => {
   }
 };
 
-exports.getAllHeroItems = async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 6;
-    const skip = (page - 1) * limit;
-
-    const total = await Hero.countDocuments();
-    const heroItems = await Hero.find().sort({ createdAt: -1 }).skip(skip).limit(limit);
-
-    res.json({
-      heroes: heroItems,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-    });
-  } catch (err) {
-    // Yeh line aapko terminal mein batayegi ke error kya hai
-    console.error('GET HERO ERROR:', err.message);
-    res.status(500).json({ error: 'Server error: ' + err.message });
-  }
-};
-
-exports.UpdateHero = async (req, res) => {
-  try {
-    const hero = await Hero.findById(req.params.id);
-    if (!hero) {
-      return res.status(404).json({ error: 'Hero ikke funnet' });
-    }
-
-    // Update text fields
-    hero.title = req.body.title ?? hero.title;
-    hero.subtitle = req.body.subtitle ?? hero.subtitle;
-    hero.description = req.body.description ?? hero.description;
-
-    // Image URL update (Agar frontend se naya URL aaye)
-    hero.image = req.body.image ?? hero.image;
-
-    // Date Fields Update
-    hero.activeFrom = req.body.activeFrom ?? hero.activeFrom;
-    hero.expireAt = req.body.expireAt ?? hero.expireAt;
-
-    await hero.save();
-    res.status(200).json(hero);
-  } catch (err) {
-    console.error('Update hero error:', err);
-    res.status(500).json({ error: 'Kunne ikke oppdatere hero' });
-  }
-};
-
-/**
- * DELETE HERO
- */
-exports.DeleteHero = async (req, res) => {
-  try {
-    const hero = await Hero.findById(req.params.id);
-    if (!hero) {
-      return res.status(404).json({ error: 'Hero ikke funnet' });
-    }
-
-    // Sirf database se delete karein kyunki image external URL hai
-    await hero.deleteOne();
-    res.status(200).json({ message: 'Hero slettet' });
-  } catch (err) {
-    console.error('Delete hero error:', err);
-    res.status(500).json({ error: 'Kunne ikke slette hero' });
-  }
-};
-
 exports.changeUserRole = async (req, res) => {
   try {
     const { role } = req.body;
     const ASSIGNABLE_ROLES = ['user', 'provider', 'company'];
     if (!role || !ASSIGNABLE_ROLES.includes(role)) {
-      return res.status(400).json({ error: `Ugyldig rolle. Tillatte roller: ${ASSIGNABLE_ROLES.join(', ')}.` });
+      return res
+        .status(400)
+        .json({ error: `Ugyldig rolle. Tillatte roller: ${ASSIGNABLE_ROLES.join(', ')}.` });
     }
 
     const mongoose = require('mongoose');
@@ -255,7 +195,11 @@ exports.changeUserRole = async (req, res) => {
       return res.status(403).json({ error: 'Du kan ikke endre din egen rolle.' });
     }
 
-    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true, runValidators: true }).select('-password -passwordResetToken -passwordResetExpires');
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role },
+      { new: true, runValidators: true }
+    ).select('-password -passwordResetToken -passwordResetExpires');
     if (!user) return res.status(404).json({ error: 'Bruker ikke funnet.' });
     res.json(user);
   } catch (err) {
@@ -314,17 +258,11 @@ exports.deleteService = async (req, res) => {
     const service = await Service.findById(id);
     if (!service) return res.status(404).json({ error: 'Service not found' });
 
-    // ⭐ DELETE ALL IMAGES FROM CLOUDINARY
+    // ⭐ DELETE ALL IMAGES FROM AZURE
     if (service.imageMetadata && service.imageMetadata.length > 0) {
-      const cloudinary = require('../config/cloudinary');
+      const { deleteFromAzure } = require('../utils/azureUpload');
       for (const meta of service.imageMetadata) {
-        if (meta.blobName) {
-          try {
-            await cloudinary.uploader.destroy(meta.blobName);
-          } catch (err) {
-            console.error('Cloudinary bulk deletion error:', err);
-          }
-        }
+        if (meta.blobName) await deleteFromAzure(meta.blobName);
       }
     }
 

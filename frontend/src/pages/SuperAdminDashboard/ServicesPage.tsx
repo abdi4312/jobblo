@@ -31,7 +31,10 @@ export default function ServicesPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<AdminService | null>(null);
-  const [statusTarget, setStatusTarget] = useState<{ service: AdminService; newStatus: string } | null>(null);
+  const [statusTarget, setStatusTarget] = useState<{
+    service: AdminService;
+    newStatus: string;
+  } | null>(null);
 
   const handleSearchChange = useCallback((val: string) => {
     setSearch(val);
@@ -97,9 +100,7 @@ export default function ServicesPage() {
       key: 'price',
       header: 'Pris',
       render: (s) => (
-        <span className="font-semibold text-gray-800">
-          {s.price.toLocaleString('nb-NO')} NOK
-        </span>
+        <span className="font-semibold text-gray-800">{s.price.toLocaleString('nb-NO')} NOK</span>
       ),
     },
     {
@@ -158,10 +159,7 @@ export default function ServicesPage() {
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader
-        title="Tjenester"
-        description="Alle tjenester publisert på plattformen"
-      />
+      <AdminPageHeader title="Tjenester" description="Alle tjenester publisert på plattformen" />
 
       <AdminDataTable
         columns={columns}
@@ -184,7 +182,10 @@ export default function ServicesPage() {
             />
             <AdminFilterSelect
               value={statusFilter}
-              onChange={(v) => { setStatusFilter(v); setPage(1); }}
+              onChange={(v) => {
+                setStatusFilter(v);
+                setPage(1);
+              }}
               options={STATUS_OPTIONS}
               placeholder="Alle statuser"
             />
@@ -202,7 +203,10 @@ export default function ServicesPage() {
         onOpenChange={(open) => !open && setStatusTarget(null)}
         onConfirm={async () => {
           if (!statusTarget) return;
-          await statusMutation.mutateAsync({ id: statusTarget.service._id, status: statusTarget.newStatus });
+          await statusMutation.mutateAsync({
+            id: statusTarget.service._id,
+            status: statusTarget.newStatus,
+          });
           setStatusTarget(null);
         }}
       />
@@ -210,7 +214,7 @@ export default function ServicesPage() {
       {/* Delete confirm */}
       <AdminConfirmDialog
         title="Slett tjeneste?"
-        description={`"${deleteTarget?.title}" vil bli permanent slettet. Bilder fjernes fra Cloudinary.`}
+        description={`"${deleteTarget?.title}" vil bli permanent slettet. Bilder fjernes fra Azure.`}
         confirmText="Ja, slett"
         cancelText="Avbryt"
         variant="destructive"

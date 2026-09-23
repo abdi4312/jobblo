@@ -40,7 +40,6 @@ const upcomingFeatureRouter = require('./routes/upcomingFeature');
 const listsRouter = require('./routes/lists');
 const aiRouter = require('./routes/ai');
 const exploreRouter = require('./routes/explore');
-const homeHeroRouter = require('./routes/homeHero');
 const globalConfigRouter = require('./routes/globalConfig');
 const applicantsRouter = require('./routes/applicant');
 const safePayRouter = require('./routes/safepay');
@@ -247,7 +246,6 @@ app.use('/api/services', servicesRouter);
 app.use('/api/favorites', favoritesRouter);
 app.use('/api/messages', messagesRouter);
 app.use('/api/upload', uploadRouter);
-app.use('/api/home-hero', homeHeroRouter);
 app.use('/api/config', globalConfigRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/notifications', notificationsRouter);
@@ -303,7 +301,9 @@ app.use(function (err, req, res, next) {
     return res.status(400).json({ error: err.message });
   }
   if (err && err.type === 'entity.too.large') {
-    return res.status(413).json({ error: 'Innholdet er for stort. Prøv med færre eller mindre bilder.' });
+    return res
+      .status(413)
+      .json({ error: 'Innholdet er for stort. Prøv med færre eller mindre bilder.' });
   }
   return next(err);
 });

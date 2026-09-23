@@ -81,7 +81,10 @@ describe('a listing tied to a live commitment', () => {
   });
 
   it('explains a paid escrow specifically', () => {
-    const caps = evaluateListingCapabilities({ service: openService, orders: [{ status: 'paid' }] });
+    const caps = evaluateListingCapabilities({
+      service: openService,
+      orders: [{ status: 'paid' }],
+    });
     expect(caps.blockedCode).toBe('LISTING_PAID');
     expect(caps.blockedReason).toMatch(/SafePay/);
   });
@@ -159,7 +162,9 @@ describe('findBlockingOrder', () => {
   });
 
   it('tolerates malformed rows', () => {
-    expect(findBlockingOrder([null, undefined, {}, { status: 'paid' }])).toEqual({ status: 'paid' });
+    expect(findBlockingOrder([null, undefined, {}, { status: 'paid' }])).toEqual({
+      status: 'paid',
+    });
   });
 });
 
@@ -175,13 +180,13 @@ describe('the endpoints enforce it, not just the interface', () => {
     return rest.slice(0, nextExport === -1 ? undefined : nextExport);
   };
 
-  it('deleteService refuses a blocked listing before touching Cloudinary', () => {
+  it('deleteService refuses a blocked listing before touching Azure', () => {
     const body = sliceOf('deleteService');
     expect(body).toMatch(/canDelete/);
 
     // The guard must run BEFORE the destructive image cleanup, or a refused delete
     // still destroys the photos.
-    expect(body.indexOf('canDelete')).toBeLessThan(body.indexOf('cloudinary'));
+    expect(body.indexOf('canDelete')).toBeLessThan(body.toLowerCase().indexOf('azure'));
   });
 
   it('updateService refuses a blocked listing', () => {

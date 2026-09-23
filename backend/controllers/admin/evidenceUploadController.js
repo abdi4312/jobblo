@@ -1,5 +1,5 @@
 const ChatReport = require('../../models/ChatReport');
-const { uploadToCloudinary } = require('../../utils/cloudinaryUpload');
+const { uploadToAzure } = require('../../utils/azureUpload');
 const { parseObjectId } = require('../../utils/pagination');
 const { asyncHandler, sendSuccess, sendError } = require('../../utils/apiResponse');
 
@@ -25,13 +25,17 @@ exports.uploadEvidence = asyncHandler(async (req, res) => {
 
   for (const file of req.files) {
     if (!allowedMimes.includes(file.mimetype)) {
-      return sendError(res, `Ugyldig filtype: ${file.mimetype}. Tillatte: JPEG, PNG, GIF, WebP, PDF.`, 400);
+      return sendError(
+        res,
+        `Ugyldig filtype: ${file.mimetype}. Tillatte: JPEG, PNG, GIF, WebP, PDF.`,
+        400
+      );
     }
     if (file.size > maxSize) {
       return sendError(res, `Fil ${file.originalname} er for stor (maks 5MB).`, 400);
     }
 
-    const fileUrl = await uploadToCloudinary(file, 'report-evidence');
+    const fileUrl = await uploadToAzure(file, 'report-evidence');
 
     evidenceItems.push({
       fileUrl,
