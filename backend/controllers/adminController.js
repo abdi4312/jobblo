@@ -1,4 +1,3 @@
-const Hero = require('../models/Hero');
 const bcrypt = require('bcryptjs');
 const Service = require('../models/Service');
 const User = require('../models/User');
@@ -173,73 +172,6 @@ exports.getSystemNotificationsHistory = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
-  }
-};
-
-exports.getAllHeroItems = async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 6;
-    const skip = (page - 1) * limit;
-
-    const total = await Hero.countDocuments();
-    const heroItems = await Hero.find().sort({ createdAt: -1 }).skip(skip).limit(limit);
-
-    res.json({
-      heroes: heroItems,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-    });
-  } catch (err) {
-    // Yeh line aapko terminal mein batayegi ke error kya hai
-    console.error('GET HERO ERROR:', err.message);
-    res.status(500).json({ error: 'Server error: ' + err.message });
-  }
-};
-
-exports.UpdateHero = async (req, res) => {
-  try {
-    const hero = await Hero.findById(req.params.id);
-    if (!hero) {
-      return res.status(404).json({ error: 'Hero ikke funnet' });
-    }
-
-    // Update text fields
-    hero.title = req.body.title ?? hero.title;
-    hero.subtitle = req.body.subtitle ?? hero.subtitle;
-    hero.description = req.body.description ?? hero.description;
-
-    // Image URL update (Agar frontend se naya URL aaye)
-    hero.image = req.body.image ?? hero.image;
-
-    // Date Fields Update
-    hero.activeFrom = req.body.activeFrom ?? hero.activeFrom;
-    hero.expireAt = req.body.expireAt ?? hero.expireAt;
-
-    await hero.save();
-    res.status(200).json(hero);
-  } catch (err) {
-    console.error('Update hero error:', err);
-    res.status(500).json({ error: 'Kunne ikke oppdatere hero' });
-  }
-};
-
-/**
- * DELETE HERO
- */
-exports.DeleteHero = async (req, res) => {
-  try {
-    const hero = await Hero.findById(req.params.id);
-    if (!hero) {
-      return res.status(404).json({ error: 'Hero ikke funnet' });
-    }
-
-    // Sirf database se delete karein kyunki image external URL hai
-    await hero.deleteOne();
-    res.status(200).json({ message: 'Hero slettet' });
-  } catch (err) {
-    console.error('Delete hero error:', err);
-    res.status(500).json({ error: 'Kunne ikke slette hero' });
   }
 };
 

@@ -1,5 +1,4 @@
 const GlobalConfig = require('../../models/GlobalConfig');
-const Hero = require('../../models/Hero');
 const UpcomingFeature = require('../../models/UpcomingFeature');
 const { sendSuccess, sendError, asyncHandler } = require('../../utils/apiResponse');
 const { logActivity } = require('../../services/admin/activityService');

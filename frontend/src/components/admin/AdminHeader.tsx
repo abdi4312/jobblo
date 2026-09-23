@@ -22,7 +22,6 @@ function useBreadcrumbs() {
     transactions: 'Transaksjoner',
     notifications: 'Varslinger',
     voucher: 'Kuponger',
-    carousel: 'Karusell',
     roadmap: 'Veikart',
     plans: 'Abonnementer',
     reviews: 'Vurderinger',

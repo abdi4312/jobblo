@@ -7,7 +7,6 @@ import {
   ShoppingCart,
   CreditCard,
   Bell,
-  Image as ImageIcon,
   Ticket,
   Rocket,
   ShieldCheck,
@@ -100,7 +99,6 @@ function useNavGroups(): NavGroup[] {
           to: '/dashboard/homepage-cms',
           icon: <Globe size={18} />,
         },
-        { label: t('nav.karusell'), to: '/dashboard/carousel', icon: <ImageIcon size={18} /> },
         {
           label: t('nav.navigasjon_footer'),
           to: '/dashboard/navigation-footer',
