@@ -417,9 +417,11 @@ const SafePayApproval: React.FC = () => {
 
       // construct payload ratings with only provided optional fields
       const payloadRatings: any = { overall: ratings.overall };
-      if (ratings.punctuality && ratings.punctuality > 0) payloadRatings.punctuality = ratings.punctuality;
+      if (ratings.punctuality && ratings.punctuality > 0)
+        payloadRatings.punctuality = ratings.punctuality;
       if (ratings.quality && ratings.quality > 0) payloadRatings.quality = ratings.quality;
-      if (ratings.communication && ratings.communication > 0) payloadRatings.communication = ratings.communication;
+      if (ratings.communication && ratings.communication > 0)
+        payloadRatings.communication = ratings.communication;
       if (ratings.tidiness && ratings.tidiness > 0) payloadRatings.tidiness = ratings.tidiness;
 
       const res = await mainLink.post('/api/safepay-checkout/approve', {
@@ -449,8 +451,7 @@ const SafePayApproval: React.FC = () => {
       // actionable message into the generic "Kunne ikke godkjenne jobben" — and the
       // skip-checklist path calls `mutate()` directly, so it was the message that path
       // actually produced.
-      const message =
-        err?.response?.data?.error || err?.message || 'Kunne ikke godkjenne jobben';
+      const message = err?.response?.data?.error || err?.message || 'Kunne ikke godkjenne jobben';
       if (status === 403) {
         toast.error('Ikke tilgang. Kun oppdragsgiver kan godkjenne jobben.');
       } else if (status === 400 && message.includes('ready_for_review')) {
@@ -476,7 +477,7 @@ const SafePayApproval: React.FC = () => {
   });
 
   /**
-   * Review photos go to Cloudinary and only their URLs travel with `approve`.
+   * Review photos go to Azure and only their URLs travel with `approve`.
    *
    * They used to be read with `FileReader.readAsDataURL` and posted inline as base64 in the
    * approve request. Base64 adds ~33 %, so two ordinary phone photos pushed the JSON body
@@ -499,7 +500,7 @@ const SafePayApproval: React.FC = () => {
     setIsUploadingPhotos(true);
     try {
       // Compress first: a phone photo is 3–8 MB and comes out a few hundred KB, which is
-      // what keeps this well under every limit between here and Cloudinary.
+      // what keeps this well under every limit between here and Azure.
       const compressed = await compressImages(files.slice(0, room));
 
       const body = new FormData();
@@ -607,7 +608,9 @@ const SafePayApproval: React.FC = () => {
   // customer can tick items off while the work is still running without the request
   // coming back 409.
   const canEditChecklist =
-    !isSuccess && !dispute && ['paid', 'in_progress', 'ready_for_review'].includes(orderData.status);
+    !isSuccess &&
+    !dispute &&
+    ['paid', 'in_progress', 'ready_for_review'].includes(orderData.status);
 
   // ── Proof-of-work evidence from the provider ─────────────────────────────
   const beforeImages: string[] = orderData.beforeImages || [];
@@ -658,9 +661,7 @@ const SafePayApproval: React.FC = () => {
               : payoutWarning}
           </p>
 
-          <div
-            className={`mt-8 rounded-2xl px-4 py-5 ${paidOut ? 'bg-white/8' : 'bg-[#F4F6F0]'}`}
-          >
+          <div className={`mt-8 rounded-2xl px-4 py-5 ${paidOut ? 'bg-white/8' : 'bg-[#F4F6F0]'}`}>
             <p
               className={`text-[2rem] font-bold tabular-nums tracking-[-0.04em] ${
                 paidOut ? 'text-[#8FBF9A]' : 'text-[#63665F]'
@@ -749,9 +750,7 @@ const SafePayApproval: React.FC = () => {
           </div>
           <div
             className={`rounded-xl p-4 flex items-center gap-4 border ${
-              canApproveNow
-                ? 'bg-[#EAF1E9] border-[#EAF1E9]'
-                : 'bg-[#F4F6F0] border-[#E6E7E1]'
+              canApproveNow ? 'bg-[#EAF1E9] border-[#EAF1E9]' : 'bg-[#F4F6F0] border-[#E6E7E1]'
             }`}
           >
             <div
@@ -777,9 +776,7 @@ const SafePayApproval: React.FC = () => {
                 {new Date(orderData.updatedAt).toLocaleDateString('no-NO')} •{' '}
                 {orderData.serviceId.title} • {orderData.serviceId.location?.city || 'Oslo'}
               </p>
-              <p className="mt-1.5 text-[12px] leading-relaxed text-[#63665F]">
-                {statusView.body}
-              </p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-[#63665F]">{statusView.body}</p>
             </div>
           </div>
         </div>
@@ -1071,7 +1068,11 @@ const SafePayApproval: React.FC = () => {
                         </div>
                       ))}
                     </div>
-                    <button type="button" onClick={() => setShowDetails(false)} className="text-sm text-gray-500 underline">
+                    <button
+                      type="button"
+                      onClick={() => setShowDetails(false)}
+                      className="text-sm text-gray-500 underline"
+                    >
                       Skjul detaljert vurdering
                     </button>
                   </>

@@ -67,7 +67,6 @@ const adminActivitySchema = new mongoose.Schema(
         'Coupon',
         'Notification',
         'Hero',
-        'HomeHero',
         'SubscriptionPlan',
         'GlobalConfig',
         'Session',

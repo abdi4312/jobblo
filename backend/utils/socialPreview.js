@@ -95,7 +95,7 @@ function absoluteImageUrl(image, env = process.env) {
   const trimmed = image.trim();
   if (!trimmed) return null;
 
-  // Protocol-relative — Cloudinary and Azure Blob both emit these in places.
+  // Protocol-relative — some storage/CDN hosts emit these in places.
   if (trimmed.startsWith('//')) return `https:${trimmed}`;
 
   if (/^https?:\/\//i.test(trimmed)) {

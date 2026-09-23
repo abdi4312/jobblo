@@ -1,32 +1,10 @@
 // controllers/uploadController.js
-const { BlobServiceClient } = require('@azure/storage-blob');
-const { v4: uuidv4 } = require('uuid');
+const { uploadBufferToAzure } = require('../utils/azureUpload');
 
-const containerName = process.env.AZURE_CONTAINER_NAME || 'bilder-newsub';
-
-if (!process.env.AZURE_STORAGE_CONNECTION_STRING) {
-  console.warn('⚠ AZURE_STORAGE_CONNECTION_STRING mangler i .env');
-}
-
-const blobServiceClient = BlobServiceClient.fromConnectionString(
-  process.env.AZURE_STORAGE_CONNECTION_STRING
-);
-
-// felles helper for å laste opp én filbuffer til Azure
-async function uploadBufferToAzure(file, folder = 'misc') {
-  const containerClient = blobServiceClient.getContainerClient(containerName);
-
-  // filnavn: folder/userid/uuid.ext
-  const ext = file.originalname.split('.').pop();
-  const blobName = `${folder}/${uuidv4()}.${ext}`;
-
-  const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-
-  await blockBlobClient.uploadData(file.buffer, {
-    blobHTTPHeaders: { blobContentType: file.mimetype },
-  });
-
-  return blockBlobClient.url;
+// Standalone upload endpoints return just the URL to the frontend.
+async function uploadUrl(file, folder) {
+  const { url } = await uploadBufferToAzure(file, folder);
+  return url;
 }
 
 /**
@@ -44,7 +22,7 @@ exports.uploadProfileImage = async (req, res) => {
       return res.status(400).json({ error: 'Kun bildefiler er tillatt' });
     }
 
-    const url = await uploadBufferToAzure(req.file, `profile/${req.userId}`);
+    const url = await uploadUrl(req.file, `profile_images/${req.userId}`);
 
     // her kan du evt. oppdatere User-modellen med url om du vil
 
@@ -73,7 +51,7 @@ exports.uploadServiceImages = async (req, res) => {
       if (!file.mimetype.startsWith('image/')) {
         return res.status(400).json({ error: 'Kun bildefiler er tillatt' });
       }
-      const url = await uploadBufferToAzure(file, `service/${req.userId}`);
+      const url = await uploadUrl(file, `job_images/${req.userId}`);
       urls.push(url);
     }
 

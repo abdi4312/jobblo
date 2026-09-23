@@ -1,7 +1,7 @@
 /**
  * What the owner of a listing is actually allowed to do with it.
  *
- * `deleteService` hard-deletes the Service document and its Cloudinary images, and it
+ * `deleteService` hard-deletes the Service document and its Azure images, and it
  * checked exactly one thing: that the caller owns the row. Nothing stopped an owner
  * deleting a listing that had a signed contract, a paid SafePay escrow, work in
  * progress, or an open dispute attached to it. Doing so leaves the Order pointing at a

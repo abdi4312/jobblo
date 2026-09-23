@@ -644,23 +644,14 @@ exports.updateUser = async (req, res) => {
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Delete old avatar if a new one is uploaded
-    const cloudinary = require('../config/cloudinary');
+    // Delete old avatar/banner from Azure when a new one is uploaded
+    // (avatarPublicId / bannerPublicId now hold the Azure blob name).
+    const { deleteFromAzure } = require('../utils/azureUpload');
     if (req.files && req.files.avatar && user.avatarPublicId) {
-      try {
-        await cloudinary.uploader.destroy(user.avatarPublicId);
-      } catch (err) {
-        console.error('Old avatar deletion error:', err);
-      }
+      await deleteFromAzure(user.avatarPublicId);
     }
-
-    // Delete old banner if a new one is uploaded
     if (req.files && req.files.banner && user.bannerPublicId) {
-      try {
-        await cloudinary.uploader.destroy(user.bannerPublicId);
-      } catch (err) {
-        console.error('Old banner deletion error:', err);
-      }
+      await deleteFromAzure(user.bannerPublicId);
     }
 
     const updatedUser = await User.findByIdAndUpdate(id, updates, {
@@ -736,15 +727,8 @@ exports.deleteUser = async (req, res) => {
       }
     }
 
-    const cloudinary = require('../config/cloudinary');
-    const destroyPublicId = async (publicId) => {
-      if (!publicId) return;
-      try {
-        await cloudinary.uploader.destroy(publicId);
-      } catch (cdnErr) {
-        console.error('Cloudinary destroy failed for %s: %s', publicId, cdnErr.message);
-      }
-    };
+    // Asset ids now hold Azure blob names. deleteFromAzure is already best-effort.
+    const { deleteFromAzure: destroyPublicId } = require('../utils/azureUpload');
 
     const assetCleanup = [];
     if (user.avatarPublicId) assetCleanup.push(destroyPublicId(user.avatarPublicId));
@@ -835,7 +819,9 @@ exports.deleteUser = async (req, res) => {
     try {
       const deletedFavorites = await List.deleteMany({ userId: id });
       if (deletedFavorites.deletedCount > 0) {
-        console.log(`deleteUser: deleted ${deletedFavorites.deletedCount} favorite lists for user ${id}`);
+        console.log(
+          `deleteUser: deleted ${deletedFavorites.deletedCount} favorite lists for user ${id}`
+        );
       }
     } catch (favoriteErr) {
       console.error('Favorite cascade delete on user delete failed:', favoriteErr.message);
@@ -847,17 +833,19 @@ exports.deleteUser = async (req, res) => {
       const cancelledOrders = await Order.updateMany(
         {
           $or: [{ customerId: id }, { providerId: id }],
-          status: { $in: ['pending', 'accepted'] }
+          status: { $in: ['pending', 'accepted'] },
         },
         {
           $set: {
             status: 'cancelled',
-            cancelledAt: new Date()
-          }
+            cancelledAt: new Date(),
+          },
         }
       );
       if (cancelledOrders.modifiedCount > 0) {
-        console.log(`deleteUser: cancelled ${cancelledOrders.modifiedCount} pending orders for user ${id}`);
+        console.log(
+          `deleteUser: cancelled ${cancelledOrders.modifiedCount} pending orders for user ${id}`
+        );
       }
     } catch (orderErr) {
       console.error('Order cascade cancel on user delete failed:', orderErr.message);
@@ -1015,8 +1003,9 @@ exports.deleteCertification = async (req, res) => {
     const cert = user.certifications.id(certId);
 
     if (cert && cert.publicId) {
-      const cloudinary = require('../config/cloudinary');
-      await cloudinary.uploader.destroy(cert.publicId);
+      // publicId now holds the Azure blob name.
+      const { deleteFromAzure } = require('../utils/azureUpload');
+      await deleteFromAzure(cert.publicId);
     }
 
     await User.findByIdAndUpdate(userId, {

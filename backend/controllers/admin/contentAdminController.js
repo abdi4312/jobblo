@@ -1,11 +1,17 @@
 const GlobalConfig = require('../../models/GlobalConfig');
 const Hero = require('../../models/Hero');
-const HomeHero = require('../../models/HomeHero');
 const UpcomingFeature = require('../../models/UpcomingFeature');
 const { sendSuccess, sendError, asyncHandler } = require('../../utils/apiResponse');
 const { logActivity } = require('../../services/admin/activityService');
 
-const SECRET_KEY_PATTERNS = ['secret', 'password', 'token', 'apikey', 'privatekey', 'authorization'];
+const SECRET_KEY_PATTERNS = [
+  'secret',
+  'password',
+  'token',
+  'apikey',
+  'privatekey',
+  'authorization',
+];
 
 const isSecretKey = (key) => {
   const lower = key.toLowerCase();
@@ -37,7 +43,11 @@ const getConfigByKey = asyncHandler(async (req, res) => {
   if (!config) {
     return sendError(res, 'Config not found.', 404);
   }
-  return sendSuccess(res, { key: config.key, value: config.value, description: config.description }, 'Config retrieved.');
+  return sendSuccess(
+    res,
+    { key: config.key, value: config.value, description: config.description },
+    'Config retrieved.'
+  );
 });
 
 const updateConfig = asyncHandler(async (req, res) => {
@@ -83,7 +93,11 @@ const getFeatureFlags = asyncHandler(async (req, res) => {
     key: { $regex: /^(feature_|flag_)/i },
   }).lean();
   const filtered = flags.filter((f) => !isSecretKey(f.key));
-  return sendSuccess(res, { flags: filtered.map((f) => ({ key: f.key, value: f.value, description: f.description })) }, 'Feature flags retrieved.');
+  return sendSuccess(
+    res,
+    { flags: filtered.map((f) => ({ key: f.key, value: f.value, description: f.description })) },
+    'Feature flags retrieved.'
+  );
 });
 
 const toggleFeatureFlag = asyncHandler(async (req, res) => {
@@ -112,8 +126,26 @@ const toggleFeatureFlag = asyncHandler(async (req, res) => {
 });
 
 const updateHomepageContent = asyncHandler(async (req, res) => {
-  const { heroTitle, heroSubtitle, heroDescription, ctaText, ctaUrl, featuredCategories, statistics, announcementBanner } = req.body;
-  const entries = { heroTitle, heroSubtitle, heroDescription, ctaText, ctaUrl, featuredCategories, statistics, announcementBanner };
+  const {
+    heroTitle,
+    heroSubtitle,
+    heroDescription,
+    ctaText,
+    ctaUrl,
+    featuredCategories,
+    statistics,
+    announcementBanner,
+  } = req.body;
+  const entries = {
+    heroTitle,
+    heroSubtitle,
+    heroDescription,
+    ctaText,
+    ctaUrl,
+    featuredCategories,
+    statistics,
+    announcementBanner,
+  };
   const ops = Object.entries(entries)
     .filter(([, v]) => v !== undefined)
     .map(([field, value]) => ({
@@ -145,13 +177,31 @@ const updateNavigation = asyncHandler(async (req, res) => {
   const { headerLinks, footerLinks, socialLinks } = req.body;
   const ops = [];
   if (headerLinks !== undefined) {
-    ops.push({ updateOne: { filter: { key: 'nav_header' }, update: { $set: { value: headerLinks } }, upsert: true } });
+    ops.push({
+      updateOne: {
+        filter: { key: 'nav_header' },
+        update: { $set: { value: headerLinks } },
+        upsert: true,
+      },
+    });
   }
   if (footerLinks !== undefined) {
-    ops.push({ updateOne: { filter: { key: 'nav_footer' }, update: { $set: { value: footerLinks } }, upsert: true } });
+    ops.push({
+      updateOne: {
+        filter: { key: 'nav_footer' },
+        update: { $set: { value: footerLinks } },
+        upsert: true,
+      },
+    });
   }
   if (socialLinks !== undefined) {
-    ops.push({ updateOne: { filter: { key: 'nav_social' }, update: { $set: { value: socialLinks } }, upsert: true } });
+    ops.push({
+      updateOne: {
+        filter: { key: 'nav_social' },
+        update: { $set: { value: socialLinks } },
+        upsert: true,
+      },
+    });
   }
   if (ops.length > 0) {
     await GlobalConfig.bulkWrite(ops);
@@ -161,13 +211,19 @@ const updateNavigation = asyncHandler(async (req, res) => {
     action: 'settings_updated',
     targetModel: 'GlobalConfig',
     description: 'Updated navigation links',
-    metadata: { updatedFields: ['headerLinks', 'footerLinks', 'socialLinks'].filter((k) => req.body[k] !== undefined) },
+    metadata: {
+      updatedFields: ['headerLinks', 'footerLinks', 'socialLinks'].filter(
+        (k) => req.body[k] !== undefined
+      ),
+    },
   });
   return sendSuccess(res, {}, 'Navigation updated.');
 });
 
 const getNavigation = asyncHandler(async (req, res) => {
-  const configs = await GlobalConfig.find({ key: { $in: ['nav_header', 'nav_footer', 'nav_social'] } }).lean();
+  const configs = await GlobalConfig.find({
+    key: { $in: ['nav_header', 'nav_footer', 'nav_social'] },
+  }).lean();
   return sendSuccess(res, { navigation: toObject(configs) }, 'Navigation retrieved.');
 });
 
@@ -204,7 +260,11 @@ const getFooter = asyncHandler(async (req, res) => {
 const getAnnouncements = asyncHandler(async (req, res) => {
   const configs = await GlobalConfig.find({ key: { $regex: /^announcement_/i } }).lean();
   const filtered = configs.filter((c) => !isSecretKey(c.key));
-  return sendSuccess(res, { announcements: filtered.map((c) => ({ key: c.key, value: c.value })) }, 'Announcements retrieved.');
+  return sendSuccess(
+    res,
+    { announcements: filtered.map((c) => ({ key: c.key, value: c.value })) },
+    'Announcements retrieved.'
+  );
 });
 
 const updateAnnouncement = asyncHandler(async (req, res) => {
@@ -235,9 +295,13 @@ const updateAnnouncement = asyncHandler(async (req, res) => {
 
 const getMaintenanceMode = asyncHandler(async (req, res) => {
   const config = await GlobalConfig.findOne({ key: 'maintenance_mode' }).lean();
-  return sendSuccess(res, {
-    maintenanceMode: config ? config.value : { enabled: false, message: '' },
-  }, 'Maintenance mode retrieved.');
+  return sendSuccess(
+    res,
+    {
+      maintenanceMode: config ? config.value : { enabled: false, message: '' },
+    },
+    'Maintenance mode retrieved.'
+  );
 });
 
 const toggleMaintenanceMode = asyncHandler(async (req, res) => {

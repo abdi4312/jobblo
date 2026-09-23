@@ -268,7 +268,8 @@ function resolveMobileReturnBase(req) {
     return { error: 'MOBILE_RETURN_URL is not set — refusing to derive it from the Host header' };
   }
   const host = req?.get?.('host');
-  if (!host) return { error: 'MOBILE_RETURN_URL is not set and the request carries no Host header' };
+  if (!host)
+    return { error: 'MOBILE_RETURN_URL is not set and the request carries no Host header' };
   return { base: `${req.protocol}://${host}` };
 }
 
@@ -432,24 +433,21 @@ exports.createSafePaySession = async (req, res) => {
     // ponytail: atomic session creation. Replaces check-then-create race with
     // findOneAndUpdate comparing status before Stripe session creation (impact:
     // multiple concurrent requests creating duplicate sessions).
-    
+
     // First, try to atomically claim the checkout-in-progress slot for this order.
     // If checkoutSessionId is unset OR expired, we own it. If it's set and open,
     // we fall back to reusing the existing session (single source of truth).
     const reclaimedOrder = await Order.findOneAndUpdate(
       {
         _id: orderId,
-        $or: [
-          { checkoutSessionId: null },
-          { checkoutSessionStatus: { $ne: 'open' } }
-        ]
+        $or: [{ checkoutSessionId: null }, { checkoutSessionStatus: { $ne: 'open' } }],
       },
       {
         $set: {
           checkoutSessionId: 'PENDING_' + Date.now() + '_' + Math.random().toString(36).slice(2),
           checkoutSessionStatus: 'pending',
-          checkoutSessionCreatedAt: new Date()
-        }
+          checkoutSessionCreatedAt: new Date(),
+        },
       },
       { new: true }
     );
@@ -457,11 +455,22 @@ exports.createSafePaySession = async (req, res) => {
     // If the update succeeded, we own the slot. If it returned null, the order
     // already has an open session from another request — reuse it.
     if (!reclaimedOrder) {
-      const currentOrder = await Order.findById(orderId).select('checkoutSessionId checkoutSessionStatus serviceId');
-      if (currentOrder && currentOrder.checkoutSessionId && currentOrder.checkoutSessionStatus === 'open') {
+      const currentOrder = await Order.findById(orderId).select(
+        'checkoutSessionId checkoutSessionStatus serviceId'
+      );
+      if (
+        currentOrder &&
+        currentOrder.checkoutSessionId &&
+        currentOrder.checkoutSessionStatus === 'open'
+      ) {
         try {
-          const existingSession = await stripe.checkout.sessions.retrieve(currentOrder.checkoutSessionId);
-          if (existingSession.status === 'open' && sameRedirectTarget(existingSession.success_url, redirects.success)) {
+          const existingSession = await stripe.checkout.sessions.retrieve(
+            currentOrder.checkoutSessionId
+          );
+          if (
+            existingSession.status === 'open' &&
+            sameRedirectTarget(existingSession.success_url, redirects.success)
+          ) {
             return res.json({ url: existingSession.url, reused: true });
           }
         } catch (_) {
@@ -773,7 +782,7 @@ exports.confirmPaidSession = confirmPaidSession;
  * Upload the customer's own review photos and get back URLs to send with `approve`.
  *
  * Mirrors providerWorkController.uploadEvidence rather than inventing a second convention:
- * multipart in, Cloudinary out, URLs back. It exists because the approval screen used to
+ * multipart in, Azure out, URLs back. It exists because the approval screen used to
  * inline the images as base64 in the approve request — see utils/reviewPhotos.js for what
  * that cost.
  */
@@ -804,7 +813,7 @@ exports.uploadReviewPhotos = async (req, res) => {
     }
 
     // The review is written at approval, so photos are only meaningful from the point the
-    // job is up for review. Uploading earlier would leave orphans in Cloudinary that no
+    // job is up for review. Uploading earlier would leave orphans in Azure that no
     // review ever references.
     if (!['ready_for_review', 'completed'].includes(order.status)) {
       return res.status(400).json({
@@ -812,10 +821,10 @@ exports.uploadReviewPhotos = async (req, res) => {
       });
     }
 
-    const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
+    const { uploadToAzure } = require('../utils/azureUpload');
     const urls = [];
     for (const file of files) {
-      urls.push(await uploadToCloudinary(file, `jobblo/reviews/${orderId}`));
+      urls.push(await uploadToAzure(file, `reviews/${orderId}`));
     }
 
     res.status(201).json({ urls });

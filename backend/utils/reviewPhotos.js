@@ -13,7 +13,7 @@
  *   3. Every read of that review — the provider's profile, the reviews list — shipped the
  *      full image bytes out of the database.
  *
- * Photos are uploaded to Cloudinary now (`POST /api/safepay-checkout/review-photos/:orderId`)
+ * Photos are uploaded to Azure now (`POST /api/safepay-checkout/review-photos/:orderId`)
  * and only the resulting URLs are stored. This validator is what makes that hold: it is
  * called by every path that writes `photos`, so an older client, a script, or a new caller
  * cannot put bytes back into the column.

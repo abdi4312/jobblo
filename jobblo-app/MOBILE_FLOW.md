@@ -1172,7 +1172,7 @@ The detail query remains `GET /api/safepay-checkout/details/:orderId`, and the c
 
 Checklist edits are restricted to the exact backend lifecycle window: `paid`, `in_progress`, and `ready_for_review`, and they are locked while an active dispute exists. On a `409` conflict, the screen refetches the server order and surfaces the backend-safe lock message without keeping stale optimistic state.
 
-The review form includes the full customer rating set: `overall` required, optional `punctuality`, `quality`, `communication`, and `tidiness`, with comment length capped at 1000 characters. `recommendWorker` remains user-editable via a native switch, and the final `approve` request sends Cloudinary review-photo URLs rather than base64. The final payload is:
+The review form includes the full customer rating set: `overall` required, optional `punctuality`, `quality`, `communication`, and `tidiness`, with comment length capped at 1000 characters. `recommendWorker` remains user-editable via a native switch, and the final `approve` request sends Azure review-photo URLs rather than base64. The final payload is:
 
 ```json
 {
@@ -3122,11 +3122,11 @@ Deleted account login is blocked on all paths (see OAuth / login section below).
 
 4. **IdentityClaim documents deleted.** `IdentityClaim.deleteMany({ userId: id })` — **NEW.** BankID/Idura stores identity claims in a SEPARATE collection (not only under `user.identityVerification.subdoc`) with `_id = IdentityClaim.keyFor('idura','no_bankid', subject)` (unique index). If we only nulled the subdoc, the same BankID person trying to register a new Jobblo account later would hit unique-key collision on the claim `_id`. Deleting the claims fully removes the dead-user binding from the Idura namespace.
 
-5. **Uploaded assets / Cloudinary deletion.** `Promise.allSettled` (never let Cloudinary/CDN failure prevent account completion) on every object whose schema actually stores a **publicId** (vs only imageUrl string):
-   - `user.avatarPublicId` → `cloudinary.uploader.destroy(publicId, { resource_type: 'image', invalidate: true })`
+5. **Uploaded assets / Azure Blob deletion.** `Promise.allSettled` (never let a storage/CDN failure prevent account completion) on every object whose schema actually stores a **publicId / blob name** (vs only imageUrl string):
+   - `user.avatarPublicId` → `deleteFromAzure(blobName)`
    - `user.bannerPublicId` → same
    - `user.certifications[].publicId` → each non-null one destroyed
-     **NOT deleted (no reliable publicId):** `portfolio[].imageUrl`, `previousProjects[].imageUrl`. The schema stores these as plain URL strings with no `{url, publicId}` sub-object, so the uploader's destination is ambiguous across local disk, Azure blob storage, and Cloudinary. URL-parsing a resource path from the CDN hostname would be unreliable across providers. The portfolio/previous-project arrays themselves are emptied (null content), so the URLs are no longer reachable through the Jobblo API even though the raw underlying blobs may remain in storage. This gap is explicitly stated: do not advertise "all uploaded files permanently deleted" to the user.
+     **NOT deleted (no reliable blob name):** `portfolio[].imageUrl`, `previousProjects[].imageUrl`. The schema stores these as plain URL strings with no `{url, blobName}` sub-object, so the stored path is ambiguous across local disk, Azure blob storage, and any 3rd-party CDN a user pasted. URL-parsing a resource path from the host would be unreliable across providers. The portfolio/previous-project arrays themselves are emptied (null content), so the URLs are no longer reachable through the Jobblo API even though the raw underlying blobs may remain in storage. This gap is explicitly stated: do not advertise "all uploaded files permanently deleted" to the user.
 
    SafePay financial evidence (Order.invoiceUrl, Payment.receiptUrl, etc.) is intentionally untouched. We do not have a clear business/legal retention policy that would allow destroying transaction evidence; it is left in place, and the anonymised userId foreign key is the only link back.
 
@@ -3259,7 +3259,7 @@ Web `DeleteAccountView.tsx` renders a `<textarea name="feedback">` and includes 
      Result: for a brief window (< typical socket heartbeat interval, worst case a few minutes on idle), another device's open socket can still emit chat events even though its Session DB row is gone. The next HTTP call from that device still correctly gets SESSION_REVOKED — only the already-open socket path has residual auth. Fixing this correctly would require per-event session middleware on all socket handlers (expensive, ~roundtrip to Mongo every keystroke) or a Redis pub/sub "kick userId" broadcast channel that every Socket.IO worker subscribes to. Both are explicitly out of scope per the task spec ("do NOT build a large new realtime system"). Documented only.
 
 2. **Portfolio and previous-project image blobs — not deleted from storage.**
-   Schema only stores `imageUrl` string — no publicId. We cannot reliably know whether a URL points to Cloudinary, Azure Blob, local disk `/uploads/`, or a 3rd-party CDN the user pasted. Extracting the path and guessing the resource token is not safe (could delete wrong resource, or fail silently leaving garbage). We empty the arrays so the Jobblo API never serves the URLs again. The raw blobs may remain in their storage bucket. If you want this closed, the real fix is to upgrade portfolio/previousProject schemas to `{ url, publicId, storageProvider }` sub-objects at upload time, then the same destroyPublicId helper works. Not done in this task (would require an upload middleware + migration, outside scope).
+   Schema only stores `imageUrl` string — no blob name. We cannot reliably know whether a URL points to Azure Blob, local disk `/uploads/`, or a 3rd-party CDN the user pasted. Extracting the path and guessing the resource token is not safe (could delete wrong resource, or fail silently leaving garbage). We empty the arrays so the Jobblo API never serves the URLs again. The raw blobs may remain in their storage bucket. If you want this closed, the real fix is to upgrade portfolio/previousProject schemas to `{ url, publicId, storageProvider }` sub-objects at upload time, then the same destroyPublicId helper works. Not done in this task (would require an upload middleware + migration, outside scope).
 
 3. **SafePay financial evidence — untouched by design.**
    Order.invoiceUrl, Payment.receiptUrl, any SafePay receipt PDFs — we don't have a business policy that allows destroying transaction evidence, even after profile erasure. They remain. The link back to the user is the anonymised User._id only (no name, email, phone left).
@@ -3277,7 +3277,7 @@ Runtime / device: not verified in this environment (user will perform manual dev
 
 Backend:
 
-- rewrote `backend/controllers/userController.js deleteUser`: added subscription guard via shared `findBillingCapableSubscription`, PushToken + IdentityClaim cleanup, Cloudinary avatar/banner/cert publicId destroy, full schema audit of anonymised fields, stable 409/503 codes `active_orders_exist` / `active_subscription_exists` / `subscription_check_unavailable`, best-effort same-process socket disconnect by userId
+- rewrote `backend/controllers/userController.js deleteUser`: added subscription guard via shared `findBillingCapableSubscription`, PushToken + IdentityClaim cleanup, Azure avatar/banner/cert blob destroy, full schema audit of anonymised fields, stable 409/503 codes `active_orders_exist` / `active_subscription_exists` / `subscription_check_unavailable`, best-effort same-process socket disconnect by userId
 - patched `backend/controllers/authController.js login`: added isDeleted/accountStatus guard before createSession
 - patched `backend/routes/auth.js Google callback`: same guard, redirect to `login?error=account_deactivated`
 - patched `backend/controllers/vippsController.js vippsLogin`: same guard

@@ -1,10 +1,25 @@
 const Service = require('../../models/Service');
-const { asyncHandler, sendSuccess, sendError, buildPagination } = require('../../utils/apiResponse');
+const {
+  asyncHandler,
+  sendSuccess,
+  sendError,
+  buildPagination,
+} = require('../../utils/apiResponse');
 const { parsePagination, parseObjectId, parseSort, parseDate } = require('../../utils/pagination');
 const { logActivity } = require('../../services/admin/activityService');
 
 const SORT_FIELDS = ['createdAt', 'updatedAt', 'price', 'title', 'views'];
-const VALID_STATUSES = ['open','closed','in_progress','completed','pending','waiting_for_approval','cancelled','expired','draft'];
+const VALID_STATUSES = [
+  'open',
+  'closed',
+  'in_progress',
+  'completed',
+  'pending',
+  'waiting_for_approval',
+  'cancelled',
+  'expired',
+  'draft',
+];
 
 /**
  * GET /api/admin/services
@@ -103,17 +118,11 @@ const deleteService = asyncHandler(async (req, res) => {
   const service = await Service.findById(id);
   if (!service) return sendError(res, 'Tjeneste ikke funnet.', 404);
 
-  // Clean up Cloudinary images if any
+  // Clean up stored images from Azure if any
   if (service.imageMetadata?.length > 0) {
-    try {
-      const cloudinary = require('../../config/cloudinary');
-      for (const meta of service.imageMetadata) {
-        if (meta.blobName) {
-          await cloudinary.uploader.destroy(meta.blobName).catch(() => {});
-        }
-      }
-    } catch {
-      // Image cleanup failure should not block record deletion
+    const { deleteFromAzure } = require('../../utils/azureUpload');
+    for (const meta of service.imageMetadata) {
+      if (meta.blobName) await deleteFromAzure(meta.blobName);
     }
   }
 
@@ -148,8 +157,16 @@ const updateService = asyncHandler(async (req, res) => {
 
   // ── Scalar fields ──────────────────────────────────────────────────────────
   const EDITABLE = [
-    'title', 'description', 'paymentType', 'equipment', 'status',
-    'urgent', 'promoted', 'countyCode', 'municipalityCode', 'areaCode',
+    'title',
+    'description',
+    'paymentType',
+    'equipment',
+    'status',
+    'urgent',
+    'promoted',
+    'countyCode',
+    'municipalityCode',
+    'areaCode',
   ];
   for (const field of EDITABLE) {
     if (b[field] !== undefined) service[field] = b[field];
@@ -180,19 +197,20 @@ const updateService = asyncHandler(async (req, res) => {
 
   // ── Location (supports both nested object and bracket notation) ───────────
   const locAddress = b['location[address]'] ?? b.location?.address;
-  const locCity    = b['location[city]']    ?? b.location?.city;
-  const locLng     = b['location[coordinates][0]'] ?? b.location?.coordinates?.[0];
-  const locLat     = b['location[coordinates][1]'] ?? b.location?.coordinates?.[1];
+  const locCity = b['location[city]'] ?? b.location?.city;
+  const locLng = b['location[coordinates][0]'] ?? b.location?.coordinates?.[0];
+  const locLat = b['location[coordinates][1]'] ?? b.location?.coordinates?.[1];
   if (locAddress !== undefined || locCity !== undefined || locLng !== undefined) {
     const existing = service.location?.toObject?.() ?? service.location ?? {};
     service.location = {
       ...existing,
       type: 'Point',
       ...(locAddress !== undefined && { address: locAddress }),
-      ...(locCity    !== undefined && { city: locCity }),
-      ...(locLng !== undefined && locLat !== undefined && {
-        coordinates: [Number(locLng), Number(locLat)],
-      }),
+      ...(locCity !== undefined && { city: locCity }),
+      ...(locLng !== undefined &&
+        locLat !== undefined && {
+          coordinates: [Number(locLng), Number(locLat)],
+        }),
     };
   }
 
@@ -207,22 +225,25 @@ const updateService = asyncHandler(async (req, res) => {
       service.checklist = parsed.map((item) => {
         const existing = service.checklist.find((c) => c.id === item.id);
         return {
-          id: item.id, text: item.text,
+          id: item.id,
+          text: item.text,
           checked: existing?.checked ?? false,
           checkedBy: existing?.checkedBy ?? null,
           checkedAt: existing?.checkedAt ?? null,
         };
       });
-    } catch { /* ignore bad checklist — don't block the save */ }
+    } catch {
+      /* ignore bad checklist — don't block the save */
+    }
   }
 
   // ── Image deletion ─────────────────────────────────────────────────────────
   if (b.imagesToDelete) {
-    const cloudinary = require('../../config/cloudinary');
+    const { deleteFromAzure } = require('../../utils/azureUpload');
     const toDelete = Array.isArray(b.imagesToDelete) ? b.imagesToDelete : [b.imagesToDelete];
     for (const url of toDelete) {
       const meta = service.imageMetadata.find((m) => m.url === url);
-      if (meta?.blobName) await cloudinary.uploader.destroy(meta.blobName).catch(() => {});
+      if (meta?.blobName) await deleteFromAzure(meta.blobName);
       service.images = service.images.filter((u) => u !== url);
       service.imageMetadata = service.imageMetadata.filter((m) => m.url !== url);
     }
@@ -231,9 +252,13 @@ const updateService = asyncHandler(async (req, res) => {
   // ── New image uploads (via multer, same as user route) ────────────────────
   if (req.files?.length) {
     service.images.push(...req.files.map((f) => f.path));
-    service.imageMetadata.push(...req.files.map((f) => ({
-      url: f.path, blobName: f.filename, uploadedAt: new Date(),
-    })));
+    service.imageMetadata.push(
+      ...req.files.map((f) => ({
+        url: f.path,
+        blobName: f.filename,
+        uploadedAt: new Date(),
+      }))
+    );
   }
 
   await service.save();

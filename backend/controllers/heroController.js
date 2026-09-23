@@ -1,5 +1,5 @@
 const Hero = require('../models/Hero');
-const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinaryUpload');
+const { uploadToAzure, deleteFromAzure } = require('../utils/azureUpload');
 
 /**
  * CREATE HERO
@@ -23,7 +23,7 @@ exports.CreateHero = async (req, res) => {
       if (!req.file.mimetype.startsWith('image/')) {
         return res.status(400).json({ error: 'Kun bildefiler er tillatt' });
       }
-      imageUrl = await uploadToCloudinary(req.file, 'hero');
+      imageUrl = await uploadToAzure(req.file, 'hero');
     } else if (req.body.image) {
       imageUrl = req.body.image; // If already a URL
     } else {
@@ -123,11 +123,9 @@ exports.UpdateHero = async (req, res) => {
       if (!req.file.mimetype.startsWith('image/')) {
         return res.status(400).json({ error: 'Kun bildefiler er tillatt' });
       }
-      // Delete old image from cloudinary
-      if (hero.image && hero.image.includes('cloudinary.com')) {
-        await deleteFromCloudinary(hero.image);
-      }
-      hero.image = await uploadToCloudinary(req.file, 'hero');
+      // Delete old image from Azure (no-op if it wasn't an Azure blob URL)
+      if (hero.image) await deleteFromAzure(hero.image);
+      hero.image = await uploadToAzure(req.file, 'hero');
     } else if (req.body.image) {
       hero.image = req.body.image;
     }
@@ -161,10 +159,8 @@ exports.DeleteHero = async (req, res) => {
       return res.status(404).json({ error: 'Hero ikke funnet' });
     }
 
-    // Delete image from cloudinary
-    if (hero.image && hero.image.includes('cloudinary.com')) {
-      await deleteFromCloudinary(hero.image);
-    }
+    // Delete image from Azure (no-op if it wasn't an Azure blob URL)
+    if (hero.image) await deleteFromAzure(hero.image);
 
     await Hero.findByIdAndDelete(id);
     res.status(200).json({ message: 'Hero slettet' });

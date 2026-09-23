@@ -250,17 +250,11 @@ exports.uploadEvidence = async (req, res) => {
       });
     }
 
-    const cloudinary = require('../config/cloudinary');
+    const { uploadBufferToAzure } = require('../utils/azureUpload');
     const urls = [];
     for (const file of files) {
-      const result = await new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { folder: `jobblo/orders/${orderId}/evidence`, resource_type: 'auto' },
-          (err, r) => (err ? reject(err) : resolve(r))
-        );
-        stream.end(file.buffer);
-      });
-      urls.push(result.secure_url);
+      const { url } = await uploadBufferToAzure(file, `orders/${orderId}/evidence`);
+      urls.push(url);
     }
     const upd = {
       $push: {
@@ -336,9 +330,9 @@ exports.deleteEvidence = async (req, res) => {
     if (!arr.includes(url))
       return res.status(404).json({ error: 'Bilde ikke funnet i denne kategorien' });
 
-    // Remove from Cloudinary too (best-effort — don't block DB update on cleanup failure)
-    const { deleteFromCloudinary } = require('../utils/cloudinaryUpload');
-    deleteFromCloudinary(url).catch((e) => console.warn('Cloudinary cleanup warning:', e.message));
+    // Remove from Azure too (best-effort — don't block DB update on cleanup failure)
+    const { deleteFromAzure } = require('../utils/azureUpload');
+    deleteFromAzure(url).catch((e) => console.warn('Azure cleanup warning:', e.message));
 
     const updated = await Order.findByIdAndUpdate(
       orderId,

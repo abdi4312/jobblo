@@ -24,11 +24,14 @@ const { PUBLIC_SERVICE_STATUSES } = require('../constants/serviceVisibility');
 const ENV = { PUBLIC_SITE_URL: 'https://jobblo.no' };
 const ID = '507f1f77bcf86cd799439011';
 
+// A stored listing photo as it looks in production: an Azure Blob URL.
+const LISTING_PHOTO = 'https://jobblostorage001.blob.core.windows.net/images/job_images/job.jpg';
+
 const listing = (overrides = {}) => ({
   status: 'open',
   title: 'Male to soverom',
   description: 'Trenger en maler til to soverom i Oslo. Malingen er kjøpt.',
-  images: ['https://res.cloudinary.com/jobblo/image/upload/v1/job.jpg'],
+  images: [LISTING_PHOTO],
   ...overrides,
 });
 
@@ -131,9 +134,7 @@ describe('3. description comes from safe public listing content', () => {
 
 describe('4. the listing image is used, absolute', () => {
   it('uses the first usable listing photo', () => {
-    expect(buildListingPreview(listing(), ID, ENV).image).toBe(
-      'https://res.cloudinary.com/jobblo/image/upload/v1/job.jpg'
-    );
+    expect(buildListingPreview(listing(), ID, ENV).image).toBe(LISTING_PHOTO);
   });
 
   it('skips empty entries to find a real one', () => {
@@ -203,7 +204,7 @@ describe('5. fallback image behaviour', () => {
 
   it('prefers the listing photo over the fallback', () => {
     const env = { ...ENV, SOCIAL_SHARE_IMAGE: '/og-default.png' };
-    expect(buildListingPreview(listing(), ID, env).image).toMatch(/cloudinary/);
+    expect(buildListingPreview(listing(), ID, env).image).toBe(LISTING_PHOTO);
   });
 });
 

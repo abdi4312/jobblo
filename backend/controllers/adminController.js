@@ -39,7 +39,11 @@ exports.getAllUsers = async (req, res) => {
     const [totalUsers, activeThisMonth, users] = await Promise.all([
       User.countDocuments(query),
       User.countDocuments({ isDeleted: { $ne: true }, createdAt: { $gte: startOfMonth } }),
-      User.find(query).select('-password -passwordResetToken -passwordResetExpires').skip(skip).limit(limit).sort({ createdAt: -1 }),
+      User.find(query)
+        .select('-password -passwordResetToken -passwordResetExpires')
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 }),
     ]);
 
     res.json({
@@ -61,7 +65,9 @@ exports.createUser = async (req, res) => {
 
     const ASSIGNABLE_ROLES = ['user', 'provider', 'company'];
     if (role && !ASSIGNABLE_ROLES.includes(role)) {
-      return res.status(400).json({ message: `Ugyldig rolle. Tillatte roller: ${ASSIGNABLE_ROLES.join(', ')}.` });
+      return res
+        .status(400)
+        .json({ message: `Ugyldig rolle. Tillatte roller: ${ASSIGNABLE_ROLES.join(', ')}.` });
     }
 
     const hashed = await bcrypt.hash(password, 12);
@@ -242,7 +248,9 @@ exports.changeUserRole = async (req, res) => {
     const { role } = req.body;
     const ASSIGNABLE_ROLES = ['user', 'provider', 'company'];
     if (!role || !ASSIGNABLE_ROLES.includes(role)) {
-      return res.status(400).json({ error: `Ugyldig rolle. Tillatte roller: ${ASSIGNABLE_ROLES.join(', ')}.` });
+      return res
+        .status(400)
+        .json({ error: `Ugyldig rolle. Tillatte roller: ${ASSIGNABLE_ROLES.join(', ')}.` });
     }
 
     const mongoose = require('mongoose');
@@ -255,7 +263,11 @@ exports.changeUserRole = async (req, res) => {
       return res.status(403).json({ error: 'Du kan ikke endre din egen rolle.' });
     }
 
-    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true, runValidators: true }).select('-password -passwordResetToken -passwordResetExpires');
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role },
+      { new: true, runValidators: true }
+    ).select('-password -passwordResetToken -passwordResetExpires');
     if (!user) return res.status(404).json({ error: 'Bruker ikke funnet.' });
     res.json(user);
   } catch (err) {
@@ -314,17 +326,11 @@ exports.deleteService = async (req, res) => {
     const service = await Service.findById(id);
     if (!service) return res.status(404).json({ error: 'Service not found' });
 
-    // ⭐ DELETE ALL IMAGES FROM CLOUDINARY
+    // ⭐ DELETE ALL IMAGES FROM AZURE
     if (service.imageMetadata && service.imageMetadata.length > 0) {
-      const cloudinary = require('../config/cloudinary');
+      const { deleteFromAzure } = require('../utils/azureUpload');
       for (const meta of service.imageMetadata) {
-        if (meta.blobName) {
-          try {
-            await cloudinary.uploader.destroy(meta.blobName);
-          } catch (err) {
-            console.error('Cloudinary bulk deletion error:', err);
-          }
-        }
+        if (meta.blobName) await deleteFromAzure(meta.blobName);
       }
     }
 

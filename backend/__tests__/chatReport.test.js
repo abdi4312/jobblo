@@ -20,13 +20,34 @@ const mockQuery = (resolveValue) => {
 };
 
 const VALID_REPORT_TYPES = [
-  'harassment', 'abusive_language', 'threats', 'spam', 'scam_or_fraud',
-  'payment_issue', 'safepay_issue', 'work_not_completed', 'poor_quality',
-  'different_from_agreement', 'inappropriate_content', 'fake_profile',
-  'identity_issue', 'suspicious_link', 'privacy_violation',
-  'off_platform_payment_request', 'other',
+  'harassment',
+  'abusive_language',
+  'threats',
+  'spam',
+  'scam_or_fraud',
+  'payment_issue',
+  'safepay_issue',
+  'work_not_completed',
+  'poor_quality',
+  'different_from_agreement',
+  'inappropriate_content',
+  'fake_profile',
+  'identity_issue',
+  'suspicious_link',
+  'privacy_violation',
+  'off_platform_payment_request',
+  'other',
 ];
-const VALID_STATUSES = ['open', 'under_review', 'waiting_for_reporter', 'waiting_for_reported_user', 'action_required', 'resolved', 'dismissed', 'closed'];
+const VALID_STATUSES = [
+  'open',
+  'under_review',
+  'waiting_for_reporter',
+  'waiting_for_reported_user',
+  'action_required',
+  'resolved',
+  'dismissed',
+  'closed',
+];
 const VALID_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 
 jest.mock('../models/ChatMessage', () => ({
@@ -106,9 +127,9 @@ jest.mock('../models/SafePayHistory', () => ({
   aggregate: jest.fn(),
 }));
 
-jest.mock('../utils/cloudinaryUpload', () => ({
-  uploadToCloudinary: jest.fn().mockResolvedValue('https://example.com/file.jpg'),
-  deleteFromCloudinary: jest.fn(),
+jest.mock('../utils/azureUpload', () => ({
+  uploadToAzure: jest.fn().mockResolvedValue('https://example.com/file.jpg'),
+  deleteFromAzure: jest.fn(),
 }));
 
 jest.mock('../services/admin/activityService');
@@ -239,8 +260,7 @@ describe('Chat Report System', () => {
      */
     const VALID_REPORT_BODY = {
       title: 'Mistenkelig oppførsel',
-      description:
-        'Motparten ba om betaling utenfor plattformen og sluttet å svare etterpå.',
+      description: 'Motparten ba om betaling utenfor plattformen og sluttet å svare etterpå.',
     };
 
     beforeAll(() => {
@@ -249,7 +269,12 @@ describe('Chat Report System', () => {
 
     test('returns 400 for invalid Chat ID', async () => {
       req.params.chatId = 'invalid';
-      req.body = { scope: 'chat', reportType: 'spam', title: 'Test', description: 'Test description' };
+      req.body = {
+        scope: 'chat',
+        reportType: 'spam',
+        title: 'Test',
+        description: 'Test description',
+      };
       await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
@@ -268,9 +293,14 @@ describe('Chat Report System', () => {
       const chatId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
       req.body = { scope: 'chat', reportType: 'spam', ...VALID_REPORT_BODY };
-      Chat.findById.mockReturnValue(mockQuery({
-        _id: chatId, clientId: new mongoose.Types.ObjectId(), providerId: new mongoose.Types.ObjectId(), messages: [],
-      }));
+      Chat.findById.mockReturnValue(
+        mockQuery({
+          _id: chatId,
+          clientId: new mongoose.Types.ObjectId(),
+          providerId: new mongoose.Types.ObjectId(),
+          messages: [],
+        })
+      );
       await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(403);
     });
@@ -279,7 +309,14 @@ describe('Chat Report System', () => {
       const chatId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
       req.body = { scope: 'chat', reportType: 'spam', title: '', description: 'Test' };
-      Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId: req.userId, providerId: new mongoose.Types.ObjectId(), messages: [] }));
+      Chat.findById.mockReturnValue(
+        mockQuery({
+          _id: chatId,
+          clientId: req.userId,
+          providerId: new mongoose.Types.ObjectId(),
+          messages: [],
+        })
+      );
       await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
     });
@@ -288,7 +325,14 @@ describe('Chat Report System', () => {
       const chatId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
       req.body = { scope: 'chat', reportType: 'spam', title: 'Test', description: '' };
-      Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId: req.userId, providerId: new mongoose.Types.ObjectId(), messages: [] }));
+      Chat.findById.mockReturnValue(
+        mockQuery({
+          _id: chatId,
+          clientId: req.userId,
+          providerId: new mongoose.Types.ObjectId(),
+          messages: [],
+        })
+      );
       await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
     });
@@ -299,9 +343,25 @@ describe('Chat Report System', () => {
       const providerId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
       req.body = { scope: 'chat', reportType: 'scam_or_fraud', ...VALID_REPORT_BODY };
-      Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId, providerId, orderId: null, serviceId: null, messages: [] }));
+      Chat.findById.mockReturnValue(
+        mockQuery({
+          _id: chatId,
+          clientId,
+          providerId,
+          orderId: null,
+          serviceId: null,
+          messages: [],
+        })
+      );
       ChatReport.findOne.mockReturnValue(mockQuery(null));
-      ChatReport.create.mockResolvedValue({ _id: new mongoose.Types.ObjectId(), chatId, scope: 'chat', reportType: 'scam_or_fraud', reportedBy: clientId, reportedUser: providerId });
+      ChatReport.create.mockResolvedValue({
+        _id: new mongoose.Types.ObjectId(),
+        chatId,
+        scope: 'chat',
+        reportType: 'scam_or_fraud',
+        reportedBy: clientId,
+        reportedUser: providerId,
+      });
       User.find.mockReturnValue(mockQuery([]));
       await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(201);
@@ -314,10 +374,29 @@ describe('Chat Report System', () => {
       const providerId = new mongoose.Types.ObjectId();
       const messageId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
-      req.body = { scope: 'message', messageId: String(messageId), reportType: 'harassment', ...VALID_REPORT_BODY };
-      Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId, providerId, orderId: null, serviceId: null, messages: [{ _id: messageId }] }));
+      req.body = {
+        scope: 'message',
+        messageId: String(messageId),
+        reportType: 'harassment',
+        ...VALID_REPORT_BODY,
+      };
+      Chat.findById.mockReturnValue(
+        mockQuery({
+          _id: chatId,
+          clientId,
+          providerId,
+          orderId: null,
+          serviceId: null,
+          messages: [{ _id: messageId }],
+        })
+      );
       ChatReport.findOne.mockReturnValue(mockQuery(null));
-      ChatReport.create.mockResolvedValue({ _id: new mongoose.Types.ObjectId(), chatId, scope: 'message', messageId: String(messageId) });
+      ChatReport.create.mockResolvedValue({
+        _id: new mongoose.Types.ObjectId(),
+        chatId,
+        scope: 'message',
+        messageId: String(messageId),
+      });
       User.find.mockReturnValue(mockQuery([]));
       await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(201);
@@ -332,7 +411,14 @@ describe('Chat Report System', () => {
       const chatId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
       req.body = { scope: 'message', reportType: 'harassment', ...VALID_REPORT_BODY };
-      Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId: req.userId, providerId: new mongoose.Types.ObjectId(), messages: [{ _id: new mongoose.Types.ObjectId() }] }));
+      Chat.findById.mockReturnValue(
+        mockQuery({
+          _id: chatId,
+          clientId: req.userId,
+          providerId: new mongoose.Types.ObjectId(),
+          messages: [{ _id: new mongoose.Types.ObjectId() }],
+        })
+      );
       await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
@@ -343,8 +429,20 @@ describe('Chat Report System', () => {
     test('message ID not present in the chat returns 404', async () => {
       const chatId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
-      req.body = { scope: 'message', messageId: 'nonexistent', reportType: 'harassment', ...VALID_REPORT_BODY };
-      Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId: req.userId, providerId: new mongoose.Types.ObjectId(), messages: [{ _id: new mongoose.Types.ObjectId() }] }));
+      req.body = {
+        scope: 'message',
+        messageId: 'nonexistent',
+        reportType: 'harassment',
+        ...VALID_REPORT_BODY,
+      };
+      Chat.findById.mockReturnValue(
+        mockQuery({
+          _id: chatId,
+          clientId: req.userId,
+          providerId: new mongoose.Types.ObjectId(),
+          messages: [{ _id: new mongoose.Types.ObjectId() }],
+        })
+      );
       await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith(
@@ -356,7 +454,16 @@ describe('Chat Report System', () => {
       const chatId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
       req.body = { scope: 'chat', reportType: 'spam', ...VALID_REPORT_BODY };
-      Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId: req.userId, providerId: new mongoose.Types.ObjectId(), orderId: null, serviceId: null, messages: [] }));
+      Chat.findById.mockReturnValue(
+        mockQuery({
+          _id: chatId,
+          clientId: req.userId,
+          providerId: new mongoose.Types.ObjectId(),
+          orderId: null,
+          serviceId: null,
+          messages: [],
+        })
+      );
       ChatReport.findOne.mockReturnValue(mockQuery({ _id: new mongoose.Types.ObjectId() }));
       await chatReportController.submitChatReport(req, res);
       expect(res.status).toHaveBeenCalledWith(429);
@@ -370,12 +477,22 @@ describe('Chat Report System', () => {
       const orderId = new mongoose.Types.ObjectId();
       req.params.chatId = chatId;
       req.body = { scope: 'chat', reportType: 'payment_issue', ...VALID_REPORT_BODY };
-      Chat.findById.mockReturnValue(mockQuery({ _id: chatId, clientId, providerId, orderId, serviceId, messages: [] }));
+      Chat.findById.mockReturnValue(
+        mockQuery({ _id: chatId, clientId, providerId, orderId, serviceId, messages: [] })
+      );
       ChatReport.findOne.mockReturnValue(mockQuery(null));
-      ChatReport.create.mockResolvedValue({ _id: new mongoose.Types.ObjectId(), chatId, orderId, serviceId, safePayOrderId: orderId });
+      ChatReport.create.mockResolvedValue({
+        _id: new mongoose.Types.ObjectId(),
+        chatId,
+        orderId,
+        serviceId,
+        safePayOrderId: orderId,
+      });
       User.find.mockReturnValue(mockQuery([]));
       await chatReportController.submitChatReport(req, res);
-      expect(ChatReport.create).toHaveBeenCalledWith(expect.objectContaining({ chatId, orderId, serviceId }));
+      expect(ChatReport.create).toHaveBeenCalledWith(
+        expect.objectContaining({ chatId, orderId, serviceId })
+      );
     });
   });
 
@@ -401,7 +518,9 @@ describe('Chat Report System', () => {
       Chat.countDocuments.mockReturnValue(mockQuery(2));
       Chat.find.mockReturnValue(mockQuery([chat1, makeChat()]));
       ChatReport.aggregate.mockReturnValue(mockQuery([]));
-      Chat.aggregate.mockReturnValue(mockQuery([{ _id: chat1._id, messageCount: 2, attachmentCount: 0, lastMessageAt: null }]));
+      Chat.aggregate.mockReturnValue(
+        mockQuery([{ _id: chat1._id, messageCount: 2, attachmentCount: 0, lastMessageAt: null }])
+      );
       await adminChats.getChats(req, res);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
     });
@@ -540,7 +659,9 @@ describe('Chat Report System', () => {
       ChatReport.aggregate.mockReturnValue(mockQuery([]));
       Chat.aggregate.mockReturnValue(mockQuery([]));
       await adminChats.getChats(req, res);
-      expect(Chat.find).toHaveBeenCalledWith(expect.objectContaining({ orderId: { $exists: true, $ne: null } }));
+      expect(Chat.find).toHaveBeenCalledWith(
+        expect.objectContaining({ orderId: { $exists: true, $ne: null } })
+      );
     });
 
     test('filter by safePayLinked = false', async () => {
@@ -561,7 +682,9 @@ describe('Chat Report System', () => {
       Chat.aggregate.mockReturnValue(mockQuery([]));
       await adminChats.getChats(req, res);
       expect(Chat.find).toHaveBeenCalledWith(
-        expect.objectContaining({ createdAt: expect.objectContaining({ $gte: expect.any(Date), $lte: expect.any(Date) }) })
+        expect.objectContaining({
+          createdAt: expect.objectContaining({ $gte: expect.any(Date), $lte: expect.any(Date) }),
+        })
       );
     });
 
@@ -577,7 +700,9 @@ describe('Chat Report System', () => {
       Chat.aggregate.mockReturnValue(mockQuery([]));
       await adminChats.getChats(req, res);
       expect(Chat.find).toHaveBeenCalledWith(
-        expect.objectContaining({ $or: expect.arrayContaining([{ serviceId: { $in: [serviceId] } }]) })
+        expect.objectContaining({
+          $or: expect.arrayContaining([{ serviceId: { $in: [serviceId] } }]),
+        })
       );
     });
 
@@ -593,7 +718,12 @@ describe('Chat Report System', () => {
       Chat.aggregate.mockReturnValue(mockQuery([]));
       await adminChats.getChats(req, res);
       expect(Chat.find).toHaveBeenCalledWith(
-        expect.objectContaining({ $or: expect.arrayContaining([{ clientId: { $in: [userId] } }, { providerId: { $in: [userId] } }]) })
+        expect.objectContaining({
+          $or: expect.arrayContaining([
+            { clientId: { $in: [userId] } },
+            { providerId: { $in: [userId] } },
+          ]),
+        })
       );
     });
 
@@ -602,12 +732,20 @@ describe('Chat Report System', () => {
       Service.find.mockReturnValue(mockQuery([]));
       User.find.mockReturnValue(mockQuery([]));
       await adminChats.getChats(req, res);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, data: { chats: [] } }));
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true, data: { chats: [] } })
+      );
     });
 
     test('pagination metadata is returned', async () => {
       Chat.countDocuments.mockReturnValue(mockQuery(25));
-      Chat.find.mockReturnValue(mockQuery(Array(15).fill(null).map(() => makeChat())));
+      Chat.find.mockReturnValue(
+        mockQuery(
+          Array(15)
+            .fill(null)
+            .map(() => makeChat())
+        )
+      );
       ChatReport.aggregate.mockReturnValue(mockQuery([]));
       Chat.aggregate.mockReturnValue(mockQuery([]));
       req.query = { page: '1', limit: '15' };
@@ -646,19 +784,30 @@ describe('Chat Report System', () => {
 
     test('returns chat metadata with participants', async () => {
       const chatId = new mongoose.Types.ObjectId();
-      const chat = makeChat({ _id: chatId, messages: [{ _id: new mongoose.Types.ObjectId(), text: 'Hello', senderId: new mongoose.Types.ObjectId() }] });
+      const chat = makeChat({
+        _id: chatId,
+        messages: [
+          {
+            _id: new mongoose.Types.ObjectId(),
+            text: 'Hello',
+            senderId: new mongoose.Types.ObjectId(),
+          },
+        ],
+      });
       req.params = { chatId: String(chatId) };
       Chat.findById.mockReturnValue(mockQuery(chat));
       ChatReport.countDocuments.mockReturnValue(mockQuery(2));
       Payment.findOne.mockReturnValue(mockQuery(null));
       Dispute.findOne.mockReturnValue(mockQuery(null));
       await adminChats.getChatById(req, res);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        success: true,
-        data: expect.objectContaining({
-          chat: expect.objectContaining({ _id: chatId, reportCount: 2 }),
-        }),
-      }));
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          data: expect.objectContaining({
+            chat: expect.objectContaining({ _id: chatId, reportCount: 2 }),
+          }),
+        })
+      );
     });
 
     test('includes payment info when linked', async () => {
@@ -667,12 +816,16 @@ describe('Chat Report System', () => {
       req.params = { chatId: String(chat._id) };
       Chat.findById.mockReturnValue(mockQuery(chat));
       ChatReport.countDocuments.mockReturnValue(mockQuery(0));
-      Payment.findOne.mockReturnValue(mockQuery({ status: 'completed', amount: 1500, stripePaymentIntentId: 'pi_xxx' }));
+      Payment.findOne.mockReturnValue(
+        mockQuery({ status: 'completed', amount: 1500, stripePaymentIntentId: 'pi_xxx' })
+      );
       Dispute.findOne.mockReturnValue(mockQuery(null));
       await adminChats.getChatById(req, res);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        data: expect.objectContaining({ payment: { status: 'completed', amount: 1500 } }),
-      }));
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ payment: { status: 'completed', amount: 1500 } }),
+        })
+      );
     });
 
     test('excludes stripePaymentIntentId from response', async () => {
@@ -681,7 +834,9 @@ describe('Chat Report System', () => {
       req.params = { chatId: String(chat._id) };
       Chat.findById.mockReturnValue(mockQuery(chat));
       ChatReport.countDocuments.mockReturnValue(mockQuery(0));
-      Payment.findOne.mockReturnValue(mockQuery({ status: 'completed', amount: 1500, stripePaymentIntentId: 'pi_xxx' }));
+      Payment.findOne.mockReturnValue(
+        mockQuery({ status: 'completed', amount: 1500, stripePaymentIntentId: 'pi_xxx' })
+      );
       Dispute.findOne.mockReturnValue(mockQuery(null));
       await adminChats.getChatById(req, res);
       const data = res.json.mock.calls[0][0].data;
@@ -695,11 +850,15 @@ describe('Chat Report System', () => {
       Chat.findById.mockReturnValue(mockQuery(chat));
       ChatReport.countDocuments.mockReturnValue(mockQuery(0));
       Payment.findOne.mockReturnValue(mockQuery(null));
-      Dispute.findOne.mockReturnValue(mockQuery({ _id: new mongoose.Types.ObjectId(), status: 'open', priority: 'high' }));
+      Dispute.findOne.mockReturnValue(
+        mockQuery({ _id: new mongoose.Types.ObjectId(), status: 'open', priority: 'high' })
+      );
       await adminChats.getChatById(req, res);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        data: expect.objectContaining({ dispute: expect.objectContaining({ status: 'open' }) }),
-      }));
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ dispute: expect.objectContaining({ status: 'open' }) }),
+        })
+      );
     });
   });
 
@@ -752,13 +911,24 @@ describe('Chat Report System', () => {
       req.query = { accessReason: 'SafePay review' };
       req.user = { _id: new mongoose.Types.ObjectId() };
 
-      Chat.findById.mockReturnValue(mockQuery({
-        _id: chatId,
-        clientId: new mongoose.Types.ObjectId(),
-        providerId: new mongoose.Types.ObjectId(),
-        orderId: new mongoose.Types.ObjectId(),
-        messages: [{ _id: msgId, text: 'Hello', type: 'text', attachments: [], senderId: { _id: senderId, name: 'John', email: 'john@test.com', role: 'user' }, createdAt: new Date() }],
-      }));
+      Chat.findById.mockReturnValue(
+        mockQuery({
+          _id: chatId,
+          clientId: new mongoose.Types.ObjectId(),
+          providerId: new mongoose.Types.ObjectId(),
+          orderId: new mongoose.Types.ObjectId(),
+          messages: [
+            {
+              _id: msgId,
+              text: 'Hello',
+              type: 'text',
+              attachments: [],
+              senderId: { _id: senderId, name: 'John', email: 'john@test.com', role: 'user' },
+              createdAt: new Date(),
+            },
+          ],
+        })
+      );
       ChatReport.find.mockReturnValue(mockQuery([]));
       logActivity.mockResolvedValue({});
 
@@ -777,14 +947,27 @@ describe('Chat Report System', () => {
       req.query = { accessReason: 'Report investigation' };
       req.user = { _id: new mongoose.Types.ObjectId() };
 
-      Chat.findById.mockReturnValue(mockQuery({
-        _id: chatId,
-        clientId: new mongoose.Types.ObjectId(),
-        providerId: new mongoose.Types.ObjectId(),
-        orderId: null,
-        messages: [{ _id: msgId, text: 'Bad', type: 'text', attachments: [], senderId: { _id: new mongoose.Types.ObjectId(), name: 'X', role: 'user' }, createdAt: new Date() }],
-      }));
-      ChatReport.find.mockReturnValue(mockQuery([{ messageId: String(msgId), reportType: 'harassment', status: 'open' }]));
+      Chat.findById.mockReturnValue(
+        mockQuery({
+          _id: chatId,
+          clientId: new mongoose.Types.ObjectId(),
+          providerId: new mongoose.Types.ObjectId(),
+          orderId: null,
+          messages: [
+            {
+              _id: msgId,
+              text: 'Bad',
+              type: 'text',
+              attachments: [],
+              senderId: { _id: new mongoose.Types.ObjectId(), name: 'X', role: 'user' },
+              createdAt: new Date(),
+            },
+          ],
+        })
+      );
+      ChatReport.find.mockReturnValue(
+        mockQuery([{ messageId: String(msgId), reportType: 'harassment', status: 'open' }])
+      );
       logActivity.mockResolvedValue({});
 
       await adminChats.getChatMessages(req, res);
@@ -799,18 +982,26 @@ describe('Chat Report System', () => {
       req.query = { accessReason: 'SafePay review' };
       req.user = { _id: adminId };
 
-      Chat.findById.mockReturnValue(mockQuery({
-        _id: chatId, clientId: new mongoose.Types.ObjectId(), providerId: new mongoose.Types.ObjectId(), orderId: null, messages: [],
-      }));
+      Chat.findById.mockReturnValue(
+        mockQuery({
+          _id: chatId,
+          clientId: new mongoose.Types.ObjectId(),
+          providerId: new mongoose.Types.ObjectId(),
+          orderId: null,
+          messages: [],
+        })
+      );
       ChatReport.find.mockReturnValue(mockQuery([]));
       logActivity.mockResolvedValue({});
 
       await adminChats.getChatMessages(req, res);
-      expect(logActivity).toHaveBeenCalledWith(expect.objectContaining({
-        adminId,
-        targetId: chatId,
-        description: expect.stringContaining('SafePay review'),
-      }));
+      expect(logActivity).toHaveBeenCalledWith(
+        expect.objectContaining({
+          adminId,
+          targetId: chatId,
+          description: expect.stringContaining('SafePay review'),
+        })
+      );
     });
 
     test('includes access reason and logged flag in response', async () => {
@@ -819,16 +1010,24 @@ describe('Chat Report System', () => {
       req.query = { accessReason: 'Support request' };
       req.user = { _id: new mongoose.Types.ObjectId() };
 
-      Chat.findById.mockReturnValue(mockQuery({
-        _id: chatId, clientId: new mongoose.Types.ObjectId(), providerId: new mongoose.Types.ObjectId(), orderId: null, messages: [],
-      }));
+      Chat.findById.mockReturnValue(
+        mockQuery({
+          _id: chatId,
+          clientId: new mongoose.Types.ObjectId(),
+          providerId: new mongoose.Types.ObjectId(),
+          orderId: null,
+          messages: [],
+        })
+      );
       ChatReport.find.mockReturnValue(mockQuery([]));
       logActivity.mockResolvedValue({});
 
       await adminChats.getChatMessages(req, res);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        data: expect.objectContaining({ accessLogged: true, reason: 'Support request' }),
-      }));
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ accessLogged: true, reason: 'Support request' }),
+        })
+      );
     });
 
     test('returns system messages', async () => {
@@ -837,15 +1036,25 @@ describe('Chat Report System', () => {
       req.query = { accessReason: 'SafePay review' };
       req.user = { _id: new mongoose.Types.ObjectId() };
 
-      Chat.findById.mockReturnValue(mockQuery({
-        _id: chatId,
-        clientId: new mongoose.Types.ObjectId(),
-        providerId: new mongoose.Types.ObjectId(),
-        orderId: null,
-        messages: [
-          { _id: new mongoose.Types.ObjectId(), text: 'Payment completed', type: 'system_payment', attachments: [], senderId: null, systemData: { amount: 1500 }, createdAt: new Date() },
-        ],
-      }));
+      Chat.findById.mockReturnValue(
+        mockQuery({
+          _id: chatId,
+          clientId: new mongoose.Types.ObjectId(),
+          providerId: new mongoose.Types.ObjectId(),
+          orderId: null,
+          messages: [
+            {
+              _id: new mongoose.Types.ObjectId(),
+              text: 'Payment completed',
+              type: 'system_payment',
+              attachments: [],
+              senderId: null,
+              systemData: { amount: 1500 },
+              createdAt: new Date(),
+            },
+          ],
+        })
+      );
       ChatReport.find.mockReturnValue(mockQuery([]));
       logActivity.mockResolvedValue({});
 
@@ -890,11 +1099,13 @@ describe('Chat Report System', () => {
       logActivity.mockResolvedValue({});
 
       await adminChats.logChatAccess(req, res);
-      expect(logActivity).toHaveBeenCalledWith(expect.objectContaining({
-        adminId,
-        targetId: chatId,
-        description: expect.stringContaining('Fraud investigation'),
-      }));
+      expect(logActivity).toHaveBeenCalledWith(
+        expect.objectContaining({
+          adminId,
+          targetId: chatId,
+          description: expect.stringContaining('Fraud investigation'),
+        })
+      );
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
     });
   });
@@ -946,7 +1157,9 @@ describe('Chat Report System', () => {
     test('filters by status', async () => {
       req.query = { status: 'open' };
       ChatReport.countDocuments.mockReturnValue(mockQuery(2));
-      ChatReport.find.mockReturnValue(mockQuery([makeReport({ status: 'open' }), makeReport({ status: 'open' })]));
+      ChatReport.find.mockReturnValue(
+        mockQuery([makeReport({ status: 'open' }), makeReport({ status: 'open' })])
+      );
       await reportAdmin.getReports(req, res);
       expect(ChatReport.find).toHaveBeenCalledWith(expect.objectContaining({ status: 'open' }));
     });
@@ -964,7 +1177,9 @@ describe('Chat Report System', () => {
       ChatReport.countDocuments.mockReturnValue(mockQuery(1));
       ChatReport.find.mockReturnValue(mockQuery([makeReport({ reportType: 'scam_or_fraud' })]));
       await reportAdmin.getReports(req, res);
-      expect(ChatReport.find).toHaveBeenCalledWith(expect.objectContaining({ reportType: 'scam_or_fraud' }));
+      expect(ChatReport.find).toHaveBeenCalledWith(
+        expect.objectContaining({ reportType: 'scam_or_fraud' })
+      );
     });
 
     test('filters by Chat ID', async () => {
@@ -982,7 +1197,9 @@ describe('Chat Report System', () => {
       ChatReport.find.mockReturnValue(mockQuery([makeReport()]));
       await reportAdmin.getReports(req, res);
       expect(ChatReport.find).toHaveBeenCalledWith(
-        expect.objectContaining({ createdAt: expect.objectContaining({ $gte: expect.any(Date), $lte: expect.any(Date) }) })
+        expect.objectContaining({
+          createdAt: expect.objectContaining({ $gte: expect.any(Date), $lte: expect.any(Date) }),
+        })
       );
     });
 
@@ -995,11 +1212,13 @@ describe('Chat Report System', () => {
 
     test('summary endpoint returns counts', async () => {
       ChatReport.countDocuments.mockReturnValue(mockQuery(5));
-      ChatReport.aggregate.mockReturnValue(mockQuery([
-        { _id: 'open', count: 3 },
-        { _id: 'under_review', count: 1 },
-        { _id: 'resolved', count: 4 },
-      ]));
+      ChatReport.aggregate.mockReturnValue(
+        mockQuery([
+          { _id: 'open', count: 3 },
+          { _id: 'under_review', count: 1 },
+          { _id: 'resolved', count: 4 },
+        ])
+      );
       await reportAdmin.getReportsSummary(req, res);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
     });
@@ -1067,7 +1286,12 @@ describe('Chat Report System', () => {
       const reportId = new mongoose.Types.ObjectId();
       req.params = { reportId: String(reportId) };
       const existingAdminId = new mongoose.Types.ObjectId();
-      const report = makeReport({ _id: reportId, assignedAdminId: existingAdminId, status: 'open', timeline: [] });
+      const report = makeReport({
+        _id: reportId,
+        assignedAdminId: existingAdminId,
+        status: 'open',
+        timeline: [],
+      });
       ChatReport.findById.mockReturnValue(mockQuery(report));
       logActivity.mockResolvedValue({});
       await reportAdmin.assignReport(req, res);
@@ -1190,7 +1414,12 @@ describe('Chat Report System', () => {
       const reportId = new mongoose.Types.ObjectId();
       req.params = { reportId: String(reportId) };
       req.body = { outcome: 'no_violation', reason: 'No evidence found.' };
-      const report = makeReport({ _id: reportId, status: 'under_review', resolution: null, timeline: [] });
+      const report = makeReport({
+        _id: reportId,
+        status: 'under_review',
+        resolution: null,
+        timeline: [],
+      });
       ChatReport.findById.mockReturnValue(mockQuery(report));
       logActivity.mockResolvedValue({});
       await reportAdmin.resolveReport(req, res);
@@ -1290,9 +1519,23 @@ describe('Chat Report System', () => {
       const reportId = new mongoose.Types.ObjectId();
       const orderId = new mongoose.Types.ObjectId();
       req.params = { reportId: String(reportId) };
-      const report = makeReport({ _id: reportId, safePayOrderId: orderId, orderId, chatId: new mongoose.Types.ObjectId(), disputeId: null, timeline: [] });
+      const report = makeReport({
+        _id: reportId,
+        safePayOrderId: orderId,
+        orderId,
+        chatId: new mongoose.Types.ObjectId(),
+        disputeId: null,
+        timeline: [],
+      });
       ChatReport.findById.mockReturnValue(mockQuery(report));
-      Order.findById.mockReturnValue(mockQuery({ _id: orderId, status: 'paid', customerId: new mongoose.Types.ObjectId(), providerId: new mongoose.Types.ObjectId() }));
+      Order.findById.mockReturnValue(
+        mockQuery({
+          _id: orderId,
+          status: 'paid',
+          customerId: new mongoose.Types.ObjectId(),
+          providerId: new mongoose.Types.ObjectId(),
+        })
+      );
       Dispute.findOne.mockReturnValue(mockQuery(null));
       openDispute.mockResolvedValue({ _id: new mongoose.Types.ObjectId(), status: 'open' });
       await reportAdmin.createDisputeFromReport(req, res);
@@ -1304,10 +1547,17 @@ describe('Chat Report System', () => {
       const reportId = new mongoose.Types.ObjectId();
       const orderId = new mongoose.Types.ObjectId();
       req.params = { reportId: String(reportId) };
-      const report = makeReport({ _id: reportId, safePayOrderId: orderId, orderId, disputeId: null });
+      const report = makeReport({
+        _id: reportId,
+        safePayOrderId: orderId,
+        orderId,
+        disputeId: null,
+      });
       ChatReport.findById.mockReturnValue(mockQuery(report));
       Order.findById.mockReturnValue(mockQuery({ _id: orderId, status: 'paid' }));
-      Dispute.findOne.mockReturnValue(mockQuery({ _id: new mongoose.Types.ObjectId(), status: 'open' }));
+      Dispute.findOne.mockReturnValue(
+        mockQuery({ _id: new mongoose.Types.ObjectId(), status: 'open' })
+      );
       await reportAdmin.createDisputeFromReport(req, res);
       expect(res.status).toHaveBeenCalledWith(409);
     });
@@ -1361,7 +1611,10 @@ describe('Chat Report System', () => {
     test('adds official moderation message', async () => {
       const reportId = new mongoose.Types.ObjectId();
       req.params = { reportId: String(reportId) };
-      req.body = { recipientId: new mongoose.Types.ObjectId(), message: 'This is an official warning.' };
+      req.body = {
+        recipientId: new mongoose.Types.ObjectId(),
+        message: 'This is an official warning.',
+      };
       const report = makeReport({ _id: reportId, officialMessages: [], timeline: [] });
       ChatReport.findById.mockReturnValue(mockQuery(report));
       await reportAdmin.addOfficialMessage(req, res);
@@ -1424,8 +1677,8 @@ describe('Chat Report System', () => {
         { mimetype: 'image/jpeg', size: 1024, originalname: 'photo.jpg' },
         { mimetype: 'application/pdf', size: 2048, originalname: 'doc.pdf' },
       ];
-      const cloudinaryUpload = require('../utils/cloudinaryUpload');
-      cloudinaryUpload.uploadToCloudinary.mockResolvedValue('https://cloudinary.com/file.jpg');
+      const azureUpload = require('../utils/azureUpload');
+      azureUpload.uploadToAzure.mockResolvedValue('https://example.com/file.jpg');
       await evidenceController.uploadEvidence(req, res);
       expect(report.evidence.length).toBe(2);
       expect(report.timeline.length).toBeGreaterThan(0);
@@ -1469,46 +1722,97 @@ describe('Chat Report System', () => {
       const orderId = new mongoose.Types.ObjectId();
       const chatId = new mongoose.Types.ObjectId();
       Order.countDocuments.mockReturnValue(mockQuery(1));
-      Order.find.mockReturnValue(mockQuery([{ _id: orderId, chatId, customerId: {}, providerId: {}, serviceId: {}, agreedPrice: 1000, status: 'paid' }]));
+      Order.find.mockReturnValue(
+        mockQuery([
+          {
+            _id: orderId,
+            chatId,
+            customerId: {},
+            providerId: {},
+            serviceId: {},
+            agreedPrice: 1000,
+            status: 'paid',
+          },
+        ])
+      );
       Dispute.find.mockReturnValue(mockQuery([]));
       Chat.find.mockReturnValue(mockQuery([{ _id: chatId, status: 'in_progress' }]));
       await safePayAdmin.getSafePayList(req, res);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        data: expect.objectContaining({
-          contracts: expect.arrayContaining([expect.objectContaining({ chatId, chatStatus: 'in_progress' })]),
-        }),
-      }));
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            contracts: expect.arrayContaining([
+              expect.objectContaining({ chatId, chatStatus: 'in_progress' }),
+            ]),
+          }),
+        })
+      );
     });
 
     test('getSafePayList shows "No linked chat" when chatId missing', async () => {
       req.query = {};
       const orderId = new mongoose.Types.ObjectId();
       Order.countDocuments.mockReturnValue(mockQuery(1));
-      Order.find.mockReturnValue(mockQuery([{ _id: orderId, chatId: null, customerId: {}, providerId: {}, serviceId: {}, agreedPrice: 1000, status: 'paid' }]));
+      Order.find.mockReturnValue(
+        mockQuery([
+          {
+            _id: orderId,
+            chatId: null,
+            customerId: {},
+            providerId: {},
+            serviceId: {},
+            agreedPrice: 1000,
+            status: 'paid',
+          },
+        ])
+      );
       Dispute.find.mockReturnValue(mockQuery([]));
       Chat.find.mockReturnValue(mockQuery([]));
       await safePayAdmin.getSafePayList(req, res);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        data: expect.objectContaining({
-          contracts: expect.arrayContaining([expect.objectContaining({ chatId: null })]),
-        }),
-      }));
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            contracts: expect.arrayContaining([expect.objectContaining({ chatId: null })]),
+          }),
+        })
+      );
     });
 
     test('getSafePayDetail includes chat info', async () => {
       const orderId = new mongoose.Types.ObjectId();
       const chatId = new mongoose.Types.ObjectId();
       req.params = { orderId: String(orderId) };
-      Order.findById.mockReturnValue(mockQuery({ _id: orderId, chatId, customerId: {}, providerId: {}, serviceId: {}, agreedPrice: 1000, status: 'paid', checklist: [] }));
-      Chat.findById.mockReturnValue(mockQuery({ _id: chatId, status: 'completed', messages: [{ _id: new mongoose.Types.ObjectId(), type: 'text', text: 'Hi', createdAt: new Date() }] }));
+      Order.findById.mockReturnValue(
+        mockQuery({
+          _id: orderId,
+          chatId,
+          customerId: {},
+          providerId: {},
+          serviceId: {},
+          agreedPrice: 1000,
+          status: 'paid',
+          checklist: [],
+        })
+      );
+      Chat.findById.mockReturnValue(
+        mockQuery({
+          _id: chatId,
+          status: 'completed',
+          messages: [
+            { _id: new mongoose.Types.ObjectId(), type: 'text', text: 'Hi', createdAt: new Date() },
+          ],
+        })
+      );
       Payment.findOne.mockReturnValue(mockQuery({ status: 'completed', amount: 1000 }));
       const SafePayHistory = require('../models/SafePayHistory');
       SafePayHistory.findOne.mockReturnValue(mockQuery(null));
       Dispute.findOne.mockReturnValue(mockQuery(null));
       await safePayAdmin.getSafePayDetail(req, res);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-        data: expect.objectContaining({ chatMeta: expect.objectContaining({ _id: chatId }) }),
-      }));
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ chatMeta: expect.objectContaining({ _id: chatId }) }),
+        })
+      );
     });
   });
 });
