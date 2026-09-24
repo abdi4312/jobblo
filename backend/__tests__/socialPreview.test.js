@@ -64,17 +64,21 @@ describe('1. a public listing returns correct preview HTML', () => {
     }
   });
 
+  it('requests the large image card so WhatsApp/X show the big photo', () => {
+    expect(metaOf(html, 'twitter:card')).toBe('summary_large_image');
+    expect(metaOf(html, 'twitter:image')).toBeTruthy();
+  });
+
   it('does not emit extra meta the card does not use', () => {
-    // The card shows only image/title/description/link, so nothing else is sent.
+    // The card shows only image/title/description/link (+ the large-image hint),
+    // so none of this branding/SEO noise is sent.
     for (const key of [
       'og:type',
       'og:site_name',
       'og:locale',
       'og:image:alt',
-      'twitter:card',
       'twitter:title',
       'twitter:description',
-      'twitter:image',
       'robots',
       'description',
     ]) {
@@ -209,6 +213,9 @@ describe('4b. large-image card metadata', () => {
     expect(metaOf(html, 'og:image:width')).toBeNull();
     expect(metaOf(html, 'og:image:height')).toBeNull();
     expect(metaOf(html, 'og:image:type')).toBeNull();
+    // With no image there is nothing to show large, so it drops to the plain card.
+    expect(metaOf(html, 'twitter:card')).toBe('summary');
+    expect(metaOf(html, 'twitter:image')).toBeNull();
   });
 });
 
