@@ -76,7 +76,11 @@ export function listingUrl(serviceId: string): string {
 export function buildSharePayload(serviceId: string, title?: string): ShareData & { text: string } {
   const url = listingUrl(serviceId);
   const resolvedTitle = title?.trim() || 'Oppdrag på Jobblo';
-  const text = `${resolvedTitle}\n\n${url}`;
+  // `text` is only the URL. The receiving app builds the card (image + title +
+  // description) from the link's OG tags, so repeating the title in the message body
+  // shows it twice — once as plain text, once inside the card. `title` stays for the
+  // OS share-sheet's own header, which apps do not paste into the message.
+  const text = url;
 
   return {
     title: resolvedTitle,

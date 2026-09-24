@@ -60,6 +60,10 @@ const serviceSchema = new mongoose.Schema(
       {
         url: String,
         blobName: String,
+        // ogUrl/ogBlobName point at a 1200×630 JPEG derived from the upload, used only
+        // for social share cards. Optional so older listings keep working.
+        ogUrl: String,
+        ogBlobName: String,
         uploadedAt: { type: Date, default: Date.now },
       },
     ],

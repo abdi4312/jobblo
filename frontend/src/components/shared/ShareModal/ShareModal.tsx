@@ -12,7 +12,11 @@ interface ShareModalProps {
 export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, url, title }) => {
   if (!isOpen) return null;
 
-  const shareText = `${title}\n${url}`;
+  // Just the URL — no title. WhatsApp/iMessage build the card (image + title +
+  // description) from the link's OG tags, so putting the title in the message text too
+  // shows it twice: once as plain text and again inside the card. Sending only the link
+  // leaves the card as the single, clean title.
+  const shareText = url;
 
   const handleCopy = async () => {
     try {

@@ -47,7 +47,7 @@ const {
  * means any field added to the schema later is one `.lean()` away from a public
  * preview. Nothing about the owner, applicants, orders or SafePay state is loaded.
  */
-const PREVIEW_FIELDS = 'title description images status';
+const PREVIEW_FIELDS = 'title description images imageMetadata status';
 
 const isCrawlerUserAgent = (ua = '') =>
   /facebookexternalhit|facebot|twitterbot|slackbot|linkedinbot|discordbot|telegrambot|whatsapp|applebot|googlebot|bingbot|duckduckbot|skypeuripreview|viber|embedly|iframely|pinterest|signal/i.test(

@@ -85,6 +85,23 @@ function canonicalListingUrl(id, env = process.env) {
 }
 
 /**
+ * The URL to advertise as og:url — the /share/job/:id path, not the clean /jobs/:id.
+ *
+ * og:url is the address a crawler re-fetches to confirm the card, so it must resolve to
+ * this server-rendered HTML. Only /share/job/ is proxied to the backend renderer in
+ * nginx; /jobs/:id is served by the SPA fallback, so a crawler re-fetching /jobs/:id
+ * gets a JS shell and canonicalises the share to the homepage (the redirect chain the
+ * Facebook debugger showed). Pointing og:url at /share/job/ keeps the card on a URL
+ * that always renders the card; a human clicking it is 302'd on to /jobs/:id by the
+ * route's own UA gate.
+ */
+function shareListingUrl(id, env = process.env) {
+  const origin = siteOrigin(env);
+  if (!origin) return null;
+  return `${origin}/share/job/${encodeURIComponent(String(id))}`;
+}
+
+/**
  * The MIME type a crawler should expect for an image URL, derived from its extension.
  *
  * WhatsApp and Facebook read `og:image:type` to decide up front whether to bother
@@ -203,7 +220,7 @@ function fallbackImageUrl(env = process.env) {
  *            siteName: string, type: string, twitterCard: string}}
  */
 function buildListingPreview(service, id, env = process.env) {
-  const url = canonicalListingUrl(id, env);
+  const url = shareListingUrl(id, env);
   const fallbackImage = fallbackImageUrl(env);
 
   /**
@@ -245,14 +262,18 @@ function buildListingPreview(service, id, env = process.env) {
     truncate(service.description, DESCRIPTION_LIMIT) ||
     'Se oppdraget på Jobblo. Trygg betaling med SafePay.';
 
-  const listingImage = absoluteImageUrl(
-    Array.isArray(service.images)
-      ? service.images.find((i) => typeof i === 'string' && i.trim())
-      : null,
-    env
-  );
-  // Cloudinary photos are rewritten to the exact 1200×630 JPEG the card declares so
-  // WhatsApp/Facebook render the big landscape card instead of a small thumbnail.
+  // Prefer the pre-rendered 1200×630 OG derivative (uploaded to Azure alongside the
+  // original) so WhatsApp/Facebook get a real wide landscape and show the big card.
+  // Fall back to the first raw photo for listings uploaded before OG versions existed.
+  const ogUrl = Array.isArray(service.imageMetadata)
+    ? service.imageMetadata.find((m) => m && typeof m.ogUrl === 'string' && m.ogUrl.trim())?.ogUrl
+    : null;
+  const rawImage = Array.isArray(service.images)
+    ? service.images.find((i) => typeof i === 'string' && i.trim())
+    : null;
+  const listingImage = absoluteImageUrl(ogUrl || rawImage, env);
+  // Cloudinary photos (older listings) are rewritten to the declared 1200×630 JPEG;
+  // a null here means no usable photo, so we fall back to the branded card image.
   const image = cardImageUrl(listingImage) || fallbackImage;
 
   return {
@@ -319,6 +340,7 @@ module.exports = {
   truncate,
   siteOrigin,
   canonicalListingUrl,
+  shareListingUrl,
   absoluteImageUrl,
   cardImageUrl,
   fallbackImageUrl,
