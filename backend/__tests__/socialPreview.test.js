@@ -7,8 +7,11 @@ const {
   siteOrigin,
   canonicalListingUrl,
   absoluteImageUrl,
+  imageMimeType,
   isValidObjectId,
   DESCRIPTION_LIMIT,
+  OG_IMAGE_WIDTH,
+  OG_IMAGE_HEIGHT,
 } = require('../utils/socialPreview');
 const { PUBLIC_SERVICE_STATUSES } = require('../constants/serviceVisibility');
 
@@ -167,6 +170,48 @@ describe('4. the listing image is used, absolute', () => {
       buildListingPreview(listing({ images: ['/uploads/a.jpg'] }), ID, ENV)
     );
     expect(metaOf(html, 'og:image')).toMatch(/^https:\/\//);
+  });
+});
+
+// ── 4b ──────────────────────────────────────────────────────────────────────────
+// The large-card tags. Without og:image:width/height/type WhatsApp and Facebook tend
+// to render a small thumbnail (or drop the image), which is the bug this guards.
+describe('4b. large-image card metadata', () => {
+  it('declares width, height and type alongside the image', () => {
+    const html = renderPreviewHtml(buildListingPreview(listing(), ID, ENV));
+    expect(metaOf(html, 'og:image:width')).toBe(String(OG_IMAGE_WIDTH));
+    expect(metaOf(html, 'og:image:height')).toBe(String(OG_IMAGE_HEIGHT));
+    // The sample listing photo is a .jpg Azure blob.
+    expect(metaOf(html, 'og:image:type')).toBe('image/jpeg');
+    expect(metaOf(html, 'og:image:secure_url')).toBe(LISTING_PHOTO);
+    expect(metaOf(html, 'twitter:card')).toBe('summary_large_image');
+  });
+
+  it('derives the mime type from the image extension', () => {
+    expect(imageMimeType('https://x.blob.core.windows.net/i/job_images/a.png')).toBe('image/png');
+    expect(imageMimeType('https://x/i/a.jpeg')).toBe('image/jpeg');
+    expect(imageMimeType('https://x/i/a.webp')).toBe('image/webp');
+    // Query string / cache-buster must not confuse the extension read.
+    expect(imageMimeType('https://x/i/a.jpg?v=abc123')).toBe('image/jpeg');
+    // Unknown extension → null so the tag is omitted rather than declared wrong.
+    expect(imageMimeType('https://x/i/a.svg')).toBeNull();
+    expect(imageMimeType('https://x/i/noext')).toBeNull();
+  });
+
+  it('omits image dimension tags entirely when there is no image', () => {
+    // No listing image AND no fallback (fallback needs an origin/config to resolve;
+    // here we pass an env with neither a photo nor SOCIAL_SHARE_IMAGE reachable).
+    const meta = buildListingPreview(listing({ images: [] }), ID, {
+      PUBLIC_SITE_URL: 'https://jobblo.no',
+      SOCIAL_SHARE_IMAGE: 'data:image/png;base64,xxx', // unfetchable → absoluteImageUrl returns null
+    });
+    expect(meta.image).toBeNull();
+    const html = renderPreviewHtml(meta);
+    expect(metaOf(html, 'og:image')).toBeNull();
+    expect(metaOf(html, 'og:image:width')).toBeNull();
+    expect(metaOf(html, 'og:image:height')).toBeNull();
+    expect(metaOf(html, 'og:image:type')).toBeNull();
+    expect(metaOf(html, 'twitter:card')).toBe('summary');
   });
 });
 

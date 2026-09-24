@@ -85,6 +85,40 @@ function canonicalListingUrl(id, env = process.env) {
 }
 
 /**
+ * The MIME type a crawler should expect for an image URL, derived from its extension.
+ *
+ * WhatsApp and Facebook read `og:image:type` to decide up front whether to bother
+ * fetching (and how to decode) the image; a missing or wrong type is one of the
+ * reasons a card silently degrades to text-only. Returns null when the extension is
+ * unknown, so the tag is omitted rather than declared wrong.
+ */
+function imageMimeType(url) {
+  if (!url || typeof url !== 'string') return null;
+  // Strip any query string / fragment before reading the extension (Azure SAS URLs,
+  // the ?v= cache-buster, etc.).
+  const clean = url.split(/[?#]/)[0];
+  const ext = clean.slice(clean.lastIndexOf('.') + 1).toLowerCase();
+  const map = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    gif: 'image/gif',
+  };
+  return map[ext] || null;
+}
+
+/**
+ * Declared image dimensions for the card. Facebook/WhatsApp render a LARGE card only
+ * when they can tell the image clears the ~600px minimum, and declaring the size lets
+ * them decide without fetching-and-measuring first (which they often skip, showing a
+ * small thumbnail instead). 1200×630 is the standard large-card ratio; it is a claim
+ * about layout, not the file's real pixels, so it is safe for any wide-enough image.
+ */
+const OG_IMAGE_WIDTH = 1200;
+const OG_IMAGE_HEIGHT = 630;
+
+/**
  * Turn a stored image reference into an absolute https URL a crawler can fetch.
  *
  * Returns null rather than a guess when it cannot: a broken `og:image` makes a card
@@ -153,7 +187,6 @@ function buildListingPreview(service, id, env = process.env) {
       found: false,
       title: 'Jobblo',
       description: 'Finn eller legg ut oppdrag i Norge. Trygg betaling med SafePay.',
-      image: fallbackImage,
       // The site root, not the listing URL. This card is about Jobblo, not about a
       // listing that is missing or private, and `og:url` is a claim of canonicality —
       // pointing it at a URL that will not resolve asks every crawler to canonicalise
@@ -162,6 +195,8 @@ function buildListingPreview(service, id, env = process.env) {
       url: siteOrigin(env),
       siteName: 'Jobblo',
       type: 'website',
+      image: fallbackImage,
+      imageType: fallbackImage ? imageMimeType(fallbackImage) : null,
       twitterCard: fallbackImage ? 'summary_large_image' : 'summary',
     };
   }
@@ -193,6 +228,7 @@ function buildListingPreview(service, id, env = process.env) {
     title,
     description,
     image,
+    imageType: image ? imageMimeType(image) : null,
     url,
     siteName: 'Jobblo',
     type: 'article',
@@ -224,7 +260,7 @@ function renderPreviewHtml(meta) {
     <title>${title}</title>
 ${tag('name', 'description', meta.description)}${canonical}
     <!-- Open Graph -->
-${tag('property', 'og:type', meta.type)}${tag('property', 'og:site_name', meta.siteName)}${tag('property', 'og:title', meta.title)}${tag('property', 'og:description', meta.description)}${tag('property', 'og:url', meta.url)}${tag('property', 'og:image', meta.image)}${tag('property', 'og:image:secure_url', meta.image)}${tag('property', 'og:image:alt', meta.image ? meta.title : null)}${tag('property', 'og:locale', 'nb_NO')}
+${tag('property', 'og:type', meta.type)}${tag('property', 'og:site_name', meta.siteName)}${tag('property', 'og:title', meta.title)}${tag('property', 'og:description', meta.description)}${tag('property', 'og:url', meta.url)}${tag('property', 'og:image', meta.image)}${tag('property', 'og:image:secure_url', meta.image)}${tag('property', 'og:image:type', meta.image ? meta.imageType : null)}${tag('property', 'og:image:width', meta.image ? String(OG_IMAGE_WIDTH) : null)}${tag('property', 'og:image:height', meta.image ? String(OG_IMAGE_HEIGHT) : null)}${tag('property', 'og:image:alt', meta.image ? meta.title : null)}${tag('property', 'og:locale', 'nb_NO')}
     <!-- Twitter -->
 ${tag('name', 'twitter:card', meta.twitterCard)}${tag('name', 'twitter:title', meta.title)}${tag('name', 'twitter:description', meta.description)}${tag('name', 'twitter:image', meta.image)}
     <meta name="robots" content="${meta.found ? 'index, follow' : 'noindex, follow'}" />
@@ -253,7 +289,10 @@ module.exports = {
   canonicalListingUrl,
   absoluteImageUrl,
   fallbackImageUrl,
+  imageMimeType,
   isValidObjectId,
   DESCRIPTION_LIMIT,
   TITLE_LIMIT,
+  OG_IMAGE_WIDTH,
+  OG_IMAGE_HEIGHT,
 };
