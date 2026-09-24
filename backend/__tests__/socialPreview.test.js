@@ -7,6 +7,7 @@ const {
   siteOrigin,
   canonicalListingUrl,
   absoluteImageUrl,
+  cardImageUrl,
   imageMimeType,
   isValidObjectId,
   DESCRIPTION_LIMIT,
@@ -216,6 +217,45 @@ describe('4b. large-image card metadata', () => {
     // With no image there is nothing to show large, so it drops to the plain card.
     expect(metaOf(html, 'twitter:card')).toBe('summary');
     expect(metaOf(html, 'twitter:image')).toBeNull();
+  });
+});
+
+// ── 4c ──────────────────────────────────────────────────────────────────────────
+// The FINN-style big card only appears when the fetched image really is a wide
+// landscape. A user's uploaded .webp is whatever shape they took, so Cloudinary is
+// told to deliver the exact 1200×630 JPEG the card declares.
+describe('4c. Cloudinary photos are rewritten to the declared card frame', () => {
+  const CLD = 'https://res.cloudinary.com/dv0zorcek/image/upload/v1789996918/job_images/x.webp';
+
+  it('injects a 1200×630 JPEG fill transform', () => {
+    const out = cardImageUrl(CLD);
+    expect(out).toContain('/image/upload/c_fill,g_auto,w_1200,h_630,f_jpg,q_auto/');
+    expect(out).toContain('/v1789996918/job_images/x.jpg'); // extension follows f_jpg
+    expect(out.endsWith('.webp')).toBe(false);
+  });
+
+  it('so og:image:type reports jpeg, matching the delivered bytes', () => {
+    expect(imageMimeType(cardImageUrl(CLD))).toBe('image/jpeg');
+  });
+
+  it('does not stack a second transform if one is already present', () => {
+    const already =
+      'https://res.cloudinary.com/dv0zorcek/image/upload/w_200,c_scale/v1/job_images/x.webp';
+    const out = cardImageUrl(already);
+    expect(out).not.toContain('w_200,c_scale');
+    expect(out.match(/\/image\/upload\//g)).toHaveLength(1);
+  });
+
+  it('leaves a non-Cloudinary URL (Azure blob) untouched', () => {
+    const azure = 'https://jobblostorage001.blob.core.windows.net/images/job_images/job.jpg';
+    expect(cardImageUrl(azure)).toBe(azure);
+  });
+
+  it('the preview uses the rewritten Cloudinary image end to end', () => {
+    const html = renderPreviewHtml(buildListingPreview(listing({ images: [CLD] }), ID, ENV));
+    expect(metaOf(html, 'og:image')).toContain('c_fill,g_auto,w_1200,h_630,f_jpg,q_auto');
+    expect(metaOf(html, 'og:image:type')).toBe('image/jpeg');
+    expect(metaOf(html, 'twitter:card')).toBe('summary_large_image');
   });
 });
 
