@@ -546,6 +546,8 @@ exports.createService = async (req, res) => {
       serviceData.imageMetadata = req.files.map((file) => ({
         url: file.path,
         blobName: file.filename,
+        ogUrl: file.ogPath,
+        ogBlobName: file.ogFilename,
         uploadedAt: new Date(),
       }));
     } else {
@@ -717,6 +719,8 @@ exports.updateService = async (req, res) => {
       const newImageMetadata = req.files.map((file) => ({
         url: file.path,
         blobName: file.filename,
+        ogUrl: file.ogPath,
+        ogBlobName: file.ogFilename,
         uploadedAt: new Date(),
       }));
 

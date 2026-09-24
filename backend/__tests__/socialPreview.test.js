@@ -259,6 +259,39 @@ describe('4c. Cloudinary photos are rewritten to the declared card frame', () =>
   });
 });
 
+// ── 4d ──────────────────────────────────────────────────────────────────────────
+// Azure blobs cannot be resized from a URL, so uploads now store a pre-rendered
+// 1200×630 JPEG (ogUrl) beside the original. The preview must use it when present.
+describe('4d. the pre-rendered OG derivative is preferred over the raw photo', () => {
+  const RAW = 'https://jobblostorage001.blob.core.windows.net/images/job_images/tall.webp';
+  const OG = 'https://jobblostorage001.blob.core.windows.net/images/job_images/og/wide.jpg';
+
+  it('uses ogUrl from imageMetadata when it exists', () => {
+    const meta = buildListingPreview(
+      listing({ images: [RAW], imageMetadata: [{ url: RAW, ogUrl: OG }] }),
+      ID,
+      ENV
+    );
+    expect(meta.image).toBe(OG);
+    expect(meta.imageType).toBe('image/jpeg');
+    expect(meta.twitterCard).toBe('summary_large_image');
+  });
+
+  it('falls back to the raw photo for older listings with no ogUrl', () => {
+    const meta = buildListingPreview(
+      listing({ images: [RAW], imageMetadata: [{ url: RAW }] }),
+      ID,
+      ENV
+    );
+    expect(meta.image).toBe(RAW);
+  });
+
+  it('falls back to the raw photo when imageMetadata is absent entirely', () => {
+    const meta = buildListingPreview(listing({ images: [RAW] }), ID, ENV);
+    expect(meta.image).toBe(RAW);
+  });
+});
+
 // ── 5 ───────────────────────────────────────────────────────────────────────────
 describe('5. fallback image behaviour', () => {
   it('uses the branded fallback image when the listing has no photo', () => {
@@ -334,9 +367,12 @@ describe('6. the canonical Jobblo URL', () => {
     expect(siteOrigin({ PUBLIC_SITE_URL: 'javascript:alert(1)' })).toBeNull();
   });
 
-  it('og:url carries the canonical listing URL', () => {
+  it('og:url carries the share URL, the only path proxied to this renderer', () => {
+    // Not /jobs/:id: og:url is re-fetched by crawlers, and only /share/job/ reaches
+    // the backend card renderer in nginx. /jobs/:id hits the SPA fallback and gets
+    // canonicalised to the homepage — the redirect chain the FB debugger showed.
     const html = renderPreviewHtml(buildListingPreview(listing(), ID, ENV));
-    expect(metaOf(html, 'og:url')).toBe(`https://jobblo.no/jobs/${ID}`);
+    expect(metaOf(html, 'og:url')).toBe(`https://jobblo.no/share/job/${ID}`);
   });
 });
 
@@ -481,7 +517,9 @@ describe('9. contact details and internals are absent', () => {
       require('path').join(__dirname, '..', 'routes', 'preview.js'),
       'utf8'
     );
-    expect(source).toMatch(/const PREVIEW_FIELDS = 'title description images status'/);
+    expect(source).toMatch(
+      /const PREVIEW_FIELDS = 'title description images imageMetadata status'/
+    );
     expect(source).toMatch(/\.select\(PREVIEW_FIELDS\)/);
   });
 });
