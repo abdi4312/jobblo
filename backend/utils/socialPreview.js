@@ -170,10 +170,12 @@ function absoluteImageUrl(image, env = process.env) {
  * portrait .webp — so declaring og:image:width=1200 while serving a 400×600 webp
  * makes WhatsApp fetch, measure, disagree, and drop to the small thumbnail (the bug
  * in the screenshot). Cloudinary rewrites the delivered pixels from the URL:
- * `c_fill,g_auto` crops to the exact frame, `f_jpg` drops webp (which several
- * crawlers won't render large), `q_auto` keeps it under WhatsApp's ~300KB fetch cap.
- * Any non-Cloudinary URL (Azure blob) is returned unchanged — it can't be resized
- * from a URL, so imageMimeType/dimensions still describe the original.
+ * `c_pad,b_white` fits the WHOLE photo into the wide frame and pads the margins white
+ * (so a portrait shot shows in full instead of being cropped top-and-bottom), `f_jpg`
+ * drops webp (which several crawlers won't render large), `q_auto` keeps it under
+ * WhatsApp's ~300KB fetch cap. Any non-Cloudinary URL (Azure blob) is returned
+ * unchanged — it can't be resized from a URL, so imageMimeType/dimensions still
+ * describe the original.
  */
 function cardImageUrl(url) {
   if (!url || typeof url !== 'string') return url;
@@ -181,7 +183,7 @@ function cardImageUrl(url) {
   const at = url.indexOf(marker);
   if (!url.includes('res.cloudinary.com') || at === -1) return url;
 
-  const transform = `c_fill,g_auto,w_${OG_IMAGE_WIDTH},h_${OG_IMAGE_HEIGHT},f_jpg,q_auto`;
+  const transform = `c_pad,b_white,w_${OG_IMAGE_WIDTH},h_${OG_IMAGE_HEIGHT},f_jpg,q_auto`;
   const head = url.slice(0, at + marker.length);
   let tail = url.slice(at + marker.length);
   // Drop a transform segment Cloudinary already put here so we don't stack two.

@@ -5,15 +5,20 @@ const { uploadBufferToAzure } = require('../utils/azureUpload');
 // Social share cards (WhatsApp/Facebook) only render the big landscape card when the
 // fetched image really is a wide ~1200×630. User uploads are any shape, and Azure Blob
 // cannot resize from a URL the way Cloudinary can — so we derive a fixed 1200×630 JPEG
-// once, at upload time, and store it alongside the original. `fit: 'cover'` crops to the
-// frame; a white flatten covers PNG/WEBP transparency so the card is never see-through.
+// once, at upload time, and store it alongside the original.
+//
+// `fit: 'contain'` shows the WHOLE photo — a portrait phone shot is letterboxed into
+// the wide frame rather than cropped top-and-bottom (which is what 'cover' did, hiding
+// most of a tall image). The empty margins are filled with the background colour, and
+// the flatten also covers PNG/WEBP transparency so the card is never see-through.
 const OG_WIDTH = 1200;
 const OG_HEIGHT = 630;
+const OG_BACKGROUND = '#ffffff';
 
 async function makeOgBuffer(buffer) {
   return sharp(buffer)
-    .resize(OG_WIDTH, OG_HEIGHT, { fit: 'cover', position: 'attention' })
-    .flatten({ background: '#ffffff' })
+    .resize(OG_WIDTH, OG_HEIGHT, { fit: 'contain', background: OG_BACKGROUND })
+    .flatten({ background: OG_BACKGROUND })
     .jpeg({ quality: 82 })
     .toBuffer();
 }
