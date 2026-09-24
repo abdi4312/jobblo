@@ -227,9 +227,9 @@ describe('4b. large-image card metadata', () => {
 describe('4c. Cloudinary photos are rewritten to the declared card frame', () => {
   const CLD = 'https://res.cloudinary.com/dv0zorcek/image/upload/v1789996918/job_images/x.webp';
 
-  it('injects a 1200×630 JPEG fill transform', () => {
+  it('injects a 1200×630 JPEG pad transform (whole photo, no crop)', () => {
     const out = cardImageUrl(CLD);
-    expect(out).toContain('/image/upload/c_fill,g_auto,w_1200,h_630,f_jpg,q_auto/');
+    expect(out).toContain('/image/upload/c_pad,b_white,w_1200,h_630,f_jpg,q_auto/');
     expect(out).toContain('/v1789996918/job_images/x.jpg'); // extension follows f_jpg
     expect(out.endsWith('.webp')).toBe(false);
   });
@@ -253,7 +253,7 @@ describe('4c. Cloudinary photos are rewritten to the declared card frame', () =>
 
   it('the preview uses the rewritten Cloudinary image end to end', () => {
     const html = renderPreviewHtml(buildListingPreview(listing({ images: [CLD] }), ID, ENV));
-    expect(metaOf(html, 'og:image')).toContain('c_fill,g_auto,w_1200,h_630,f_jpg,q_auto');
+    expect(metaOf(html, 'og:image')).toContain('c_pad,b_white,w_1200,h_630,f_jpg,q_auto');
     expect(metaOf(html, 'og:image:type')).toBe('image/jpeg');
     expect(metaOf(html, 'twitter:card')).toBe('summary_large_image');
   });
