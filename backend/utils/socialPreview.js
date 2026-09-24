@@ -251,9 +251,11 @@ function renderPreviewHtml(meta) {
 
   const title = escapeHtml(meta.title);
 
-  // Only the four things the card shows: image, title, description, link (og:url).
-  // og:image:width/height/type stay because WhatsApp needs the declared size to
-  // render the LARGE image card instead of a small thumbnail.
+  // The card shows image, title, description and link (og:url). The image block
+  // carries width/height/type AND twitter:card=summary_large_image so WhatsApp,
+  // Facebook and X all render the BIG image card (like finn.no) instead of a small
+  // side thumbnail. Without the large-image hint some clients fall back to summary.
+  const largeCard = meta.image ? 'summary_large_image' : 'summary';
   return `<!doctype html>
 <html lang="nb">
   <head>
@@ -261,7 +263,8 @@ function renderPreviewHtml(meta) {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${title}</title>
     <!-- Open Graph -->
-${tag('property', 'og:title', meta.title)}${tag('property', 'og:description', meta.description)}${tag('property', 'og:url', meta.url)}${tag('property', 'og:image', meta.image)}${tag('property', 'og:image:secure_url', meta.image)}${tag('property', 'og:image:type', meta.image ? meta.imageType : null)}${tag('property', 'og:image:width', meta.image ? String(OG_IMAGE_WIDTH) : null)}${tag('property', 'og:image:height', meta.image ? String(OG_IMAGE_HEIGHT) : null)}  </head>
+${tag('property', 'og:title', meta.title)}${tag('property', 'og:description', meta.description)}${tag('property', 'og:url', meta.url)}${tag('property', 'og:image', meta.image)}${tag('property', 'og:image:secure_url', meta.image)}${tag('property', 'og:image:type', meta.image ? meta.imageType : null)}${tag('property', 'og:image:width', meta.image ? String(OG_IMAGE_WIDTH) : null)}${tag('property', 'og:image:height', meta.image ? String(OG_IMAGE_HEIGHT) : null)}    <!-- Large image card hint -->
+${tag('name', 'twitter:card', largeCard)}${tag('name', 'twitter:image', meta.image)}  </head>
   <body>
     <h1>${title}</h1>
     <p>${escapeHtml(meta.description)}</p>
