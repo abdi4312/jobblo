@@ -58,30 +58,29 @@ describe('1. a public listing returns correct preview HTML', () => {
     expect(html).toContain('<html lang="nb">');
   });
 
-  it('carries every tag the brief requires', () => {
-    for (const [key, value] of [
-      ['og:type', 'article'],
-      ['og:site_name', 'Jobblo'],
-      ['twitter:card', 'summary_large_image'],
-    ]) {
-      expect(metaOf(html, key)).toBe(value);
-    }
-    for (const key of [
-      'og:title',
-      'og:description',
-      'og:image',
-      'og:url',
-      'twitter:title',
-      'twitter:description',
-      'twitter:image',
-    ]) {
+  it('carries the four card fields: image, title, description, link', () => {
+    for (const key of ['og:title', 'og:description', 'og:image', 'og:url']) {
       expect(metaOf(html, key)).toBeTruthy();
     }
   });
 
-  it('is indexable and declares its canonical URL', () => {
-    expect(metaOf(html, 'robots')).toBe('index, follow');
-    expect(html).toContain(`<link rel="canonical" href="https://jobblo.no/jobs/${ID}" />`);
+  it('does not emit extra meta the card does not use', () => {
+    // The card shows only image/title/description/link, so nothing else is sent.
+    for (const key of [
+      'og:type',
+      'og:site_name',
+      'og:locale',
+      'og:image:alt',
+      'twitter:card',
+      'twitter:title',
+      'twitter:description',
+      'twitter:image',
+      'robots',
+      'description',
+    ]) {
+      expect(metaOf(html, key)).toBeNull();
+    }
+    expect(html).not.toContain('rel="canonical"');
   });
 
   it('contains no script tag at all', () => {
@@ -184,7 +183,6 @@ describe('4b. large-image card metadata', () => {
     // The sample listing photo is a .jpg Azure blob.
     expect(metaOf(html, 'og:image:type')).toBe('image/jpeg');
     expect(metaOf(html, 'og:image:secure_url')).toBe(LISTING_PHOTO);
-    expect(metaOf(html, 'twitter:card')).toBe('summary_large_image');
   });
 
   it('derives the mime type from the image extension', () => {
@@ -211,7 +209,6 @@ describe('4b. large-image card metadata', () => {
     expect(metaOf(html, 'og:image:width')).toBeNull();
     expect(metaOf(html, 'og:image:height')).toBeNull();
     expect(metaOf(html, 'og:image:type')).toBeNull();
-    expect(metaOf(html, 'twitter:card')).toBe('summary');
   });
 });
 
@@ -290,10 +287,9 @@ describe('6. the canonical Jobblo URL', () => {
     expect(siteOrigin({ PUBLIC_SITE_URL: 'javascript:alert(1)' })).toBeNull();
   });
 
-  it('og:url and the canonical link agree', () => {
+  it('og:url carries the canonical listing URL', () => {
     const html = renderPreviewHtml(buildListingPreview(listing(), ID, ENV));
-    const canonical = html.match(/<link rel="canonical" href="([^"]*)"/)[1];
-    expect(metaOf(html, 'og:url')).toBe(canonical);
+    expect(metaOf(html, 'og:url')).toBe(`https://jobblo.no/jobs/${ID}`);
   });
 });
 
@@ -383,15 +379,9 @@ describe('8. non-public listings do not leak', () => {
     expect(missing).toBe(priv);
   });
 
-  it('the generic card is noindex, so it never becomes a search result', () => {
-    const html = renderPreviewHtml(buildListingPreview(null, ID, ENV));
-    expect(metaOf(html, 'robots')).toBe('noindex, follow');
-  });
-
   it('the generic card is still a valid, branded card', () => {
     // It must not be blank: Facebook falls back to a bare link if the head is empty.
     const html = renderPreviewHtml(buildListingPreview(null, ID, ENV));
-    expect(metaOf(html, 'og:site_name')).toBe('Jobblo');
     expect(metaOf(html, 'og:title')).toBe('Jobblo');
     expect(metaOf(html, 'og:description')).toBeTruthy();
   });
@@ -488,7 +478,7 @@ describe('10. malformed or unknown ids are handled safely', () => {
   it('an unknown but well-formed id renders the generic card, not an error', () => {
     const html = renderPreviewHtml(buildListingPreview(null, ID, ENV));
     expect(html).toMatch(/^<!doctype html>/i);
-    expect(metaOf(html, 'og:site_name')).toBe('Jobblo');
+    expect(metaOf(html, 'og:title')).toBe('Jobblo');
   });
 
   it('a hostile id cannot reach the rendered URL', () => {

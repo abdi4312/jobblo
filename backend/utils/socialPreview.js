@@ -250,21 +250,18 @@ function renderPreviewHtml(meta) {
     value ? `    <meta ${attr}="${escapeHtml(key)}" content="${escapeHtml(value)}" />\n` : '';
 
   const title = escapeHtml(meta.title);
-  const canonical = meta.url ? `    <link rel="canonical" href="${escapeHtml(meta.url)}" />\n` : '';
 
+  // Only the four things the card shows: image, title, description, link (og:url).
+  // og:image:width/height/type stay because WhatsApp needs the declared size to
+  // render the LARGE image card instead of a small thumbnail.
   return `<!doctype html>
 <html lang="nb">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${title}</title>
-${tag('name', 'description', meta.description)}${canonical}
     <!-- Open Graph -->
-${tag('property', 'og:type', meta.type)}${tag('property', 'og:site_name', meta.siteName)}${tag('property', 'og:title', meta.title)}${tag('property', 'og:description', meta.description)}${tag('property', 'og:url', meta.url)}${tag('property', 'og:image', meta.image)}${tag('property', 'og:image:secure_url', meta.image)}${tag('property', 'og:image:type', meta.image ? meta.imageType : null)}${tag('property', 'og:image:width', meta.image ? String(OG_IMAGE_WIDTH) : null)}${tag('property', 'og:image:height', meta.image ? String(OG_IMAGE_HEIGHT) : null)}${tag('property', 'og:image:alt', meta.image ? meta.title : null)}${tag('property', 'og:locale', 'nb_NO')}
-    <!-- Twitter -->
-${tag('name', 'twitter:card', meta.twitterCard)}${tag('name', 'twitter:title', meta.title)}${tag('name', 'twitter:description', meta.description)}${tag('name', 'twitter:image', meta.image)}
-    <meta name="robots" content="${meta.found ? 'index, follow' : 'noindex, follow'}" />
-  </head>
+${tag('property', 'og:title', meta.title)}${tag('property', 'og:description', meta.description)}${tag('property', 'og:url', meta.url)}${tag('property', 'og:image', meta.image)}${tag('property', 'og:image:secure_url', meta.image)}${tag('property', 'og:image:type', meta.image ? meta.imageType : null)}${tag('property', 'og:image:width', meta.image ? String(OG_IMAGE_WIDTH) : null)}${tag('property', 'og:image:height', meta.image ? String(OG_IMAGE_HEIGHT) : null)}  </head>
   <body>
     <h1>${title}</h1>
     <p>${escapeHtml(meta.description)}</p>
