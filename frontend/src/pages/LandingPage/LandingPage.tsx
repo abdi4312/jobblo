@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { HomeHero } from '../../components/landing/HomeHero';
+import { CampaignExperience } from '../../components/landing/CampaignExperience';
 import { Categories } from '../../components/landing/Categories.tsx';
 import { SafePayExplainer } from '../../components/landing/SafePayExplainer.tsx';
 import { HowItWorks } from '../../components/landing/HowItWorks.tsx';
@@ -51,6 +52,7 @@ export default function LandingPage() {
 
   return (
     <div className="bg-[#EFF0EA]">
+      <CampaignExperience />
       <HomeHero />
       <TrustBar />
 
