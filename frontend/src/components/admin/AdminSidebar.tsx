@@ -99,6 +99,7 @@ function useNavGroups(): NavGroup[] {
           to: '/dashboard/homepage-cms',
           icon: <Globe size={18} />,
         },
+        { label: 'Kampanjer', to: '/dashboard/campaigns', icon: <Megaphone size={18} /> },
         {
           label: t('nav.navigasjon_footer'),
           to: '/dashboard/navigation-footer',

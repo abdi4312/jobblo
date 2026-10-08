@@ -22,6 +22,7 @@ const contentAdminController = require('../../controllers/admin/contentAdminCont
 const evidenceUploadController = require('../../controllers/admin/evidenceUploadController');
 const shopAdminController = require('../../controllers/admin/shopAdminController');
 const promotionCodeController = require('../../controllers/admin/promotionCodeController');
+const campaignController = require('../../controllers/campaignController');
 
 // Apply auth + admin check + rate limiter to ALL routes
 router.use(authenticate, requireAdmin, adminLimiter);
@@ -30,6 +31,14 @@ router.use(authenticate, requireAdmin, adminLimiter);
 router.get('/promotion-codes', promotionCodeController.listPromotionCodes);
 router.post('/promotion-codes', promotionCodeController.createPromotionCode);
 router.post('/promotion-codes/:id/deactivate', promotionCodeController.deactivatePromotionCode);
+
+// ── Promotional campaigns ───────────────────────────────────────────────────
+router.get('/campaigns/defaults', campaignController.getCampaignDefaults);
+router.get('/campaigns', campaignController.listCampaigns);
+router.post('/campaigns', campaignController.createCampaign);
+router.put('/campaigns/:id', campaignController.updateCampaign);
+router.delete('/campaigns/:id', campaignController.deleteCampaign);
+router.get('/campaigns/:id/analytics', campaignController.getAnalytics);
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 router.get('/overview', dashboardController.getOverview);

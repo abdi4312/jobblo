@@ -54,6 +54,7 @@ const withSuspense = (Component: React.ComponentType) => (
 // =======================
 
 const LandingPage = lazy(() => import('../pages/LandingPage/LandingPage.tsx'));
+const CampaignTermsPage = lazy(() => import('../pages/CampaignTermsPage.tsx'));
 const JobListingPage = lazy(() => import('../pages/ExplorePage/JobListingPage.tsx'));
 const RecommendedTaskersPage = lazy(
   () => import('../pages/ExplorePage/RecommendedTaskersPage.tsx')
@@ -158,6 +159,7 @@ const JobReportDetailPage = lazy(
 const SystemHealthPage = lazy(() => import('../pages/SuperAdminDashboard/SystemHealthPage.tsx'));
 const FeatureFlagsPage = lazy(() => import('../pages/SuperAdminDashboard/FeatureFlagsPage.tsx'));
 const HomepageCMSPage = lazy(() => import('../pages/SuperAdminDashboard/HomepageCMSPage.tsx'));
+const CampaignManagementPage = lazy(() => import('../pages/SuperAdminDashboard/CampaignManagementPage.tsx'));
 const GlobalSettingsPage = lazy(
   () => import('../pages/SuperAdminDashboard/GlobalSettingsPage.tsx')
 );
@@ -316,6 +318,7 @@ export const routes: RouteObject[] = [
       },
       // Public: reachable from the job-detail upsell CTA by logged-out visitors too.
       { path: 'pricing', element: withSuspense(PricingPage) },
+      { path: 'kampanjevilkar', element: withSuspense(CampaignTermsPage) },
       { path: 'upcoming', element: withSuspense(UpcomingFeatures) },
       { path: '*', element: withSuspense(NotFoundPage) },
     ],
@@ -374,6 +377,7 @@ export const routes: RouteObject[] = [
       { path: 'system-health', element: withSuspense(SystemHealthPage) },
       { path: 'feature-flags', element: withSuspense(FeatureFlagsPage) },
       { path: 'homepage-cms', element: withSuspense(HomepageCMSPage) },
+      { path: 'campaigns', element: withSuspense(CampaignManagementPage) },
       { path: 'settings', element: withSuspense(GlobalSettingsPage) },
       { path: 'navigation-footer', element: withSuspense(NavigationFooterPage) },
       { path: 'announcements', element: withSuspense(AnnouncementsPage) },
