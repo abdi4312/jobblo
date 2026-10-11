@@ -1,6 +1,11 @@
 // Mock Stripe config module
 jest.mock('../config/stripe', () => ({
   getStripe: jest.fn(),
+  getStripeConfiguration: jest.fn(),
+  getStripeForMode: jest.fn(),
+}));
+jest.mock('../services/stripe/financialHistory', () => ({
+  recordStripeTransfer: jest.fn().mockResolvedValue({}),
 }));
 
 // Mock Models to prevent MongoDB connection attempts during unit tests
@@ -30,7 +35,7 @@ const { PUBLIC_USER_SELECT, sanitizeUserPublic } = require('../utils/userProject
 const releasePayoutToProvider = require('../services/payout/releasePayoutToProvider');
 const Payout = require('../models/Payout');
 const User = require('../models/User');
-const { getStripe } = require('../config/stripe');
+const { getStripe, getStripeConfiguration, getStripeForMode } = require('../config/stripe');
 
 describe('BUG-006: Stripe Connect & Sensitive Data Leak Prevention', () => {
   let mockStripe;
@@ -43,6 +48,11 @@ describe('BUG-006: Stripe Connect & Sensitive Data Leak Prevention', () => {
       },
     };
     getStripe.mockResolvedValue(mockStripe);
+    getStripeConfiguration.mockResolvedValue({
+      testMode: true,
+      mode: 'test',
+    });
+    getStripeForMode.mockResolvedValue(mockStripe);
   });
 
   describe('1. Sensitive Data Leakage Prevention', () => {
@@ -113,7 +123,7 @@ describe('BUG-006: Stripe Connect & Sensitive Data Leak Prevention', () => {
       User.findById.mockReturnValue({
         select: jest.fn().mockResolvedValue({
           _id: providerId,
-          stripeConnectAccountId: 'acct_test123',
+          stripeConnectAccountIdTest: 'acct_test123',
           payoutEnabled: false,
         }),
       });
@@ -141,7 +151,7 @@ describe('BUG-006: Stripe Connect & Sensitive Data Leak Prevention', () => {
       User.findById.mockReturnValue({
         select: jest.fn().mockResolvedValue({
           _id: providerId,
-          stripeConnectAccountId: 'acct_test123',
+          stripeConnectAccountIdTest: 'acct_test123',
           payoutEnabled: true,
         }),
       });
@@ -176,6 +186,37 @@ describe('BUG-006: Stripe Connect & Sensitive Data Leak Prevention', () => {
 
       expect(result.alreadyPaid).toBe(false);
       expect(result.transfer.id).toBe('tr_test_9999');
+    });
+
+    it('selects the isolated live Connect account when live mode is active', async () => {
+      const orderId = '507f1f77bcf86cd799439052';
+      getStripeConfiguration.mockResolvedValue({ testMode: false, mode: 'live' });
+      Payout.findOne.mockResolvedValue(null);
+      User.findById.mockReturnValue({
+        select: jest.fn().mockResolvedValue({
+          _id: '507f1f77bcf86cd799439053',
+          stripeConnectAccountId: 'acct_live_123',
+          payoutEnabled: true,
+        }),
+      });
+      mockStripe.transfers.create.mockResolvedValue({ id: 'tr_live_9999', amount: 97000, currency: 'nok' });
+
+      await releasePayoutToProvider({
+        orderId,
+        providerId: '507f1f77bcf86cd799439053',
+        customerId: '507f1f77bcf86cd799439054',
+        serviceId: '507f1f77bcf86cd799439055',
+        grossAmount: 1000,
+        platformFee: 30,
+        releaseSource: 'customer_approve',
+        releasedBy: '507f1f77bcf86cd799439054',
+      });
+
+      expect(getStripeForMode).toHaveBeenCalledWith(false);
+      expect(mockStripe.transfers.create).toHaveBeenCalledWith(
+        expect.objectContaining({ destination: 'acct_live_123' }),
+        expect.any(Object)
+      );
     });
 
     it('should be idempotent and return existing transferred Payout without re-transferring', async () => {

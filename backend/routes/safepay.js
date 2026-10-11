@@ -4,6 +4,7 @@ const multer = require('multer');
 const safePayController = require('../controllers/safepayController');
 const disputeController = require('../controllers/disputeController');
 const providerWorkController = require('../controllers/providerWorkController');
+const financeController = require('../controllers/safepayFinanceController');
 const { authenticate } = require('../middleware/auth');
 
 const upload = multer({
@@ -46,6 +47,13 @@ router.post('/contract/:orderId/start', authenticate, providerWorkController.sta
 router.get('/history', authenticate, safePayController.getSafePayHistory);
 router.get('/history/:userId', authenticate, safePayController.getSafePayHistory);
 router.put('/contract/:orderId/checklist/:itemId', authenticate, safePayController.updateChecklistItem);
+
+// Financial history is read-only; listing it never creates a Stripe transfer or payout.
+router.get('/finance/transfers', authenticate, financeController.getTransfers);
+router.get('/finance/transfers/:id', authenticate, financeController.getTransfer);
+router.get('/finance/bank-payouts', authenticate, financeController.getBankPayouts);
+router.get('/finance/bank-payouts/:id', authenticate, financeController.getBankPayout);
+router.get('/finance/summary', authenticate, financeController.getSummary);
 
 // ── Disputes ──────────────────────────────────────────────────────────────────
 router.post('/contract/:orderId/dispute', authenticate, disputeController.openDisputeByUser);

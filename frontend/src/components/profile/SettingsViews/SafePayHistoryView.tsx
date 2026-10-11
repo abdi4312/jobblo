@@ -16,6 +16,7 @@ import { useSafePayHistory } from '../../../features/profile/hooks';
 import { Spinner } from '../../Ui/Spinner';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../../../stores/userStore';
+import FinanceHistoryTabs from '../../SafePay/FinanceHistoryTabs';
 
 const PayoutStatusBanner = () => {
   const user = useUserStore((state) => state.user);
@@ -191,6 +192,8 @@ export const SafePayHistoryView = () => {
 
       {/* Payout setup warning for providers / earners */}
       <PayoutStatusBanner />
+
+      <FinanceHistoryTabs />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -9,23 +9,27 @@
  */
 
 const User = require('../models/User');
-const { getStripe } = require('../config/stripe');
+const { getStripeConfiguration, getStripeForMode } = require('../config/stripe');
 
 // ── create or retrieve account ──────────────────────────────────────────────
 exports.createOrGetAccount = async (req, res) => {
   try {
     const userId = req.userId;
+    const stripeConfig = await getStripeConfiguration();
+    const accountField = stripeConfig.testMode
+      ? 'stripeConnectAccountIdTest'
+      : 'stripeConnectAccountId';
     const user = await User.findById(userId).select(
-      'name email stripeConnectAccountId payoutOnboardingStatus payoutEnabled chargesEnabled detailsSubmitted'
+      'name email stripeConnectAccountId stripeConnectAccountIdTest payoutOnboardingStatus payoutEnabled chargesEnabled detailsSubmitted'
     );
     if (!user) return res.status(404).json({ error: 'Bruker ikke funnet' });
 
-    const stripe = await getStripe();
+    const stripe = await getStripeForMode(stripeConfig.testMode);
 
     // Reuse existing account if we already created one
-    if (user.stripeConnectAccountId) {
-      const account = await stripe.accounts.retrieve(user.stripeConnectAccountId);
-      await _syncAccountFields(user, account);
+    if (user[accountField]) {
+      const account = await stripe.accounts.retrieve(user[accountField]);
+      await _syncAccountFields(user, account, stripeConfig.testMode);
       return res.json({ accountId: account.id, status: user.payoutOnboardingStatus });
     }
 
@@ -42,7 +46,7 @@ exports.createOrGetAccount = async (req, res) => {
       metadata: { jobbloUserId: String(userId) },
     });
 
-    await _syncAccountFields(user, account);
+    await _syncAccountFields(user, account, stripeConfig.testMode);
     res.json({ accountId: account.id, status: user.payoutOnboardingStatus });
   } catch (err) {
     console.error('createOrGetAccount error:', err);
@@ -54,11 +58,17 @@ exports.createOrGetAccount = async (req, res) => {
 exports.createAccountLink = async (req, res) => {
   try {
     const userId = req.userId;
-    const user = await User.findById(userId).select('stripeConnectAccountId name email');
+    const stripeConfig = await getStripeConfiguration();
+    const accountField = stripeConfig.testMode
+      ? 'stripeConnectAccountIdTest'
+      : 'stripeConnectAccountId';
+    const user = await User.findById(userId).select(
+      'stripeConnectAccountId stripeConnectAccountIdTest name email'
+    );
     if (!user) return res.status(404).json({ error: 'Bruker ikke funnet' });
 
-    let accountId = user.stripeConnectAccountId;
-    const stripe = await getStripe();
+    let accountId = user[accountField];
+    const stripe = await getStripeForMode(stripeConfig.testMode);
 
     if (!accountId) {
       // Auto-create if missing
@@ -69,7 +79,7 @@ exports.createAccountLink = async (req, res) => {
         capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
         metadata: { jobbloUserId: String(userId) },
       });
-      await _syncAccountFields(user, account);
+      await _syncAccountFields(user, account, stripeConfig.testMode);
       accountId = account.id;
     }
 
@@ -93,11 +103,15 @@ exports.createAccountLink = async (req, res) => {
 exports.refreshAccountStatus = async (req, res) => {
   try {
     const userId = req.userId;
+    const stripeConfig = await getStripeConfiguration();
+    const accountField = stripeConfig.testMode
+      ? 'stripeConnectAccountIdTest'
+      : 'stripeConnectAccountId';
     const user = await User.findById(userId).select(
-      'stripeConnectAccountId payoutOnboardingStatus payoutEnabled chargesEnabled detailsSubmitted'
+      'stripeConnectAccountId stripeConnectAccountIdTest payoutOnboardingStatus payoutEnabled chargesEnabled detailsSubmitted'
     );
     if (!user) return res.status(404).json({ error: 'Bruker ikke funnet' });
-    if (!user.stripeConnectAccountId) {
+    if (!user[accountField]) {
       return res.json({
         payoutOnboardingStatus: 'none',
         payoutEnabled: false,
@@ -106,9 +120,9 @@ exports.refreshAccountStatus = async (req, res) => {
       });
     }
 
-    const stripe = await getStripe();
-    const account = await stripe.accounts.retrieve(user.stripeConnectAccountId);
-    await _syncAccountFields(user, account);
+    const stripe = await getStripeForMode(stripeConfig.testMode);
+    const account = await stripe.accounts.retrieve(user[accountField]);
+    await _syncAccountFields(user, account, stripeConfig.testMode);
 
     res.json({
       payoutOnboardingStatus: user.payoutOnboardingStatus,
@@ -126,13 +140,18 @@ exports.refreshAccountStatus = async (req, res) => {
 exports.getStatus = async (req, res) => {
   try {
     const userId = req.userId;
+    const stripeConfig = await getStripeConfiguration();
+    const accountField = stripeConfig.testMode
+      ? 'stripeConnectAccountIdTest'
+      : 'stripeConnectAccountId';
     const user = await User.findById(userId).select(
-      'stripeConnectAccountId payoutOnboardingStatus payoutEnabled chargesEnabled detailsSubmitted connectAccountCreatedAt payoutOnboardingLastRefreshedAt'
+      'stripeConnectAccountId stripeConnectAccountIdTest payoutOnboardingStatus payoutEnabled chargesEnabled detailsSubmitted connectAccountCreatedAt payoutOnboardingLastRefreshedAt'
     );
     if (!user) return res.status(404).json({ error: 'Bruker ikke funnet' });
 
     res.json({
-      hasAccount:           !!user.stripeConnectAccountId,
+      hasAccount:           !!user[accountField],
+      mode: stripeConfig.mode,
       payoutOnboardingStatus: user.payoutOnboardingStatus,
       payoutEnabled:          user.payoutEnabled,
       chargesEnabled:         user.chargesEnabled,
@@ -147,7 +166,7 @@ exports.getStatus = async (req, res) => {
 };
 
 // ── internal helper ───────────────────────────────────────────────────────────
-async function _syncAccountFields(user, account) {
+async function _syncAccountFields(user, account, testMode) {
   const payouts = account.payouts_enabled;
   const charges = account.charges_enabled;
   const submitted = account.details_submitted;
@@ -161,7 +180,7 @@ async function _syncAccountFields(user, account) {
     onboardingStatus = 'started';
   }
 
-  user.stripeConnectAccountId        = account.id;
+  user[testMode ? 'stripeConnectAccountIdTest' : 'stripeConnectAccountId'] = account.id;
   user.payoutOnboardingStatus        = onboardingStatus;
   user.payoutEnabled                 = payouts;
   user.chargesEnabled                = charges;

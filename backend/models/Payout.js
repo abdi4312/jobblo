@@ -64,6 +64,13 @@ const payoutSchema = new mongoose.Schema(
     // Stripe Connect transfer
     stripeTransferId: { type: String, trim: true, index: true, unique: true, sparse: true },
     stripeConnectAccountId: { type: String, trim: true },
+    stripeLivemode: { type: Boolean, default: null },
+    financialSyncStatus: {
+      type: String,
+      enum: ['not_synced', 'synced', 'failed'],
+      default: 'not_synced',
+    },
+    financialSyncError: { type: String, trim: true },
     transferInitiatedAt: { type: Date },
     transferCompletedAt: { type: Date },
     transferFailedAt: { type: Date },

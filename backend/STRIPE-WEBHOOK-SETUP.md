@@ -20,6 +20,22 @@ The shared dispatcher also consumes these existing subscription events:
 - `customer.subscription.updated`
 - `customer.subscription.deleted`
 
+For provider transfer and connected-account bank payout history, also subscribe
+to:
+
+- `transfer.created`
+- `transfer.reversed`
+- `payout.created`
+- `payout.updated`
+- `payout.paid`
+- `payout.failed`
+- `payout.canceled`
+
+Transfer and payout updates must be delivered with the connected account context
+(`event.account`). Platform-level payouts are intentionally not treated as
+provider bank payouts. History can also be reconciled from Stripe's read-only
+list APIs by an administrator; reconciliation never initiates money movement.
+
 Use Stripe's snapshot event payload format and the API version configured by this
 backend. Configure test and live destinations separately. Store each endpoint's
 signing secret only in its matching environment variable:
@@ -64,3 +80,23 @@ last 30 days.
 
 The health endpoint is read-only and protected by the admin router. Ordinary
 users cannot mark an endpoint verified or clear a delivery problem.
+
+## Verify provider finance history
+
+1. Add the transfer and payout event types above to both the test and live
+   destinations as applicable. The endpoint must be configured to deliver
+   connected-account events.
+2. In Stripe test mode, use a connected test account and create a test transfer
+   and bank payout using Stripe's supported test flow. Do not create a live
+   transfer or payout solely to test the application. Use Stripe Workbench's
+   signed event delivery/resend capability for event processing checks.
+3. Confirm the backend accepts the event (HTTP 2xx), and inspect the provider
+   and administrator finance-history screens for the resulting record and
+   correct test-mode label. A signature-verified event is not proof that an
+   unrelated financial object belongs to the selected Jobblo provider; the
+   backend scopes records to the connected account and verifies local payout
+   account/mode details when available.
+4. An administrator can run the read-only reconciliation endpoint for an
+   explicit `test` or `live` mode to backfill missed history. This requires
+   Stripe Connect account read/list permissions. A permission or API failure is
+   reported as a failed account sync; it is not shown as a successful sync.

@@ -37,6 +37,14 @@ const ORDER_EVENT_TYPES = new Set([
   'invoice.payment_failed',
   'customer.subscription.updated',
   'customer.subscription.deleted',
+  'transfer.created',
+  'transfer.updated',
+  'transfer.reversed',
+  'payout.created',
+  'payout.updated',
+  'payout.paid',
+  'payout.failed',
+  'payout.canceled',
 ]);
 
 /** Log a payment failure where an admin will actually see it, without leaking secrets. */
@@ -67,6 +75,10 @@ async function handleEvent(event, { io } = {}) {
   // a top-level import would close the cycle.
   const { confirmPaidSession } = require('../../controllers/SafePayCheckoutController');
   const Order = require('../../models/Order');
+  const {
+    recordStripeTransfer,
+    recordStripeBankPayout,
+  } = require('./financialHistory');
 
   switch (event.type) {
     case 'checkout.session.completed': {
@@ -145,6 +157,28 @@ async function handleEvent(event, { io } = {}) {
         handled: 'subscription_deleted',
         result: await applySubscriptionDeleted(event.data.object),
       };
+
+    case 'transfer.created':
+    case 'transfer.updated':
+    case 'transfer.reversed':
+      await recordStripeTransfer(event.data.object, {
+        livemode: event.livemode,
+        event,
+      });
+      return { handled: 'stripe_transfer' };
+
+    case 'payout.created':
+    case 'payout.updated':
+    case 'payout.paid':
+    case 'payout.failed':
+    case 'payout.canceled':
+      if (!event.account) return { handled: 'ignored_platform_bank_payout' };
+      await recordStripeBankPayout(event.data.object, {
+        stripeAccountId: event.account,
+        livemode: event.livemode,
+        event,
+      });
+      return { handled: 'stripe_connected_bank_payout' };
 
     default:
       return { handled: 'ignored_type' };

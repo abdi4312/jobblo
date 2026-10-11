@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, requireAdmin } = require('../../middleware/auth');
-const { adminLimiter } = require('../../middleware/rateLimiter');
+const { adminLimiter, financeSyncLimiter } = require('../../middleware/rateLimiter');
 
 const dashboardController = require('../../controllers/admin/dashboardController');
 const usersAdminController = require('../../controllers/admin/usersAdminController');
@@ -24,6 +24,7 @@ const shopAdminController = require('../../controllers/admin/shopAdminController
 const promotionCodeController = require('../../controllers/admin/promotionCodeController');
 const campaignController = require('../../controllers/campaignController');
 const stripeWebhookHealthController = require('../../controllers/admin/stripeWebhookHealthController');
+const safePayFinanceController = require('../../controllers/safepayFinanceController');
 
 // Apply auth + admin check + rate limiter to ALL routes
 router.use(authenticate, requireAdmin, adminLimiter);
@@ -88,6 +89,13 @@ router.get('/transactions/:id', transactionsAdminController.getTransactionById);
 // ── SafePay ────────────────────────────────────────────────────────────────
 router.get('/safepay', safePayAdminController.getSafePayList);
 router.get('/safepay/summary', safePayAdminController.getSafePaySummary);
+router.get('/safepay/finance/transfers', safePayFinanceController.getAdminTransfers);
+router.get('/safepay/finance/transfers/:id', safePayFinanceController.getAdminTransfer);
+router.get('/safepay/finance/bank-payouts', safePayFinanceController.getAdminBankPayouts);
+router.get('/safepay/finance/bank-payouts/:id', safePayFinanceController.getAdminBankPayout);
+router.get('/safepay/finance/summary', safePayFinanceController.getAdminSummary);
+router.post('/safepay/finance/reconcile', financeSyncLimiter, safePayFinanceController.reconcile);
+router.get('/safepay/finance/reconciliation-issues', safePayFinanceController.getReconciliationIssues);
 router.get('/safepay/:orderId', safePayAdminController.getSafePayDetail);
 router.get('/safepay/:orderId/timeline', safePayAdminController.getSafePayTimeline);
 router.get('/safepay/:orderId/chat', safePayAdminController.getSafePayChat);

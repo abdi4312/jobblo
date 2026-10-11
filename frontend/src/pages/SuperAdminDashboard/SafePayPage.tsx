@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, DollarSign, AlertTriangle, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { Shield, DollarSign, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { useSafePayList, useSafePaySummary } from '../../hooks/admin/safepay';
 import type { SafePayContract } from '../../types/admin/safepay';
 import {
@@ -11,7 +11,6 @@ import {
     AdminPageHeader,
     AdminStatCard,
     AdminStatCardSkeleton,
-    AdminErrorState,
 } from '../../components/admin';
 import { ChatIdCell } from '../../components/admin/chat/ChatIdCell';
 import type { ColumnDef } from '../../components/admin/AdminDataTable';

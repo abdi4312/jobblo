@@ -18,7 +18,7 @@
 const Payout  = require('../../models/Payout');
 const User    = require('../../models/User');
 const Payment = require('../../models/Payment');
-const { getStripe } = require('../../config/stripe');
+const { getStripeConfiguration, getStripeForMode } = require('../../config/stripe');
 const mongoose = require('mongoose');
 
 /**
@@ -92,6 +92,7 @@ async function releasePayoutToProvider(opts) {
 
   const netProviderAmount = grossAmount - platformFee;
   const idempotencyKey = `payout_order_${String(orderId)}`;
+  const stripeConfig = await getStripeConfiguration();
 
   // ── 1. Idempotency check ────────────────────────────────────────────────────
   // If a Payout record for this order already exists, return it without
@@ -106,19 +107,40 @@ async function releasePayoutToProvider(opts) {
     if (payout.status === 'cancelled') {
       throw new Error(`Payout for order ${orderId} was cancelled and cannot be retried automatically.`);
     }
+    if (
+      payout.stripeLivemode !== null &&
+      payout.stripeLivemode !== undefined &&
+      payout.stripeLivemode !== !stripeConfig.testMode
+    ) {
+      const err = new Error('PAYOUT_MODE_MISMATCH: Existing payout belongs to another Stripe mode.');
+      err.code = 'PAYOUT_MODE_MISMATCH';
+      throw err;
+    }
+    if (
+      payout.stripeLivemode === null &&
+      (payout.stripeTransferId || ['processing', 'failed', 'transferred'].includes(payout.status))
+    ) {
+      const err = new Error('PAYOUT_MODE_UNKNOWN: Existing payout requires financial review.');
+      err.code = 'PAYOUT_MODE_UNKNOWN';
+      throw err;
+    }
     // status is 'pending', 'released_internal', 'processing', or 'failed' — retry below.
   }
 
   // ── 2. Verify provider has a working Stripe Connect account ────────────────
+  const connectAccountField = stripeConfig.testMode
+    ? 'stripeConnectAccountIdTest'
+    : 'stripeConnectAccountId';
   const provider = await User.findById(providerId).select(
-    'stripeConnectAccountId payoutEnabled chargesEnabled detailsSubmitted payoutOnboardingStatus name email'
+    `stripeConnectAccountId stripeConnectAccountIdTest payoutEnabled chargesEnabled detailsSubmitted payoutOnboardingStatus name email`
   );
 
   if (!provider) {
     throw new Error(`Provider user not found: ${providerId}`);
   }
 
-  if (!provider.stripeConnectAccountId) {
+  const stripeConnectAccountId = provider[connectAccountField];
+  if (!stripeConnectAccountId) {
     const err = new Error('PAYOUT_SETUP_REQUIRED: Provider has not connected a Stripe payout account.');
     err.code = 'PAYOUT_SETUP_REQUIRED';
     err.providerId = String(providerId);
@@ -150,12 +172,17 @@ async function releasePayoutToProvider(opts) {
       releasedBy,
       stripePaymentIntentId:    stripePaymentIntentId || undefined,
       stripeCheckoutSessionId:  stripeCheckoutSessionId || undefined,
-      stripeConnectAccountId:   provider.stripeConnectAccountId,
+      stripeConnectAccountId,
+      stripeLivemode: !stripeConfig.testMode,
       safePayHistoryId:         safePayHistoryId || undefined,
       disputeId:                disputeId || undefined,
       idempotencyKey,
       status: 'pending',
     });
+    await payout.save(saveOpts);
+  } else if (payout.status === 'pending' || payout.status === 'released_internal') {
+    payout.stripeConnectAccountId = stripeConnectAccountId;
+    payout.stripeLivemode = !stripeConfig.testMode;
     await payout.save(saveOpts);
   }
 
@@ -169,14 +196,14 @@ async function releasePayoutToProvider(opts) {
   payout.transitionTo('processing');
   await payout.save(saveOpts);
 
-  const stripe = await getStripe();
+  const stripe = await getStripeForMode(stripeConfig.testMode);
 
   let transfer;
   try {
     const transferParams = {
       amount:      Math.round(netProviderAmount * 100), // Stripe uses øre/cents
       currency:    'nok',
-      destination: provider.stripeConnectAccountId,
+      destination: stripeConnectAccountId,
       metadata: {
         orderId:       String(orderId),
         providerId:    String(providerId),
@@ -223,7 +250,27 @@ async function releasePayoutToProvider(opts) {
   payout.transitionTo('transferred', {
     stripeTransferId:    transfer.id,
     transferInitiatedAt: new Date(),
+    stripeLivemode: !stripeConfig.testMode,
   });
+  await payout.save(saveOpts);
+
+  try {
+    const { recordStripeTransfer } = require('../stripe/financialHistory');
+    await recordStripeTransfer(transfer, {
+      livemode: !stripeConfig.testMode,
+      source: 'reconciliation',
+    });
+    payout.financialSyncStatus = 'synced';
+    payout.financialSyncError = undefined;
+  } catch (syncErr) {
+    payout.financialSyncStatus = 'failed';
+    payout.financialSyncError = syncErr.code || syncErr.name || 'financial_history_sync_failed';
+    console.error(
+      'releasePayoutToProvider: transfer history sync failed for payout %s: %s',
+      String(payout._id),
+      payout.financialSyncError
+    );
+  }
   await payout.save(saveOpts);
 
   // ── 6. Update Payment record status to 'released' if it exists ────────────

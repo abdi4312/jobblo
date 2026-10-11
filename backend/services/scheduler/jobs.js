@@ -1,6 +1,8 @@
 const Order = require('../../models/Order');
 const Payment = require('../../models/Payment');
 const Payout = require('../../models/Payout');
+const { getStripeConfiguration, getStripeForMode } = require('../../config/stripe');
+const { reconcileConnectedAccountsBatch } = require('../stripe/financialHistory');
 const Dispute = require('../../models/Dispute');
 const Notification = require('../../models/Notification');
 const { logApplicationError } = require('../../utils/errorLogger');
@@ -363,11 +365,18 @@ async function reconcileMoneyState() {
   return { unsettledOrders: problems.length, stuckDisputes: stuckDisputes.length };
 }
 
+async function reconcileStripeFinancialHistory() {
+  const config = await getStripeConfiguration();
+  const stripe = await getStripeForMode(config.testMode);
+  return reconcileConnectedAccountsBatch(stripe, !config.testMode, { limit: 10 });
+}
+
 module.exports = {
   autoReleaseStaleReviews,
   warnBeforeAutoRelease,
   retryFailedPayouts,
   cleanupAbandonedOrders,
   reconcileMoneyState,
+  reconcileStripeFinancialHistory,
   config,
 };

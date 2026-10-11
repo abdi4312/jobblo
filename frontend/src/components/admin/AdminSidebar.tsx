@@ -29,6 +29,7 @@ import {
   Megaphone,
   Wrench,
   AlertCircle,
+  WalletCards,
 } from 'lucide-react';
 import { useUserStore } from '../../stores/userStore';
 import { toast } from 'react-hot-toast';
@@ -85,6 +86,11 @@ function useNavGroups(): NavGroup[] {
           icon: <CreditCard size={18} />,
         },
         { label: t('nav.safepay'), to: '/dashboard/safepay', icon: <Shield size={18} /> },
+        {
+          label: 'Stripe-historikk',
+          to: '/dashboard/finance-history',
+          icon: <WalletCards size={18} />,
+        },
         { label: t('nav.tvister'), to: '/dashboard/disputes', icon: <AlertTriangle size={18} /> },
         { label: t('nav.abonnementer'), to: '/dashboard/plans', icon: <ShieldCheck size={18} /> },
         { label: t('nav.kuponger'), to: '/dashboard/voucher', icon: <Ticket size={18} /> },

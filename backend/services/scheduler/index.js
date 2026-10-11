@@ -20,6 +20,7 @@ const SCHEDULE = [
   { name: 'retryFailedPayouts', fn: jobs.retryFailedPayouts, everyMs: 2 * HOUR, delayMs: 4 * MINUTE },
   { name: 'cleanupAbandonedOrders', fn: jobs.cleanupAbandonedOrders, everyMs: 6 * HOUR, delayMs: 5 * MINUTE },
   { name: 'reconcileMoneyState', fn: jobs.reconcileMoneyState, everyMs: 24 * HOUR, delayMs: 6 * MINUTE },
+  { name: 'reconcileStripeFinancialHistory', fn: jobs.reconcileStripeFinancialHistory, everyMs: 24 * HOUR, delayMs: 7 * MINUTE },
 ];
 
 const timers = [];

@@ -237,6 +237,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    stripeConnectAccountIdTest: {
+      type: String,
+      trim: true,
+    },
     payoutOnboardingStatus: {
       type: String,
       enum: ['none', 'started', 'restricted', 'enabled', 'pending_verification'],
