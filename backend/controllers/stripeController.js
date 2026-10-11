@@ -61,6 +61,12 @@ const {
   customerFieldForMode,
 } = require('../services/stripe/customers');
 const { getStripeWebhookReadiness } = require('../services/stripe/webhookReadiness');
+const {
+  getOrCreateBillingOperation,
+  findActiveBillingOperation,
+  finishBillingOperation,
+  operationIdempotencyKey,
+} = require('../services/stripe/billingOperations');
 
 /**
  * How long two identical checkout requests are collapsed into one Stripe session.
@@ -573,8 +579,15 @@ exports.cancelMySubscription = async (req, res) => {
       return res.status(400).json({ message: 'Denne planen er gratis og har ingenting å si opp' });
     }
 
-    const { stripe, live } = await stripeContextForSubscription(current, req.userId);
+    const { stripe, live, testMode } = await stripeContextForSubscription(current, req.userId);
+    const fingerprint = `${testMode ? 'test' : 'live'}:${current.stripeSubscriptionId}:cancel`;
     if (live.cancel_at_period_end) {
+      const activeOperation = await findActiveBillingOperation(fingerprint);
+      if (activeOperation) {
+        await finishBillingOperation(activeOperation, 'succeeded', {
+          stripeObjectId: live.id,
+        });
+      }
       const periodEnd = subscriptionPeriodEnd(live);
       subscription.currentPlan.autoRenew = false;
       if (periodEnd) {
@@ -588,8 +601,9 @@ exports.cancelMySubscription = async (req, res) => {
         currentPeriodEnd: periodEnd || subscription.currentPlan.renewalDate,
       });
     }
+    let scheduleId;
     if (live.schedule) {
-      const scheduleId = typeof live.schedule === 'string' ? live.schedule : live.schedule.id;
+      scheduleId = typeof live.schedule === 'string' ? live.schedule : live.schedule.id;
       const schedule = await stripe.subscriptionSchedules.retrieve(scheduleId);
       if (
         !subscription.pendingPlan ||
@@ -600,14 +614,38 @@ exports.cancelMySubscription = async (req, res) => {
           message: 'Administrer den planlagte endringen og oppsigelsen i Stripe Portal.',
         });
       }
-      await stripe.subscriptionSchedules.release(scheduleId);
-      subscription.pendingPlan = undefined;
     }
-    const updated = await stripe.subscriptions.update(
-      current.stripeSubscriptionId,
-      { cancel_at_period_end: true },
-      { idempotencyKey: `jobblo_subscription_cancel_${current.stripeSubscriptionId}` }
-    );
+    const operation = await getOrCreateBillingOperation({
+      fingerprint,
+      operationType: 'cancel',
+      userId: req.userId,
+      subscriptionId: current.stripeSubscriptionId,
+      testMode,
+    });
+    let updated;
+    try {
+      if (scheduleId) {
+        await stripe.subscriptionSchedules.release(
+          scheduleId,
+          {},
+          { idempotencyKey: operationIdempotencyKey(operation, 'schedule_release') }
+        );
+      }
+      updated = await stripe.subscriptions.update(
+        current.stripeSubscriptionId,
+        { cancel_at_period_end: true },
+        { idempotencyKey: operationIdempotencyKey(operation) }
+      );
+      if (!updated.cancel_at_period_end) {
+        throw new Error('Stripe did not confirm the scheduled cancellation');
+      }
+      await finishBillingOperation(operation, 'succeeded', { stripeObjectId: updated.id });
+    } catch (error) {
+      await finishBillingOperation(operation, 'reconciliation_required', {
+        failureCode: error?.code || error?.type || 'stripe_cancel_outcome_unknown',
+      });
+      throw error;
+    }
 
     // `status` stays 'active': they keep the plan until the period ends. What changes is
     // that it will not renew — recorded as autoRenew, which is the field that means that.
@@ -620,6 +658,7 @@ exports.cancelMySubscription = async (req, res) => {
       subscription.currentPlan.renewalDate = periodEnd;
       subscription.currentPlan.endDate = periodEnd;
     }
+    if (scheduleId) subscription.pendingPlan = undefined;
     await subscription.save();
 
     res.json({
@@ -643,7 +682,8 @@ exports.resumeMySubscription = async (req, res) => {
       return res.status(400).json({ message: 'Du har ingen abonnement å gjenoppta' });
     }
 
-    const { stripe, live } = await stripeContextForSubscription(current, req.userId);
+    const { stripe, live, testMode } = await stripeContextForSubscription(current, req.userId);
+    const fingerprint = `${testMode ? 'test' : 'live'}:${current.stripeSubscriptionId}:resume`;
     if (live.status === 'canceled') {
       return res.status(409).json({
         message: 'Abonnementet er allerede avsluttet og kan ikke gjenopptas.',
@@ -657,7 +697,26 @@ exports.resumeMySubscription = async (req, res) => {
           message: 'Administrer det planlagte planbyttet i Stripe Portal.',
         });
       }
-      await stripe.subscriptionSchedules.release(scheduleId);
+      const operation = await getOrCreateBillingOperation({
+        fingerprint,
+        operationType: 'resume',
+        userId: req.userId,
+        subscriptionId: current.stripeSubscriptionId,
+        testMode,
+      });
+      try {
+        await stripe.subscriptionSchedules.release(
+          scheduleId,
+          {},
+          { idempotencyKey: operationIdempotencyKey(operation, 'schedule_release') }
+        );
+        await finishBillingOperation(operation, 'succeeded', { stripeObjectId: live.id });
+      } catch (error) {
+        await finishBillingOperation(operation, 'reconciliation_required', {
+          failureCode: error?.code || error?.type || 'stripe_resume_outcome_unknown',
+        });
+        throw error;
+      }
       subscription.currentPlan.autoRenew = true;
       subscription.currentPlan.status = 'active';
       await subscription.save();
@@ -667,6 +726,10 @@ exports.resumeMySubscription = async (req, res) => {
       });
     }
     if (!live.cancel_at_period_end) {
+      const activeOperation = await findActiveBillingOperation(fingerprint);
+      if (activeOperation) {
+        await finishBillingOperation(activeOperation, 'succeeded', { stripeObjectId: live.id });
+      }
       subscription.currentPlan.autoRenew = true;
       await subscription.save();
       return res.json({
@@ -674,11 +737,30 @@ exports.resumeMySubscription = async (req, res) => {
         cancelAtPeriodEnd: false,
       });
     }
-    const updated = await stripe.subscriptions.update(
-      current.stripeSubscriptionId,
-      { cancel_at_period_end: false },
-      { idempotencyKey: `jobblo_subscription_resume_${current.stripeSubscriptionId}` }
-    );
+    const operation = await getOrCreateBillingOperation({
+      fingerprint,
+      operationType: 'resume',
+      userId: req.userId,
+      subscriptionId: current.stripeSubscriptionId,
+      testMode,
+    });
+    let updated;
+    try {
+      updated = await stripe.subscriptions.update(
+        current.stripeSubscriptionId,
+        { cancel_at_period_end: false },
+        { idempotencyKey: operationIdempotencyKey(operation) }
+      );
+      if (updated.cancel_at_period_end) {
+        throw new Error('Stripe did not confirm subscription reactivation');
+      }
+      await finishBillingOperation(operation, 'succeeded', { stripeObjectId: updated.id });
+    } catch (error) {
+      await finishBillingOperation(operation, 'reconciliation_required', {
+        failureCode: error?.code || error?.type || 'stripe_resume_outcome_unknown',
+      });
+      throw error;
+    }
 
     subscription.currentPlan.autoRenew = true;
     subscription.currentPlan.status = 'active';

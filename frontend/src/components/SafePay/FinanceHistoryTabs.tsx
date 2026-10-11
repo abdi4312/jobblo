@@ -40,6 +40,7 @@ interface FinanceResponse {
   activeMode?: 'test' | 'live';
   testDataNotice: string | null;
   lastSyncedAt: string | null;
+  snapshotAt: string;
 }
 
 interface Props {
@@ -110,6 +111,7 @@ export default function FinanceHistoryTabs({ admin = false }: Props) {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
+  const [snapshotAt, setSnapshotAt] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [result, setResult] = useState<FinanceResponse | null>(null);
   const [summary, setSummary] = useState<{ transfers: Array<{ _id: { currency: string; status: string; mode?: boolean }; count: number; amount: number }>; bankPayouts: Array<{ _id: { currency: string; status: string; mode?: boolean }; count: number; amount: number }> } | null>(null);
@@ -124,6 +126,7 @@ export default function FinanceHistoryTabs({ admin = false }: Props) {
   useEffect(() => {
     let active = true;
     const query = new URLSearchParams({ page: String(page), limit: '20' });
+    if (page > 1 && snapshotAt) query.set('snapshotAt', snapshotAt);
     if (admin && mode !== 'current') query.set('mode', mode);
     if (status) query.set('status', status);
     if (search.trim()) query.set('search', search.trim());
@@ -147,6 +150,7 @@ export default function FinanceHistoryTabs({ admin = false }: Props) {
       .then(([listResponse, summaryResponse]) => {
         if (!active) return;
         setResult(listResponse.data);
+        setSnapshotAt(listResponse.data.snapshotAt);
         setSummary(summaryResponse.data);
         if (admin && !reconcileModeInitialized.current && listResponse.data.activeMode) {
           setReconcileMode(listResponse.data.activeMode);

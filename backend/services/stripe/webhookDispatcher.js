@@ -14,6 +14,7 @@ const {
   applySubscriptionDeleted,
   applySubscriptionScheduleCanceled,
 } = require('./provisioning');
+const { recordStripePaymentLifecycle } = require('./paymentLifecycle');
 
 /**
  * The single verified ingress for Stripe events.
@@ -48,6 +49,16 @@ const ORDER_EVENT_TYPES = new Set([
   'transfer.created',
   'transfer.updated',
   'transfer.reversed',
+  'charge.dispute.created',
+  'charge.dispute.updated',
+  'charge.dispute.closed',
+  'charge.dispute.funds_withdrawn',
+  'charge.dispute.funds_reinstated',
+  'charge.refunded',
+  'charge.refund.updated',
+  'refund.created',
+  'refund.updated',
+  'refund.failed',
   'payout.created',
   'payout.updated',
   'payout.paid',
@@ -196,6 +207,19 @@ async function handleEvent(event, { io } = {}) {
       if (!result.ok) throw new Error('Canceled subscription schedule could not be reconciled');
       return { handled: 'subscription_schedule_canceled', result };
     }
+
+    case 'charge.dispute.created':
+    case 'charge.dispute.updated':
+    case 'charge.dispute.funds_withdrawn':
+    case 'charge.dispute.funds_reinstated':
+    case 'charge.dispute.closed':
+    case 'charge.refunded':
+    case 'charge.refund.updated':
+    case 'refund.created':
+    case 'refund.updated':
+    case 'refund.failed':
+      await recordStripePaymentLifecycle(event);
+      return { handled: 'stripe_payment_incident' };
 
     case 'transfer.created':
     case 'transfer.updated':

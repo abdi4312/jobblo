@@ -16,6 +16,27 @@
 
 jest.mock('../models/SubscriptionPlan', () => ({ findById: jest.fn() }));
 jest.mock('../models/Subscription', () => ({ findOne: jest.fn() }));
+const mockBillingOperations = new Map();
+jest.mock('../models/StripeBillingOperation', () => ({
+  findOne: jest.fn(({ fingerprint }) =>
+    Promise.resolve(
+      [...mockBillingOperations.values()].find((operation) =>
+        operation.fingerprint === fingerprint &&
+        ['pending', 'reconciliation_required'].includes(operation.status)
+      ) || null
+    )
+  ),
+  create: jest.fn(async (operation) => {
+    const saved = { _id: `billing_${mockBillingOperations.size + 1}`, ...operation };
+    mockBillingOperations.set(saved.operationId, saved);
+    return saved;
+  }),
+  updateOne: jest.fn(async ({ _id }, update) => {
+    const saved = [...mockBillingOperations.values()].find((operation) => operation._id === _id);
+    if (saved) Object.assign(saved, update.$set);
+    return { modifiedCount: saved ? 1 : 0 };
+  }),
+}));
 jest.mock('../models/Coupon', () => ({ findOne: jest.fn(), findByIdAndUpdate: jest.fn() }));
 jest.mock('../models/User', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
 jest.mock('../models/Service', () => ({ findById: jest.fn() }));
@@ -54,7 +75,11 @@ const User = require('../models/User');
 const { getStripe, getStripeForMode, getStripeConfiguration } = require('../config/stripe');
 const { getStripeWebhookReadiness } = require('../services/stripe/webhookReadiness');
 const { resolveStripeCustomer } = require('../services/stripe/customers');
-const { createCheckoutSession, cancelMySubscription } = require('../controllers/stripeController');
+const {
+  createCheckoutSession,
+  cancelMySubscription,
+  resumeMySubscription,
+} = require('../controllers/stripeController');
 
 const USER_ID = '507f1f77bcf86cd799439011';
 const PLAN_ID = '507f1f77bcf86cd799439022';
@@ -133,6 +158,7 @@ function sentUnitAmount() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockBillingOperations.clear();
   process.env.FRONTEND_URL = 'https://jobblo.no';
 
   stripe = {
@@ -591,12 +617,49 @@ describe('double-submit protection', () => {
     await cancelMySubscription({ userId: USER_ID }, res);
 
     expect(res.statusCode).toBe(200);
-    expect(stripe.subscriptionSchedules.release).toHaveBeenCalledWith('sched_jobblo');
+    expect(stripe.subscriptionSchedules.release).toHaveBeenCalledWith(
+      'sched_jobblo',
+      {},
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('schedule_release') })
+    );
     expect(stripe.subscriptions.update).toHaveBeenCalledWith(
       'sub_existing',
       { cancel_at_period_end: true },
       expect.objectContaining({ idempotencyKey: expect.any(String) })
     );
     expect(record.pendingPlan).toBeUndefined();
+  });
+
+  it('uses distinct durable keys for cancel, resume, and a later cancel', async () => {
+    const record = {
+      userId: USER_ID,
+      currentPlan: {
+        plan: 'Pro',
+        planType: 'private',
+        planId: PLAN_ID,
+        stripeSubscriptionId: 'sub_existing',
+        stripeMode: 'test',
+        status: 'active',
+      },
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    Subscription.findOne.mockResolvedValue(record);
+    stripe.subscriptions.retrieve
+      .mockResolvedValueOnce({ id: 'sub_existing', status: 'active', customer: 'cus_1', cancel_at_period_end: false })
+      .mockResolvedValueOnce({ id: 'sub_existing', status: 'active', customer: 'cus_1', cancel_at_period_end: true })
+      .mockResolvedValueOnce({ id: 'sub_existing', status: 'active', customer: 'cus_1', cancel_at_period_end: false });
+    stripe.subscriptions.update
+      .mockResolvedValueOnce({ id: 'sub_existing', cancel_at_period_end: true })
+      .mockResolvedValueOnce({ id: 'sub_existing', cancel_at_period_end: false })
+      .mockResolvedValueOnce({ id: 'sub_existing', cancel_at_period_end: true });
+
+    await cancelMySubscription({ userId: USER_ID }, makeRes());
+    await resumeMySubscription({ userId: USER_ID }, makeRes());
+    await cancelMySubscription({ userId: USER_ID }, makeRes());
+
+    const keys = stripe.subscriptions.update.mock.calls.map((call) => call[2].idempotencyKey);
+    expect(keys).toHaveLength(3);
+    expect(new Set(keys).size).toBe(3);
+    expect(keys.every((key) => key.startsWith('jobblo_billing_'))).toBe(true);
   });
 });

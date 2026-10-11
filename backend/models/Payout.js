@@ -48,6 +48,7 @@ const payoutSchema = new mongoose.Schema(
         'processing',
         'transferred',
         'failed',
+        'reconciliation_required',
         'cancelled',
       ],
       required: true,
@@ -102,7 +103,8 @@ payoutSchema.methods.transitionTo = function (nextStatus, extra = {}) {
     released_internal: ['processing', 'failed'],
     processing: ['transferred', 'failed'],
     transferred: [],
-    failed: ['processing', 'cancelled'],
+    failed: ['processing', 'reconciliation_required', 'cancelled'],
+    reconciliation_required: [],
     cancelled: [],
   };
   const allowed = VALID_NEXT[this.status] || [];

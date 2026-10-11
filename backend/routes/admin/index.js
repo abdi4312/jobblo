@@ -14,6 +14,7 @@ const categoriesAdminController = require('../../controllers/admin/categoriesAdm
 const transactionsAdminController = require('../../controllers/admin/transactionsAdminController');
 const safePayAdminController = require('../../controllers/admin/safePayAdminController');
 const disputesAdminController = require('../../controllers/admin/disputesAdminController');
+const stripePaymentIncidentController = require('../../controllers/admin/stripePaymentIncidentController');
 const chatsAdminController = require('../../controllers/admin/chatsAdminController');
 const chatReportsAdminController = require('../../controllers/admin/chatReportsAdminController');
 const jobReportsAdminController = require('../../controllers/admin/jobReportsAdminController');
@@ -31,6 +32,9 @@ const stripeBillingController = require('../../controllers/stripeBillingControll
 router.use(authenticate, requireAdmin, adminLimiter);
 
 router.get('/stripe/webhook-readiness', stripeWebhookHealthController.getWebhookReadiness);
+router.get('/stripe/payment-incidents', stripePaymentIncidentController.list);
+router.post('/stripe/payment-incidents/:id/refund-duplicate', stripePaymentIncidentController.refundDuplicatePayment);
+router.post('/stripe/payment-incidents/:id/reverse-chargeback-transfer', stripePaymentIncidentController.reverseChargebackTransfer);
 router.get('/billing/subscriptions/summary', stripeBillingController.getAdminSummary);
 router.post(
   '/billing/subscriptions/reconcile',

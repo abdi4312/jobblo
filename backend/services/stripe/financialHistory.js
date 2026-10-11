@@ -83,6 +83,50 @@ async function recordStripeTransfer(transfer, { livemode, event, source = 'webho
       payout.stripeLivemode !== livemode) {
     throw new Error('Stripe transfer mode does not match the local payout mode');
   }
+  if (
+    payout &&
+    payout.status !== 'transferred' &&
+    ['processing', 'reconciliation_required'].includes(payout.status) &&
+    !transfer.reversed &&
+    Number(transfer.amount_reversed || 0) === 0
+  ) {
+    const matchesPayout =
+      transfer.metadata?.payoutId === String(payout._id) &&
+      transfer.metadata?.orderId === String(payout.orderId) &&
+      destination === payout.stripeConnectAccountId &&
+      Number(transfer.amount) === Math.round(Number(payout.netProviderAmount) * 100) &&
+      String(transfer.currency || '').toLowerCase() === String(payout.currency || '').toLowerCase() &&
+      (payout.stripeLivemode === null ||
+        payout.stripeLivemode === undefined ||
+        payout.stripeLivemode === livemode);
+    if (!matchesPayout) {
+      await Payout.updateOne(
+        { _id: payout._id, status: { $in: ['processing', 'reconciliation_required'] } },
+        {
+          $set: {
+            status: 'reconciliation_required',
+            failureCode: 'PAYOUT_TRANSFER_MISMATCH',
+            failureReason: 'Observed Stripe transfer does not match the authorized payout.',
+          },
+        }
+      );
+      throw new Error('Stripe transfer does not match the authorized payout');
+    }
+    await Payout.updateOne(
+      { _id: payout._id, status: { $in: ['processing', 'reconciliation_required'] } },
+      {
+        $set: {
+          status: 'transferred',
+          stripeTransferId: transferId,
+          transferInitiatedAt: new Date(),
+          transferCompletedAt: new Date(),
+          stripeLivemode: livemode,
+          failureCode: null,
+          failureReason: null,
+        },
+      }
+    );
+  }
   const providerId = payout?.providerId || await providerForAccount(destination, livemode);
   const orderId = payout?.orderId ||
     (mongoose.Types.ObjectId.isValid(transfer.metadata?.orderId)
@@ -145,7 +189,12 @@ async function recordStripeBankPayout(payout, { stripeAccountId, livemode, event
     currency: String(payout.currency || '').toUpperCase(),
     status: payout.status,
     arrivalDate: dateFromUnix(payout.arrival_date),
-    payoutType: payout.type === 'manual' ? 'manual' : payout.type === 'automatic' ? 'automatic' : undefined,
+    payoutType:
+      typeof payout.automatic === 'boolean'
+        ? payout.automatic
+          ? 'automatic'
+          : 'manual'
+        : undefined,
     destinationLast4: /^\d{4}$/.test(destination?.last4 || '') ? destination.last4 : undefined,
     destinationBankName: destination?.bank_name || undefined,
     failureCode: payout.failure_code || undefined,

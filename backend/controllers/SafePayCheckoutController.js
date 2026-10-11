@@ -16,7 +16,7 @@ const { normaliseReviewPhotos, MAX_REVIEW_PHOTOS } = require('../utils/reviewPho
 
 const PAID_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed'];
 
-async function verifyPaidCheckoutSession(session, order) {
+async function verifyPaidCheckoutSession(session, order, allowAlternateAttempt = false) {
   if (String(session?.metadata?.userId) !== String(order.customerId)) {
     return { ok: false, reason: 'session_customer_mismatch' };
   }
@@ -66,12 +66,18 @@ async function verifyPaidCheckoutSession(session, order) {
 
   if (order.checkoutAttemptId) {
     if (
-      session.metadata?.checkoutAttemptId !== order.checkoutAttemptId ||
-      session.metadata?.stripeMode !== sessionMode
+      allowAlternateAttempt &&
+      (!session.metadata?.checkoutAttemptId || session.metadata?.stripeMode !== sessionMode)
     ) {
       return { ok: false, reason: 'checkout_attempt_mismatch' };
     }
-    if (
+    if (!allowAlternateAttempt && (
+      session.metadata?.checkoutAttemptId !== order.checkoutAttemptId ||
+      session.metadata?.stripeMode !== sessionMode
+    )) {
+      return { ok: false, reason: 'checkout_attempt_mismatch' };
+    }
+    if (!allowAlternateAttempt &&
       order.checkoutSessionId !== session.id &&
       order.checkoutSessionId !== `PENDING_${order.checkoutAttemptId}`
     ) {
@@ -104,7 +110,7 @@ async function verifyPaidCheckoutSession(session, order) {
   ) {
     return { ok: false, reason: 'charge_mismatch' };
   }
-  return { ok: true, paymentIntentId };
+  return { ok: true, paymentIntentId, chargeId };
 }
 
 /**
@@ -123,10 +129,89 @@ async function confirmPaidSession(session, io) {
   // metadata when we created the session, so it is trusted — but an order whose
   // metadata points elsewhere means we are about to mark the wrong order paid,
   // which is worth refusing rather than guessing about.
-  const verification = await verifyPaidCheckoutSession(session, order);
+  let verification = await verifyPaidCheckoutSession(session, order);
+  const existingPayment = await Payment.findOne({ orderId });
+  let updatedOrder;
+  let alreadyConfirmed = false;
+  if (!verification.ok && ['checkout_attempt_mismatch', 'checkout_session_mismatch'].includes(verification.reason)) {
+    verification = await verifyPaidCheckoutSession(session, order, true);
+    if (verification.ok) {
+      if (existingPayment?.stripePaymentIntentId === verification.paymentIntentId) {
+        return { ok: true, alreadyConfirmed: true, duplicateSession: true };
+      }
+      if (existingPayment || PAID_STATUSES.includes(order.status)) {
+        const { recordDuplicateSafePayPayment } = require('../services/stripe/paymentLifecycle');
+        const incident = await recordDuplicateSafePayPayment({
+          order,
+          originalPayment: existingPayment,
+          session,
+          paymentIntentId: verification.paymentIntentId,
+          chargeId: verification.chargeId,
+        });
+        return { ok: true, duplicatePayment: true, incidentId: String(incident._id) };
+      }
+
+      // A delayed event for a replaced checkout can be the first actual payment.
+      // Claim it only if the reservation has not changed since the order read.
+      updatedOrder = await Order.findOneAndUpdate(
+        {
+          _id: orderId,
+          status: { $in: ['awaiting_payment', 'pending', 'accepted'] },
+          paymentStatus: { $ne: 'paid' },
+          checkoutSessionId: order.checkoutSessionId,
+          checkoutAttemptId: order.checkoutAttemptId,
+        },
+        {
+          $set: {
+            status: 'paid',
+            paymentStatus: 'paid',
+            paymentConfirmedAt: new Date(),
+            checkoutSessionId: session.id,
+            checkoutAttemptId: session.metadata.checkoutAttemptId,
+            checkoutSessionStatus: 'complete',
+            checkoutMode: session.livemode ? 'live' : 'test',
+            paymentIntentId: verification.paymentIntentId,
+          },
+          $push: {
+            history: {
+              action: 'payment_confirmed',
+              userId: null,
+              timestamp: new Date(),
+              data: { stripeSessionId: session.id, message: 'Betaling bekreftet' },
+            },
+          },
+        },
+        { new: true }
+      );
+      if (!updatedOrder) {
+        const [currentOrder, currentPayment] = await Promise.all([
+          Order.findById(orderId),
+          Payment.findOne({ orderId }),
+        ]);
+        if (
+          currentOrder?.checkoutSessionId === session.id &&
+          currentOrder?.paymentIntentId === verification.paymentIntentId
+        ) {
+          updatedOrder = currentOrder;
+          alreadyConfirmed = true;
+        } else if (currentPayment || PAID_STATUSES.includes(currentOrder?.status)) {
+          const { recordDuplicateSafePayPayment } = require('../services/stripe/paymentLifecycle');
+          const incident = await recordDuplicateSafePayPayment({
+            order: currentOrder || order,
+            originalPayment: currentPayment,
+            session,
+            paymentIntentId: verification.paymentIntentId,
+            chargeId: verification.chargeId,
+          });
+          return { ok: true, duplicatePayment: true, incidentId: String(incident._id) };
+        } else {
+          return { ok: false, reason: 'order_state_conflict' };
+        }
+      }
+    }
+  }
   if (!verification.ok) return verification;
   const paymentIntentId = verification.paymentIntentId;
-  const existingPayment = await Payment.findOne({ orderId });
   if (
     existingPayment &&
     (existingPayment.stripeSessionId !== session.id ||
@@ -135,9 +220,9 @@ async function confirmPaidSession(session, io) {
     return { ok: false, reason: 'duplicate_successful_payment' };
   }
 
-  let updatedOrder;
-  let alreadyConfirmed = false;
-  if (PAID_STATUSES.includes(order.status)) {
+  if (updatedOrder) {
+    // The delayed first successful attempt was claimed above.
+  } else if (PAID_STATUSES.includes(order.status)) {
     if (order.checkoutSessionId !== session.id || order.paymentIntentId !== paymentIntentId) {
       return { ok: false, reason: 'duplicate_successful_payment' };
     }
@@ -167,6 +252,7 @@ async function confirmPaidSession(session, io) {
           paymentConfirmedAt: new Date(),
           checkoutSessionId: session.id,
           checkoutSessionStatus: 'complete',
+          checkoutMode: session.livemode ? 'live' : 'test',
           paymentIntentId,
         },
         $push: {
@@ -191,6 +277,17 @@ async function confirmPaidSession(session, io) {
       ) {
         updatedOrder = currentOrder;
         alreadyConfirmed = true;
+      } else if (PAID_STATUSES.includes(currentOrder?.status) && currentOrder.paymentIntentId) {
+        const currentPayment = await Payment.findOne({ orderId });
+        const { recordDuplicateSafePayPayment } = require('../services/stripe/paymentLifecycle');
+        const incident = await recordDuplicateSafePayPayment({
+          order: currentOrder,
+          originalPayment: currentPayment,
+          session,
+          paymentIntentId,
+          chargeId: verification.chargeId,
+        });
+        return { ok: true, duplicatePayment: true, incidentId: String(incident._id) };
       } else {
         return { ok: false, reason: 'order_state_conflict' };
       }
@@ -233,6 +330,7 @@ async function confirmPaidSession(session, io) {
         amount: updatedOrder.agreedPrice || 0,
         stripeSessionId: session.id,
         stripePaymentIntentId: paymentIntentId,
+        stripeLivemode: session.livemode,
       },
     },
     { upsert: true }

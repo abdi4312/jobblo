@@ -15,6 +15,10 @@ jest.mock('../models/ChatMessage', () => ({ findById: jest.fn() }));
 jest.mock('../models/Service', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
 jest.mock('../models/SafePayHistory', () => ({ findOneAndUpdate: jest.fn() }));
 jest.mock('../models/Review', () => ({ create: jest.fn(), findOne: jest.fn() }));
+jest.mock('../models/StripePaymentIncident', () => ({
+  findOneAndUpdate: jest.fn().mockResolvedValue({ _id: 'incident_1' }),
+}));
+jest.mock('../utils/errorLogger', () => ({ logApplicationError: jest.fn() }));
 jest.mock('../config/stripe', () => ({
   getStripeConfiguration: jest.fn(),
   getStripeForMode: jest.fn(),
@@ -26,6 +30,7 @@ const Order = require('../models/Order');
 const Payment = require('../models/Payment');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const StripePaymentIncident = require('../models/StripePaymentIncident');
 const Chat = require('../models/ChatMessage');
 const { getStripeConfiguration, getStripeForMode } = require('../config/stripe');
 const { confirmPaidSession } = require('../controllers/SafePayCheckoutController');
@@ -45,7 +50,12 @@ function session(overrides = {}) {
     livemode: false,
     payment_intent: 'pi_test_1',
     payment_status: 'paid',
-    metadata: { orderId: String(ORDER_ID), userId: String(CUSTOMER_ID) },
+    metadata: {
+      orderId: String(ORDER_ID),
+      userId: String(CUSTOMER_ID),
+      checkoutAttemptId: 'attempt_current',
+      stripeMode: 'test',
+    },
     ...overrides,
   };
 }
@@ -59,6 +69,7 @@ function order(status = 'awaiting_payment') {
     agreedPrice: 1000,
     checkoutSessionId: 'cs_test_1',
     checkoutSessionStatus: 'open',
+    checkoutAttemptId: 'attempt_current',
     checkoutMode: 'test',
     checkoutAmountMinor: 103000,
     checkoutCurrency: 'nok',
@@ -77,24 +88,26 @@ beforeEach(() => {
   getStripeConfiguration.mockResolvedValue({ mode: 'test', testMode: true });
   getStripeForMode.mockResolvedValue({
     paymentIntents: {
-      retrieve: jest.fn().mockResolvedValue({
-        id: 'pi_test_1',
+      retrieve: jest.fn(async (id) => ({
+        id,
         status: 'succeeded',
         amount_received: 103000,
         currency: 'nok',
         customer: 'cus_test_1',
-        latest_charge: 'ch_test_1',
-      }),
+        latest_charge: id === 'pi_test_1' ? 'ch_test_1' : 'ch_test_2',
+      })),
     },
     charges: {
-      retrieve: jest.fn().mockResolvedValue({
-        id: 'ch_test_1',
+      retrieve: jest.fn(async (id) => ({
+        id,
         paid: true,
         captured: true,
         amount: 103000,
         currency: 'nok',
-        payment_intent: 'pi_test_1',
-      }),
+        payment_intent: id === 'ch_test_1' ? 'pi_test_1' : 'pi_test_2',
+        customer: 'cus_test_1',
+        livemode: false,
+      })),
     },
   });
 });
@@ -196,5 +209,121 @@ describe('confirmPaidSession', () => {
     Order.findById.mockResolvedValue(null);
     const result = await confirmPaidSession(session(), null);
     expect(result).toEqual({ ok: false, reason: 'order_not_found' });
+  });
+
+  it('accepts a delayed first payment from a replaced checkout without losing the order', async () => {
+    const orderDoc = order();
+    Order.findById.mockResolvedValue(orderDoc);
+    Order.findOneAndUpdate.mockResolvedValue({
+      ...order('paid'),
+      checkoutSessionId: 'cs_test_old',
+      checkoutAttemptId: 'attempt_old',
+      paymentIntentId: 'pi_test_2',
+    });
+    Payment.updateOne.mockResolvedValue({ upsertedCount: 1 });
+
+    const result = await confirmPaidSession(
+      session({
+        id: 'cs_test_old',
+        payment_intent: 'pi_test_2',
+        metadata: {
+          orderId: String(ORDER_ID),
+          userId: String(CUSTOMER_ID),
+          checkoutAttemptId: 'attempt_old',
+          stripeMode: 'test',
+        },
+      }),
+      null
+    );
+
+    expect(result).toMatchObject({ ok: true, alreadyConfirmed: false });
+    expect(Order.findOneAndUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        checkoutSessionId: 'cs_test_1',
+        checkoutAttemptId: 'attempt_current',
+      }),
+      expect.objectContaining({
+        $set: expect.objectContaining({
+          checkoutSessionId: 'cs_test_old',
+          checkoutAttemptId: 'attempt_old',
+        }),
+      }),
+      { new: true }
+    );
+    expect(StripePaymentIncident.findOneAndUpdate).not.toHaveBeenCalled();
+    expect(Notification.create).toHaveBeenCalledTimes(2);
+  });
+
+  it('records a separately verified later payment as an incident without a second payout entitlement', async () => {
+    const paidOrder = order('paid');
+    paidOrder.checkoutSessionId = 'cs_test_1';
+    Payment.findOne.mockResolvedValue({
+      stripeSessionId: 'cs_test_1',
+      stripePaymentIntentId: 'pi_test_1',
+    });
+    Order.findById.mockResolvedValue(paidOrder);
+
+    const result = await confirmPaidSession(
+      session({
+        id: 'cs_test_2',
+        payment_intent: 'pi_test_2',
+        metadata: {
+          orderId: String(ORDER_ID),
+          userId: String(CUSTOMER_ID),
+          checkoutAttemptId: 'attempt_old',
+          stripeMode: 'test',
+        },
+      }),
+      null
+    );
+
+    expect(result).toMatchObject({ ok: true, duplicatePayment: true, incidentId: 'incident_1' });
+    expect(StripePaymentIncident.findOneAndUpdate).toHaveBeenCalledWith(
+      { eventId: 'duplicate_payment:cs_test_2:pi_test_2' },
+      expect.objectContaining({
+        $setOnInsert: expect.objectContaining({
+          originalPaymentIntentId: 'pi_test_1',
+          duplicatePaymentIntentId: 'pi_test_2',
+          originalChargeId: 'ch_test_1',
+          chargeId: 'ch_test_2',
+        }),
+      }),
+      expect.any(Object)
+    );
+    expect(Order.findOneAndUpdate).not.toHaveBeenCalled();
+    expect(Payment.updateOne).not.toHaveBeenCalled();
+    expect(Notification.create).not.toHaveBeenCalled();
+  });
+
+  it('records the losing captured payment when two successful attempts race before either Payment is stored', async () => {
+    const orderThatLostTheRace = {
+      ...order('paid'),
+      checkoutSessionId: 'cs_test_old',
+      checkoutAttemptId: 'attempt_old',
+      paymentIntentId: 'pi_test_2',
+    };
+    Order.findById
+      .mockResolvedValueOnce(order())
+      .mockResolvedValueOnce(orderThatLostTheRace);
+    Payment.findOne.mockResolvedValue(null);
+    Order.findOneAndUpdate.mockResolvedValue(null);
+
+    const result = await confirmPaidSession(session(), null);
+
+    expect(result).toMatchObject({ ok: true, duplicatePayment: true });
+    expect(StripePaymentIncident.findOneAndUpdate).toHaveBeenCalledWith(
+      { eventId: 'duplicate_payment:cs_test_1:pi_test_1' },
+      expect.objectContaining({
+        $setOnInsert: expect.objectContaining({
+          originalPaymentIntentId: 'pi_test_2',
+          duplicatePaymentIntentId: 'pi_test_1',
+          originalChargeId: 'ch_test_2',
+          chargeId: 'ch_test_1',
+        }),
+      }),
+      expect.any(Object)
+    );
+    expect(Payment.updateOne).not.toHaveBeenCalled();
+    expect(Notification.create).not.toHaveBeenCalled();
   });
 });

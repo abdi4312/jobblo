@@ -1,3 +1,25 @@
+const mockBillingOperations = new Map();
+jest.mock('../models/StripeBillingOperation', () => ({
+  findOne: jest.fn(({ fingerprint }) =>
+    Promise.resolve(
+      [...mockBillingOperations.values()].find(
+        (operation) =>
+          operation.fingerprint === fingerprint &&
+          ['pending', 'reconciliation_required'].includes(operation.status)
+      ) || null
+    )
+  ),
+  create: jest.fn(async (operation) => {
+    const saved = { _id: `billing_${mockBillingOperations.size + 1}`, ...operation };
+    mockBillingOperations.set(saved.operationId, saved);
+    return saved;
+  }),
+  updateOne: jest.fn(async ({ _id }, update) => {
+    const operation = [...mockBillingOperations.values()].find((entry) => entry._id === _id);
+    if (operation) Object.assign(operation, update.$set);
+    return { modifiedCount: operation ? 1 : 0 };
+  }),
+}));
 jest.mock('../models/Subscription', () => ({
   findOne: jest.fn(),
   countDocuments: jest.fn(),
@@ -22,7 +44,7 @@ jest.mock('../services/stripe/provisioning', () => ({
   applyInvoicePaid: jest.fn(),
   applyInvoicePaymentFailed: jest.fn(),
   applySubscriptionUpdated: jest.fn(),
-  subscriptionPeriodEnd: jest.fn((sub) => new Date(sub.period_end * 1000)),
+  subscriptionPeriodEnd: jest.fn((sub) => new Date((sub.current_period_end || sub.period_end) * 1000)),
   invoiceSubscriptionId: jest.fn((invoice) => invoice.subscription),
 }));
 jest.mock('../services/stripe/webhookReadiness', () => ({
@@ -62,6 +84,7 @@ const TARGET_PLAN_ID = '507f1f77bcf86cd799439033';
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockBillingOperations.clear();
   process.env.FRONTEND_URL = 'https://jobblo.no';
   getStripeConfiguration.mockResolvedValue({ testMode: true });
   record = {
@@ -84,7 +107,7 @@ beforeEach(() => {
     cancel_at_period_end: false,
     customer: 'cus_test_1',
     start_date: 1_791_000_000,
-    current_period_end: 1_791_100_000,
+    current_period_end: Math.floor(Date.now() / 1000) + 86_400,
     metadata: { userId: USER_ID },
     items: {
       data: [
@@ -219,7 +242,7 @@ describe('authenticated subscription billing actions', () => {
           expect.objectContaining({ proration_behavior: 'none' }),
         ]),
       }),
-      expect.objectContaining({ idempotencyKey: expect.stringContaining('downgrade_phase') })
+      expect.objectContaining({ idempotencyKey: expect.stringContaining('schedule_update') })
     );
     expect(stripe.subscriptions.update).not.toHaveBeenCalled();
     expect(record.pendingPlan.plan).toBe('Lower plan');

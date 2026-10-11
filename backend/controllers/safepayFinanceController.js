@@ -50,9 +50,11 @@ function parseListOptions(req, { admin }) {
   };
   const dateFrom = parseDate(req.query.dateFrom);
   const dateTo = parseDate(req.query.dateTo);
+  const snapshotAt = parseDate(req.query.snapshotAt);
   if (dateFrom === false || dateTo === false || (dateFrom && dateTo && dateFrom > dateTo)) {
     return { error: 'Ugyldig datoperiode.' };
   }
+  if (snapshotAt === false) return { error: 'Ugyldig pagineringsøyeblikk.' };
   const search = typeof req.query.search === 'string' ? req.query.search.trim().slice(0, 100) : '';
   return {
     page,
@@ -64,6 +66,7 @@ function parseListOptions(req, { admin }) {
     search,
     dateFrom,
     dateTo,
+    snapshotAt: snapshotAt || new Date(),
   };
 }
 
@@ -79,6 +82,28 @@ function dateFilter(field, from, to) {
   if (from) result.$gte = from;
   if (to) result.$lte = to;
   return { [field]: result };
+}
+
+function chronologyFilter(expression, from, to) {
+  const clauses = [];
+  if (from) clauses.push({ $gte: [expression, from] });
+  if (to) clauses.push({ $lte: [expression, to] });
+  return clauses.length ? { $expr: { $and: clauses } } : {};
+}
+
+function boundedChronology(field, snapshotAt) {
+  return {
+    $cond: [
+      {
+        $and: [
+          { $ne: [field, null] },
+          { $lte: [field, snapshotAt] },
+        ],
+      },
+      field,
+      '$createdAt',
+    ],
+  };
 }
 
 function transferDate(item) {
@@ -204,8 +229,12 @@ async function paginated(req, res, { admin, kind }) {
   const mode = options.mode === 'current' ? config.mode : options.mode;
   const livemode = mode === 'all' ? null : mode === 'live';
   const baseQuery = {
-    ...(options.providerId ? { providerId: options.providerId } : {}),
-    ...(options.orderId ? { orderId: options.orderId } : {}),
+    ...(options.providerId
+      ? { providerId: new mongoose.Types.ObjectId(options.providerId) }
+      : {}),
+    ...(options.orderId
+      ? { orderId: new mongoose.Types.ObjectId(options.orderId) }
+      : {}),
     ...(livemode === null ? {} : { livemode }),
   };
   const searchQuery = options.search
@@ -213,7 +242,7 @@ async function paginated(req, res, { admin, kind }) {
         $or: [
           { stripeObjectId: options.search },
           ...(mongoose.Types.ObjectId.isValid(options.search)
-            ? [{ orderId: options.search }]
+            ? [{ orderId: new mongoose.Types.ObjectId(options.search) }]
             : []),
         ],
       }
@@ -228,27 +257,19 @@ async function paginated(req, res, { admin, kind }) {
   const recordQuery = {
     ...baseQuery,
     ...searchQuery,
-    ...dateFilter('stripeCreatedAt', options.dateFrom, options.dateTo),
+    createdAt: { $lte: options.snapshotAt },
+    ...chronologyFilter(
+      boundedChronology('$stripeCreatedAt', options.snapshotAt),
+      options.dateFrom,
+      options.dateTo
+    ),
     ...(req.query.status
       ? { [kind === 'transfers' ? 'normalizedStatus' : 'status']: req.query.status }
       : {}),
   };
 
-  const recordCount = await recordModel.countDocuments(recordQuery);
-  const records = await recordModel.find(recordQuery)
-    .sort({ stripeCreatedAt: -1, _id: -1 })
-    .skip(options.skip)
-    .limit(options.limit)
-    .populate('providerId', 'name')
-    .populate(kind === 'transfers'
-      ? { path: 'payoutId', select: 'platformFee customerId', populate: { path: 'customerId', select: 'name' } }
-      : { path: 'providerId', select: 'name' })
-    .lean();
-  let items = kind === 'transfers'
-    ? records.map((row) => mapTransferRecord(row, admin))
-    : records.map((row) => mapBankPayout(row, admin));
-  let total = recordCount;
-
+  let items;
+  let total;
   if (kind === 'transfers') {
     const statuses = {
       awaiting_customer_approval: 'pending',
@@ -260,36 +281,129 @@ async function paginated(req, res, { admin, kind }) {
     let localStatus;
     if (req.query.status) localStatus = statuses[req.query.status];
     const attemptQuery = {
-      ...(options.providerId ? { providerId: options.providerId } : {}),
-      ...(options.orderId ? { orderId: options.orderId } : {}),
+      ...(options.providerId
+        ? { providerId: new mongoose.Types.ObjectId(options.providerId) }
+        : {}),
+      ...(options.orderId
+        ? { orderId: new mongoose.Types.ObjectId(options.orderId) }
+        : {}),
       ...(livemode === null ? {} : { stripeLivemode: livemode }),
+      createdAt: { $lte: options.snapshotAt },
       ...(localStatus ? { status: localStatus } : { status: { $in: ['pending', 'released_internal', 'processing', 'failed', 'transferred'] } }),
-      ...dateFilter('createdAt', options.dateFrom, options.dateTo),
+      ...chronologyFilter(
+        boundedChronology('$transferInitiatedAt', options.snapshotAt),
+        options.dateFrom,
+        options.dateTo
+      ),
       ...(options.search
         ? { $or: [
             { stripeTransferId: options.search },
             ...(mongoose.Types.ObjectId.isValid(options.search)
-              ? [{ orderId: options.search }]
+              ? [{ orderId: new mongoose.Types.ObjectId(options.search) }]
               : []),
           ] }
         : {}),
     };
-    const attempts = await Payout.find(attemptQuery)
-      .sort({ createdAt: -1, _id: -1 })
+    const [result] = await StripeTransferRecord.aggregate([
+      { $match: recordQuery },
+      {
+        $project: {
+          source: { $literal: 'stripe' },
+          row: '$$ROOT',
+          sortAt: boundedChronology('$stripeCreatedAt', options.snapshotAt),
+          snapshotAt: options.snapshotAt.toISOString(),
+          tieId: '$_id',
+        },
+      },
+      {
+        $unionWith: {
+          coll: Payout.collection.name,
+          pipeline: [
+            { $match: attemptQuery },
+            {
+              $lookup: {
+                from: StripeTransferRecord.collection.name,
+                let: {
+                  payoutId: '$_id',
+                  payoutMode: '$stripeLivemode',
+                  payoutTransferId: '$stripeTransferId',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          {
+                            $or: [
+                              { $eq: ['$payoutId', '$$payoutId'] },
+                              {
+                                $and: [
+                                  { $ne: ['$$payoutTransferId', null] },
+                                  { $eq: ['$stripeObjectId', '$$payoutTransferId'] },
+                                ],
+                              },
+                            ],
+                          },
+                          { $eq: ['$livemode', '$$payoutMode'] },
+                          { $lte: ['$createdAt', options.snapshotAt] },
+                        ],
+                      },
+                    },
+                  },
+                ],
+                as: 'syncedTransfers',
+              },
+            },
+            { $match: { $expr: { $eq: [{ $size: '$syncedTransfers' }, 0] } } },
+            {
+              $project: {
+                source: { $literal: 'local' },
+                row: '$$ROOT',
+                sortAt: boundedChronology('$transferInitiatedAt', options.snapshotAt),
+                tieId: '$_id',
+              },
+            },
+          ],
+        },
+      },
+      { $sort: { sortAt: -1, tieId: -1, source: 1 } },
+      {
+        $facet: {
+          metadata: [{ $count: 'total' }],
+          data: [{ $skip: options.skip }, { $limit: options.limit }],
+        },
+      },
+    ]).allowDiskUse(true);
+    const rows = result?.data || [];
+    const stripeRows = rows.filter((entry) => entry.source === 'stripe').map((entry) => entry.row);
+    const localRows = rows.filter((entry) => entry.source === 'local').map((entry) => entry.row);
+    await Promise.all([
+      StripeTransferRecord.populate(stripeRows, [
+        { path: 'providerId', select: 'name' },
+        { path: 'payoutId', select: 'platformFee customerId', populate: { path: 'customerId', select: 'name' } },
+      ]),
+      Payout.populate(localRows, [
+        { path: 'providerId', select: 'name' },
+        { path: 'customerId', select: admin ? 'name' : '_id' },
+      ]),
+    ]);
+    const stripeById = new Map(stripeRows.map((row) => [String(row._id), row]));
+    const localById = new Map(localRows.map((row) => [String(row._id), row]));
+    items = rows.map((entry) =>
+      entry.source === 'stripe'
+        ? mapTransferRecord(stripeById.get(String(entry.row._id)), admin)
+        : mapLocalTransferAttempt(localById.get(String(entry.row._id)), admin)
+    );
+    total = result?.metadata?.[0]?.total || 0;
+  } else {
+    total = await recordModel.countDocuments(recordQuery);
+    const records = await recordModel.find(recordQuery)
+      .sort({ stripeCreatedAt: -1, _id: -1 })
       .skip(options.skip)
       .limit(options.limit)
       .populate('providerId', 'name')
-      .populate(admin ? { path: 'customerId', select: 'name' } : { path: 'customerId', select: '_id' })
       .lean();
-    const recordPayoutIds = new Set(records.map((row) => String(row.payoutId || '')));
-    const localAttempts = attempts
-      .filter((row) => !recordPayoutIds.has(String(row._id)))
-      .map((row) => mapLocalTransferAttempt(row, admin));
-    total += await Payout.countDocuments(attemptQuery) -
-      await Payout.countDocuments({ ...attemptQuery, _id: { $in: records.map((row) => row.payoutId).filter(Boolean) } });
-    items = [...items, ...localAttempts]
-      .sort((a, b) => new Date(b.stripeCreatedAt || 0) - new Date(a.stripeCreatedAt || 0))
-      .slice(0, options.limit);
+    items = records.map((row) => mapBankPayout(row, admin));
   }
 
   const latestSync = await StripeFinancialSyncState.find({
@@ -312,6 +426,7 @@ async function paginated(req, res, { admin, kind }) {
       hasNextPage: options.page * options.limit < total,
       hasPreviousPage: options.page > 1,
     },
+    snapshotAt: options.snapshotAt.toISOString(),
     mode,
     ...(admin ? { activeMode: config.mode } : {}),
     testDataNotice: mode === 'test' || (mode === 'all' && items.some((item) => item.mode === 'test'))

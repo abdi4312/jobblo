@@ -235,7 +235,9 @@ async function cleanupAbandonedOrders() {
     paymentStatus: { $ne: 'paid' },
     createdAt: { $lte: cutoff },
   })
-    .select('_id serviceId providerId chatId')
+    .select(
+      '_id serviceId providerId chatId checkoutSessionId checkoutSessionStatus checkoutAttemptId checkoutMode'
+    )
     .limit(100)
     .lean();
 
@@ -243,11 +245,86 @@ async function cleanupAbandonedOrders() {
   let reopened = 0;
 
   for (const order of abandoned) {
-    // CAS so a payment landing right now cannot be cancelled out from under itself.
+    let terminalStripeSession = false;
+    if (order.checkoutSessionId) {
+      if (
+        order.checkoutSessionId.startsWith('PENDING_') ||
+        !['test', 'live'].includes(order.checkoutMode)
+      ) {
+        continue;
+      }
+      try {
+        const stripe = await getStripeForMode(order.checkoutMode === 'test');
+        const stripeSession = await stripe.checkout.sessions.retrieve(order.checkoutSessionId);
+        if (
+          stripeSession.id !== order.checkoutSessionId ||
+          stripeSession.livemode !== (order.checkoutMode === 'live')
+        ) {
+          continue;
+        }
+        if (stripeSession.payment_status === 'paid') {
+          const { confirmPaidSession } = require('../../controllers/SafePayCheckoutController');
+          const confirmation = await confirmPaidSession(stripeSession);
+          if (!confirmation.ok) {
+            await logApplicationError({
+              error: new Error('Paid abandoned checkout could not be reconciled'),
+              requestPath: 'scheduler/cleanupAbandonedOrders',
+              httpMethod: 'POST',
+              httpStatus: 500,
+              errorCode: 'ABANDONED_PAYMENT_RECONCILIATION_FAILED',
+              source: 'scheduler',
+              metadata: { orderId: String(order._id) },
+            });
+          }
+          continue;
+        }
+        if (stripeSession.status !== 'expired' || stripeSession.payment_status !== 'unpaid') {
+          continue;
+        }
+        terminalStripeSession = true;
+      } catch (err) {
+        await logApplicationError({
+          error: err,
+          requestPath: 'scheduler/cleanupAbandonedOrders',
+          httpMethod: 'POST',
+          httpStatus: 500,
+          errorCode: 'ABANDONED_CHECKOUT_LOOKUP_FAILED',
+          source: 'scheduler',
+          metadata: { orderId: String(order._id) },
+        });
+        continue;
+      }
+    } else if (order.checkoutSessionStatus === 'pending' || order.checkoutAttemptId) {
+      // A Stripe create call may have succeeded even if its response was lost.
+      continue;
+    }
+
+    // A Stripe-backed attempt is cancellable only after Stripe confirms expiration.
     const moved = await Order.findOneAndUpdate(
-      { _id: order._id, status: 'awaiting_payment', paymentStatus: { $ne: 'paid' } },
       {
-        $set: { status: 'cancelled' },
+        _id: order._id,
+        status: 'awaiting_payment',
+        paymentStatus: { $ne: 'paid' },
+        ...(order.checkoutSessionId
+          ? {
+              checkoutSessionId: order.checkoutSessionId,
+              checkoutSessionStatus: order.checkoutSessionStatus,
+              checkoutAttemptId: order.checkoutAttemptId,
+            }
+          : {
+              checkoutSessionId: { $in: [null, ''] },
+              checkoutSessionStatus: { $nin: ['pending', 'open'] },
+              checkoutAttemptId: { $in: [null, ''] },
+            }),
+        ...(order.checkoutSessionId && terminalStripeSession
+          ? { checkoutSessionStatus: { $in: ['open', 'expired', 'failed', 'complete'] } }
+          : {}),
+      },
+      {
+        $set: {
+          status: 'cancelled',
+          ...(order.checkoutSessionId ? { checkoutSessionStatus: 'expired' } : {}),
+        },
         $push: {
           history: {
             action: 'auto_cancelled',

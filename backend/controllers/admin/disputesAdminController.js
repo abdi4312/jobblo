@@ -1,6 +1,7 @@
 const Dispute = require('../../models/Dispute');
 const Order = require('../../models/Order');
 const Payment = require('../../models/Payment');
+const Payout = require('../../models/Payout');
 const SafePayHistory = require('../../models/SafePayHistory');
 const Chat = require('../../models/ChatMessage');
 const Notification = require('../../models/Notification');
@@ -10,10 +11,57 @@ const { asyncHandler, sendSuccess, sendError, buildPagination } = require('../..
 const { parsePagination, parseObjectId, parseSort, parseDate } = require('../../utils/pagination');
 const { logActivity } = require('../../services/admin/activityService');
 const { notify } = require('../../services/notifications');
+const { getStripeForMode } = require('../../config/stripe');
+const { executeRefund, executeTransferReversal } = require('../../services/stripe/financialOperations');
 
 const SORT_FIELDS = ['createdAt', 'updatedAt', 'openedAt'];
 const VALID_STATUSES = ['open','under_review','waiting_for_customer','waiting_for_provider','evidence_submitted','resolved','closed','cancelled'];
 const VALID_PRIORITIES = ['low', 'medium', 'high', 'critical'];
+
+function stripeId(value) {
+  return typeof value === 'string' ? value : value?.id || null;
+}
+
+async function verifyDisputePayment(stripe, order, payment) {
+  const session = await stripe.checkout.sessions.retrieve(payment.stripeSessionId);
+  const intent = await stripe.paymentIntents.retrieve(payment.stripePaymentIntentId);
+  const chargeId = stripeId(intent.latest_charge);
+  if (!chargeId) throw new Error('Verified SafePay charge is unavailable for this dispute.');
+  const charge = await stripe.charges.retrieve(chargeId);
+  const expectedAmount = order.checkoutAmountMinor;
+  const customerId = order.checkoutCustomerId;
+  if (
+    !expectedAmount ||
+    !customerId ||
+    session.id !== order.checkoutSessionId ||
+    session.id !== payment.stripeSessionId ||
+    session.livemode !== (order.checkoutMode === 'live') ||
+    session.status !== 'complete' ||
+    session.payment_status !== 'paid' ||
+    session.mode !== 'payment' ||
+    stripeId(session.payment_intent) !== payment.stripePaymentIntentId ||
+    stripeId(session.customer) !== customerId ||
+    String(session.metadata?.orderId) !== String(order._id) ||
+    String(session.metadata?.userId) !== String(order.customerId) ||
+    session.amount_total !== expectedAmount ||
+    String(session.currency).toLowerCase() !== String(order.checkoutCurrency || 'nok').toLowerCase() ||
+    intent.id !== payment.stripePaymentIntentId ||
+    intent.status !== 'succeeded' ||
+    intent.amount_received !== expectedAmount ||
+    stripeId(intent.customer) !== customerId ||
+    charge.id !== chargeId ||
+    charge.paid !== true ||
+    charge.captured !== true ||
+    charge.amount !== expectedAmount ||
+    charge.currency !== session.currency ||
+    stripeId(charge.payment_intent) !== payment.stripePaymentIntentId ||
+    stripeId(charge.customer) !== customerId ||
+    charge.disputed === true
+  ) {
+    throw new Error('SafePay payment does not match the order; manual reconciliation is required.');
+  }
+  return { session, intent, charge, chargeId };
+}
 
 // ── Disputes list ─────────────────────────────────────────────────────────────
 const getDisputes = asyncHandler(async (req, res) => {
@@ -312,7 +360,10 @@ const resolveDispute = asyncHandler(async (req, res) => {
   // Prevent duplicate resolution. A resolution whose money movement FAILED is the
   // one case worth retrying — the Stripe calls below are all idempotent, so a retry
   // re-attempts the transfer/refund without duplicating it.
-  if (dispute.resolution?.outcome && dispute.resolution?.moneyState !== 'failed') {
+  if (
+    dispute.resolution?.outcome &&
+    !['failed', 'reconciliation_required'].includes(dispute.resolution?.moneyState)
+  ) {
     return sendError(res, 'Tvisten er allerede løst.', 409);
   }
 
@@ -360,12 +411,19 @@ const resolveDispute = asyncHandler(async (req, res) => {
           refund: cust,
           payout: prov,
           payoutFee: 0, // `prov` is already the provider's net share
-          payment: 'refunded',
+          payment: cust > 0 && prov === 0 ? 'refunded' : cust > 0 ? 'partially_refunded' : 'completed',
           order: prov > 0 ? 'completed' : 'cancelled',
         };
       case 'cancel_without_payment':
-        // The customer's money must come back. This used to move nothing at all.
-        return { refund: securedAmount, payout: 0, payoutFee: 0, payment: 'refunded', order: 'cancelled' };
+        return {
+          refund: payment && ['completed', 'released', 'disputed'].includes(payment.status)
+            ? securedAmount
+            : 0,
+          payout: 0,
+          payoutFee: 0,
+          payment: payment ? 'refunded' : 'pending',
+          order: 'cancelled',
+        };
       case 'no_action':
       default:
         // Genuinely no action: the order returns to where the dispute found it.
@@ -413,57 +471,167 @@ const resolveDispute = asyncHandler(async (req, res) => {
   let stripeRefundStatus = null;
   let payoutResult = null;
   let stripeTransferId = null;
+  let stripeReversalId = null;
+  let existingPayout = null;
 
   try {
+    let stripe;
+    let charge;
+    if (movesMoney || plan.refund > 0) {
+      existingPayout = await Payout.findOne({ orderId: order._id }).lean();
+      if (
+        ['processing', 'reconciliation_required'].includes(existingPayout?.status) &&
+        !existingPayout.stripeTransferId
+      ) {
+        const error = new Error('A prior transfer attempt must be reconciled before dispute money can move.');
+        error.code = 'PAYOUT_RECONCILIATION_REQUIRED';
+        throw error;
+      }
+      if (!['test', 'live'].includes(order.checkoutMode)) {
+        throw new Error('Payment mode is missing; financial recovery requires manual reconciliation.');
+      }
+      stripe = await getStripeForMode(order.checkoutMode === 'test');
+      if (payment) {
+        const source = await verifyDisputePayment(stripe, order, payment);
+        charge = source.charge;
+      }
+    }
+
     if (plan.refund > 0) {
-      const { getStripe } = require('../../config/stripe');
-      const stripe = await getStripe();
-      const refund = await stripe.refunds.create(
-        {
-          payment_intent: payment.stripePaymentIntentId,
-          amount: Math.round(plan.refund * 100), // Stripe works in øre
-        },
-        // Same key on every retry, so re-resolving a failed dispute cannot refund twice.
-        { idempotencyKey: `dispute_refund_${id.toString()}` }
-      );
-      stripeRefundId = refund.id;
-      stripeRefundStatus = refund.status;
-      if (!['succeeded', 'pending'].includes(refund.status)) {
-        throw new Error(`Stripe refusjon mislyktes: ${refund.status}`);
+      const refundResult = await executeRefund(stripe, {
+        operationKey: `dispute:${dispute._id}:refund:${payment.stripePaymentIntentId}:${Math.round(plan.refund * 100)}`,
+        orderId: order._id,
+        paymentId: payment._id,
+        disputeId: dispute._id,
+        stripeMode: order.checkoutMode,
+        paymentIntentId: payment.stripePaymentIntentId,
+        chargeId: charge.id,
+        amount: Math.round(plan.refund * 100),
+        currency: charge.currency,
+      });
+      stripeRefundId = refundResult.refund.id;
+      stripeRefundStatus = refundResult.refund.status;
+      dispute.resolution.stripeRefundId = stripeRefundId;
+      dispute.resolution.stripeRefundStatus = stripeRefundStatus;
+      await dispute.save();
+      if (refundResult.status !== 'succeeded') {
+        return res.status(202).json({
+          message: 'Refunderingen behandles fortsatt av Stripe. Tvisten forblir åpen til betalingen er bekreftet.',
+          code: 'refund_pending',
+          stripeRefundId,
+          stripeRefundStatus,
+        });
       }
     }
 
     if (plan.payout > 0) {
       const releasePayoutToProvider = require('../../services/payout/releasePayoutToProvider');
-      payoutResult = await releasePayoutToProvider({
-        orderId: order._id,
-        providerId: order.providerId,
-        customerId: order.customerId,
-        serviceId: order.serviceId,
-        grossAmount: plan.payout,
-        platformFee: plan.payoutFee,
-        releaseSource: 'dispute_release',
-        releasedBy: req.user._id,
-        stripePaymentIntentId: payment?.stripePaymentIntentId,
-        stripeCheckoutSessionId: payment?.stripeSessionId,
-        disputeId: dispute._id,
-      });
-      stripeTransferId = payoutResult?.payout?.stripeTransferId || null;
-
-      if (!payoutResult.alreadyPaid) {
-        await User.findByIdAndUpdate(order.providerId, {
-          $inc: { earnings: plan.payout - plan.payoutFee },
+      if (
+        ['transferred', 'processing', 'reconciliation_required'].includes(existingPayout?.status) &&
+        existingPayout.stripeTransferId
+      ) {
+        const transfer = await stripe.transfers.retrieve(existingPayout.stripeTransferId);
+        const targetAmount = Math.round((plan.payout - plan.payoutFee) * 100);
+        const remainingAmount = Number(transfer.amount) - Number(transfer.amount_reversed || 0);
+        if (
+          transfer.id !== existingPayout.stripeTransferId ||
+          transfer.livemode !== (order.checkoutMode === 'live') ||
+          stripeId(transfer.destination) !== existingPayout.stripeConnectAccountId ||
+          stripeId(transfer.source_transaction) !== charge.id ||
+          transfer.amount !== Math.round(Number(existingPayout.netProviderAmount) * 100) ||
+          String(transfer.currency).toUpperCase() !== String(charge.currency).toUpperCase() ||
+          !Number.isSafeInteger(remainingAmount) ||
+          remainingAmount < targetAmount
+        ) {
+          throw new Error('Existing provider transfer cannot safely satisfy the approved dispute outcome.');
+        }
+        stripeTransferId = transfer.id;
+        const reversalAmount = remainingAmount - targetAmount;
+        if (reversalAmount > 0) {
+          const reversal = await executeTransferReversal(stripe, {
+            operationKey: `dispute:${dispute._id}:reversal:${transfer.id}:${reversalAmount}`,
+            orderId: order._id,
+            paymentId: payment._id,
+            disputeId: dispute._id,
+            stripeMode: order.checkoutMode,
+            paymentIntentId: payment.stripePaymentIntentId,
+            chargeId: charge.id,
+            transferId: transfer.id,
+            amount: reversalAmount,
+            currency: transfer.currency,
+          });
+          stripeReversalId = reversal.reversal.id;
+        }
+        payoutResult = { payout: existingPayout, alreadyPaid: true };
+      } else {
+        payoutResult = await releasePayoutToProvider({
+          orderId: order._id,
+          providerId: order.providerId,
+          customerId: order.customerId,
+          serviceId: order.serviceId,
+          grossAmount: plan.payout,
+          platformFee: plan.payoutFee,
+          releaseSource: 'dispute_release',
+          releasedBy: req.user._id,
+          stripePaymentIntentId: payment?.stripePaymentIntentId,
+          stripeCheckoutSessionId: payment?.stripeSessionId,
+          disputeId: dispute._id,
         });
+        stripeTransferId = payoutResult?.payout?.stripeTransferId || null;
+        if (!payoutResult.alreadyPaid) {
+          await User.findByIdAndUpdate(order.providerId, {
+            $inc: { earnings: plan.payout - plan.payoutFee },
+          });
+        }
+      }
+    }
+
+    if (plan.refund > 0 && plan.payout === 0) {
+      if (
+        ['transferred', 'processing', 'reconciliation_required'].includes(existingPayout?.status) &&
+        existingPayout.stripeTransferId
+      ) {
+        const transfer = await stripe.transfers.retrieve(existingPayout.stripeTransferId);
+        const remainingAmount = Number(transfer.amount) - Number(transfer.amount_reversed || 0);
+        if (
+          transfer.id !== existingPayout.stripeTransferId ||
+          transfer.livemode !== (order.checkoutMode === 'live') ||
+          stripeId(transfer.destination) !== existingPayout.stripeConnectAccountId ||
+          stripeId(transfer.source_transaction) !== charge.id ||
+          String(transfer.currency).toUpperCase() !== String(charge.currency).toUpperCase() ||
+          !Number.isSafeInteger(remainingAmount)
+        ) {
+          throw new Error('Existing provider transfer cannot be verified for the approved refund.');
+        }
+        if (remainingAmount > 0) {
+          const reversal = await executeTransferReversal(stripe, {
+            operationKey: `dispute:${dispute._id}:reversal:${transfer.id}:${remainingAmount}`,
+            orderId: order._id,
+            paymentId: payment._id,
+            disputeId: dispute._id,
+            stripeMode: order.checkoutMode,
+            paymentIntentId: payment.stripePaymentIntentId,
+            chargeId: charge.id,
+            transferId: transfer.id,
+            amount: remainingAmount,
+            currency: transfer.currency,
+          });
+          stripeReversalId = reversal.reversal.id;
+        }
+        stripeTransferId = transfer.id;
       }
     }
   } catch (moneyErr) {
     // Leave the dispute unresolved and retryable, and say so loudly. The previous code
     // returned 502 for a refund failure and merely console.error'd a failed transfer,
     // so a provider could be left unpaid with the dispute marked resolved.
-    dispute.resolution.moneyState = 'failed';
+    dispute.resolution.moneyState = String(moneyErr.code || '').includes('RECONCILIATION_REQUIRED')
+      ? 'reconciliation_required'
+      : 'failed';
     dispute.resolution.moneyError = moneyErr.message?.slice(0, 500);
     dispute.resolution.stripeRefundId = stripeRefundId;
     dispute.resolution.stripeRefundStatus = stripeRefundStatus;
+    dispute.resolution.stripeReversalId = stripeReversalId;
     await dispute.save();
 
     await logApplicationError({
@@ -474,7 +642,9 @@ const resolveDispute = asyncHandler(async (req, res) => {
       ip: req.ip,
       userAgent: req.headers['user-agent'],
       userId: req.user?._id,
-      errorCode: 'DISPUTE_RESOLUTION_MONEY_FAILED',
+      errorCode: dispute.resolution.moneyState === 'reconciliation_required'
+        ? 'DISPUTE_RESOLUTION_RECONCILIATION_REQUIRED'
+        : 'DISPUTE_RESOLUTION_MONEY_FAILED',
       source: 'dispute_resolution',
       metadata: {
         disputeId: String(dispute._id),
@@ -500,6 +670,7 @@ const resolveDispute = asyncHandler(async (req, res) => {
   dispute.resolution.stripeRefundId = stripeRefundId;
   dispute.resolution.stripeRefundStatus = stripeRefundStatus;
   dispute.resolution.stripeTransferId = stripeTransferId;
+  dispute.resolution.stripeReversalId = stripeReversalId;
   dispute.resolution.moneyState = 'settled';
   dispute.timeline.push({
     action: 'dispute_resolved',

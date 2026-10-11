@@ -18,6 +18,12 @@ const {
 } = require('../services/stripe/provisioning');
 const { getStripeWebhookReadiness } = require('../services/stripe/webhookReadiness');
 const { logActivity } = require('../services/admin/activityService');
+const {
+  getOrCreateBillingOperation,
+  findActiveBillingOperation,
+  finishBillingOperation,
+  operationIdempotencyKey,
+} = require('../services/stripe/billingOperations');
 
 const objectId = (value) => mongoose.Types.ObjectId.isValid(value);
 const idOf = (value) => (typeof value === 'string' ? value : value?.id || null);
@@ -311,21 +317,48 @@ exports.changePlan = async (req, res) => {
       return res.json({ message: 'Dette er allerede planen din.', strategy: 'no_change' });
     }
     if (change.strategy === 'immediate') {
-      await change.stripe.subscriptions.update(
-        change.live.id,
-        {
-          items: [{ id: change.item.id, price: change.targetPrice.id }],
-          proration_behavior: 'always_invoice',
-          payment_behavior: 'error_if_incomplete',
-          metadata: {
-            ...change.live.metadata,
-            userId: String(req.userId),
-            planId: String(change.plan._id),
-            planType: change.plan.type,
+      if (change.item.price.id === change.targetPrice.id) {
+        return res.json({ message: 'Denne planen behandles allerede av Stripe.', strategy: 'no_change' });
+      }
+      const fingerprint = `${stripeMode(change.testMode)}:${change.live.id}:upgrade:${change.item.price.id}:${change.targetPrice.id}`;
+      const operation = await getOrCreateBillingOperation({
+        fingerprint,
+        operationType: 'upgrade',
+        userId: req.userId,
+        subscriptionId: change.live.id,
+        targetPlanId: change.plan._id,
+        testMode: change.testMode,
+      });
+      try {
+        await change.stripe.subscriptions.update(
+          change.live.id,
+          {
+            items: [{ id: change.item.id, price: change.targetPrice.id }],
+            proration_behavior: 'always_invoice',
+            payment_behavior: 'error_if_incomplete',
+            metadata: {
+              ...change.live.metadata,
+              userId: String(req.userId),
+              planId: String(change.plan._id),
+              planType: change.plan.type,
+            },
           },
-        },
-        { idempotencyKey: `jobblo_subscription_upgrade_${change.live.id}_${change.targetPrice.id}` }
-      );
+          { idempotencyKey: operationIdempotencyKey(operation) }
+        );
+        const verified = await change.stripe.subscriptions.retrieve(change.live.id, {
+          expand: ['items.data.price'],
+        });
+        const verifiedPriceId = verified.items?.data?.[0]?.price?.id;
+        if (verifiedPriceId !== change.targetPrice.id) {
+          throw new Error('Stripe subscription update has not reached the requested plan.');
+        }
+        await finishBillingOperation(operation, 'succeeded', { stripeObjectId: verified.id });
+      } catch (error) {
+        await finishBillingOperation(operation, 'reconciliation_required', {
+          failureCode: error?.code || error?.type || 'stripe_upgrade_outcome_unknown',
+        });
+        throw error;
+      }
       return res.json({
         message: 'Oppgraderingen er betalt og behandles. Planfordelene oppdateres når Stripe bekrefter endringen.',
         strategy: 'immediate',
@@ -353,6 +386,11 @@ exports.changePlan = async (req, res) => {
           code: 'pending_plan_change_exists',
         });
       }
+      const fingerprint = `${stripeMode(change.testMode)}:${change.live.id}:downgrade:${change.item.price.id}:${change.targetPrice.id}`;
+      const activeOperation = await findActiveBillingOperation(fingerprint);
+      if (activeOperation) {
+        await finishBillingOperation(activeOperation, 'succeeded', { stripeObjectId: schedule.id });
+      }
       return res.json({
         message: `Planen endres til ${change.plan.name} ved neste periode.`,
         strategy: 'period_end',
@@ -373,54 +411,104 @@ exports.changePlan = async (req, res) => {
       });
     }
     let schedule;
+    const fingerprint = `${stripeMode(change.testMode)}:${change.live.id}:downgrade:${change.item.price.id}:${change.targetPrice.id}`;
+    const activeOperation = await findActiveBillingOperation(fingerprint);
+    const operation = activeOperation || await getOrCreateBillingOperation({
+      fingerprint,
+      operationType: 'downgrade',
+      userId: req.userId,
+      subscriptionId: change.live.id,
+      targetPlanId: change.plan._id,
+      testMode: change.testMode,
+    });
     const attachedScheduleId = idOf(change.live.schedule);
     if (attachedScheduleId) {
       schedule = await change.stripe.subscriptionSchedules.retrieve(attachedScheduleId);
       if (
-        schedule.metadata?.jobbloPendingPlanId !== String(change.plan._id) ||
-        schedule.metadata?.jobbloUserId !== String(req.userId)
+        (schedule.metadata?.jobbloPendingPlanId !== String(change.plan._id) ||
+          schedule.metadata?.jobbloUserId !== String(req.userId)) &&
+        !activeOperation
       ) {
+        await finishBillingOperation(operation, 'failed', {
+          failureCode: 'unrelated_subscription_schedule',
+        });
         return res.status(409).json({
           message: 'Et annet planbytte er allerede planlagt. Administrer det i Stripe Portal.',
           code: 'pending_plan_change_exists',
         });
       }
+      if (
+        activeOperation &&
+        (schedule.metadata?.jobbloPendingPlanId !== String(change.plan._id) ||
+          schedule.metadata?.jobbloUserId !== String(req.userId))
+      ) {
+        try {
+          const recovered = await change.stripe.subscriptionSchedules.create(
+            { from_subscription: change.live.id },
+            { idempotencyKey: operationIdempotencyKey(operation, 'schedule_create') }
+          );
+          if (recovered.id !== attachedScheduleId) {
+            throw new Error('Stripe returned a different schedule during recovery.');
+          }
+          schedule = recovered;
+        } catch (error) {
+          await finishBillingOperation(operation, 'reconciliation_required', {
+            failureCode: error?.code || error?.type || 'stripe_downgrade_schedule_unresolved',
+          });
+          throw error;
+        }
+      }
     } else {
-      schedule = await change.stripe.subscriptionSchedules.create(
-        { from_subscription: change.live.id },
-        { idempotencyKey: `jobblo_subscription_downgrade_${change.live.id}_${change.targetPrice.id}` }
-      );
+      try {
+        schedule = await change.stripe.subscriptionSchedules.create(
+          { from_subscription: change.live.id },
+          { idempotencyKey: operationIdempotencyKey(operation, 'schedule_create') }
+        );
+      } catch (error) {
+        await finishBillingOperation(operation, 'reconciliation_required', {
+          failureCode: error?.code || error?.type || 'stripe_downgrade_schedule_outcome_unknown',
+        });
+        throw error;
+      }
     }
-    await change.stripe.subscriptionSchedules.update(
-      schedule.id,
-      {
-      end_behavior: 'release',
-      metadata: {
-        ...schedule.metadata,
-        jobbloPendingPlanId: String(change.plan._id),
-        jobbloUserId: String(req.userId),
-      },
-      phases: [
+    try {
+      await change.stripe.subscriptionSchedules.update(
+        schedule.id,
         {
-          items: [{ price: change.item.price.id, quantity: change.item.quantity || 1 }],
-          start_date: schedule.current_phase?.start_date || change.live.start_date,
-          end_date: Math.floor(periodEnd.getTime() / 1000),
-          proration_behavior: 'none',
-        },
-        {
-          items: [{ price: change.targetPrice.id, quantity: change.item.quantity || 1 }],
-          iterations: 1,
-          proration_behavior: 'none',
+          end_behavior: 'release',
           metadata: {
-            userId: String(req.userId),
-            planId: String(change.plan._id),
-            planType: change.plan.type,
+            ...schedule.metadata,
+            jobbloPendingPlanId: String(change.plan._id),
+            jobbloUserId: String(req.userId),
+            jobbloBillingOperationId: operation.operationId,
           },
+          phases: [
+            {
+              items: [{ price: change.item.price.id, quantity: change.item.quantity || 1 }],
+              start_date: schedule.current_phase?.start_date || change.live.start_date,
+              end_date: Math.floor(periodEnd.getTime() / 1000),
+              proration_behavior: 'none',
+            },
+            {
+              items: [{ price: change.targetPrice.id, quantity: change.item.quantity || 1 }],
+              iterations: 1,
+              proration_behavior: 'none',
+              metadata: {
+                userId: String(req.userId),
+                planId: String(change.plan._id),
+                planType: change.plan.type,
+              },
+            },
+          ],
         },
-      ],
-      },
-      { idempotencyKey: `jobblo_subscription_downgrade_phase_${change.live.id}_${change.targetPrice.id}` }
-    );
+        { idempotencyKey: operationIdempotencyKey(operation, 'schedule_update') }
+      );
+    } catch (error) {
+      await finishBillingOperation(operation, 'reconciliation_required', {
+        failureCode: error?.code || error?.type || 'stripe_downgrade_schedule_update_unknown',
+      });
+      throw error;
+    }
     change.record.pendingPlan = {
       planId: change.plan._id,
       plan: change.plan.name,
@@ -429,6 +517,7 @@ exports.changePlan = async (req, res) => {
       stripeMode: stripeMode(change.testMode),
     };
     await change.record.save();
+    await finishBillingOperation(operation, 'succeeded', { stripeObjectId: schedule.id });
     res.json({
       message: `Planen endres til ${change.plan.name} ved neste periode.`,
       strategy: 'period_end',
