@@ -2,6 +2,7 @@ const Subscription = require('../models/Subscription');
 const SubscriptionPlan = require('../models/SubscriptionPlan');
 const User = require('../models/User');
 const { resolveAllowedPlanType } = require('./planAccess');
+const { hasPaidEntitlement } = require('../services/stripe/billingPolicy');
 
 async function resolveCurrentSubscriptionEntitlements(userId) {
   const [user, subscription] = await Promise.all([
@@ -43,6 +44,7 @@ async function resolveCurrentSubscriptionEntitlements(userId) {
     plan = await SubscriptionPlan.findOne({ name: current.plan, type: allowedType });
   }
   if (!plan || plan.type !== allowedType) return noPlan;
+  if (current?.stripeSubscriptionId && !hasPaidEntitlement(current)) return noPlan;
 
   // Company signup creates a schema-compatible business placeholder, but it is not
   // a purchased plan until Stripe provisions a planId and subscription id. It must

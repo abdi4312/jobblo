@@ -20,13 +20,19 @@ jest.mock('../models/Coupon', () => ({ findByIdAndUpdate: jest.fn() }));
 jest.mock('../models/User', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
 jest.mock('../models/SubscriptionPlan', () => ({ findById: jest.fn() }));
 jest.mock('../models/Notification', () => ({}));
-jest.mock('../config/stripe', () => ({ getStripe: jest.fn(), isTestMode: jest.fn() }));
+jest.mock('../config/stripe', () => ({
+  getStripe: jest.fn(),
+  getStripeForMode: jest.fn(),
+  isTestMode: jest.fn(),
+}));
 jest.mock('../utils/transaction', () => ({ upsertTransaction: jest.fn() }));
 jest.mock('../utils/subscription', () => ({ upsertSubscription: jest.fn() }));
 jest.mock('../services/notifications', () => ({ notify: jest.fn() }));
 jest.mock('../services/stripe/customers', () => ({
   resolveStripeCustomer: jest.fn(),
-  customerFieldForMode: jest.fn(),
+  customerFieldForMode: jest.fn((testMode) =>
+    testMode ? 'stripeCustomerIdTest' : 'stripeCustomerId'
+  ),
   isResourceMissing: (err) =>
     err?.code === 'resource_missing' || err?.rawType === 'invalid_request_error',
 }));
@@ -35,6 +41,7 @@ const Subscription = require('../models/Subscription');
 const SubscriptionPlan = require('../models/SubscriptionPlan');
 const User = require('../models/User');
 const { getStripe } = require('../config/stripe');
+const { getStripeForMode } = require('../config/stripe');
 const { upsertTransaction } = require('../utils/transaction');
 const { upsertSubscription } = require('../utils/subscription');
 const { provisionSubscriptionFromSession } = require('../services/stripe/provisioning');
@@ -49,8 +56,33 @@ function paidSession(subscriptionId = 'sub_new') {
     id: 'cs_new',
     amount_total: 29900,
     currency: 'nok',
+    mode: 'subscription',
+    payment_status: 'paid',
+    livemode: false,
+    customer: 'cus_test',
     subscription: subscriptionId,
     metadata: { userId: USER_ID, planId: PLAN_ID, planName: 'Premium', planType: 'private' },
+  };
+}
+
+function liveStripeSubscription(id, status = 'active') {
+  return {
+    id,
+    status,
+    livemode: false,
+    customer: 'cus_test',
+    metadata: { userId: USER_ID, planId: PLAN_ID },
+    items: {
+      data: [
+        {
+          price: {
+            currency: 'nok',
+            unit_amount: 29900,
+            recurring: { interval: 'month' },
+          },
+        },
+      ],
+    },
   };
 }
 
@@ -73,21 +105,28 @@ function resourceMissing() {
 beforeEach(() => {
   jest.clearAllMocks();
   stripe = {
-    subscriptions: { retrieve: jest.fn() },
+    subscriptions: {
+      retrieve: jest.fn().mockImplementation(async (id) => liveStripeSubscription(id)),
+    },
     checkout: { sessions: { retrieve: jest.fn() } },
   };
   getStripe.mockResolvedValue(stripe);
+  getStripeForMode.mockResolvedValue(stripe);
   upsertSubscription.mockResolvedValue({ currentPlan: { plan: 'Premium' } });
   upsertTransaction.mockResolvedValue({});
   Subscription.findOne.mockResolvedValue(storedRow(null));
-  SubscriptionPlan.findById.mockResolvedValue({ _id: PLAN_ID, type: 'private' });
-  User.findById.mockResolvedValue({ _id: USER_ID, role: 'user' });
+  SubscriptionPlan.findById.mockResolvedValue({ _id: PLAN_ID, type: 'private', price: 299 });
+  User.findById.mockResolvedValue({
+    _id: USER_ID,
+    role: 'user',
+    stripeCustomerIdTest: 'cus_test',
+  });
 });
 
 describe('K — a paid session cannot silently orphan a live subscription', () => {
   it('refuses to overwrite a different subscription Stripe is still billing', async () => {
     Subscription.findOne.mockResolvedValue(storedRow('sub_old'));
-    stripe.subscriptions.retrieve.mockResolvedValue({ id: 'sub_old', status: 'active' });
+    stripe.subscriptions.retrieve.mockImplementation(async (id) => liveStripeSubscription(id));
 
     const result = await provisionSubscriptionFromSession(paidSession('sub_new'));
 
@@ -99,7 +138,7 @@ describe('K — a paid session cannot silently orphan a live subscription', () =
     // Withholding the receipt as well would leave the payment invisible to anyone
     // reconciling or refunding it.
     Subscription.findOne.mockResolvedValue(storedRow('sub_old'));
-    stripe.subscriptions.retrieve.mockResolvedValue({ id: 'sub_old', status: 'active' });
+    stripe.subscriptions.retrieve.mockImplementation(async (id) => liveStripeSubscription(id));
 
     await provisionSubscriptionFromSession(paidSession('sub_new'));
 
@@ -112,7 +151,7 @@ describe('K — a paid session cannot silently orphan a live subscription', () =
   it('names both subscriptions in the log so the duplicate can be found and cancelled', async () => {
     const error = jest.spyOn(console, 'error').mockImplementation(() => {});
     Subscription.findOne.mockResolvedValue(storedRow('sub_old'));
-    stripe.subscriptions.retrieve.mockResolvedValue({ id: 'sub_old', status: 'active' });
+    stripe.subscriptions.retrieve.mockImplementation(async (id) => liveStripeSubscription(id));
 
     await provisionSubscriptionFromSession(paidSession('sub_new'));
 
@@ -126,7 +165,9 @@ describe('K — a paid session cannot silently orphan a live subscription', () =
     'refuses when the stored subscription is %s',
     async (status) => {
       Subscription.findOne.mockResolvedValue(storedRow('sub_old'));
-      stripe.subscriptions.retrieve.mockResolvedValue({ id: 'sub_old', status });
+      stripe.subscriptions.retrieve.mockImplementation(async (id) =>
+        liveStripeSubscription(id, id === 'sub_old' ? status : 'active')
+      );
 
       const result = await provisionSubscriptionFromSession(paidSession('sub_new'));
 
@@ -142,8 +183,60 @@ describe('the guard does not break normal provisioning', () => {
 
     expect(result.ok).toBe(true);
     expect(upsertSubscription).toHaveBeenCalledTimes(1);
-    // No stored id means no reason to ask Stripe anything.
-    expect(stripe.subscriptions.retrieve).not.toHaveBeenCalled();
+    // The incoming subscription must be retrieved from Stripe before provisioning.
+    expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith('sub_new');
+    expect(getStripeForMode).toHaveBeenCalledWith(true);
+  });
+
+  it.each([
+    ['currency', { currency: 'usd' }],
+    ['payment status', { payment_status: 'unpaid' }],
+  ])('rejects a checkout with mismatched %s', async (_label, override) => {
+    const result = await provisionSubscriptionFromSession({
+      ...paidSession('sub_new'),
+      ...override,
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'checkout_payment_mismatch' });
+    expect(upsertTransaction).not.toHaveBeenCalled();
+    expect(upsertSubscription).not.toHaveBeenCalled();
+  });
+
+  it('rejects a subscription retrieved from the opposite Stripe mode', async () => {
+    const result = await provisionSubscriptionFromSession({
+      ...paidSession('sub_new'),
+      livemode: true,
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'stripe_subscription_mismatch' });
+    expect(getStripeForMode).toHaveBeenCalledWith(false);
+    expect(upsertSubscription).not.toHaveBeenCalled();
+  });
+
+  it('rejects a subscription with the wrong recurring amount or customer', async () => {
+    stripe.subscriptions.retrieve.mockResolvedValue({
+      id: 'sub_new',
+      status: 'active',
+      livemode: false,
+      customer: 'cus_other',
+      metadata: { userId: USER_ID, planId: PLAN_ID },
+      items: {
+        data: [
+          {
+            price: {
+              currency: 'nok',
+              unit_amount: 1,
+              recurring: { interval: 'month' },
+            },
+          },
+        ],
+      },
+    });
+
+    const result = await provisionSubscriptionFromSession(paidSession('sub_new'));
+
+    expect(result).toEqual({ ok: false, reason: 'stripe_subscription_mismatch' });
+    expect(upsertSubscription).not.toHaveBeenCalled();
   });
 
   it('provisions a replay of the same session idempotently', async () => {
@@ -153,7 +246,7 @@ describe('the guard does not break normal provisioning', () => {
 
     expect(result.ok).toBe(true);
     expect(upsertSubscription).toHaveBeenCalledTimes(1);
-    expect(stripe.subscriptions.retrieve).not.toHaveBeenCalled();
+    expect(stripe.subscriptions.retrieve).toHaveBeenCalledWith('sub_same');
   });
 
   it('records Stripe total and native promotion discount, never a Jobblo coupon id', async () => {
@@ -191,7 +284,9 @@ describe('the guard does not break normal provisioning', () => {
     'replaces a stored subscription that is %s',
     async (status) => {
       Subscription.findOne.mockResolvedValue(storedRow('sub_old'));
-      stripe.subscriptions.retrieve.mockResolvedValue({ id: 'sub_old', status });
+      stripe.subscriptions.retrieve.mockImplementation(async (id) =>
+        liveStripeSubscription(id, id === 'sub_old' ? status : 'active')
+      );
 
       const result = await provisionSubscriptionFromSession(paidSession('sub_new'));
 
@@ -203,7 +298,10 @@ describe('the guard does not break normal provisioning', () => {
   it('replaces a stored id Stripe no longer recognises', async () => {
     // A `sub_…` from the other Stripe mode, or from an account the data was copied from.
     Subscription.findOne.mockResolvedValue(storedRow('sub_old'));
-    stripe.subscriptions.retrieve.mockRejectedValue(resourceMissing());
+    stripe.subscriptions.retrieve.mockImplementation(async (id) => {
+      if (id === 'sub_old') throw resourceMissing();
+      return liveStripeSubscription(id);
+    });
 
     const result = await provisionSubscriptionFromSession(paidSession('sub_new'));
 

@@ -75,14 +75,16 @@ exports.upsertSubscription = async ({
   planName,
   planType,
   stripeSubscriptionId,
+  stripeMode,
+  periodEnd,
   autoRenew,
   discountAmount = 0,
   discountCoupon = null,
   couponId = null,
 }) => {
   const now = new Date();
-  const nextMonth = new Date(now);
-  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  const nextMonth = periodEnd || new Date(now);
+  if (!periodEnd) nextMonth.setMonth(nextMonth.getMonth() + 1);
 
   let subscription = await Subscription.findOne({ userId });
 
@@ -95,6 +97,7 @@ exports.upsertSubscription = async ({
         plan: planName,
         planType,
         stripeSubscriptionId,
+        stripeMode,
         startDate: now,
         endDate: nextMonth,
         renewalDate: nextMonth,
@@ -131,6 +134,7 @@ exports.upsertSubscription = async ({
       plan: planName,
       planType,
       stripeSubscriptionId,
+      stripeMode,
       startDate: now,
       endDate: nextMonth,
       renewalDate: nextMonth,
@@ -140,6 +144,7 @@ exports.upsertSubscription = async ({
       discountCoupon,
       coupon: couponId,
     };
+    subscription.pendingPlan = undefined;
   }
 
   await subscription.save();

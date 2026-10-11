@@ -17,9 +17,17 @@
 jest.mock('../models/SubscriptionPlan', () => ({ findById: jest.fn() }));
 jest.mock('../models/Subscription', () => ({ findOne: jest.fn() }));
 jest.mock('../models/Coupon', () => ({ findOne: jest.fn(), findByIdAndUpdate: jest.fn() }));
-jest.mock('../models/User', () => ({ findByIdAndUpdate: jest.fn() }));
+jest.mock('../models/User', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
 jest.mock('../models/Service', () => ({ findById: jest.fn() }));
-jest.mock('../config/stripe', () => ({ getStripe: jest.fn(), isTestMode: jest.fn() }));
+jest.mock('../config/stripe', () => ({
+  getStripe: jest.fn(),
+  getStripeForMode: jest.fn(),
+  getStripeConfiguration: jest.fn(),
+  isTestMode: jest.fn(),
+}));
+jest.mock('../services/stripe/webhookReadiness', () => ({
+  getStripeWebhookReadiness: jest.fn(),
+}));
 jest.mock('../utils/transaction', () => ({ upsertTransaction: jest.fn() }));
 jest.mock('../utils/subscription', () => ({ upsertSubscription: jest.fn() }));
 // Stub provisioning so this file stays isolated from the notification stack.
@@ -30,7 +38,9 @@ jest.mock('../services/stripe/provisioning', () => ({
 }));
 jest.mock('../services/stripe/customers', () => ({
   resolveStripeCustomer: jest.fn(),
-  customerFieldForMode: jest.fn(),
+  customerFieldForMode: jest.fn((testMode) =>
+    testMode ? 'stripeCustomerIdTest' : 'stripeCustomerId'
+  ),
   // Kept faithful to the real implementation: subscriptionState uses it to tell "no
   // such subscription" (safe to allow) from "Stripe could not answer" (must block).
   isResourceMissing: (err) =>
@@ -40,9 +50,11 @@ jest.mock('../services/stripe/customers', () => ({
 const SubscriptionPlan = require('../models/SubscriptionPlan');
 const Subscription = require('../models/Subscription');
 const Coupon = require('../models/Coupon');
-const { getStripe } = require('../config/stripe');
+const User = require('../models/User');
+const { getStripe, getStripeForMode, getStripeConfiguration } = require('../config/stripe');
+const { getStripeWebhookReadiness } = require('../services/stripe/webhookReadiness');
 const { resolveStripeCustomer } = require('../services/stripe/customers');
-const { createCheckoutSession } = require('../controllers/stripeController');
+const { createCheckoutSession, cancelMySubscription } = require('../controllers/stripeController');
 
 const USER_ID = '507f1f77bcf86cd799439011';
 const PLAN_ID = '507f1f77bcf86cd799439022';
@@ -124,7 +136,17 @@ beforeEach(() => {
   process.env.FRONTEND_URL = 'https://jobblo.no';
 
   stripe = {
-    subscriptions: { retrieve: jest.fn() },
+    subscriptions: {
+      retrieve: jest.fn(),
+      update: jest.fn().mockResolvedValue({
+        cancel_at_period_end: true,
+        items: { data: [{ current_period_end: 1_800_000_000 }] },
+      }),
+    },
+    subscriptionSchedules: {
+      retrieve: jest.fn(),
+      release: jest.fn().mockResolvedValue({}),
+    },
     checkout: {
       sessions: {
         create: jest.fn().mockResolvedValue({ url: 'https://checkout.stripe.com/pay/cs_1' }),
@@ -132,9 +154,13 @@ beforeEach(() => {
     },
   };
   getStripe.mockResolvedValue(stripe);
+  getStripeForMode.mockResolvedValue(stripe);
+  getStripeConfiguration.mockResolvedValue({ testMode: true, mode: 'test' });
+  getStripeWebhookReadiness.mockResolvedValue({ ready: true });
   resolveStripeCustomer.mockResolvedValue('cus_1');
   SubscriptionPlan.findById.mockResolvedValue(paidPlan());
   Subscription.findOne.mockResolvedValue(freeDefaultRow());
+  User.findById.mockResolvedValue({ stripeCustomerIdTest: 'cus_1' });
 });
 
 describe('A — a user with no paid subscription can buy an active paid plan', () => {
@@ -448,7 +474,8 @@ describe('J — the server, not the client, decides what is charged', () => {
     // The only place a customer id can come from is resolveStripeCustomer.
     expect(resolveStripeCustomer).toHaveBeenCalledWith(
       stripe,
-      expect.objectContaining({ _id: USER_ID })
+      expect.objectContaining({ _id: USER_ID }),
+      true
     );
   });
 
@@ -481,6 +508,40 @@ describe('double-submit protection', () => {
     expect(options.idempotencyKey).toContain(`sub_checkout_${USER_ID}_${PLAN_ID}_nocoupon_`);
   });
 
+  describe('Stripe subscription webhook preflight', () => {
+    it('fails closed before creating Checkout when webhook delivery is not verified', async () => {
+      getStripeWebhookReadiness.mockResolvedValueOnce({
+        ready: false,
+        status: 'endpoint_unverified',
+      });
+      const res = makeRes();
+
+      await createCheckoutSession(makeReq(), res);
+
+      expect(res.statusCode).toBe(503);
+      expect(res.body.code).toBe('STRIPE_WEBHOOK_NOT_READY');
+      expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+      expect(resolveStripeCustomer).not.toHaveBeenCalled();
+    });
+
+    it('maps configuration lookup failures to a secret-safe 503', async () => {
+      const secretMarker = 'sk_live_never-log-this';
+      const error = new Error(`database failure near ${secretMarker}`);
+      getStripeConfiguration.mockRejectedValueOnce(error);
+      const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const res = makeRes();
+
+      await createCheckoutSession(makeReq(), res);
+
+      expect(res.statusCode).toBe(503);
+      expect(res.body.code).toBe('STRIPE_WEBHOOK_NOT_READY');
+      expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+      expect(resolveStripeCustomer).not.toHaveBeenCalled();
+      expect(log.mock.calls.flat().join(' ')).not.toContain(secretMarker);
+      log.mockRestore();
+    });
+  });
+
   it('does not vary by a client-supplied coupon because coupons are Stripe-native', async () => {
     await createCheckoutSession(makeReq({ couponCode: 'SPAR20' }), makeRes());
 
@@ -497,5 +558,45 @@ describe('double-submit protection', () => {
 
     expect(res.statusCode).toBe(409);
     expect(res.body.code).toBe('checkout_in_progress');
+  });
+
+  it('cancels after the current period when a Jobblo downgrade is scheduled', async () => {
+    const record = {
+      userId: USER_ID,
+      currentPlan: {
+        plan: 'Pro',
+        planType: 'private',
+        planId: PLAN_ID,
+        stripeSubscriptionId: 'sub_existing',
+        stripeMode: 'test',
+        status: 'active',
+      },
+      pendingPlan: { planId: 'another-plan' },
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    Subscription.findOne.mockResolvedValue(record);
+    stripe.subscriptions.retrieve.mockResolvedValue({
+      id: 'sub_existing',
+      status: 'active',
+      customer: 'cus_1',
+      schedule: 'sched_jobblo',
+      cancel_at_period_end: false,
+    });
+    stripe.subscriptionSchedules.retrieve.mockResolvedValue({
+      id: 'sched_jobblo',
+      metadata: { jobbloPendingPlanId: 'another-plan', jobbloUserId: USER_ID },
+    });
+    const res = makeRes();
+
+    await cancelMySubscription({ userId: USER_ID }, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(stripe.subscriptionSchedules.release).toHaveBeenCalledWith('sched_jobblo');
+    expect(stripe.subscriptions.update).toHaveBeenCalledWith(
+      'sub_existing',
+      { cancel_at_period_end: true },
+      expect.objectContaining({ idempotencyKey: expect.any(String) })
+    );
+    expect(record.pendingPlan).toBeUndefined();
   });
 });

@@ -30,6 +30,7 @@ import {
   Wrench,
   AlertCircle,
   WalletCards,
+  Receipt,
 } from 'lucide-react';
 import { useUserStore } from '../../stores/userStore';
 import { toast } from 'react-hot-toast';
@@ -93,6 +94,11 @@ function useNavGroups(): NavGroup[] {
         },
         { label: t('nav.tvister'), to: '/dashboard/disputes', icon: <AlertTriangle size={18} /> },
         { label: t('nav.abonnementer'), to: '/dashboard/plans', icon: <ShieldCheck size={18} /> },
+        {
+          label: 'Fakturering',
+          to: '/dashboard/subscription-billing',
+          icon: <Receipt size={18} />,
+        },
         { label: t('nav.kuponger'), to: '/dashboard/voucher', icon: <Ticket size={18} /> },
       ],
     },

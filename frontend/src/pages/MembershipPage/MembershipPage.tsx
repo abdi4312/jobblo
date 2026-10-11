@@ -8,6 +8,10 @@ import {
   AlertCircle,
   Sparkles,
   RotateCcw,
+  CreditCard,
+  ExternalLink,
+  CalendarDays,
+  Receipt,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { usePlans } from '../../features/plans/hooks';
@@ -19,6 +23,7 @@ import { BackLink } from '../../components/Ui/BackLink';
 
 type MySubscription = {
   plan: string;
+  planId: string | null;
   planType: 'private' | 'business';
   status: string;
   autoRenew: boolean;
@@ -27,6 +32,60 @@ type MySubscription = {
   cancelAtPeriodEnd: boolean;
   currentPeriodEnd?: string;
   stripeStatus?: string;
+  stripeMode?: 'test' | 'live' | null;
+  price?: number | null;
+  billingInterval?: string | null;
+  pendingPlan?: {
+    plan: string;
+    effectiveAt: string;
+  } | null;
+  timeline?: Array<{ plan: string; status: string; startDate?: string; endDate?: string }>;
+};
+
+type BillingHistory = {
+  payments: Array<{
+    id: string;
+    plan: string;
+    amount: number;
+    currency: string;
+    status: string;
+    mode: string;
+    createdAt: string;
+  }>;
+  invoices: Array<{
+    id: string;
+    number: string | null;
+    createdAt: string | null;
+    amountPaid: number;
+    amountDue: number;
+    currency: string;
+    status: string | null;
+    mode: 'test' | 'live';
+    hasPdf: boolean;
+  }>;
+  paymentMethod: {
+    brand: string | null;
+    last4: string | null;
+    expMonth: number | null;
+    expYear: number | null;
+  } | null;
+  billingAddress: {
+    name?: string | null;
+    line1?: string | null;
+    line2?: string | null;
+    postal_code?: string | null;
+    city?: string | null;
+    country?: string | null;
+  } | null;
+};
+
+type PlanChangePreview = {
+  strategy: 'no_change' | 'period_end' | 'immediate';
+  effectiveAt?: string;
+  amountDueNow: number;
+  currency: string;
+  currentPlan?: string;
+  targetPlan?: string;
 };
 
 /**
@@ -80,6 +139,14 @@ export default function MembershipPage() {
     staleTime: 30_000,
   });
 
+  const { data: billingHistory } = useQuery<BillingHistory>({
+    queryKey: ['subscription-billing-history'],
+    queryFn: async () =>
+      (await mainLink.get('/api/stripe/subscription/billing-history?mode=all')).data,
+    enabled: Boolean(mySub?.stripeSubscriptionId),
+    staleTime: 60_000,
+  });
+
   const cancelMutation = useMutation({
     mutationFn: async () => (await mainLink.post('/api/stripe/subscription/cancel')).data,
     onSuccess: (data) => {
@@ -100,6 +167,16 @@ export default function MembershipPage() {
       toast.error(err?.response?.data?.message || 'Kunne ikke gjenoppta abonnementet'),
   });
 
+  const portalMutation = useMutation({
+    mutationFn: async () => (await mainLink.post('/api/stripe/subscription/portal')).data,
+    onSuccess: (data) => {
+      if (data?.url) window.location.assign(data.url);
+      else toast.error('Kunne ikke åpne abonnementsadministrasjonen.');
+    },
+    onError: (err: any) =>
+      toast.error(err?.response?.data?.message || 'Kunne ikke åpne abonnementsadministrasjonen'),
+  });
+
   const allowedPlanType: 'private' | 'business' = user?.role === 'company' ? 'business' : 'private';
   const [userType, setUserType] = useState<'private' | 'business'>(allowedPlanType);
 
@@ -118,8 +195,11 @@ export default function MembershipPage() {
 
   /** The plan the account is actually on, matched by name — what the backend stores. */
   const currentPlanId = useMemo(
-    () => typePlans.find((p) => p.name === user?.subscription)?._id ?? null,
-    [typePlans, user?.subscription]
+    () =>
+      mySub?.planId ||
+      typePlans.find((p) => p.name === (mySub?.plan || user?.subscription))?._id ||
+      null,
+    [mySub?.plan, mySub?.planId, typePlans, user?.subscription]
   );
 
   // Open on something rather than nothing: the plan they are on, else the cheapest paid
@@ -168,6 +248,43 @@ export default function MembershipPage() {
   /** Paid checkout is offered only where the server would actually accept it. */
   const canCheckout =
     !!selectedPlan && isAllowedForAccount && !isFree && !isCurrent && !hasPaidSubscription;
+
+  const canChangePlan =
+    !!selectedPlan &&
+    isAllowedForAccount &&
+    !isFree &&
+    !isCurrent &&
+    hasPaidSubscription &&
+    !mySub?.pendingPlan;
+  const { data: planChangePreview, isLoading: isPreviewLoading, isError: previewFailed } =
+    useQuery<PlanChangePreview>({
+      queryKey: ['subscription-plan-change-preview', mySub?.stripeSubscriptionId, selectedPlan?._id],
+      queryFn: async () =>
+        (
+          await mainLink.post('/api/stripe/subscription/change/preview', {
+            planId: selectedPlan?._id,
+          })
+        ).data,
+      enabled: canChangePlan,
+      retry: false,
+    });
+
+  const changePlanMutation = useMutation({
+    mutationFn: async () =>
+      (
+        await mainLink.post('/api/stripe/subscription/change', {
+          planId: selectedPlan?._id,
+        })
+      ).data,
+    onSuccess: (data) => {
+      toast.success(data?.message || 'Planendringen er sendt til Stripe');
+      queryClient.invalidateQueries({ queryKey: ['my-subscription'] });
+      queryClient.invalidateQueries({ queryKey: ['subscription-billing-history'] });
+      queryClient.invalidateQueries({ queryKey: ['subscription-plan-change-preview'] });
+    },
+    onError: (err: any) =>
+      toast.error(err?.response?.data?.message || 'Kunne ikke endre abonnementet'),
+  });
 
   const selectPlan = (id: string) => {
     setSelectedId(id);
@@ -396,6 +513,54 @@ export default function MembershipPage() {
                 <p className="mt-2 text-[1rem] font-semibold tracking-[-0.02em] text-[#0B0B0B]">
                   {mySub.plan}
                 </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold ${
+                      mySub.status === 'past_due'
+                        ? 'bg-amber-100 text-amber-800'
+                        : mySub.status === 'active'
+                          ? 'bg-[#EAF1E9] text-[#2E6641]'
+                          : 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    {mySub.status === 'past_due'
+                      ? 'Betaling forfalt'
+                      : mySub.cancelAtPeriodEnd
+                        ? 'Avsluttes ved periodens slutt'
+                        : mySub.status === 'active'
+                          ? 'Aktiv'
+                          : mySub.status}
+                  </span>
+                  {mySub.stripeMode && (
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold ${
+                        mySub.stripeMode === 'test'
+                          ? 'bg-violet-100 text-violet-800'
+                          : 'bg-slate-100 text-slate-700'
+                      }`}
+                    >
+                      {mySub.stripeMode.toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-3 text-[0.8125rem] text-[#63665F]">
+                  {mySub.price != null
+                    ? `${mySub.price.toLocaleString('nb-NO')} kr per måned`
+                    : 'Månedlig abonnement'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => portalMutation.mutate()}
+                  disabled={portalMutation.isPending}
+                  className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-full bg-[#2E6641] text-[0.875rem] font-semibold text-white hover:bg-[#255335] disabled:opacity-60"
+                >
+                  {portalMutation.isPending ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <ExternalLink size={14} />
+                  )}
+                  Administrer abonnement
+                </button>
 
                 {mySub.cancelAtPeriodEnd ? (
                   <>
@@ -423,15 +588,21 @@ export default function MembershipPage() {
                 ) : (
                   <>
                     <p className="mt-2 text-[0.8125rem] leading-relaxed text-[#63665F]">
-                      Fornyes automatisk{' '}
+                      Neste betaling{' '}
                       <span className="font-semibold text-[#0B0B0B]">
                         {fullDate(mySub.currentPeriodEnd || mySub.renewalDate)}
                       </span>
-                      .
+                      {mySub.status === 'past_due'
+                        ? '. Oppdater betalingsmåten for å beholde tilgangen.'
+                        : ' — fornyes automatisk.'}
                     </p>
                     <button
                       type="button"
                       onClick={() => {
+                        if (mySub.pendingPlan) {
+                          portalMutation.mutate();
+                          return;
+                        }
                         if (
                           !window.confirm(
                             'Si opp abonnementet? Du beholder tilgangen ut perioden du allerede har betalt for.'
@@ -440,15 +611,121 @@ export default function MembershipPage() {
                           return;
                         cancelMutation.mutate();
                       }}
-                      disabled={cancelMutation.isPending}
+                      disabled={cancelMutation.isPending || portalMutation.isPending}
                       className="mt-4 h-10 w-full rounded-full text-[0.875rem] font-semibold text-[#63665F] transition-colors hover:text-[#0B0B0B] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/15 disabled:opacity-60"
                     >
-                      {cancelMutation.isPending ? 'Sier opp…' : 'Si opp abonnementet'}
+                      {cancelMutation.isPending
+                        ? 'Sier opp…'
+                        : mySub.pendingPlan
+                          ? 'Administrer planbytte / oppsigelse'
+                          : 'Si opp abonnementet'}
                     </button>
                   </>
                 )}
+                {mySub.pendingPlan && (
+                  <p className="mt-3 rounded-xl bg-blue-50 px-3 py-2 text-[0.75rem] text-blue-800">
+                    Planen endres til {mySub.pendingPlan.plan}{' '}
+                    {fullDate(mySub.pendingPlan.effectiveAt)}.
+                  </p>
+                )}
               </div>
             )}
+
+            {mySub?.stripeSubscriptionId && (
+              <div className={`${CARD} p-5`}>
+                <h2 className={MICRO_LABEL}>Betaling og faktura</h2>
+                <div className="mt-3 flex items-start gap-3">
+                  <CreditCard size={17} className="mt-0.5 text-[#2E6641]" />
+                  <div className="min-w-0 text-[0.8125rem] text-[#63665F]">
+                    <p className="font-semibold text-[#0B0B0B]">Betalingsmåte</p>
+                    {billingHistory?.paymentMethod?.last4 ? (
+                      <p className="mt-1 capitalize">
+                        {billingHistory.paymentMethod.brand} •••• {billingHistory.paymentMethod.last4}
+                        {billingHistory.paymentMethod.expMonth && billingHistory.paymentMethod.expYear
+                          ? ` · utløper ${billingHistory.paymentMethod.expMonth}/${billingHistory.paymentMethod.expYear}`
+                          : ''}
+                      </p>
+                    ) : (
+                      <p className="mt-1">Administrer kortet sikkert i Stripe.</p>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-4 flex items-start gap-3 border-t border-[#E6E7E1] pt-4">
+                  <Receipt size={17} className="mt-0.5 text-[#2E6641]" />
+                  <div className="min-w-0 flex-1 text-[0.8125rem] text-[#63665F]">
+                    <p className="font-semibold text-[#0B0B0B]">Fakturahistorikk</p>
+                    {billingHistory?.invoices?.length ? (
+                      <ul className="mt-2 space-y-2">
+                        {billingHistory.invoices.slice(0, 8).map((invoice) => (
+                          <li key={`${invoice.mode}-${invoice.id}`} className="flex items-center justify-between gap-2">
+                            <span className="min-w-0 truncate">
+                              {invoice.number || invoice.id} ·{' '}
+                              {invoice.createdAt
+                                ? new Date(invoice.createdAt).toLocaleDateString('nb-NO')
+                                : 'Dato ukjent'}{' '}
+                              · {invoice.status || 'ukjent'}
+                              <span className="ml-1 font-semibold">
+                                {invoice.mode === 'test' ? 'TEST' : 'LIVE'}
+                              </span>
+                            </span>
+                            {invoice.hasPdf && (
+                              <button
+                                type="button"
+                                className="shrink-0 font-semibold text-[#2E6641] underline"
+                                onClick={async () => {
+                                  try {
+                                    const response = await mainLink.get(
+                                      `/api/stripe/subscription/invoices/${encodeURIComponent(invoice.id)}/pdf?mode=${invoice.mode}`
+                                    );
+                                    if (response.data?.url) window.location.assign(response.data.url);
+                                  } catch {
+                                    toast.error('Fakturaen kunne ikke åpnes.');
+                                  }
+                                }}
+                              >
+                                PDF
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-1">Fakturaer vises når de er opprettet av Stripe.</p>
+                    )}
+                    {billingHistory?.billingAddress && (
+                      <p className="mt-3 border-t border-[#E6E7E1] pt-3">
+                        Fakturaadresse:{' '}
+                        {[
+                          billingHistory.billingAddress.line1,
+                          billingHistory.billingAddress.postal_code,
+                          billingHistory.billingAddress.city,
+                          billingHistory.billingAddress.country,
+                        ]
+                          .filter(Boolean)
+                          .join(', ') || 'Oppdater i Stripe'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {mySub?.timeline?.length ? (
+              <div className={`${CARD} p-5`}>
+                <h2 className={MICRO_LABEL}>Abonnementstidslinje</h2>
+                <ol className="mt-3 space-y-3">
+                  {mySub.timeline.slice(-5).reverse().map((item, index) => (
+                    <li key={`${item.plan}-${item.startDate || index}`} className="border-l-2 border-[#DDE8DB] pl-3">
+                      <p className="text-[0.8125rem] font-semibold text-[#0B0B0B]">{item.plan}</p>
+                      <p className="text-[0.75rem] text-[#63665F]">
+                        {item.startDate ? fullDate(item.startDate) : 'Dato ukjent'}
+                        {item.endDate ? ` – ${fullDate(item.endDate)}` : ' – nå'}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ) : null}
 
             <div className={`${CARD} p-6`}>
               <h2 className={MICRO_LABEL}>Sammendrag</h2>
@@ -499,36 +776,68 @@ export default function MembershipPage() {
                           : 'Velg en annen plan for å bytte.'}
                       </p>
                     </div>
-                  ) : !isFree && hasPaidSubscription ? (
-                    /*
-                     * The account already has a Stripe subscription that can bill it, so
-                     * this button used to say "Bytt til denne planen" and quietly start a
-                     * SECOND one — the old subscription kept billing and its id was
-                     * overwritten in Mongo, leaving it uncancellable from Jobblo. The
-                     * server now refuses with 409 `active_subscription_exists`, so
-                     * offering the button would only lead into a failure. Plan switching
-                     * is not supported: there is no proration or change-plan flow behind
-                     * it, and inventing one is out of scope.
-                     */
+                  ) : hasPaidSubscription ? (
                     <div className="mt-6 rounded-xl border border-[#E6E7E1] bg-[#F4F6F0] px-4 py-3.5">
-                      <div className="flex items-start gap-2.5">
-                        <AlertCircle
-                          size={15}
-                          strokeWidth={2.2}
-                          className="mt-0.5 shrink-0 text-[#63665F]"
-                        />
-                        <div>
+                      {mySub?.pendingPlan ? (
+                        <p className="text-[0.8125rem] leading-relaxed text-[#63665F]">
+                          En endring til {mySub?.pendingPlan?.plan} er allerede planlagt til{' '}
+                          {fullDate(mySub?.pendingPlan?.effectiveAt)}. Administrer eller avbryt den
+                          via Stripe Portal før du velger et nytt bytte.
+                        </p>
+                      ) : canChangePlan ? (
+                        <>
                           <p className="text-[0.875rem] font-semibold text-[#0B0B0B]">
-                            Du har allerede et aktivt abonnement
+                            {planChangePreview?.strategy === 'period_end'
+                              ? 'Nedgradering ved neste periode'
+                              : 'Oppgradering med forholdsmessig betaling'}
                           </p>
-                          <p className="mt-1 text-[0.8125rem] leading-relaxed text-[#63665F]">
-                            Du er på {mySub?.plan || 'en betalt plan'}. Å kjøpe en ny plan nå
-                            ville gitt deg to abonnement som begge trekkes hver måned, så det
-                            er ikke mulig. Si opp det eksisterende abonnementet fra
-                            abonnementskortet på denne siden først.
-                          </p>
-                        </div>
-                      </div>
+                          {isPreviewLoading ? (
+                            <p className="mt-2 text-[0.8125rem] text-[#63665F]">Beregner prisjustering…</p>
+                          ) : previewFailed ? (
+                            <p className="mt-2 text-[0.8125rem] text-amber-800">
+                              Endringen kan ikke forhåndsvises akkurat nå. Oppdater betalingsmåten eller prøv igjen senere.
+                            </p>
+                          ) : planChangePreview?.strategy === 'period_end' ? (
+                            <p className="mt-2 text-[0.8125rem] text-[#63665F]">
+                              Du beholder {mySub?.plan} til {fullDate(planChangePreview.effectiveAt)}.
+                              Ingen ny betaling trekkes i dag.
+                            </p>
+                          ) : planChangePreview ? (
+                            <p className="mt-2 text-[0.8125rem] text-[#63665F]">
+                              Stripe beregner proratajusteringen. Beløp nå:{' '}
+                              {new Intl.NumberFormat('nb-NO', {
+                                style: 'currency',
+                                currency: planChangePreview.currency.toUpperCase(),
+                              }).format(planChangePreview.amountDueNow / 100)}.
+                            </p>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => changePlanMutation.mutate()}
+                            disabled={
+                              isPreviewLoading ||
+                              previewFailed ||
+                              !planChangePreview ||
+                              planChangePreview.strategy === 'no_change' ||
+                              changePlanMutation.isPending
+                            }
+                            className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#2E6641] text-[0.875rem] font-semibold text-white hover:bg-[#255335] disabled:opacity-50"
+                          >
+                            {changePlanMutation.isPending ? (
+                              <Loader2 size={15} className="animate-spin" />
+                            ) : (
+                              <CalendarDays size={15} />
+                            )}
+                            Bekreft planendring
+                          </button>
+                        </>
+                      ) : (
+                        <p className="text-[0.8125rem] leading-relaxed text-[#63665F]">
+                          {mySub?.plan && mySub.plan !== selectedPlan.name
+                            ? `Du har allerede et aktivt abonnement på ${mySub.plan}.`
+                            : 'Planendring er ikke tilgjengelig for abonnementets nåværende status.'}
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <button

@@ -139,6 +139,9 @@ const SafePayAdminPage = lazy(() => import('../pages/SuperAdminDashboard/SafePay
 const FinanceHistoryPage = lazy(
   () => import('../pages/SuperAdminDashboard/FinanceHistoryPage.tsx')
 );
+const SubscriptionBillingAdminPage = lazy(
+  () => import('../pages/SuperAdminDashboard/SubscriptionBillingAdminPage.tsx')
+);
 const SafePayDetailPage = lazy(() => import('../pages/SuperAdminDashboard/SafePayDetailPage.tsx'));
 const DisputesPage = lazy(() => import('../pages/SuperAdminDashboard/DisputesPage.tsx'));
 const DisputeDetailPage = lazy(() => import('../pages/SuperAdminDashboard/DisputeDetailPage.tsx'));
@@ -364,6 +367,7 @@ export const routes: RouteObject[] = [
       { path: 'activity', element: withSuspense(ActivityLogPage) },
       { path: 'safepay', element: withSuspense(SafePayAdminPage) },
       { path: 'finance-history', element: withSuspense(FinanceHistoryPage) },
+      { path: 'subscription-billing', element: withSuspense(SubscriptionBillingAdminPage) },
       { path: 'safepay/:orderId', element: withSuspense(SafePayDetailPage) },
       { path: 'disputes', element: withSuspense(DisputesPage) },
       { path: 'disputes/:disputeId', element: withSuspense(DisputeDetailPage) },

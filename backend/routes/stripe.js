@@ -10,6 +10,7 @@ const {
   cancelMySubscription,
   resumeMySubscription,
 } = require('../controllers/stripeController');
+const billingController = require('../controllers/stripeBillingController');
 
 router.post('/create-checkout-session', authenticate, createCheckoutSession);
 router.get('/checkout-session/:sessionId', authenticate, checkoutSessionStatus);
@@ -21,5 +22,10 @@ router.get('/extra-contact-status/:sessionId', authenticate, extraContactPayment
 router.get('/subscription', authenticate, getMySubscription);
 router.post('/subscription/cancel', authenticate, cancelMySubscription);
 router.post('/subscription/resume', authenticate, resumeMySubscription);
+router.post('/subscription/portal', authenticate, billingController.createPortalSession);
+router.get('/subscription/billing-history', authenticate, billingController.getBillingHistory);
+router.get('/subscription/invoices/:invoiceId/pdf', authenticate, billingController.downloadInvoicePdf);
+router.post('/subscription/change/preview', authenticate, billingController.previewPlanChange);
+router.post('/subscription/change', authenticate, billingController.changePlan);
 
 module.exports = router;

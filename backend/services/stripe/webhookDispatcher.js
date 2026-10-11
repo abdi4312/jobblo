@@ -12,6 +12,7 @@ const {
   applyInvoicePaymentFailed,
   applySubscriptionUpdated,
   applySubscriptionDeleted,
+  applySubscriptionScheduleCanceled,
 } = require('./provisioning');
 
 /**
@@ -35,8 +36,15 @@ const ORDER_EVENT_TYPES = new Set([
   'checkout.session.expired',
   'invoice.paid',
   'invoice.payment_failed',
+  'invoice.payment_action_required',
   'customer.subscription.updated',
   'customer.subscription.deleted',
+  'customer.subscription.paused',
+  'customer.subscription.resumed',
+  'customer.subscription.pending_update_applied',
+  'customer.subscription.pending_update_expired',
+  'subscription_schedule.completed',
+  'subscription_schedule.canceled',
   'transfer.created',
   'transfer.updated',
   'transfer.reversed',
@@ -137,26 +145,57 @@ async function handleEvent(event, { io } = {}) {
       );
       return { handled: 'session_expired' };
 
-    case 'invoice.paid':
-      return { handled: 'invoice_paid', result: await applyInvoicePaid(event.data.object) };
+    case 'invoice.paid': {
+      const result = await applyInvoicePaid(event.data.object);
+      if (!result.ok) throw new Error('Subscription invoice payment could not be reconciled');
+      return { handled: 'invoice_paid', result };
+    }
 
     case 'invoice.payment_failed':
-      return {
-        handled: 'invoice_failed',
-        result: await applyInvoicePaymentFailed(event.data.object),
-      };
+    case 'invoice.payment_action_required': {
+      const result = await applyInvoicePaymentFailed(event.data.object);
+      if (!result.ok) throw new Error('Subscription invoice failure could not be reconciled');
+      return { handled: 'invoice_failed', result };
+    }
 
     case 'customer.subscription.updated':
+    case 'customer.subscription.paused':
+    case 'customer.subscription.resumed':
+    case 'customer.subscription.pending_update_applied':
+    case 'customer.subscription.pending_update_expired': {
+      const result = await applySubscriptionUpdated(event.data.object);
+      if (!result.ok) throw new Error('Subscription update could not be reconciled');
       return {
         handled: 'subscription_updated',
-        result: await applySubscriptionUpdated(event.data.object),
+        result,
       };
+    }
 
-    case 'customer.subscription.deleted':
-      return {
-        handled: 'subscription_deleted',
-        result: await applySubscriptionDeleted(event.data.object),
-      };
+    case 'customer.subscription.deleted': {
+      const result = await applySubscriptionDeleted(event.data.object);
+      if (!result.ok) throw new Error('Subscription deletion could not be reconciled');
+      return { handled: 'subscription_deleted', result };
+    }
+
+    case 'subscription_schedule.completed': {
+      const subscriptionId =
+        typeof event.data.object.subscription === 'string'
+          ? event.data.object.subscription
+          : event.data.object.subscription?.id;
+      if (!subscriptionId) throw new Error('Completed subscription schedule is missing its subscription');
+      const result = await applySubscriptionUpdated({
+        id: subscriptionId,
+        livemode: event.livemode,
+      });
+      if (!result.ok) throw new Error('Completed subscription schedule could not be reconciled');
+      return { handled: 'subscription_schedule_completed', result };
+    }
+
+    case 'subscription_schedule.canceled': {
+      const result = await applySubscriptionScheduleCanceled(event.data.object);
+      if (!result.ok) throw new Error('Canceled subscription schedule could not be reconciled');
+      return { handled: 'subscription_schedule_canceled', result };
+    }
 
     case 'transfer.created':
     case 'transfer.updated':

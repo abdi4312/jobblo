@@ -25,11 +25,18 @@ const promotionCodeController = require('../../controllers/admin/promotionCodeCo
 const campaignController = require('../../controllers/campaignController');
 const stripeWebhookHealthController = require('../../controllers/admin/stripeWebhookHealthController');
 const safePayFinanceController = require('../../controllers/safepayFinanceController');
+const stripeBillingController = require('../../controllers/stripeBillingController');
 
 // Apply auth + admin check + rate limiter to ALL routes
 router.use(authenticate, requireAdmin, adminLimiter);
 
 router.get('/stripe/webhook-readiness', stripeWebhookHealthController.getWebhookReadiness);
+router.get('/billing/subscriptions/summary', stripeBillingController.getAdminSummary);
+router.post(
+  '/billing/subscriptions/reconcile',
+  financeSyncLimiter,
+  stripeBillingController.reconcileSubscriptions
+);
 
 // ── Stripe membership promotion codes ─────────────────────────────────────
 router.get('/promotion-codes', promotionCodeController.listPromotionCodes);
