@@ -1,8 +1,10 @@
 const Stripe = require('stripe');
 const GlobalConfig = require('../models/GlobalConfig');
+const crypto = require('crypto');
 
 let cachedClient = null;
 let cachedMode = null;
+let cachedSecretKey = null;
 
 /**
  * The API version this codebase is written against.
@@ -32,13 +34,47 @@ function parseBool(value) {
 }
 
 async function isTestMode() {
-  try {
-    const config = await GlobalConfig.findOne({ key: 'STRIPE_TEST_MODE' });
-    return config ? parseBool(config.value) : false;
-  } catch (err) {
-    console.error('Stripe config lookup error, defaulting to production:', err.message);
-    return false;
+  const config = await GlobalConfig.findOne({ key: 'STRIPE_TEST_MODE' });
+  if (!config) return false;
+
+  const value = config.value;
+  if (
+    value === true ||
+    value === false ||
+    value === 1 ||
+    value === 0 ||
+    (typeof value === 'string' &&
+      ['true', 'false', '1', '0', 'yes', 'no'].includes(value.trim().toLowerCase()))
+  ) {
+    return parseBool(value);
   }
+  throw new Error('Stripe mode configuration is invalid');
+}
+
+async function getStripeConfiguration() {
+  const testMode = await isTestMode();
+  const secretKey = secretKeyForMode(testMode);
+  const webhookSecret = (
+    testMode ? process.env.STRIPE_TEST_WEBHOOK_SECRET : process.env.STRIPE_WEBHOOK_SECRET
+  )?.trim();
+  const expectedPrefix = testMode ? /^(?:sk|rk)_test_.+/ : /^(?:sk|rk)_live_.+/;
+  const keyModeValid = Boolean(secretKey && expectedPrefix.test(secretKey));
+
+  return {
+    testMode,
+    mode: testMode ? 'test' : 'live',
+    secretKey,
+    webhookSecret: webhookSecret || null,
+    keyModeValid,
+    webhookSecretValid: Boolean(webhookSecret && /^whsec_.+/.test(webhookSecret)),
+    fingerprint:
+      secretKey && webhookSecret
+        ? crypto
+            .createHash('sha256')
+            .update(`${testMode ? 'test' : 'live'}\0${secretKey}\0${webhookSecret}`)
+            .digest('hex')
+        : null,
+  };
 }
 
 /**
@@ -51,10 +87,7 @@ async function isTestMode() {
  * signature".
  */
 async function getStripeWebhookSecret() {
-  const testMode = await isTestMode();
-  return (
-    (testMode ? process.env.STRIPE_TEST_WEBHOOK_SECRET : process.env.STRIPE_WEBHOOK_SECRET) || null
-  );
+  return (await getStripeConfiguration()).webhookSecret;
 }
 
 function secretKeyForMode(testMode) {
@@ -63,18 +96,20 @@ function secretKeyForMode(testMode) {
   return (testMode ? process.env.STRIPE_TEST_SECRET_KEY : process.env.STRIPE_SECRET_KEY) || null;
 }
 
-async function getStripe() {
-  const testMode = await isTestMode();
-
-  if (cachedClient && cachedMode === testMode) return cachedClient;
+async function getStripeForMode(testMode) {
 
   const secretKey = secretKeyForMode(testMode);
+  const expectedPrefix = testMode ? /^(?:sk|rk)_test_.+/ : /^(?:sk|rk)_live_.+/;
 
-  if (!secretKey) {
+  if (!secretKey || !expectedPrefix.test(secretKey)) {
     const varName = testMode ? 'STRIPE_TEST_SECRET_KEY' : 'STRIPE_SECRET_KEY';
     throw new Error(
-      `Stripe secret key is missing for ${testMode ? 'TEST' : 'PRODUCTION'} mode (${varName} is not set)`
+      `Stripe secret key is missing or invalid for ${testMode ? 'TEST' : 'PRODUCTION'} mode (${varName})`
     );
+  }
+
+  if (cachedClient && cachedMode === testMode && cachedSecretKey === secretKey) {
+    return cachedClient;
   }
 
   cachedClient = Stripe(secretKey, {
@@ -83,8 +118,14 @@ async function getStripe() {
     timeout: 20000,
   });
   cachedMode = testMode;
+  cachedSecretKey = secretKey;
   console.log(`Stripe client initialized: ${testMode ? 'TEST' : 'PRODUCTION'} mode`);
   return cachedClient;
+}
+
+async function getStripe() {
+  const { testMode } = await getStripeConfiguration();
+  return getStripeForMode(testMode);
 }
 
 /**
@@ -99,11 +140,15 @@ async function getStripe() {
  * Returns key *prefixes* only — never the key itself.
  */
 async function getStripeModeReport() {
-  const toggleTestMode = await isTestMode();
-  const key = secretKeyForMode(toggleTestMode);
-  const webhookSecret = await getStripeWebhookSecret();
-
-  const keyMode = !key ? 'missing' : key.startsWith('sk_live_') ? 'live' : 'test';
+  const config = await getStripeConfiguration();
+  const { testMode: toggleTestMode, secretKey: key } = config;
+  const keyMode = !key
+    ? 'missing'
+    : /^(?:sk|rk)_test_.+/.test(key)
+      ? 'test'
+      : /^(?:sk|rk)_live_.+/.test(key)
+        ? 'live'
+        : 'invalid';
 
   return {
     // What the STRIPE_TEST_MODE toggle says.
@@ -112,10 +157,10 @@ async function getStripeModeReport() {
     keyMode,
     keyVarName: toggleTestMode ? 'STRIPE_TEST_SECRET_KEY' : 'STRIPE_SECRET_KEY',
     webhookVarName: toggleTestMode ? 'STRIPE_TEST_WEBHOOK_SECRET' : 'STRIPE_WEBHOOK_SECRET',
-    webhookConfigured: Boolean(webhookSecret),
+    webhookConfigured: config.webhookSecretValid,
     apiVersion: STRIPE_API_VERSION,
     // True when the toggle and the real key disagree, or the key is absent.
-    mismatch: keyMode === 'missing' || toggleTestMode !== (keyMode === 'test'),
+    mismatch: !config.keyModeValid || toggleTestMode !== (keyMode === 'test'),
   };
 }
 
@@ -123,10 +168,13 @@ async function getStripeModeReport() {
 function _resetStripeCache() {
   cachedClient = null;
   cachedMode = null;
+  cachedSecretKey = null;
 }
 
 module.exports = {
   getStripe,
+  getStripeForMode,
+  getStripeConfiguration,
   getStripeWebhookSecret,
   getStripeModeReport,
   isTestMode,

@@ -74,9 +74,9 @@ describe('isTestMode', () => {
     expect(await isTestMode()).toBe(false);
   });
 
-  it('defaults to production if the lookup throws', async () => {
+  it('fails closed if the mode lookup throws', async () => {
     GlobalConfig.findOne.mockRejectedValue(new Error('mongo down'));
-    expect(await isTestMode()).toBe(false);
+    await expect(isTestMode()).rejects.toThrow('mongo down');
   });
 });
 

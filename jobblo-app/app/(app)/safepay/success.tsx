@@ -9,6 +9,7 @@ import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { SafePayProgressSteps } from '../../../src/components/domain/SafePayProgressSteps';
 import { providerOrderRoute } from '../../../src/utils/orderRoute';
 import { isValidOrderId, isValidSessionId } from '../../../src/utils/safepayCheckoutSession';
+import { reconcileSafePayPayment } from '../../../src/services/safepay.service';
 
 const PAID_ORDER_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed'];
 type PaymentState = 'verifying' | 'paid' | 'pending' | 'unverified';
@@ -105,7 +106,17 @@ export default function SafePaySuccessScreen() {
   }
 
   if (paymentState !== 'paid') {
-    const retry = () => void statusQuery.refetch();
+    const retry = async () => {
+      if (resolvedOrderId && isCustomer) {
+        try {
+          await reconcileSafePayPayment(resolvedOrderId);
+        } catch {
+          // Reconciliation is best effort; only the subsequent DB read reports payment.
+        }
+      }
+      await statusQuery.refetch();
+      await orderQuery.refetch();
+    };
     const checkout = () => {
       if (!resolvedOrderId.trim()) return;
       router.push({ pathname: '/(app)/safepay/checkout/[orderId]', params: { orderId: resolvedOrderId } });

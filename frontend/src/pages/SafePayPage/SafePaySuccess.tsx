@@ -24,9 +24,7 @@ const SafePaySuccess: React.FC = () => {
   const sessionId = searchParams.get('session_id');
   const { user } = useUserStore();
 
-  // Check payment status. This is the authoritative source: the backend retrieves the
-  // session live from Stripe. Its response body MUST be read — the page previously
-  // ignored it and rendered "Betaling bekreftet!" unconditionally.
+  // The status route reads database-confirmed state only; Stripe webhooks are authoritative.
   const {
     data: statusData,
     isLoading: statusLoading,
@@ -49,6 +47,7 @@ const SafePaySuccess: React.FC = () => {
     data: checkoutData,
     isLoading: orderLoading,
     isError: orderError,
+    refetch: refetchOrder,
   } = useQuery({
     queryKey: ['safepay-checkout', orderId],
     queryFn: async () => {
@@ -60,6 +59,18 @@ const SafePaySuccess: React.FC = () => {
 
   const order = checkoutData?.order;
   const serviceId = order?.serviceId?._id;
+
+  const reconcileAndRefresh = async () => {
+    if (orderId) {
+      try {
+        await mainLink.post(`/api/safepay/orders/${orderId}/reconcile-payment`);
+      } catch {
+        // A failed reconciliation is not payment confirmation; refresh the DB view.
+      }
+    }
+    await refetchStatus();
+    await refetchOrder();
+  };
 
   const paymentState: 'verifying' | 'paid' | 'pending' | 'unverified' = useMemo(() => {
     if (statusLoading || orderLoading) return 'verifying';
@@ -129,7 +140,7 @@ const SafePaySuccess: React.FC = () => {
           <div className="mt-7 flex flex-col gap-2.5">
             {sessionId && (
               <button
-                onClick={() => refetchStatus()}
+                onClick={reconcileAndRefresh}
                 disabled={isRefetchingStatus}
                 className={SOLID}
               >

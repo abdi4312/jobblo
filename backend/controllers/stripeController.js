@@ -9,8 +9,6 @@ const { upsertTransaction } = require('../utils/transaction');
 const { upsertSubscription } = require('../utils/subscription');
 const { findBillingCapableSubscription } = require('../services/stripe/subscriptionState');
 const {
-  provisionSubscriptionFromSession,
-  provisionExtraContactFromSession,
   subscriptionPeriodEnd,
 } = require('../services/stripe/provisioning');
 const { resolveAllowedPlanType } = require('../utils/planAccess');
@@ -251,54 +249,24 @@ exports.createCheckoutSession = async (req, res) => {
 
 exports.checkoutSessionStatus = async (req, res) => {
   try {
-    const stripe = await getStripe();
     const { sessionId } = req.params;
-
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['subscription'],
-    });
-
-    // The session id comes from a query string the caller controls, and everything below
-    // is driven by `session.metadata.userId` — so without this check any signed-in user
-    // who got hold of someone else's session id could drive that person's subscription
-    // activation. The caller must own the session they are asking about.
-    if (session.metadata?.userId && String(session.metadata.userId) !== String(req.userId)) {
+    const transaction = await Transaction.findOne({ stripeSessionId: sessionId }).lean();
+    if (transaction && String(transaction.userId) !== String(req.userId)) {
       return res.status(403).json({ error: 'Denne betalingen tilhører en annen bruker' });
     }
 
-    const isMembership =
-      session.mode === 'subscription' || session.metadata?.type === 'subscription';
-    if (
-      session.payment_status !== 'paid' &&
-      !(isMembership && session.payment_status === 'no_payment_required')
-    ) {
-      return res.json({ payment_status: session.payment_status });
+    if (!transaction || transaction.type !== 'subscription' || transaction.status !== 'succeeded') {
+      return res.json({ payment_status: transaction?.status || 'unpaid' });
     }
 
-    // Provisioning lives in services/stripe/provisioning.js so this page and the
-    // webhook run the same code. This call is now a convenience — the webhook is
-    // the source of truth and will have done (or will do) the same work — but
-    // keeping it makes the success page instant instead of waiting on delivery.
-    const result = await provisionSubscriptionFromSession(session);
-    if (!result.ok) {
-      console.error('checkoutSessionStatus: could not provision %s: %s', sessionId, result.reason);
-      return res
-        .status(400)
-        .json({ message: 'Kunne ikke aktivere abonnementet', code: result.reason });
-    }
-
-    // The success page showed one line of green text and nothing about the purchase.
-    // These are already computed above, so returning them costs nothing and lets the
-    // page confirm *what* was bought and *what* was charged — which is the difference
-    // between a receipt and an assurance.
     res.json({
       payment_status: 'paid',
-      plan: result.subscription.currentPlan.plan,
-      planType: result.planType,
-      amount: result.amount,
-      currency: session.currency || 'nok',
-      discountAmount: result.discountAmount,
-      coupon: result.discountCoupon,
+      plan: transaction.planName,
+      planType: transaction.planType,
+      amount: transaction.amount,
+      currency: transaction.currency || 'nok',
+      discountAmount: transaction.discountAmount,
+      coupon: transaction.discountCoupon,
     });
   } catch (error) {
     console.error('Status Error:', error);
@@ -381,30 +349,21 @@ exports.createExtraContactPayment = async (req, res) => {
 
 exports.extraContactPaymentStatus = async (req, res) => {
   try {
-    const stripe = await getStripe();
     const { sessionId } = req.params;
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-
-    if (session.payment_status !== 'paid') {
-      return res.json({ payment_status: session.payment_status });
-    }
-
-    // Same session-ownership check the subscription status endpoint makes: without
-    // it, any signed-in user holding someone else's session id could drive that
-    // person's entitlement.
-    if (session.metadata?.userId && String(session.metadata.userId) !== String(req.userId)) {
+    const transaction = await Transaction.findOne({ stripeSessionId: sessionId }).lean();
+    if (transaction && String(transaction.userId) !== String(req.userId)) {
       return res.status(403).json({ message: 'Denne betalingen tilhører en annen bruker' });
     }
 
-    const result = await provisionExtraContactFromSession(session);
-    if (!result.ok) {
-      return res.status(400).json({ message: 'Invalid payment type', code: result.reason });
+    if (
+      !transaction ||
+      transaction.type !== 'extra_contact' ||
+      transaction.status !== 'succeeded'
+    ) {
+      return res.json({ payment_status: transaction?.status || 'unpaid' });
     }
 
-    // monthlyContactUsage is deliberately not incremented — this was a paid contact.
-    // The entitlement itself is the Transaction row, which checkSubscription consumes
-    // exactly once.
-    res.json({ payment_status: 'paid', serviceId: result.serviceId });
+    res.json({ payment_status: 'paid', serviceId: transaction.serviceId });
   } catch (error) {
     console.error('Extra Contact Status Error:', error);
     res.status(500).json({ message: error.message });

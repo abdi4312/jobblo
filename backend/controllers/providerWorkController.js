@@ -10,7 +10,6 @@ const Dispute = require('../models/Dispute');
 const Chat = require('../models/ChatMessage');
 const Service = require('../models/Service');
 const { notify, emitToUser } = require('../services/notifications');
-// stripe is lazily initialized only when needed (reconcile endpoint)
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -451,7 +450,10 @@ exports.reconcilePayment = async (req, res) => {
         .status(400)
         .json({ status: 'no_session', message: 'Ingen betalingssesjon funnet' });
 
-    // Lazy stripe initialization
+    if (!order.checkoutSessionId.startsWith('cs_')) {
+      return res.status(409).json({ status: 'checkout_attempt_pending' });
+    }
+
     const { getStripe } = require('../config/stripe');
     const stripe = await getStripe();
 
@@ -463,57 +465,16 @@ exports.reconcilePayment = async (req, res) => {
         .status(503)
         .json({ status: 'stripe_unavailable', message: 'Stripe ikke tilgjengelig' });
     }
-    if (session.metadata?.orderId !== String(orderId))
+    if (session.id !== order.checkoutSessionId) {
       return res.status(400).json({ status: 'session_mismatch' });
+    }
     if (session.payment_status !== 'paid')
       return res.json({ status: 'not_paid', payment_status: session.payment_status });
-    const updated = await Order.findOneAndUpdate(
-      { _id: orderId, status: { $in: ['awaiting_payment', 'pending'] } },
-      {
-        $set: {
-          status: 'paid',
-          paymentStatus: 'paid',
-          paymentConfirmedAt: new Date(),
-          checkoutSessionId: session.id,
-          checkoutSessionStatus: 'complete',
-          paymentIntentId: session.payment_intent,
-        },
-        $push: {
-          history: {
-            action: 'payment_confirmed',
-            userId: null,
-            timestamp: new Date(),
-            data: { stripeSessionId: session.id },
-          },
-        },
-      },
-      { new: true }
-    );
-    let payment;
-    try {
-      payment = await Payment.create({
-        orderId,
-        chatId: order.chatId,
-        status: 'completed',
-        amount: order.agreedPrice,
-        stripeSessionId: session.id,
-        stripePaymentIntentId: session.payment_intent,
-      });
-    } catch (e) {
-      if (e.code === 11000) payment = await Payment.findOne({ orderId });
-      else throw e;
-    }
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`user_${order.providerId}`).emit('payment_confirmed', { orderId });
-      io.to(`user_${order.customerId}`).emit('payment_confirmed', { orderId });
-    }
-    // Sync service status to paid (when payment is confirmed)
-    const orderForService = updated || order;
-    if (orderForService) {
-      await Service.findByIdAndUpdate(orderForService.serviceId, { status: 'paid' });
-    }
-    res.json({ status: 'confirmed', order: updated || order, payment });
+    const { confirmPaidSession } = require('./SafePayCheckoutController');
+    const result = await confirmPaidSession(session, req.app.get('io'));
+    if (!result.ok) return res.status(409).json({ status: 'confirmation_rejected' });
+    const payment = await Payment.findOne({ orderId });
+    return res.json({ status: 'confirmed', order: result.order, payment });
   } catch (err) {
     res.status(500).json({ error: 'Serverfeil', status: 'error' });
   }

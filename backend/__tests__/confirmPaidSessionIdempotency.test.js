@@ -15,7 +15,10 @@ jest.mock('../models/ChatMessage', () => ({ findById: jest.fn() }));
 jest.mock('../models/Service', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
 jest.mock('../models/SafePayHistory', () => ({ findOneAndUpdate: jest.fn() }));
 jest.mock('../models/Review', () => ({ create: jest.fn(), findOne: jest.fn() }));
-jest.mock('../config/stripe', () => ({ getStripe: jest.fn() }));
+jest.mock('../config/stripe', () => ({
+  getStripeConfiguration: jest.fn(),
+  getStripeForMode: jest.fn(),
+}));
 jest.mock('../services/stripe/customers', () => ({ resolveStripeCustomer: jest.fn() }));
 
 const mongoose = require('mongoose');
@@ -24,6 +27,7 @@ const Payment = require('../models/Payment');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const Chat = require('../models/ChatMessage');
+const { getStripeConfiguration, getStripeForMode } = require('../config/stripe');
 const { confirmPaidSession } = require('../controllers/SafePayCheckoutController');
 
 const ORDER_ID = new mongoose.Types.ObjectId();
@@ -33,6 +37,12 @@ const PROVIDER_ID = new mongoose.Types.ObjectId();
 function session(overrides = {}) {
   return {
     id: 'cs_test_1',
+    status: 'complete',
+    mode: 'payment',
+    currency: 'nok',
+    amount_total: 103000,
+    customer: 'cus_test_1',
+    livemode: false,
     payment_intent: 'pi_test_1',
     payment_status: 'paid',
     metadata: { orderId: String(ORDER_ID), userId: String(CUSTOMER_ID) },
@@ -47,6 +57,13 @@ function order(status = 'awaiting_payment') {
     customerId: CUSTOMER_ID,
     providerId: PROVIDER_ID,
     agreedPrice: 1000,
+    checkoutSessionId: 'cs_test_1',
+    checkoutSessionStatus: 'open',
+    checkoutMode: 'test',
+    checkoutAmountMinor: 103000,
+    checkoutCurrency: 'nok',
+    checkoutCustomerId: 'cus_test_1',
+    paymentIntentId: status === 'paid' || status === 'in_progress' ? 'pi_test_1' : undefined,
     chatId: null,
   };
 }
@@ -56,6 +73,30 @@ beforeEach(() => {
   Chat.findById.mockResolvedValue(null);
   User.updateMany.mockResolvedValue({});
   Notification.create.mockResolvedValue({});
+  Payment.findOne = jest.fn().mockResolvedValue(null);
+  getStripeConfiguration.mockResolvedValue({ mode: 'test', testMode: true });
+  getStripeForMode.mockResolvedValue({
+    paymentIntents: {
+      retrieve: jest.fn().mockResolvedValue({
+        id: 'pi_test_1',
+        status: 'succeeded',
+        amount_received: 103000,
+        currency: 'nok',
+        customer: 'cus_test_1',
+        latest_charge: 'ch_test_1',
+      }),
+    },
+    charges: {
+      retrieve: jest.fn().mockResolvedValue({
+        id: 'ch_test_1',
+        paid: true,
+        captured: true,
+        amount: 103000,
+        currency: 'nok',
+        payment_intent: 'pi_test_1',
+      }),
+    },
+  });
 });
 
 describe('confirmPaidSession', () => {
@@ -92,12 +133,20 @@ describe('confirmPaidSession', () => {
 
   it('short-circuits when the order is already in a paid state', async () => {
     Order.findById.mockResolvedValue(order('in_progress'));
+    Payment.findOne.mockResolvedValue({
+      stripeSessionId: 'cs_test_1',
+      stripePaymentIntentId: 'pi_test_1',
+    });
 
     const result = await confirmPaidSession(session(), null);
 
     expect(result).toMatchObject({ ok: true, alreadyConfirmed: true });
     expect(Order.findOneAndUpdate).not.toHaveBeenCalled();
-    expect(Payment.updateOne).not.toHaveBeenCalled();
+    expect(Payment.updateOne).toHaveBeenCalledWith(
+      { orderId: String(ORDER_ID) },
+      expect.objectContaining({ $setOnInsert: expect.any(Object) }),
+      { upsert: true }
+    );
   });
 
   it('reports already-confirmed when the status CAS matched nothing', async () => {
@@ -107,7 +156,7 @@ describe('confirmPaidSession', () => {
     const result = await confirmPaidSession(session(), null);
 
     expect(result).toMatchObject({ ok: true, alreadyConfirmed: true });
-    expect(Payment.updateOne).not.toHaveBeenCalled();
+    expect(Payment.updateOne).toHaveBeenCalled();
   });
 
   it('only moves an order out of a pre-payment status', async () => {

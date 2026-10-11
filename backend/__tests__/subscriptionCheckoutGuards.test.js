@@ -22,8 +22,7 @@ jest.mock('../models/Service', () => ({ findById: jest.fn() }));
 jest.mock('../config/stripe', () => ({ getStripe: jest.fn(), isTestMode: jest.fn() }));
 jest.mock('../utils/transaction', () => ({ upsertTransaction: jest.fn() }));
 jest.mock('../utils/subscription', () => ({ upsertSubscription: jest.fn() }));
-// Provisioning is only reached by the *status* endpoint; stubbing it keeps this file
-// from pulling in the notification stack.
+// Stub provisioning so this file stays isolated from the notification stack.
 jest.mock('../services/stripe/provisioning', () => ({
   provisionSubscriptionFromSession: jest.fn(),
   provisionExtraContactFromSession: jest.fn(),

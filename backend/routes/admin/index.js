@@ -23,9 +23,12 @@ const evidenceUploadController = require('../../controllers/admin/evidenceUpload
 const shopAdminController = require('../../controllers/admin/shopAdminController');
 const promotionCodeController = require('../../controllers/admin/promotionCodeController');
 const campaignController = require('../../controllers/campaignController');
+const stripeWebhookHealthController = require('../../controllers/admin/stripeWebhookHealthController');
 
 // Apply auth + admin check + rate limiter to ALL routes
 router.use(authenticate, requireAdmin, adminLimiter);
+
+router.get('/stripe/webhook-readiness', stripeWebhookHealthController.getWebhookReadiness);
 
 // ── Stripe membership promotion codes ─────────────────────────────────────
 router.get('/promotion-codes', promotionCodeController.listPromotionCodes);

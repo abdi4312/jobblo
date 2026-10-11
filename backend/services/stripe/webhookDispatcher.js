@@ -1,4 +1,8 @@
-const { getStripe, getStripeWebhookSecret } = require('../../config/stripe');
+const { getStripeConfiguration, getStripeForMode } = require('../../config/stripe');
+const {
+  recordVerifiedDelivery,
+  recordDeliveryProblem,
+} = require('./webhookReadiness');
 const { claimEvent, markProcessed, releaseClaim } = require('./eventLedger');
 const { logApplicationError } = require('../../utils/errorLogger');
 const {
@@ -26,6 +30,8 @@ const {
 
 const ORDER_EVENT_TYPES = new Set([
   'checkout.session.completed',
+  'checkout.session.async_payment_succeeded',
+  'checkout.session.async_payment_failed',
   'checkout.session.expired',
   'invoice.paid',
   'invoice.payment_failed',
@@ -77,17 +83,38 @@ async function handleEvent(event, { io } = {}) {
       const type = session.metadata?.type;
 
       if (isMembership) {
-        return { handled: 'subscription', result: await provisionSubscriptionFromSession(session) };
+        const result = await provisionSubscriptionFromSession(session);
+        if (!result.ok) throw new Error('Subscription checkout provisioning rejected');
+        return { handled: 'subscription', result };
       }
       if (type === 'extra_contact') {
+        const result = await provisionExtraContactFromSession(session);
+        if (!result.ok) throw new Error('Extra-contact checkout provisioning rejected');
         return {
           handled: 'extra_contact',
-          result: await provisionExtraContactFromSession(session),
+          result,
         };
       }
       // Default is SafePay: the original behaviour of this endpoint, and the only
       // type whose sessions predate the metadata convention.
-      return { handled: 'safepay', result: await confirmPaidSession(session, io) };
+      const confirmation = await confirmPaidSession(session, io);
+      if (!confirmation.ok) throw new Error('SafePay checkout confirmation rejected');
+      return { handled: 'safepay', result: confirmation };
+    }
+
+    case 'checkout.session.async_payment_succeeded': {
+      const confirmation = await confirmPaidSession(event.data.object, io);
+      if (!confirmation.ok) throw new Error('SafePay checkout confirmation rejected');
+      return { handled: 'safepay_async_payment_succeeded', result: confirmation };
+    }
+
+    case 'checkout.session.async_payment_failed': {
+      const session = event.data.object;
+      await Order.updateOne(
+        { checkoutSessionId: session.id, paymentStatus: { $ne: 'paid' } },
+        { $set: { checkoutSessionStatus: 'failed' } }
+      );
+      return { handled: 'safepay_async_payment_failed' };
     }
 
     case 'checkout.session.expired':
@@ -127,35 +154,50 @@ async function handleEvent(event, { io } = {}) {
 /** Express handler. Requires req.body to be a raw Buffer. */
 async function stripeWebhook(req, res) {
   let event;
+  let stripeConfig;
+  let stripe;
 
   try {
-    const stripe = await getStripe();
-    const webhookSecret = await getStripeWebhookSecret();
+    stripeConfig = await getStripeConfiguration();
+  } catch (err) {
+    await logPaymentFailure({
+      req,
+      error: new Error('Stripe mode configuration unavailable'),
+      httpStatus: 503,
+      errorCode: 'STRIPE_MODE_CONFIGURATION_UNAVAILABLE',
+      metadata: {},
+    });
+    return res.status(503).send('Webhook configuration unavailable');
+  }
 
-    if (!webhookSecret) {
-      const err = new Error(
-        'Stripe webhook secret is not configured for the active mode — event rejected'
-      );
-      console.error(err.message);
-      await logPaymentFailure({
-        req,
-        error: err,
-        httpStatus: 500,
-        errorCode: 'STRIPE_WEBHOOK_NOT_CONFIGURED',
-        metadata: {},
-      });
-      return res.status(500).send('Webhook secret not configured');
-    }
+  if (!stripeConfig.secretKey || !stripeConfig.keyModeValid || !stripeConfig.webhookSecretValid) {
+    const configurationCode = !stripeConfig.webhookSecret
+      ? 'STRIPE_WEBHOOK_SECRET_MISSING'
+      : 'STRIPE_WEBHOOK_CONFIGURATION_INVALID';
+    await logPaymentFailure({
+      req,
+      error: new Error(configurationCode),
+      httpStatus: 503,
+      errorCode: configurationCode,
+      metadata: {},
+    });
+    return res.status(503).send('Webhook configuration unavailable');
+  }
 
+  try {
+    stripe = await getStripeForMode(stripeConfig.testMode);
+  } catch (_err) {
+    return res.status(503).send('Webhook configuration unavailable');
+  }
+
+  try {
     event = stripe.webhooks.constructEvent(
       req.body,
       req.headers['stripe-signature'],
-      webhookSecret
+      stripeConfig.webhookSecret
     );
   } catch (err) {
-    // Signature mismatch or malformed payload — never process it. 400 tells Stripe
-    // not to retry, which is correct: a bad signature will still be bad next time.
-    console.error('Stripe webhook signature verification failed:', err.message);
+    // Signature mismatch or malformed payload — never process it.
     await logPaymentFailure({
       req,
       error: err,
@@ -163,29 +205,58 @@ async function stripeWebhook(req, res) {
       errorCode: 'STRIPE_WEBHOOK_SIGNATURE_FAILED',
       metadata: {},
     });
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    return res.status(400).send('Webhook signature verification failed');
+  }
+
+  if (
+    typeof event.livemode !== 'boolean' ||
+    event.livemode !== (stripeConfig.mode === 'live')
+  ) {
+    await logPaymentFailure({
+      req,
+      error: new Error('Stripe event mode does not match the active mode'),
+      httpStatus: 400,
+      errorCode: 'STRIPE_WEBHOOK_MODE_MISMATCH',
+      metadata: { eventId: event.id, eventType: event.type },
+    });
+    return res.status(400).send('Webhook event mode mismatch');
   }
 
   // Only claim ledger rows for events we actually act on, so an account-wide event
   // firehose does not fill the collection.
   if (!ORDER_EVENT_TYPES.has(event.type)) {
+    try {
+      await recordVerifiedDelivery(stripeConfig, event.id);
+    } catch (_err) {
+      return res.status(500).send('Webhook health update failed');
+    }
     return res.json({ received: true, ignored: true });
   }
 
   const claim = await claimEvent(event);
   if (!claim.claimed) {
-    // Already done, or in flight elsewhere. Either way Stripe should stop asking.
-    return res.json({ received: true, duplicate: true, reason: claim.reason });
+    if (claim.reason === 'duplicate') {
+      await recordVerifiedDelivery(stripeConfig, event.id);
+      return res.json({ received: true, duplicate: true, reason: claim.reason });
+    }
+    return res.status(503).send('Webhook event is still being processed');
   }
 
   try {
     const outcome = await handleEvent(event, { io: req.app?.get('io') });
     await markProcessed(event.id);
+    await recordVerifiedDelivery(stripeConfig, event.id);
     return res.json({ received: true, handled: outcome.handled });
   } catch (err) {
     // Release first: a claim left behind would make Stripe's retry look like a
     // duplicate and the payment would be lost for good.
     await releaseClaim(event.id, err);
+    try {
+      await recordDeliveryProblem(stripeConfig, event.id, 'verified_event_processing_failed');
+    } catch (_healthErr) {
+      // The webhook request already returns 500; a later verified delivery repairs
+      // readiness once the health store is available again.
+    }
     await logPaymentFailure({
       req,
       error: err,

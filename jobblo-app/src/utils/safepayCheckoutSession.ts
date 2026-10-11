@@ -4,8 +4,8 @@ import type { WebBrowserOpenOptions } from 'expo-web-browser';
 import type { SafePaySessionStatusResponse } from '../types/SafePay';
 
 /**
- * Runs a Stripe Checkout session from inside the app, and decides on the server's word
- * alone whether it was paid.
+ * Runs a Stripe Checkout session from inside the app, and decides from webhook-confirmed
+ * database state whether it was paid.
  *
  * Why this exists: the checkout screen handed the payment to the *system* browser with
  * `Linking.openURL(session.url)`, and Stripe's `success_url` was a plain website URL owned
@@ -24,8 +24,9 @@ import type { SafePaySessionStatusResponse } from '../types/SafePay';
  *     so Jobblo is the thing the sheet sits on top of and closing it IS the return; plus a
  *     status poll and an AppState check.
  *
- * Every one of those paths ends in the same place — `GET /api/safepay-checkout/status/:id`.
- * Nothing here infers a payment from a browser closing or from a deep link arriving.
+ * Every status path ends at `GET /api/safepay-checkout/status/:id`, a read-only view of
+ * webhook-confirmed database state. A customer may separately request Stripe-backed
+ * reconciliation; neither a browser closing nor a deep link confirms payment.
  */
 
 /** Mongo ObjectId — what every `:orderId` route segment expects. */
@@ -114,13 +115,11 @@ export async function runStripeCheckout({
   let lastStatus: SafePaySessionStatusResponse | null = null;
 
   /**
-   * The single place a payment may be declared successful.
+   * The single client-side place a payment may be displayed as successful.
    *
    * Errors are swallowed deliberately: a 404 while Stripe propagates a fresh session, or a
    * dropped connection while the browser held focus, must not end the flow — every exit
-   * path below asks once more. Note this endpoint is also what *confirms* the order
-   * server-side, so calling it is how a payment gets reconciled when the Stripe webhook
-   * cannot reach this environment.
+   * path below asks once more. Payment confirmation itself is exclusively server-side.
    */
   const askServer = async (): Promise<boolean> => {
     if (!sessionId) return false;
@@ -208,4 +207,3 @@ export async function runStripeCheckout({
     deepLink.remove();
   }
 }
-
