@@ -16,6 +16,10 @@ const { normaliseReviewPhotos, MAX_REVIEW_PHOTOS } = require('../utils/reviewPho
 
 const PAID_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed'];
 
+function truncateStripeText(value, limit) {
+  return Array.from(String(value)).slice(0, limit).join('');
+}
+
 async function verifyPaidCheckoutSession(session, order, allowAlternateAttempt = false) {
   if (String(session?.metadata?.userId) !== String(order.customerId)) {
     return { ok: false, reason: 'session_customer_mismatch' };
@@ -601,6 +605,16 @@ exports.createSafePaySession = async (req, res) => {
       });
     }
 
+    const jobId = String(order.serviceId._id);
+    const jobTitle = truncateStripeText(order.serviceId.title || 'Uten navn', 500);
+    const paymentDescriptionPrefix = 'SafePay | Job: ';
+    const paymentDescriptionSuffix = ` | Job ID: ${jobId}`;
+    const paymentDescription = `${paymentDescriptionPrefix}${truncateStripeText(
+      jobTitle,
+      500 - paymentDescriptionPrefix.length - paymentDescriptionSuffix.length
+    )}${paymentDescriptionSuffix}`;
+    const stripeProductName = `SafePay: ${truncateStripeText(jobTitle, 250 - 'SafePay: '.length)}`;
+
     if (!(order.agreedPrice > 0)) {
       console.error(
         'createSafePaySession: order %s has agreedPrice %o',
@@ -804,7 +818,7 @@ exports.createSafePaySession = async (req, res) => {
             checkoutCustomerId: stripeCustomerId,
             checkoutSuccessUrl: redirects.success,
             checkoutCancelUrl: redirects.cancel,
-            checkoutProductName: `SafePay: ${order.serviceId.title}`,
+            checkoutProductName: stripeProductName,
           },
         },
         { new: true }
@@ -814,7 +828,7 @@ exports.createSafePaySession = async (req, res) => {
       attemptCustomerId = stripeCustomerId;
       successUrl = redirects.success;
       cancelUrl = redirects.cancel;
-      productName = `SafePay: ${order.serviceId.title}`;
+      productName = stripeProductName;
       amountSnapshot = amountMinor;
     }
 
@@ -843,7 +857,7 @@ exports.createSafePaySession = async (req, res) => {
               currency: 'nok',
               product_data: {
                 name: productName,
-                description: `Kontrakt #${order._id.toString().substring(0, 8).toUpperCase()}`,
+                description: paymentDescription,
               },
               unit_amount: amountSnapshot,
             },
@@ -857,8 +871,22 @@ exports.createSafePaySession = async (req, res) => {
           userId: String(user._id),
           orderId: orderId.toString(),
           type: 'safepay_payment',
+          jobId,
+          jobTitle,
           checkoutAttemptId: attemptId,
           stripeMode: stripeConfig.mode,
+        },
+        payment_intent_data: {
+          description: paymentDescription,
+          metadata: {
+            userId: String(user._id),
+            orderId: orderId.toString(),
+            type: 'safepay_payment',
+            jobId,
+            jobTitle,
+            checkoutAttemptId: attemptId,
+            stripeMode: stripeConfig.mode,
+          },
         },
       },
       { idempotencyKey }

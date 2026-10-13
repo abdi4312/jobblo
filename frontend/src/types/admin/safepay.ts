@@ -68,7 +68,7 @@ export interface DisputeMessage {
 
 export interface Dispute {
     _id: string;
-    orderId: { _id: string; status: string; agreedPrice?: number } | string;
+    orderId: { _id: string; status: string; agreedPrice?: number } | string | null;
     serviceId?: { _id: string; title: string };
     openedBy?: { _id: string; name: string; email: string; role: string };
     openedAgainst?: { _id: string; name: string; email: string; role: string };

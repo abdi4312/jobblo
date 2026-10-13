@@ -433,6 +433,29 @@ describe('subscription lifecycle events', () => {
     expect(provisioning[handlerName]).toHaveBeenCalledTimes(1);
   });
 
+  it('includes the provisioning failure reason when a subscription update cannot reconcile', async () => {
+    provisioning.applySubscriptionUpdated.mockResolvedValue({
+      ok: false,
+      reason: 'subscription_not_found',
+    });
+    mockStripeConstructing({
+      id: 'evt_subscription_missing',
+      type: 'customer.subscription.updated',
+      data: { object: { id: 'sub_missing' } },
+    });
+
+    const res = makeRes();
+    await stripeWebhook(makeReq(), res);
+
+    expect(res.statusCode).toBe(500);
+    expect(ledger.releaseClaim).toHaveBeenCalledWith(
+      'evt_subscription_missing',
+      expect.objectContaining({
+        message: 'Subscription update could not be reconciled: subscription_not_found',
+      })
+    );
+  });
+
   it('marks the order expired on checkout.session.expired', async () => {
     Order.updateOne.mockResolvedValue({});
     mockStripeConstructing({

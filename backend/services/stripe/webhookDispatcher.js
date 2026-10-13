@@ -175,7 +175,11 @@ async function handleEvent(event, { io } = {}) {
     case 'customer.subscription.pending_update_applied':
     case 'customer.subscription.pending_update_expired': {
       const result = await applySubscriptionUpdated(event.data.object);
-      if (!result.ok) throw new Error('Subscription update could not be reconciled');
+      if (!result.ok) {
+        throw new Error(
+          `Subscription update could not be reconciled: ${result.reason || 'unknown_reason'}`
+        );
+      }
       return {
         handled: 'subscription_updated',
         result,

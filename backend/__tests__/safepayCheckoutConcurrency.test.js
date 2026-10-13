@@ -341,7 +341,7 @@ describe('SafePay checkout reservations', () => {
 
     const req = {
       userId: USER_ID,
-      body: { orderId: ORDER_ID },
+      body: { orderId: ORDER_ID, jobId: 'client_job', jobTitle: 'Client supplied title' },
       protocol: 'https',
       get: jest.fn(() => 'example.com'),
     };
@@ -353,6 +353,118 @@ describe('SafePay checkout reservations', () => {
       expect.any(Object),
       expect.objectContaining({ idempotencyKey: `safepay:${ORDER_ID}:attempt_123` })
     );
+    const params = stripe.checkout.sessions.create.mock.calls[0][0];
+    expect(params.metadata).toMatchObject({
+      type: 'safepay_payment',
+      jobId: '507f1f77bcf86cd799439014',
+      jobTitle: 'Design mockup',
+      orderId: ORDER_ID,
+    });
+    expect(params.payment_intent_data).toMatchObject({
+      description: 'SafePay | Job: Design mockup | Job ID: 507f1f77bcf86cd799439014',
+      metadata: {
+        type: 'safepay_payment',
+        jobId: '507f1f77bcf86cd799439014',
+        jobTitle: 'Design mockup',
+        orderId: ORDER_ID,
+      },
+    });
+    expect(params.line_items[0].price_data).toMatchObject({
+      unit_amount: 103000,
+      product_data: {
+        name: 'SafePay: Design mockup',
+        description: 'SafePay | Job: Design mockup | Job ID: 507f1f77bcf86cd799439014',
+      },
+    });
     expect(res.statusCode).toBe(200);
+  });
+
+  it('bounds Stripe metadata, description, and product name for long job titles', async () => {
+    jest.spyOn(crypto, 'randomUUID').mockReturnValue('attempt_long_title');
+    const longTitle = 'House Cleaning '.repeat(60);
+    const stripe = {
+      checkout: {
+        sessions: {
+          retrieve: jest.fn().mockResolvedValue({ status: 'expired' }),
+          create: jest.fn().mockResolvedValue({
+            id: 'cs_test_long_title',
+            status: 'open',
+            url: 'https://checkout.stripe.com/long-title',
+          }),
+        },
+      },
+    };
+    getStripeForMode.mockResolvedValue(stripe);
+    Order.findById.mockReturnValue({
+      populate: jest.fn().mockResolvedValue(
+        makeOrder({
+          serviceId: { _id: '507f1f77bcf86cd799439014', title: longTitle },
+          checkoutSessionStatus: 'expired',
+        })
+      ),
+    });
+    Order.findOneAndUpdate.mockResolvedValueOnce({
+      _id: ORDER_ID,
+      checkoutSessionId: 'PENDING_attempt_long_title',
+      checkoutAttemptId: 'attempt_long_title',
+      checkoutAmountMinor: 103000,
+      checkoutCurrency: 'nok',
+      checkoutMode: 'test',
+      checkoutCustomerId: 'cus_test_123',
+      checkoutSuccessUrl: 'https://example.com/success',
+      checkoutCancelUrl: 'https://example.com/cancel',
+      checkoutProductName: 'SafePay: House Cleaning',
+    }).mockResolvedValueOnce({
+      _id: ORDER_ID,
+      checkoutSessionId: 'cs_test_long_title',
+      checkoutSessionStatus: 'open',
+    });
+
+    const res = makeRes();
+    await createSafePaySession(
+      {
+        userId: USER_ID,
+        body: { orderId: ORDER_ID },
+        protocol: 'https',
+        get: jest.fn(() => 'example.com'),
+      },
+      res
+    );
+
+    const params = stripe.checkout.sessions.create.mock.calls[0][0];
+    expect(params.metadata.jobTitle).toHaveLength(500);
+    expect(params.payment_intent_data.metadata.jobTitle).toHaveLength(500);
+    expect(params.payment_intent_data.description).toHaveLength(500);
+    expect(params.line_items[0].price_data.product_data.name.length).toBeLessThanOrEqual(250);
+    expect(params.line_items[0].price_data.product_data.description.length).toBeLessThanOrEqual(500);
+    expect(params.payment_intent_data.description).toContain(
+      '| Job ID: 507f1f77bcf86cd799439014'
+    );
+  });
+
+  it('rejects checkout safely when the job service record is missing', async () => {
+    const stripe = {
+      checkout: { sessions: { retrieve: jest.fn(), create: jest.fn() } },
+    };
+    getStripeForMode.mockResolvedValue(stripe);
+    Order.findById.mockReturnValue({
+      populate: jest.fn().mockResolvedValue(makeOrder({ serviceId: null })),
+    });
+
+    const res = makeRes();
+    await createSafePaySession(
+      {
+        userId: USER_ID,
+        body: { orderId: ORDER_ID },
+        protocol: 'https',
+        get: jest.fn(() => 'example.com'),
+      },
+      res
+    );
+
+    expect(res.statusCode).toBe(409);
+    expect(res.payload.code).toBe('service_missing');
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+    expect(Order.findOneAndUpdate).not.toHaveBeenCalled();
   });
 });
