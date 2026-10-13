@@ -448,6 +448,16 @@ async function reconcileStripeFinancialHistory() {
   return reconcileConnectedAccountsBatch(stripe, !config.testMode, { limit: 10 });
 }
 
+async function cancelExpiredUnconnectedSafePayOrders() {
+  const { cancelUnconnectedPaidOrders } = require('../safepay/providerConnectTimeout');
+  return cancelUnconnectedPaidOrders();
+}
+
+async function recordSafePayConnectReadiness() {
+  const { recordReadyProvidersBeforeDeadline } = require('../safepay/providerConnectTimeout');
+  return recordReadyProvidersBeforeDeadline();
+}
+
 module.exports = {
   autoReleaseStaleReviews,
   warnBeforeAutoRelease,
@@ -455,5 +465,7 @@ module.exports = {
   cleanupAbandonedOrders,
   reconcileMoneyState,
   reconcileStripeFinancialHistory,
+  cancelExpiredUnconnectedSafePayOrders,
+  recordSafePayConnectReadiness,
   config,
 };

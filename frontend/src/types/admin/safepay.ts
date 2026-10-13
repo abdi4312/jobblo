@@ -5,6 +5,25 @@ export interface SafePayContract {
     _id: string;
     status: string;
     paymentStatus: string;
+    cancellationReason?: string;
+    providerConnectDeadlineDays?: number;
+    providerConnectDeadlineAt?: string;
+    providerConnectTimeout?: {
+        status?: string;
+        operationKey?: string;
+        stripeRefundId?: string;
+        originalPaymentAmountMinor?: number;
+        refundAmountMinor?: number;
+        refundedAmountMinor?: number;
+        reason?: string;
+        lastErrorCode?: string;
+        manualReviewReason?: string;
+        lastAttemptAt?: string;
+        lockUntil?: string;
+        providerVerificationAt?: string;
+        refundCompletedAt?: string;
+        refundFailedAt?: string;
+    };
     agreedPrice?: number;
     initialPrice?: number;
     fee?: number;
@@ -113,7 +132,7 @@ export interface DisputesSummary {
 
 // ── Query params ──────────────────────────────────────────────────────────────
 export interface SafePayQuery {
-    page?: number; limit?: number; status?: string; paymentStatus?: string;
+    page?: number; limit?: number; status?: string; paymentStatus?: string; timeoutReview?: string;
     orderId?: string; dateFrom?: string; dateTo?: string; sortOrder?: string;
 }
 export interface DisputesQuery {

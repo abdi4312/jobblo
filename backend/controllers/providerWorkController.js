@@ -62,6 +62,13 @@ exports.startJob = async (req, res) => {
     if (String(order.providerId) !== String(userId))
       return res.status(403).json({ error: 'Kun utfører kan starte jobben' });
     if (order.status === 'in_progress') return res.json({ message: 'Allerede startet', order });
+    if (['processing', 'pending', 'reconciliation_required', 'failed', 'manual_review'].includes(
+      order.providerConnectTimeout?.status
+    )) {
+      return res.status(409).json({
+        error: 'Refusjon eller manuell behandling pågår. Oppdraget kan ikke startes nå.',
+      });
+    }
     if (order.paymentStatus !== 'paid')
       return res.status(400).json({ error: 'Betaling må bekreftes først' });
     if (await hasActiveDispute(orderId)) return res.status(400).json({ error: 'Aktiv tvist' });
@@ -71,7 +78,15 @@ exports.startJob = async (req, res) => {
         .json({ error: `Ugyldig statusovergang: ${order.status} → in_progress` });
     const now = new Date();
     const updated = await Order.findOneAndUpdate(
-      { _id: orderId, status: 'paid' },
+      {
+        _id: orderId,
+        status: 'paid',
+        paymentStatus: 'paid',
+        startedAt: null,
+        'providerConnectTimeout.status': {
+          $nin: ['processing', 'pending', 'reconciliation_required', 'failed', 'manual_review'],
+        },
+      },
       {
         $set: { status: 'in_progress', startedAt: now },
         $push: {
@@ -85,7 +100,21 @@ exports.startJob = async (req, res) => {
       },
       { new: true }
     );
-    if (!updated) return res.json({ message: 'Allerede startet', order });
+    if (!updated) {
+      const current = await Order.findById(orderId);
+      if (current?.status === 'in_progress') {
+        return res.json({ message: 'Allerede startet', order: current });
+      }
+      if (
+        ['processing', 'pending', 'reconciliation_required', 'failed', 'manual_review']
+          .includes(current?.providerConnectTimeout?.status)
+      ) {
+        return res.status(409).json({
+          error: 'Refusjon eller manuell behandling pågår. Oppdraget kan ikke startes nå.',
+        });
+      }
+      return res.status(409).json({ error: 'Oppdraget kan ikke startes fordi statusen er endret.' });
+    }
     if (updated.chatId) {
       const chat = await Chat.findById(updated.chatId);
       if (chat) {

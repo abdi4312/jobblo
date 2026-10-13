@@ -14,6 +14,8 @@ interface ConfigEntry {
   description?: string;
 }
 
+const CONNECT_DEADLINE_KEY = 'SAFEPAY_CONNECT_ONBOARDING_DEADLINE_DAYS';
+
 function getValueType(value: unknown): string {
   if (value === null) return 'null';
   if (Array.isArray(value)) return 'array';
@@ -47,6 +49,8 @@ export default function GlobalSettingsPage() {
   const [saving, setSaving] = useState(false);
 
   const configs = useMemo(() => normalizeConfigs(data as Record<string, unknown> | undefined), [data]);
+  const connectDeadline = configs.find((entry) => entry.key === CONNECT_DEADLINE_KEY);
+  const visibleConfigs = configs.filter((entry) => entry.key !== CONNECT_DEADLINE_KEY);
 
   const handleOpenEdit = (entry: ConfigEntry) => {
     setEditingConfig(entry);
@@ -166,6 +170,29 @@ export default function GlobalSettingsPage() {
         }
       />
 
+      {connectDeadline && (
+        <section className="rounded-2xl border border-gray-100 bg-white p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">SafePay</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Frist for utførerens Stripe Connect-oppsett etter bekreftet betaling.
+                Hver dag tilsvarer 24 timer.
+              </p>
+              <p className="mt-2 text-sm font-medium text-gray-800">
+                Nåværende frist: {formatDisplayValue(connectDeadline.value)} dager
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => handleOpenEdit(connectDeadline)}
+            >
+              Endre frist
+            </Button>
+          </div>
+        </section>
+      )}
+
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -179,7 +206,7 @@ export default function GlobalSettingsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {configs.map((entry) => (
+              {visibleConfigs.map((entry) => (
                 <tr key={entry.key} className="hover:bg-gray-50/40 transition-colors">
                   <td className="px-5 py-3.5">
                     <code className="text-sm font-mono font-medium text-gray-800">{entry.key}</code>
@@ -213,7 +240,7 @@ export default function GlobalSettingsPage() {
           </table>
         </div>
         <div className="px-5 py-3 border-t border-gray-50 bg-gray-50/30">
-          <p className="text-xs text-gray-400">{configs.length} innstillinger totalt</p>
+          <p className="text-xs text-gray-400">{visibleConfigs.length} innstillinger totalt</p>
         </div>
       </div>
 
@@ -251,6 +278,10 @@ export default function GlobalSettingsPage() {
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
                     placeholder="Angi verdi..."
+                    type={editingConfig.key === CONNECT_DEADLINE_KEY ? 'number' : 'text'}
+                    min={editingConfig.key === CONNECT_DEADLINE_KEY ? 1 : undefined}
+                    max={editingConfig.key === CONNECT_DEADLINE_KEY ? 30 : undefined}
+                    step={editingConfig.key === CONNECT_DEADLINE_KEY ? 1 : undefined}
                   />
                 )}
               </div>

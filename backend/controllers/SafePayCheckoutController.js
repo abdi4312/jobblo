@@ -13,6 +13,10 @@ const { getStripeWebhookReadiness } = require('../services/stripe/webhookReadine
 const { resolveStripeCustomer } = require('../services/stripe/customers');
 const { notify, emitToUser } = require('../services/notifications');
 const { normaliseReviewPhotos, MAX_REVIEW_PHOTOS } = require('../utils/reviewPhotos');
+const {
+  getProviderConnectDeadlineDays,
+  deadlineSnapshot,
+} = require('../services/safepay/providerConnectDeadline');
 
 const PAID_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed'];
 
@@ -114,7 +118,14 @@ async function verifyPaidCheckoutSession(session, order, allowAlternateAttempt =
   ) {
     return { ok: false, reason: 'charge_mismatch' };
   }
-  return { ok: true, paymentIntentId, chargeId };
+  const card = charge.payment_method_details?.card;
+  return {
+    ok: true,
+    paymentIntentId,
+    chargeId,
+    paymentMethodBrand: typeof card?.brand === 'string' ? card.brand : undefined,
+    paymentMethodLast4: /^\d{4}$/.test(card?.last4 || '') ? card.last4 : undefined,
+  };
 }
 
 /**
@@ -157,6 +168,10 @@ async function confirmPaidSession(session, io) {
 
       // A delayed event for a replaced checkout can be the first actual payment.
       // Claim it only if the reservation has not changed since the order read.
+      const deadline = deadlineSnapshot(
+        await getProviderConnectDeadlineDays(),
+        new Date()
+      );
       updatedOrder = await Order.findOneAndUpdate(
         {
           _id: orderId,
@@ -169,7 +184,7 @@ async function confirmPaidSession(session, io) {
           $set: {
             status: 'paid',
             paymentStatus: 'paid',
-            paymentConfirmedAt: new Date(),
+            ...deadline,
             checkoutSessionId: session.id,
             checkoutAttemptId: session.metadata.checkoutAttemptId,
             checkoutSessionStatus: 'complete',
@@ -233,7 +248,11 @@ async function confirmPaidSession(session, io) {
     updatedOrder = order;
     alreadyConfirmed = true;
   } else {
-    updatedOrder = await Order.findOneAndUpdate(
+  const deadline = deadlineSnapshot(
+    await getProviderConnectDeadlineDays(),
+    new Date()
+  );
+  updatedOrder = await Order.findOneAndUpdate(
       {
         _id: orderId,
         status: { $in: ['awaiting_payment', 'pending', 'accepted'] },
@@ -253,7 +272,7 @@ async function confirmPaidSession(session, io) {
         $set: {
           status: 'paid',
           paymentStatus: 'paid',
-          paymentConfirmedAt: new Date(),
+          ...deadline,
           checkoutSessionId: session.id,
           checkoutSessionStatus: 'complete',
           checkoutMode: session.livemode ? 'live' : 'test',
@@ -327,18 +346,66 @@ async function confirmPaidSession(session, io) {
   const paymentResult = await Payment.updateOne(
     { orderId },
     {
+      $set: {
+        capturedAmountMinor: updatedOrder.checkoutAmountMinor,
+        stripeSessionId: session.id,
+        stripePaymentIntentId: paymentIntentId,
+        stripeLivemode: session.livemode,
+      },
       $setOnInsert: {
         orderId,
         chatId: updatedOrder.chatId,
         status: 'completed',
         amount: updatedOrder.agreedPrice || 0,
-        stripeSessionId: session.id,
-        stripePaymentIntentId: paymentIntentId,
-        stripeLivemode: session.livemode,
       },
     },
     { upsert: true }
   );
+
+  if (
+    Number.isSafeInteger(updatedOrder.checkoutAmountMinor) &&
+    updatedOrder.checkoutAmountMinor > 0
+  ) {
+    const service = await Service.findById(updatedOrder.serviceId).select('title');
+    const originalPayment = updatedOrder.checkoutAmountMinor / 100;
+    const agreedPrice = Number(updatedOrder.agreedPrice) || 0;
+    const fee = Math.max(0, originalPayment - agreedPrice);
+    await SafePayHistory.updateOne(
+      { orderId: updatedOrder._id },
+      {
+        $set: {
+          paymentDate: updatedOrder.paymentConfirmedAt || new Date(),
+          originalPaymentAmountMinor: updatedOrder.checkoutAmountMinor,
+          stripePaymentIntentId: paymentIntentId,
+          transactionId: paymentIntentId,
+          paymentMethodBrand: verification.paymentMethodBrand,
+          paymentMethodLast4: verification.paymentMethodLast4,
+          stripeLivemode: session.livemode,
+          providerConnectDeadlineDays: updatedOrder.providerConnectDeadlineDays,
+          providerConnectDeadlineAt: updatedOrder.providerConnectDeadlineAt,
+        },
+        $setOnInsert: {
+          orderId: updatedOrder._id,
+          serviceId: updatedOrder.serviceId,
+          customerId: updatedOrder.customerId,
+          providerId: updatedOrder.providerId,
+          serviceTitle: service?.title || 'Uten navn',
+          amounts: {
+            agreedPrice,
+            fee,
+            tax: 0,
+            totalCustomer: originalPayment,
+            netProvider: Math.max(0, agreedPrice - fee),
+          },
+          status: 'payment_received',
+          providerConnectStatus: 'pending',
+          refundedAmountMinor: 0,
+          refundStatus: 'none',
+        },
+      },
+      { upsert: true }
+    );
+  }
 
   if (paymentResult?.upsertedCount === 1) {
     await User.updateMany(
@@ -358,6 +425,19 @@ async function confirmPaidSession(session, io) {
         senderId: order.customerId,
         event: 'order_paid',
         payload: { orderId: String(order._id) },
+      }),
+      notify({
+        userId: order.providerId,
+        type: 'payment',
+        content: `Fullfør Stripe Connect-oppsettet innen ${updatedOrder.providerConnectDeadlineAt.toLocaleDateString('nb-NO')} for å motta utbetaling: ${(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')}/settings/payout`,
+        orderId: order._id,
+        senderId: order.customerId,
+        event: 'provider_connect_deadline',
+        payload: {
+          orderId: String(order._id),
+          url: '/settings/payout',
+          deadlineAt: updatedOrder.providerConnectDeadlineAt,
+        },
       }),
       notify({
         userId: order.customerId,

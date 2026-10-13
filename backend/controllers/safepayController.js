@@ -7,6 +7,7 @@ const Notification = require('../models/Notification');
 const Payment = require('../models/Payment');
 const User = require('../models/User');
 const SafePayHistory = require('../models/SafePayHistory');
+const StripeTransferRecord = require('../models/StripeTransferRecord');
 const Review = require('../models/Review');
 const { notify } = require('../services/notifications');
 
@@ -372,6 +373,32 @@ exports.getSafePayHistory = async (req, res) => {
       let totalFees = 0;
       let totalTax = 0;
 
+      const providerOrderIds = safePayRecords
+        .filter((record) => String(record.providerId?._id || record.providerId) === String(userId))
+        .map((record) => record.orderId);
+      const verifiedTransfers = providerOrderIds.length
+        ? await StripeTransferRecord.find({
+            orderId: { $in: providerOrderIds },
+            providerId: userId,
+            normalizedStatus: { $in: ['transferred', 'partially_reversed', 'fully_reversed'] },
+            lastVerifiedAt: { $ne: null },
+          }).lean()
+        : [];
+      const transferByOrder = new Map();
+      for (const transfer of verifiedTransfers) {
+        const key = String(transfer.orderId);
+        const current = transferByOrder.get(key) || { amountMinor: 0, grossMinor: 0 };
+        transferByOrder.set(
+          key,
+          {
+            amountMinor:
+              current.amountMinor +
+              Math.max(0, Number(transfer.amount || 0) - Number(transfer.amountReversed || 0)),
+            grossMinor: current.grossMinor + Number(transfer.amount || 0),
+          }
+        );
+      }
+
       const history = safePayRecords.map((record) => {
         // Get IDs from populated objects or directly from record
         const recordProviderId = record.providerId?._id
@@ -382,12 +409,23 @@ exports.getSafePayHistory = async (req, res) => {
           : String(record.customerId);
         const isProvider = recordProviderId === String(userId);
 
+        const originalPayment = Number.isSafeInteger(record.originalPaymentAmountMinor)
+          ? record.originalPaymentAmountMinor / 100
+          : record.amounts.totalCustomer;
+        const recordedRefund = (record.refundedAmountMinor || 0) / 100;
+        const refundedAmount =
+          record.refundStatus === 'succeeded'
+            ? Math.min(originalPayment, recordedRefund)
+            : 0;
+        const remainingPayment = Math.max(0, originalPayment - refundedAmount);
+        const transfer = transferByOrder.get(String(record.orderId)) || { amountMinor: 0, grossMinor: 0 };
+        const transferredAmountMinor = transfer.amountMinor;
         if (isProvider) {
-          totalEarned += record.amounts.netProvider;
-          totalFees += record.amounts.fee;
+          totalEarned += transferredAmountMinor / 100;
+          if (transfer.grossMinor > 0) totalFees += record.amounts.fee;
         } else {
-          totalSpent += record.amounts.totalCustomer;
-          totalFees += record.amounts.fee;
+          totalSpent += remainingPayment;
+          totalFees += Math.max(0, record.amounts.fee - Math.min(record.amounts.fee, refundedAmount));
         }
         totalTax += record.amounts.tax;
 
@@ -402,9 +440,31 @@ exports.getSafePayHistory = async (req, res) => {
           isProvider,
           isCustomer: !isProvider,
           amounts: record.amounts,
-          paymentDate: record.paymentDate || record.updatedAt,
+          paymentDate: record.paymentDate || record.createdAt,
           orderDate: record.createdAt,
           status: record.status,
+          providerConnectStatus: record.providerConnectStatus,
+          originalPaymentAmountMinor: record.originalPaymentAmountMinor,
+          refundAmountMinor: record.refundAmountMinor || 0,
+          refundedAmountMinor: record.refundedAmountMinor || 0,
+          refundStatus: record.refundStatus || 'none',
+          refundReason: record.refundReason,
+          cancellationReason: record.cancellationReason,
+          stripePaymentIntentId: record.stripePaymentIntentId,
+          stripeRefundId: record.stripeRefundId,
+          ...(typeof record.paymentMethodBrand === 'string'
+            ? { paymentMethodBrand: record.paymentMethodBrand }
+            : {}),
+          ...(typeof record.paymentMethodLast4 === 'string' && /^\d{4}$/.test(record.paymentMethodLast4)
+            ? { paymentMethodLast4: record.paymentMethodLast4 }
+            : {}),
+          stripeLivemode: record.stripeLivemode,
+          providerTransferAmountMinor: transferredAmountMinor,
+          hasVerifiedProviderTransfer: transfer.grossMinor > 0,
+          refundCompletedAt: record.refundCompletedAt,
+          refundFailedAt: record.refundFailedAt,
+          providerConnectDeadlineAt: record.providerConnectDeadlineAt,
+          transactionId: record.transactionId,
           customerAvatar: record.customerId?.avatarUrl,
           providerAvatar: record.providerId?.avatarUrl,
           ratings: record.ratings,
@@ -440,6 +500,25 @@ exports.getSafePayHistory = async (req, res) => {
         orderId: { $in: orderIds },
         status: 'released',
       });
+      const verifiedTransfers = orderIds.length
+        ? await StripeTransferRecord.find({
+            orderId: { $in: orderIds },
+            providerId: userId,
+            normalizedStatus: { $in: ['transferred', 'partially_reversed', 'fully_reversed'] },
+            lastVerifiedAt: { $ne: null },
+          }).lean()
+        : [];
+      const transferByOrder = new Map();
+      for (const transfer of verifiedTransfers) {
+        const key = String(transfer.orderId);
+        const current = transferByOrder.get(key) || { amountMinor: 0, grossMinor: 0 };
+        transferByOrder.set(key, {
+          amountMinor:
+            current.amountMinor +
+            Math.max(0, Number(transfer.amount || 0) - Number(transfer.amountReversed || 0)),
+          grossMinor: current.grossMinor + Number(transfer.amount || 0),
+        });
+      }
 
       // Calculate totals (Bug 8: Consistent fee calculation)
       let totalEarned = 0;
@@ -461,10 +540,12 @@ exports.getSafePayHistory = async (req, res) => {
         const tax = Math.round(order.agreedPrice * 0); // 0% tax for now
         const netProvider = order.agreedPrice - fee;
         const totalCustomer = order.agreedPrice + fee;
+        const transfer = transferByOrder.get(String(order._id)) || { amountMinor: 0, grossMinor: 0 };
+        const transferredAmountMinor = transfer.amountMinor;
 
         if (isProvider) {
-          totalEarned += netProvider;
-          totalFees += fee;
+          totalEarned += transferredAmountMinor / 100;
+          if (transfer.grossMinor > 0) totalFees += fee;
         } else {
           totalSpent += totalCustomer;
           totalFees += fee;
@@ -481,6 +562,8 @@ exports.getSafePayHistory = async (req, res) => {
             `${order.providerId?.name || ''} ${order.providerId?.lastName || ''}`.trim(),
           isProvider,
           isCustomer: !isProvider,
+          providerTransferAmountMinor: transferredAmountMinor,
+          hasVerifiedProviderTransfer: transfer.grossMinor > 0,
           amounts: {
             agreedPrice: order.agreedPrice,
             fee: fee,

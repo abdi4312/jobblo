@@ -27,6 +27,7 @@ const STATUS_OPTIONS = [
 export default function SafePayPage() {
     const [page, setPage] = useState(1);
     const [statusFilter, setStatusFilter] = useState('');
+    const [timeoutReview, setTimeoutReview] = useState('');
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -39,6 +40,7 @@ export default function SafePayPage() {
     const { data, isLoading, isError, refetch } = useSafePayList({
         page, limit: 15,
         ...(statusFilter && { status: statusFilter }),
+        ...(timeoutReview && { timeoutReview }),
         ...(debouncedSearch && { orderId: debouncedSearch }),
     });
 
@@ -105,6 +107,17 @@ export default function SafePayPage() {
             render: (c) => <AdminStatusBadge status={c.paymentStatus} />,
         },
         {
+            key: 'connectRefund',
+            header: 'Connect / refusjon',
+            render: (c) => c.providerConnectTimeout?.status
+                ? <AdminStatusBadge status={c.providerConnectTimeout.status} />
+                : c.providerConnectDeadlineAt &&
+                  c.paymentStatus === 'paid' &&
+                  new Date(c.providerConnectDeadlineAt).getTime() <= Date.now()
+                    ? <span className="text-xs font-medium text-amber-700">Frist utløpt</span>
+                    : <span className="text-xs text-gray-300">–</span>,
+        },
+        {
             key: 'chat',
             header: 'Chat',
             render: (c) => c.chatStatus ? <AdminStatusBadge status={c.chatStatus} /> : <span className="text-gray-300 text-xs">–</span>,
@@ -167,6 +180,14 @@ export default function SafePayPage() {
                     <div className="flex flex-wrap gap-3 w-full">
                         <AdminSearchInput value={search} onChange={handleSearchChange} placeholder="Søk på ordre-ID..." className="flex-1 min-w-[180px]" />
                         <AdminFilterSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} options={STATUS_OPTIONS} placeholder="Alle statuser" />
+                        <AdminFilterSelect
+                            value={timeoutReview}
+                            onChange={(value) => { setTimeoutReview(value); setPage(1); }}
+                            options={[
+                                { label: 'Alle Connect/refusjoner', value: '' },
+                                { label: 'Krever oppfølging', value: 'true' },
+                            ]}
+                        />
                     </div>
                 }
             />

@@ -158,7 +158,9 @@ async function recordStripePaymentLifecycle(event) {
         operation.paymentIntentId === paymentIntentId &&
         operation.amount === object.amount &&
         operation.currency === String(object.currency || '').toUpperCase() &&
-        operation.stripeMode === (event.livemode ? 'live' : 'test')
+        operation.stripeMode === (event.livemode ? 'live' : 'test') &&
+        (!operation.chargeId || idOf(object.charge) === operation.chargeId) &&
+        object.livemode === event.livemode
       ) {
         const status = object.status === 'succeeded'
           ? 'succeeded'
@@ -167,8 +169,27 @@ async function recordStripePaymentLifecycle(event) {
             : 'pending';
         await StripeFinancialOperation.updateOne(
           { _id: operation._id },
-          { $set: { status, stripeObjectId: object.id, lastErrorCode: status === 'failed' ? 'stripe_refund_failed' : null } }
+          {
+            $set: {
+              status,
+              stripeObjectId: object.id,
+              lastErrorCode: status === 'failed' ? 'stripe_refund_failed' : null,
+              ...(status === 'succeeded' ? { completedAt: new Date(), failedAt: null } : {}),
+              ...(status === 'failed' ? { failedAt: new Date() } : {}),
+            },
+          }
         );
+        Object.assign(operation, {
+          status,
+          stripeObjectId: object.id,
+          lastErrorCode: status === 'failed' ? 'stripe_refund_failed' : null,
+          ...(status === 'succeeded' ? { completedAt: new Date(), failedAt: null } : {}),
+          ...(status === 'failed' ? { failedAt: new Date() } : {}),
+        });
+        if (operationKey.startsWith('safepay-connect-timeout:')) {
+          const { applyTimeoutRefundResult } = require('../safepay/providerConnectTimeout');
+          await applyTimeoutRefundResult(order, payment, operation, object, status);
+        }
         if (status === 'succeeded' && operation.incidentId) {
           await StripePaymentIncident.updateOne(
             { _id: operation.incidentId, kind: 'duplicate_payment', status: 'manual_review' },
@@ -183,6 +204,58 @@ async function recordStripePaymentLifecycle(event) {
             }
           );
         }
+      }
+    }
+  }
+
+  const isConnectTimeoutRefund = Boolean(
+    order?.providerConnectTimeout?.operationKey?.startsWith('safepay-connect-timeout:')
+  );
+  if (kind === 'charge_refund' && isConnectTimeoutRefund) {
+    const operationKey = order.providerConnectTimeout.operationKey;
+    const operation = await StripeFinancialOperation.findOne({ operationKey });
+    if (
+      operation &&
+      operation.type === 'refund' &&
+      operation.paymentIntentId === paymentIntentId &&
+      operation.stripeMode === (event.livemode ? 'live' : 'test')
+    ) {
+      const refunds = await stripe.refunds.list({ charge: object.id, limit: 100 });
+      const timeoutRefund = (refunds.data || []).find(
+        (refund) =>
+          refund.metadata?.jobbloOperationKey === operationKey &&
+          refund.amount === operation.amount &&
+          String(refund.currency || '').toUpperCase() === operation.currency &&
+          (!operation.chargeId || idOf(refund.charge) === operation.chargeId) &&
+          object.livemode === event.livemode
+      );
+      if (timeoutRefund) {
+        const status = timeoutRefund.status === 'succeeded'
+          ? 'succeeded'
+          : timeoutRefund.status === 'failed' || timeoutRefund.status === 'canceled'
+            ? 'failed'
+            : 'pending';
+        await StripeFinancialOperation.updateOne(
+          { _id: operation._id },
+          {
+            $set: {
+              status,
+              stripeObjectId: timeoutRefund.id,
+              lastErrorCode: status === 'failed' ? 'stripe_refund_failed' : null,
+              ...(status === 'succeeded' ? { completedAt: new Date(), failedAt: null } : {}),
+              ...(status === 'failed' ? { failedAt: new Date() } : {}),
+            },
+          }
+        );
+        Object.assign(operation, {
+          status,
+          stripeObjectId: timeoutRefund.id,
+          lastErrorCode: status === 'failed' ? 'stripe_refund_failed' : null,
+          ...(status === 'succeeded' ? { completedAt: new Date(), failedAt: null } : {}),
+          ...(status === 'failed' ? { failedAt: new Date() } : {}),
+        });
+        const { applyTimeoutRefundResult } = require('../safepay/providerConnectTimeout');
+        await applyTimeoutRefundResult(order, payment, operation, timeoutRefund, status);
       }
     }
   }
@@ -219,7 +292,9 @@ async function recordStripePaymentLifecycle(event) {
     );
   }
 
-  if (kind === 'charge_refund' && object.amount_refunded >= object.amount) {
+  if (isConnectTimeoutRefund) {
+    // The timeout refund service keeps the order paid until its exact refund is confirmed.
+  } else if (kind === 'charge_refund' && object.amount_refunded >= object.amount) {
     await Payment.updateOne(
       { _id: payment._id, status: { $ne: 'disputed' } },
       { $set: { status: 'refunded' } }

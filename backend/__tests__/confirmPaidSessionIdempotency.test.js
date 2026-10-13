@@ -10,10 +10,11 @@
 jest.mock('../models/Order', () => ({ findById: jest.fn(), findOneAndUpdate: jest.fn(), updateOne: jest.fn() }));
 jest.mock('../models/Payment', () => ({ updateOne: jest.fn() }));
 jest.mock('../models/User', () => ({ updateMany: jest.fn(), findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
-jest.mock('../models/Notification', () => ({ create: jest.fn() }));
+jest.mock('../models/Notification', () => ({ create: jest.fn(), findById: jest.fn() }));
 jest.mock('../models/ChatMessage', () => ({ findById: jest.fn() }));
 jest.mock('../models/Service', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
-jest.mock('../models/SafePayHistory', () => ({ findOneAndUpdate: jest.fn() }));
+jest.mock('../models/SafePayHistory', () => ({ updateOne: jest.fn() }));
+jest.mock('../models/GlobalConfig', () => ({ findOneAndUpdate: jest.fn() }));
 jest.mock('../models/Review', () => ({ create: jest.fn(), findOne: jest.fn() }));
 jest.mock('../models/StripePaymentIncident', () => ({
   findOneAndUpdate: jest.fn().mockResolvedValue({ _id: 'incident_1' }),
@@ -32,6 +33,9 @@ const User = require('../models/User');
 const Notification = require('../models/Notification');
 const StripePaymentIncident = require('../models/StripePaymentIncident');
 const Chat = require('../models/ChatMessage');
+const Service = require('../models/Service');
+const SafePayHistory = require('../models/SafePayHistory');
+const GlobalConfig = require('../models/GlobalConfig');
 const { getStripeConfiguration, getStripeForMode } = require('../config/stripe');
 const { confirmPaidSession } = require('../controllers/SafePayCheckoutController');
 
@@ -73,6 +77,9 @@ function order(status = 'awaiting_payment') {
     checkoutMode: 'test',
     checkoutAmountMinor: 103000,
     checkoutCurrency: 'nok',
+    paymentConfirmedAt: new Date('2025-01-01T00:00:00Z'),
+    providerConnectDeadlineDays: 3,
+    providerConnectDeadlineAt: new Date('2025-01-04T00:00:00Z'),
     checkoutCustomerId: 'cus_test_1',
     paymentIntentId: status === 'paid' || status === 'in_progress' ? 'pi_test_1' : undefined,
     chatId: null,
@@ -84,6 +91,14 @@ beforeEach(() => {
   Chat.findById.mockResolvedValue(null);
   User.updateMany.mockResolvedValue({});
   Notification.create.mockResolvedValue({});
+  Notification.findById.mockResolvedValue(null);
+  Service.findById.mockReturnValue({
+    select: jest.fn().mockResolvedValue({ title: 'Test service' }),
+  });
+  SafePayHistory.updateOne.mockResolvedValue({});
+  GlobalConfig.findOneAndUpdate.mockReturnValue({
+    lean: jest.fn().mockResolvedValue({ value: 3 }),
+  });
   Payment.findOne = jest.fn().mockResolvedValue(null);
   getStripeConfiguration.mockResolvedValue({ mode: 'test', testMode: true });
   getStripeForMode.mockResolvedValue({
@@ -107,6 +122,7 @@ beforeEach(() => {
         payment_intent: id === 'ch_test_1' ? 'pi_test_1' : 'pi_test_2',
         customer: 'cus_test_1',
         livemode: false,
+        payment_method_details: { card: { brand: 'visa', last4: '4242' } },
       })),
     },
   });
@@ -129,7 +145,17 @@ describe('confirmPaidSession', () => {
       expect.objectContaining({ $setOnInsert: expect.any(Object) }),
       { upsert: true }
     );
-    expect(Notification.create).toHaveBeenCalledTimes(2);
+    expect(Notification.create).toHaveBeenCalledTimes(3);
+    expect(SafePayHistory.updateOne).toHaveBeenCalledWith(
+      { orderId: ORDER_ID },
+      expect.objectContaining({
+        $set: expect.objectContaining({
+          paymentMethodBrand: 'visa',
+          paymentMethodLast4: '4242',
+        }),
+      }),
+      { upsert: true }
+    );
   });
 
   it('does NOT re-send notifications when the second caller loses the upsert race', async () => {
@@ -183,7 +209,13 @@ describe('confirmPaidSession', () => {
       expect.objectContaining({
         status: { $in: ['awaiting_payment', 'pending', 'accepted'] },
       }),
-      expect.any(Object),
+      expect.objectContaining({
+        $set: expect.objectContaining({
+          providerConnectDeadlineDays: 3,
+          providerConnectDeadlineAt: expect.any(Date),
+          paymentConfirmedAt: expect.any(Date),
+        }),
+      }),
       expect.any(Object)
     );
   });
@@ -251,7 +283,7 @@ describe('confirmPaidSession', () => {
       { new: true }
     );
     expect(StripePaymentIncident.findOneAndUpdate).not.toHaveBeenCalled();
-    expect(Notification.create).toHaveBeenCalledTimes(2);
+    expect(Notification.create).toHaveBeenCalledTimes(3);
   });
 
   it('records a separately verified later payment as an incident without a second payout entitlement', async () => {

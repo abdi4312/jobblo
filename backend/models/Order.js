@@ -92,6 +92,38 @@ const orderSchema = new mongoose.Schema(
     checkoutProductName: String,
     paymentIntentId: String,
     paymentConfirmedAt: Date,
+    providerConnectDeadlineDays: { type: Number, min: 1, max: 30 },
+    providerConnectDeadlineTestMinutes: { type: Number, min: 1 },
+    providerConnectDeadlineAt: { type: Date, index: true },
+    providerConnectTimeout: {
+      status: {
+        type: String,
+        enum: [
+          'processing',
+          'pending',
+          'succeeded',
+          'failed',
+          'reconciliation_required',
+          'manual_review',
+          'provider_ready',
+        ],
+      },
+      operationKey: String,
+      stripeRefundId: String,
+      originalPaymentAmountMinor: Number,
+      refundAmountMinor: Number,
+      refundedAmountMinor: Number,
+      reason: String,
+      lastErrorCode: String,
+      manualReviewReason: String,
+      lastAttemptAt: Date,
+      lockUntil: Date,
+      providerVerificationAt: Date,
+      autoCancelledAt: Date,
+      refundCompletedAt: Date,
+      refundFailedAt: Date,
+    },
+    cancellationReason: String,
 
     // Lifecycle timestamps
     startedAt: Date,
@@ -151,4 +183,7 @@ const orderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+orderSchema.index({ status: 1, paymentStatus: 1, providerConnectDeadlineAt: 1 });
+
 module.exports = mongoose.model('Order', orderSchema);

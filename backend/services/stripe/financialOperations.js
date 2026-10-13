@@ -72,6 +72,8 @@ async function updateOperation(operation, status, fields = {}) {
     {
       $set: {
         status,
+        ...(status === 'succeeded' ? { completedAt: new Date(), failedAt: null } : {}),
+        ...(status === 'failed' ? { failedAt: new Date() } : {}),
         ...fields,
       },
     }

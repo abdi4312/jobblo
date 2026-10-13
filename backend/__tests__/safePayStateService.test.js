@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-jest.mock('../models/Order', () => ({ findById: jest.fn() }));
+jest.mock('../models/Order', () => ({ findById: jest.fn(), findOneAndUpdate: jest.fn() }));
 jest.mock('../models/Payment', () => ({ findOne: jest.fn() }));
 jest.mock('../models/SafePayHistory', () => ({ findOneAndUpdate: jest.fn() }));
 jest.mock('../models/ChatMessage', () => ({ findByIdAndUpdate: jest.fn() }));
@@ -39,6 +39,10 @@ describe('openDispute eligibility', () => {
   it('allows a dispute at the approval stage (ready_for_review) — BUG-003', async () => {
     const order = makeOrder('ready_for_review');
     Order.findById.mockResolvedValue(order);
+    Order.findOneAndUpdate.mockImplementation(async () => {
+      order.status = 'disputed';
+      return order;
+    });
     Dispute.findOne.mockResolvedValue(null);
     Payment.findOne.mockResolvedValue(null);
     SafePayHistory.findOneAndUpdate.mockResolvedValue(null);

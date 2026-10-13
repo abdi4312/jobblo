@@ -2,6 +2,10 @@ const GlobalConfig = require('../../models/GlobalConfig');
 const UpcomingFeature = require('../../models/UpcomingFeature');
 const { sendSuccess, sendError, asyncHandler } = require('../../utils/apiResponse');
 const { logActivity } = require('../../services/admin/activityService');
+const {
+  CONFIG_KEY: SAFEPAY_CONNECT_DEADLINE_KEY,
+  getProviderConnectDeadlineDays,
+} = require('../../services/safepay/providerConnectDeadline');
 
 const SECRET_KEY_PATTERNS = [
   'secret',
@@ -31,6 +35,7 @@ const getLogBase = (req) => ({
 });
 
 const getAllConfigs = asyncHandler(async (req, res) => {
+  await getProviderConnectDeadlineDays();
   const configs = await GlobalConfig.find().lean();
   const filtered = configs.filter((c) => !isSecretKey(c.key));
   return sendSuccess(res, { configs: toObject(filtered) }, 'All configs retrieved.');
@@ -54,6 +59,15 @@ const updateConfig = asyncHandler(async (req, res) => {
   if (!key || value === undefined) {
     return sendError(res, 'Key and value are required.', 400);
   }
+  if (
+    key === SAFEPAY_CONNECT_DEADLINE_KEY &&
+    (!Number.isInteger(value) || value < 1 || value > 30)
+  ) {
+    return sendError(res, 'Connect-fristen må være et heltall mellom 1 og 30 dager.', 400);
+  }
+  const previous = key === SAFEPAY_CONNECT_DEADLINE_KEY
+    ? await GlobalConfig.findOne({ key }).select('value').lean()
+    : null;
   const config = await GlobalConfig.findOneAndUpdate(
     { key },
     { value, description },
@@ -65,7 +79,12 @@ const updateConfig = asyncHandler(async (req, res) => {
     targetModel: 'GlobalConfig',
     targetId: config._id,
     description: `Updated config key: ${key}`,
-    metadata: { key },
+    metadata: {
+      key,
+      ...(key === SAFEPAY_CONNECT_DEADLINE_KEY
+        ? { previousValue: previous?.value ?? null, newValue: value }
+        : {}),
+    },
   });
   return sendSuccess(res, { key: config.key, value: config.value }, 'Config updated.');
 });

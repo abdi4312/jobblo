@@ -52,6 +52,30 @@ describe('Order schema — SafePay reconciliation fields', () => {
     expect(order.paymentConfirmedAt).toEqual(now);
   });
 
+  it('persists the payment-confirmed Connect deadline and refund lifecycle state', () => {
+    const confirmedAt = new Date('2025-01-01T00:00:00Z');
+    const deadlineAt = new Date('2025-01-04T00:00:00Z');
+    const order = makeOrder({
+      paymentConfirmedAt: confirmedAt,
+      providerConnectDeadlineDays: 3,
+      providerConnectDeadlineAt: deadlineAt,
+      providerConnectTimeout: {
+        status: 'reconciliation_required',
+        operationKey: 'safepay-connect-timeout:order:pi_test_1',
+        stripeRefundId: 're_test_1',
+        originalPaymentAmountMinor: 103000,
+        refundedAmountMinor: 0,
+        providerVerificationAt: confirmedAt,
+      },
+    });
+
+    expect(order.providerConnectDeadlineDays).toBe(3);
+    expect(order.providerConnectDeadlineAt).toEqual(deadlineAt);
+    expect(order.providerConnectTimeout.providerVerificationAt).toEqual(confirmedAt);
+    expect(order.providerConnectTimeout.originalPaymentAmountMinor).toBe(103000);
+    expect(order.validateSync()).toBeUndefined();
+  });
+
   it('persists the lifecycle timestamps written by providerWorkController', () => {
     const now = new Date();
     const order = makeOrder({

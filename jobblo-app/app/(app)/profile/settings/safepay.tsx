@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import {
   ArrowLeft,
   ChevronDown,
@@ -8,6 +8,7 @@ import {
   ChevronUp,
   Clock3,
   CreditCard,
+  Copy,
   Receipt,
   ShieldCheck,
   TrendingDown,
@@ -15,6 +16,7 @@ import {
   Wallet,
   XCircle,
 } from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import { useSafePayHistory } from '../../../../src/hooks/useSafePayHistory';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
@@ -23,7 +25,7 @@ import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator
 import type { SafePayHistoryTransaction } from '../../../../src/services/safepayHistory.service';
 
 const money = (value: number) =>
-  `${new Intl.NumberFormat('nb-NO', { maximumFractionDigits: 2 }).format(Number(value) || 0)} kr`;
+  `${new Intl.NumberFormat('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value) || 0)} kr`;
 const date = (value?: string) => {
   if (!value) return '';
   const parsed = new Date(value);
@@ -33,6 +35,20 @@ const date = (value?: string) => {
 };
 
 function status(value: string) {
+  if (value === 'payment_received')
+    return {
+      label: 'Betaling mottatt',
+      color: '#2E6641',
+      icon: <CreditCard size={14} color="#2E6641" />,
+    };
+  if (value === 'waiting_connect')
+    return { label: 'Venter på Stripe Connect', color: '#B7791F', icon: <Clock3 size={14} color="#B7791F" /> };
+  if (value === 'refund_pending')
+    return { label: 'Refusjon pågår', color: '#B7791F', icon: <Clock3 size={14} color="#B7791F" /> };
+  if (value === 'refund_failed')
+    return { label: 'Refusjon mislyktes', color: '#B4544A', icon: <XCircle size={14} color="#B4544A" /> };
+  if (value === 'automatically_cancelled')
+    return { label: 'Automatisk kansellert', color: '#63665F', icon: <XCircle size={14} color="#63665F" /> };
   if (value === 'transferred' || value === 'completed')
     return {
       label: 'Overført / utbetalt',
@@ -58,10 +74,25 @@ function status(value: string) {
 
 function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }) {
   const [expanded, setExpanded] = useState(false);
-  const state = status(transaction.status);
-  const amount = transaction.isProvider
-    ? transaction.amounts.netProvider
+  const [copiedReference, setCopiedReference] = useState(false);
+  const state = status(
+    transaction.refundStatus === 'succeeded'
+      ? 'refunded'
+      : transaction.refundStatus === 'failed'
+        ? 'refund_failed'
+        : transaction.refundStatus === 'pending' || transaction.refundStatus === 'reconciliation_required'
+          ? 'refund_pending'
+          : transaction.status,
+  );
+  const originalAmount = Number.isSafeInteger(transaction.originalPaymentAmountMinor)
+    ? (transaction.originalPaymentAmountMinor || 0) / 100
     : transaction.amounts.totalCustomer;
+  const confirmedRefund = transaction.refundStatus === 'succeeded'
+    ? Math.min(originalAmount, (transaction.refundedAmountMinor || 0) / 100)
+    : 0;
+  const amount = transaction.isProvider
+    ? (transaction.providerTransferAmountMinor || 0) / 100
+    : Math.max(0, originalAmount - confirmedRefund);
   return (
     <View className="overflow-hidden rounded-3xl border border-[#E6E7E1] bg-white">
       <Pressable onPress={() => setExpanded((value) => !value)} className="p-4">
@@ -76,18 +107,29 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
             <Text className="mt-1 text-xs text-[#63665F]" numberOfLines={1}>
               {transaction.isProvider
                 ? `Jobbet for: ${transaction.customerName}`
-                : `Betalt til: ${transaction.providerName}`}
+                : transaction.hasVerifiedProviderTransfer
+                  ? `Betalt til: ${transaction.providerName}`
+                  : `Oppdragstaker: ${transaction.providerName}`}
             </Text>
             <Text className="mt-1 text-xs text-[#9B9E96]">{date(transaction.paymentDate)}</Text>
+            {transaction.status === 'payment_received' &&
+            transaction.providerConnectStatus !== 'ready' &&
+            transaction.providerConnectDeadlineAt ? (
+              <Text className="mt-1 text-xs text-[#B7791F]">
+                {transaction.providerConnectStatus === 'verification_retry'
+                  ? 'Stripe Connect-status kontrolleres på nytt'
+                  : 'Venter på Stripe Connect'}
+              </Text>
+            ) : null}
           </View>
           <View className="ml-2 items-end">
             <Text
               className={[
                 'text-sm font-bold',
-                transaction.isProvider ? 'text-[#2E6641]' : 'text-[#B4544A]',
+                transaction.isProvider || amount === 0 ? 'text-[#2E6641]' : 'text-[#B4544A]',
               ].join('')}
             >
-              {transaction.isProvider ? '+' : '-'}
+              {transaction.isProvider ? '+' : amount > 0 ? '−' : ''}
               {money(amount)}
             </Text>
             <View className="mt-1 flex-row items-center">
@@ -96,13 +138,103 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
                 {state.label}
               </Text>
             </View>
+            {transaction.cancellationReason === 'provider_stripe_connect_timeout' ? (
+              <Text className="mt-1 text-[0.6875rem] font-medium text-[#63665F]">
+                Automatisk kansellert
+              </Text>
+            ) : null}
           </View>
         </View>
       </Pressable>
       {expanded ? (
         <View className="border-t border-[#E6E7E1] bg-[#F4F6F0] px-4 py-4">
+          <Text className="mb-2 text-xs font-bold uppercase tracking-wide text-[#63665F]">Betalingsdetaljer</Text>
           <Detail label="Avtalt pris" value={money(transaction.amounts.agreedPrice)} />
-          <Detail label="SafePay avgift" value={money(transaction.amounts.fee)} />
+          <Detail label="SafePay avgift (3 %)" value={money(transaction.amounts.fee)} />
+          {!transaction.isProvider ? (
+            <Detail label="Opprinnelig betaling" value={`−${money(originalAmount)}`} />
+          ) : null}
+          {Number(transaction.refundAmountMinor || transaction.refundedAmountMinor) > 0 ||
+          transaction.refundStatus !== 'none' ? (
+            <>
+              <Text className="mb-2 mt-4 text-xs font-bold uppercase tracking-wide text-[#63665F]">Refusjonsdetaljer</Text>
+              <Detail
+                label="Refusjonsbeløp"
+                value={money(
+                  (transaction.refundStatus === 'succeeded'
+                    ? transaction.refundedAmountMinor || 0
+                    : transaction.refundAmountMinor || 0) / 100,
+                )}
+              />
+              <Detail
+                label="Refundert beløp"
+                value={`+${money((transaction.refundedAmountMinor || 0) / 100)}`}
+              />
+              <Detail label="Netto betalt" value={money(Math.max(0, originalAmount - confirmedRefund))} />
+              <Detail
+                label="Refusjonsstatus"
+                value={
+                  transaction.refundStatus === 'succeeded'
+                    ? 'Refundert'
+                    : transaction.refundStatus === 'failed'
+                      ? 'Refusjon mislyktes'
+                      : transaction.refundStatus === 'pending' || transaction.refundStatus === 'reconciliation_required'
+                        ? 'Refusjon pågår'
+                        : 'Ingen refusjon'
+                }
+              />
+              {!transaction.isProvider &&
+              transaction.refundStatus === 'succeeded' &&
+              transaction.paymentMethodBrand &&
+              transaction.paymentMethodLast4 ? (
+                <Detail
+                  label="Refundert til"
+                  value={`${transaction.paymentMethodBrand} •••• ${transaction.paymentMethodLast4}`}
+                />
+              ) : null}
+              {transaction.stripeRefundId ? (
+                <View className="mb-2 flex-row items-center justify-between">
+                  <Text className="text-xs text-[#63665F]">Refusjonsreferanse</Text>
+                  <View className="flex-row items-center">
+                    <Text className="text-xs font-medium text-[#0B0B0B]">
+                      {`${transaction.stripeRefundId.slice(0, 6)}...${transaction.stripeRefundId.slice(-3)}`}
+                    </Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Kopier full refusjonsreferanse"
+                      className="ml-2 rounded p-1"
+                      onPress={async () => {
+                        try {
+                          await Clipboard.setStringAsync(transaction.stripeRefundId!);
+                          setCopiedReference(true);
+                        } catch {
+                          Alert.alert('Kunne ikke kopiere', 'Prøv igjen senere.');
+                        }
+                      }}
+                    >
+                      <Copy size={14} color={copiedReference ? '#2E6641' : '#63665F'} />
+                    </Pressable>
+                  </View>
+                </View>
+              ) : null}
+              {transaction.refundCompletedAt || transaction.refundFailedAt ? (
+                <Detail label="Refusjonsdato" value={date(transaction.refundCompletedAt || transaction.refundFailedAt)} />
+              ) : null}
+            </>
+          ) : null}
+          {transaction.cancellationReason || transaction.refundReason ? (
+            <>
+            <Text className="mb-2 mt-4 text-xs font-bold uppercase tracking-wide text-[#63665F]">Kanselleringsårsak</Text>
+            <Detail
+              label="Årsak"
+              value={
+                (transaction.cancellationReason || transaction.refundReason) === 'provider_stripe_connect_timeout'
+                  ? 'Utføreren fullførte ikke Stripe Connect-oppsettet innen fristen'
+                  : transaction.cancellationReason || transaction.refundReason || ''
+              }
+            />
+            </>
+          ) : null}
           {transaction.amounts.tax ? (
             <Detail label="MVA" value={money(transaction.amounts.tax)} />
           ) : null}

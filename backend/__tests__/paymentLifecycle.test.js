@@ -213,6 +213,7 @@ it('reconciles a successful internally approved refund from its signed Stripe re
     payment_intent: 'pi_test_1',
     amount: 20000,
     currency: 'nok',
+    livemode: false,
     status: 'succeeded',
     metadata: { jobbloOperationKey: 'dispute:one:refund' },
   };

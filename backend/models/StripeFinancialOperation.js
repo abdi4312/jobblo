@@ -24,7 +24,10 @@ const stripeFinancialOperationSchema = new mongoose.Schema(
     currency: { type: String, required: true, uppercase: true },
     stripeObjectId: String,
     attemptedAt: Date,
+    completedAt: Date,
+    failedAt: Date,
     lastErrorCode: String,
+    lastErrorMessage: { type: String, maxlength: 500 },
   },
   { timestamps: true }
 );

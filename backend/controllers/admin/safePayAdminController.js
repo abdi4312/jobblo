@@ -30,6 +30,22 @@ const getSafePayList = asyncHandler(async (req, res) => {
     const valid = ['unpaid','pending','paid','refunded'];
     if (valid.includes(req.query.paymentStatus)) query.paymentStatus = req.query.paymentStatus;
   }
+  if (req.query.timeoutReview === 'true') {
+    query.$or = [
+      {
+        'providerConnectTimeout.status': {
+          $in: ['processing', 'pending', 'failed', 'reconciliation_required', 'manual_review'],
+        },
+      },
+      {
+        status: 'paid',
+        paymentStatus: 'paid',
+        startedAt: null,
+        providerConnectDeadlineAt: { $lte: new Date() },
+        'providerConnectTimeout.status': { $exists: false },
+      },
+    ];
+  }
 
   const dateFrom = parseDate(req.query.dateFrom);
   const dateTo = parseDate(req.query.dateTo);
@@ -130,6 +146,7 @@ const getSafePaySummary = asyncHandler(async (req, res) => {
           totalCustomer: { $sum: '$amounts.totalCustomer' },
           totalNet: { $sum: '$amounts.netProvider' },
           totalFee: { $sum: '$amounts.fee' },
+          totalRefunded: { $sum: { $divide: [{ $ifNull: ['$refundedAmountMinor', 0] }, 100] } },
         },
       },
     ]),
@@ -151,9 +168,7 @@ const getSafePaySummary = asyncHandler(async (req, res) => {
       revenueSummary.released += r.totalNet;
       revenueSummary.fees += r.totalFee;
     }
-    if (r._id === 'refunded') {
-      revenueSummary.refunded += r.totalCustomer;
-    }
+    revenueSummary.refunded += r.totalRefunded || 0;
   });
 
   return sendSuccess(res, {

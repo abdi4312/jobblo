@@ -221,6 +221,18 @@ function ChatMessagesView({ messages, onClose }: { messages: AdminChatMessage[];
 // ── Main page ──────────────────────────────────────────────────────────────────
 type OrderData = {
     _id: string; status: string; paymentStatus: string;
+    cancellationReason?: string;
+    checkoutAmountMinor?: number;
+    paymentConfirmedAt?: string;
+    providerConnectDeadlineDays?: number;
+    providerConnectDeadlineAt?: string;
+    providerConnectTimeout?: {
+        status?: string; operationKey?: string; stripeRefundId?: string;
+        originalPaymentAmountMinor?: number; refundAmountMinor?: number; refundedAmountMinor?: number;
+        reason?: string; lastErrorCode?: string; manualReviewReason?: string;
+        lastAttemptAt?: string; lockUntil?: string; providerVerificationAt?: string;
+        refundCompletedAt?: string; refundFailedAt?: string;
+    };
     agreedPrice?: number; initialPrice?: number; fee?: number;
     customerTotal?: number; providerNet?: number;
     scheduledDate?: string; createdAt: string;
@@ -241,8 +253,18 @@ export default function SafePayDetailPage() {
 
     const d = data as {
         order: OrderData;
-        payment?: { _id: string; status: string; amount: number; stripePaymentIntentId?: string; createdAt: string } | null;
-        safePayHistory?: { status: string; amounts: { agreedPrice: number; fee: number; totalCustomer: number; netProvider: number }; paymentDate?: string } | null;
+        payment?: {
+            _id: string; status: string; amount: number; capturedAmountMinor?: number;
+            refundAmountMinor?: number; refundedAmountMinor?: number; refundStatus?: string; stripeRefundId?: string;
+            stripePaymentIntentId?: string; createdAt: string;
+        } | null;
+        safePayHistory?: {
+            status: string;
+            amounts: { agreedPrice: number; fee: number; totalCustomer: number; netProvider: number };
+            paymentDate?: string; originalPaymentAmountMinor?: number; refundAmountMinor?: number; refundedAmountMinor?: number;
+            refundStatus?: string; refundReason?: string; cancellationReason?: string;
+            stripePaymentIntentId?: string; stripeRefundId?: string;
+        } | null;
         dispute?: { _id: string; status: string; priority: string; title: string; reasonCategory: string } | null;
         chatMeta?: { _id: string; status: string; messageCount: number; systemMessageCount: number; lastMessageAt?: string } | null;
     };
@@ -321,11 +343,47 @@ export default function SafePayDetailPage() {
                                         copy={payment.stripePaymentIntentId} />
                                 )}
                                 <Row label="Betalingsdato" value={new Date(payment.createdAt).toLocaleString('nb-NO')} />
+                                {payment.capturedAmountMinor != null && (
+                                    <Row label="Faktisk innbetalt" value={`${(payment.capturedAmountMinor / 100).toLocaleString('nb-NO')} NOK`} />
+                                )}
+                                {payment.refundedAmountMinor != null && payment.refundedAmountMinor > 0 && (
+                                    <Row label="Refundert beløp" value={`${(payment.refundedAmountMinor / 100).toLocaleString('nb-NO')} NOK`} />
+                                )}
+                                {payment.refundAmountMinor != null && payment.refundAmountMinor > 0 && (
+                                    <Row label="Beløp for refusjon" value={`${(payment.refundAmountMinor / 100).toLocaleString('nb-NO')} NOK`} />
+                                )}
+                                {payment.refundStatus && <Row label="Refusjonsstatus" badge={payment.refundStatus} />}
+                                {payment.stripeRefundId && <Row label="Stripe-refusjon" value={<span className="font-mono text-xs">{payment.stripeRefundId}</span>} copy={payment.stripeRefundId} />}
                             </>
                         ) : (
                             <AdminEmptyState title="Ingen betaling" description="Betaling er ikke behandlet ennå." className="py-4" />
                         )}
                     </Section>
+
+                    {order.providerConnectDeadlineAt && (
+                        <Section title="Stripe Connect-frist og automatisk refusjon">
+                            <Row label="Betaling bekreftet" value={order.paymentConfirmedAt ? new Date(order.paymentConfirmedAt).toLocaleString('nb-NO') : undefined} />
+                            <Row label="Frist (24-timers dager)" value={`${order.providerConnectDeadlineDays ?? '–'} dager`} />
+                            <Row label="Frist utløper" value={new Date(order.providerConnectDeadlineAt).toLocaleString('nb-NO')} />
+                            <Row label="Oppfølging" badge={order.providerConnectTimeout?.status ?? 'venter'} />
+                            {order.providerConnectTimeout?.originalPaymentAmountMinor != null && (
+                                <Row label="Opprinnelig innbetaling" value={`${(order.providerConnectTimeout.originalPaymentAmountMinor / 100).toLocaleString('nb-NO')} NOK`} />
+                            )}
+                            {order.providerConnectTimeout?.refundedAmountMinor != null && (
+                                <Row label="Bekreftet refusjon" value={`${(order.providerConnectTimeout.refundedAmountMinor / 100).toLocaleString('nb-NO')} NOK`} />
+                            )}
+                            {order.providerConnectTimeout?.refundAmountMinor != null && (
+                                <Row label="Refusjonsbeløp" value={`${(order.providerConnectTimeout.refundAmountMinor / 100).toLocaleString('nb-NO')} NOK`} />
+                            )}
+                            {order.providerConnectTimeout?.stripeRefundId && (
+                                <Row label="Stripe-refusjon" value={<span className="font-mono text-xs">{order.providerConnectTimeout.stripeRefundId}</span>} copy={order.providerConnectTimeout.stripeRefundId} />
+                            )}
+                            {order.cancellationReason && <Row label="Kanselleringsårsak" value={order.cancellationReason} />}
+                            {order.providerConnectTimeout?.lastErrorCode && <Row label="Siste feilkode" value={order.providerConnectTimeout.lastErrorCode} />}
+                            {order.providerConnectTimeout?.manualReviewReason && <Row label="Manuell behandling" value={order.providerConnectTimeout.manualReviewReason} />}
+                            {order.providerConnectTimeout?.operationKey && <Row label="Operasjonsnøkkel" value={<span className="font-mono text-xs">{order.providerConnectTimeout.operationKey}</span>} />}
+                        </Section>
+                    )}
 
                     {/* SafePayHistory */}
                     {safePayHistory && (
