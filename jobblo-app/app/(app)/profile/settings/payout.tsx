@@ -8,14 +8,15 @@ import type { ConnectStatusResponse } from '../../../../src/services/payout.serv
 import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 
-type StatusKind = 'ready' | 'pending_verification' | 'started' | 'not_configured';
+type StatusKind = 'ready' | 'pending_verification' | 'started' | 'restricted' | 'not_configured';
 
 function deriveStatus(s: ConnectStatusResponse): StatusKind {
-  if (s.payoutEnabled && s.payoutOnboardingStatus === 'enabled') return 'ready';
-  if (s.detailsSubmitted && !s.payoutEnabled) return 'pending_verification';
+  if (s.payoutReady) return 'ready';
+  if (s.payoutOnboardingStatus === 'restricted') return 'restricted';
+  if (s.payoutOnboardingStatus === 'pending_verification') return 'pending_verification';
   if (s.hasAccount && s.payoutOnboardingStatus === 'started') return 'started';
   if (!s.hasAccount || s.payoutOnboardingStatus === 'none') return 'not_configured';
-  return s.detailsSubmitted ? 'pending_verification' : s.hasAccount ? 'started' : 'not_configured';
+  return 'started';
 }
 
 function getErrorInfo(error: unknown) {
@@ -138,13 +139,13 @@ export default function PayoutSettingsScreen() {
               </View>
             </View>
             <Text className="mt-2 text-[0.8125rem] leading-5 text-[#173A24]">
-              Din Stripe Connect-konto er aktiv og klar til å motta midler direkte når oppdrag godkjennes via SafePay.
+              Stripe Connect-kontoen din er verifisert og klar til å motta overføringer.
             </Text>
           </View>
         </View>
       </View>
     );
-    ctaLabel = 'Oppdater eller endre Stripe-opplysninger';
+    ctaLabel = 'Administrer Stripe-konto';
     ctaIcon = <ExternalLink size={17} color="#FFFFFF" />;
   } else if (kind === 'pending_verification') {
     statusCard = (
@@ -163,13 +164,13 @@ export default function PayoutSettingsScreen() {
               </View>
             </View>
             <Text className="mt-2 text-[0.8125rem] leading-5 text-[#614109]">
-              Stripe behandler opplysningene dine. Du kan bli bedt om ytterligere dokumentasjon eller identitetsverifisering i Stripe Dashboard.
+              Stripe gjennomgår opplysningene dine. Vi oppdaterer statusen når kontoen er klar.
             </Text>
           </View>
         </View>
       </View>
     );
-    ctaLabel = 'Fullfør verifisering i Stripe';
+    ctaLabel = 'Åpne Stripe-konto';
     ctaIcon = <ExternalLink size={17} color="#FFFFFF" />;
   } else if (kind === 'started') {
     statusCard = (
@@ -188,13 +189,13 @@ export default function PayoutSettingsScreen() {
               </View>
             </View>
             <Text className="mt-2 text-[0.8125rem] leading-5 text-[#614109]">
-              Stripe-onboardingen er startet, men ikke fullført. Fortsett i Stripes portal for å legge inn bankinformasjon og fullføre identitetsverifisering.
+              Fullfør Stripe Connect-oppsettet for å kunne sende forespørsler, starte oppdrag og motta utbetalinger.
             </Text>
           </View>
         </View>
       </View>
     );
-    ctaLabel = 'Fortsett Stripe-onboarding';
+    ctaLabel = 'Fullfør Stripe Connect-oppsett';
     ctaIcon = <ExternalLink size={17} color="#FFFFFF" />;
   } else {
     statusCard = (
@@ -213,14 +214,32 @@ export default function PayoutSettingsScreen() {
               </View>
             </View>
             <Text className="mt-2 text-[0.8125rem] leading-5 text-[#614109]">
-              Du må koble til din utbetalingskonto via Stripe Connect for å kunne motta utbetalinger for utførte jobber.
+              Koble til Stripe Connect for å kunne sende forespørsler og motta betaling for oppdrag.
             </Text>
           </View>
         </View>
       </View>
     );
-    ctaLabel = 'Start Stripe-onboarding';
+    ctaLabel = 'Koble til Stripe Connect';
     ctaIcon = <ShieldCheck size={17} color="#FFFFFF" />;
+  }
+
+  if (kind === 'restricted') {
+    statusCard = (
+      <View className="rounded-2xl border border-[#E6E7E1] bg-white p-5">
+        <View className="flex-row items-start">
+          <AlertCircle size={22} color="#63665F" />
+          <View className="ml-3 flex-1">
+            <Text className="text-[0.9375rem] font-bold text-[#0B0B0B]">Handling kreves</Text>
+            <Text className="mt-2 text-[0.8125rem] leading-5 text-[#63665F]">
+              Stripe trenger flere opplysninger eller verifisering. Åpne kontoen din hos Stripe for å se hva som mangler.
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+    ctaLabel = 'Oppdater Stripe-opplysninger';
+    ctaIcon = <ExternalLink size={17} color="#FFFFFF" />;
   }
 
   return (
@@ -232,69 +251,126 @@ export default function PayoutSettingsScreen() {
         </Pressable>
 
         <View className="mb-5">
-          <Text className="text-[1.5rem] font-bold leading-tight text-[#0B0B0B]">Utbetalingsinformasjon</Text>
+          <Text className="text-[1.5rem] font-bold leading-tight text-[#0B0B0B]">Utbetalinger</Text>
           <Text className="mt-1 text-[0.9375rem] leading-6 text-[#63665F]">
-            Jobblo bruker <Text className="font-semibold text-[#0B0B0B]">Stripe Connect</Text> for trygg og direkte
-            utbetaling til din bankkonto for fullførte oppdrag.
+            Administrer Stripe Connect-kontoen din og se status for utbetalinger.
           </Text>
         </View>
+
+        {status.mode === 'test' ? (
+          <View className="mb-4 rounded-2xl bg-white p-4">
+            <Text className="text-xs font-semibold text-[#63665F]">Testmodus</Text>
+            <Text className="mt-1 text-xs leading-5 text-[#63665F]">
+              Dette er en testkonto. Ingen ekte bankoverføringer gjennomføres.
+            </Text>
+          </View>
+        ) : null}
 
         {statusCard}
 
-        <View className="mt-5 rounded-3xl border border-[#E6E7E1] bg-white p-5">
-          <View className="flex-row items-center">
-            <View className="h-10 w-10 items-center justify-center rounded-2xl bg-[#EAF1E9]">
-              <ShieldCheck size={22} color="#2E6641" />
+        <View className="mt-3 rounded-2xl border border-[#E6E7E1] bg-white p-5">
+          <View className="flex-row items-center justify-between gap-3">
+            <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Kontoinformasjon</Text>
+            <Text className="text-xs text-[#85887F]">Status fra Stripe</Text>
+          </View>
+          {[
+            ['Tilkoblingsstatus', kind === 'ready' ? 'Klar for utbetalinger' : kind === 'pending_verification' ? 'Venter på verifisering' : kind === 'restricted' ? 'Handling kreves' : kind === 'not_configured' ? 'Ikke tilkoblet' : 'Oppsett ikke fullført'],
+            ['Identitetsverifisering', kind === 'ready' ? 'Fullført' : kind === 'pending_verification' ? 'Under behandling' : status.detailsSubmitted ? 'Opplysninger sendt' : 'Ikke fullført'],
+            ['Klar for overføringer', status.transfersEnabled ? 'Ja' : status.hasAccount ? 'Nei' : 'Ikke tilkoblet'],
+            ['Bankutbetalinger aktivert', status.payoutEnabled ? 'Ja' : status.hasAccount ? 'Nei' : 'Ikke tilkoblet'],
+            ...(status.connectedAt
+              ? [['Tilkoblet siden', new Date(status.connectedAt).toLocaleDateString('nb-NO')]]
+              : []),
+          ].map(([label, value]) => (
+            <View key={label} className="min-h-12 flex-row items-center justify-between gap-4 border-t border-[#F0F1EC] py-3">
+              <Text className="flex-1 text-[0.8125rem] text-[#63665F]">{label}</Text>
+              <Text className="text-right text-[0.8125rem] font-medium text-[#30332F]">{value}</Text>
             </View>
-            <View className="ml-3 flex-1">
-              <Text className="text-[1rem] font-bold text-[#0B0B0B]">Stripe Connect-oppsett</Text>
-              <Text className="mt-1 text-[0.8125rem] text-[#63665F]">
-                Sikker ID-verifisering og registrering av bankkonto
+          ))}
+          {status.accountId ? (
+            <View className="min-h-12 flex-row items-center justify-between gap-4 border-t border-[#F0F1EC] py-3">
+              <Text className="text-[0.8125rem] text-[#63665F]">Stripe-konto</Text>
+              <Text className="font-mono text-xs text-[#30332F]">
+                {status.accountId.slice(0, 9)}…{status.accountId.slice(-4)}
               </Text>
             </View>
-          </View>
-
-          <Text className="mt-4 text-[0.875rem] leading-6 text-[#63665F]">
-            Ved å trykke på knappen nedenfor blir du sendt til Stripes trygge onboarding-portal i nettleseren din, der du kan legge inn bankinformasjon og gjennomføre identitetsverifisering. Jobblo lagrer ingen bankopplysninger eller identitetsdokumenter lokalt.
-          </Text>
-
-          <Pressable
-            onPress={handleCta}
-            disabled={pending}
-            className={[
-              'mt-5 flex-row items-center justify-center rounded-2xl px-5 py-3.5 shadow-sm',
-              pending ? 'opacity-70' : '',
-            ].join(' ')}
-            style={{ backgroundColor: '#2E6641' }}
-          >
-            {pending ? (
-              <>
-                <Loader2 size={17} color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text className="text-[0.9375rem] font-semibold text-white">
-                  {accountLinkMutation.isPending ? 'Kobler til Stripe...' : 'Oppdaterer status...'}
-                </Text>
-              </>
-            ) : (
-              <>
-                {ctaIcon}
-                <Text className="ml-2 text-[0.9375rem] font-semibold text-white">{ctaLabel}</Text>
-              </>
-            )}
-          </Pressable>
+          ) : null}
+          {kind !== 'ready' ? (
+            <Text className="mt-3 rounded-xl bg-[#F4F6F0] p-3 text-xs leading-5 text-[#63665F]">
+              Fullfør Stripe Connect-oppsettet for å kunne sende forespørsler, starte oppdrag og motta utbetalinger.
+            </Text>
+          ) : null}
         </View>
 
-        <View className="mt-5 rounded-3xl border border-[#E6E7E1] bg-white p-5">
+        {kind === 'pending_verification' ? (
+          <Pressable
+            onPress={() => refreshMutation.mutate(undefined, {
+              onError: (error) => {
+                const info = getErrorInfo(error);
+                Alert.alert('Kunne ikke oppdatere status', info.message || 'Prøv igjen senere.');
+              },
+            })}
+            disabled={pending}
+            className="mt-3 min-h-11 flex-row items-center justify-center gap-2 rounded-xl border border-[#E6E7E1] bg-white px-4"
+          >
+            {refreshMutation.isPending ? <Loader2 size={16} color="#2E6641" /> : <Clock3 size={16} color="#2E6641" />}
+            <Text className="text-sm font-semibold text-[#2E6641]">
+              {refreshMutation.isPending ? 'Sjekker status...' : 'Sjekk status'}
+            </Text>
+          </Pressable>
+        ) : null}
+
+        <Pressable
+          onPress={handleCta}
+          disabled={pending}
+          className={[
+            'mt-3 min-h-12 flex-row items-center justify-center rounded-xl px-5 py-3',
+            pending ? 'opacity-70' : '',
+          ].join(' ')}
+          style={{ backgroundColor: '#2E6641' }}
+        >
+          {pending ? (
+            <>
+              <Loader2 size={17} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text className="text-[0.9375rem] font-semibold text-white">
+                {accountLinkMutation.isPending ? 'Åpner Stripe...' : 'Oppdaterer status...'}
+              </Text>
+            </>
+          ) : (
+            <>
+              {ctaIcon}
+              <Text className="ml-2 text-[0.9375rem] font-semibold text-white">{ctaLabel}</Text>
+            </>
+          )}
+        </Pressable>
+
+        <View className="mt-5 rounded-2xl border border-[#E6E7E1] bg-white p-5">
           <View className="flex-row items-center">
             <Info size={16} color="#63665F" />
-            <Text className="ml-2 text-[0.8125rem] font-bold uppercase tracking-[0.14em] text-[#63665F]">
-              Informasjon om utbetalingstid
-            </Text>
+            <Text className="ml-2 text-[0.9375rem] font-semibold text-[#0B0B0B]">Slik fungerer utbetalinger</Text>
           </View>
-          <Text className="mt-3 text-[0.8125rem] leading-6 text-[#63665F]">
-            Din utbetalingstid fastlegges av din utbetalingsplan i Stripe. Når oppdragsgiver godkjenner jobben via
-            SafePay, frigjøres midlene umiddelbart til din tilknyttede Stripe Connect-konto. Nøyaktig ankomsttid til
-            bankkontoen din avhenger av Stripes schema, kontoens land, og forhåndsverifisering.
+          {[
+            { number: '1', title: 'Kunden betaler', description: 'Kunden fullfører betalingen gjennom SafePay.' },
+            { number: '2', title: 'Oppdraget godkjennes', description: 'Du fullfører jobben, og kunden godkjenner arbeidet.' },
+            { number: '3', title: 'Overføring til Stripe Connect', description: 'Jobblo overfører tilgjengelige midler til Stripe-kontoen din.' },
+            { number: '4', title: 'Utbetaling til bankkonto', description: 'Stripe utbetaler etter kontoens utbetalingsplan.' },
+          ].map((step) => (
+            <View key={step.number} className="mt-4 flex-row gap-3">
+              <View className="h-7 w-7 items-center justify-center rounded-full bg-[#F4F6F0]">
+                <Text className="text-xs font-bold text-[#2E6641]">{step.number}</Text>
+              </View>
+              <View className="flex-1">
+                <Text className="text-[0.8125rem] font-semibold text-[#30332F]">{step.title}</Text>
+                <Text className="mt-1 text-xs leading-5 text-[#63665F]">{step.description}</Text>
+              </View>
+            </View>
+          ))}
+          <Text className="mt-4 border-t border-[#F0F1EC] pt-3 text-xs leading-5 text-[#63665F]">
+            En overføring til Stripe Connect betyr ikke at beløpet allerede er utbetalt til bankkontoen.
           </Text>
+          <Pressable onPress={() => router.push('/profile/settings/safepay')} className="mt-4 self-start py-2">
+            <Text className="text-sm font-semibold text-[#2E6641]">Se transaksjonshistorikk →</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>

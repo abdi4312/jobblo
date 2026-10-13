@@ -86,6 +86,12 @@ exports.createAccountLink = async (req, res) => {
 
     const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
 
+    const readiness = await getConnectReadiness(userId);
+    if (readiness.ready) {
+      const loginLink = await stripe.accounts.createLoginLink(accountId);
+      return res.json({ url: loginLink.url });
+    }
+
     const link = await stripe.accountLinks.create({
       account:     accountId,
       refresh_url: `${frontendUrl}/settings/payout?refresh=1`,
@@ -142,10 +148,6 @@ exports.getStatus = async (req, res) => {
   try {
     const userId = req.userId;
     const readiness = await getConnectReadiness(userId);
-    const user = await User.findById(userId).select(
-      'stripeConnectAccountId stripeConnectAccountIdTest payoutOnboardingStatus payoutEnabled chargesEnabled detailsSubmitted connectAccountCreatedAt payoutOnboardingLastRefreshedAt'
-    );
-    if (!user) return res.status(404).json({ error: 'Bruker ikke funnet' });
 
     res.json({
       hasAccount: readiness.hasAccount,
@@ -154,10 +156,11 @@ exports.getStatus = async (req, res) => {
       transfersEnabled: readiness.transfersEnabled,
       payoutOnboardingStatus: readiness.payoutOnboardingStatus,
       payoutEnabled: readiness.payoutEnabled,
-      chargesEnabled: user.chargesEnabled,
+      chargesEnabled: readiness.chargesEnabled,
       detailsSubmitted: readiness.detailsSubmitted,
-      connectedAt:            user.connectAccountCreatedAt,
-      lastRefreshed:          user.payoutOnboardingLastRefreshedAt,
+      accountId: readiness.accountId,
+      connectedAt: readiness.connectedAt,
+      lastRefreshed: readiness.lastRefreshed,
     });
   } catch (err) {
     console.error('getStatus error:', err);

@@ -4,12 +4,14 @@ export type PayoutOnboardingStatus = 'none' | 'started' | 'restricted' | 'enable
 
 export type ConnectStatusResponse = {
   hasAccount: boolean;
+  mode: 'test' | 'live';
   payoutReady: boolean;
   transfersEnabled: boolean;
   payoutOnboardingStatus: PayoutOnboardingStatus;
   payoutEnabled: boolean;
   chargesEnabled: boolean;
   detailsSubmitted: boolean;
+  accountId?: string | null;
   connectedAt?: string;
   lastRefreshed?: string;
 };

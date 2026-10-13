@@ -16,6 +16,7 @@ const account = (overrides = {}) => ({
   id: 'acct_test',
   deleted: false,
   payouts_enabled: true,
+  charges_enabled: true,
   details_submitted: true,
   capabilities: { transfers: 'active' },
   requirements: {
@@ -45,7 +46,14 @@ it('accepts only a fully onboarded payout-ready account in the selected test mod
 
   expect(getStripeForMode).toHaveBeenCalledWith(true);
   expect(retrieveAccount).toHaveBeenCalledWith('acct_test');
-  expect(result).toMatchObject({ ready: true, mode: 'test', payoutEnabled: true, transfersEnabled: true });
+  expect(result).toMatchObject({
+    ready: true,
+    mode: 'test',
+    accountId: 'acct_test',
+    payoutEnabled: true,
+    transfersEnabled: true,
+    chargesEnabled: true,
+  });
 });
 
 it('rejects missing accounts and incomplete or revoked capabilities', async () => {
@@ -73,6 +81,21 @@ it('rejects missing accounts and incomplete or revoked capabilities', async () =
 
   retrieve.mockResolvedValue(account({ capabilities: { transfers: 'inactive' } }));
   expect((await getConnectReadiness('worker')).ready).toBe(false);
+
+  retrieve.mockResolvedValue(
+    account({
+      requirements: {
+        currently_due: [],
+        past_due: ['individual.verification.document'],
+        pending_verification: [],
+        disabled_reason: 'requirements.past_due',
+      },
+    })
+  );
+  expect(await getConnectReadiness('worker')).toMatchObject({
+    ready: false,
+    payoutOnboardingStatus: 'restricted',
+  });
 });
 
 it('uses only the live account ID when live mode is configured', async () => {

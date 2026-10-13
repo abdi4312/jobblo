@@ -32,10 +32,14 @@ async function getConnectReadiness(userId) {
     const base = {
       mode: config.mode,
       hasAccount: Boolean(accountId),
+      accountId: accountId || null,
       payoutEnabled: false,
       transfersEnabled: false,
+      chargesEnabled: false,
       detailsSubmitted: false,
       payoutOnboardingStatus: accountId ? 'started' : 'none',
+      connectedAt: user.connectAccountCreatedAt || null,
+      lastRefreshed: user.payoutOnboardingLastRefreshedAt || null,
     };
     if (!accountId) return { ...base, ready: false, reason: 'no_account' };
 
@@ -63,11 +67,12 @@ async function getConnectReadiness(userId) {
       payoutEnabled: account.payouts_enabled === true,
       transfersEnabled,
       detailsSubmitted: account.details_submitted === true,
+      chargesEnabled: account.charges_enabled === true,
       payoutOnboardingStatus: ready
         ? 'enabled'
         : requirements.disabled_reason
           ? 'restricted'
-          : account.details_submitted
+          : pendingVerification.length > 0
             ? 'pending_verification'
             : 'started',
     };
