@@ -1,10 +1,12 @@
 jest.mock('../models/SafePayHistory', () => ({ find: jest.fn() }));
 jest.mock('../models/StripeTransferRecord', () => ({ find: jest.fn() }));
+jest.mock('../models/Payout', () => ({ find: jest.fn() }));
 jest.mock('../models/User', () => ({ findById: jest.fn() }));
 
 const mongoose = require('mongoose');
 const SafePayHistory = require('../models/SafePayHistory');
 const StripeTransferRecord = require('../models/StripeTransferRecord');
+const Payout = require('../models/Payout');
 const User = require('../models/User');
 const { getSafePayHistory } = require('../controllers/safepayController');
 
@@ -14,6 +16,8 @@ async function readHistory({
   refundStatus,
   refundMinor,
   transfers = [],
+  payout,
+  providerConnectStatus,
   card = true,
   cancelled = refundStatus !== 'none',
 }) {
@@ -38,9 +42,11 @@ async function readHistory({
     refundAmountMinor: refundMinor,
     refundedAmountMinor: refundStatus === 'succeeded' ? refundMinor : 0,
     refundStatus,
+    providerConnectStatus,
     ...(cancelled ? { cancellationReason: 'provider_stripe_connect_timeout' } : {}),
     stripePaymentIntentId: 'pi_test_1',
     stripeRefundId: 're_3U07AbcRnp',
+    stripeLivemode: false,
     ...(card ? { paymentMethodBrand: 'visa', paymentMethodLast4: '4242' } : {}),
     createdAt: new Date('2025-01-01T00:00:00Z'),
     paymentDate: new Date('2025-01-01T00:01:00Z'),
@@ -49,9 +55,20 @@ async function readHistory({
     populate: jest.fn().mockReturnThis(),
     sort: jest.fn().mockResolvedValue([record]),
   });
+  Payout.find.mockReturnValue({
+    lean: jest.fn().mockResolvedValue(
+      payout ? [{ orderId, providerId, ...payout }] : []
+    ),
+  });
   StripeTransferRecord.find.mockReturnValue({
     lean: jest.fn().mockResolvedValue(
-      transfers.map((transfer) => ({ ...transfer, orderId: transfer.orderId || orderId }))
+      transfers.map((transfer) => ({
+        livemode: false,
+        lastVerifiedAt: new Date(),
+        stripeObjectId: 'tr_verified',
+        ...transfer,
+        orderId: transfer.orderId || orderId,
+      }))
     ),
   });
 
@@ -121,8 +138,9 @@ it('counts provider earnings only from verified transfers after reversals', asyn
   const { payload, orderId } = await readHistory({
     userId: providerId,
     providerId,
-    refundStatus: 'succeeded',
-    refundMinor: 30900,
+    refundStatus: 'none',
+    refundMinor: 0,
+    cancelled: false,
     transfers: [{
       orderId: undefined,
       amount: 29100,
@@ -141,6 +159,94 @@ it('counts provider earnings only from verified transfers after reversals', asyn
   expect(payload.summary.totalFees).toBe(9);
   expect(payload.history[0].providerTransferAmountMinor).toBe(27100);
   expect(payload.summary.totalSpent).toBe(0);
+});
+
+it('exposes an expected payout without counting it as provider earnings', async () => {
+  const providerId = new mongoose.Types.ObjectId();
+  const { payload } = await readHistory({
+    userId: providerId,
+    providerId,
+    refundStatus: 'none',
+    refundMinor: 0,
+    cancelled: false,
+    providerConnectStatus: 'pending',
+    payout: { status: 'pending', netProviderAmount: 291, stripeLivemode: false },
+  });
+
+  expect(payload.summary.totalEarned).toBe(0);
+  expect(payload.history[0]).toEqual(expect.objectContaining({
+    providerConnectStatus: 'pending',
+    payoutAmountMinor: 29100,
+    payoutStatus: 'pending',
+    hasVerifiedProviderTransfer: false,
+  }));
+});
+
+it('does not verify a transfer recorded in a different Stripe mode', async () => {
+  const providerId = new mongoose.Types.ObjectId();
+  const { payload } = await readHistory({
+    userId: providerId,
+    providerId,
+    refundStatus: 'none',
+    refundMinor: 0,
+    cancelled: false,
+    transfers: [{
+      amount: 29100,
+      amountReversed: 0,
+      normalizedStatus: 'transferred',
+      livemode: true,
+    }],
+  });
+
+  expect(payload.summary.totalEarned).toBe(0);
+  expect(payload.history[0].hasVerifiedProviderTransfer).toBe(false);
+});
+
+it('does not count a fully reversed verified transfer as provider earnings', async () => {
+  const providerId = new mongoose.Types.ObjectId();
+  const { payload } = await readHistory({
+    userId: providerId,
+    providerId,
+    refundStatus: 'none',
+    refundMinor: 0,
+    cancelled: false,
+    transfers: [{
+      amount: 29100,
+      amountReversed: 29100,
+      normalizedStatus: 'fully_reversed',
+    }],
+  });
+
+  expect(payload.summary.totalEarned).toBe(0);
+  expect(payload.history[0]).toEqual(expect.objectContaining({
+    hasVerifiedProviderTransfer: true,
+    providerTransferAmountMinor: 0,
+    providerTransferReversed: true,
+  }));
+});
+
+it('does not treat an unverified or wrong-mode local payout as transferred', async () => {
+  const providerId = new mongoose.Types.ObjectId();
+  Payout.find.mockReturnValue({
+    lean: jest.fn().mockResolvedValue([{
+      orderId: 'some-other-order',
+      providerId,
+      status: 'transferred',
+      stripeLivemode: false,
+      netProviderAmount: 291,
+    }]),
+  });
+  const { payload } = await readHistory({
+    userId: providerId,
+    providerId,
+    refundStatus: 'none',
+    refundMinor: 0,
+    cancelled: false,
+  });
+
+  expect(payload.summary.totalEarned).toBe(0);
+  expect(payload.history[0].hasVerifiedProviderTransfer).toBe(false);
+  expect(payload.history[0].payoutStatus).toBeUndefined();
 });
 
 it('does not expose history or card details to a non-participant', async () => {

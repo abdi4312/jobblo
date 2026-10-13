@@ -65,6 +65,20 @@ function status(value: string) {
     return { label: 'Kansellert', color: '#63665F', icon: <XCircle size={14} color="#63665F" /> };
   if (value === 'pending' || value === 'released_internal' || value === 'disputed')
     return { label: 'Venter', color: '#B7791F', icon: <Clock3 size={14} color="#B7791F" /> };
+  if (value === 'awaiting_payout')
+    return { label: 'Avventer utbetaling', color: '#63665F', icon: <Clock3 size={14} color="#63665F" /> };
+  if (value === 'connect_check')
+    return { label: 'Stripe Connect-status kontrolleres', color: '#B7791F', icon: <Clock3 size={14} color="#B7791F" /> };
+  if (value === 'approval')
+    return { label: 'Venter på godkjenning', color: '#63665F', icon: <Clock3 size={14} color="#63665F" /> };
+  if (value === 'transfer_processing')
+    return { label: 'Utbetaling behandles', color: '#B7791F', icon: <Clock3 size={14} color="#B7791F" /> };
+  if (value === 'transfer_failed')
+    return { label: 'Utbetaling mislyktes', color: '#B4544A', icon: <XCircle size={14} color="#B4544A" /> };
+  if (value === 'action_required')
+    return { label: 'Handling kreves', color: '#B7791F', icon: <XCircle size={14} color="#B7791F" /> };
+  if (value === 'reversed')
+    return { label: 'Overføring reversert', color: '#63665F', icon: <XCircle size={14} color="#63665F" /> };
   return {
     label: value || 'Ukjent status',
     color: '#63665F',
@@ -73,16 +87,45 @@ function status(value: string) {
 }
 
 function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [copiedReference, setCopiedReference] = useState(false);
-  const state = status(
-    transaction.refundStatus === 'succeeded'
+  const providerStage = transaction.isProvider
+    ? transaction.refundStatus === 'succeeded'
       ? 'refunded'
       : transaction.refundStatus === 'failed'
         ? 'refund_failed'
         : transaction.refundStatus === 'pending' || transaction.refundStatus === 'reconciliation_required'
           ? 'refund_pending'
-          : transaction.status,
+          : transaction.cancellationReason === 'provider_stripe_connect_timeout' ||
+              transaction.status === 'automatically_cancelled'
+            ? 'automatically_cancelled'
+            : transaction.providerTransferReversed
+              ? 'reversed'
+              : transaction.hasVerifiedProviderTransfer && (transaction.providerTransferAmountMinor || 0) > 0
+                ? 'transferred'
+                : transaction.payoutStatus === 'failed'
+                  ? 'transfer_failed'
+                  : transaction.payoutStatus === 'reconciliation_required'
+                    ? 'action_required'
+                    : transaction.providerConnectStatus === 'verification_retry'
+                      ? 'connect_check'
+                      : transaction.providerConnectStatus && transaction.providerConnectStatus !== 'ready'
+                        ? 'awaiting_payout'
+                      : transaction.payoutStatus || ['completed', 'refunded'].includes(transaction.status)
+                        ? 'transfer_processing'
+                        : 'approval'
+    : null;
+  const state = status(
+    providerStage || (
+      transaction.refundStatus === 'succeeded'
+        ? 'refunded'
+        : transaction.refundStatus === 'failed'
+          ? 'refund_failed'
+          : transaction.refundStatus === 'pending' || transaction.refundStatus === 'reconciliation_required'
+            ? 'refund_pending'
+            : transaction.status
+    ),
   );
   const originalAmount = Number.isSafeInteger(transaction.originalPaymentAmountMinor)
     ? (transaction.originalPaymentAmountMinor || 0) / 100
@@ -90,8 +133,13 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
   const confirmedRefund = transaction.refundStatus === 'succeeded'
     ? Math.min(originalAmount, (transaction.refundedAmountMinor || 0) / 100)
     : 0;
-  const amount = transaction.isProvider
+  const providerAmount = providerStage === 'transferred'
     ? (transaction.providerTransferAmountMinor || 0) / 100
+    : ['refunded', 'refund_pending', 'refund_failed', 'automatically_cancelled', 'reversed'].includes(providerStage || '')
+      ? 0
+      : (transaction.payoutAmountMinor ?? Math.round(transaction.amounts.netProvider * 100)) / 100;
+  const amount = transaction.isProvider
+    ? providerAmount
     : Math.max(0, originalAmount - confirmedRefund);
   return (
     <View className="overflow-hidden rounded-3xl border border-[#E6E7E1] bg-white">
@@ -126,10 +174,14 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
             <Text
               className={[
                 'text-sm font-bold',
-                transaction.isProvider || amount === 0 ? 'text-[#2E6641]' : 'text-[#B4544A]',
+                transaction.isProvider
+                  ? providerStage === 'transferred' ? 'text-[#2E6641]' : 'text-[#0B0B0B]'
+                  : amount === 0 ? 'text-[#2E6641]' : 'text-[#B4544A]',
               ].join('')}
             >
-              {transaction.isProvider ? '+' : amount > 0 ? '−' : ''}
+              {transaction.isProvider
+                ? providerStage === 'transferred' ? '+' : ''
+                : amount > 0 ? '−' : ''}
               {money(amount)}
             </Text>
             <View className="mt-1 flex-row items-center">
@@ -138,6 +190,11 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
                 {state.label}
               </Text>
             </View>
+            {transaction.isProvider && (transaction.originalPaymentAmountMinor || 0) > 0 ? (
+              <Text className="mt-1 text-[0.6875rem] font-medium text-[#63665F]">
+                Kundens betaling er mottatt
+              </Text>
+            ) : null}
             {transaction.cancellationReason === 'provider_stripe_connect_timeout' ? (
               <Text className="mt-1 text-[0.6875rem] font-medium text-[#63665F]">
                 Automatisk kansellert
@@ -150,10 +207,111 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
         <View className="border-t border-[#E6E7E1] bg-[#F4F6F0] px-4 py-4">
           <Text className="mb-2 text-xs font-bold uppercase tracking-wide text-[#63665F]">Betalingsdetaljer</Text>
           <Detail label="Avtalt pris" value={money(transaction.amounts.agreedPrice)} />
-          <Detail label="SafePay avgift (3 %)" value={money(transaction.amounts.fee)} />
+          <Detail
+            label="SafePay avgift (3 %)"
+            value={`${transaction.isProvider ? '−' : ''}${money(transaction.amounts.fee)}`}
+          />
           {!transaction.isProvider ? (
             <Detail label="Opprinnelig betaling" value={`−${money(originalAmount)}`} />
-          ) : null}
+          ) : (
+            <>
+              <Detail label="Oppdragsgiver betalte" value={money(originalAmount)} />
+              <View className="my-3 border-t border-[#E6E7E1]" />
+              <Text className="mb-2 text-xs font-bold uppercase tracking-wide text-[#63665F]">
+                Forventet utbetaling
+              </Text>
+              <Detail
+                label={providerStage === 'transferred' ? 'Overført til Stripe Connect' : 'Forventet utbetaling'}
+                value={`${providerStage === 'transferred' ? '+' : ''}${money(amount)}`}
+              />
+              {providerStage === 'awaiting_payout' ? (
+                <View className="mt-2 rounded-xl bg-[#FFF8E8] p-3">
+                  <Text className="text-xs leading-5 text-[#6B5425]">
+                    Fullfør Stripe Connect-oppsettet for å kunne motta utbetaling når oppdraget er godkjent.
+                  </Text>
+                  <Pressable
+                    accessibilityRole="link"
+                    onPress={() => router.push('/profile/settings/payout')}
+                    className="mt-2 self-start"
+                  >
+                    <Text className="text-xs font-semibold text-[#2E6641] underline">Fullfør oppsett</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+              {providerStage === 'connect_check' ? (
+                <Text className="mt-2 text-xs leading-5 text-[#8A641F]">
+                  Stripe Connect-status kunne ikke bekreftes. Vi prøver igjen; utbetalingsstatus er ikke fastslått ennå.
+                </Text>
+              ) : null}
+              {providerStage === 'approval' ? (
+                <Text className="mt-2 text-xs leading-5 text-[#63665F]">
+                  Betalingen er mottatt. Utbetalingen skjer når oppdraget er godkjent.
+                </Text>
+              ) : null}
+              {providerStage === 'transfer_processing' ? (
+                <Text className="mt-2 text-xs leading-5 text-[#63665F]">
+                  Oppdraget er godkjent. Stripe behandler overføringen til Stripe Connect.
+                </Text>
+              ) : null}
+              {providerStage === 'transfer_failed' || providerStage === 'action_required' ? (
+                <View className="mt-2 rounded-xl bg-[#FCEDEC] p-3">
+                  <Text className="text-xs leading-5 text-[#8C3932]">
+                    {transaction.payoutFailureMessage ||
+                      'Utbetalingen er ikke bekreftet. Saken krever oppfølging.'}
+                  </Text>
+                  {['PAYOUT_SETUP_REQUIRED', 'PAYOUT_NOT_ENABLED'].includes(transaction.payoutFailureCode || '') ? (
+                    <Pressable
+                      accessibilityRole="link"
+                      onPress={() => router.push('/profile/settings/payout')}
+                      className="mt-2 self-start"
+                    >
+                      <Text className="text-xs font-semibold text-[#2E6641] underline">Åpne Stripe Connect</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
+              {providerStage === 'transferred' ? (
+                <>
+                  <Text className="mt-2 text-xs leading-5 text-[#63665F]">
+                    Dette bekrefter overføring til Stripe Connect, ikke at beløpet er kommet til bankkontoen.
+                  </Text>
+                  {transaction.stripeTransferId ? (
+                    <View className="mb-2 mt-2 flex-row items-center justify-between">
+                      <Text className="text-xs text-[#63665F]">Stripe-overføring</Text>
+                      <View className="flex-row items-center">
+                        <Text className="text-xs font-medium text-[#0B0B0B]">
+                          {`${transaction.stripeTransferId.slice(0, 6)}...${transaction.stripeTransferId.slice(-3)}`}
+                        </Text>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Kopier full Stripe-overføringsreferanse"
+                          className="ml-2 rounded p-1"
+                          onPress={async () => {
+                            try {
+                              await Clipboard.setStringAsync(transaction.stripeTransferId!);
+                              setCopiedReference(true);
+                            } catch {
+                              Alert.alert('Kunne ikke kopiere', 'Prøv igjen senere.');
+                            }
+                          }}
+                        >
+                          {copiedReference
+                            ? <ShieldCheck size={14} color="#2E6641" />
+                            : <Copy size={14} color="#63665F" />}
+                        </Pressable>
+                      </View>
+                    </View>
+                  ) : null}
+                  {transaction.transferDate ? (
+                    <Detail label="Overføringsdato" value={date(transaction.transferDate)} />
+                  ) : null}
+                  <Text className="mt-1 text-[11px] leading-4 text-[#63665F]">
+                    Eventuelle bankutbetalinger vises i Stripe Connect-utbetalingshistorikken.
+                  </Text>
+                </>
+              ) : null}
+            </>
+          )}
           {Number(transaction.refundAmountMinor || transaction.refundedAmountMinor) > 0 ||
           transaction.refundStatus !== 'none' ? (
             <>
@@ -240,10 +398,18 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
           ) : null}
           <View className="mt-2 flex-row justify-between border-t border-[#E6E7E1] pt-3">
             <Text className="text-sm font-semibold text-[#0B0B0B]">
-              {transaction.isProvider ? 'Du mottar' : 'Du betalte'}
+              {transaction.isProvider
+                ? providerStage === 'transferred' ? 'Overført til Stripe Connect' : 'Forventet utbetaling'
+                : 'Netto betalt'}
             </Text>
-            <Text className="text-sm font-bold text-[#0B0B0B]">
-              {transaction.isProvider ? '+' : '-'}
+            <Text className={`text-sm font-bold ${
+              transaction.isProvider
+                ? providerStage === 'transferred' ? 'text-[#2E6641]' : 'text-[#0B0B0B]'
+                : 'text-[#0B0B0B]'
+            }`}>
+              {transaction.isProvider
+                ? providerStage === 'transferred' ? '+' : ''
+                : ''}
               {money(amount)}
             </Text>
           </View>

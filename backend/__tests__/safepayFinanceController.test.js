@@ -2,6 +2,7 @@ jest.mock('../models/Order', () => ({}));
 jest.mock('../models/Payout', () => ({
   collection: { name: 'payouts' },
   populate: jest.fn(async (rows) => rows),
+  aggregate: jest.fn(),
 }));
 jest.mock('../models/User', () => ({
   findById: jest.fn(() => ({
@@ -13,7 +14,7 @@ jest.mock('../models/StripeTransferRecord', () => ({
   aggregate: jest.fn(),
   populate: jest.fn(async (rows) => rows),
 }));
-jest.mock('../models/StripeBankPayoutRecord', () => ({}));
+jest.mock('../models/StripeBankPayoutRecord', () => ({ aggregate: jest.fn() }));
 jest.mock('../models/StripeFinancialSyncState', () => ({
   find: jest.fn(() => ({
     sort: () => ({
@@ -36,6 +37,8 @@ jest.mock('../services/admin/activityService', () => ({ logActivity: jest.fn() }
 
 const { getStripeForMode, getStripeConfiguration } = require('../config/stripe');
 const StripeTransferRecord = require('../models/StripeTransferRecord');
+const StripeBankPayoutRecord = require('../models/StripeBankPayoutRecord');
+const Payout = require('../models/Payout');
 const controller = require('../controllers/safepayFinanceController');
 
 function response() {
@@ -94,6 +97,14 @@ describe('SafePay finance API request validation', () => {
     const stripeRow = {
       _id: 'stripe_1',
       stripeObjectId: 'tr_1',
+      orderId: '507f1f77bcf86cd799439012',
+      payoutId: {
+        _id: '507f1f77bcf86cd799439013',
+        platformFee: 45,
+        grossAmount: 300,
+        netProviderAmount: 255,
+        serviceId: { title: 'Maling' },
+      },
       stripeCreatedAt: new Date('2025-01-03T00:00:00Z'),
       createdAt: new Date('2025-01-03T00:00:00Z'),
       normalizedStatus: 'transferred',
@@ -136,7 +147,15 @@ describe('SafePay finance API request validation', () => {
     ]);
     expect(res.body.pagination).toMatchObject({ total: 2, totalPages: 1 });
     expect(res.body.items.map((item) => item.id)).toEqual(['stripe_1', 'payout_1']);
+    expect(res.body.items[0]).toEqual(expect.objectContaining({
+      orderId: '507f1f77bcf86cd799439012',
+      orderTitle: 'Maling',
+      agreedPrice: 300,
+      jobbloFee: 4500,
+      netProviderAmount: 25500,
+    }));
     expect(res.body.snapshotAt).toEqual(expect.any(String));
+    expect(res.body.testDataNotice).toBeNull();
   });
 
   it('keeps a linked local attempt in the same snapshot de-duplication query', async () => {
@@ -189,5 +208,34 @@ describe('SafePay finance API request validation', () => {
       $lte: ['$createdAt', new Date(snapshotAt)],
     });
     expect(res.body.pagination.total).toBe(0);
+  });
+
+  it('returns mode-scoped verified net transfer, fee and pending payout totals', async () => {
+    StripeTransferRecord.aggregate.mockResolvedValue([
+      { _id: { currency: 'NOK', status: 'partially_reversed' }, count: 1, amount: 27100, jobbloFee: 4500 },
+    ]);
+    StripeBankPayoutRecord.aggregate.mockResolvedValue([
+      { _id: { currency: 'NOK', status: 'in_transit' }, count: 1, amount: 27100 },
+    ]);
+    Payout.aggregate.mockResolvedValue([
+      { _id: { currency: 'NOK' }, count: 2, amount: 50000 },
+    ]);
+    const res = response();
+
+    await controller.getSummary({ userId: '507f1f77bcf86cd799439011' }, res);
+
+    expect(res.body).toEqual(expect.objectContaining({
+      mode: 'test',
+      transfers: [expect.objectContaining({ amount: 27100, jobbloFee: 4500 })],
+      bankPayouts: [expect.objectContaining({ amount: 27100 })],
+      pendingTransfers: [expect.objectContaining({ count: 2, amount: 50000 })],
+    }));
+    const transferPipeline = StripeTransferRecord.aggregate.mock.calls[0][0];
+    expect(transferPipeline.find((stage) => stage.$set).$set.netTransferredAmount).toEqual({
+      $max: [0, { $subtract: ['$amount', { $ifNull: ['$amountReversed', 0] }] }],
+    });
+    expect(Payout.aggregate.mock.calls[0][0].some((stage) =>
+      stage.$lookup?.from === 'stripetransferrecords'
+    )).toBe(true);
   });
 });

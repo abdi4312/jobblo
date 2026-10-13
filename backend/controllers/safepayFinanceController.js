@@ -125,6 +125,11 @@ function mapTransferRecord(record, admin) {
     stripeTransferId: record.stripeObjectId,
     orderId: record.orderId ? String(record.orderId) : null,
     payoutId: record.payoutId ? String(record.payoutId._id || record.payoutId) : null,
+    orderTitle: localPayout?.serviceId?.title || null,
+    agreedPrice: Number.isFinite(localPayout?.grossAmount) ? localPayout.grossAmount : null,
+    netProviderAmount: Number.isFinite(localPayout?.netProviderAmount)
+      ? Math.round(localPayout.netProviderAmount * 100)
+      : null,
     jobbloFee: Number.isFinite(localPayout?.platformFee)
       ? Math.round(localPayout.platformFee * 100)
       : null,
@@ -171,6 +176,11 @@ function mapLocalTransferAttempt(payout, admin) {
     stripeTransferId: payout.stripeTransferId || null,
     orderId: String(payout.orderId),
     payoutId: String(payout._id),
+    orderTitle: payout.serviceId?.title || null,
+    agreedPrice: Number.isFinite(payout.grossAmount) ? payout.grossAmount : null,
+    netProviderAmount: Number.isFinite(payout.netProviderAmount)
+      ? Math.round(payout.netProviderAmount * 100)
+      : null,
     provider: payout.providerId
       ? { id: String(payout.providerId._id || payout.providerId), name: payout.providerId.name || null }
       : null,
@@ -380,11 +390,19 @@ async function paginated(req, res, { admin, kind }) {
     await Promise.all([
       StripeTransferRecord.populate(stripeRows, [
         { path: 'providerId', select: 'name' },
-        { path: 'payoutId', select: 'platformFee customerId', populate: { path: 'customerId', select: 'name' } },
+        {
+          path: 'payoutId',
+          select: 'platformFee grossAmount netProviderAmount serviceId customerId',
+          populate: [
+            { path: 'customerId', select: 'name' },
+            { path: 'serviceId', select: 'title' },
+          ],
+        },
       ]),
       Payout.populate(localRows, [
         { path: 'providerId', select: 'name' },
         { path: 'customerId', select: admin ? 'name' : '_id' },
+        { path: 'serviceId', select: 'title' },
       ]),
     ]);
     const stripeById = new Map(stripeRows.map((row) => [String(row._id), row]));
@@ -429,7 +447,7 @@ async function paginated(req, res, { admin, kind }) {
     snapshotAt: options.snapshotAt.toISOString(),
     mode,
     ...(admin ? { activeMode: config.mode } : {}),
-    testDataNotice: mode === 'test' || (mode === 'all' && items.some((item) => item.mode === 'test'))
+    testDataNotice: mode === 'test'
       ? 'Testdata er ikke ekte bankbevegelser.'
       : null,
     lastSyncedAt: latestSync[0]?.lastSucceededAt || null,
@@ -451,7 +469,14 @@ async function getOne(req, res, { admin, kind }) {
     let record = await Model.findOne(query)
       .populate('providerId', 'name')
       .populate(kind === 'transfers'
-        ? { path: 'payoutId', select: 'customerId orderId', populate: { path: 'customerId', select: 'name' } }
+        ? {
+            path: 'payoutId',
+            select: 'customerId orderId platformFee grossAmount netProviderAmount serviceId',
+            populate: [
+              { path: 'customerId', select: 'name' },
+              { path: 'serviceId', select: 'title' },
+            ],
+          }
         : { path: 'providerId', select: 'name' })
       .lean();
     if (!record && kind === 'transfers') {
@@ -461,6 +486,7 @@ async function getOne(req, res, { admin, kind }) {
       if (!admin) payoutQuery.providerId = req.userId;
       record = await Payout.findOne(payoutQuery)
         .populate('providerId', 'name')
+        .populate('serviceId', 'title')
         .populate(admin ? { path: 'customerId', select: 'name' } : { path: 'customerId', select: '_id' })
         .lean();
       if (record) return res.json(mapLocalTransferAttempt(record, admin));
@@ -484,17 +510,100 @@ exports.getSummary = async (req, res) => {
   try {
     const config = await getStripeConfiguration();
     const providerId = req.userId;
-    const [transfers, bankPayouts] = await Promise.all([
+    const modeMatch = { providerId: new mongoose.Types.ObjectId(providerId), livemode: !config.testMode };
+    const payoutModeMatch = { providerId: new mongoose.Types.ObjectId(providerId), stripeLivemode: !config.testMode };
+    const [transfers, bankPayouts, pendingTransfers] = await Promise.all([
       StripeTransferRecord.aggregate([
-        { $match: { providerId: new mongoose.Types.ObjectId(providerId), livemode: !config.testMode } },
-        { $group: { _id: { currency: '$currency', status: '$normalizedStatus' }, count: { $sum: 1 }, amount: { $sum: '$amount' } } },
+        { $match: modeMatch },
+        {
+          $lookup: {
+            from: Payout.collection.name,
+            localField: 'payoutId',
+            foreignField: '_id',
+            as: 'payout',
+          },
+        },
+        { $unwind: { path: '$payout', preserveNullAndEmptyArrays: true } },
+        {
+          $set: {
+            netTransferredAmount: {
+              $max: [0, { $subtract: ['$amount', { $ifNull: ['$amountReversed', 0] }] }],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: { currency: '$currency', status: '$normalizedStatus' },
+            count: { $sum: { $cond: [{ $gt: ['$netTransferredAmount', 0] }, 1, 0] } },
+            amount: { $sum: '$netTransferredAmount' },
+            jobbloFee: {
+              $sum: {
+                $cond: [
+                  { $gt: ['$netTransferredAmount', 0] },
+                  { $multiply: [{ $ifNull: ['$payout.platformFee', 0] }, 100] },
+                  0,
+                ],
+              },
+            },
+          },
+        },
       ]),
       StripeBankPayoutRecord.aggregate([
-        { $match: { providerId: new mongoose.Types.ObjectId(providerId), livemode: !config.testMode } },
+        { $match: modeMatch },
         { $group: { _id: { currency: '$currency', status: '$status' }, count: { $sum: 1 }, amount: { $sum: '$amount' } } },
       ]),
+      Payout.aggregate([
+        { $match: { ...payoutModeMatch, status: { $in: ['pending', 'released_internal', 'processing'] } } },
+        {
+          $lookup: {
+            from: StripeTransferRecord.collection.name,
+            let: {
+              payoutId: '$_id',
+              transferId: '$stripeTransferId',
+              orderId: '$orderId',
+              providerId: '$providerId',
+              livemode: '$stripeLivemode',
+            },
+            pipeline: [{
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$livemode', '$$livemode'] },
+                    {
+                      $or: [
+                        { $eq: ['$payoutId', '$$payoutId'] },
+                        {
+                          $and: [
+                            { $ne: ['$$transferId', null] },
+                            { $eq: ['$stripeObjectId', '$$transferId'] },
+                          ],
+                        },
+                        {
+                          $and: [
+                            { $eq: ['$orderId', '$$orderId'] },
+                            { $eq: ['$providerId', '$$providerId'] },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              },
+            }],
+            as: 'verifiedTransfers',
+          },
+        },
+        { $match: { $expr: { $eq: [{ $size: '$verifiedTransfers' }, 0] } } },
+        {
+          $group: {
+            _id: { currency: '$currency' },
+            count: { $sum: 1 },
+            amount: { $sum: { $round: [{ $multiply: ['$netProviderAmount', 100] }, 0] } },
+          },
+        },
+      ]),
     ]);
-    res.json({ mode: config.mode, transfers, bankPayouts });
+    res.json({ mode: config.mode, transfers, bankPayouts, pendingTransfers });
   } catch (err) {
     console.error('SafePay finance summary failed:', err.code || err.name || 'Error');
     res.status(503).json({ error: 'Kunne ikke hente økonomioversikten.' });
@@ -508,17 +617,101 @@ exports.getAdminSummary = async (req, res) => {
       return res.status(400).json({ error: 'Ugyldig Stripe-modus.' });
     }
     const match = mode === 'all' ? {} : { livemode: mode === 'live' };
-    const [transfers, bankPayouts] = await Promise.all([
+    const payoutMatch = mode === 'all'
+      ? { stripeLivemode: { $in: [true, false] } }
+      : { stripeLivemode: mode === 'live' };
+    const [transfers, bankPayouts, pendingTransfers] = await Promise.all([
       StripeTransferRecord.aggregate([
         { $match: match },
-        { $group: { _id: { mode: '$livemode', currency: '$currency', status: '$normalizedStatus' }, count: { $sum: 1 }, amount: { $sum: '$amount' } } },
+        {
+          $lookup: {
+            from: Payout.collection.name,
+            localField: 'payoutId',
+            foreignField: '_id',
+            as: 'payout',
+          },
+        },
+        { $unwind: { path: '$payout', preserveNullAndEmptyArrays: true } },
+        {
+          $set: {
+            netTransferredAmount: {
+              $max: [0, { $subtract: ['$amount', { $ifNull: ['$amountReversed', 0] }] }],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: { mode: '$livemode', currency: '$currency', status: '$normalizedStatus' },
+            count: { $sum: { $cond: [{ $gt: ['$netTransferredAmount', 0] }, 1, 0] } },
+            amount: { $sum: '$netTransferredAmount' },
+            jobbloFee: {
+              $sum: {
+                $cond: [
+                  { $gt: ['$netTransferredAmount', 0] },
+                  { $multiply: [{ $ifNull: ['$payout.platformFee', 0] }, 100] },
+                  0,
+                ],
+              },
+            },
+          },
+        },
       ]),
       StripeBankPayoutRecord.aggregate([
         { $match: match },
         { $group: { _id: { mode: '$livemode', currency: '$currency', status: '$status' }, count: { $sum: 1 }, amount: { $sum: '$amount' } } },
       ]),
+      Payout.aggregate([
+        { $match: { ...payoutMatch, status: { $in: ['pending', 'released_internal', 'processing'] } } },
+        {
+          $lookup: {
+            from: StripeTransferRecord.collection.name,
+            let: {
+              payoutId: '$_id',
+              transferId: '$stripeTransferId',
+              orderId: '$orderId',
+              providerId: '$providerId',
+              livemode: '$stripeLivemode',
+            },
+            pipeline: [{
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$livemode', '$$livemode'] },
+                    {
+                      $or: [
+                        { $eq: ['$payoutId', '$$payoutId'] },
+                        {
+                          $and: [
+                            { $ne: ['$$transferId', null] },
+                            { $eq: ['$stripeObjectId', '$$transferId'] },
+                          ],
+                        },
+                        {
+                          $and: [
+                            { $eq: ['$orderId', '$$orderId'] },
+                            { $eq: ['$providerId', '$$providerId'] },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              },
+            }],
+            as: 'verifiedTransfers',
+          },
+        },
+        { $match: { $expr: { $eq: [{ $size: '$verifiedTransfers' }, 0] } } },
+        {
+          $group: {
+            _id: { mode: '$stripeLivemode', currency: '$currency' },
+            count: { $sum: 1 },
+            amount: { $sum: { $round: [{ $multiply: ['$netProviderAmount', 100] }, 0] } },
+          },
+        },
+      ]),
     ]);
-    res.json({ mode, transfers, bankPayouts });
+    res.json({ mode, transfers, bankPayouts, pendingTransfers });
   } catch (err) {
     console.error('Admin SafePay finance summary failed:', err.code || err.name || 'Error');
     res.status(503).json({ error: 'Kunne ikke hente økonomioversikten.' });

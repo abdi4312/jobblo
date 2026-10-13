@@ -31,6 +31,14 @@ export type SafePayHistoryTransaction = {
   paymentMethodLast4?: string;
   providerTransferAmountMinor?: number;
   hasVerifiedProviderTransfer?: boolean;
+  providerTransferReversed?: boolean;
+  payoutAmountMinor?: number;
+  payoutStatus?: string;
+  payoutFailureCode?: string | null;
+  payoutFailureMessage?: string | null;
+  stripeTransferId?: string | null;
+  transferDate?: string | null;
+  transferLivemode?: boolean;
   refundCompletedAt?: string;
   refundFailedAt?: string;
   providerConnectDeadlineAt?: string;

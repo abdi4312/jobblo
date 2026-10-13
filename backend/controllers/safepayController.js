@@ -8,6 +8,7 @@ const Payment = require('../models/Payment');
 const User = require('../models/User');
 const SafePayHistory = require('../models/SafePayHistory');
 const StripeTransferRecord = require('../models/StripeTransferRecord');
+const Payout = require('../models/Payout');
 const Review = require('../models/Review');
 const { notify } = require('../services/notifications');
 
@@ -376,25 +377,55 @@ exports.getSafePayHistory = async (req, res) => {
       const providerOrderIds = safePayRecords
         .filter((record) => String(record.providerId?._id || record.providerId) === String(userId))
         .map((record) => record.orderId);
-      const verifiedTransfers = providerOrderIds.length
-        ? await StripeTransferRecord.find({
-            orderId: { $in: providerOrderIds },
-            providerId: userId,
-            normalizedStatus: { $in: ['transferred', 'partially_reversed', 'fully_reversed'] },
-            lastVerifiedAt: { $ne: null },
-          }).lean()
-        : [];
+      const [payouts, verifiedTransfers] = providerOrderIds.length
+        ? await Promise.all([
+            Payout.find({ orderId: { $in: providerOrderIds }, providerId: userId }).lean(),
+            StripeTransferRecord.find({
+              orderId: { $in: providerOrderIds },
+              providerId: userId,
+              normalizedStatus: { $in: ['transferred', 'partially_reversed', 'fully_reversed'] },
+              lastVerifiedAt: { $ne: null },
+            }).lean(),
+          ])
+        : [[], []];
+      const payoutByOrder = new Map(payouts.map((payout) => [String(payout.orderId), payout]));
+      const historyByOrder = new Map(
+        safePayRecords.map((record) => [String(record.orderId), record])
+      );
       const transferByOrder = new Map();
       for (const transfer of verifiedTransfers) {
         const key = String(transfer.orderId);
-        const current = transferByOrder.get(key) || { amountMinor: 0, grossMinor: 0 };
+        const historyRecord = historyByOrder.get(key);
+        const payout = payoutByOrder.get(key);
+        const expectedMode = typeof historyRecord?.stripeLivemode === 'boolean'
+          ? historyRecord.stripeLivemode
+          : payout?.stripeLivemode;
+        if (typeof expectedMode !== 'boolean' || transfer.livemode !== expectedMode) continue;
+        const current = transferByOrder.get(key) || {
+          amountMinor: 0,
+          grossMinor: 0,
+          stripeTransferId: null,
+          transferDate: null,
+        };
+        const netAmountMinor = Math.max(
+          0,
+          Number(transfer.amount || 0) - Number(transfer.amountReversed || 0)
+        );
         transferByOrder.set(
           key,
           {
-            amountMinor:
-              current.amountMinor +
-              Math.max(0, Number(transfer.amount || 0) - Number(transfer.amountReversed || 0)),
+            amountMinor: current.amountMinor + netAmountMinor,
             grossMinor: current.grossMinor + Number(transfer.amount || 0),
+            stripeTransferId: netAmountMinor > 0
+              ? transfer.stripeObjectId
+              : current.stripeTransferId,
+            transferDate: netAmountMinor > 0
+              ? transfer.stripeCreatedAt || transfer.lastVerifiedAt
+              : current.transferDate,
+            reversed: current.reversed || (
+              Number(transfer.amount || 0) > 0 &&
+              Number(transfer.amountReversed || 0) >= Number(transfer.amount || 0)
+            ),
           }
         );
       }
@@ -418,11 +449,22 @@ exports.getSafePayHistory = async (req, res) => {
             ? Math.min(originalPayment, recordedRefund)
             : 0;
         const remainingPayment = Math.max(0, originalPayment - refundedAmount);
-        const transfer = transferByOrder.get(String(record.orderId)) || { amountMinor: 0, grossMinor: 0 };
+        const transfer = transferByOrder.get(String(record.orderId)) || {
+          amountMinor: 0,
+          grossMinor: 0,
+          stripeTransferId: null,
+          transferDate: null,
+          reversed: false,
+        };
+        const payout = payoutByOrder.get(String(record.orderId));
         const transferredAmountMinor = transfer.amountMinor;
+        const refundConfirmed =
+          record.refundStatus === 'succeeded' ||
+          ['refunded', 'automatically_cancelled'].includes(record.status);
+        const countsAsEarnings = !refundConfirmed && transferredAmountMinor > 0;
         if (isProvider) {
-          totalEarned += transferredAmountMinor / 100;
-          if (transfer.grossMinor > 0) totalFees += record.amounts.fee;
+          if (countsAsEarnings) totalEarned += transferredAmountMinor / 100;
+          if (countsAsEarnings) totalFees += record.amounts.fee;
         } else {
           totalSpent += remainingPayment;
           totalFees += Math.max(0, record.amounts.fee - Math.min(record.amounts.fee, refundedAmount));
@@ -461,6 +503,25 @@ exports.getSafePayHistory = async (req, res) => {
           stripeLivemode: record.stripeLivemode,
           providerTransferAmountMinor: transferredAmountMinor,
           hasVerifiedProviderTransfer: transfer.grossMinor > 0,
+          providerTransferReversed: transfer.reversed,
+          payoutStartedAt: payout?.transferInitiatedAt || payout?.lastAttemptedAt || null,
+          payoutStatus: payout?.status === 'transferred' && transfer.grossMinor === 0
+            ? 'reconciliation_required'
+            : payout?.status,
+          payoutFailureCode: payout?.failureCode || null,
+          payoutFailureMessage: ['PAYOUT_SETUP_REQUIRED', 'PAYOUT_NOT_ENABLED'].includes(payout?.failureCode)
+            ? 'Fullfør Stripe Connect-oppsettet for å kunne motta utbetaling.'
+            : payout?.failureCode
+              ? 'Utbetalingen kunne ikke fullføres. Kontakt kundestøtte hvis problemet vedvarer.'
+              : null,
+          stripeTransferId: transfer.stripeTransferId,
+          transferDate: transfer.transferDate,
+          transferLivemode: typeof record.stripeLivemode === 'boolean'
+            ? record.stripeLivemode
+            : payout?.stripeLivemode,
+          payoutAmountMinor: Number.isFinite(payout?.netProviderAmount)
+            ? Math.round(payout.netProviderAmount * 100)
+            : Math.round(Number(record.amounts.netProvider || 0) * 100),
           refundCompletedAt: record.refundCompletedAt,
           refundFailedAt: record.refundFailedAt,
           providerConnectDeadlineAt: record.providerConnectDeadlineAt,
@@ -500,23 +561,45 @@ exports.getSafePayHistory = async (req, res) => {
         orderId: { $in: orderIds },
         status: 'released',
       });
-      const verifiedTransfers = orderIds.length
-        ? await StripeTransferRecord.find({
-            orderId: { $in: orderIds },
-            providerId: userId,
-            normalizedStatus: { $in: ['transferred', 'partially_reversed', 'fully_reversed'] },
-            lastVerifiedAt: { $ne: null },
-          }).lean()
-        : [];
+      const [payouts, verifiedTransfers] = orderIds.length
+        ? await Promise.all([
+            Payout.find({ orderId: { $in: orderIds }, providerId: userId }).lean(),
+            StripeTransferRecord.find({
+              orderId: { $in: orderIds },
+              providerId: userId,
+              normalizedStatus: { $in: ['transferred', 'partially_reversed', 'fully_reversed'] },
+              lastVerifiedAt: { $ne: null },
+            }).lean(),
+          ])
+        : [[], []];
+      const payoutByOrder = new Map(payouts.map((payout) => [String(payout.orderId), payout]));
+      const paymentByOrder = new Map(payments.map((payment) => [String(payment.orderId), payment]));
       const transferByOrder = new Map();
       for (const transfer of verifiedTransfers) {
         const key = String(transfer.orderId);
-        const current = transferByOrder.get(key) || { amountMinor: 0, grossMinor: 0 };
+        const expectedMode = paymentByOrder.get(key)?.stripeLivemode ??
+          payoutByOrder.get(key)?.stripeLivemode;
+        if (typeof expectedMode !== 'boolean' || transfer.livemode !== expectedMode) continue;
+        const current = transferByOrder.get(key) || {
+          amountMinor: 0,
+          grossMinor: 0,
+          stripeTransferId: null,
+          transferDate: null,
+          reversed: false,
+        };
+        const netAmountMinor = Math.max(
+          0,
+          Number(transfer.amount || 0) - Number(transfer.amountReversed || 0)
+        );
         transferByOrder.set(key, {
-          amountMinor:
-            current.amountMinor +
-            Math.max(0, Number(transfer.amount || 0) - Number(transfer.amountReversed || 0)),
+          amountMinor: current.amountMinor + netAmountMinor,
           grossMinor: current.grossMinor + Number(transfer.amount || 0),
+          stripeTransferId: netAmountMinor > 0 ? transfer.stripeObjectId : current.stripeTransferId,
+          transferDate: netAmountMinor > 0
+            ? transfer.stripeCreatedAt || transfer.lastVerifiedAt
+            : current.transferDate,
+          reversed: current.reversed ||
+            (Number(transfer.amount || 0) > 0 && Number(transfer.amountReversed || 0) >= Number(transfer.amount || 0)),
         });
       }
 
@@ -540,7 +623,14 @@ exports.getSafePayHistory = async (req, res) => {
         const tax = Math.round(order.agreedPrice * 0); // 0% tax for now
         const netProvider = order.agreedPrice - fee;
         const totalCustomer = order.agreedPrice + fee;
-        const transfer = transferByOrder.get(String(order._id)) || { amountMinor: 0, grossMinor: 0 };
+        const transfer = transferByOrder.get(String(order._id)) || {
+          amountMinor: 0,
+          grossMinor: 0,
+          stripeTransferId: null,
+          transferDate: null,
+          reversed: false,
+        };
+        const payout = payoutByOrder.get(String(order._id));
         const transferredAmountMinor = transfer.amountMinor;
 
         if (isProvider) {
@@ -563,6 +653,20 @@ exports.getSafePayHistory = async (req, res) => {
           isProvider,
           isCustomer: !isProvider,
           providerTransferAmountMinor: transferredAmountMinor,
+          hasVerifiedProviderTransfer: transfer.grossMinor > 0,
+          providerTransferReversed: transfer.reversed,
+          payoutAmountMinor: Math.round((payout?.netProviderAmount ?? netProvider) * 100),
+          payoutStatus: payout?.status === 'transferred' && transfer.grossMinor === 0
+            ? 'reconciliation_required'
+            : payout?.status,
+          payoutFailureCode: payout?.failureCode || null,
+          payoutFailureMessage: ['PAYOUT_SETUP_REQUIRED', 'PAYOUT_NOT_ENABLED'].includes(payout?.failureCode)
+            ? 'Fullfør Stripe Connect-oppsettet for å kunne motta utbetaling.'
+            : payout?.failureCode
+              ? 'Utbetalingen kunne ikke fullføres. Kontakt kundestøtte hvis problemet vedvarer.'
+              : null,
+          stripeTransferId: transfer.stripeTransferId,
+          transferDate: transfer.transferDate,
           hasVerifiedProviderTransfer: transfer.grossMinor > 0,
           amounts: {
             agreedPrice: order.agreedPrice,
