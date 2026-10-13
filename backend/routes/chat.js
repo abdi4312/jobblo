@@ -20,9 +20,10 @@ const upload = multer({
 const chatController = require('../controllers/chatController');
 const { submitChatReport, getMyChatReports, reportSubmitLimiter } = require('../controllers/chatReportController');
 const { authenticate } = require('../middleware/auth');
-const { checkSubscription } = require('../middleware/checkSubscription');
 
-router.post('/create', authenticate, checkSubscription, chatController.createOrGetChat);
+// Applying already consumes contact entitlement on /orders/request. Opening that
+// applicant's existing job conversation must not consume it a second time.
+router.post('/create', authenticate, chatController.createOrGetChat);
 router.get('/get', authenticate, chatController.getMyChats);
 router.get('/:chatId', authenticate, chatController.getChatById);
 router.post('/:chatId/message', authenticate, chatController.sendMessage);

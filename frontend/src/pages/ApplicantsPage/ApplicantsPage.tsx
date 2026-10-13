@@ -207,6 +207,7 @@ const ApplicantsPage: React.FC = () => {
         {/* Steps Bar */}
         <SafePaySteps
           currentStep={currentStep}
+          navigableThroughStep={progressStep}
           serviceId={serviceId}
           orderId={activeOrder?._id}
         />
