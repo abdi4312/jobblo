@@ -67,6 +67,7 @@ export default function ProviderOrderScreen() {
   const [completionNote, setCompletionNote] = useState('');
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
+  const [connectRequired, setConnectRequired] = useState(false);
   const { data, isLoading, isError, error, refetch } = useProviderOrder(orderId ?? '');
   const startMutation = useStartProviderJobMutation(orderId ?? '');
   const checklistMutation = useProviderChecklistMutation(orderId ?? '');
@@ -76,7 +77,19 @@ export default function ProviderOrderScreen() {
   const { data: reviews = [] } = useProviderOrderReviews(orderId ?? '');
   const reviewMutation = useCreateProviderReviewMutation(orderId ?? '');
 
-  const start = () => startMutation.mutate(undefined, { onError: (e) => Alert.alert('Kunne ikke starte jobben', errorMessage(e, 'Prøv igjen.')) });
+  const start = () => startMutation.mutate(undefined, {
+    onSuccess: () => setConnectRequired(false),
+    onError: (e) => {
+      const code = typeof e === 'object' && e !== null && 'response' in e
+        ? (e.response as { data?: { code?: string } } | undefined)?.data?.code
+        : undefined;
+      if (code === 'STRIPE_CONNECT_REQUIRED') {
+        setConnectRequired(true);
+        return;
+      }
+      Alert.alert('Kunne ikke starte jobben', errorMessage(e, 'Prøv igjen.'));
+    },
+  });
   const toggleChecklist = (itemId: string, completed: boolean) => checklistMutation.mutate({ itemId, providerCompleted: !completed }, { onError: (e) => Alert.alert('Kunne ikke oppdatere sjekklisten', errorMessage(e, 'Prøv igjen.')) });
   const availableSlots = () => {
     const current = evidenceType === 'before' ? (data?.order.beforeImages ?? []).length : (data?.order.afterImages ?? []).length;
@@ -145,6 +158,7 @@ export default function ProviderOrderScreen() {
   return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
     {/* No "Se kontrakt" link: /safepay/checkout is customer-only and its provider guard
         redirects straight back here, so the pair used to bounce the provider in a loop. */}
+    {connectRequired ? <View className="mb-4 rounded-2xl border border-[#E6E7E1] bg-[#F4F6F0] p-4"><Text className="text-sm font-medium text-[#0B0B0B]">Du må fullføre og verifisere Stripe Connect-kontoen din før du kan sende forespørsler eller starte oppdrag.</Text><Pressable onPress={() => router.push('/profile/settings/payout')} className="mt-3 rounded-full bg-[#2E6641] px-4 py-3"><Text className="text-center text-sm font-semibold text-white">Fullfør Stripe Connect</Text></Pressable></View> : null}
     <View className="mb-5 flex-row items-center"><Pressable onPress={() => router.back()} className="flex-row items-center gap-2"><ArrowLeft size={16} color="#63665F" /><Text className="text-[0.8125rem] text-[#63665F]">Tilbake</Text></Pressable></View>
     <View className="mb-4 rounded-2xl bg-[#122A1C] p-5"><View className="flex-row items-start justify-between gap-3"><View className="min-w-0 flex-1"><Text className="text-[1.125rem] font-bold text-white" numberOfLines={2}>{order.serviceId?.title ?? 'Oppdrag'}</Text><Text className="mt-1 text-[0.75rem] text-white/60">Kontrakt #JB-{order._id.substring(0, 8).toUpperCase()}</Text></View><View className="items-end"><Text className="text-[1.25rem] font-bold text-[#8FBF9A]">{order.agreedPrice?.toLocaleString('nb-NO')} kr</Text><Text className="text-[0.6875rem] text-white/60">Du mottar: {calculation.providerNet.toLocaleString('nb-NO')} kr</Text></View></View></View>
     <View className="mb-4 rounded-2xl border border-[#E6E7E1] bg-white p-5"><View className={['self-start rounded-full px-3 py-1.5', config.tone].join(' ')}><Text className="text-[0.75rem] font-semibold text-[#0B0B0B]">{config.label}</Text></View><Text className="mt-2.5 text-[0.875rem] leading-relaxed text-[#63665F]">{config.note}</Text>{activeDispute ? <Text className="mt-2 text-[0.8125rem] font-medium text-[#B4453A]">Tvist er åpnet — utbetalingen er fryst.</Text> : null}</View>

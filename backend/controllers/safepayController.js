@@ -11,6 +11,7 @@ const StripeTransferRecord = require('../models/StripeTransferRecord');
 const Payout = require('../models/Payout');
 const Review = require('../models/Review');
 const { notify } = require('../services/notifications');
+const { ensureProviderConnectReady } = require('../middleware/requireProviderConnect');
 
 /**
  * POST /api/safepay/create-contract
@@ -77,6 +78,8 @@ exports.createContract = async (req, res) => {
         status: jobRequest.status,
       });
     }
+
+    if (!(await ensureProviderConnectReady(req, res, applicantId))) return;
 
     // Prevent duplicate contract.
     //
@@ -279,6 +282,10 @@ exports.startJob = async (req, res) => {
       String(order.customerId) !== String(userId)
     ) {
       return res.status(403).json({ error: 'Ikke autorisert' });
+    }
+
+    if (String(order.providerId) === String(userId)) {
+      if (!(await ensureProviderConnectReady(req, res, order.providerId))) return;
     }
 
     // Bug 5: Validate order status before starting

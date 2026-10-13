@@ -9,6 +9,7 @@ const JobRequest = require('../models/JobRequest');
 const User = require('../models/User');
 const { calculatePointsFromService } = require('../utils/points');
 const { notify } = require('../services/notifications');
+const { ensureProviderConnectReady } = require('../middleware/requireProviderConnect');
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -90,6 +91,8 @@ exports.createJobRequest = async (req, res) => {
 
     if (providerId.toString() === customerId)
       return res.status(400).json({ error: 'Cannot request your own service' });
+
+    if (!(await ensureProviderConnectReady(req, res, customerId))) return;
 
     // --- CHECK APPLICATION LIMIT (HIDDEN FOR NOW) ---
     // if (service.maxApplicants > 0) {
@@ -501,4 +504,3 @@ exports.getCompletedJobDetails = async (req, res) => {
  * either party. Cancelling a paid order is now only reachable through the dispute
  * resolution flow, which records where the money went.
  */
-

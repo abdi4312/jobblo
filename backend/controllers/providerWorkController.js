@@ -10,6 +10,7 @@ const Dispute = require('../models/Dispute');
 const Chat = require('../models/ChatMessage');
 const Service = require('../models/Service');
 const { notify, emitToUser } = require('../services/notifications');
+const { ensureProviderConnectReady } = require('../middleware/requireProviderConnect');
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -62,6 +63,7 @@ exports.startJob = async (req, res) => {
     if (String(order.providerId) !== String(userId))
       return res.status(403).json({ error: 'Kun utfører kan starte jobben' });
     if (order.status === 'in_progress') return res.json({ message: 'Allerede startet', order });
+    if (!(await ensureProviderConnectReady(req, res, order.providerId))) return;
     if (['processing', 'pending', 'reconciliation_required', 'failed', 'manual_review'].includes(
       order.providerConnectTimeout?.status
     )) {

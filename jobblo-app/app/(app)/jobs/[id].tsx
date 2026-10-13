@@ -9,7 +9,7 @@ import {
   Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowLeft,
   Bookmark,
@@ -23,6 +23,7 @@ import {
 } from 'lucide-react-native';
 import { useJobDetails } from '../../../src/hooks/useJobDetails';
 import { useApplyMutation } from '../../../src/hooks/useApplyMutation';
+import { useConnectStatus } from '../../../src/hooks/usePayout';
 import { useMyJobRequests } from '../../../src/hooks/useMyApplications';
 import { useIsServiceSaved } from '../../../src/hooks/useFavoriteLists';
 import { useAuthStore } from '../../../src/store/authStore';
@@ -61,6 +62,12 @@ export default function JobDetailsScreen() {
   const { user, isAuthenticated } = useAuthStore();
   const { data: job, isLoading, isError, refetch } = useJobDetails(id ?? '');
   const requestsQuery = useMyJobRequests(isAuthenticated && !!id);
+  const connectStatusQuery = useConnectStatus(isAuthenticated);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (isAuthenticated) void connectStatusQuery.refetch();
+    }, [connectStatusQuery.refetch, isAuthenticated])
+  );
   const [isApplyModalOpen, setIsApplyModalOpen] = React.useState(false);
   const [applyError, setApplyError] = React.useState<string | null>(null);
   const [saveSheetVisible, setSaveSheetVisible] = React.useState(false);
@@ -81,6 +88,9 @@ export default function JobDetailsScreen() {
         errorMessage = `Du må vente ${minutesLeft} minutter før du kan søke på nytt.`;
       } else if (error.response?.status === 402) {
         errorMessage = 'Du har nådd din månedlige grense for kontakter. Oppgrader planen din for å søke videre.';
+      } else if (errorData?.code === 'STRIPE_CONNECT_REQUIRED') {
+        void connectStatusQuery.refetch();
+        errorMessage = 'Du må fullføre og verifisere Stripe Connect-kontoen din før du kan sende forespørsler eller starte oppdrag.';
       } else if (errorData?.error) {
         errorMessage = String(errorData.error);
       } else if (errorData?.message) {
@@ -140,6 +150,7 @@ export default function JobDetailsScreen() {
   };
 
   const handleApplySubmit = (payload: any) => {
+    if (connectStatusQuery.data?.payoutReady !== true) return;
     applyToJob({
       serviceId: id ?? '',
       message: payload.message,
@@ -422,6 +433,16 @@ export default function JobDetailsScreen() {
         jobTitle={job?.title}
         isLoading={isApplyLoading}
         error={applyError}
+        connectStatus={
+          connectStatusQuery.isLoading
+            ? 'loading'
+            : connectStatusQuery.isError
+              ? 'unavailable'
+              : connectStatusQuery.data?.payoutReady === true
+                ? 'ready'
+                : 'required'
+        }
+        onGoToPayout={() => router.push('/profile/settings/payout')}
       />
 
       <SaveToListSheet

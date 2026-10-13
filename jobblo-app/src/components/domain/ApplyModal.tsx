@@ -16,10 +16,21 @@ export interface ApplyModalProps {
   jobTitle?: string;
   isLoading?: boolean;
   error?: string | null;
+  connectStatus?: 'loading' | 'ready' | 'required' | 'unavailable';
+  onGoToPayout?: () => void;
 }
 
 export const ApplyModal = React.memo(
-  ({ visible, onClose, onSubmit, jobTitle, isLoading = false, error }: ApplyModalProps) => {
+  ({
+    visible,
+    onClose,
+    onSubmit,
+    jobTitle,
+    isLoading = false,
+    error,
+    connectStatus = 'ready',
+    onGoToPayout,
+  }: ApplyModalProps) => {
     const [message, setMessage] = useState('');
     const maxLength = 500;
     const messageLength = message.length;
@@ -65,7 +76,31 @@ export const ApplyModal = React.memo(
             </Text>
           ) : null}
 
-          {error ? (
+          {connectStatus !== 'ready' ? (
+            <View className="mb-4 rounded-xl border border-[#E6E7E1] bg-[#F4F6F0] px-4 py-3">
+              <Text className="text-sm font-semibold text-[#0B0B0B]">
+                {connectStatus === 'loading'
+                  ? 'Kontrollerer Stripe Connect-status...'
+                  : 'Du må fullføre og verifisere Stripe Connect-kontoen din før du kan sende forespørsler eller starte oppdrag.'}
+              </Text>
+              {connectStatus === 'unavailable' ? (
+                <Text className="mt-2 text-sm text-[#63665F]">
+                  Stripe Connect-status kan ikke bekreftes akkurat nå. Prøv igjen senere.
+                </Text>
+              ) : null}
+              {connectStatus !== 'loading' ? (
+                <Pressable
+                  onPress={onGoToPayout}
+                  className="mt-3 items-center rounded-xl bg-[#2E6641] px-4 py-3"
+                  accessibilityRole="button"
+                >
+                  <Text className="text-sm font-semibold text-white">Fullfør Stripe Connect</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+
+          {error && connectStatus === 'ready' ? (
             <View className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2">
               <Text className="text-sm font-medium text-red-700">
                 {typeof error === 'string' ? error : 'Kunne ikke sende forespørsel. Prøv igjen senere.'}
@@ -73,63 +108,67 @@ export const ApplyModal = React.memo(
             </View>
           ) : null}
 
-          <View className="mb-4">
-            <Text className="mb-2 text-sm font-medium text-[#0B0B0B]">
-              Melding til leverandøren <Text className="font-normal text-[#63665F]">(valgfritt)</Text>
-            </Text>
-
-            <TextInput
-              value={message}
-              onChangeText={setMessage}
-              placeholder="Skriv en melding til leverandøren..."
-              placeholderTextColor="#9B9E96"
-              multiline
-              maxLength={maxLength}
-              editable={!isLoading}
-              numberOfLines={4}
-              className="min-h-[104px] w-full rounded-xl border border-[#E6E7E1] bg-white px-4 py-3 text-sm text-[#0B0B0B]"
-              style={{
-                textAlignVertical: 'top',
-                fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
-                shadowOpacity: 0,
-              }}
-            />
-
-            <Text className="mt-1 text-right text-[11px] text-[#9B9E96]">
-              {messageLength}/{maxLength}
-            </Text>
-          </View>
-
-          <View className="flex-row gap-3">
-            <Pressable
-              onPress={handleClose}
-              disabled={isLoading}
-              className={[
-                'flex-1 items-center justify-center rounded-xl border border-[#E6E7E1] bg-white px-4 py-3',
-                isLoading ? 'opacity-60' : '',
-              ].join(' ')}
-            >
-              <Text className="text-sm font-medium text-[#0B0B0B]">Avbryt</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={handleSubmit}
-              disabled={!isValid || isLoading}
-              className={[
-                'flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-[#2F7E47] px-4 py-3',
-                (!isValid || isLoading) ? 'opacity-60' : '',
-              ].join(' ')}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Send size={16} color="#FFFFFF" />
-              )}
-              <Text className="text-sm font-semibold text-white">
-                {isLoading ? 'Sender...' : 'Send forespørsel'}
+          {connectStatus === 'ready' ? (
+            <View className="mb-4">
+              <Text className="mb-2 text-sm font-medium text-[#0B0B0B]">
+                Melding til leverandøren <Text className="font-normal text-[#63665F]">(valgfritt)</Text>
               </Text>
-            </Pressable>
-          </View>
+
+              <TextInput
+                value={message}
+                onChangeText={setMessage}
+                placeholder="Skriv en melding til leverandøren..."
+                placeholderTextColor="#9B9E96"
+                multiline
+                maxLength={maxLength}
+                editable={!isLoading}
+                numberOfLines={4}
+                className="min-h-[104px] w-full rounded-xl border border-[#E6E7E1] bg-white px-4 py-3 text-sm text-[#0B0B0B]"
+                style={{
+                  textAlignVertical: 'top',
+                  fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+                  shadowOpacity: 0,
+                }}
+              />
+
+              <Text className="mt-1 text-right text-[11px] text-[#9B9E96]">
+                {messageLength}/{maxLength}
+              </Text>
+            </View>
+          ) : null}
+
+          {connectStatus === 'ready' ? (
+            <View className="flex-row gap-3">
+              <Pressable
+                onPress={handleClose}
+                disabled={isLoading}
+                className={[
+                  'flex-1 items-center justify-center rounded-xl border border-[#E6E7E1] bg-white px-4 py-3',
+                  isLoading ? 'opacity-60' : '',
+                ].join(' ')}
+              >
+                <Text className="text-sm font-medium text-[#0B0B0B]">Avbryt</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleSubmit}
+                disabled={!isValid || isLoading}
+                className={[
+                  'flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-[#2F7E47] px-4 py-3',
+                  (!isValid || isLoading) ? 'opacity-60' : '',
+                ].join(' ')}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Send size={16} color="#FFFFFF" />
+                )}
+                <Text className="text-sm font-semibold text-white">
+                  {isLoading ? 'Sender...' : 'Send forespørsel'}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
         </View>
       </Dialog>
     );

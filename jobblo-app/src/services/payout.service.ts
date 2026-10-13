@@ -4,6 +4,8 @@ export type PayoutOnboardingStatus = 'none' | 'started' | 'restricted' | 'enable
 
 export type ConnectStatusResponse = {
   hasAccount: boolean;
+  payoutReady: boolean;
+  transfersEnabled: boolean;
   payoutOnboardingStatus: PayoutOnboardingStatus;
   payoutEnabled: boolean;
   chargesEnabled: boolean;

@@ -152,6 +152,7 @@ const ProviderOrderDetailPage: React.FC = () => {
     const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
     const [completionNote, setCompletionNote] = useState('');
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+    const [connectRequired, setConnectRequired] = useState(false);
 
     // Provider review state
     const [showReviewForm, setShowReviewForm] = useState(false);
@@ -186,8 +187,14 @@ const ProviderOrderDetailPage: React.FC = () => {
 
     const startMutation = useMutation({
         mutationFn: () => mainLink.post(`/api/safepay/orders/${orderId}/start`),
-        onSuccess: () => { toast.success('Jobb startet!'); invalidate(); },
-        onError: (e: any) => toast.error(e.response?.data?.error || 'Feil ved start'),
+        onSuccess: () => { setConnectRequired(false); toast.success('Jobb startet!'); invalidate(); },
+        onError: (e: any) => {
+            if (e.response?.data?.code === 'STRIPE_CONNECT_REQUIRED') {
+                setConnectRequired(true);
+                return;
+            }
+            toast.error(e.response?.data?.error || 'Feil ved start');
+        },
     });
 
     const readyMutation = useMutation({
@@ -876,13 +883,28 @@ const ProviderOrderDetailPage: React.FC = () => {
 
                     {/* Start job */}
                     {canStart && (
-                        <Button
-                            onClick={() => startMutation.mutate()}
-                            loading={startMutation.isPending}
-                            className="w-full bg-custom-green text-white rounded-full py-3.5 text-[15px] font-bold flex items-center justify-center gap-2 shadow-md"
-                        >
-                            <Play size={17} /> Start jobben
-                        </Button>
+                        <>
+                            {connectRequired && (
+                                <div className="rounded-xl border border-[#E6E7E1] bg-[#F4F6F0] p-4">
+                                    <p className="text-sm font-medium text-[#0B0B0B]">
+                                        Du må fullføre og verifisere Stripe Connect-kontoen din før du kan sende forespørsler eller starte oppdrag.
+                                    </p>
+                                    <button
+                                        onClick={() => navigate('/settings/payout')}
+                                        className="mt-3 rounded-full bg-[#2E6641] px-4 py-2.5 text-sm font-semibold text-white"
+                                    >
+                                        Fullfør Stripe Connect
+                                    </button>
+                                </div>
+                            )}
+                            <Button
+                                onClick={() => startMutation.mutate()}
+                                loading={startMutation.isPending}
+                                className="w-full bg-custom-green text-white rounded-full py-3.5 text-[15px] font-bold flex items-center justify-center gap-2 shadow-md"
+                            >
+                                <Play size={17} /> Start jobben
+                            </Button>
+                        </>
                     )}
 
                     {/* Continue work */}

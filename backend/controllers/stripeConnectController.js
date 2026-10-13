@@ -10,6 +10,7 @@
 
 const User = require('../models/User');
 const { getStripeConfiguration, getStripeForMode } = require('../config/stripe');
+const { getConnectReadiness } = require('../services/stripeConnectReadiness');
 
 // ── create or retrieve account ──────────────────────────────────────────────
 exports.createOrGetAccount = async (req, res) => {
@@ -140,27 +141,32 @@ exports.refreshAccountStatus = async (req, res) => {
 exports.getStatus = async (req, res) => {
   try {
     const userId = req.userId;
-    const stripeConfig = await getStripeConfiguration();
-    const accountField = stripeConfig.testMode
-      ? 'stripeConnectAccountIdTest'
-      : 'stripeConnectAccountId';
+    const readiness = await getConnectReadiness(userId);
     const user = await User.findById(userId).select(
       'stripeConnectAccountId stripeConnectAccountIdTest payoutOnboardingStatus payoutEnabled chargesEnabled detailsSubmitted connectAccountCreatedAt payoutOnboardingLastRefreshedAt'
     );
     if (!user) return res.status(404).json({ error: 'Bruker ikke funnet' });
 
     res.json({
-      hasAccount:           !!user[accountField],
-      mode: stripeConfig.mode,
-      payoutOnboardingStatus: user.payoutOnboardingStatus,
-      payoutEnabled:          user.payoutEnabled,
-      chargesEnabled:         user.chargesEnabled,
-      detailsSubmitted:       user.detailsSubmitted,
+      hasAccount: readiness.hasAccount,
+      mode: readiness.mode,
+      payoutReady: readiness.ready,
+      transfersEnabled: readiness.transfersEnabled,
+      payoutOnboardingStatus: readiness.payoutOnboardingStatus,
+      payoutEnabled: readiness.payoutEnabled,
+      chargesEnabled: user.chargesEnabled,
+      detailsSubmitted: readiness.detailsSubmitted,
       connectedAt:            user.connectAccountCreatedAt,
       lastRefreshed:          user.payoutOnboardingLastRefreshedAt,
     });
   } catch (err) {
     console.error('getStatus error:', err);
+    if (err.code === 'STRIPE_CONNECT_STATUS_UNAVAILABLE') {
+      return res.status(503).json({
+        error: 'Stripe Connect-status er midlertidig utilgjengelig. Prøv igjen senere.',
+        code: err.code,
+      });
+    }
     res.status(500).json({ error: 'Serverfeil' });
   }
 };
