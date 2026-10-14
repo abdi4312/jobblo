@@ -137,7 +137,6 @@ const ApplicantsPage: React.FC = () => {
 
   const handleSelectApplicant = (applicantId: string, requestId: string) => {
     if (activeOrder) {
-      toast.error('Dette oppdraget har allerede en aktiv kontrakt.');
       if (activeOrder.status === 'awaiting_payment') {
         navigate(`/safepay/checkout/${activeOrder._id}`);
       } else if (['paid', 'in_progress'].includes(activeOrder.status)) {
@@ -337,7 +336,12 @@ const ApplicantsPage: React.FC = () => {
 
             {applicants.length > 0 ? (
               <div className="space-y-4">
-                {applicants.map((app: any, index: number) => (
+                {applicants.map((app: any, index: number) => {
+                  const isContractedApplicant =
+                    activeOrder &&
+                    String(activeOrder.providerId) === String(app.applicant._id);
+
+                  return (
                   <div
                     key={app._id}
                     className={`relative bg-white border rounded-2xl p-4 md:p-5 transition-all ${app.favorite
@@ -520,16 +524,20 @@ const ApplicantsPage: React.FC = () => {
                       <Button
                         onClick={() => handleSelectApplicant(app.applicant._id, app._id)}
                         loading={createContractMutation.isPending}
-                        disabled={!!activeOrder}
+                        disabled={!!activeOrder && !isContractedApplicant}
                         label={
-                          isJobAlreadyPaid
-                            ? 'Betalt'
-                            : hasAwaitingPayment
-                              ? 'Gå til betaling'
-                              : 'Velg og start SafePay'
+                          !activeOrder
+                            ? 'Velg og start SafePay'
+                            : !isContractedApplicant
+                              ? 'Ikke valgt'
+                              : isJobAlreadyPaid
+                                ? 'Betalt'
+                                : hasAwaitingPayment
+                                  ? 'Gå til betaling'
+                                  : 'Kontrakt inngått'
                         }
                         icon={<Check size={16} />}
-                        className={`w-auto rounded-full bg-custom-green px-5 py-2.5 text-[13px] font-medium text-white shadow-sm hover:bg-[#266b3c] sm:flex-1 sm:basis-0 ${activeOrder ? 'opacity-70' : ''}`}
+                        className={`w-auto rounded-full bg-custom-green px-5 py-2.5 text-[13px] font-medium text-white shadow-sm hover:bg-[#266b3c] sm:flex-1 sm:basis-0 ${activeOrder && !isContractedApplicant ? 'opacity-50' : ''}`}
                       />
                       {/* (F-35) "Velg uten SafePay" removed: it only fired
                           toast.success('Bruker valgt uten SafePay') — no API call, no
@@ -550,13 +558,14 @@ const ApplicantsPage: React.FC = () => {
                         label="Send melding"
                         icon={<MessageCircle size={16} />}
                         loading={chatStartingFor === app.applicant._id}
-                        disabled={!!chatStartingFor}
-                        className="w-auto rounded-full border-black/20 px-5 py-2.5 text-[13px] font-medium hover:bg-gray-50 sm:flex-1 sm:basis-0"
+                        disabled={!!chatStartingFor || (!!activeOrder && !isContractedApplicant)}
+                        className={`w-auto rounded-full border-black/20 px-5 py-2.5 text-[13px] font-medium hover:bg-gray-50 sm:flex-1 sm:basis-0 ${activeOrder && !isContractedApplicant ? 'opacity-50' : ''}`}
                         onClick={() => handleStartChat(app.applicant._id)}
                       />
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="bg-white rounded-2xl border border-black/5">

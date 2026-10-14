@@ -183,8 +183,8 @@ export default function SafePayPage() {
                         <AdminFilterSelect
                             value={timeoutReview}
                             onChange={(value) => { setTimeoutReview(value); setPage(1); }}
+                            placeholder="Alle Connect/refusjoner"
                             options={[
-                                { label: 'Alle Connect/refusjoner', value: '' },
                                 { label: 'Krever oppfølging', value: 'true' },
                             ]}
                         />
