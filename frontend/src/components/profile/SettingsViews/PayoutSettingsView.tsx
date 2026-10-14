@@ -114,6 +114,7 @@ export const PayoutSettingsView = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [linking, setLinking] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [platformSetupRequired, setPlatformSetupRequired] = useState(false);
 
   const fetchStatus = useCallback(async () => {
     const response = await mainLink.get<ConnectStatus>('/api/connect/status');
@@ -178,6 +179,7 @@ export const PayoutSettingsView = () => {
 
   const handleAccountAction = async () => {
     setLinking(true);
+    setPlatformSetupRequired(false);
     try {
       const response = await mainLink.post<{ url?: string }>('/api/connect/account-link');
       if (!response.data?.url) {
@@ -186,6 +188,15 @@ export const PayoutSettingsView = () => {
       }
       window.location.assign(response.data.url);
     } catch (error) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        (error as { response?: { data?: { code?: string } } }).response?.data?.code ===
+          'STRIPE_CONNECT_PLATFORM_SETUP_REQUIRED'
+      ) {
+        setPlatformSetupRequired(true);
+      }
       toast.error(getErrorMessage(error));
     } finally {
       setLinking(false);
@@ -284,6 +295,12 @@ export const PayoutSettingsView = () => {
         </div>
       )}
 
+      {platformSetupRequired && (
+        <div role="alert" className="rounded-xl border border-[#F1E1C4] bg-[#FBF5E9] px-4 py-3 text-sm leading-5 text-[#614109]">
+          Stripe Connect-oppsettet må fullføres av plattformadministratoren. Du trenger ikke gjøre flere forsøk nå.
+        </div>
+      )}
+
       {loading ? (
         <div className="animate-pulse space-y-4" aria-label="Laster Stripe-status">
           <div className="h-36 rounded-2xl bg-[#F4F6F0]" />
@@ -327,11 +344,11 @@ export const PayoutSettingsView = () => {
                 <button
                   type="button"
                   onClick={() => void handleAccountAction()}
-                  disabled={linking || refreshing}
+                  disabled={linking || refreshing || platformSetupRequired}
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2E6641] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#245536] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/20 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {linking ? <Loader2 size={16} className="animate-spin" /> : <ExternalLink size={16} />}
-                  {linking ? 'Åpner Stripe...' : actionLabel}
+                  {linking ? 'Åpner Stripe...' : platformSetupRequired ? 'Venter på plattformadministrator' : actionLabel}
                 </button>
                 {state === 'pending' && (
                   <button

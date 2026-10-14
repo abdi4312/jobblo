@@ -229,7 +229,7 @@ describe('BUG-006: Stripe Connect & Sensitive Data Leak Prevention', () => {
       ).rejects.toThrow('PAYOUT_SETUP_REQUIRED');
     });
 
-    it('should throw PAYOUT_NOT_ENABLED if provider Connect account is not enabled for payouts', async () => {
+    it('uses the selected Stripe account as payout readiness authority, not the shared cached flag', async () => {
       const orderId = '507f1f77bcf86cd799439022';
       const providerId = '507f1f77bcf86cd799439023';
 
@@ -247,6 +247,12 @@ describe('BUG-006: Stripe Connect & Sensitive Data Leak Prevention', () => {
           payoutEnabled: false,
         }),
       });
+      mockStripe.accounts.retrieve.mockResolvedValueOnce({
+        id: 'acct_test123',
+        deleted: false,
+        payouts_enabled: false,
+        capabilities: { transfers: 'active' },
+      });
 
       await expect(
         releasePayoutToProvider({
@@ -261,7 +267,9 @@ describe('BUG-006: Stripe Connect & Sensitive Data Leak Prevention', () => {
           stripeCheckoutSessionId: 'cs_test_123',
           stripePaymentIntentId: 'pi_test_123',
         })
-      ).rejects.toThrow('PAYOUT_NOT_ENABLED');
+      ).rejects.toMatchObject({ code: 'PAYOUT_CONNECT_ACCOUNT_UNVERIFIED' });
+      expect(mockStripe.accounts.retrieve).toHaveBeenCalledWith('acct_test123');
+      expect(mockStripe.transfers.create).not.toHaveBeenCalled();
     });
 
     it('should create Stripe transfer and mark payout transferred on success', async () => {
@@ -280,7 +288,7 @@ describe('BUG-006: Stripe Connect & Sensitive Data Leak Prevention', () => {
         select: jest.fn().mockResolvedValue({
           _id: providerId,
           stripeConnectAccountIdTest: 'acct_test123',
-          payoutEnabled: true,
+          payoutEnabled: false,
         }),
       });
 

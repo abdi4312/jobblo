@@ -13,9 +13,9 @@ class StripeConnectUnavailableError extends Error {
   }
 }
 
-async function getConnectReadiness(userId) {
+async function getConnectReadiness(userId, selectedConfig) {
   try {
-    const config = await getStripeConfiguration();
+    const config = selectedConfig || await getStripeConfiguration();
     const accountField = config.testMode
       ? 'stripeConnectAccountIdTest'
       : 'stripeConnectAccountId';
@@ -45,6 +45,15 @@ async function getConnectReadiness(userId) {
 
     const stripe = await getStripeForMode(config.testMode);
     const account = await stripe.accounts.retrieve(accountId);
+    if (
+      account.id !== accountId ||
+      (account.metadata?.jobbloUserId &&
+        account.metadata.jobbloUserId !== String(userId))
+    ) {
+      const error = new Error('Connected account does not match the stored Jobblo provider.');
+      error.code = 'STRIPE_CONNECT_ACCOUNT_MODE_MISMATCH';
+      throw error;
+    }
     const requirements = account.requirements || {};
     const currentlyDue = requirements.currently_due || [];
     const pastDue = requirements.past_due || [];
@@ -77,7 +86,25 @@ async function getConnectReadiness(userId) {
             : 'started',
     };
   } catch (error) {
-    if (error.code === 'USER_NOT_FOUND') throw error;
+    if (
+      error.type === 'StripeInvalidRequestError' &&
+      (error.code === 'resource_missing' || error.statusCode === 404)
+    ) {
+      const missing = new Error('Stored Stripe Connect account was not found in the selected mode.');
+      missing.code = 'STRIPE_CONNECT_ACCOUNT_NOT_FOUND';
+      missing.cause = error;
+      throw missing;
+    }
+    if (error.type === 'StripeInvalidRequestError' && error.code === 'account_invalid') {
+      const mismatch = new Error('Stored Stripe Connect account does not match the selected mode.');
+      mismatch.code = 'STRIPE_CONNECT_ACCOUNT_MODE_MISMATCH';
+      mismatch.cause = error;
+      throw mismatch;
+    }
+    if (['USER_NOT_FOUND', 'STRIPE_CONNECT_ACCOUNT_MODE_MISMATCH'].includes(error.code)) {
+      throw error;
+    }
+    if (error.code === 'STRIPE_CONNECT_ACCOUNT_NOT_FOUND') throw error;
     throw new StripeConnectUnavailableError(error);
   }
 }

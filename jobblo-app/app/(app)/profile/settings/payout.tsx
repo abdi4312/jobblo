@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Alert, AppState, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { AlertCircle, ArrowLeft, CheckCircle2, Clock3, ExternalLink, Info, Loader2, ShieldCheck } from 'lucide-react-native';
@@ -20,14 +20,15 @@ function deriveStatus(s: ConnectStatusResponse): StatusKind {
 }
 
 function getErrorInfo(error: unknown) {
-  const err = error as { response?: { status?: number; data?: { error?: string; message?: string } } };
+  const err = error as { response?: { status?: number; data?: { error?: string; message?: string; code?: string } } };
   const status = err?.response?.status;
   const message = err?.response?.data?.error || err?.response?.data?.message;
-  return { status, message };
+  return { status, message, code: err?.response?.data?.code };
 }
 
 export default function PayoutSettingsScreen() {
   const router = useRouter();
+  const [platformSetupRequired, setPlatformSetupRequired] = useState(false);
   const statusQuery = useConnectStatus();
   const accountLinkMutation = useCreateAccountLinkMutation();
   const refreshMutation = useRefreshStatusMutation();
@@ -75,6 +76,9 @@ export default function PayoutSettingsScreen() {
       },
       onError: (error) => {
         const info = getErrorInfo(error);
+        if (info.code === 'STRIPE_CONNECT_PLATFORM_SETUP_REQUIRED') {
+          setPlatformSetupRequired(true);
+        }
         if (info.status === 401) {
           Alert.alert('Pålogging kreves', 'Du må være innlogget for å sette opp utbetalinger.');
           return;
@@ -266,6 +270,15 @@ export default function PayoutSettingsScreen() {
           </View>
         ) : null}
 
+        {platformSetupRequired ? (
+          <View accessibilityRole="alert" className="mb-4 rounded-2xl border border-[#F1E1C4] bg-[#FBF5E9] p-4">
+            <Text className="text-sm font-semibold text-[#614109]">Stripe Connect-oppsett avventer administrator</Text>
+            <Text className="mt-1 text-xs leading-5 text-[#614109]">
+              Plattformadministratoren må fullføre Stripe-oppsettet. Du trenger ikke prøve å koble til på nytt nå.
+            </Text>
+          </View>
+        ) : null}
+
         {statusCard}
 
         <View className="mt-3 rounded-2xl border border-[#E6E7E1] bg-white p-5">
@@ -322,7 +335,7 @@ export default function PayoutSettingsScreen() {
 
         <Pressable
           onPress={handleCta}
-          disabled={pending}
+          disabled={pending || platformSetupRequired}
           className={[
             'mt-3 min-h-12 flex-row items-center justify-center rounded-xl px-5 py-3',
             pending ? 'opacity-70' : '',
@@ -339,7 +352,9 @@ export default function PayoutSettingsScreen() {
           ) : (
             <>
               {ctaIcon}
-              <Text className="ml-2 text-[0.9375rem] font-semibold text-white">{ctaLabel}</Text>
+              <Text className="ml-2 text-[0.9375rem] font-semibold text-white">
+                {platformSetupRequired ? 'Venter på plattformadministrator' : ctaLabel}
+              </Text>
             </>
           )}
         </Pressable>

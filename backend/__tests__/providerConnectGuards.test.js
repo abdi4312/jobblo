@@ -24,6 +24,7 @@ const orderController = require('../controllers/orderController');
 const providerWorkController = require('../controllers/providerWorkController');
 const Dispute = require('../models/Dispute');
 const { getConnectReadiness } = require('../services/stripeConnectReadiness');
+const { ensureProviderConnectReady } = require('../middleware/requireProviderConnect');
 
 function makeRes() {
   return {
@@ -88,4 +89,18 @@ it('rejects starting work before changing the order when Connect is not ready', 
   expect(res.statusCode).toBe(403);
   expect(res.body.code).toBe('STRIPE_CONNECT_REQUIRED');
   expect(Order.findOneAndUpdate).not.toHaveBeenCalled();
+});
+
+it('returns a support-directed conflict when the saved account is missing in the selected mode', async () => {
+  getConnectReadiness.mockRejectedValue(
+    Object.assign(new Error('No such account'), {
+      code: 'STRIPE_CONNECT_ACCOUNT_NOT_FOUND',
+    })
+  );
+  const res = makeRes();
+
+  await expect(ensureProviderConnectReady({}, res, 'provider-id')).resolves.toBe(false);
+  expect(res.statusCode).toBe(409);
+  expect(res.body.code).toBe('STRIPE_CONNECT_ACCOUNT_NOT_FOUND');
+  expect(res.body.error).toContain('Kontakt kundestøtte');
 });

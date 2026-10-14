@@ -335,13 +335,6 @@ async function releasePayoutToProvider(opts) {
     throw err;
   }
 
-  if (!provider.payoutEnabled) {
-    const err = new Error('PAYOUT_NOT_ENABLED: Provider\'s Stripe Connect account is not yet enabled for payouts.');
-    err.code = 'PAYOUT_NOT_ENABLED';
-    err.providerId = String(providerId);
-    throw err;
-  }
-
   // ── 3. Upsert Payout record ────────────────────────────────────────────────
   const saveOpts = session ? { session } : {};
 
@@ -508,6 +501,8 @@ async function releasePayoutToProvider(opts) {
   if (
     account.id !== stripeConnectAccountId ||
     account.deleted ||
+    (account.metadata?.jobbloUserId &&
+      account.metadata.jobbloUserId !== String(providerId)) ||
     account.payouts_enabled !== true ||
     account.capabilities?.transfers !== 'active'
   ) {

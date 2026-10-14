@@ -27,6 +27,14 @@ exports.ensureProviderConnectReady = async (req, res, userId) => {
       res.status(404).json({ error: 'Bruker ikke funnet' });
       return false;
     }
+    if (error.code === 'STRIPE_CONNECT_ACCOUNT_NOT_FOUND' ||
+        error.code === 'STRIPE_CONNECT_ACCOUNT_MODE_MISMATCH') {
+      res.status(409).json({
+        error: 'Den lagrede Stripe-kontoen ble ikke funnet i valgt modus. Kontakt kundestøtte.',
+        code: error.code,
+      });
+      return false;
+    }
     console.error('Could not verify provider Stripe Connect readiness:', error);
     res.status(500).json({ error: 'Kunne ikke kontrollere Stripe Connect-status.' });
     return false;

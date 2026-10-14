@@ -125,6 +125,19 @@ export function ContractViewModal({ orderId, trigger }: ContractViewModalProps) 
                                                 Kanselleringsårsak
                                             </p>
                                             <p className="mt-1 text-sm text-red-800">{cancellationReason}</p>
+                                            {order.paymentStatus === 'refunded' ? (
+                                                <p className="mt-2 text-xs text-red-700">
+                                                    Full refusjon er bekreftet. Det kan ta 1–2 virkedager før pengene vises på kontoen din.
+                                                </p>
+                                            ) : ['failed', 'manual_review'].includes(order.providerConnectTimeout?.status) ? (
+                                                <p className="mt-2 text-xs text-red-700">
+                                                    Refusjonen kunne ikke bekreftes automatisk og følges opp manuelt.
+                                                </p>
+                                            ) : (
+                                                <p className="mt-2 text-xs text-red-700">
+                                                    Oppdraget er kansellert og refusjonen behandles. Når Stripe har bekreftet refusjonen, kan det ta 1–2 virkedager før pengene vises på kontoen din.
+                                                </p>
+                                            )}
                                             {order.providerConnectDeadlineDays && (
                                                 <p className="mt-2 text-xs text-red-700">
                                                     Frist ved betaling: {order.providerConnectDeadlineDays} dager

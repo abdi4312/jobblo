@@ -119,3 +119,19 @@ it('fails closed with a distinct error when Stripe cannot verify the account', a
     StripeConnectUnavailableError
   );
 });
+
+it('reports a saved account missing from the selected mode instead of treating it as unconnected', async () => {
+  getStripeForMode.mockResolvedValue({
+    accounts: {
+      retrieve: jest.fn().mockRejectedValue(Object.assign(new Error('No such account'), {
+        type: 'StripeInvalidRequestError',
+        code: 'resource_missing',
+        statusCode: 404,
+      })),
+    },
+  });
+
+  await expect(getConnectReadiness('worker')).rejects.toMatchObject({
+    code: 'STRIPE_CONNECT_ACCOUNT_NOT_FOUND',
+  });
+});
