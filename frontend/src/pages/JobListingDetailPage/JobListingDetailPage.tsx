@@ -29,6 +29,7 @@ import {
   ChevronRight,
   CheckCircle2,
   ShieldCheck,
+  X,
 } from 'lucide-react';
 import { BackLink } from '../../components/Ui/BackLink';
 import { dateFormatter } from '../../utils/dateFormatter';
@@ -43,7 +44,7 @@ import { BuyContactModal } from '../../components/shared/BuyContactModal';
 import OrderRequestModal from '../../components/job/OrderRequestModal';
 import ReportJobModal from '../../components/job/ReportJobModal';
 import { submitUserJobReport } from '../../api/admin/jobReports';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import mainLink from '../../api/mainURLs';
 
 import { usePlans } from '../../features/plans/hooks';
@@ -134,6 +135,7 @@ const JobListingDetailPage = () => {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [isConnectRequiredModalOpen, setIsConnectRequiredModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
   const [isTimerActive, setIsTimerActive] = useState(false);
@@ -164,6 +166,13 @@ const JobListingDetailPage = () => {
 
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const currentUser = useUserStore((state) => state.user);
+  const connectStatusQuery = useQuery({
+    queryKey: ['connect-readiness', currentUser?._id],
+    queryFn: async () => (await mainLink.get('/api/connect/status')).data,
+    enabled: isAuth,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
 
   const { data: plans } = usePlans();
   const { data: jobRequests } = useMyJobRequestsQuery(isAuth);
@@ -311,11 +320,18 @@ const JobListingDetailPage = () => {
       return;
     }
 
+    if (connectStatusQuery.data?.payoutReady !== true) {
+      setIsConnectRequiredModalOpen(true);
+      if (connectStatusQuery.isError) void connectStatusQuery.refetch();
+      return;
+    }
+
     setIsOrderModalOpen(true);
   };
 
   const handleOrderSubmit = (message?: string) => {
     if (!job?._id) return;
+    if (connectStatusQuery.data?.payoutReady !== true) return;
 
     createJobRequestMutation.mutate(
       { serviceId: job._id, message },
@@ -325,6 +341,12 @@ const JobListingDetailPage = () => {
           toast.success('Forespørsel sendt! Venter på godkjenning.');
         },
         onError: (err: any) => {
+          if (err.response?.data?.code === 'STRIPE_CONNECT_REQUIRED') {
+            setIsOrderModalOpen(false);
+            setIsConnectRequiredModalOpen(true);
+            void connectStatusQuery.refetch();
+            return;
+          }
           if (err.response?.status === 403 && err.response?.data?.isDelayed) {
             setUnlockTime(err.response.data.unlockAt);
             setIsTimerActive(true);
@@ -957,6 +979,50 @@ const JobListingDetailPage = () => {
         isLoading={createJobRequestMutation.isPending}
         jobTitle={job.title}
       />
+
+      {isConnectRequiredModalOpen && (
+        <div
+          className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => setIsConnectRequiredModalOpen(false)}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="connect-required-title"
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <h2 id="connect-required-title" className="text-lg font-bold text-[#0B0B0B]">
+                Stripe Connect må fullføres
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsConnectRequiredModalOpen(false)}
+                aria-label="Lukk"
+                className="rounded-lg p-1 text-[#63665F] hover:bg-[#F4F6F0]"
+              >
+                <X size={18} strokeWidth={2} aria-hidden="true" />
+              </button>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-[#63665F]">
+              Du må fullføre og verifisere Stripe Connect-kontoen din før du kan sende forespørsler eller starte oppdrag.
+            </p>
+            {connectStatusQuery.isError && (
+              <p className="mt-2 text-sm text-[#B4453A]">
+                Stripe Connect-status kan ikke bekreftes akkurat nå. Prøv igjen senere.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => navigate('/settings/payout')}
+              className="mt-5 w-full rounded-xl bg-[#2F7E47] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#266b3c]"
+            >
+              Fullfør Stripe Connect
+            </button>
+          </section>
+        </div>
+      )}
 
       <ReportJobModal
         isOpen={isReportModalOpen}

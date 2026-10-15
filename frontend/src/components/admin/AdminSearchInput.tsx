@@ -7,6 +7,7 @@ interface AdminSearchInputProps {
     onChange: (value: string) => void;
     placeholder?: string;
     className?: string;
+    inputClassName?: string;
     disabled?: boolean;
 }
 
@@ -15,6 +16,7 @@ export function AdminSearchInput({
     onChange,
     placeholder = 'Søk...',
     className,
+    inputClassName,
     disabled,
 }: AdminSearchInputProps) {
     return (
@@ -33,7 +35,8 @@ export function AdminSearchInput({
                 className={cn(
                     'w-full pl-9 pr-9 py-2.5 text-sm rounded-xl border-gray-200 bg-gray-50',
                     'focus:bg-white focus:border-[#2d4a3e] focus:ring-2 focus:ring-[#2d4a3e]/10 focus:outline-none',
-                    'placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all'
+                    'placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all',
+                    inputClassName
                 )}
             />
             {value && (

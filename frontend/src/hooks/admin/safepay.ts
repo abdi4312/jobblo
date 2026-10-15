@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import * as safePayApi from '../../api/admin/safepay';
-import type { SafePayQuery, DisputesQuery } from '../../types/admin/safepay';
+import type { SafePayFinanceSummary, SafePayQuery, DisputesQuery } from '../../types/admin/safepay';
 
 const keys = {
     safePayList: (q: SafePayQuery) => ['admin', 'safepay', 'list', q] as const,
     safePaySummary: () => ['admin', 'safepay', 'summary'] as const,
+    safePayFinanceSummary: (mode: SafePayFinanceSummary['mode']) => ['admin', 'safepay', 'finance-summary', mode] as const,
     safePayDetail: (id: string) => ['admin', 'safepay', 'detail', id] as const,
     safePayTimeline: (id: string) => ['admin', 'safepay', 'timeline', id] as const,
     disputesList: (q: DisputesQuery) => ['admin', 'disputes', 'list', q] as const,
@@ -18,6 +19,13 @@ export const useSafePayList = (q: SafePayQuery) =>
 
 export const useSafePaySummary = () =>
     useQuery({ queryKey: keys.safePaySummary(), queryFn: safePayApi.fetchSafePaySummary, staleTime: 30_000 });
+
+export const useSafePayFinanceSummary = (mode: SafePayFinanceSummary['mode']) =>
+    useQuery({
+        queryKey: keys.safePayFinanceSummary(mode),
+        queryFn: () => safePayApi.fetchSafePayFinanceSummary(mode),
+        staleTime: 30_000,
+    });
 
 export const useSafePayDetail = (orderId: string) =>
     useQuery({ queryKey: keys.safePayDetail(orderId), queryFn: () => safePayApi.fetchSafePayDetail(orderId), enabled: !!orderId, staleTime: 30_000 });

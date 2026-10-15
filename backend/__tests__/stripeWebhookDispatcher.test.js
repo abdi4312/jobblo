@@ -5,8 +5,12 @@
  */
 
 jest.mock('../config/stripe', () => ({
-  getStripe: jest.fn(),
-  getStripeWebhookSecret: jest.fn(),
+  getStripeConfiguration: jest.fn(),
+  getStripeForMode: jest.fn(),
+}));
+jest.mock('../services/stripe/webhookReadiness', () => ({
+  recordVerifiedDelivery: jest.fn(),
+  recordDeliveryProblem: jest.fn(),
 }));
 jest.mock('../services/stripe/eventLedger', () => ({
   claimEvent: jest.fn(),
@@ -27,13 +31,15 @@ jest.mock('../controllers/SafePayCheckoutController', () => ({
 jest.mock('../models/Order', () => ({ updateOne: jest.fn() }));
 jest.mock('../utils/errorLogger', () => ({ logApplicationError: jest.fn() }));
 
-const { getStripe, getStripeWebhookSecret } = require('../config/stripe');
+const { getStripeConfiguration, getStripeForMode } = require('../config/stripe');
+const webhookReadiness = require('../services/stripe/webhookReadiness');
 const ledger = require('../services/stripe/eventLedger');
 const provisioning = require('../services/stripe/provisioning');
 const { confirmPaidSession } = require('../controllers/SafePayCheckoutController');
 const Order = require('../models/Order');
 const { logApplicationError } = require('../utils/errorLogger');
 const { stripeWebhook } = require('../services/stripe/webhookDispatcher');
+const Stripe = require('stripe');
 
 function makeRes() {
   return {
@@ -66,9 +72,9 @@ function makeReq(overrides = {}) {
 }
 
 function mockStripeConstructing(event) {
-  getStripe.mockResolvedValue({
+  getStripeForMode.mockResolvedValue({
     webhooks: {
-      constructEvent: jest.fn(() => event),
+      constructEvent: jest.fn(() => ({ livemode: false, ...event })),
     },
   });
 }
@@ -82,7 +88,17 @@ const paidSafePaySession = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  getStripeWebhookSecret.mockResolvedValue('whsec_test');
+  getStripeConfiguration.mockResolvedValue({
+    testMode: true,
+    mode: 'test',
+    secretKey: 'sk_test_fake',
+    webhookSecret: 'whsec_test',
+    keyModeValid: true,
+    webhookSecretValid: true,
+    fingerprint: 'fingerprint_test',
+  });
+  webhookReadiness.recordVerifiedDelivery.mockResolvedValue();
+  webhookReadiness.recordDeliveryProblem.mockResolvedValue();
   ledger.claimEvent.mockResolvedValue({ claimed: true });
   ledger.markProcessed.mockResolvedValue();
   ledger.releaseClaim.mockResolvedValue();
@@ -90,8 +106,46 @@ beforeEach(() => {
 });
 
 describe('signature verification', () => {
+  it('accepts a valid Stripe SDK-signed event and records readiness only after verification', async () => {
+    const signingSecret = 'whsec_test_fixture';
+    const stripe = Stripe('sk_test_fixture');
+    getStripeForMode.mockResolvedValue(stripe);
+    const payload = JSON.stringify({
+      id: 'evt_signed_fixture',
+      object: 'event',
+      type: 'account.updated',
+      livemode: false,
+      data: { object: { id: 'acct_test' } },
+    });
+    const signature = stripe.webhooks.generateTestHeaderString({
+      payload,
+      secret: signingSecret,
+    });
+    getStripeConfiguration.mockResolvedValue({
+      testMode: true,
+      mode: 'test',
+      secretKey: 'sk_test_fixture',
+      webhookSecret: signingSecret,
+      keyModeValid: true,
+      webhookSecretValid: true,
+      fingerprint: 'fingerprint_test',
+    });
+
+    const res = makeRes();
+    await stripeWebhook(
+      makeReq({ body: Buffer.from(payload), headers: { 'stripe-signature': signature } }),
+      res
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(webhookReadiness.recordVerifiedDelivery).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'test' }),
+      'evt_signed_fixture'
+    );
+  });
+
   it('rejects an event whose signature does not verify, and never claims it', async () => {
-    getStripe.mockResolvedValue({
+    getStripeForMode.mockResolvedValue({
       webhooks: {
         constructEvent: jest.fn(() => {
           throw new Error('No signatures found matching the expected signature');
@@ -108,7 +162,7 @@ describe('signature verification', () => {
   });
 
   it('logs the signature failure with an errorCode, since the logger drops 4xx without one', async () => {
-    getStripe.mockResolvedValue({
+    getStripeForMode.mockResolvedValue({
       webhooks: {
         constructEvent: jest.fn(() => {
           throw new Error('bad signature');
@@ -127,16 +181,24 @@ describe('signature verification', () => {
   });
 
   it('refuses to process anything when no signing secret is configured', async () => {
-    getStripeWebhookSecret.mockResolvedValue(null);
+    getStripeConfiguration.mockResolvedValue({
+      testMode: true,
+      mode: 'test',
+      secretKey: 'sk_test_fake',
+      webhookSecret: null,
+      keyModeValid: true,
+      webhookSecretValid: false,
+      fingerprint: null,
+    });
     mockStripeConstructing({ id: 'evt_1', type: 'checkout.session.completed', data: { object: {} } });
 
     const res = makeRes();
     await stripeWebhook(makeReq(), res);
 
-    expect(res.statusCode).toBe(500);
+    expect(res.statusCode).toBe(503);
     expect(ledger.claimEvent).not.toHaveBeenCalled();
     expect(logApplicationError).toHaveBeenCalledWith(
-      expect.objectContaining({ errorCode: 'STRIPE_WEBHOOK_NOT_CONFIGURED' })
+      expect.objectContaining({ errorCode: 'STRIPE_WEBHOOK_SECRET_MISSING' })
     );
   });
 });
@@ -192,6 +254,25 @@ describe('event-level idempotency', () => {
       expect.objectContaining({ errorCode: 'STRIPE_WEBHOOK_HANDLER_FAILED' })
     );
   });
+
+  it('does not mark an unconfirmed SafePay webhook as processed', async () => {
+    confirmPaidSession.mockResolvedValue({ ok: false, reason: 'amount_mismatch' });
+    mockStripeConstructing({
+      id: 'evt_rejected_safepay',
+      type: 'checkout.session.completed',
+      data: { object: paidSafePaySession },
+    });
+
+    const res = makeRes();
+    await stripeWebhook(makeReq(), res);
+
+    expect(res.statusCode).toBe(500);
+    expect(ledger.markProcessed).not.toHaveBeenCalled();
+    expect(ledger.releaseClaim).toHaveBeenCalledWith(
+      'evt_rejected_safepay',
+      expect.any(Error)
+    );
+  });
 });
 
 describe('routing by session type — the tab-close path', () => {
@@ -216,6 +297,32 @@ describe('routing by session type — the tab-close path', () => {
     expect(confirmPaidSession).not.toHaveBeenCalled();
   });
 
+  it('does not mark a rejected subscription event processed', async () => {
+    provisioning.provisionSubscriptionFromSession.mockResolvedValue({
+      ok: false,
+      reason: 'plan_metadata_mismatch',
+    });
+    mockStripeConstructing({
+      id: 'evt_sub_rejected',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'cs_sub_rejected',
+          mode: 'subscription',
+          payment_status: 'paid',
+          metadata: { userId: 'u1', type: 'subscription' },
+        },
+      },
+    });
+
+    const res = makeRes();
+    await stripeWebhook(makeReq(), res);
+
+    expect(res.statusCode).toBe(500);
+    expect(ledger.markProcessed).not.toHaveBeenCalled();
+    expect(ledger.releaseClaim).toHaveBeenCalledWith('evt_sub_rejected', expect.any(Error));
+  });
+
   it('provisions an EXTRA CONTACT from the webhook alone', async () => {
     provisioning.provisionExtraContactFromSession.mockResolvedValue({ ok: true });
     mockStripeConstructing({
@@ -235,6 +342,32 @@ describe('routing by session type — the tab-close path', () => {
 
     expect(provisioning.provisionExtraContactFromSession).toHaveBeenCalledTimes(1);
     expect(confirmPaidSession).not.toHaveBeenCalled();
+  });
+
+  it('does not mark a rejected extra-contact event processed', async () => {
+    provisioning.provisionExtraContactFromSession.mockResolvedValue({
+      ok: false,
+      reason: 'missing_metadata',
+    });
+    mockStripeConstructing({
+      id: 'evt_extra_rejected',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'cs_extra_rejected',
+          mode: 'payment',
+          payment_status: 'paid',
+          metadata: { userId: 'u1', type: 'extra_contact' },
+        },
+      },
+    });
+
+    const res = makeRes();
+    await stripeWebhook(makeReq(), res);
+
+    expect(res.statusCode).toBe(500);
+    expect(ledger.markProcessed).not.toHaveBeenCalled();
+    expect(ledger.releaseClaim).toHaveBeenCalledWith('evt_extra_rejected', expect.any(Error));
   });
 
   it('routes a SafePay session to confirmPaidSession', async () => {
@@ -298,6 +431,29 @@ describe('subscription lifecycle events', () => {
     await stripeWebhook(makeReq(), makeRes());
 
     expect(provisioning[handlerName]).toHaveBeenCalledTimes(1);
+  });
+
+  it('includes the provisioning failure reason when a subscription update cannot reconcile', async () => {
+    provisioning.applySubscriptionUpdated.mockResolvedValue({
+      ok: false,
+      reason: 'subscription_not_found',
+    });
+    mockStripeConstructing({
+      id: 'evt_subscription_missing',
+      type: 'customer.subscription.updated',
+      data: { object: { id: 'sub_missing' } },
+    });
+
+    const res = makeRes();
+    await stripeWebhook(makeReq(), res);
+
+    expect(res.statusCode).toBe(500);
+    expect(ledger.releaseClaim).toHaveBeenCalledWith(
+      'evt_subscription_missing',
+      expect.objectContaining({
+        message: 'Subscription update could not be reconciled: subscription_not_found',
+      })
+    );
   });
 
   it('marks the order expired on checkout.session.expired', async () => {

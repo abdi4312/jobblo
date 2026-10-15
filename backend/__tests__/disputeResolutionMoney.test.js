@@ -31,22 +31,43 @@ jest.mock('../utils/pagination', () => ({
 jest.mock('../models/Dispute', () => ({ findById: jest.fn() }));
 jest.mock('../models/Order', () => ({}));
 jest.mock('../models/Payment', () => ({ findOne: jest.fn() }));
+jest.mock('../models/Payout', () => ({ findOne: jest.fn() }));
 jest.mock('../models/SafePayHistory', () => ({ findOneAndUpdate: jest.fn() }));
 jest.mock('../models/ChatMessage', () => ({ findByIdAndUpdate: jest.fn() }));
 jest.mock('../models/Notification', () => ({ create: jest.fn() }));
 jest.mock('../models/User', () => ({ findByIdAndUpdate: jest.fn() }));
 jest.mock('../services/admin/activityService', () => ({ logActivity: jest.fn() }));
 jest.mock('../utils/errorLogger', () => ({ logApplicationError: jest.fn() }));
-jest.mock('../config/stripe', () => ({ getStripe: jest.fn() }));
+jest.mock('../config/stripe', () => ({
+  getStripe: jest.fn(),
+  getStripeForMode: jest.fn(),
+}));
 jest.mock('../services/payout/releasePayoutToProvider', () => jest.fn());
+jest.mock('../services/stripe/financialOperations', () => ({
+  executeRefund: jest.fn(async (stripe, operation) => ({
+    operation: { _id: 'financial_operation_1' },
+    refund: await stripe.refunds.create(
+      {
+        payment_intent: operation.paymentIntentId,
+        amount: operation.amount,
+        metadata: { jobbloOperationKey: operation.operationKey },
+      },
+      { idempotencyKey: 'jobblo_financial_test' }
+    ),
+    status: 'succeeded',
+  })),
+  executeTransferReversal: jest.fn(),
+}));
 
 const Dispute = require('../models/Dispute');
 const Payment = require('../models/Payment');
+const Payout = require('../models/Payout');
 const SafePayHistory = require('../models/SafePayHistory');
 const Notification = require('../models/Notification');
-const { getStripe } = require('../config/stripe');
+const { getStripe, getStripeForMode } = require('../config/stripe');
 const releasePayoutToProvider = require('../services/payout/releasePayoutToProvider');
 const { logApplicationError } = require('../utils/errorLogger');
+const { executeRefund } = require('../services/stripe/financialOperations');
 const { resolveDispute } = require('../controllers/admin/disputesAdminController');
 
 const ORDER = () => ({
@@ -57,6 +78,13 @@ const ORDER = () => ({
   agreedPrice: 1000,
   chatId: null,
   status: 'disputed',
+  checkoutMode: 'test',
+  checkoutSessionId: 'cs_1',
+  paymentIntentId: 'pi_1',
+  checkoutCustomerId: 'cus_1',
+  checkoutAmountMinor: 100000,
+  checkoutCurrency: 'nok',
+  checkoutAttemptId: 'attempt_1',
   history: [],
   save: jest.fn().mockResolvedValue(),
 });
@@ -93,7 +121,50 @@ beforeEach(() => {
   captured.error = null;
 
   refundsCreate = jest.fn().mockResolvedValue({ id: 're_1', status: 'succeeded' });
-  getStripe.mockResolvedValue({ refunds: { create: refundsCreate } });
+  const stripe = {
+    checkout: {
+      sessions: {
+        retrieve: jest.fn().mockResolvedValue({
+          id: 'cs_1',
+          livemode: false,
+          status: 'complete',
+          payment_status: 'paid',
+          mode: 'payment',
+          payment_intent: 'pi_1',
+          customer: 'cus_1',
+          metadata: { orderId: 'order_1', userId: 'cust_1' },
+          amount_total: 100000,
+          currency: 'nok',
+        }),
+      },
+    },
+    paymentIntents: {
+      retrieve: jest.fn().mockResolvedValue({
+        id: 'pi_1',
+        status: 'succeeded',
+        amount_received: 100000,
+        customer: 'cus_1',
+        latest_charge: 'ch_1',
+      }),
+    },
+    charges: {
+      retrieve: jest.fn().mockResolvedValue({
+        id: 'ch_1',
+        paid: true,
+        captured: true,
+        amount: 100000,
+        currency: 'nok',
+        payment_intent: 'pi_1',
+        customer: 'cus_1',
+        disputed: false,
+        livemode: false,
+      }),
+    },
+    refunds: { create: refundsCreate },
+  };
+  getStripe.mockResolvedValue(stripe);
+  getStripeForMode.mockResolvedValue(stripe);
+  Payout.findOne.mockReturnValue({ lean: jest.fn().mockResolvedValue(null) });
 
   Payment.findOne.mockResolvedValue({
     stripePaymentIntentId: 'pi_1',
@@ -131,7 +202,7 @@ describe('outcomes that pay the provider', () => {
 
     expect(refundsCreate).toHaveBeenCalledWith(
       expect.objectContaining({ amount: 40000 }), // 400 kr in øre
-      expect.objectContaining({ idempotencyKey: 'dispute_refund_dispute_1' })
+      expect.objectContaining({ idempotencyKey: expect.stringMatching(/^jobblo_financial_/) })
     );
     // This transfer never happened before — the amount was recorded and dropped.
     expect(releasePayoutToProvider).toHaveBeenCalledWith(
@@ -165,7 +236,7 @@ describe('outcomes that return money to the customer', () => {
 
     expect(refundsCreate).toHaveBeenCalledWith(
       expect.objectContaining({ amount: 100000 }),
-      expect.any(Object)
+      expect.objectContaining({ idempotencyKey: expect.stringMatching(/^jobblo_financial_/) })
     );
     expect(releasePayoutToProvider).not.toHaveBeenCalled();
     expect(order.status).toBe('cancelled');
@@ -180,7 +251,7 @@ describe('outcomes that return money to the customer', () => {
     // Previously: no Stripe call whatsoever, order cancelled, platform kept the funds.
     expect(refundsCreate).toHaveBeenCalledWith(
       expect.objectContaining({ amount: 100000 }),
-      expect.any(Object)
+      expect.objectContaining({ idempotencyKey: expect.stringMatching(/^jobblo_financial_/) })
     );
     expect(order.status).toBe('cancelled');
   });

@@ -21,7 +21,7 @@ const DashboardLayout: React.FC = () => {
           },
         }}
       />
-      <div className="flex h-screen overflow-hidden bg-gray-50" translate="no">
+      <div className="flex h-screen overflow-hidden bg-[#f4f6f2]" translate="no">
         <AdminSidebar
           mobileOpen={mobileOpen}
           onMobileClose={() => setMobileOpen(false)}
@@ -31,11 +31,11 @@ const DashboardLayout: React.FC = () => {
           <AdminHeader onMobileMenuOpen={() => setMobileOpen(true)} />
 
           <main
-            className="flex-1 overflow-y-auto p-4 md:p-6"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 md:px-7 md:py-8"
             id="main-content"
             aria-label="Hovedinnhold"
           >
-            <div className="max-w-screen-2xl mx-auto">
+            <div className="mx-auto w-full max-w-[1680px]">
               <Outlet />
             </div>
           </main>

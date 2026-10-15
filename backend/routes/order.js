@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
 const { authenticate } = require('../middleware/auth');
+const { requireServiceApplicantConnectReady } = require('../middleware/requireProviderConnect');
 const { checkSubscription } = require('../middleware/checkSubscription');
 
 /**
@@ -65,7 +66,13 @@ const { checkSubscription } = require('../middleware/checkSubscription');
  *         description: Mangler eller ugyldig autentisering
  */
 router.get('/', authenticate, orderController.getAllOrders);
-router.post('/request', authenticate, checkSubscription, orderController.createJobRequest);
+router.post(
+  '/request',
+  authenticate,
+  requireServiceApplicantConnectReady,
+  checkSubscription,
+  orderController.createJobRequest
+);
 router.get('/requests/my', authenticate, orderController.getMyJobRequests);
 router.patch('/request/:id', authenticate, orderController.updateJobRequestStatus);
 

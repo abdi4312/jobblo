@@ -32,6 +32,13 @@ jest.mock('../models/JobRequest', () => ({
 jest.mock('../models/ChatMessage', () => ({ findOne: jest.fn(), findOneAndUpdate: jest.fn() }));
 jest.mock('../models/Notification', () => ({ create: jest.fn() }));
 jest.mock('../models/User', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
+jest.mock('../services/notifications', () => ({ notify: jest.fn() }));
+jest.mock('../services/stripeConnectReadiness', () => ({
+  getConnectReadiness: jest.fn().mockResolvedValue({ ready: true }),
+  sendConnectReadinessFailure: jest.fn((res) =>
+    res.status(403).json({ code: 'STRIPE_CONNECT_REQUIRED' })
+  ),
+}));
 
 const mongoose = require('mongoose');
 const Order = require('../models/Order');
@@ -40,6 +47,7 @@ const JobRequest = require('../models/JobRequest');
 const Chat = require('../models/ChatMessage');
 const Notification = require('../models/Notification');
 const safepayController = require('../controllers/safepayController');
+const { getConnectReadiness } = require('../services/stripeConnectReadiness');
 
 const OWNER = new mongoose.Types.ObjectId();
 const APPLICANT = new mongoose.Types.ObjectId();
@@ -77,6 +85,7 @@ function req() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  getConnectReadiness.mockResolvedValue({ ready: true });
   Service.findById.mockResolvedValue({
     _id: SERVICE,
     userId: OWNER,
@@ -120,6 +129,19 @@ describe('only a live application can be awarded', () => {
     expect(String(created.customerId)).toBe(String(OWNER)); // owner pays
     expect(String(created.providerId)).toBe(String(APPLICANT)); // applicant works
     expect(created.status).toBe('awaiting_payment');
+    expect(getConnectReadiness).toHaveBeenCalledWith(String(APPLICANT));
+  });
+
+  it('does not create a contract when the applicant is not payout-ready', async () => {
+    JobRequest.findOne.mockResolvedValue({ _id: REQUEST, status: 'pending' });
+    getConnectReadiness.mockResolvedValue({ ready: false });
+    const res = makeRes();
+
+    await safepayController.createContract(req(), res);
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body.code).toBe('STRIPE_CONNECT_REQUIRED');
+    expect(Order).not.toHaveBeenCalled();
   });
 
   it('refuses when the caller does not own the service', async () => {

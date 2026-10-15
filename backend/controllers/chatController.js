@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const { ensureProviderConnectReady } = require('../middleware/requireProviderConnect');
 const Chat = require('../models/ChatMessage');
 const Order = require('../models/Order');
 const Service = require('../models/Service');
@@ -511,6 +512,8 @@ exports.createContract = async (req, res) => {
     if (!workerId) {
       return res.status(400).json({ error: 'Fant ikke motparten i denne samtalen.' });
     }
+
+    if (!(await ensureProviderConnectReady(req, res, workerId))) return;
 
     const order = new Order({
       chatId: chat._id,

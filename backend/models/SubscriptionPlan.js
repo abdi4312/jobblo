@@ -34,6 +34,13 @@ const planSchema = new mongoose.Schema(
     },
 
     isActive: { type: Boolean, default: true },
+
+    // Recurring Stripe Prices are mode-specific. Existing plan prices remain the
+    // source of truth; Stripe Prices are only created from these exact amounts.
+    stripeProductId: String,
+    stripeProductIdTest: String,
+    stripePriceId: String,
+    stripePriceIdTest: String,
   },
   { timestamps: true }
 );

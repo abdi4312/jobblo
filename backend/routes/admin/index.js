@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, requireAdmin } = require('../../middleware/auth');
-const { adminLimiter } = require('../../middleware/rateLimiter');
+const { adminLimiter, financeSyncLimiter } = require('../../middleware/rateLimiter');
 
 const dashboardController = require('../../controllers/admin/dashboardController');
 const usersAdminController = require('../../controllers/admin/usersAdminController');
@@ -14,6 +14,7 @@ const categoriesAdminController = require('../../controllers/admin/categoriesAdm
 const transactionsAdminController = require('../../controllers/admin/transactionsAdminController');
 const safePayAdminController = require('../../controllers/admin/safePayAdminController');
 const disputesAdminController = require('../../controllers/admin/disputesAdminController');
+const stripePaymentIncidentController = require('../../controllers/admin/stripePaymentIncidentController');
 const chatsAdminController = require('../../controllers/admin/chatsAdminController');
 const chatReportsAdminController = require('../../controllers/admin/chatReportsAdminController');
 const jobReportsAdminController = require('../../controllers/admin/jobReportsAdminController');
@@ -23,9 +24,23 @@ const evidenceUploadController = require('../../controllers/admin/evidenceUpload
 const shopAdminController = require('../../controllers/admin/shopAdminController');
 const promotionCodeController = require('../../controllers/admin/promotionCodeController');
 const campaignController = require('../../controllers/campaignController');
+const stripeWebhookHealthController = require('../../controllers/admin/stripeWebhookHealthController');
+const safePayFinanceController = require('../../controllers/safepayFinanceController');
+const stripeBillingController = require('../../controllers/stripeBillingController');
 
 // Apply auth + admin check + rate limiter to ALL routes
 router.use(authenticate, requireAdmin, adminLimiter);
+
+router.get('/stripe/webhook-readiness', stripeWebhookHealthController.getWebhookReadiness);
+router.get('/stripe/payment-incidents', stripePaymentIncidentController.list);
+router.post('/stripe/payment-incidents/:id/refund-duplicate', stripePaymentIncidentController.refundDuplicatePayment);
+router.post('/stripe/payment-incidents/:id/reverse-chargeback-transfer', stripePaymentIncidentController.reverseChargebackTransfer);
+router.get('/billing/subscriptions/summary', stripeBillingController.getAdminSummary);
+router.post(
+  '/billing/subscriptions/reconcile',
+  financeSyncLimiter,
+  stripeBillingController.reconcileSubscriptions
+);
 
 // ── Stripe membership promotion codes ─────────────────────────────────────
 router.get('/promotion-codes', promotionCodeController.listPromotionCodes);
@@ -85,6 +100,13 @@ router.get('/transactions/:id', transactionsAdminController.getTransactionById);
 // ── SafePay ────────────────────────────────────────────────────────────────
 router.get('/safepay', safePayAdminController.getSafePayList);
 router.get('/safepay/summary', safePayAdminController.getSafePaySummary);
+router.get('/safepay/finance/transfers', safePayFinanceController.getAdminTransfers);
+router.get('/safepay/finance/transfers/:id', safePayFinanceController.getAdminTransfer);
+router.get('/safepay/finance/bank-payouts', safePayFinanceController.getAdminBankPayouts);
+router.get('/safepay/finance/bank-payouts/:id', safePayFinanceController.getAdminBankPayout);
+router.get('/safepay/finance/summary', safePayFinanceController.getAdminSummary);
+router.post('/safepay/finance/reconcile', financeSyncLimiter, safePayFinanceController.reconcile);
+router.get('/safepay/finance/reconciliation-issues', safePayFinanceController.getReconciliationIssues);
 router.get('/safepay/:orderId', safePayAdminController.getSafePayDetail);
 router.get('/safepay/:orderId/timeline', safePayAdminController.getSafePayTimeline);
 router.get('/safepay/:orderId/chat', safePayAdminController.getSafePayChat);

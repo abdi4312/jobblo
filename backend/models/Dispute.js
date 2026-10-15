@@ -58,6 +58,7 @@ const resolutionSchema = new mongoose.Schema(
     resolvedAt: { type: Date },
     stripeRefundId: { type: String },
     stripeRefundStatus: { type: String },
+    stripeReversalId: { type: String },
     /**
      * Written BEFORE the Stripe calls, cleared once they finish.
      *
@@ -69,7 +70,7 @@ const resolutionSchema = new mongoose.Schema(
      */
     moneyState: {
       type: String,
-      enum: ['pending', 'settled', 'failed'],
+      enum: ['pending', 'settled', 'failed', 'reconciliation_required'],
       default: null,
     },
     /** Set when a payout was part of the outcome, for reconciliation. */

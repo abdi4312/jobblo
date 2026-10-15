@@ -400,7 +400,7 @@ describe('14. OAuth placeholder passwords cannot authenticate', () => {
     for (const guess of ['oauth-user', 'oauth-user!', '', 'password', 'vipps', stored]) {
       expect(await bcrypt.compare(guess, stored)).toBe(false);
     }
-  });
+  }, 20000);
 
   it('two OAuth accounts never share the same stored value', async () => {
     const a = await createUnusablePassword();

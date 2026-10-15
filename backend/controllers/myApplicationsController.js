@@ -50,14 +50,23 @@ exports.getMyApplications = async (req, res) => {
         const serviceId = jobReq.serviceId?._id;
         const jobOwnerId = jobReq.serviceId?.userId?._id;
 
-        // Find active order for this service where current user is the provider
-        const order = await Order.findOne({
+        // Keep a timeout-cancelled contract visible to the provider so its cancellation
+        // reason and payment-time deadline remain available from the application card.
+        const orderFields =
+          '_id status paymentStatus agreedPrice startedAt readyForReviewAt completedAt chatId cancellationReason providerConnectDeadlineDays providerConnectDeadlineTestMinutes providerConnectDeadlineAt';
+        let order = await Order.findOne({
           serviceId,
           providerId: userId,
           status: { $nin: ['cancelled', 'declined'] },
-        }).select(
-          '_id status paymentStatus agreedPrice startedAt readyForReviewAt completedAt chatId'
-        );
+        }).select(orderFields);
+        if (!order) {
+          order = await Order.findOne({
+            serviceId,
+            providerId: userId,
+            status: 'cancelled',
+            cancellationReason: 'provider_stripe_connect_timeout',
+          }).select(orderFields);
+        }
 
         // Find chat between this applicant and job owner
         const chat = await Chat.findOne({
@@ -114,6 +123,10 @@ exports.getMyApplications = async (req, res) => {
                 readyForReviewAt: order.readyForReviewAt,
                 completedAt: order.completedAt,
                 chatId: order.chatId,
+                cancellationReason: order.cancellationReason,
+                providerConnectDeadlineDays: order.providerConnectDeadlineDays,
+                providerConnectDeadlineTestMinutes: order.providerConnectDeadlineTestMinutes,
+                providerConnectDeadlineAt: order.providerConnectDeadlineAt,
               }
             : null,
           chat: chat ? { _id: chat._id, status: chat.status, lastMessage: chat.lastMessage } : null,

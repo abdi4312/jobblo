@@ -5,10 +5,11 @@ const Notification = require('../../models/Notification');
 const { upsertTransaction } = require('../../utils/transaction');
 const { upsertSubscription } = require('../../utils/subscription');
 const { notify } = require('../../services/notifications');
-const { getStripe } = require('../../config/stripe');
+const { getStripe, getStripeForMode } = require('../../config/stripe');
 const { retrieveLiveSubscription, isBillingCapableStripeStatus } = require('./subscriptionState');
 const SubscriptionPlan = require('../../models/SubscriptionPlan');
 const { resolveAllowedPlanType } = require('../../utils/planAccess');
+const { customerFieldForMode } = require('./customers');
 
 function promotionCodeFromSession(session) {
   const discount = session?.discounts?.find((item) => item?.promotion_code);
@@ -23,7 +24,10 @@ async function finalizedCheckoutSession(session) {
   ) {
     return session;
   }
-  const stripe = await getStripe();
+  const stripe =
+    typeof session.livemode === 'boolean'
+      ? await getStripeForMode(!session.livemode)
+      : await getStripe();
   return stripe.checkout.sessions.retrieve(session.id, {
     expand: ['discounts.promotion_code'],
   });
@@ -61,6 +65,14 @@ function subscriptionPeriodEnd(sub) {
 function idOf(value) {
   if (!value) return null;
   return typeof value === 'string' ? value : value.id || null;
+}
+
+function invoiceSubscriptionId(invoice) {
+  return (
+    idOf(invoice?.subscription) ||
+    idOf(invoice?.parent?.subscription_details?.subscription) ||
+    idOf(invoice?.lines?.data?.[0]?.parent?.subscription_item_details?.subscription)
+  );
 }
 
 /**
@@ -136,14 +148,70 @@ async function provisionSubscriptionFromSession(session) {
   if (!user || resolveAllowedPlanType(user) !== plan.type) {
     return { ok: false, reason: 'plan_type_not_allowed' };
   }
+  if (
+    finalizedSession.mode !== 'subscription' ||
+    !['paid', 'no_payment_required'].includes(finalizedSession.payment_status) ||
+    typeof finalizedSession.livemode !== 'boolean' ||
+    finalizedSession.currency?.toLowerCase() !== 'nok' ||
+    !Number.isSafeInteger(finalizedSession.amount_total) ||
+    finalizedSession.amount_total < 0
+  ) {
+    return { ok: false, reason: 'checkout_payment_mismatch' };
+  }
+  const expectedUnitAmount = Math.round(Number(plan.price) * 100);
+  if (
+    !Number.isSafeInteger(expectedUnitAmount) ||
+    expectedUnitAmount <= 0 ||
+    finalizedSession.amount_total > expectedUnitAmount
+  ) {
+    return { ok: false, reason: 'checkout_payment_mismatch' };
+  }
 
   const discountAmount = Number(finalizedSession.total_details?.amount_discount || 0) / 100;
   const discountCoupon = promotionCodeFromSession(finalizedSession);
   const couponId = null;
-  const autoRenew = metadata.autoRenew === 'true';
+  const autoRenew = metadata.autoRenew !== 'false';
+  const livemode = typeof finalizedSession.livemode === 'boolean' ? finalizedSession.livemode : null;
 
   const amount = Number(finalizedSession.amount_total || 0) / 100;
   const stripeSubscriptionId = idOf(finalizedSession.subscription);
+  if (!stripeSubscriptionId) return { ok: false, reason: 'missing_stripe_subscription' };
+  const stripe = livemode === null ? await getStripe() : await getStripeForMode(!livemode);
+  const liveSubscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+  const items = liveSubscription.items?.data || [];
+  const subscriptionPrice = items[0]?.price;
+  const expectedCustomerId = user[await customerFieldForMode(!livemode)];
+  if (
+    liveSubscription.id !== stripeSubscriptionId ||
+    !['active', 'trialing'].includes(liveSubscription.status) ||
+    items.length !== 1 ||
+    !subscriptionPrice ||
+    subscriptionPrice.currency?.toLowerCase() !== 'nok' ||
+    subscriptionPrice.unit_amount !== expectedUnitAmount ||
+    subscriptionPrice.recurring?.interval !== 'month' ||
+    idOf(finalizedSession.customer) !== idOf(liveSubscription.customer) ||
+    !expectedCustomerId ||
+    idOf(liveSubscription.customer) !== expectedCustomerId ||
+    (liveSubscription.metadata?.userId &&
+      liveSubscription.metadata.userId !== String(userId)) ||
+    (liveSubscription.metadata?.planId &&
+      liveSubscription.metadata.planId !== String(planId)) ||
+    (typeof liveSubscription.livemode === 'boolean' &&
+      typeof livemode === 'boolean' &&
+      liveSubscription.livemode !== livemode)
+  ) {
+    return { ok: false, reason: 'stripe_subscription_mismatch' };
+  }
+  const subscriptionMode =
+    typeof liveSubscription.livemode === 'boolean'
+      ? liveSubscription.livemode
+        ? 'live'
+        : 'test'
+      : livemode === null
+        ? undefined
+        : livemode
+          ? 'live'
+          : 'test';
 
   // Keyed on the unique stripeSessionId, so a replay updates in place.
   await upsertTransaction({
@@ -156,6 +224,7 @@ async function provisionSubscriptionFromSession(session) {
     currency: finalizedSession.currency || 'nok',
     status: 'succeeded',
     type: 'subscription',
+    livemode,
     discountAmount,
     discountCoupon,
     coupon: couponId,
@@ -183,6 +252,8 @@ async function provisionSubscriptionFromSession(session) {
     planName,
     planType,
     stripeSubscriptionId,
+    stripeMode: subscriptionMode,
+    periodEnd: subscriptionPeriodEnd(liveSubscription),
     autoRenew,
     discountAmount,
     discountCoupon,
@@ -214,6 +285,7 @@ async function provisionExtraContactFromSession(session) {
     currency: session.currency || 'nok',
     status: 'succeeded',
     type: 'extra_contact',
+    livemode: typeof session.livemode === 'boolean' ? session.livemode : null,
   });
 
   return { ok: true, transaction, serviceId };
@@ -224,7 +296,7 @@ async function provisionExtraContactFromSession(session) {
  * every subsequent charge was invisible.
  */
 async function applyInvoicePaid(invoice) {
-  const stripeSubscriptionId = idOf(invoice.subscription);
+  const stripeSubscriptionId = invoiceSubscriptionId(invoice);
   if (!stripeSubscriptionId) return { ok: false, reason: 'not_a_subscription_invoice' };
 
   const subscription = await Subscription.findOne({
@@ -232,16 +304,15 @@ async function applyInvoicePaid(invoice) {
   });
   if (!subscription) return { ok: false, reason: 'subscription_not_found' };
 
+  const stripe = typeof invoice.livemode === 'boolean'
+    ? await getStripeForMode(!invoice.livemode)
+    : await getStripe();
+  const canonical = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+
   const periodEnd =
+    subscriptionPeriodEnd(canonical) ||
     subscriptionPeriodEnd(invoice.lines?.data?.[0]) ||
     (invoice.period_end ? new Date(invoice.period_end * 1000) : null);
-
-  subscription.currentPlan.status = 'active';
-  if (periodEnd) {
-    subscription.currentPlan.renewalDate = periodEnd;
-    subscription.currentPlan.endDate = periodEnd;
-  }
-  await subscription.save();
 
   // A renewal has no Checkout session. Transaction.stripeSessionId is unique and
   // required, so the invoice id stands in for it — it is equally unique and equally
@@ -256,7 +327,18 @@ async function applyInvoicePaid(invoice) {
     currency: invoice.currency || 'nok',
     status: 'succeeded',
     type: 'subscription',
+    livemode: typeof invoice.livemode === 'boolean' ? invoice.livemode : null,
   });
+
+  if (['active', 'trialing'].includes(canonical.status)) {
+    subscription.currentPlan.status = 'active';
+    subscription.currentPlan.pastDueSince = undefined;
+    if (periodEnd) {
+      subscription.currentPlan.renewalDate = periodEnd;
+      subscription.currentPlan.endDate = periodEnd;
+    }
+    await subscription.save();
+  }
 
   return { ok: true, subscription };
 }
@@ -271,26 +353,46 @@ async function applyInvoicePaid(invoice) {
  * subscription to past_due/unpaid.
  */
 async function applyInvoicePaymentFailed(invoice) {
-  const stripeSubscriptionId = idOf(invoice.subscription);
+  const stripeSubscriptionId = invoiceSubscriptionId(invoice);
   if (!stripeSubscriptionId) return { ok: false, reason: 'not_a_subscription_invoice' };
 
+  const stripe = typeof invoice.livemode === 'boolean'
+    ? await getStripeForMode(!invoice.livemode)
+    : await getStripe();
+  const canonicalInvoice = await stripe.invoices.retrieve(invoice.id);
+  if (canonicalInvoice.status === 'paid') {
+    return applyInvoicePaid(canonicalInvoice);
+  }
   const subscription = await Subscription.findOne({
     'currentPlan.stripeSubscriptionId': stripeSubscriptionId,
   });
-  if (!subscription) return { ok: false, reason: 'subscription_not_found' };
+  if (!subscription) return { ok: true, ignored: 'subscription_not_found' };
 
+  const canonicalSubscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
   await upsertTransaction({
     userId: subscription.userId,
     planId: subscription.currentPlan.planId,
     planName: subscription.currentPlan.plan,
     planType: subscription.currentPlan.planType,
     stripeSessionId: invoice.id,
-    amount: invoice.amount_due ? invoice.amount_due / 100 : 0,
-    currency: invoice.currency || 'nok',
+    amount: canonicalInvoice.amount_due ? canonicalInvoice.amount_due / 100 : 0,
+    currency: canonicalInvoice.currency || 'nok',
     status: 'failed',
     type: 'subscription',
+    livemode: typeof canonicalInvoice.livemode === 'boolean' ? canonicalInvoice.livemode : null,
   });
 
+  if (['past_due', 'unpaid', 'incomplete'].includes(canonicalSubscription.status)) {
+    if (subscription.currentPlan.status !== 'past_due') {
+      subscription.currentPlan.pastDueSince = new Date();
+    }
+    subscription.currentPlan.status = 'past_due';
+    await subscription.save();
+  }
+
+  if (!['past_due', 'unpaid', 'incomplete'].includes(canonicalSubscription.status)) {
+    return { ok: true, subscription, staleFailure: true };
+  }
   await notify({
     userId: subscription.userId,
     type: 'payment',
@@ -305,7 +407,8 @@ async function applyInvoicePaymentFailed(invoice) {
 /** Map Stripe's subscription status onto the Subscription.currentPlan.status enum. */
 function mapStripeSubscriptionStatus(stripeStatus) {
   if (['active', 'trialing'].includes(stripeStatus)) return 'active';
-  if (['past_due', 'unpaid', 'incomplete', 'incomplete_expired', 'paused'].includes(stripeStatus)) {
+  if (stripeStatus === 'past_due') return 'past_due';
+  if (['unpaid', 'incomplete', 'incomplete_expired', 'paused'].includes(stripeStatus)) {
     return 'inactive';
   }
   if (stripeStatus === 'canceled') return 'cancelled';
@@ -318,18 +421,67 @@ function mapStripeSubscriptionStatus(stripeStatus) {
  * instead of drifting from it.
  */
 async function applySubscriptionUpdated(stripeSub) {
+  const stripe = typeof stripeSub.livemode === 'boolean'
+    ? await getStripeForMode(!stripeSub.livemode)
+    : await getStripe();
+  const canonical = await stripe.subscriptions.retrieve(stripeSub.id);
+  if (canonical.status === 'canceled') return applySubscriptionDeleted(canonical);
   const subscription = await Subscription.findOne({
-    'currentPlan.stripeSubscriptionId': stripeSub.id,
+    'currentPlan.stripeSubscriptionId': canonical.id,
   });
   if (!subscription) return { ok: false, reason: 'subscription_not_found' };
 
-  const periodEnd = subscriptionPeriodEnd(stripeSub);
+  const periodEnd = subscriptionPeriodEnd(canonical);
 
-  subscription.currentPlan.status = mapStripeSubscriptionStatus(stripeSub.status);
-  subscription.currentPlan.autoRenew = !stripeSub.cancel_at_period_end;
+  subscription.currentPlan.status = mapStripeSubscriptionStatus(canonical.status);
+  subscription.currentPlan.stripeMode =
+    typeof canonical.livemode === 'boolean' ? (canonical.livemode ? 'live' : 'test') : subscription.currentPlan.stripeMode;
+  subscription.currentPlan.autoRenew = !canonical.cancel_at_period_end;
+  if (canonical.status === 'past_due') {
+    subscription.currentPlan.pastDueSince ||= new Date();
+  } else {
+    subscription.currentPlan.pastDueSince = undefined;
+  }
   if (periodEnd) {
     subscription.currentPlan.renewalDate = periodEnd;
     subscription.currentPlan.endDate = periodEnd;
+  }
+
+  const priceId = canonical.items?.data?.[0]?.price?.id;
+  const testMode = canonical.livemode === false || subscription.currentPlan.stripeMode === 'test';
+  const planByPrice = priceId
+    ? await SubscriptionPlan.findOne({
+        [testMode ? 'stripePriceIdTest' : 'stripePriceId']: priceId,
+      })
+    : null;
+  const plan =
+    planByPrice ||
+    (canonical.metadata?.planId
+      ? await SubscriptionPlan.findById(canonical.metadata.planId)
+      : null);
+  if (plan && plan.type === subscription.currentPlan.planType) {
+    if (String(subscription.currentPlan.planId || '') !== String(plan._id)) {
+      const now = new Date();
+      subscription.planHistory.push({
+        planId: subscription.currentPlan.planId,
+        plan: subscription.currentPlan.plan,
+        planType: subscription.currentPlan.planType,
+        startDate: subscription.currentPlan.startDate || now,
+        endDate: now,
+        stripeSubscriptionId: canonical.id,
+        status: 'expired',
+        discountAmount: subscription.currentPlan.discountAmount || 0,
+        discountCoupon: subscription.currentPlan.discountCoupon || null,
+        coupon: subscription.currentPlan.coupon || null,
+      });
+      subscription.currentPlan.planId = plan._id;
+      subscription.currentPlan.plan = plan.name;
+      subscription.pendingPlan = undefined;
+      await User.findByIdAndUpdate(subscription.userId, {
+        subscription: plan.name,
+        planType: plan.type,
+      });
+    }
   }
   await subscription.save();
 
@@ -360,12 +512,26 @@ async function applySubscriptionDeleted(stripeSub) {
 
   subscription.currentPlan.status = 'cancelled';
   subscription.currentPlan.autoRenew = false;
+  subscription.currentPlan.pastDueSince = undefined;
+  subscription.pendingPlan = undefined;
   await subscription.save();
 
   // Drop the denormalised copy on the user so gated features stop reading a plan
   // Stripe no longer bills for.
   await User.findByIdAndUpdate(subscription.userId, { subscription: null });
 
+  return { ok: true, subscription };
+}
+
+async function applySubscriptionScheduleCanceled(schedule) {
+  const stripeSubscriptionId = idOf(schedule?.subscription);
+  if (!stripeSubscriptionId) return { ok: false, reason: 'subscription_not_found' };
+  const subscription = await Subscription.findOne({
+    'currentPlan.stripeSubscriptionId': stripeSubscriptionId,
+  });
+  if (!subscription) return { ok: false, reason: 'subscription_not_found' };
+  subscription.pendingPlan = undefined;
+  await subscription.save();
   return { ok: true, subscription };
 }
 
@@ -377,6 +543,8 @@ module.exports = {
   applySubscriptionUpdated,
   applySubscriptionDeleted,
   subscriptionPeriodEnd,
+  invoiceSubscriptionId,
   mapStripeSubscriptionStatus,
   detectConflictingLiveSubscription,
+  applySubscriptionScheduleCanceled,
 };

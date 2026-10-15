@@ -3,14 +3,16 @@ const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 const Service = require('../models/Service');
 const mongoose = require('mongoose');
-const { getStripe } = require('../config/stripe');
+const {
+  getStripe,
+  getStripeConfiguration,
+  getStripeForMode,
+} = require('../config/stripe');
 const SubscriptionPlan = require('../models/SubscriptionPlan');
 const { upsertTransaction } = require('../utils/transaction');
 const { upsertSubscription } = require('../utils/subscription');
 const { findBillingCapableSubscription } = require('../services/stripe/subscriptionState');
 const {
-  provisionSubscriptionFromSession,
-  provisionExtraContactFromSession,
   subscriptionPeriodEnd,
 } = require('../services/stripe/provisioning');
 const { resolveAllowedPlanType } = require('../utils/planAccess');
@@ -54,7 +56,17 @@ function resolveFrontendUrl() {
  * is verified against Stripe before reuse, so a `cus_…` left over from the other mode
  * is replaced instead of producing a `resource_missing` 500.
  */
-const { resolveStripeCustomer } = require('../services/stripe/customers');
+const {
+  resolveStripeCustomer,
+  customerFieldForMode,
+} = require('../services/stripe/customers');
+const { getStripeWebhookReadiness } = require('../services/stripe/webhookReadiness');
+const {
+  getOrCreateBillingOperation,
+  findActiveBillingOperation,
+  finishBillingOperation,
+  operationIdempotencyKey,
+} = require('../services/stripe/billingOperations');
 
 /**
  * How long two identical checkout requests are collapsed into one Stripe session.
@@ -89,6 +101,29 @@ function isIdempotencyCollision(error) {
   return error?.code === 'idempotency_key_in_use' || error?.type === 'idempotency_error';
 }
 
+async function stripeContextForSubscription(current, userId) {
+  const testMode =
+    current?.stripeMode === 'test'
+      ? true
+      : current?.stripeMode === 'live'
+        ? false
+        : (await getStripeConfiguration()).testMode;
+  const [stripe, user] = await Promise.all([
+    getStripeForMode(testMode),
+    User.findById(userId),
+  ]);
+  if (!user) throw new Error('Subscription owner not found');
+  const live = await stripe.subscriptions.retrieve(current.stripeSubscriptionId);
+  const customerId = typeof live.customer === 'string' ? live.customer : live.customer?.id;
+  const expectedCustomerId = user[await customerFieldForMode(testMode)];
+  if (!customerId || !expectedCustomerId || customerId !== expectedCustomerId) {
+    const error = new Error('Subscription customer mismatch');
+    error.code = 'subscription_customer_mismatch';
+    throw error;
+  }
+  return { stripe, live, testMode };
+}
+
 /**
  * Start a Stripe Checkout session for a paid subscription plan.
  *
@@ -96,8 +131,29 @@ function isIdempotencyCollision(error) {
  * Stripe customer and the owning user are all resolved server-side.
  */
 exports.createCheckoutSession = async (req, res) => {
+  let stripeConfig;
+  let stripe;
   try {
-    const stripe = await getStripe();
+    try {
+      stripeConfig = await getStripeConfiguration();
+      const webhookReadiness = await getStripeWebhookReadiness(stripeConfig);
+      if (!webhookReadiness.ready) {
+        return res.status(503).json({
+          message: 'Abonnementsbetaling er ikke tilgjengelig akkurat nå. Prøv igjen senere.',
+          code: 'STRIPE_WEBHOOK_NOT_READY',
+        });
+      }
+      stripe = await getStripeForMode(stripeConfig.testMode);
+    } catch (error) {
+      console.error(
+        'createCheckoutSession webhook preflight failed [code=%s]',
+        error?.code || error?.type || 'configuration_error'
+      );
+      return res.status(503).json({
+        message: 'Abonnementsbetaling er ikke tilgjengelig akkurat nå. Prøv igjen senere.',
+        code: 'STRIPE_WEBHOOK_NOT_READY',
+      });
+    }
     const { planId } = req.body;
     const user = req.user;
 
@@ -181,7 +237,7 @@ exports.createCheckoutSession = async (req, res) => {
     const unitAmount = Math.round(plan.price * 100);
 
     // 5️⃣ Reuse the user's Stripe customer, creating it only on the first purchase
-    const customerId = await resolveStripeCustomer(stripe, user);
+    const customerId = await resolveStripeCustomer(stripe, user, stripeConfig.testMode);
 
     // 6️⃣ Create Stripe checkout session
     const session = await stripe.checkout.sessions.create(
@@ -210,11 +266,16 @@ exports.createCheckoutSession = async (req, res) => {
           planName: plan.name,
           planPrice: plan.price,
           planType: plan.type,
-          // `SubscriptionPlan` has no `autoRenew` field, so this has always been the
-          // literal string "undefined" and provisioning has always read it as false.
-          // Left as-is rather than removed: changing it would change the metadata
-          // contract, which is not what this hardening pass is for.
-          autoRenew: String(plan.autoRenew),
+          autoRenew: 'true',
+        },
+        subscription_data: {
+          metadata: {
+            userId: String(user._id),
+            planId: String(planId),
+            planName: plan.name,
+            planType: plan.type,
+            autoRenew: 'true',
+          },
         },
       },
       {
@@ -241,7 +302,11 @@ exports.createCheckoutSession = async (req, res) => {
     }
 
     // A Stripe or database failure is not safe to echo verbatim to the customer.
-    console.error('createCheckoutSession failed [plan=%s]: %s', req.body?.planId, error?.message);
+    console.error(
+      'createCheckoutSession failed [plan=%s, code=%s]',
+      req.body?.planId,
+      error?.code || error?.type || 'stripe_session_failed'
+    );
     res.status(500).json({
       message: 'Kunne ikke starte betalingen. Prøv igjen, eller kontakt support.',
       code: error?.code || 'stripe_session_failed',
@@ -251,54 +316,24 @@ exports.createCheckoutSession = async (req, res) => {
 
 exports.checkoutSessionStatus = async (req, res) => {
   try {
-    const stripe = await getStripe();
     const { sessionId } = req.params;
-
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['subscription'],
-    });
-
-    // The session id comes from a query string the caller controls, and everything below
-    // is driven by `session.metadata.userId` — so without this check any signed-in user
-    // who got hold of someone else's session id could drive that person's subscription
-    // activation. The caller must own the session they are asking about.
-    if (session.metadata?.userId && String(session.metadata.userId) !== String(req.userId)) {
+    const transaction = await Transaction.findOne({ stripeSessionId: sessionId }).lean();
+    if (transaction && String(transaction.userId) !== String(req.userId)) {
       return res.status(403).json({ error: 'Denne betalingen tilhører en annen bruker' });
     }
 
-    const isMembership =
-      session.mode === 'subscription' || session.metadata?.type === 'subscription';
-    if (
-      session.payment_status !== 'paid' &&
-      !(isMembership && session.payment_status === 'no_payment_required')
-    ) {
-      return res.json({ payment_status: session.payment_status });
+    if (!transaction || transaction.type !== 'subscription' || transaction.status !== 'succeeded') {
+      return res.json({ payment_status: transaction?.status || 'unpaid' });
     }
 
-    // Provisioning lives in services/stripe/provisioning.js so this page and the
-    // webhook run the same code. This call is now a convenience — the webhook is
-    // the source of truth and will have done (or will do) the same work — but
-    // keeping it makes the success page instant instead of waiting on delivery.
-    const result = await provisionSubscriptionFromSession(session);
-    if (!result.ok) {
-      console.error('checkoutSessionStatus: could not provision %s: %s', sessionId, result.reason);
-      return res
-        .status(400)
-        .json({ message: 'Kunne ikke aktivere abonnementet', code: result.reason });
-    }
-
-    // The success page showed one line of green text and nothing about the purchase.
-    // These are already computed above, so returning them costs nothing and lets the
-    // page confirm *what* was bought and *what* was charged — which is the difference
-    // between a receipt and an assurance.
     res.json({
       payment_status: 'paid',
-      plan: result.subscription.currentPlan.plan,
-      planType: result.planType,
-      amount: result.amount,
-      currency: session.currency || 'nok',
-      discountAmount: result.discountAmount,
-      coupon: result.discountCoupon,
+      plan: transaction.planName,
+      planType: transaction.planType,
+      amount: transaction.amount,
+      currency: transaction.currency || 'nok',
+      discountAmount: transaction.discountAmount,
+      coupon: transaction.discountCoupon,
     });
   } catch (error) {
     console.error('Status Error:', error);
@@ -381,30 +416,21 @@ exports.createExtraContactPayment = async (req, res) => {
 
 exports.extraContactPaymentStatus = async (req, res) => {
   try {
-    const stripe = await getStripe();
     const { sessionId } = req.params;
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-
-    if (session.payment_status !== 'paid') {
-      return res.json({ payment_status: session.payment_status });
-    }
-
-    // Same session-ownership check the subscription status endpoint makes: without
-    // it, any signed-in user holding someone else's session id could drive that
-    // person's entitlement.
-    if (session.metadata?.userId && String(session.metadata.userId) !== String(req.userId)) {
+    const transaction = await Transaction.findOne({ stripeSessionId: sessionId }).lean();
+    if (transaction && String(transaction.userId) !== String(req.userId)) {
       return res.status(403).json({ message: 'Denne betalingen tilhører en annen bruker' });
     }
 
-    const result = await provisionExtraContactFromSession(session);
-    if (!result.ok) {
-      return res.status(400).json({ message: 'Invalid payment type', code: result.reason });
+    if (
+      !transaction ||
+      transaction.type !== 'extra_contact' ||
+      transaction.status !== 'succeeded'
+    ) {
+      return res.json({ payment_status: transaction?.status || 'unpaid' });
     }
 
-    // monthlyContactUsage is deliberately not incremented — this was a paid contact.
-    // The entitlement itself is the Transaction row, which checkSubscription consumes
-    // exactly once.
-    res.json({ payment_status: 'paid', serviceId: result.serviceId });
+    res.json({ payment_status: 'paid', serviceId: transaction.serviceId });
   } catch (error) {
     console.error('Extra Contact Status Error:', error);
     res.status(500).json({ message: error.message });
@@ -457,6 +483,26 @@ exports.getMySubscription = async (req, res) => {
       startDate: current?.startDate || null,
       renewalDate: current?.renewalDate || null,
       stripeSubscriptionId: current?.stripeSubscriptionId || null,
+      stripeMode: current?.stripeMode || null,
+      price: resolved.hasPlan ? resolved.price : null,
+      billingInterval: current?.stripeSubscriptionId ? 'month' : null,
+      pendingPlan: resolved.subscription?.pendingPlan || null,
+      timeline: [
+        ...(resolved.subscription?.planHistory || []).map((item) => ({
+          plan: item.plan,
+          status: item.status,
+          startDate: item.startDate,
+          endDate: item.endDate,
+        })),
+        ...(current?.plan
+          ? [{
+              plan: current.plan,
+              status: current.status,
+              startDate: current.startDate,
+              endDate: current.endDate,
+            }]
+          : []),
+      ],
       cancelAtPeriodEnd: false,
       currentPeriodEnd: current?.renewalDate || current?.endDate || null,
       contacts: {
@@ -478,10 +524,22 @@ exports.getMySubscription = async (req, res) => {
     // document can drift — a card that failed, a cancellation made in the dashboard.
     if (current?.stripeSubscriptionId) {
       try {
-        const stripe = await getStripe();
-        const live = await stripe.subscriptions.retrieve(current.stripeSubscriptionId);
+        const { live, stripe } = await stripeContextForSubscription(current, req.userId);
         payload.cancelAtPeriodEnd = Boolean(live.cancel_at_period_end);
+        if (live.schedule) {
+          const scheduleId = typeof live.schedule === 'string' ? live.schedule : live.schedule.id;
+          const liveSchedule = await stripe.subscriptionSchedules.retrieve(scheduleId);
+          payload.cancelAtPeriodEnd ||= liveSchedule.end_behavior === 'cancel';
+        }
         payload.stripeStatus = live.status;
+        payload.stripeMode =
+          typeof live.livemode === 'boolean' ? (live.livemode ? 'live' : 'test') : current.stripeMode;
+        const price = live.items?.data?.[0]?.price;
+        if (Number.isInteger(price?.unit_amount)) {
+          payload.price = price.unit_amount / 100;
+          payload.billingCurrency = price.currency || 'nok';
+        }
+        payload.billingInterval = price?.recurring?.interval || payload.billingInterval;
         // On the pinned API version this moved onto the subscription ITEM, so the
         // old `live.current_period_end` read was always undefined and this branch
         // never ran. subscriptionPeriodEnd() reads both shapes.
@@ -521,10 +579,73 @@ exports.cancelMySubscription = async (req, res) => {
       return res.status(400).json({ message: 'Denne planen er gratis og har ingenting å si opp' });
     }
 
-    const stripe = await getStripe();
-    const updated = await stripe.subscriptions.update(current.stripeSubscriptionId, {
-      cancel_at_period_end: true,
+    const { stripe, live, testMode } = await stripeContextForSubscription(current, req.userId);
+    const fingerprint = `${testMode ? 'test' : 'live'}:${current.stripeSubscriptionId}:cancel`;
+    if (live.cancel_at_period_end) {
+      const activeOperation = await findActiveBillingOperation(fingerprint);
+      if (activeOperation) {
+        await finishBillingOperation(activeOperation, 'succeeded', {
+          stripeObjectId: live.id,
+        });
+      }
+      const periodEnd = subscriptionPeriodEnd(live);
+      subscription.currentPlan.autoRenew = false;
+      if (periodEnd) {
+        subscription.currentPlan.renewalDate = periodEnd;
+        subscription.currentPlan.endDate = periodEnd;
+      }
+      await subscription.save();
+      return res.json({
+        message: 'Abonnementet avsluttes ved periodens slutt',
+        cancelAtPeriodEnd: true,
+        currentPeriodEnd: periodEnd || subscription.currentPlan.renewalDate,
+      });
+    }
+    let scheduleId;
+    if (live.schedule) {
+      scheduleId = typeof live.schedule === 'string' ? live.schedule : live.schedule.id;
+      const schedule = await stripe.subscriptionSchedules.retrieve(scheduleId);
+      if (
+        !subscription.pendingPlan ||
+        schedule.metadata?.jobbloPendingPlanId !== String(subscription.pendingPlan.planId) ||
+        schedule.metadata?.jobbloUserId !== String(req.userId)
+      ) {
+        return res.status(409).json({
+          message: 'Administrer den planlagte endringen og oppsigelsen i Stripe Portal.',
+        });
+      }
+    }
+    const operation = await getOrCreateBillingOperation({
+      fingerprint,
+      operationType: 'cancel',
+      userId: req.userId,
+      subscriptionId: current.stripeSubscriptionId,
+      testMode,
     });
+    let updated;
+    try {
+      if (scheduleId) {
+        await stripe.subscriptionSchedules.release(
+          scheduleId,
+          {},
+          { idempotencyKey: operationIdempotencyKey(operation, 'schedule_release') }
+        );
+      }
+      updated = await stripe.subscriptions.update(
+        current.stripeSubscriptionId,
+        { cancel_at_period_end: true },
+        { idempotencyKey: operationIdempotencyKey(operation) }
+      );
+      if (!updated.cancel_at_period_end) {
+        throw new Error('Stripe did not confirm the scheduled cancellation');
+      }
+      await finishBillingOperation(operation, 'succeeded', { stripeObjectId: updated.id });
+    } catch (error) {
+      await finishBillingOperation(operation, 'reconciliation_required', {
+        failureCode: error?.code || error?.type || 'stripe_cancel_outcome_unknown',
+      });
+      throw error;
+    }
 
     // `status` stays 'active': they keep the plan until the period ends. What changes is
     // that it will not renew — recorded as autoRenew, which is the field that means that.
@@ -537,6 +658,7 @@ exports.cancelMySubscription = async (req, res) => {
       subscription.currentPlan.renewalDate = periodEnd;
       subscription.currentPlan.endDate = periodEnd;
     }
+    if (scheduleId) subscription.pendingPlan = undefined;
     await subscription.save();
 
     res.json({
@@ -560,10 +682,85 @@ exports.resumeMySubscription = async (req, res) => {
       return res.status(400).json({ message: 'Du har ingen abonnement å gjenoppta' });
     }
 
-    const stripe = await getStripe();
-    const updated = await stripe.subscriptions.update(current.stripeSubscriptionId, {
-      cancel_at_period_end: false,
+    const { stripe, live, testMode } = await stripeContextForSubscription(current, req.userId);
+    const fingerprint = `${testMode ? 'test' : 'live'}:${current.stripeSubscriptionId}:resume`;
+    if (live.status === 'canceled') {
+      return res.status(409).json({
+        message: 'Abonnementet er allerede avsluttet og kan ikke gjenopptas.',
+      });
+    }
+    if (live.schedule) {
+      const scheduleId = typeof live.schedule === 'string' ? live.schedule : live.schedule.id;
+      const schedule = await stripe.subscriptionSchedules.retrieve(scheduleId);
+      if (schedule.end_behavior !== 'cancel') {
+        return res.status(409).json({
+          message: 'Administrer det planlagte planbyttet i Stripe Portal.',
+        });
+      }
+      const operation = await getOrCreateBillingOperation({
+        fingerprint,
+        operationType: 'resume',
+        userId: req.userId,
+        subscriptionId: current.stripeSubscriptionId,
+        testMode,
+      });
+      try {
+        await stripe.subscriptionSchedules.release(
+          scheduleId,
+          {},
+          { idempotencyKey: operationIdempotencyKey(operation, 'schedule_release') }
+        );
+        await finishBillingOperation(operation, 'succeeded', { stripeObjectId: live.id });
+      } catch (error) {
+        await finishBillingOperation(operation, 'reconciliation_required', {
+          failureCode: error?.code || error?.type || 'stripe_resume_outcome_unknown',
+        });
+        throw error;
+      }
+      subscription.currentPlan.autoRenew = true;
+      subscription.currentPlan.status = 'active';
+      await subscription.save();
+      return res.json({
+        message: 'Oppsigelsen er fjernet. Abonnementet fortsetter.',
+        cancelAtPeriodEnd: false,
+      });
+    }
+    if (!live.cancel_at_period_end) {
+      const activeOperation = await findActiveBillingOperation(fingerprint);
+      if (activeOperation) {
+        await finishBillingOperation(activeOperation, 'succeeded', { stripeObjectId: live.id });
+      }
+      subscription.currentPlan.autoRenew = true;
+      await subscription.save();
+      return res.json({
+        message: 'Abonnementet fortsetter som normalt',
+        cancelAtPeriodEnd: false,
+      });
+    }
+    const operation = await getOrCreateBillingOperation({
+      fingerprint,
+      operationType: 'resume',
+      userId: req.userId,
+      subscriptionId: current.stripeSubscriptionId,
+      testMode,
     });
+    let updated;
+    try {
+      updated = await stripe.subscriptions.update(
+        current.stripeSubscriptionId,
+        { cancel_at_period_end: false },
+        { idempotencyKey: operationIdempotencyKey(operation) }
+      );
+      if (updated.cancel_at_period_end) {
+        throw new Error('Stripe did not confirm subscription reactivation');
+      }
+      await finishBillingOperation(operation, 'succeeded', { stripeObjectId: updated.id });
+    } catch (error) {
+      await finishBillingOperation(operation, 'reconciliation_required', {
+        failureCode: error?.code || error?.type || 'stripe_resume_outcome_unknown',
+      });
+      throw error;
+    }
 
     subscription.currentPlan.autoRenew = true;
     subscription.currentPlan.status = 'active';

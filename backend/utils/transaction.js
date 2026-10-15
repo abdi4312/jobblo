@@ -9,6 +9,7 @@ exports.upsertTransaction = async ({
   planType = null,
 
   stripeSessionId,
+  livemode = null,
   amount,
   currency = 'nok',
 
@@ -34,6 +35,7 @@ exports.upsertTransaction = async ({
       planType,
 
       stripeSessionId,
+      livemode,
       amount,
       currency,
       status,

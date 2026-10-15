@@ -42,6 +42,7 @@ const TransactionSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    livemode: { type: Boolean, default: null },
     amount: {
       type: Number,
       required: true,

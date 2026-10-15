@@ -134,7 +134,7 @@ async function openDispute({
   ip,
   userAgent,
 }) {
-  const order = await Order.findById(orderId);
+  let order = await Order.findById(orderId);
   if (!order) throw new Error('Ordre ikke funnet');
 
   // Only allow dispute when in eligible state (shared with admin chat-report flow)
@@ -154,8 +154,8 @@ async function openDispute({
 
   // Link payment if exists
   const payment = await Payment.findOne({ orderId });
-
-  // Create dispute
+  const previousOrderStatus = order.status;
+  const openedAt = new Date();
   const dispute = new Dispute({
     orderId,
     chatId: order.chatId,
@@ -169,33 +169,63 @@ async function openDispute({
     description,
     status: 'open',
     payoutFrozen: true,
-    // Remembered so a `no_action` resolution can put the order back where it was
-    // rather than cancelling it.
-    previousOrderStatus: order.status,
-    openedAt: new Date(),
+    previousOrderStatus,
+    openedAt,
     timeline: [{
       action: 'dispute_opened',
       actorId: openedByUserId,
       note: `Tvist åpnet: ${title}`,
     }],
   });
-  await dispute.save();
+
+  // Claim the order before creating the dispute so a timeout refund cannot race it.
+  const claimedOrder = await Order.findOneAndUpdate(
+    {
+      _id: orderId,
+      status: previousOrderStatus,
+      'providerConnectTimeout.status': {
+        $nin: ['processing', 'pending', 'reconciliation_required', 'failed', 'manual_review'],
+      },
+    },
+    {
+      $set: { status: 'disputed' },
+      $push: {
+        history: {
+          action: 'dispute_opened',
+          userId: openedByUserId,
+          timestamp: openedAt,
+          data: { disputeId: dispute._id, reason: reasonCategory },
+        },
+      },
+    },
+    { new: true }
+  );
+  if (!claimedOrder) {
+    throw new Error('Ordren er under refusjonsbehandling eller har endret status');
+  }
+  order = claimedOrder;
+  try {
+    await dispute.save();
+  } catch (error) {
+    await Order.findOneAndUpdate(
+      {
+        _id: orderId,
+        status: 'disputed',
+        'history.data.disputeId': dispute._id,
+      },
+      {
+        $set: { status: previousOrderStatus },
+        $pull: { history: { 'data.disputeId': dispute._id } },
+      }
+    );
+    throw error;
+  }
 
   // Update payment status
   if (payment) {
     payment.status = 'disputed';
     await payment.save();
   }
-
-  // Update order
-  order.status = 'disputed';
-  order.history.push({
-    action: 'dispute_opened',
-    userId: openedByUserId,
-    timestamp: new Date(),
-    data: { disputeId: dispute._id, reason: reasonCategory },
-  });
-  await order.save();
 
   // Update chat
   if (order.chatId) {

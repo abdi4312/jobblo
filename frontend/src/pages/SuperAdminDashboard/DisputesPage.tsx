@@ -109,11 +109,14 @@ export default function DisputesPage() {
             key: 'order',
             header: 'Ordre',
             render: (d) => {
-                const orderId = typeof d.orderId === 'object' ? d.orderId._id : d.orderId;
+                const orderId =
+                    typeof d.orderId === 'object' ? d.orderId?._id : d.orderId;
                 return (
-                    <Link to={`/dashboard/safepay/${orderId}`} className="text-xs font-mono text-gray-600 hover:underline">
-                        {orderId?.slice(-8).toUpperCase() ?? '–'}
-                    </Link>
+                    orderId ? (
+                        <Link to={`/dashboard/safepay/${orderId}`} className="text-xs font-mono text-gray-600 hover:underline">
+                            {orderId.slice(-8).toUpperCase()}
+                        </Link>
+                    ) : <span className="text-xs text-gray-400">–</span>
                 );
             },
         },

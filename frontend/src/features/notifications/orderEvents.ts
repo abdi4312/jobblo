@@ -24,6 +24,11 @@ export const APPLICATION_EVENTS = [
 /** Money and work stage — an order exists. */
 export const ORDER_EVENTS = [
   'order_paid',
+  'provider_connect_deadline',
+  'provider_connect_timeout_refunded',
+  'provider_connect_refund_pending',
+  'provider_connect_refund_failed',
+  'provider_connect_refund_reconciliation',
   'payment_confirmed',
   'order_status_changed',
   'job_started',

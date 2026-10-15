@@ -71,4 +71,22 @@ const adminLimiter = rateLimit({
   },
 });
 
-module.exports = { apiLimiter, authLimiter, otpSendLimiter, otpVerifyLimiter, adminLimiter };
+const financeSyncLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Avstemming er begrenset. Prøv igjen senere.',
+  },
+});
+
+module.exports = {
+  apiLimiter,
+  authLimiter,
+  otpSendLimiter,
+  otpVerifyLimiter,
+  adminLimiter,
+  financeSyncLimiter,
+};

@@ -1,22 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
 import ChatHeader from '../../components/chat/ChatHeader';
 import MessageList from '../../components/chat/MessageList';
 import MessageInput from '../../components/chat/MessageInput';
 import { EmptyChatState } from '../../components/chat/ChatUiComponents';
 import { ChatWindowSkeleton } from '../Loading/ChatWindowSkeleton';
-import { Briefcase, X, Check, Edit2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useMutation } from '@tanstack/react-query';
-import { createContract, createPaymentSession, updateAgreedPrice } from '../../api/chatAPI';
+import { createContract, createPaymentSession } from '../../api/chatAPI';
 import { customerOrderPath } from '../../constants/statuses';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetClose,
-} from '../../components/Ui/sheet';
 
 interface ChatWindowProps {
   conversationId?: string;
@@ -35,45 +27,6 @@ interface ChatWindowProps {
   sending: boolean;
   refetchActiveChat?: () => void;
 }
-
-const getChatStatusLabel = (chatStatus?: string) => {
-  switch (chatStatus) {
-    case 'requested':
-      return 'Forespørsel';
-    case 'agreed':
-      return 'Avtalt';
-    case 'paid':
-      return 'Betalt';
-    case 'contracted':
-      return 'Kontrakt signert';
-    // `in_progress` and `disputed` are both real values in the schema and are both set
-    // by the backend, but neither had a case here — so the moment a provider started
-    // work, a paid job's badge fell through to the default and read "Forespørsel",
-    // which is the label for a job nobody has even been chosen for yet.
-    case 'in_progress':
-      return 'Under arbeid';
-    case 'disputed':
-      return 'Tvist';
-    case 'completed':
-      return 'Fullført';
-    case 'cancelled':
-      return 'Kansellert';
-    default:
-      return 'Forespørsel';
-  }
-};
-
-const getOrderStage = (status: string, paymentStatus: string) => {
-  if (status === 'completed') return 'Fullført';
-  if (status === 'in_progress') return 'Pågår';
-  if (paymentStatus === 'paid') return 'Betalt';
-  if (status === 'awaiting_payment') return 'Venter på betaling';
-  if (status === 'accepted') return 'Godtatt';
-  if (status === 'pending') return 'Ventende';
-  if (status === 'cancelled') return 'Kansellert';
-  if (status === 'declined') return 'Avslått';
-  return 'Forespørsel';
-};
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
   conversationId,
@@ -96,10 +49,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   // Three `console.log`s used to run here on every render, dumping the whole chat object
   // — both parties, the order, the agreed price — into the browser console of every
   // production user. Removed.
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [isEditingPrice, setIsEditingPrice] = useState(false);
-  const [newAgreedPrice, setNewAgreedPrice] = useState<string>('');
-
   const createContractMutation = useMutation({
     mutationFn: () =>
       createContract(activeChat._id, activeChat.agreedPrice || activeChat.serviceId.price),
@@ -149,28 +98,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     } else {
       toast('Du må opprette kontrakt først!');
     }
-  };
-
-  const updateAgreedPriceMutation = useMutation({
-    mutationFn: (price: number) => updateAgreedPrice(activeChat._id, price),
-    onSuccess: (data) => {
-      toast.success('Pris avtalt!');
-      setIsEditingPrice(false);
-      setNewAgreedPrice('');
-      refetchActiveChat?.();
-    },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.error || 'Kunne ikke oppdatere pris');
-    },
-  });
-
-  const handleUpdateAgreedPrice = () => {
-    const price = Number(newAgreedPrice);
-    if (isNaN(price) || price < 0) {
-      toast.error('Ugyldig pris');
-      return;
-    }
-    updateAgreedPriceMutation.mutate(price);
   };
 
   // Check if current user is service owner (customer).
@@ -248,129 +175,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
           {activeChat?.serviceId && (
             <>
-              {/* Sticky Job Header */}
-              <div
-                className="bg-white border-b border-[#E6E7E1] px-[18px] py-[12px] shrink-0 cursor-pointer hover:bg-[#F4F6F0] transition-colors sticky top-0 z-10"
-                onClick={() => setSheetOpen(true)}
-              >
-                <div className="flex items-start gap-[12px]">
-                  {/* Image */}
-                  <div className="w-[60px] h-[60px] flex-shrink-0 bg-gray-100 rounded-[8px] overflow-hidden">
-                    {(activeChat.serviceId.images && activeChat.serviceId.images.length > 0) ||
-                    activeChat.serviceId.image ? (
-                      <img
-                        src={
-                          activeChat.serviceId.images && activeChat.serviceId.images.length > 0
-                            ? activeChat.serviceId.images[0]
-                            : activeChat.serviceId.image
-                        }
-                        alt={activeChat.serviceId.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          console.error('ChatWindow - Image failed to load:', e.currentTarget.src);
-                          // Replace with fallback
-                          const parent = e.currentTarget.parentElement;
-                          if (parent) {
-                            parent.innerHTML =
-                              '<div class="w-full h-full flex items-center justify-center bg-[#EAF1E9]"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2E6641" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></div>';
-                          }
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-[#EAF1E9]">
-                        <Briefcase size={24} className="text-[#2E6641]" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-[13px] font-semibold text-custom-black truncate">
-                          {activeChat.serviceId.title || 'Oppdrag'}
-                        </h4>
-                        {activeChat.serviceId.categories &&
-                          activeChat.serviceId.categories.length > 0 && (
-                            <p className="text-[11px] text-gray-500 mt-[1px] truncate">
-                              {activeChat.serviceId.categories.join(', ')}
-                            </p>
-                          )}
-                        <div className="flex items-center gap-2 mt-[2px]">
-                          {/* Original service price (if agreed price exists) */}
-                          {activeChat.agreedPrice !== undefined && (
-                            <p className="text-[12px] text-gray-400 line-through">
-                              {activeChat.serviceId.price ? `${activeChat.serviceId.price} kr` : ''}
-                            </p>
-                          )}
-                          {/* Agreed price or original price input */}
-                          {isEditingPrice ? (
-                            <div
-                              className="flex items-center gap-2"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <input
-                                type="number"
-                                value={newAgreedPrice}
-                                onChange={(e) => setNewAgreedPrice(e.target.value)}
-                                placeholder="Pris"
-                                className="w-[80px] border border-gray-300 rounded px-2 py-1 text-sm"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleUpdateAgreedPrice();
-                                  }
-                                }}
-                              />
-                              <button
-                                onClick={handleUpdateAgreedPrice}
-                                className="p-1 text-green-600 hover:bg-green-50 rounded"
-                              >
-                                <Check size={16} />
-                              </button>
-                              <button
-                                onClick={() => setIsEditingPrice(false)}
-                                className="p-1 text-gray-500 hover:bg-gray-100 rounded"
-                              >
-                                <X size={16} />
-                              </button>
-                            </div>
-                          ) : (
-                            <p className="text-[12px] font-bold text-[#2E6641]">
-                              {activeChat.agreedPrice ?? activeChat.serviceId.price} kr
-                            </p>
-                          )}
-                          {/* Edit price button (only if no contract created yet) */}
-                          {!activeChat.orderId && !isEditingPrice && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setIsEditingPrice(true);
-                                setNewAgreedPrice(
-                                  (activeChat.agreedPrice ?? activeChat.serviceId.price).toString()
-                                );
-                              }}
-                              className="p-1 text-gray-500 hover:bg-gray-100 rounded"
-                            >
-                              <Edit2 size={16} />
-                            </button>
-                          )}
-                        </div>
-                        <span className="inline-block mt-[4px] px-[8px] py-[2px] rounded-full text-[10px] font-medium bg-gray-100 text-gray-700">
-                          {activeChat.status
-                            ? getChatStatusLabel(activeChat.status)
-                            : activeChat.orderId
-                              ? getOrderStage(
-                                  activeChat.orderId.status,
-                                  activeChat.orderId.paymentStatus
-                                )
-                              : 'Forespørsel'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* In-thread Action Bar */}
               {isServiceOwner && isChatReady && (
                 <div className="bg-white border-b border-gray-100 px-4 py-3 shrink-0">
@@ -383,118 +187,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         Opprett kontrakt
                       </button>
                     ) : (
-                      <>
-                        {/* Only show payment button if payment isn't completed yet */}
-                        {activeChat.orderId.paymentStatus !== 'paid' && (
-                          <button
-                            onClick={handleStartSafePay}
-                            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none bg-linear-to-r from-[#2E6641] to-[#15803d] text-white shadow-sm hover:shadow-md hover:from-[#15803d] hover:to-[#14532d] transition-all duration-200 transform hover:-translate-y-0.5"
-                          >
-                            Start fiks ferdig-betaling
-                          </button>
-                        )}
-                        {/* Always show view contract button unless order is canceled/declined */}
-                        {activeChat.orderId.status !== 'canceled' && activeChat.orderId.status !== 'declined' && (
-                          <button
-                            onClick={() => {
-                              const orderId = activeChat.orderId._id || activeChat.orderId;
-                              // ponytail BUG-005: customer → checkout; provider → /provider/orders (navigateToOrder resolves role)
-                              navigateToOrder(orderId);
-                            }}
-                            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#2E6641] text-[#2E6641] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
-                          >
-                            Se kontrakt
-                          </button>
-                        )}
-                      </>
+                      activeChat.orderId.paymentStatus !== 'paid' && (
+                        <button
+                          onClick={handleStartSafePay}
+                          className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none bg-linear-to-r from-[#2E6641] to-[#15803d] text-white shadow-sm hover:shadow-md hover:from-[#15803d] hover:to-[#14532d] transition-all duration-200 transform hover:-translate-y-0.5"
+                        >
+                          Start fiks ferdig-betaling
+                        </button>
+                      )
                     )}
                   </div>
                 </div>
               )}
-              {/* If not service owner, maybe show view contract button (always (if order exists) */}
-              {!isServiceOwner &&
-                activeChat.orderId &&
-                activeChat.orderId.status !== 'canceled' &&
-                activeChat.orderId.status !== 'declined' && (
-                  <div className="bg-white border-b border-gray-100 px-4 py-3 shrink-0">
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => {
-                          const orderId = activeChat.orderId._id || activeChat.orderId;
-                          // ponytail BUG-005: provider (viewer is NOT service owner) must always go to /provider/orders/:orderId
-                          navigateToOrder(orderId);
-                        }}
-                        className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-2 border-[#2E6641] text-[#2E6641] bg-white hover:bg-[#f0fdf4] transition-all duration-200 transform hover:-translate-y-0.5"
-                      >
-                        Se oppdrag
-                      </button>
-                    </div>
-                  </div>
-                )}
             </>
-          )}
-
-          {/* Job Detail Sheet */}
-          {activeChat?.serviceId && (
-            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-              <SheetContent side="bottom" className="h-[80vh] rounded-t-[20px] px-0">
-                <SheetHeader className="px-[18px] pb-2 border-b border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <SheetTitle className="text-lg font-semibold">Oppdrag</SheetTitle>
-                    <SheetClose className="rounded-full p-1 hover:bg-gray-100">
-                      <X size={20} />
-                    </SheetClose>
-                  </div>
-                </SheetHeader>
-                <div className="px-[18px] py-4 overflow-y-auto">
-                  {((activeChat.serviceId.images && activeChat.serviceId.images.length > 0) ||
-                    activeChat.serviceId.image) && (
-                    <div className="w-full h-[200px] rounded-[12px] overflow-hidden mb-4">
-                      <img
-                        src={
-                          activeChat.serviceId.images && activeChat.serviceId.images.length > 0
-                            ? activeChat.serviceId.images[0]
-                            : activeChat.serviceId.image
-                        }
-                        alt={activeChat.serviceId.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          console.error(
-                            'ChatWindow Sheet - Image failed to load:',
-                            e.currentTarget.src
-                          );
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  )}
-                  <h2 className="text-xl font-bold text-custom-black mb-2">
-                    {activeChat.serviceId.title}
-                  </h2>
-                  {activeChat.serviceId.categories &&
-                    activeChat.serviceId.categories.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {activeChat.serviceId.categories.map((cat: string, idx: number) => (
-                          <span
-                            key={idx}
-                            className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
-                          >
-                            {cat}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  <p className="text-2xl font-bold text-[#2E6641] mb-4">
-                    {activeChat.agreedPrice ?? activeChat.serviceId.price} kr
-                  </p>
-                  {activeChat.serviceId.description && (
-                    <p className="text-gray-700 text-sm leading-relaxed">
-                      {activeChat.serviceId.description}
-                    </p>
-                  )}
-                </div>
-              </SheetContent>
-            </Sheet>
           )}
 
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">

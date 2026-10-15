@@ -62,7 +62,7 @@ export default function DisputeDetailPage() {
     if (isError || !dispute) return <AdminErrorState onRetry={refetch} title="Tvist ikke funnet" description="Tvisten finnes ikke eller tilgang er nektet." />;
 
     const d = dispute as Dispute;
-    const orderId = typeof d.orderId === 'object' ? d.orderId._id : d.orderId;
+    const orderId = typeof d.orderId === 'object' ? d.orderId?._id : d.orderId;
     const isActive = ['open', 'under_review', 'waiting_for_customer', 'waiting_for_provider', 'evidence_submitted'].includes(d.status);
     const isResolved = ['resolved', 'closed'].includes(d.status);
     const PRIORITY_COLOR: Record<string, string> = { low: 'bg-gray-100 text-gray-600', medium: 'bg-yellow-50 text-yellow-700', high: 'bg-orange-50 text-orange-700', critical: 'bg-red-100 text-red-700' };

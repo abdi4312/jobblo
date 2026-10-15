@@ -8,22 +8,130 @@ const Notification = require('../models/Notification');
 const SafePayHistory = require('../models/SafePayHistory');
 const Review = require('../models/Review');
 const Chat = require('../models/ChatMessage');
-const { getStripe } = require('../config/stripe');
+const { getStripeConfiguration, getStripeForMode } = require('../config/stripe');
+const { getStripeWebhookReadiness } = require('../services/stripe/webhookReadiness');
 const { resolveStripeCustomer } = require('../services/stripe/customers');
 const { notify, emitToUser } = require('../services/notifications');
 const { normaliseReviewPhotos, MAX_REVIEW_PHOTOS } = require('../utils/reviewPhotos');
+const {
+  getProviderConnectDeadlineDays,
+  deadlineSnapshot,
+} = require('../services/safepay/providerConnectDeadline');
 
 const PAID_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed'];
 
+function truncateStripeText(value, limit) {
+  return Array.from(String(value)).slice(0, limit).join('');
+}
+
+async function verifyPaidCheckoutSession(session, order, allowAlternateAttempt = false) {
+  if (String(session?.metadata?.userId) !== String(order.customerId)) {
+    return { ok: false, reason: 'session_customer_mismatch' };
+  }
+  const paymentIntentId =
+    typeof session?.payment_intent === 'string'
+      ? session.payment_intent
+      : session?.payment_intent?.id;
+  if (
+    !session?.id ||
+    session.mode !== 'payment' ||
+    session.status !== 'complete' ||
+    session.payment_status !== 'paid' ||
+    session.currency !== 'nok' ||
+    !Number.isSafeInteger(session.amount_total) ||
+    !paymentIntentId ||
+    String(session.metadata?.orderId) !== String(order._id) ||
+    String(session.metadata?.userId) !== String(order.customerId)
+  ) {
+    return { ok: false, reason: 'session_details_mismatch' };
+  }
+  if (typeof session.livemode !== 'boolean') {
+    return { ok: false, reason: 'session_mode_missing' };
+  }
+
+  const testMode = session.livemode === false;
+  const sessionMode = testMode ? 'test' : 'live';
+  const stripeConfig = await getStripeConfiguration();
+  if (stripeConfig.mode !== sessionMode || (order.checkoutMode && order.checkoutMode !== sessionMode)) {
+    return { ok: false, reason: 'stripe_mode_mismatch' };
+  }
+
+  const expectedAmount =
+    order.checkoutAmountMinor ??
+    Math.round((order.agreedPrice + Math.round(order.agreedPrice * 0.03)) * 100);
+  if (session.amount_total !== expectedAmount) {
+    return { ok: false, reason: 'amount_mismatch' };
+  }
+  if (
+    order.checkoutCurrency &&
+    order.checkoutCurrency.toLowerCase() !== session.currency.toLowerCase()
+  ) {
+    return { ok: false, reason: 'currency_mismatch' };
+  }
+  if (order.checkoutCustomerId && String(session.customer) !== order.checkoutCustomerId) {
+    return { ok: false, reason: 'customer_mismatch' };
+  }
+
+  if (order.checkoutAttemptId) {
+    if (
+      allowAlternateAttempt &&
+      (!session.metadata?.checkoutAttemptId || session.metadata?.stripeMode !== sessionMode)
+    ) {
+      return { ok: false, reason: 'checkout_attempt_mismatch' };
+    }
+    if (!allowAlternateAttempt && (
+      session.metadata?.checkoutAttemptId !== order.checkoutAttemptId ||
+      session.metadata?.stripeMode !== sessionMode
+    )) {
+      return { ok: false, reason: 'checkout_attempt_mismatch' };
+    }
+    if (!allowAlternateAttempt &&
+      order.checkoutSessionId !== session.id &&
+      order.checkoutSessionId !== `PENDING_${order.checkoutAttemptId}`
+    ) {
+      return { ok: false, reason: 'checkout_session_mismatch' };
+    }
+  } else if (order.checkoutSessionId !== session.id) {
+    return { ok: false, reason: 'checkout_session_mismatch' };
+  }
+
+  const stripe = await getStripeForMode(testMode);
+  const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  if (
+    intent.status !== 'succeeded' ||
+    intent.amount_received !== expectedAmount ||
+    intent.currency !== session.currency ||
+    (order.checkoutCustomerId && String(intent.customer) !== order.checkoutCustomerId)
+  ) {
+    return { ok: false, reason: 'payment_intent_mismatch' };
+  }
+  const chargeId =
+    typeof intent.latest_charge === 'string' ? intent.latest_charge : intent.latest_charge?.id;
+  if (!chargeId) return { ok: false, reason: 'charge_missing' };
+  const charge = await stripe.charges.retrieve(chargeId);
+  if (
+    !charge.paid ||
+    !charge.captured ||
+    charge.amount !== expectedAmount ||
+    charge.currency !== session.currency ||
+    String(charge.payment_intent) !== paymentIntentId
+  ) {
+    return { ok: false, reason: 'charge_mismatch' };
+  }
+  const card = charge.payment_method_details?.card;
+  return {
+    ok: true,
+    paymentIntentId,
+    chargeId,
+    paymentMethodBrand: typeof card?.brand === 'string' ? card.brand : undefined,
+    paymentMethodLast4: /^\d{4}$/.test(card?.last4 || '') ? card.last4 : undefined,
+  };
+}
+
 /**
- * Idempotently move an order to "paid" for a Stripe Checkout session that Stripe
- * reports as paid, create the Payment record, notify both parties and emit sockets.
- *
- * Shared by two callers so they cannot drift:
- *   - checkoutSessionStatus  (browser returned from Stripe — best effort)
- *   - stripeWebhook          (Stripe told us directly — the source of truth)
- *
- * Returns { ok, alreadyConfirmed, order } or { ok: false, reason }.
+ * Webhooks and server-side reconciliation are the only callers; browser status reads
+ * never call this function. Stripe's PaymentIntent and captured charge are verified
+ * against the immutable attempt snapshot before state changes.
  */
 async function confirmPaidSession(session, io) {
   const orderId = session?.metadata?.orderId;
@@ -36,41 +144,177 @@ async function confirmPaidSession(session, io) {
   // metadata when we created the session, so it is trusted — but an order whose
   // metadata points elsewhere means we are about to mark the wrong order paid,
   // which is worth refusing rather than guessing about.
-  const sessionUserId = session?.metadata?.userId;
-  if (sessionUserId && String(sessionUserId) !== String(order.customerId)) {
-    return { ok: false, reason: 'session_customer_mismatch' };
+  let verification = await verifyPaidCheckoutSession(session, order);
+  const existingPayment = await Payment.findOne({ orderId });
+  let updatedOrder;
+  let alreadyConfirmed = false;
+  if (!verification.ok && ['checkout_attempt_mismatch', 'checkout_session_mismatch'].includes(verification.reason)) {
+    verification = await verifyPaidCheckoutSession(session, order, true);
+    if (verification.ok) {
+      if (existingPayment?.stripePaymentIntentId === verification.paymentIntentId) {
+        return { ok: true, alreadyConfirmed: true, duplicateSession: true };
+      }
+      if (existingPayment || PAID_STATUSES.includes(order.status)) {
+        const { recordDuplicateSafePayPayment } = require('../services/stripe/paymentLifecycle');
+        const incident = await recordDuplicateSafePayPayment({
+          order,
+          originalPayment: existingPayment,
+          session,
+          paymentIntentId: verification.paymentIntentId,
+          chargeId: verification.chargeId,
+        });
+        return { ok: true, duplicatePayment: true, incidentId: String(incident._id) };
+      }
+
+      // A delayed event for a replaced checkout can be the first actual payment.
+      // Claim it only if the reservation has not changed since the order read.
+      const deadline = deadlineSnapshot(
+        await getProviderConnectDeadlineDays(),
+        new Date()
+      );
+      updatedOrder = await Order.findOneAndUpdate(
+        {
+          _id: orderId,
+          status: { $in: ['awaiting_payment', 'pending', 'accepted'] },
+          paymentStatus: { $ne: 'paid' },
+          checkoutSessionId: order.checkoutSessionId,
+          checkoutAttemptId: order.checkoutAttemptId,
+        },
+        {
+          $set: {
+            status: 'paid',
+            paymentStatus: 'paid',
+            ...deadline,
+            checkoutSessionId: session.id,
+            checkoutAttemptId: session.metadata.checkoutAttemptId,
+            checkoutSessionStatus: 'complete',
+            checkoutMode: session.livemode ? 'live' : 'test',
+            paymentIntentId: verification.paymentIntentId,
+          },
+          $push: {
+            history: {
+              action: 'payment_confirmed',
+              userId: null,
+              timestamp: new Date(),
+              data: { stripeSessionId: session.id, message: 'Betaling bekreftet' },
+            },
+          },
+        },
+        { new: true }
+      );
+      if (!updatedOrder) {
+        const [currentOrder, currentPayment] = await Promise.all([
+          Order.findById(orderId),
+          Payment.findOne({ orderId }),
+        ]);
+        if (
+          currentOrder?.checkoutSessionId === session.id &&
+          currentOrder?.paymentIntentId === verification.paymentIntentId
+        ) {
+          updatedOrder = currentOrder;
+          alreadyConfirmed = true;
+        } else if (currentPayment || PAID_STATUSES.includes(currentOrder?.status)) {
+          const { recordDuplicateSafePayPayment } = require('../services/stripe/paymentLifecycle');
+          const incident = await recordDuplicateSafePayPayment({
+            order: currentOrder || order,
+            originalPayment: currentPayment,
+            session,
+            paymentIntentId: verification.paymentIntentId,
+            chargeId: verification.chargeId,
+          });
+          return { ok: true, duplicatePayment: true, incidentId: String(incident._id) };
+        } else {
+          return { ok: false, reason: 'order_state_conflict' };
+        }
+      }
+    }
+  }
+  if (!verification.ok) return verification;
+  const paymentIntentId = verification.paymentIntentId;
+  if (
+    existingPayment &&
+    (existingPayment.stripeSessionId !== session.id ||
+      existingPayment.stripePaymentIntentId !== paymentIntentId)
+  ) {
+    return { ok: false, reason: 'duplicate_successful_payment' };
   }
 
-  if (PAID_STATUSES.includes(order.status)) {
-    return { ok: true, alreadyConfirmed: true, order };
-  }
-
-  const updatedOrder = await Order.findOneAndUpdate(
-    { _id: orderId, status: { $in: ['awaiting_payment', 'pending', 'accepted'] } },
-    {
-      $set: {
-        status: 'paid',
-        paymentStatus: 'paid',
-        paymentConfirmedAt: new Date(),
-        checkoutSessionId: session.id,
-        checkoutSessionStatus: 'complete',
-        paymentIntentId: session.payment_intent,
+  if (updatedOrder) {
+    // The delayed first successful attempt was claimed above.
+  } else if (PAID_STATUSES.includes(order.status)) {
+    if (order.checkoutSessionId !== session.id || order.paymentIntentId !== paymentIntentId) {
+      return { ok: false, reason: 'duplicate_successful_payment' };
+    }
+    updatedOrder = order;
+    alreadyConfirmed = true;
+  } else {
+  const deadline = deadlineSnapshot(
+    await getProviderConnectDeadlineDays(),
+    new Date()
+  );
+  updatedOrder = await Order.findOneAndUpdate(
+      {
+        _id: orderId,
+        status: { $in: ['awaiting_payment', 'pending', 'accepted'] },
+        paymentStatus: { $ne: 'paid' },
+        $or: order.checkoutAttemptId
+          ? [
+              { checkoutSessionId: session.id, checkoutAttemptId: order.checkoutAttemptId },
+              {
+                checkoutSessionId: `PENDING_${order.checkoutAttemptId}`,
+                checkoutAttemptId: order.checkoutAttemptId,
+                checkoutSessionStatus: 'pending',
+              },
+            ]
+          : [{ checkoutSessionId: session.id }],
       },
-      $push: {
-        history: {
-          action: 'payment_confirmed',
-          userId: null,
-          timestamp: new Date(),
-          data: { stripeSessionId: session.id, message: 'Betaling bekreftet' },
+      {
+        $set: {
+          status: 'paid',
+          paymentStatus: 'paid',
+          ...deadline,
+          checkoutSessionId: session.id,
+          checkoutSessionStatus: 'complete',
+          checkoutMode: session.livemode ? 'live' : 'test',
+          paymentIntentId,
+        },
+        $push: {
+          history: {
+            action: 'payment_confirmed',
+            userId: null,
+            timestamp: new Date(),
+            data: { stripeSessionId: session.id, message: 'Betaling bekreftet' },
+          },
         },
       },
-    },
-    { new: true }
-  );
+      { new: true }
+    );
 
-  // Another caller won the race between our read and our write.
-  if (!updatedOrder) {
-    return { ok: true, alreadyConfirmed: true, order: await Order.findById(orderId) };
+    // Another caller won the race between our read and our write.
+    if (!updatedOrder) {
+      const currentOrder = await Order.findById(orderId);
+      if (
+        PAID_STATUSES.includes(currentOrder?.status) &&
+        currentOrder.checkoutSessionId === session.id &&
+        currentOrder.paymentIntentId === paymentIntentId
+      ) {
+        updatedOrder = currentOrder;
+        alreadyConfirmed = true;
+      } else if (PAID_STATUSES.includes(currentOrder?.status) && currentOrder.paymentIntentId) {
+        const currentPayment = await Payment.findOne({ orderId });
+        const { recordDuplicateSafePayPayment } = require('../services/stripe/paymentLifecycle');
+        const incident = await recordDuplicateSafePayPayment({
+          order: currentOrder,
+          originalPayment: currentPayment,
+          session,
+          paymentIntentId,
+          chargeId: verification.chargeId,
+        });
+        return { ok: true, duplicatePayment: true, incidentId: String(incident._id) };
+      } else {
+        return { ok: false, reason: 'order_state_conflict' };
+      }
+    }
   }
 
   await Service.findByIdAndUpdate(updatedOrder.serviceId, { status: 'paid' });
@@ -102,17 +346,66 @@ async function confirmPaidSession(session, io) {
   const paymentResult = await Payment.updateOne(
     { orderId },
     {
+      $set: {
+        capturedAmountMinor: updatedOrder.checkoutAmountMinor,
+        stripeSessionId: session.id,
+        stripePaymentIntentId: paymentIntentId,
+        stripeLivemode: session.livemode,
+      },
       $setOnInsert: {
         orderId,
         chatId: updatedOrder.chatId,
         status: 'completed',
         amount: updatedOrder.agreedPrice || 0,
-        stripeSessionId: session.id,
-        stripePaymentIntentId: session.payment_intent,
       },
     },
     { upsert: true }
   );
+
+  if (
+    Number.isSafeInteger(updatedOrder.checkoutAmountMinor) &&
+    updatedOrder.checkoutAmountMinor > 0
+  ) {
+    const service = await Service.findById(updatedOrder.serviceId).select('title');
+    const originalPayment = updatedOrder.checkoutAmountMinor / 100;
+    const agreedPrice = Number(updatedOrder.agreedPrice) || 0;
+    const fee = Math.max(0, originalPayment - agreedPrice);
+    await SafePayHistory.updateOne(
+      { orderId: updatedOrder._id },
+      {
+        $set: {
+          paymentDate: updatedOrder.paymentConfirmedAt || new Date(),
+          originalPaymentAmountMinor: updatedOrder.checkoutAmountMinor,
+          stripePaymentIntentId: paymentIntentId,
+          transactionId: paymentIntentId,
+          paymentMethodBrand: verification.paymentMethodBrand,
+          paymentMethodLast4: verification.paymentMethodLast4,
+          stripeLivemode: session.livemode,
+          providerConnectDeadlineDays: updatedOrder.providerConnectDeadlineDays,
+          providerConnectDeadlineAt: updatedOrder.providerConnectDeadlineAt,
+        },
+        $setOnInsert: {
+          orderId: updatedOrder._id,
+          serviceId: updatedOrder.serviceId,
+          customerId: updatedOrder.customerId,
+          providerId: updatedOrder.providerId,
+          serviceTitle: service?.title || 'Uten navn',
+          amounts: {
+            agreedPrice,
+            fee,
+            tax: 0,
+            totalCustomer: originalPayment,
+            netProvider: Math.max(0, agreedPrice - fee),
+          },
+          status: 'payment_received',
+          providerConnectStatus: 'pending',
+          refundedAmountMinor: 0,
+          refundStatus: 'none',
+        },
+      },
+      { upsert: true }
+    );
+  }
 
   if (paymentResult?.upsertedCount === 1) {
     await User.updateMany(
@@ -134,6 +427,19 @@ async function confirmPaidSession(session, io) {
         payload: { orderId: String(order._id) },
       }),
       notify({
+        userId: order.providerId,
+        type: 'payment',
+        content: `Fullfør Stripe Connect-oppsettet innen ${updatedOrder.providerConnectDeadlineAt.toLocaleDateString('nb-NO')} for å motta utbetaling: ${(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')}/settings/payout`,
+        orderId: order._id,
+        senderId: order.customerId,
+        event: 'provider_connect_deadline',
+        payload: {
+          orderId: String(order._id),
+          url: '/settings/payout',
+          deadlineAt: updatedOrder.providerConnectDeadlineAt,
+        },
+      }),
+      notify({
         userId: order.customerId,
         type: 'payment',
         content: 'Betalingen er bekreftet og holdes trygt til jobben er godkjent.',
@@ -150,7 +456,7 @@ async function confirmPaidSession(session, io) {
     io.to(`user_${order.customerId}`).emit('payment_confirmed', { orderId: order._id });
   }
 
-  return { ok: true, alreadyConfirmed: false, order: updatedOrder };
+  return { ok: true, alreadyConfirmed, order: updatedOrder };
 }
 
 exports.getCheckoutDetails = async (req, res) => {
@@ -329,7 +635,24 @@ function buildCheckoutRedirects({ orderId, mobile, req }) {
 exports.createSafePaySession = async (req, res) => {
   const { orderId, platform } = req.body || {};
   try {
-    const stripe = await getStripe();
+    let stripeConfig;
+    let stripe;
+    try {
+      stripeConfig = await getStripeConfiguration();
+      const readiness = await getStripeWebhookReadiness(stripeConfig);
+      if (!readiness.ready) {
+        return res.status(503).json({
+          error: 'Betaling er midlertidig utilgjengelig. Prøv igjen senere eller kontakt support.',
+          code: 'STRIPE_WEBHOOK_NOT_READY',
+        });
+      }
+      stripe = await getStripeForMode(stripeConfig.testMode);
+    } catch (_err) {
+      return res.status(503).json({
+        error: 'Betaling er midlertidig utilgjengelig. Prøv igjen senere eller kontakt support.',
+        code: 'STRIPE_WEBHOOK_NOT_READY',
+      });
+    }
     const userId = req.userId;
 
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
@@ -362,6 +685,16 @@ exports.createSafePaySession = async (req, res) => {
       });
     }
 
+    const jobId = String(order.serviceId._id);
+    const jobTitle = truncateStripeText(order.serviceId.title || 'Uten navn', 500);
+    const paymentDescriptionPrefix = 'SafePay | Job: ';
+    const paymentDescriptionSuffix = ` | Job ID: ${jobId}`;
+    const paymentDescription = `${paymentDescriptionPrefix}${truncateStripeText(
+      jobTitle,
+      500 - paymentDescriptionPrefix.length - paymentDescriptionSuffix.length
+    )}${paymentDescriptionSuffix}`;
+    const stripeProductName = `SafePay: ${truncateStripeText(jobTitle, 250 - 'SafePay: '.length)}`;
+
     if (!(order.agreedPrice > 0)) {
       console.error(
         'createSafePaySession: order %s has agreedPrice %o',
@@ -389,98 +722,6 @@ exports.createSafePaySession = async (req, res) => {
       return res.status(409).json({ error: 'Ordre er allerede betalt.' });
     }
 
-    // Computed before the reuse check below, not just before the Stripe call: the reuse
-    // decision needs to know what THIS request's return URLs are. A config mistake also
-    // still fails here rather than after Stripe has been handed "undefined/safepay/…",
-    // which it rejects as an invalid URL — a config error that arrived looking like a
-    // payment-provider failure.
-    const redirects = buildCheckoutRedirects({
-      // `order._id`, not the raw body value: `ObjectId.isValid()` also passes any 12-char
-      // string, so the request's `orderId` is not guaranteed to be 24 hex characters. This
-      // id is about to be embedded in a URL that leaves the server, and the bridge below
-      // re-validates it as 24 hex — normalising here keeps the two ends in agreement.
-      orderId: String(order._id),
-      mobile: isMobile,
-      req,
-    });
-    if (redirects.error) {
-      console.error('createSafePaySession: %s', redirects.error);
-      return res.status(500).json({
-        error: 'Betaling er ikke konfigurert riktig. Kontakt support.',
-        code: 'frontend_url_misconfigured',
-      });
-    }
-
-    // Return existing open session if one exists (prevent duplicate sessions)
-    if (order.checkoutSessionId && order.checkoutSessionStatus === 'open') {
-      try {
-        const existingSession = await stripe.checkout.sessions.retrieve(order.checkoutSessionId);
-        // Reuse only a session that returns where this caller needs to go. A session opened
-        // from the website carries the web `success_url`; handing it to the app would send
-        // the customer to jobblo.no after paying and the app would never learn about it.
-        // Platform changed → let it fall through and open a fresh session instead.
-        if (
-          existingSession.status === 'open' &&
-          sameRedirectTarget(existingSession.success_url, redirects.success)
-        ) {
-          return res.json({ url: existingSession.url, reused: true });
-        }
-      } catch (_) {
-        // Session expired/invalid — create new one
-      }
-    }
-
-    // ponytail: atomic session creation. Replaces check-then-create race with
-    // findOneAndUpdate comparing status before Stripe session creation (impact:
-    // multiple concurrent requests creating duplicate sessions).
-
-    // First, try to atomically claim the checkout-in-progress slot for this order.
-    // If checkoutSessionId is unset OR expired, we own it. If it's set and open,
-    // we fall back to reusing the existing session (single source of truth).
-    const reclaimedOrder = await Order.findOneAndUpdate(
-      {
-        _id: orderId,
-        $or: [{ checkoutSessionId: null }, { checkoutSessionStatus: { $ne: 'open' } }],
-      },
-      {
-        $set: {
-          checkoutSessionId: 'PENDING_' + Date.now() + '_' + Math.random().toString(36).slice(2),
-          checkoutSessionStatus: 'pending',
-          checkoutSessionCreatedAt: new Date(),
-        },
-      },
-      { new: true }
-    );
-
-    // If the update succeeded, we own the slot. If it returned null, the order
-    // already has an open session from another request — reuse it.
-    if (!reclaimedOrder) {
-      const currentOrder = await Order.findById(orderId).select(
-        'checkoutSessionId checkoutSessionStatus serviceId'
-      );
-      if (
-        currentOrder &&
-        currentOrder.checkoutSessionId &&
-        currentOrder.checkoutSessionStatus === 'open'
-      ) {
-        try {
-          const existingSession = await stripe.checkout.sessions.retrieve(
-            currentOrder.checkoutSessionId
-          );
-          if (
-            existingSession.status === 'open' &&
-            sameRedirectTarget(existingSession.success_url, redirects.success)
-          ) {
-            return res.json({ url: existingSession.url, reused: true });
-          }
-        } catch (_) {
-          // Session invalid — fall through to create new one
-        }
-      }
-      // Neither our update succeeded nor could we reuse existing session.
-      // This should be rare. Fall through to create fresh session.
-    }
-
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'Bruker ble ikke funnet' });
@@ -489,72 +730,288 @@ exports.createSafePaySession = async (req, res) => {
     // Verifies the stored id against Stripe before reusing it, so a customer left
     // over from the other Stripe mode is replaced rather than producing a
     // resource_missing 500 on the way into checkout.
-    const stripeCustomerId = await resolveStripeCustomer(stripe, user);
+    const stripeCustomerId = await resolveStripeCustomer(stripe, user, stripeConfig.testMode);
 
     const fee = Math.round(order.agreedPrice * 0.03);
     const total = order.agreedPrice + fee;
+    const amountMinor = Math.round(total * 100);
 
-    if (total < 3) {
+    if (amountMinor < 300) {
       return res.status(400).json({
         error: 'Beløpet er for lavt. Minimumsbeløpet for betaling er 3 kr inkludert gebyr.',
       });
     }
 
-    // `redirects` was resolved above, before the session-reuse check.
-    const session = await stripe.checkout.sessions.create({
-      customer: stripeCustomerId,
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'nok',
-            product_data: {
-              name: `SafePay: ${order.serviceId.title}`,
-              description: `Kontrakt #${order._id.toString().substring(0, 8).toUpperCase()}`,
-            },
-            unit_amount: Math.round(total * 100),
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      success_url: redirects.success,
-      cancel_url: redirects.cancel,
-      metadata: {
-        userId: String(user._id),
-        orderId: orderId.toString(),
-        type: 'safepay_payment',
-      },
+    const redirects = buildCheckoutRedirects({
+      orderId: String(order._id),
+      mobile: isMobile,
+      req,
     });
+    if (redirects.error) {
+      return res.status(500).json({
+        error: 'Betaling er ikke konfigurert riktig. Kontakt support.',
+        code: 'frontend_url_misconfigured',
+      });
+    }
 
-    // Store session ID on order for reconciliation
-    await Order.findByIdAndUpdate(orderId, {
-      checkoutSessionId: session.id,
-      checkoutSessionStatus: 'open',
-      checkoutSessionCreatedAt: new Date(),
-    });
+    const conflict = () =>
+      res.status(409).json({
+        error: 'Betalingsforsøk er allerede i gang for denne kontrakten.',
+        code: 'checkout_in_progress',
+      });
+    const retrieveExistingSession = async (sessionId) => {
+      try {
+        return await stripe.checkout.sessions.retrieve(sessionId);
+      } catch (err) {
+        if (err?.code === 'resource_missing' || err?.statusCode === 404) return null;
+        throw err;
+      }
+    };
+
+    // Never clear or replace a session based on a timeout or other transient Stripe
+    // failure. Cross-platform requests reuse one payable session rather than creating
+    // a second session with different return URLs.
+    if (order.checkoutSessionId && order.checkoutSessionStatus === 'open') {
+      let existingSession;
+      try {
+        existingSession = await retrieveExistingSession(order.checkoutSessionId);
+      } catch (_err) {
+        return res.status(503).json({
+          error: 'Kunne ikke kontrollere betalingsforsøket hos Stripe. Prøv igjen.',
+          code: 'checkout_status_unavailable',
+        });
+      }
+      if (!existingSession) {
+        return res.status(503).json({
+          error: 'Betalingsforsøket kan ikke verifiseres hos Stripe. Kontakt support før du prøver igjen.',
+          code: 'checkout_status_unknown',
+        });
+      }
+      if (existingSession?.status === 'open') {
+        const expectedAmount =
+          order.checkoutAmountMinor ??
+          Math.round((order.agreedPrice + Math.round(order.agreedPrice * 0.03)) * 100);
+        if (
+          existingSession.mode !== 'payment' ||
+          existingSession.amount_total !== expectedAmount ||
+          existingSession.currency !== (order.checkoutCurrency || 'nok') ||
+          String(existingSession.metadata?.orderId) !== String(order._id) ||
+          String(existingSession.metadata?.userId) !== String(order.customerId) ||
+          existingSession.livemode !== (stripeConfig.mode === 'live')
+        ) {
+          return res.status(409).json({
+            error: 'Betalingsforsøket må kontrolleres før det kan brukes.',
+            code: 'checkout_session_mismatch',
+          });
+        }
+        return res.json({ url: existingSession.url, reused: true });
+      }
+      if (existingSession?.status === 'complete') {
+        if (existingSession.payment_status === 'paid') {
+          const result = await confirmPaidSession(existingSession, req.app?.get('io'));
+          if (result.ok) return res.json({ payment_status: 'paid', orderId: String(order._id) });
+        }
+        return conflict();
+      }
+      if (existingSession.status !== 'expired') return conflict();
+      const closed = await Order.updateOne(
+        { _id: orderId, checkoutSessionId: order.checkoutSessionId, checkoutSessionStatus: 'open' },
+        { $set: { checkoutSessionStatus: 'expired' } }
+      );
+      if (!closed.matchedCount) return conflict();
+    }
+
+    let attemptId;
+    let attemptCustomerId;
+    let successUrl;
+    let cancelUrl;
+    let productName;
+    let reservationId;
+    let amountSnapshot;
+
+    if (order.checkoutSessionId && order.checkoutMode && order.checkoutMode !== stripeConfig.mode) {
+      return conflict();
+    }
+
+    if (order.checkoutSessionStatus === 'pending') {
+      if (
+        !order.checkoutAttemptId ||
+        !order.checkoutSessionId?.startsWith('PENDING_') ||
+        order.checkoutMode !== stripeConfig.mode
+      ) {
+        return conflict();
+      }
+      const staleBefore = new Date(Date.now() - 2 * 60 * 1000);
+      if (!order.checkoutSessionCreatedAt || order.checkoutSessionCreatedAt > staleBefore) {
+        return conflict();
+      }
+      if (Date.now() - order.checkoutSessionCreatedAt.getTime() >= 23 * 60 * 60 * 1000) {
+        return res.status(409).json({
+          error: 'Betalingsforsøket må kontrolleres av support før det kan prøves på nytt.',
+          code: 'checkout_review_required',
+        });
+      }
+      const reclaimed = await Order.findOneAndUpdate(
+        {
+          _id: orderId,
+          checkoutSessionStatus: 'pending',
+          checkoutSessionId: order.checkoutSessionId,
+          checkoutAttemptId: order.checkoutAttemptId,
+          checkoutSessionCreatedAt: { $lte: staleBefore },
+        },
+        { $set: { checkoutSessionCreatedAt: new Date() } },
+        { new: true }
+      );
+      if (!reclaimed) return conflict();
+      attemptId = reclaimed.checkoutAttemptId;
+      attemptCustomerId = reclaimed.checkoutCustomerId;
+      successUrl = reclaimed.checkoutSuccessUrl;
+      cancelUrl = reclaimed.checkoutCancelUrl;
+      productName = reclaimed.checkoutProductName;
+      reservationId = reclaimed.checkoutSessionId;
+      amountSnapshot = reclaimed.checkoutAmountMinor;
+    } else {
+      const attempt = crypto.randomUUID();
+      reservationId = `PENDING_${attempt}`;
+      const reserved = await Order.findOneAndUpdate(
+        {
+          _id: orderId,
+          status: { $in: ['awaiting_payment', 'pending', 'accepted'] },
+          paymentStatus: { $ne: 'paid' },
+          $or: [
+            {
+              checkoutSessionId: { $in: [null, ''] },
+              checkoutSessionStatus: { $in: [null, ''] },
+            },
+            { checkoutSessionStatus: { $in: ['expired', 'cancelled', 'failed'] } },
+          ],
+        },
+        {
+          $set: {
+            checkoutSessionId: reservationId,
+            checkoutSessionStatus: 'pending',
+            checkoutSessionCreatedAt: new Date(),
+            checkoutAttemptId: attempt,
+            checkoutAmountMinor: amountMinor,
+            checkoutCurrency: 'nok',
+            checkoutMode: stripeConfig.mode,
+            checkoutCustomerId: stripeCustomerId,
+            checkoutSuccessUrl: redirects.success,
+            checkoutCancelUrl: redirects.cancel,
+            checkoutProductName: stripeProductName,
+          },
+        },
+        { new: true }
+      );
+      if (!reserved) return conflict();
+      attemptId = attempt;
+      attemptCustomerId = stripeCustomerId;
+      successUrl = redirects.success;
+      cancelUrl = redirects.cancel;
+      productName = stripeProductName;
+      amountSnapshot = amountMinor;
+    }
+
+    if (
+      !attemptCustomerId ||
+      !successUrl ||
+      !cancelUrl ||
+      !productName ||
+      !Number.isSafeInteger(amountSnapshot)
+    ) {
+      return conflict();
+    }
+
+    const idempotencyKey = `safepay:${orderId}:${attemptId}`;
+
+    // `redirects` was resolved above, before the session-reuse check.
+    let session;
+    try {
+      session = await stripe.checkout.sessions.create(
+      {
+        customer: attemptCustomerId,
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'nok',
+              product_data: {
+                name: productName,
+                description: paymentDescription,
+              },
+              unit_amount: amountSnapshot,
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'payment',
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        metadata: {
+          userId: String(user._id),
+          orderId: orderId.toString(),
+          type: 'safepay_payment',
+          jobId,
+          jobTitle,
+          checkoutAttemptId: attemptId,
+          stripeMode: stripeConfig.mode,
+        },
+        payment_intent_data: {
+          description: paymentDescription,
+          metadata: {
+            userId: String(user._id),
+            orderId: orderId.toString(),
+            type: 'safepay_payment',
+            jobId,
+            jobTitle,
+            checkoutAttemptId: attemptId,
+            stripeMode: stripeConfig.mode,
+          },
+        },
+      },
+      { idempotencyKey }
+      );
+    } catch (_err) {
+      return res.status(503).json({
+        error: 'Kunne ikke bekrefte opprettelsen av betalingslenken. Prøv igjen.',
+        code: 'checkout_outcome_unknown',
+      });
+    }
+
+    const persisted = await Order.findOneAndUpdate(
+      {
+        _id: orderId,
+        checkoutSessionId: reservationId,
+        checkoutSessionStatus: 'pending',
+        checkoutAttemptId: attemptId,
+        status: { $in: ['awaiting_payment', 'pending', 'accepted'] },
+        paymentStatus: { $ne: 'paid' },
+      },
+      {
+        $set: {
+          checkoutSessionId: session.id,
+          checkoutSessionStatus: session.status === 'open' ? 'open' : 'pending',
+          checkoutSessionCreatedAt: new Date(),
+        },
+      },
+      { new: true }
+    );
+    if (!persisted) {
+      return res.status(503).json({
+        error: 'Betalingsforsøket ble opprettet, men må kontrolleres før det kan åpnes på nytt.',
+        code: 'checkout_persistence_pending',
+      });
+    }
 
     res.json({ url: session.url });
   } catch (err) {
-    // A missing Stripe key throws out of getStripe() with a precise message; Stripe's own
-    // errors carry `type` and `code`. Both were being discarded, which is why a 500 here
-    // was unactionable in production.
-    const isConfig = /secret key is missing/i.test(err?.message || '');
     console.error(
-      'createSafePaySession failed [order=%s] %s%s: %s',
+      'createSafePaySession failed [order=%s] %s%s',
       orderId,
-      err?.type ? `${err.type}` : err?.name || 'Error',
-      err?.code ? `/${err.code}` : '',
-      err?.message,
-      err?.stack
+      err?.type || err?.name || 'Error',
+      err?.code ? `/${err.code}` : ''
     );
-
-    res.status(500).json({
-      error: isConfig
-        ? 'Betaling er ikke konfigurert riktig. Kontakt support.'
-        : 'Kunne ikke starte betalingen',
-      code: isConfig ? 'stripe_key_missing' : err?.code || 'stripe_session_failed',
-    });
+    res.status(500).json({ error: 'Kunne ikke starte betalingen', code: 'stripe_session_failed' });
   }
 };
 
@@ -711,20 +1168,10 @@ exports.mobileReturn = (req, res) => {
 
 exports.checkoutSessionStatus = async (req, res) => {
   try {
-    const stripe = await getStripe();
     const { sessionId } = req.params;
+    if (!SESSION_ID_RE.test(sessionId)) return res.status(400).json({ error: 'Invalid session id' });
 
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    if (!session) {
-      return res.status(404).json({ error: 'Session not found' });
-    }
-
-    const metadata = session.metadata;
-    if (!metadata?.orderId) {
-      return res.status(400).json({ error: 'Invalid session metadata' });
-    }
-
-    const order = await Order.findById(metadata.orderId);
+    const order = await Order.findOne({ checkoutSessionId: sessionId });
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
@@ -737,23 +1184,14 @@ exports.checkoutSessionStatus = async (req, res) => {
       return res.status(403).json({ error: 'Ikke autorisert' });
     }
 
-    if (session.payment_status !== 'paid') {
-      return res.json({ payment_status: session.payment_status });
-    }
-
-    const result = await confirmPaidSession(session, req.app?.get('io'));
-    if (!result.ok) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-
     return res.json({
-      payment_status: 'paid',
-      orderId: result.order._id,
-      chatId: result.order.chatId,
-      alreadyConfirmed: result.alreadyConfirmed,
+      payment_status: order.paymentStatus === 'paid' ? 'paid' : 'unpaid',
+      status: order.checkoutSessionStatus || 'unpaid',
+      orderId: order._id,
+      chatId: order.chatId,
     });
   } catch (err) {
-    console.error('checkoutSessionStatus error:', err.message);
+    console.error('checkoutSessionStatus failed: %s', err?.name || 'Error');
     res.status(500).json({ error: 'Serverfeil ved sjekking av betaling' });
   }
 };

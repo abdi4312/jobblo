@@ -21,8 +21,9 @@ const { isTestMode } = require('../../config/stripe');
  */
 
 /** Which User field holds the customer id for the mode we are currently in. */
-async function customerFieldForMode() {
-  return (await isTestMode()) ? 'stripeCustomerIdTest' : 'stripeCustomerId';
+async function customerFieldForMode(testMode) {
+  const useTestMode = testMode === undefined ? await isTestMode() : testMode;
+  return useTestMode ? 'stripeCustomerIdTest' : 'stripeCustomerId';
 }
 
 function isResourceMissing(err) {
@@ -46,8 +47,8 @@ async function createAndPersist(stripe, user, field) {
  * The user's Stripe customer for the active mode, created once and reused.
  * Always returns a customer id that Stripe currently recognises.
  */
-async function resolveStripeCustomer(stripe, user) {
-  const field = await customerFieldForMode();
+async function resolveStripeCustomer(stripe, user, testMode) {
+  const field = await customerFieldForMode(testMode);
   const stored = user?.[field];
 
   if (!stored) return createAndPersist(stripe, user, field);

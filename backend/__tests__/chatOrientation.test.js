@@ -43,6 +43,12 @@ jest.mock('../models/Dispute', () => ({ findOne: jest.fn() }));
 jest.mock('../models/JobRequest', () => ({ findOne: jest.fn() }));
 jest.mock('../config/stripe', () => ({ getStripe: jest.fn() }));
 jest.mock('../services/stripe/customers', () => ({ resolveStripeCustomer: jest.fn() }));
+jest.mock('../services/stripeConnectReadiness', () => ({
+  getConnectReadiness: jest.fn().mockResolvedValue({ ready: true }),
+  sendConnectReadinessFailure: jest.fn((res) =>
+    res.status(403).json({ code: 'STRIPE_CONNECT_REQUIRED' })
+  ),
+}));
 
 const mongoose = require('mongoose');
 const Chat = require('../models/ChatMessage');

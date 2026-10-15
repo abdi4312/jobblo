@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface SafePayStepsProps {
   currentStep: number;
+  navigableThroughStep?: number;
   orderId?: string;
   serviceId?: string;
 }
@@ -24,10 +25,15 @@ const STEPS = [
  *
  * And every step was clickable as soon as an `orderId` existed, including steps ahead of
  * the current one. From the payment screen you could press "Godkjenn og utbetal" and land
- * on the approval page for an order nobody had paid for yet. Only completed steps and the
- * current one navigate now; the rest are inert.
+ * on the approval page for an order nobody had paid for yet. Only reached steps and the
+ * current one navigate; the rest are inert.
  */
-const SafePaySteps: React.FC<SafePayStepsProps> = ({ currentStep, orderId, serviceId }) => {
+const SafePaySteps: React.FC<SafePayStepsProps> = ({
+  currentStep,
+  navigableThroughStep = currentStep,
+  orderId,
+  serviceId,
+}) => {
   const navigate = useNavigate();
 
   const pathFor = (id: number) => {
@@ -46,7 +52,8 @@ const SafePaySteps: React.FC<SafePayStepsProps> = ({ currentStep, orderId, servi
           const isCurrent = step.id === currentStep;
           const href = pathFor(step.id);
           // Never forward — a step you have not reached is not a place you can go.
-          const navigable = !!href && step.id <= currentStep && !isCurrent;
+          const navigable =
+            !!href && step.id <= Math.max(currentStep, navigableThroughStep) && !isCurrent;
 
           return (
             <li key={step.id} className="relative flex flex-1 flex-col items-center gap-2">
@@ -66,8 +73,10 @@ const SafePaySteps: React.FC<SafePayStepsProps> = ({ currentStep, orderId, servi
                 type="button"
                 disabled={!navigable}
                 aria-current={isCurrent ? 'step' : undefined}
+                aria-label={navigable ? `Gå til fullført steg: ${step.label}` : step.label}
+                title={navigable ? `Gå tilbake til ${step.label}` : undefined}
                 onClick={() => navigable && href && navigate(href)}
-                className="group relative z-10 flex flex-col items-center gap-2 rounded px-1 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/20 disabled:cursor-default"
+                className="group relative z-10 flex cursor-pointer flex-col items-center gap-2 rounded px-1 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#2E6641]/20 disabled:cursor-default"
               >
                 <span
                   className={`flex size-7 items-center justify-center rounded-full text-[0.6875rem] font-bold transition-colors ${
@@ -75,7 +84,9 @@ const SafePaySteps: React.FC<SafePayStepsProps> = ({ currentStep, orderId, servi
                       ? 'bg-[#122A1C] text-white'
                       : done
                         ? 'bg-[#2E6641] text-white group-hover:bg-[#255335]'
-                        : 'border border-[#E6E7E1] bg-white text-[#9B9E96]'
+                          : navigable
+                            ? 'border border-[#2E6641]/50 bg-white text-[#2E6641] group-hover:bg-[#EAF1E9]'
+                          : 'border border-[#E6E7E1] bg-white text-[#9B9E96]'
                   }`}
                 >
                   {done ? <Check size={13} strokeWidth={3} /> : step.id}
@@ -84,7 +95,7 @@ const SafePaySteps: React.FC<SafePayStepsProps> = ({ currentStep, orderId, servi
                   className={`text-center text-[0.6875rem] leading-tight transition-colors sm:text-[0.75rem] ${
                     isCurrent
                       ? 'font-semibold text-[#0B0B0B]'
-                      : done
+                      : done || navigable
                         ? 'font-medium text-[#2E6641] group-hover:text-[#255335]'
                         : 'text-[#9B9E96]'
                   }`}

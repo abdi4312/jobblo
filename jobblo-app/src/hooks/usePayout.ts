@@ -2,11 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../queryKeys';
 import { createAccountLink, getConnectStatus, refreshAccountStatus } from '../services/payout.service';
 
-export function useConnectStatus() {
+export function useConnectStatus(enabled = true) {
   return useQuery({
     queryKey: queryKeys.payout.status,
     queryFn: getConnectStatus,
+    enabled,
     refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     staleTime: 0,
   });
 }

@@ -61,6 +61,9 @@ export function ContractViewModal({ orderId, trigger }: ContractViewModalProps) 
 
     const order = data?.order;
     const calculation = data?.calculation;
+    const cancellationReason = order?.cancellationReason === 'provider_stripe_connect_timeout'
+        ? 'Utføreren fullførte ikke Stripe Connect-oppsettet innen fristen.'
+        : order?.cancellationReason;
 
     const { label: statusText, color: statusColor } = order
         ? statusLabel(order.status)
@@ -115,6 +118,42 @@ export function ContractViewModal({ orderId, trigger }: ContractViewModalProps) 
                                     <p className="text-[11px] text-gray-400 font-mono">
                                         Kontrakt-ID: {String(order._id).toUpperCase()}
                                     </p>
+
+                                    {cancellationReason && (
+                                        <section className="rounded-xl border border-red-100 bg-red-50 p-4">
+                                            <p className="text-[11px] font-bold uppercase tracking-wider text-red-700">
+                                                Kanselleringsårsak
+                                            </p>
+                                            <p className="mt-1 text-sm text-red-800">{cancellationReason}</p>
+                                            {order.paymentStatus === 'refunded' ? (
+                                                <p className="mt-2 text-xs text-red-700">
+                                                    Full refusjon er bekreftet. Det kan ta 1–2 virkedager før pengene vises på kontoen din.
+                                                </p>
+                                            ) : ['failed', 'manual_review'].includes(order.providerConnectTimeout?.status) ? (
+                                                <p className="mt-2 text-xs text-red-700">
+                                                    Refusjonen kunne ikke bekreftes automatisk og følges opp manuelt.
+                                                </p>
+                                            ) : (
+                                                <p className="mt-2 text-xs text-red-700">
+                                                    Oppdraget er kansellert og refusjonen behandles. Når Stripe har bekreftet refusjonen, kan det ta 1–2 virkedager før pengene vises på kontoen din.
+                                                </p>
+                                            )}
+                                            {order.providerConnectDeadlineDays && (
+                                                <p className="mt-2 text-xs text-red-700">
+                                                    Frist ved betaling: {order.providerConnectDeadlineDays} dager
+                                                    {order.providerConnectDeadlineTestMinutes
+                                                        ? ` (testfrist: ${order.providerConnectDeadlineTestMinutes} minutt)`
+                                                        : ''}
+                                                </p>
+                                            )}
+                                            {order.providerConnectDeadlineAt && (
+                                                <p className="mt-1 text-xs text-red-700">
+                                                    Fristen utløp:{' '}
+                                                    {new Date(order.providerConnectDeadlineAt).toLocaleString('nb-NO')}
+                                                </p>
+                                            )}
+                                        </section>
+                                    )}
 
                                     {/* Parties */}
                                     <section>

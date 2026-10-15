@@ -10,12 +10,39 @@ export type SafePayAmounts = {
 
 export type SafePayHistoryTransaction = {
   id: string;
+  orderId?: string;
   serviceTitle: string;
   isProvider: boolean;
   customerName: string;
   providerName: string;
   paymentDate?: string;
+  orderDate?: string;
   status: string;
+  providerConnectStatus?: 'pending' | 'ready' | 'verification_retry';
+  originalPaymentAmountMinor?: number;
+  refundAmountMinor?: number;
+  refundedAmountMinor?: number;
+  refundStatus?: 'none' | 'pending' | 'succeeded' | 'failed' | 'reconciliation_required';
+  refundReason?: string;
+  cancellationReason?: string;
+  stripePaymentIntentId?: string;
+  stripeRefundId?: string;
+  paymentMethodBrand?: string;
+  paymentMethodLast4?: string;
+  providerTransferAmountMinor?: number;
+  hasVerifiedProviderTransfer?: boolean;
+  providerTransferReversed?: boolean;
+  payoutAmountMinor?: number;
+  payoutStatus?: string;
+  payoutFailureCode?: string | null;
+  payoutFailureMessage?: string | null;
+  stripeTransferId?: string | null;
+  transferDate?: string | null;
+  transferLivemode?: boolean;
+  refundCompletedAt?: string;
+  refundFailedAt?: string;
+  providerConnectDeadlineAt?: string;
+  transactionId?: string;
   amounts: SafePayAmounts;
 };
 

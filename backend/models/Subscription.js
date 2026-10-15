@@ -66,13 +66,15 @@ const subscriptionSchema = new mongoose.Schema(
       },
       isPlaceholder: { type: Boolean, default: false },
       stripeSubscriptionId: String,
+      stripeMode: { type: String, enum: ['test', 'live'] },
+      pastDueSince: Date,
       startDate: Date,
       endDate: Date,
       renewalDate: Date,
       autoRenew: { type: Boolean, default: false },
       status: {
         type: String,
-        enum: ['active', 'inactive', 'cancelled', 'expired'],
+        enum: ['active', 'past_due', 'inactive', 'cancelled', 'expired'],
         default: 'active',
       },
       discountAmount: Number,
@@ -81,6 +83,14 @@ const subscriptionSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Coupon',
       },
+    },
+
+    pendingPlan: {
+      planId: { type: mongoose.Schema.Types.ObjectId, ref: 'SubscriptionPlan' },
+      plan: String,
+      planType: { type: String, enum: ['business', 'private'] },
+      effectiveAt: Date,
+      stripeMode: { type: String, enum: ['test', 'live'] },
     },
 
     // 🔹 PLAN HISTORY

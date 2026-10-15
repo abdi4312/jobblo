@@ -8,6 +8,8 @@ interface OrderRequestModalProps {
   onConfirm: (message?: string) => void;
   isLoading?: boolean;
   jobTitle?: string;
+  connectStatus?: 'loading' | 'ready' | 'required' | 'unavailable';
+  onGoToPayout?: () => void;
 }
 
 const OrderRequestModal: React.FC<OrderRequestModalProps> = ({
@@ -16,6 +18,8 @@ const OrderRequestModal: React.FC<OrderRequestModalProps> = ({
   onConfirm,
   isLoading,
   jobTitle,
+  connectStatus = 'ready',
+  onGoToPayout,
 }) => {
   const [message, setMessage] = useState('');
 
@@ -53,45 +57,70 @@ const OrderRequestModal: React.FC<OrderRequestModalProps> = ({
           </p>
         )}
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Melding til leverandøren <span className="text-gray-400 font-normal">(valgfritt)</span>
-          </label>
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Skriv en melding til leverandøren..."
-            rows={4}
-            maxLength={500}
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2F7E47] focus:border-transparent resize-none transition-all"
-          />
-          <p className="text-xs text-gray-400 mt-1 text-right">{message.length}/500</p>
-        </div>
-
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            disabled={isLoading}
-            className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            Avbryt
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className="flex-1 px-4 py-3 bg-[#2F7E47] text-white rounded-xl text-sm font-semibold hover:bg-[#266b3c] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {isLoading ? (
-              <Spinner size={18} label={null} />
-            ) : (
-              <>
-                <Send size={16} />
-                Send forespørsel
-              </>
+        {connectStatus !== 'ready' ? (
+          <div className="mb-5 rounded-xl border border-[#E6E7E1] bg-[#F4F6F0] p-4">
+            <p className="text-sm font-semibold text-[#0B0B0B]">
+              {connectStatus === 'loading'
+                ? 'Kontrollerer Stripe Connect-status...'
+                : 'Du må fullføre og verifisere Stripe Connect-kontoen din før du kan sende forespørsler eller starte oppdrag.'}
+            </p>
+            {connectStatus === 'unavailable' && (
+              <p className="mt-2 text-sm text-[#63665F]">
+                Stripe Connect-status kan ikke bekreftes akkurat nå. Prøv igjen senere.
+              </p>
             )}
-          </button>
-        </div>
+            {connectStatus !== 'loading' && (
+              <button
+                onClick={onGoToPayout}
+                className="mt-4 w-full rounded-xl bg-[#2F7E47] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#266b3c]"
+              >
+                Fullfør Stripe Connect
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Melding til leverandøren <span className="text-gray-400 font-normal">(valgfritt)</span>
+            </label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Skriv en melding til leverandøren..."
+              rows={4}
+              maxLength={500}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2F7E47] focus:border-transparent resize-none transition-all"
+            />
+            <p className="text-xs text-gray-400 mt-1 text-right">{message.length}/500</p>
+          </div>
+        )}
+
+        {connectStatus === 'ready' && (
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              disabled={isLoading}
+              className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Avbryt
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="flex-1 px-4 py-3 bg-[#2F7E47] text-white rounded-xl text-sm font-semibold hover:bg-[#266b3c] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isLoading ? (
+                <Spinner size={18} label={null} />
+              ) : (
+                <>
+                  <Send size={16} />
+                  Send forespørsel
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

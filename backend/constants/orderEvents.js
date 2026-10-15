@@ -32,6 +32,11 @@ const APPLICATION_EVENTS = Object.freeze([
 /** Money and work stage — an order exists. */
 const ORDER_EVENTS = Object.freeze([
   'order_paid', // escrow funded
+  'provider_connect_deadline',
+  'provider_connect_timeout_refunded',
+  'provider_connect_refund_pending',
+  'provider_connect_refund_failed',
+  'provider_connect_refund_reconciliation',
   'payment_confirmed', // reconciliation confirmed a payment out of band
   'order_status_changed', // generic status move; payload carries `status`
   'job_started', // provider started the work

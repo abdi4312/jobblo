@@ -35,7 +35,15 @@ async function logApplicationError({
     const errorMessage = error?.message || String(error || 'Unknown');
 
     // Map severity default
-    let action = errorCode || 'error_500';
+    const requestedAction = errorCode || 'error_500';
+    const allowedActions = AdminActivity.schema.path('action').enumValues;
+    const action = allowedActions.includes(requestedAction)
+      ? requestedAction
+      : httpStatus >= 500
+        ? source
+          ? 'error_integration'
+          : 'error_500'
+        : 'other';
     let severity = httpStatus >= 500 ? 'critical' : 'error';
 
     // Skip 4xx client errors unless explicitly flagged

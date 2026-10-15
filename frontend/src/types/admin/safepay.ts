@@ -5,11 +5,37 @@ export interface SafePayContract {
     _id: string;
     status: string;
     paymentStatus: string;
+    cancellationReason?: string;
+    startedAt?: string;
+    providerConnectDeadlineDays?: number;
+    providerConnectDeadlineAt?: string;
+    providerConnectTimeout?: {
+        status?: string;
+        operationKey?: string;
+        stripeRefundId?: string;
+        originalPaymentAmountMinor?: number;
+        refundAmountMinor?: number;
+        refundedAmountMinor?: number;
+        reason?: string;
+        lastErrorCode?: string;
+        manualReviewReason?: string;
+        lastAttemptAt?: string;
+        lockUntil?: string;
+        providerVerificationAt?: string;
+        refundCompletedAt?: string;
+        refundFailedAt?: string;
+    };
     agreedPrice?: number;
     initialPrice?: number;
     fee?: number;
     customerTotal?: number;
     providerNet?: number;
+    safePayStatus?: {
+        providerConnectStatus?: string;
+        refundStatus?: string;
+        refundAmountMinor?: number;
+        refundedAmountMinor?: number;
+    } | null;
     scheduledDate?: string;
     createdAt: string;
     updatedAt: string;
@@ -34,6 +60,23 @@ export interface SafePaySummary {
     };
     disputes: { open: number; under_review: number; resolved: number };
     revenue: { secured: number; released: number; refunded: number; fees: number };
+}
+
+export interface SafePayFinanceSummaryGroup {
+    _id: { currency: string; status?: string; mode?: boolean };
+    count: number;
+    amount: number;
+    jobbloFee?: number;
+}
+
+export interface SafePayFinanceSummary {
+    mode: 'all' | 'test' | 'live';
+    transfers: SafePayFinanceSummaryGroup[];
+    pendingTransfers: Array<{
+        _id: { currency: string; mode?: boolean };
+        count: number;
+        amount: number;
+    }>;
 }
 
 // ── Timeline event ────────────────────────────────────────────────────────────
@@ -68,7 +111,7 @@ export interface DisputeMessage {
 
 export interface Dispute {
     _id: string;
-    orderId: { _id: string; status: string; agreedPrice?: number } | string;
+    orderId: { _id: string; status: string; agreedPrice?: number } | string | null;
     serviceId?: { _id: string; title: string };
     openedBy?: { _id: string; name: string; email: string; role: string };
     openedAgainst?: { _id: string; name: string; email: string; role: string };
@@ -113,7 +156,7 @@ export interface DisputesSummary {
 
 // ── Query params ──────────────────────────────────────────────────────────────
 export interface SafePayQuery {
-    page?: number; limit?: number; status?: string; paymentStatus?: string;
+    page?: number; limit?: number; status?: string; paymentStatus?: string; timeoutReview?: string;
     orderId?: string; dateFrom?: string; dateTo?: string; sortOrder?: string;
 }
 export interface DisputesQuery {

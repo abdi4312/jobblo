@@ -151,7 +151,7 @@ exports.getApplicantsForService = async (req, res) => {
             'disputed',
           ],
         },
-      }).select('_id status'),
+      }).select('_id status providerId'),
     });
   } catch (err) {
     console.error('Error fetching applicants:', err);

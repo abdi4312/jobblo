@@ -27,3 +27,7 @@ export async function getSafePaySessionStatus(sessionId: string): Promise<SafePa
   const response = await apiClient.get(`/safepay-checkout/status/${requireId(sessionId, 'sessionId')}`);
   return response.data;
 }
+
+export async function reconcileSafePayPayment(orderId: string): Promise<void> {
+  await apiClient.post(`/safepay/orders/${requireId(orderId, 'orderId')}/reconcile-payment`);
+}
