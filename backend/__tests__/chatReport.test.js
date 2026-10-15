@@ -123,6 +123,7 @@ jest.mock('../models/Service', () => ({
 }));
 
 jest.mock('../models/SafePayHistory', () => ({
+  find: jest.fn(),
   findOne: jest.fn(),
   aggregate: jest.fn(),
 }));
@@ -1721,6 +1722,7 @@ describe('Chat Report System', () => {
       req.query = {};
       const orderId = new mongoose.Types.ObjectId();
       const chatId = new mongoose.Types.ObjectId();
+      const SafePayHistory = require('../models/SafePayHistory');
       Order.countDocuments.mockReturnValue(mockQuery(1));
       Order.find.mockReturnValue(
         mockQuery([
@@ -1736,13 +1738,29 @@ describe('Chat Report System', () => {
         ])
       );
       Dispute.find.mockReturnValue(mockQuery([]));
+      SafePayHistory.find.mockReturnValue(mockQuery([{
+        orderId,
+        providerConnectStatus: 'ready',
+        refundStatus: 'succeeded',
+        refundAmountMinor: 10000,
+        refundedAmountMinor: 10000,
+      }]));
       Chat.find.mockReturnValue(mockQuery([{ _id: chatId, status: 'in_progress' }]));
       await safePayAdmin.getSafePayList(req, res);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             contracts: expect.arrayContaining([
-              expect.objectContaining({ chatId, chatStatus: 'in_progress' }),
+              expect.objectContaining({
+                chatId,
+                chatStatus: 'in_progress',
+                safePayStatus: expect.objectContaining({
+                  providerConnectStatus: 'ready',
+                  refundStatus: 'succeeded',
+                  refundAmountMinor: 10000,
+                  refundedAmountMinor: 10000,
+                }),
+              }),
             ]),
           }),
         })
@@ -1752,6 +1770,7 @@ describe('Chat Report System', () => {
     test('getSafePayList shows "No linked chat" when chatId missing', async () => {
       req.query = {};
       const orderId = new mongoose.Types.ObjectId();
+      const SafePayHistory = require('../models/SafePayHistory');
       Order.countDocuments.mockReturnValue(mockQuery(1));
       Order.find.mockReturnValue(
         mockQuery([
@@ -1767,6 +1786,7 @@ describe('Chat Report System', () => {
         ])
       );
       Dispute.find.mockReturnValue(mockQuery([]));
+      SafePayHistory.find.mockReturnValue(mockQuery([]));
       Chat.find.mockReturnValue(mockQuery([]));
       await safePayAdmin.getSafePayList(req, res);
       expect(res.json).toHaveBeenCalledWith(

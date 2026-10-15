@@ -180,18 +180,27 @@ describe('state validation on the callback', () => {
     expect(axios.post).not.toHaveBeenCalled();
   });
 
-  it('clears the state even when the callback fails, so it cannot be replayed', async () => {
+  it('keeps the pending state when an unrelated callback fails validation', async () => {
     const session = { vippsAuth: { state: 'abc', createdAt: Date.now() } };
     const req = makeReq({ query: { code: 'c', state: 'wrong' }, session });
+
+    await vippsController.vippsCallback(req, makeRes());
+
+    expect(session.vippsAuth.state).toBe('abc');
+  });
+
+  it('clears the state when the user cancels at Vipps', async () => {
+    const session = { vippsAuth: { state: 'abc', createdAt: Date.now() } };
+    const req = makeReq({ query: { error: 'access_denied', state: 'abc' }, session });
 
     await vippsController.vippsCallback(req, makeRes());
 
     expect(session.vippsAuth).toBeUndefined();
   });
 
-  it('clears the state when the user cancels at Vipps', async () => {
+  it('consumes the matching state before handling a failed token exchange', async () => {
     const session = { vippsAuth: { state: 'abc', createdAt: Date.now() } };
-    const req = makeReq({ query: { error: 'access_denied' }, session });
+    const req = makeReq({ query: { code: 'c', state: 'abc' }, session });
 
     await vippsController.vippsCallback(req, makeRes());
 
