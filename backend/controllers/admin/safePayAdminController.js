@@ -76,13 +76,23 @@ const getSafePayList = asyncHandler(async (req, res) => {
 
   // Attach dispute info for each order
   const orderIds = orders.map((o) => o._id);
-  const disputes = await Dispute.find(
-    { orderId: { $in: orderIds } },
-    { orderId: 1, status: 1, priority: 1, _id: 1 }
-  ).lean();
+  const [disputes, safePayRecords] = orderIds.length
+    ? await Promise.all([
+        Dispute.find(
+          { orderId: { $in: orderIds } },
+          { orderId: 1, status: 1, priority: 1, _id: 1 }
+        ).lean(),
+        SafePayHistory.find(
+          { orderId: { $in: orderIds } },
+          { orderId: 1, providerConnectStatus: 1, refundStatus: 1, refundAmountMinor: 1, refundedAmountMinor: 1 }
+        ).lean(),
+      ])
+    : [[], []];
 
   const disputeMap = {};
   disputes.forEach((d) => { disputeMap[String(d.orderId)] = d; });
+  const safePayMap = {};
+  safePayRecords.forEach((record) => { safePayMap[String(record.orderId)] = record; });
 
   // Fee calculation (3% Jobblo fee)
   const enriched = orders.map((o) => {
@@ -93,6 +103,14 @@ const getSafePayList = asyncHandler(async (req, res) => {
       customerTotal: o.agreedPrice ? o.agreedPrice + fee : null,
       providerNet: o.agreedPrice ? o.agreedPrice - fee : null,
       dispute: disputeMap[String(o._id)] ?? null,
+      safePayStatus: safePayMap[String(o._id)]
+        ? {
+            providerConnectStatus: safePayMap[String(o._id)].providerConnectStatus,
+            refundStatus: safePayMap[String(o._id)].refundStatus,
+            refundAmountMinor: safePayMap[String(o._id)].refundAmountMinor,
+            refundedAmountMinor: safePayMap[String(o._id)].refundedAmountMinor,
+          }
+        : null,
     };
   });
 

@@ -31,6 +31,7 @@ import {
   AlertCircle,
   WalletCards,
   Receipt,
+  Sparkles,
 } from 'lucide-react';
 import { useUserStore } from '../../stores/userStore';
 import { toast } from 'react-hot-toast';
@@ -182,11 +183,11 @@ function SidebarLink({ item, collapsed }: { item: NavItem; collapsed: boolean })
       title={collapsed ? item.label : undefined}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-3 rounded-xl transition-all duration-150 group focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50',
-          collapsed ? 'p-2.5 justify-center' : 'px-3 py-2.5',
+          'flex items-center gap-3 rounded-lg border border-transparent transition-all duration-150 group focus:outline-none focus:ring-2 focus:ring-[#b9d4bf]/60',
+          collapsed ? 'p-2 justify-center' : 'px-3 py-2.5',
           isActive
-            ? 'bg-[#2d4a3e] text-white shadow-sm'
-            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+            ? 'bg-[#303238] text-white'
+            : 'text-[#c2cec4] hover:bg-white/[0.06] hover:text-white'
         )
       }
       aria-label={item.label}
@@ -219,42 +220,49 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
   };
 
   const sidebarContent = (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full min-h-0 flex-col">
       {/* Logo + collapse toggle */}
       <div
-        className={cn('flex items-center mb-6', collapsed ? 'justify-center' : 'justify-between')}
+        className="mb-3"
       >
-        {!collapsed && (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#2d4a3e] rounded-xl flex items-center justify-center text-white font-black text-sm shadow">
-              J
+        <div className={cn('flex items-center', collapsed ? 'justify-center' : 'justify-between')}>
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 bg-[#d9e8d8] rounded-xl flex items-center justify-center text-[#1d3d2c] font-black text-sm shadow-sm">
+              <Sparkles size={20} strokeWidth={2.5} />
             </div>
-            <span className="text-lg font-black text-gray-900 tracking-tight">Jobblo</span>
+            {!collapsed && (
+              <div>
+                <span className="text-lg font-black text-white tracking-tight">Jobblo</span>
+                <p className="text-[9px] uppercase tracking-[0.2em] text-[#93a99a] font-semibold -mt-0.5">Admin Console</p>
+              </div>
+            )}
           </div>
-        )}
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className="hidden md:flex p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[#2d4a3e]/50"
-          aria-label={collapsed ? 'Utvid sidepanel' : 'Skjul sidepanel'}
-        >
-          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-        </button>
-        {/* Mobile close */}
-        <button
-          onClick={onMobileClose}
-          className="md:hidden p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-          aria-label="Lukk sidepanel"
-        >
-          <X size={18} />
-        </button>
+          {/* Mobile close */}
+          <button
+            onClick={onMobileClose}
+            className="md:hidden p-1.5 rounded-lg text-[#93a99a] hover:text-white hover:bg-white/10 transition-colors"
+            aria-label="Lukk sidepanel"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="relative -mr-4 mt-1 hidden h-6 justify-end md:flex">
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            className="absolute -right-2.5 flex h-6 w-6 items-center justify-center rounded-full border border-[#dfe3dc] bg-white text-[#2d4a3e] shadow-sm transition-colors hover:bg-[#f4f8f4] focus:outline-none focus:ring-2 focus:ring-[#b9d4bf]/70"
+            aria-label={collapsed ? 'Utvid sidepanel' : 'Skjul sidepanel'}
+          >
+            {collapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
+          </button>
+        </div>
       </div>
 
       {/* Nav groups */}
-      <nav className="flex-1 overflow-y-auto space-y-5 pr-1" aria-label="Adminnavigasjon">
+      <nav className="no-scrollbar min-h-0 w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-contain space-y-6 pr-1" aria-label="Adminnavigasjon">
         {NAV_GROUPS.map((group) => (
           <div key={group.label}>
             {!collapsed && (
-              <p className="px-3 mb-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
+              <p className="px-3 mb-2 text-[9px] font-bold text-[#799080] uppercase tracking-[0.16em]">
                 {group.label}
               </p>
             )}
@@ -270,25 +278,25 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
       {/* Admin profile + logout */}
       <div
         className={cn(
-          'pt-4 mt-4 border-t border-gray-100',
+          'pt-4 mt-4 border-t border-white/10',
           collapsed && 'flex flex-col items-center gap-2'
         )}
       >
         {!collapsed && (
-          <div className="flex items-center gap-3 px-3 py-2 rounded-xl mb-2">
+          <div className="flex items-center gap-3 px-2 py-3 rounded-xl mb-2 bg-white/[0.04]">
             <img
               src={
                 user?.avatarUrl ||
                 `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'A')}&background=2d4a3e&color=fff&size=64`
               }
               alt={user?.name || 'Admin'}
-              className="w-8 h-8 rounded-full object-cover shrink-0"
+              className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-white/10"
             />
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-800 truncate">
+              <p className="text-sm font-semibold text-white truncate">
                 {user?.name || 'Super Admin'}
               </p>
-              <p className="text-[11px] text-gray-400 truncate">{user?.email}</p>
+              <p className="text-[11px] text-[#91a197] truncate">{user?.email}</p>
             </div>
           </div>
         )}
@@ -305,7 +313,7 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
           trigger={
             <button
               className={cn(
-                'flex items-center gap-3 w-full rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400/50',
+                'flex items-center gap-3 w-full rounded-xl text-[#a9b8ae] hover:text-white hover:bg-white/[0.07] transition-colors focus:outline-none focus:ring-2 focus:ring-red-400/50',
                 collapsed ? 'p-2.5 justify-center' : 'px-3 py-2.5'
               )}
               aria-label="Logg ut"
@@ -325,7 +333,7 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 md:hidden"
+          className="fixed inset-0 bg-[#102017]/60 backdrop-blur-sm z-40 md:hidden"
           onClick={onMobileClose}
           aria-hidden="true"
         />
@@ -334,7 +342,7 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
       {/* Mobile drawer */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-100 p-4 transition-transform duration-300 ease-in-out md:hidden',
+          'fixed inset-y-0 left-0 z-50 h-screen min-h-0 bg-[#172b21] border-r border-white/10 p-4 transition-transform duration-300 ease-in-out md:hidden',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
           'w-64'
         )}
@@ -347,7 +355,7 @@ export function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebarProps) {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          'hidden md:flex flex-col bg-white border-r border-gray-100 p-4 transition-all duration-300 ease-in-out shrink-0',
+          'relative hidden md:flex min-h-0 flex-col bg-[#172b21] border border-white/10 mx-2 my-3 rounded-xl p-2 transition-all duration-300 ease-in-out shrink-0',
           collapsed ? 'w-[68px]' : 'w-60'
         )}
         aria-label="Sidepanel"

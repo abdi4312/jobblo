@@ -28,8 +28,8 @@ function CopyButton({ value }: { value: string }) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 p-5">
-            <h3 className="text-sm font-semibold text-gray-800 mb-4 border-b border-gray-50 pb-2">{title}</h3>
+        <div className="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 border-b border-gray-100 pb-3 text-sm font-semibold tracking-tight text-gray-900">{title}</h3>
             {children}
         </div>
     );
@@ -37,9 +37,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Row({ label, value, badge, copy }: { label: string; value?: React.ReactNode; badge?: string; copy?: string }) {
     return (
-        <div className="flex items-start justify-between py-1.5 gap-4">
-            <span className="text-xs text-gray-400 shrink-0 w-36">{label}</span>
-            <span className="text-sm text-gray-800 text-right flex items-center gap-1 min-w-0">
+        <div className="flex items-start justify-between gap-4 border-b border-gray-50 py-2 last:border-0">
+            <span className="w-36 shrink-0 text-xs text-gray-500">{label}</span>
+            <span className="flex min-w-0 items-center gap-1 text-right text-sm text-gray-800">
                 {badge ? <AdminStatusBadge status={badge} /> : (value ?? <span className="text-gray-300">–</span>)}
                 {copy && <CopyButton value={copy} />}
             </span>
@@ -263,6 +263,7 @@ export default function SafePayDetailPage() {
             amounts: { agreedPrice: number; fee: number; totalCustomer: number; netProvider: number };
             paymentDate?: string; originalPaymentAmountMinor?: number; refundAmountMinor?: number; refundedAmountMinor?: number;
             refundStatus?: string; refundReason?: string; cancellationReason?: string;
+            providerConnectStatus?: string;
             stripePaymentIntentId?: string; stripeRefundId?: string;
         } | null;
         dispute?: { _id: string; status: string; priority: string; title: string; reasonCategory: string } | null;
@@ -296,7 +297,7 @@ export default function SafePayDetailPage() {
             />
 
             {/* Status bar */}
-            <div className="flex flex-wrap gap-3 bg-white rounded-2xl border border-gray-100 p-4">
+            <div className="flex flex-wrap gap-x-6 gap-y-3 rounded-2xl border border-gray-200/80 bg-white p-4 shadow-sm">
                 {([
                     { label: 'Ordre', value: order.status },
                     { label: 'Betaling', value: order.paymentStatus },
@@ -389,15 +390,23 @@ export default function SafePayDetailPage() {
                     {safePayHistory && (
                         <Section title="SafePay-historikk">
                             <Row label="Status" badge={safePayHistory.status} />
+                            {safePayHistory.providerConnectStatus && <Row label="Connect-kontostatus" badge={safePayHistory.providerConnectStatus} />}
+                            {safePayHistory.refundStatus && <Row label="Refusjonsstatus" badge={safePayHistory.refundStatus} />}
                             <Row label="Avtalt pris" value={`${safePayHistory.amounts.agreedPrice.toLocaleString('nb-NO')} NOK`} />
                             <Row label="Gebyr" value={`${safePayHistory.amounts.fee.toLocaleString('nb-NO')} NOK`} />
                             <Row label="Kunden betalte" value={`${safePayHistory.amounts.totalCustomer.toLocaleString('nb-NO')} NOK`} />
-                            <Row label="Tilbyder fikk (intern)" value={`${safePayHistory.amounts.netProvider.toLocaleString('nb-NO')} NOK`} />
+                            <Row label="Tilbyderens interne saldo" value={`${safePayHistory.amounts.netProvider.toLocaleString('nb-NO')} NOK`} />
+                            {safePayHistory.refundAmountMinor != null && safePayHistory.refundAmountMinor > 0 && (
+                                <Row label="Refusjonsbeløp" value={`${(safePayHistory.refundAmountMinor / 100).toLocaleString('nb-NO')} NOK`} />
+                            )}
+                            {safePayHistory.refundedAmountMinor != null && safePayHistory.refundedAmountMinor > 0 && (
+                                <Row label="Bekreftet refundert" value={`${(safePayHistory.refundedAmountMinor / 100).toLocaleString('nb-NO')} NOK`} />
+                            )}
                             {safePayHistory.paymentDate && (
                                 <Row label="Betalingsdato" value={new Date(safePayHistory.paymentDate).toLocaleString('nb-NO')} />
                             )}
-                            <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2 mt-2">
-                                ⚠️ "Tilbyder fikk" er en intern saldooppdatering — ikke en ekstern bankoverføring.
+                            <p className="mt-2 rounded-lg border border-amber-100 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+                                Connect-status viser kontotilkobling. Tilbyderens interne saldo er ikke en bekreftet bankutbetaling; overføringsstatus er ikke tilgjengelig her.
                             </p>
                         </Section>
                     )}

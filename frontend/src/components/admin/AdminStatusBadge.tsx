@@ -15,6 +15,9 @@ type StatusVariant =
     | 'open'
     | 'closed'
     | 'in_progress'
+    | 'ready_for_review'
+    | 'waiting_for_approval'
+    | 'disputed'
     | 'superAdmin'
     | 'provider'
     | 'company'
@@ -22,32 +25,48 @@ type StatusVariant =
     | string;
 
 const variantMap: Record<string, string> = {
-    active: 'bg-green-100 text-green-700',
-    verified: 'bg-emerald-100 text-emerald-700',
-    completed: 'bg-blue-100 text-blue-700',
-    paid: 'bg-green-100 text-green-700',
-    succeeded: 'bg-green-100 text-green-700',
-    open: 'bg-sky-100 text-sky-700',
-    in_progress: 'bg-yellow-100 text-yellow-700',
-    under_review: 'bg-yellow-100 text-yellow-700',
-    resolved: 'bg-green-100 text-green-700',
-    dismissed: 'bg-red-100 text-red-600',
-    pending: 'bg-yellow-100 text-yellow-700',
-    awaiting_payment: 'bg-orange-100 text-orange-700',
-    inactive: 'bg-gray-100 text-gray-500',
-    cancelled: 'bg-red-100 text-red-600',
-    closed: 'bg-gray-100 text-gray-500',
-    failed: 'bg-red-100 text-red-600',
-    unpaid: 'bg-orange-100 text-orange-600',
-    refunded: 'bg-purple-100 text-purple-600',
-    superAdmin: 'bg-red-100 text-red-700',
-    provider: 'bg-indigo-100 text-indigo-700',
-    company: 'bg-violet-100 text-violet-700',
-    user: 'bg-gray-100 text-gray-600',
+    active: 'bg-emerald-50 text-emerald-800 ring-emerald-700/10',
+    verified: 'bg-emerald-50 text-emerald-800 ring-emerald-700/10',
+    completed: 'bg-sky-50 text-sky-800 ring-sky-700/10',
+    ready_for_review: 'bg-sky-50 text-sky-800 ring-sky-700/10',
+    waiting_for_approval: 'bg-sky-50 text-sky-800 ring-sky-700/10',
+    paid: 'bg-emerald-50 text-emerald-800 ring-emerald-700/10',
+    succeeded: 'bg-emerald-50 text-emerald-800 ring-emerald-700/10',
+    open: 'bg-sky-50 text-sky-800 ring-sky-700/10',
+    in_progress: 'bg-amber-50 text-amber-800 ring-amber-700/10',
+    under_review: 'bg-amber-50 text-amber-800 ring-amber-700/10',
+    disputed: 'bg-rose-50 text-rose-800 ring-rose-700/10',
+    resolved: 'bg-emerald-50 text-emerald-800 ring-emerald-700/10',
+    dismissed: 'bg-rose-50 text-rose-800 ring-rose-700/10',
+    pending: 'bg-amber-50 text-amber-800 ring-amber-700/10',
+    processing: 'bg-amber-50 text-amber-800 ring-amber-700/10',
+    awaiting_payment: 'bg-orange-50 text-orange-800 ring-orange-700/10',
+    inactive: 'bg-slate-100 text-slate-600 ring-slate-500/10',
+    cancelled: 'bg-rose-50 text-rose-800 ring-rose-700/10',
+    closed: 'bg-slate-100 text-slate-600 ring-slate-500/10',
+    failed: 'bg-rose-50 text-rose-800 ring-rose-700/10',
+    partially_refunded: 'bg-violet-50 text-violet-800 ring-violet-700/10',
+    unpaid: 'bg-orange-50 text-orange-800 ring-orange-700/10',
+    refunded: 'bg-violet-50 text-violet-800 ring-violet-700/10',
+    reconciliation_required: 'bg-rose-50 text-rose-800 ring-rose-700/10',
+    manual_review: 'bg-rose-50 text-rose-800 ring-rose-700/10',
+    verification_retry: 'bg-amber-50 text-amber-800 ring-amber-700/10',
+    ready: 'bg-emerald-50 text-emerald-800 ring-emerald-700/10',
+    provider_ready: 'bg-emerald-50 text-emerald-800 ring-emerald-700/10',
+    deadline_expired: 'bg-rose-50 text-rose-800 ring-rose-700/10',
+    declined: 'bg-rose-50 text-rose-800 ring-rose-700/10',
+    accepted: 'bg-emerald-50 text-emerald-800 ring-emerald-700/10',
+    awaiting_provider_connect: 'bg-orange-50 text-orange-800 ring-orange-700/10',
+    superAdmin: 'bg-rose-50 text-rose-800 ring-rose-700/10',
+    provider: 'bg-indigo-50 text-indigo-800 ring-indigo-700/10',
+    company: 'bg-violet-50 text-violet-800 ring-violet-700/10',
+    user: 'bg-slate-100 text-slate-700 ring-slate-500/10',
 };
 
 const labelMap: Record<string, string> = {
     in_progress: 'Pågår',
+    ready_for_review: 'Klar for godkjenning',
+    waiting_for_approval: 'Venter godkjenning',
     awaiting_payment: 'Venter betaling',
     superAdmin: 'Super Admin',
     provider: 'Tilbyder',
@@ -59,9 +78,18 @@ const labelMap: Record<string, string> = {
     completed: 'Fullført',
     cancelled: 'Avbrutt',
     pending: 'Venter',
+    processing: 'Behandles',
     paid: 'Betalt',
     unpaid: 'Ubetalt',
     refunded: 'Refundert',
+    partially_refunded: 'Delvis refundert',
+    none: 'Ingen refusjon',
+    reconciliation_required: 'Krever avstemming',
+    manual_review: 'Manuell kontroll',
+    verification_retry: 'Ny verifisering',
+    ready: 'Klar',
+    provider_ready: 'Tilbyder klar',
+    deadline_expired: 'Frist utløpt',
     succeeded: 'Vellykket',
     failed: 'Feilet',
     open: 'Åpen',
@@ -69,6 +97,10 @@ const labelMap: Record<string, string> = {
     under_review: 'Under behandling',
     resolved: 'Løst',
     dismissed: 'Avvist',
+    disputed: 'Tvist',
+    declined: 'Avslått',
+    accepted: 'Akseptert',
+    awaiting_provider_connect: 'Venter på tilbyder',
 };
 
 interface AdminStatusBadgeProps {
@@ -82,7 +114,7 @@ export function AdminStatusBadge({ status, className }: AdminStatusBadgeProps) {
     return (
         <span
             className={cn(
-                'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap',
+                'inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ring-1 ring-inset',
                 colorClass,
                 className
             )}

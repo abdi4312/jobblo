@@ -12,6 +12,8 @@ interface AdminStatCardProps {
     changeSuffix?: string;
     subtitle?: string;
     to?: string;
+    onClick?: () => void;
+    active?: boolean;
     className?: string;
     iconClassName?: string;
     loading?: boolean;
@@ -25,6 +27,8 @@ export function AdminStatCard({
     changeSuffix = 'siste måned',
     subtitle,
     to,
+    onClick,
+    active = false,
     className,
     iconClassName,
 }: AdminStatCardProps) {
@@ -50,19 +54,13 @@ export function AdminStatCard({
         </span>
     ) : null;
 
-    const inner = (
-        <div
-            className={cn(
-                'group bg-white rounded-2xl p-5 border border-gray-100 hover:shadow-md transition-all duration-200 flex flex-col gap-3',
-                to && 'cursor-pointer',
-                className
-            )}
-        >
+    const content = (
+        <>
             <div className="flex items-start justify-between">
-                <p className="text-sm text-gray-500 font-medium">{title}</p>
+                <p className="text-sm text-[#758078] font-medium">{title}</p>
                 <div
                     className={cn(
-                        'p-2.5 rounded-xl bg-gray-50 text-gray-600 group-hover:bg-[#2d4a3e]/10 transition-colors',
+                        'p-2.5 rounded-2xl bg-[#eaf1e9] text-[#38644a]',
                         iconClassName
                     )}
                     aria-hidden="true"
@@ -70,17 +68,42 @@ export function AdminStatCard({
                     {icon}
                 </div>
             </div>
-            <p className="text-3xl font-black text-gray-900 tracking-tight leading-none">
+            <p className="text-[2rem] font-semibold text-[#183126] tracking-tight leading-none tabular-nums">
                 {typeof value === 'number' ? value.toLocaleString('nb-NO') : value}
             </p>
-            <div className="flex items-center gap-2 min-h-[18px]">
+            <div className="flex items-center gap-2 min-h-[20px] border-t border-[#e4e9e2] pt-3">
                 {trendEl}
                 {!hasChange && subtitle && (
                     <span className="text-xs text-gray-400">{subtitle}</span>
                 )}
             </div>
-        </div>
+        </>
     );
 
-    return to ? <Link to={to}>{inner}</Link> : inner;
+    const cardClassName = cn(
+        'relative flex flex-col gap-4 overflow-hidden rounded-[24px] border bg-[#fbfcfa] p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#397453]/50 md:p-6',
+        active ? 'border-[#7c9d86] ring-2 ring-[#d9e6db]' : 'border-[#e2e8df]',
+        className
+    );
+
+    if (to) {
+        return (
+            <Link to={to} className="block h-full">
+                <div className={cn(cardClassName, 'cursor-pointer')}>{content}</div>
+            </Link>
+        );
+    }
+    if (onClick) {
+        return (
+            <button
+                type="button"
+                onClick={onClick}
+                aria-pressed={active}
+                className={cn(cardClassName, 'w-full cursor-pointer')}
+            >
+                {content}
+            </button>
+        );
+    }
+    return <div className={cardClassName}>{content}</div>;
 }

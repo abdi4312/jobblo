@@ -6,6 +6,7 @@ export interface SafePayContract {
     status: string;
     paymentStatus: string;
     cancellationReason?: string;
+    startedAt?: string;
     providerConnectDeadlineDays?: number;
     providerConnectDeadlineAt?: string;
     providerConnectTimeout?: {
@@ -29,6 +30,12 @@ export interface SafePayContract {
     fee?: number;
     customerTotal?: number;
     providerNet?: number;
+    safePayStatus?: {
+        providerConnectStatus?: string;
+        refundStatus?: string;
+        refundAmountMinor?: number;
+        refundedAmountMinor?: number;
+    } | null;
     scheduledDate?: string;
     createdAt: string;
     updatedAt: string;
@@ -53,6 +60,23 @@ export interface SafePaySummary {
     };
     disputes: { open: number; under_review: number; resolved: number };
     revenue: { secured: number; released: number; refunded: number; fees: number };
+}
+
+export interface SafePayFinanceSummaryGroup {
+    _id: { currency: string; status?: string; mode?: boolean };
+    count: number;
+    amount: number;
+    jobbloFee?: number;
+}
+
+export interface SafePayFinanceSummary {
+    mode: 'all' | 'test' | 'live';
+    transfers: SafePayFinanceSummaryGroup[];
+    pendingTransfers: Array<{
+        _id: { currency: string; mode?: boolean };
+        count: number;
+        amount: number;
+    }>;
 }
 
 // ── Timeline event ────────────────────────────────────────────────────────────

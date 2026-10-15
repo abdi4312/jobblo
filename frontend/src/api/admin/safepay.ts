@@ -2,7 +2,7 @@ import mainLink from '../mainURLs';
 import type { ApiResponse } from '../../types/admin';
 import type {
     SafePayContract, SafePaySummary, TimelineEvent,
-    Dispute, DisputesSummary, SafePayQuery, DisputesQuery,
+    Dispute, DisputesSummary, SafePayFinanceSummary, SafePayQuery, DisputesQuery,
     Pagination,
 } from '../../types/admin/safepay';
 
@@ -25,6 +25,11 @@ export const fetchSafePayList = async (q: SafePayQuery = {}): Promise<{ contract
 export const fetchSafePaySummary = async (): Promise<SafePaySummary> => {
     const res = await mainLink.get<ApiResponse<SafePaySummary>>('/api/admin/safepay/summary');
     return res.data.data;
+};
+
+export const fetchSafePayFinanceSummary = async (mode: SafePayFinanceSummary['mode']): Promise<SafePayFinanceSummary> => {
+    const res = await mainLink.get<SafePayFinanceSummary>(`/api/admin/safepay/finance/summary?mode=${mode}`);
+    return res.data;
 };
 
 export const fetchSafePayDetail = async (orderId: string) => {
