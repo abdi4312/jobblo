@@ -535,10 +535,7 @@ exports.createService = async (req, res) => {
     serviceData.status = serviceData.status || 'open';
     serviceData.equipment = serviceData.equipment || 'utstyrfri';
 
-    // Restriction for urgent (haste) - only for paid subscribers
-    if (serviceData.urgent && user.subscription === 'Standard') {
-      serviceData.urgent = false;
-    }
+    serviceData.urgent = false;
 
     // Add images from Multer (Azure)
     if (req.files && req.files.length > 0) {
@@ -790,12 +787,9 @@ exports.updateService = async (req, res) => {
     }
     Object.assign(service, pickContactUpdates(req.body));
 
-    // `urgent` is a paid-tier feature, enforced on create but previously not on
-    // update — which made the restriction free to bypass by editing.
+    // Urgent placement was a subscription entitlement and stays disabled until V2.
     if (req.body.urgent !== undefined) {
-      const owner = await require('../models/User').findById(req.userId).select('subscription');
-      const wantsUrgent = req.body.urgent === true || req.body.urgent === 'true';
-      service.urgent = wantsUrgent && owner?.subscription !== 'Standard';
+      service.urgent = false;
     }
 
     const { countyCode, municipalityCode, areaCode } = req.body;

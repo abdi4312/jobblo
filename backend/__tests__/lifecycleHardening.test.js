@@ -24,7 +24,6 @@ jest.mock('../models/Service', () => ({
 }));
 jest.mock('../models/JobRequest', () => ({ findById: jest.fn(), findOne: jest.fn() }));
 jest.mock('../models/Dispute', () => ({ findOne: jest.fn() }));
-jest.mock('../models/User', () => ({ findById: jest.fn(), updateOne: jest.fn() }));
 jest.mock('../models/Notification', () => ({ create: jest.fn() }));
 jest.mock('../models/Payment', () => ({ findOne: jest.fn() }));
 
@@ -34,7 +33,6 @@ const Order = require('../models/Order');
 const Service = require('../models/Service');
 const JobRequest = require('../models/JobRequest');
 const Dispute = require('../models/Dispute');
-const User = require('../models/User');
 const Notification = require('../models/Notification');
 
 const safepayController = require('../controllers/safepayController');
@@ -70,7 +68,6 @@ beforeEach(() => {
   jest.clearAllMocks();
   Dispute.findOne.mockReturnValue(selectChain(null));
   Notification.create.mockResolvedValue({});
-  User.updateOne.mockResolvedValue({});
 });
 
 // ── 2. SafePay checklist freeze ──────────────────────────────────────────────
@@ -229,7 +226,7 @@ describe('withdrawing an application', () => {
     expect(res.body.code).toBe('application_has_active_order');
   });
 
-  it('marks it withdrawn instead of hard-deleting, refunds the quota and tells the owner', async () => {
+  it('marks it withdrawn instead of hard-deleting and tells the owner', async () => {
     const app = application();
     JobRequest.findById.mockResolvedValue(app);
     Order.findOne.mockReturnValue(selectChain(null));
@@ -245,12 +242,6 @@ describe('withdrawing an application', () => {
     expect(app.status).toBe('declined');
     expect(app.withdrawnAt).toBeInstanceOf(Date);
     expect(app.save).toHaveBeenCalled();
-
-    // The contact charged at application time comes back.
-    expect(User.updateOne).toHaveBeenCalledWith(
-      expect.objectContaining({ monthlyContactUsage: { $gt: 0 } }),
-      { $inc: { monthlyContactUsage: -1 } }
-    );
 
     // The owner's list used to just lose a row with no explanation.
     expect(Notification.create).toHaveBeenCalledWith(

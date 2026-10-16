@@ -5,15 +5,6 @@ const {
 } = require('./webhookReadiness');
 const { claimEvent, markProcessed, releaseClaim } = require('./eventLedger');
 const { logApplicationError } = require('../../utils/errorLogger');
-const {
-  provisionSubscriptionFromSession,
-  provisionExtraContactFromSession,
-  applyInvoicePaid,
-  applyInvoicePaymentFailed,
-  applySubscriptionUpdated,
-  applySubscriptionDeleted,
-  applySubscriptionScheduleCanceled,
-} = require('./provisioning');
 const { recordStripePaymentLifecycle } = require('./paymentLifecycle');
 
 /**
@@ -35,17 +26,6 @@ const ORDER_EVENT_TYPES = new Set([
   'checkout.session.async_payment_succeeded',
   'checkout.session.async_payment_failed',
   'checkout.session.expired',
-  'invoice.paid',
-  'invoice.payment_failed',
-  'invoice.payment_action_required',
-  'customer.subscription.updated',
-  'customer.subscription.deleted',
-  'customer.subscription.paused',
-  'customer.subscription.resumed',
-  'customer.subscription.pending_update_applied',
-  'customer.subscription.pending_update_expired',
-  'subscription_schedule.completed',
-  'subscription_schedule.canceled',
   'transfer.created',
   'transfer.updated',
   'transfer.reversed',
@@ -65,6 +45,14 @@ const ORDER_EVENT_TYPES = new Set([
   'payout.failed',
   'payout.canceled',
 ]);
+
+function isLegacySubscriptionSession(session) {
+  return (
+    session?.mode === 'subscription' ||
+    session?.metadata?.type === 'subscription' ||
+    session?.metadata?.type === 'extra_contact'
+  );
+}
 
 /** Log a payment failure where an admin will actually see it, without leaking secrets. */
 async function logPaymentFailure({ req, error, httpStatus, errorCode, metadata }) {
@@ -102,30 +90,13 @@ async function handleEvent(event, { io } = {}) {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object;
-      const isMembership =
-        session.mode === 'subscription' || session.metadata?.type === 'subscription';
-      if (
-        session.payment_status !== 'paid' &&
-        !(isMembership && session.payment_status === 'no_payment_required')
-      ) {
+      if (isLegacySubscriptionSession(session)) {
+        return { handled: 'subscription_rebuild_in_progress' };
+      }
+      if (session.payment_status !== 'paid') {
         return { handled: 'ignored_unpaid' };
       }
 
-      const type = session.metadata?.type;
-
-      if (isMembership) {
-        const result = await provisionSubscriptionFromSession(session);
-        if (!result.ok) throw new Error('Subscription checkout provisioning rejected');
-        return { handled: 'subscription', result };
-      }
-      if (type === 'extra_contact') {
-        const result = await provisionExtraContactFromSession(session);
-        if (!result.ok) throw new Error('Extra-contact checkout provisioning rejected');
-        return {
-          handled: 'extra_contact',
-          result,
-        };
-      }
       // Default is SafePay: the original behaviour of this endpoint, and the only
       // type whose sessions predate the metadata convention.
       const confirmation = await confirmPaidSession(session, io);
@@ -134,13 +105,20 @@ async function handleEvent(event, { io } = {}) {
     }
 
     case 'checkout.session.async_payment_succeeded': {
-      const confirmation = await confirmPaidSession(event.data.object, io);
+      const session = event.data.object;
+      if (isLegacySubscriptionSession(session)) {
+        return { handled: 'subscription_rebuild_in_progress' };
+      }
+      const confirmation = await confirmPaidSession(session, io);
       if (!confirmation.ok) throw new Error('SafePay checkout confirmation rejected');
       return { handled: 'safepay_async_payment_succeeded', result: confirmation };
     }
 
     case 'checkout.session.async_payment_failed': {
       const session = event.data.object;
+      if (isLegacySubscriptionSession(session)) {
+        return { handled: 'subscription_rebuild_in_progress' };
+      }
       await Order.updateOne(
         { checkoutSessionId: session.id, paymentStatus: { $ne: 'paid' } },
         { $set: { checkoutSessionStatus: 'failed' } }
@@ -149,68 +127,15 @@ async function handleEvent(event, { io } = {}) {
     }
 
     case 'checkout.session.expired':
+      if (isLegacySubscriptionSession(event.data.object)) {
+        return { handled: 'subscription_rebuild_in_progress' };
+      }
       // Clear the stale session so createSafePaySession stops trying to reuse it.
       await Order.updateOne(
         { checkoutSessionId: event.data.object.id },
         { $set: { checkoutSessionStatus: 'expired' } }
       );
       return { handled: 'session_expired' };
-
-    case 'invoice.paid': {
-      const result = await applyInvoicePaid(event.data.object);
-      if (!result.ok) throw new Error('Subscription invoice payment could not be reconciled');
-      return { handled: 'invoice_paid', result };
-    }
-
-    case 'invoice.payment_failed':
-    case 'invoice.payment_action_required': {
-      const result = await applyInvoicePaymentFailed(event.data.object);
-      if (!result.ok) throw new Error('Subscription invoice failure could not be reconciled');
-      return { handled: 'invoice_failed', result };
-    }
-
-    case 'customer.subscription.updated':
-    case 'customer.subscription.paused':
-    case 'customer.subscription.resumed':
-    case 'customer.subscription.pending_update_applied':
-    case 'customer.subscription.pending_update_expired': {
-      const result = await applySubscriptionUpdated(event.data.object);
-      if (!result.ok) {
-        throw new Error(
-          `Subscription update could not be reconciled: ${result.reason || 'unknown_reason'}`
-        );
-      }
-      return {
-        handled: 'subscription_updated',
-        result,
-      };
-    }
-
-    case 'customer.subscription.deleted': {
-      const result = await applySubscriptionDeleted(event.data.object);
-      if (!result.ok) throw new Error('Subscription deletion could not be reconciled');
-      return { handled: 'subscription_deleted', result };
-    }
-
-    case 'subscription_schedule.completed': {
-      const subscriptionId =
-        typeof event.data.object.subscription === 'string'
-          ? event.data.object.subscription
-          : event.data.object.subscription?.id;
-      if (!subscriptionId) throw new Error('Completed subscription schedule is missing its subscription');
-      const result = await applySubscriptionUpdated({
-        id: subscriptionId,
-        livemode: event.livemode,
-      });
-      if (!result.ok) throw new Error('Completed subscription schedule could not be reconciled');
-      return { handled: 'subscription_schedule_completed', result };
-    }
-
-    case 'subscription_schedule.canceled': {
-      const result = await applySubscriptionScheduleCanceled(event.data.object);
-      if (!result.ok) throw new Error('Canceled subscription schedule could not be reconciled');
-      return { handled: 'subscription_schedule_canceled', result };
-    }
 
     case 'charge.dispute.created':
     case 'charge.dispute.updated':

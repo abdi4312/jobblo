@@ -1,14 +1,12 @@
 /**
  * Deciding which Subscription row survives when a user has more than one.
  *
- * Extracted from scripts/dedupe-subscriptions.js so the rules can be tested directly
- * rather than only through a database. The script is the only caller in production.
+ * Extracted from scripts/dedupe-subscriptions.js so its offline migration rules can be
+ * tested directly rather than only through a database.
  *
  * -- Why duplicates exist ------------------------------------------------------
- * The Vipps callback ran `Subscription.create(...)` on every sign-in rather than only
- * at signup, so a user who logged in ten times has ten rows. That is fixed
- * (controllers/vippsController.js now uses an idempotent upsert), but the rows it
- * already wrote are still there.
+ * Historical signup and login flows created duplicate rows. This offline utility is
+ * retained for a future migration; the current backend does not provision subscriptions.
  *
  * -- Why "newest wins" is wrong ------------------------------------------------
  * The accidental rows are the NEW ones. The valuable row -- a real Stripe-backed plan
@@ -20,10 +18,8 @@
  * Split the group into *substantive* and *disposable* rows.
  *
  *   disposable  - carries no Stripe subscription id, has an empty planHistory, and its
- *                 current plan is one of the two signup defaults ('Standard' private /
- *                 'Start' business). Such a row is what the bug produced and what
- *                 authController.register produces; it holds nothing that cannot be
- *                 recreated.
+ *                 current plan is one of the historical signup defaults ('Standard'
+ *                 private / 'Start' business). Such a row holds no Stripe billing id.
  *
  *   substantive - anything else: a Stripe id, a plan history, or a plan somebody
  *                 actually chose or was granted.
@@ -39,14 +35,9 @@
  * and ask for a human.
  *
  * -- The constraint that makes deletion safe -----------------------------------
- * services/stripe/provisioning.js resolves renewals, plan changes and cancellations
- * with `Subscription.findOne({ 'currentPlan.stripeSubscriptionId': ... })`. Deleting a
- * row that carries such an id would orphan every future webhook for that Stripe
- * subscription -- renewals would stop being recorded and the customer would keep
- * access to a plan nobody is billing. Disposable rows have no Stripe id by
- * definition, so this holds automatically; `assertNoStripeIdLost` re-checks it anyway,
- * because an invariant that costs nothing to verify should not depend on a future
- * edit to the classifier remembering it.
+ * Stripe may still bill subscriptions represented by the retained records. Deleting a
+ * row that carries a Stripe id would orphan that billing history, so the utility
+ * refuses to classify such rows as disposable and re-checks before deletion.
  */
 
 /** Plans handed out at signup. Anything else was chosen, bought, or granted. */

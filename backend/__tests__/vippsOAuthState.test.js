@@ -17,8 +17,6 @@ jest.mock('../models/User', () => ({ findOne: jest.fn(), findById: jest.fn(), cr
 jest.mock('../utils/tokenUtils', () => ({
   createSession: jest.fn(async () => ({ accessToken: 'at', refreshToken: 'rt' })),
 }));
-jest.mock('../utils/subscription', () => ({ ensureDefaultSubscription: jest.fn(async () => ({})) }));
-
 const axios = require('axios');
 const User = require('../models/User');
 const vippsController = require('../controllers/vippsController');

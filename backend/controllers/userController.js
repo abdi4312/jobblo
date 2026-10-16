@@ -772,7 +772,6 @@ exports.deleteUser = async (req, res) => {
       favorites: [],
       pointsBalance: 0,
       pointsHistory: [],
-      monthlyContactUsage: 0,
       password: crypto.randomBytes(32).toString('hex'),
       refreshTokens: [],
       passwordResetToken: null,

@@ -1,5 +1,4 @@
 const { createSession } = require('../utils/tokenUtils');
-const { ensureDefaultSubscription } = require('../utils/subscription');
 const { createUnusablePassword } = require('../utils/passwordUtils');
 const { resolveOAuthLogin } = require('../utils/oauthLinking');
 const {
@@ -302,10 +301,6 @@ exports.vippsCallback = async (req, res, options = {}) => {
     ) {
       return res.redirect(failed('account_inactive'));
     }
-
-    // Idempotent by construction -- everything writable is inside `$setOnInsert`, so
-    // this cannot create a second row or reset an existing paid plan on a repeat login.
-    await ensureDefaultSubscription(user);
 
     const { accessToken, refreshToken } = await createSession(req, user._id);
 

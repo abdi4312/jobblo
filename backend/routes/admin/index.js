@@ -22,11 +22,10 @@ const systemAdminController = require('../../controllers/admin/systemAdminContro
 const contentAdminController = require('../../controllers/admin/contentAdminController');
 const evidenceUploadController = require('../../controllers/admin/evidenceUploadController');
 const shopAdminController = require('../../controllers/admin/shopAdminController');
-const promotionCodeController = require('../../controllers/admin/promotionCodeController');
 const campaignController = require('../../controllers/campaignController');
 const stripeWebhookHealthController = require('../../controllers/admin/stripeWebhookHealthController');
 const safePayFinanceController = require('../../controllers/safepayFinanceController');
-const stripeBillingController = require('../../controllers/stripeBillingController');
+const subscriptionRebuildInProgress = require('../../middleware/subscriptionRebuildInProgress');
 
 // Apply auth + admin check + rate limiter to ALL routes
 router.use(authenticate, requireAdmin, adminLimiter);
@@ -35,17 +34,13 @@ router.get('/stripe/webhook-readiness', stripeWebhookHealthController.getWebhook
 router.get('/stripe/payment-incidents', stripePaymentIncidentController.list);
 router.post('/stripe/payment-incidents/:id/refund-duplicate', stripePaymentIncidentController.refundDuplicatePayment);
 router.post('/stripe/payment-incidents/:id/reverse-chargeback-transfer', stripePaymentIncidentController.reverseChargebackTransfer);
-router.get('/billing/subscriptions/summary', stripeBillingController.getAdminSummary);
-router.post(
-  '/billing/subscriptions/reconcile',
-  financeSyncLimiter,
-  stripeBillingController.reconcileSubscriptions
-);
+router.get('/billing/subscriptions/summary', subscriptionRebuildInProgress);
+router.post('/billing/subscriptions/reconcile', financeSyncLimiter, subscriptionRebuildInProgress);
 
 // ── Stripe membership promotion codes ─────────────────────────────────────
-router.get('/promotion-codes', promotionCodeController.listPromotionCodes);
-router.post('/promotion-codes', promotionCodeController.createPromotionCode);
-router.post('/promotion-codes/:id/deactivate', promotionCodeController.deactivatePromotionCode);
+router.get('/promotion-codes', subscriptionRebuildInProgress);
+router.post('/promotion-codes', subscriptionRebuildInProgress);
+router.post('/promotion-codes/:id/deactivate', subscriptionRebuildInProgress);
 
 // ── Promotional campaigns ───────────────────────────────────────────────────
 router.get('/campaigns/defaults', campaignController.getCampaignDefaults);

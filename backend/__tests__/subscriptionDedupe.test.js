@@ -158,8 +158,7 @@ describe('3. a paid Stripe subscription alongside an accidental free row', () =>
 describe('4. active versus cancelled or expired', () => {
   it('a cancelled Stripe row still beats an accidental free default', () => {
     // The free row is not a subscription anyone chose — it is what the bug wrote.
-    // The cancelled row carries the billing history AND the stripeSubscriptionId that
-    // services/stripe/provisioning.js needs to resolve future webhooks.
+    // Keep the cancelled row because it carries a Stripe subscription id and history.
     const rows = [
       row({ id: 'free', createdAt: '2025-06-01T00:00:00.000Z' }),
       row({

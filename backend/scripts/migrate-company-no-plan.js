@@ -1,7 +1,6 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('../models/User');
-const Subscription = require('../models/Subscription');
 const Transaction = require('../models/Transaction');
 
 const apply = process.argv.includes('--apply');
@@ -29,13 +28,14 @@ async function classify(user, subscription, subscriptionTransactions) {
 
 async function main() {
   await mongoose.connect(process.env.MONGO_URI);
+  const subscriptions = mongoose.connection.db.collection('subscriptions');
   const users = await User.find({ role: 'company' })
     .select('_id email role planType subscription')
     .lean();
   const report = [];
 
   for (const user of users) {
-    const subscription = await Subscription.findOne({ userId: user._id }).lean();
+    const subscription = await subscriptions.findOne({ userId: user._id });
     const transactions = await Transaction.find({ userId: user._id, type: 'subscription' })
       .select('status provider stripeSessionId')
       .lean();
@@ -56,7 +56,10 @@ async function main() {
     });
 
     if (apply && classification === 'LEGACY_AUTO_ASSIGNED' && subscription) {
-      await Subscription.updateOne({ _id: subscription._id }, { $set: { currentPlan: null } });
+      await subscriptions.updateOne(
+        { _id: subscription._id },
+        { $set: { currentPlan: null } }
+      );
     }
   }
 

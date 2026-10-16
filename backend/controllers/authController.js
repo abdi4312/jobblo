@@ -1,9 +1,7 @@
-const Subscription = require('../models/Subscription');
 const User = require('../models/User');
 const Session = require('../models/Session');
 const bcrypt = require('bcryptjs');
 const { isBcryptHash } = require('../utils/passwordUtils');
-const { ensureDefaultSubscription } = require('../utils/subscription');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { generateTokens, createSession } = require('../utils/tokenUtils');
@@ -199,11 +197,6 @@ exports.register = async (req, res) => {
 
     const { accessToken, refreshToken } = await createSession(req, user._id);
 
-    // Shared with the Google and Vipps signup paths so all three provision the same
-    // plan the same way. Atomic upsert with everything inside $setOnInsert, so a retry
-    // or a concurrent request cannot produce a second subscription row.
-    await ensureDefaultSubscription(user);
-
     setAuthCookies(res, accessToken, refreshToken);
 
     return res.status(201).json({
@@ -215,7 +208,6 @@ exports.register = async (req, res) => {
       await Promise.allSettled([
         User.deleteOne({ _id: createdUserId }),
         Session.deleteMany({ userId: createdUserId }),
-        Subscription.deleteMany({ userId: createdUserId }),
       ]);
     }
 

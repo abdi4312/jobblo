@@ -1,5 +1,11 @@
 # Stripe webhook deployment
 
+> **Legacy subscription processing is disabled on this branch. Do not deploy this
+> cleanup to production or staging while customers have active Stripe subscriptions.**
+> The webhook remains signature-verified for SafePay and finance events, but does
+> not synchronize subscription checkouts, invoices, status changes, or schedules.
+> Existing Stripe subscriptions and MongoDB records are not changed by this code.
+
 SafePay's canonical endpoint is `POST https://<api-host>/api/stripe/webhook`.
 It must be publicly reachable over HTTPS. New Stripe event destinations should
 use this URL; `/api/safepay-checkout/webhook` remains as a legacy alias.
@@ -12,32 +18,6 @@ For SafePay Checkout, subscribe to:
 - `checkout.session.async_payment_succeeded`
 - `checkout.session.async_payment_failed`
 - `checkout.session.expired`
-
-The shared dispatcher also consumes these existing subscription events:
-
-- `invoice.paid`
-- `invoice.payment_failed`
-- `invoice.payment_action_required`
-- `customer.subscription.updated`
-- `customer.subscription.deleted`
-- `customer.subscription.paused`
-- `customer.subscription.resumed`
-- `customer.subscription.pending_update_applied`
-- `customer.subscription.pending_update_expired`
-- `subscription_schedule.completed`
-- `subscription_schedule.canceled`
-
-`checkout.session.completed` activates the initial plan only after Stripe reports
-the checkout as paid (or no payment is required). `invoice.paid` records renewals,
-and failed/action-required invoice events mark an account past due. The configured
-`STRIPE_SUBSCRIPTION_GRACE_DAYS` controls entitlement grace (default 3 days,
-0–30); Stripe Billing Smart Retries and retry cadence must be configured in each
-Stripe Dashboard mode. A single failure never cancels the Stripe subscription.
-
-Subscription billing policy is monthly from the signup/period start date (there
-is no first-of-month alignment). Upgrades are immediate with Stripe proration and
-only verified subscription webhooks change Jobblo entitlements. Downgrades are
-scheduled for the end of the paid period without proration.
 
 For provider transfer and connected-account bank payout history, also subscribe
 to:
@@ -100,6 +80,22 @@ last 30 days.
 The health endpoint is read-only and protected by the admin router. Ordinary
 users cannot mark an endpoint verified or clear a delivery problem.
 
+## Subscription processing disabled
+
+Subscription checkout and management endpoints return HTTP 503 with
+`SUBSCRIPTION_REBUILD_IN_PROGRESS`. The shared webhook verifies Stripe signatures
+but acknowledges old subscription checkout sessions without provisioning them;
+invoice, subscription lifecycle, and schedule events are ignored. Active Stripe
+subscriptions may continue billing directly through Stripe, but their state will
+not synchronize to Jobblo. Keep this branch isolated until Subscription V2 and
+the migration plan are ready.
+
+The legacy `Subscription`, `SubscriptionPlan`, `StripeBillingOperation`, and
+`Coupon` Mongoose model files are removed. Their MongoDB collections and documents
+are not dropped or modified. `backend/seeds/plan.seed.js` still imports the removed
+`SubscriptionPlan` model and is intentionally not runnable until Subscription V2
+restores a compatible plan model; do not run it before then.
+
 ## Verify provider finance history
 
 1. Add the transfer and payout event types above to both the test and live
@@ -119,23 +115,3 @@ users cannot mark an endpoint verified or clear a delivery problem.
    explicit `test` or `live` mode to backfill missed history. This requires
    Stripe Connect account read/list permissions. A permission or API failure is
    reported as a failed account sync; it is not shown as a successful sync.
-
-## Subscription recovery and customer billing
-
-- Configure Customer Portal in Stripe for each mode. Enable payment-method and
-  billing-address updates, invoice history, and cancellation/reactivation. Do not
-  enable a portal plan switch unless all selectable recurring prices are managed
-  by Jobblo.
-- Enable Stripe Billing automatic collection and Smart Retries in both test and
-  live mode; choose the retry schedule and configure the after-retry behavior.
-  Jobblo does not cancel on an individual failed payment. It grants the configured
-  grace period after `past_due`, then removes paid entitlements.
-- Stripe automatically retries failed webhook deliveries. Failed handler claims
-  are released so event retries can run safely; event IDs and invoice IDs are
-  idempotent. Use Stripe Workbench to resend a failed event, then run the
-  authenticated admin subscription reconciliation endpoint to compare current
-  Stripe subscriptions/invoices with Jobblo. Reconciliation is read-only with
-  respect to Stripe and never creates charges.
-- Check subscriber status and failed invoices at
-  `/dashboard/subscription-billing`. Reconciliation requires an explicit mode and
-  is limited to 20 subscribers per request.

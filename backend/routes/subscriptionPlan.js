@@ -1,19 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const {
-  getAllPlans,
-  updatePlan,
-  createPlan,
-  deletePlan,
-} = require('../controllers/subscriptionPlanController');
-const { authenticate, requireAdmin } = require('../middleware/auth');
+const subscriptionRebuildInProgress = require('../middleware/subscriptionRebuildInProgress');
 
-// GET /api/plans (public)
-router.get('/', getAllPlans);
-
-// Admin routes
-router.post('/', authenticate, requireAdmin, createPlan);
-router.put('/:id', authenticate, requireAdmin, updatePlan);
-router.delete('/:id', authenticate, requireAdmin, deletePlan);
+router.get('/', subscriptionRebuildInProgress);
+router.post('/', subscriptionRebuildInProgress);
+router.put('/:id', subscriptionRebuildInProgress);
+router.delete('/:id', subscriptionRebuildInProgress);
 
 module.exports = router;

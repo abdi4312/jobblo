@@ -1,7 +1,6 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
-const { ensureDefaultSubscription } = require('../utils/subscription');
 const { createUnusablePassword } = require('../utils/passwordUtils');
 const { resolveOAuthLogin } = require('../utils/oauthLinking');
 
@@ -87,7 +86,6 @@ function buildGoogleVerify() {
             oauthProviders: [{ provider: 'google', providerId: String(profile.id) }],
           });
 
-          await ensureDefaultSubscription(user);
           return done(null, user);
         }
 

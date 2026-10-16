@@ -1,18 +1,13 @@
 /**
- * Collapse the duplicate Subscription rows left behind by the Vipps login bug.
+ * Report or collapse duplicate documents in the historical subscriptions collection.
  *
  *   npm run dedupe:subscriptions             # report only, changes nothing
  *   npm run dedupe:subscriptions -- --apply  # actually delete
  *
  * (or `node scripts/dedupe-subscriptions.js [--apply]` directly.)
  *
- * Background: controllers/vippsController.js ran `Subscription.create(...)` on every
- * sign-in instead of only at signup, so a user who logged in ten times has ten rows.
- * That is fixed -- the callback now does an idempotent `$setOnInsert` upsert -- but
- * the rows already written are still in the database, and every reader in the codebase
- * resolves the subscription with `findOne({ userId })`. Which row wins is natural
- * document order, so an upgraded customer can be served a stale free row and silently
- * lose the plan they are paying for.
+ * Historical login flows could create duplicate rows. This migration utility uses
+ * the raw collection so it remains available after removal of the legacy Mongoose model.
  *
  * The rules for choosing the survivor live in utils/subscriptionDedupe.js, next to the
  * reasoning behind them, and are unit-tested in __tests__/subscriptionDedupe.test.js.
@@ -20,9 +15,7 @@
  * signup default regardless of age, and a group containing two rows that both mean
  * something is reported as MANUAL_REVIEW and left completely alone.
  *
- * Run this BEFORE the unique index on Subscription.userId is built. Mongoose fails an
- * index build soft -- it logs and carries on -- so a collection with duplicates leaves
- * the application running with no index while looking perfectly healthy.
+ * Run only after an explicit migration review. This script is not run by the application.
  *
  * Idempotent: after a successful --apply every user has one row, so a second run finds
  * no groups and changes nothing.
@@ -69,7 +62,7 @@ function printGroup(userId, rows, verdict) {
   }
 
   await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 15000 });
-  const Subscription = require('../models/Subscription');
+  const subscriptions = mongoose.connection.db.collection('subscriptions');
 
   console.log(
     `\nDeduplicating subscriptions${APPLY ? '' : '  (DRY RUN -- pass --apply to delete)'}\n`
@@ -77,11 +70,11 @@ function printGroup(userId, rows, verdict) {
 
   // Group in the database rather than pulling the whole collection into memory: only
   // the userIds that actually have more than one row come back.
-  const duplicated = await Subscription.aggregate([
+  const duplicated = await subscriptions.aggregate([
     { $group: { _id: '$userId', n: { $sum: 1 } } },
     { $match: { n: { $gt: 1 } } },
     { $sort: { n: -1 } },
-  ]);
+  ]).toArray();
 
   if (duplicated.length === 0) {
     console.log('  No user has more than one subscription. Nothing to do.\n');
@@ -100,7 +93,7 @@ function printGroup(userId, rows, verdict) {
     const userId = group._id;
 
     // Re-read the rows themselves; the aggregate above only counted them.
-    const rows = await Subscription.find({ userId }).lean();
+    const rows = await subscriptions.find({ userId }).toArray();
     const verdict = classifySubscriptionGroup(rows);
 
     if (verdict.decision === 'SINGLE') continue; // raced with a concurrent write
@@ -125,7 +118,7 @@ function printGroup(userId, rows, verdict) {
       // point, so aborting here leaves the group exactly as it was.
       assertNoStripeIdLost(rows, verdict.keepId, verdict.deleteIds);
 
-      const res = await Subscription.deleteMany({
+      const res = await subscriptions.deleteMany({
         _id: { $in: verdict.deleteIds.map((id) => new mongoose.Types.ObjectId(id)) },
       });
       deletedRows += res.deletedCount;
@@ -159,8 +152,7 @@ function printGroup(userId, rows, verdict) {
     console.log(`\n  Nothing was changed. Re-run with --apply to delete.\n`);
   } else if (manualGroups === 0) {
     console.log(
-      `\n  Done. Every user now has at most one subscription -- safe to build the\n` +
-        `  unique index on Subscription.userId (see models/Subscription.js).\n`
+      `\n  Done. Every user now has at most one subscription document.\n`
     );
   } else {
     console.log(

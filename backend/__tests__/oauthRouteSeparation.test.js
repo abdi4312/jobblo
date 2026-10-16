@@ -1,6 +1,5 @@
 jest.mock('axios', () => ({ post: jest.fn(), get: jest.fn() }));
 jest.mock('../models/User', () => ({ findOne: jest.fn(), findById: jest.fn(), create: jest.fn() }));
-jest.mock('../utils/subscription', () => ({ ensureDefaultSubscription: jest.fn(async () => ({})) }));
 jest.mock('../utils/tokenUtils', () => ({ createSession: jest.fn(async () => ({ accessToken: 'at', refreshToken: 'rt' })) }));
 
 let passport;

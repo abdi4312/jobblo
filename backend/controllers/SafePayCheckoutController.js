@@ -1201,9 +1201,8 @@ exports.checkoutSessionStatus = async (req, res) => {
  *
  * Kept as an alias so an endpoint already registered at this URL in the Stripe
  * dashboard keeps working. The verification, event-level idempotency and routing
- * now live in one dispatcher shared with /api/stripe/webhook — this used to handle
- * only SafePay sessions, which is why subscriptions and extra-contact purchases had
- * no server-side confirmation at all.
+ * now live in one dispatcher shared with /api/stripe/webhook. Legacy subscription
+ * and extra-contact processing has been disabled.
  */
 exports.stripeWebhook = (req, res) =>
   require('../services/stripe/webhookDispatcher').stripeWebhook(req, res);

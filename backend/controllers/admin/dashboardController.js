@@ -1,8 +1,8 @@
+const mongoose = require('mongoose');
 const User = require('../../models/User');
 const Service = require('../../models/Service');
 const Order = require('../../models/Order');
 const Transaction = require('../../models/Transaction');
-const Subscription = require('../../models/Subscription');
 const Review = require('../../models/Review');
 const Notification = require('../../models/Notification');
 const AdminActivity = require('../../models/AdminActivity');
@@ -110,7 +110,9 @@ const getOverview = asyncHandler(async (req, res) => {
     ]),
 
     // Active subscriptions
-    Subscription.countDocuments({ 'currentPlan.status': 'active' }),
+    mongoose.connection.db
+      .collection('subscriptions')
+      .countDocuments({ 'currentPlan.status': 'active' }),
 
     // Reviews (total — as "pending moderation" flag — adjust when moderation field exists)
     Review.countDocuments(),
