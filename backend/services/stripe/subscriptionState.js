@@ -2,11 +2,6 @@ const mongoose = require('mongoose');
 const { isResourceMissing } = require('./customers');
 
 /**
- * Read-only account-deletion safeguard. Read historical subscription data directly
- * so this protection does not depend on the removed legacy Mongoose model.
- */
-
-/**
  * Stripe statuses that can still produce a charge.
  *
  * - `active`, `trialing` — obviously.
@@ -79,49 +74,56 @@ async function retrieveLiveSubscription(stripe, stripeSubscriptionId) {
  *
  * @throws an error tagged `subscription_check_unavailable` when Stripe cannot be reached.
  * @returns {Promise<{ blocking: boolean, reason: string, stripeSubscriptionId?: string,
- *   stripeStatus?: string, cancelAtPeriodEnd?: boolean, planName?: string|null }>}
+ *   stripeStatus?: string, cancelAtPeriodEnd?: boolean }>}
  */
 async function findBillingCapableSubscription(stripe, userId) {
-  const record = await mongoose.connection.db.collection('subscriptions').findOne(
-    { userId: new mongoose.Types.ObjectId(userId) },
-    { projection: { 'currentPlan.stripeSubscriptionId': 1, 'currentPlan.plan': 1 } }
-  );
-  const stripeSubscriptionId = record?.currentPlan?.stripeSubscriptionId || null;
-
-  if (!stripeSubscriptionId) {
-    return { blocking: false, reason: 'no_stripe_subscription' };
-  }
-
-  let live;
+  const objectId = new mongoose.Types.ObjectId(userId);
+  const db = mongoose.connection.db;
+  let pendingCheckout;
+  let v2Record;
   try {
-    live = await retrieveLiveSubscription(stripe, stripeSubscriptionId);
+    pendingCheckout = await db.collection('subscription_billing_operations_v2').findOne({
+      userId: objectId,
+      operationType: 'checkout',
+      status: { $in: ['pending', 'reconciliation_required'] },
+    });
+    v2Record = await db.collection('subscription_v2').findOne(
+      { userId: objectId },
+      { projection: { stripeSubscriptionId: 1, stripeMode: 1, status: 1 } }
+    );
   } catch (err) {
     throw verificationUnavailable(err);
   }
-
-  if (!live.found) {
-    return { blocking: false, reason: 'stripe_subscription_missing', stripeSubscriptionId };
+  if (pendingCheckout) {
+    return { blocking: true, reason: 'pending_subscription_checkout' };
   }
 
-  const stripeStatus = live.subscription.status;
+  if (!v2Record) return { blocking: false, reason: 'no_v2_subscription' };
+  if (!v2Record.stripeSubscriptionId || !['test', 'live'].includes(v2Record.stripeMode)) {
+    throw verificationUnavailable(new Error('V2 subscription has no verifiable Stripe reference'));
+  }
 
-  if (!isBillingCapableStripeStatus(stripeStatus)) {
+  try {
+    let client = stripe;
+    if (typeof stripe.getStripeForMode === 'function') {
+      client = await stripe.getStripeForMode(v2Record.stripeMode === 'test');
+    } else if (!client?.subscriptions?.retrieve && typeof stripe.getStripe === 'function') {
+      client = await stripe.getStripe();
+    }
+    const live = await retrieveLiveSubscription(client, v2Record.stripeSubscriptionId);
+    if (!live.found || !isBillingCapableStripeStatus(live.subscription.status)) {
+      return { blocking: false, reason: 'stripe_status_settled' };
+    }
     return {
-      blocking: false,
-      reason: 'stripe_status_settled',
-      stripeSubscriptionId,
-      stripeStatus,
+      blocking: true,
+      reason: 'billing_capable',
+      stripeSubscriptionId: v2Record.stripeSubscriptionId,
+      stripeStatus: live.subscription.status,
+      cancelAtPeriodEnd: Boolean(live.subscription.cancel_at_period_end),
     };
+  } catch (err) {
+    throw verificationUnavailable(err);
   }
-
-  return {
-    blocking: true,
-    reason: 'billing_capable',
-    stripeSubscriptionId,
-    stripeStatus,
-    cancelAtPeriodEnd: Boolean(live.subscription.cancel_at_period_end),
-    planName: record?.currentPlan?.plan || null,
-  };
 }
 
 module.exports = {

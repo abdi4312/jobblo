@@ -26,6 +26,17 @@ const ORDER_EVENT_TYPES = new Set([
   'checkout.session.async_payment_succeeded',
   'checkout.session.async_payment_failed',
   'checkout.session.expired',
+  'customer.subscription.created',
+  'customer.subscription.updated',
+  'customer.subscription.deleted',
+  'invoice.paid',
+  'invoice.payment_failed',
+  'invoice.payment_action_required',
+  'subscription_schedule.created',
+  'subscription_schedule.updated',
+  'subscription_schedule.canceled',
+  'subscription_schedule.released',
+  'subscription_schedule.aborted',
   'transfer.created',
   'transfer.updated',
   'transfer.reversed',
@@ -54,6 +65,34 @@ function isLegacySubscriptionSession(session) {
   );
 }
 
+function isV2SubscriptionEvent(event) {
+  const object = event?.data?.object;
+  if (event?.type === 'subscription_schedule.created') return true;
+  if (event?.type?.startsWith('checkout.session.')) {
+    return object?.mode === 'subscription' && object?.metadata?.subscriptionV2 === 'true';
+  }
+  if (event?.type?.startsWith('customer.subscription.')) {
+    return object?.metadata?.subscriptionV2 === 'true';
+  }
+  if (event?.type?.startsWith('subscription_schedule.')) {
+    return object?.metadata?.subscriptionV2 === 'true';
+  }
+  if (
+    event?.type === 'invoice.paid' ||
+    event?.type === 'invoice.payment_failed' ||
+    event?.type === 'invoice.payment_action_required'
+  ) {
+    return object?.parent?.subscription_details?.metadata?.subscriptionV2 === 'true';
+  }
+  return false;
+}
+
+async function handleV2SubscriptionEvent(event, stripe) {
+  const { processVerifiedEvent } = require('../subscriptions/v2WebhookProcessor');
+  const mode = event.livemode ? 'live' : 'test';
+  return processVerifiedEvent(event, mode, stripe);
+}
+
 /** Log a payment failure where an admin will actually see it, without leaking secrets. */
 async function logPaymentFailure({ req, error, httpStatus, errorCode, metadata }) {
   await logApplicationError({
@@ -77,7 +116,7 @@ async function logPaymentFailure({ req, error, httpStatus, errorCode, metadata }
  * which is what asks Stripe to retry — so throw for transient faults, and return
  * normally for anything a retry cannot fix.
  */
-async function handleEvent(event, { io } = {}) {
+async function handleEvent(event, { io, stripe } = {}) {
   // Required lazily: SafePayCheckoutController requires this module's siblings, and
   // a top-level import would close the cycle.
   const { confirmPaidSession } = require('../../controllers/SafePayCheckoutController');
@@ -90,6 +129,10 @@ async function handleEvent(event, { io } = {}) {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object;
+      if (isV2SubscriptionEvent(event)) {
+        const result = await handleV2SubscriptionEvent(event, stripe);
+        return result;
+      }
       if (isLegacySubscriptionSession(session)) {
         return { handled: 'subscription_rebuild_in_progress' };
       }
@@ -106,6 +149,9 @@ async function handleEvent(event, { io } = {}) {
 
     case 'checkout.session.async_payment_succeeded': {
       const session = event.data.object;
+      if (isV2SubscriptionEvent(event)) {
+        return handleV2SubscriptionEvent(event, stripe);
+      }
       if (isLegacySubscriptionSession(session)) {
         return { handled: 'subscription_rebuild_in_progress' };
       }
@@ -116,6 +162,9 @@ async function handleEvent(event, { io } = {}) {
 
     case 'checkout.session.async_payment_failed': {
       const session = event.data.object;
+      if (isV2SubscriptionEvent(event)) {
+        return handleV2SubscriptionEvent(event, stripe);
+      }
       if (isLegacySubscriptionSession(session)) {
         return { handled: 'subscription_rebuild_in_progress' };
       }
@@ -127,6 +176,9 @@ async function handleEvent(event, { io } = {}) {
     }
 
     case 'checkout.session.expired':
+      if (isV2SubscriptionEvent(event)) {
+        return handleV2SubscriptionEvent(event, stripe);
+      }
       if (isLegacySubscriptionSession(event.data.object)) {
         return { handled: 'subscription_rebuild_in_progress' };
       }
@@ -136,6 +188,32 @@ async function handleEvent(event, { io } = {}) {
         { $set: { checkoutSessionStatus: 'expired' } }
       );
       return { handled: 'session_expired' };
+
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated':
+    case 'customer.subscription.deleted':
+    case 'invoice.paid':
+    case 'invoice.payment_failed':
+    case 'invoice.payment_action_required':
+      if (isV2SubscriptionEvent(event)) {
+        return handleV2SubscriptionEvent(event, stripe);
+      }
+      return { handled: 'subscription_rebuild_in_progress' };
+
+    case 'subscription_schedule.created':
+      if (isV2SubscriptionEvent(event)) {
+        return handleV2SubscriptionEvent(event, stripe);
+      }
+      return { handled: 'subscription_event_ignored' };
+
+    case 'subscription_schedule.updated':
+    case 'subscription_schedule.canceled':
+    case 'subscription_schedule.released':
+    case 'subscription_schedule.aborted':
+      if (isV2SubscriptionEvent(event)) {
+        return handleV2SubscriptionEvent(event, stripe);
+      }
+      return { handled: 'subscription_event_ignored' };
 
     case 'charge.dispute.created':
     case 'charge.dispute.updated':
@@ -269,7 +347,7 @@ async function stripeWebhook(req, res) {
   }
 
   try {
-    const outcome = await handleEvent(event, { io: req.app?.get('io') });
+    const outcome = await handleEvent(event, { io: req.app?.get('io'), stripe });
     await markProcessed(event.id);
     await recordVerifiedDelivery(stripeConfig, event.id);
     return res.json({ received: true, handled: outcome.handled });

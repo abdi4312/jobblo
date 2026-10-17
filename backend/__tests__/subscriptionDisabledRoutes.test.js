@@ -45,5 +45,62 @@ describe('legacy subscription endpoints', () => {
       code: 'SUBSCRIPTION_REBUILD_IN_PROGRESS',
       message: 'Subscription functionality is temporarily unavailable.',
     });
+
+  });
+
+  it('keeps the V2 checkout route disabled unless its server-side flag is enabled', async () => {
+    const previous = process.env.SUBSCRIPTION_V2_CHECKOUT_ENABLED;
+    delete process.env.SUBSCRIPTION_V2_CHECKOUT_ENABLED;
+    try {
+      const response = await request(app).post('/api/stripe/v2/create-checkout-session');
+      expect(response.status).toBe(503);
+      expect(response.body).toEqual({
+        code: 'SUBSCRIPTION_V2_CHECKOUT_DISABLED',
+        message: 'Subscription checkout is not currently available.',
+      });
+    } finally {
+      if (previous === undefined) delete process.env.SUBSCRIPTION_V2_CHECKOUT_ENABLED;
+      else process.env.SUBSCRIPTION_V2_CHECKOUT_ENABLED = previous;
+    }
+  });
+
+  it('keeps V2 management endpoints disabled unless their server-side flag is enabled', async () => {
+    const previous = process.env.SUBSCRIPTION_V2_MANAGEMENT_ENABLED;
+    delete process.env.SUBSCRIPTION_V2_MANAGEMENT_ENABLED;
+    try {
+      const responses = await Promise.all([
+        request(app).get('/api/stripe/v2/subscription'),
+        request(app).post('/api/stripe/v2/subscription/cancel'),
+        request(app).post('/api/stripe/v2/subscription/resume'),
+        request(app).post('/api/stripe/v2/subscription/change/preview').send({ planId: 'plan' }),
+        request(app).post('/api/stripe/v2/subscription/change').send({ planId: 'plan' }),
+      ]);
+      for (const response of responses) {
+        expect(response.status).toBe(503);
+        expect(response.body).toEqual({
+          code: 'SUBSCRIPTION_V2_MANAGEMENT_DISABLED',
+          message: 'Subscription management is not currently available.',
+        });
+      }
+    } finally {
+      if (previous === undefined) delete process.env.SUBSCRIPTION_V2_MANAGEMENT_ENABLED;
+      else process.env.SUBSCRIPTION_V2_MANAGEMENT_ENABLED = previous;
+    }
+  });
+
+  it('keeps V2 entitlements disabled unless their server-side flag is enabled', async () => {
+    const previous = process.env.SUBSCRIPTION_V2_ENTITLEMENTS_ENABLED;
+    delete process.env.SUBSCRIPTION_V2_ENTITLEMENTS_ENABLED;
+    try {
+      const response = await request(app).get('/api/stripe/v2/entitlements');
+      expect(response.status).toBe(503);
+      expect(response.body).toEqual({
+        code: 'SUBSCRIPTION_V2_ENTITLEMENTS_DISABLED',
+        message: 'Subscription entitlements are not currently available.',
+      });
+    } finally {
+      if (previous === undefined) delete process.env.SUBSCRIPTION_V2_ENTITLEMENTS_ENABLED;
+      else process.env.SUBSCRIPTION_V2_ENTITLEMENTS_ENABLED = previous;
+    }
   });
 });

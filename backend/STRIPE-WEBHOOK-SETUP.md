@@ -1,10 +1,10 @@
 # Stripe webhook deployment
 
-> **Legacy subscription processing is disabled on this branch. Do not deploy this
-> cleanup to production or staging while customers have active Stripe subscriptions.**
-> The webhook remains signature-verified for SafePay and finance events, but does
-> not synchronize subscription checkouts, invoices, status changes, or schedules.
-> Existing Stripe subscriptions and MongoDB records are not changed by this code.
+> **Subscription V2 checkout is disabled by default and lifecycle management is
+> incomplete. Do not enable it or treat this branch as production-ready.** The shared
+> webhook remains signature-verified for SafePay and finance events, and processes
+> only properly marked V2 subscription events. It does not process old subscription
+> events or modify Stripe subscriptions or MongoDB history.
 
 SafePay's canonical endpoint is `POST https://<api-host>/api/stripe/webhook`.
 It must be publicly reachable over HTTPS. New Stripe event destinations should
@@ -29,6 +29,23 @@ to:
 - `payout.paid`
 - `payout.failed`
 - `payout.canceled`
+
+Before enabling Subscription V2 in a future release, its destination must also
+deliver:
+
+- `customer.subscription.created`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+- `invoice.paid`
+- `invoice.payment_failed`
+- `checkout.session.completed`
+- `checkout.session.async_payment_succeeded`
+- `checkout.session.async_payment_failed`
+- `checkout.session.expired`
+
+The `SUBSCRIPTION_V2_CHECKOUT_ENABLED` flag remains off by default. Do not enable it
+until cancellation, plan changes, usage/entitlement handling, recovery, legal review,
+and end-to-end migration verification are complete.
 
 Transfer and payout updates must be delivered with the connected account context
 (`event.account`). Platform-level payouts are intentionally not treated as
@@ -80,21 +97,23 @@ last 30 days.
 The health endpoint is read-only and protected by the admin router. Ordinary
 users cannot mark an endpoint verified or clear a delivery problem.
 
-## Subscription processing disabled
+## Subscription V1 removed; V2 incomplete
 
-Subscription checkout and management endpoints return HTTP 503 with
-`SUBSCRIPTION_REBUILD_IN_PROGRESS`. The shared webhook verifies Stripe signatures
-but acknowledges old subscription checkout sessions without provisioning them;
-invoice, subscription lifecycle, and schedule events are ignored. Active Stripe
-subscriptions may continue billing directly through Stripe, but their state will
-not synchronize to Jobblo. Keep this branch isolated until Subscription V2 and
-the migration plan are ready.
+Legacy checkout, subscription-management, plan-catalogue, membership coupon, and
+extra-contact endpoints return HTTP 503 with `SUBSCRIPTION_REBUILD_IN_PROGRESS`.
+The V2 checkout endpoint is also disabled with `SUBSCRIPTION_V2_CHECKOUT_DISABLED`
+unless explicitly enabled by server configuration. The existing webhook verifies
+signatures using the raw request body; old subscription sessions/events are
+acknowledged without state changes. Only server-marked V2 events reach the V2
+processor. SafePay and unrelated payment/finance handlers remain active.
 
-The legacy `Subscription`, `SubscriptionPlan`, `StripeBillingOperation`, and
-`Coupon` Mongoose model files are removed. Their MongoDB collections and documents
-are not dropped or modified. `backend/seeds/plan.seed.js` still imports the removed
-`SubscriptionPlan` model and is intentionally not runnable until Subscription V2
-restores a compatible plan model; do not run it before then.
+V2 models use separate collections, while `SubscriptionPlan` remains compatible with
+the unchanged `subscriptionplans` collection and plan seed definitions. The obsolete
+`subscriptions` collection and historical transactions are retained but no active
+backend source code depends on the V1 subscription collection. No seed, migration,
+or database cleanup has been run. Extra-contact purchases remain unavailable because
+their fulfillment depended on V1 quota rules and V2 usage fulfillment is not yet
+implemented.
 
 ## Verify provider finance history
 

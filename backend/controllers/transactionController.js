@@ -72,9 +72,7 @@ exports.getUserTransactions = async (req, res) => {
 // GET SINGLE TRANSACTION
 exports.getTransactionById = async (req, res) => {
   try {
-    const transaction = await Transaction.findById(req.params.id).populate(
-      'userId serviceId coupon'
-    );
+    const transaction = await Transaction.findById(req.params.id).populate('userId serviceId');
 
     if (!transaction) {
       return res.status(404).json({ success: false, error: 'Transaction not found' });

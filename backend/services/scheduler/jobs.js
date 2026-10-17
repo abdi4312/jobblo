@@ -453,6 +453,16 @@ async function cancelExpiredUnconnectedSafePayOrders() {
   return cancelUnconnectedPaidOrders();
 }
 
+async function cancelExpiredSubscriptionRecoveries() {
+  const recovery = require('../subscriptions/v2RecoveryPolicy');
+  return recovery.cancelExpiredRecoveries();
+}
+
+async function dispatchSubscriptionRecoveryEmails() {
+  const recovery = require('../subscriptions/v2RecoveryPolicy');
+  return recovery.dispatchRecoveryEmails();
+}
+
 async function recordSafePayConnectReadiness() {
   const { recordReadyProvidersBeforeDeadline } = require('../safepay/providerConnectTimeout');
   return recordReadyProvidersBeforeDeadline();
@@ -466,6 +476,8 @@ module.exports = {
   reconcileMoneyState,
   reconcileStripeFinancialHistory,
   cancelExpiredUnconnectedSafePayOrders,
+  cancelExpiredSubscriptionRecoveries,
+  dispatchSubscriptionRecoveryEmails,
   recordSafePayConnectReadiness,
   config,
 };

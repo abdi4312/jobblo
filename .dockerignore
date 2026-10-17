@@ -1,14 +1,29 @@
+# Things Docker should NOT copy into the image (keeps builds fast & safe)
+
+# Installed packages (the image runs its own npm install)
 **/node_modules
-.git
-.github
-frontend
-jobblo-app
-coverage
-logs
-**/dist
+
+# Secrets & local settings (never bake these into an image)
 **/.env
 **/.env.*
-!backend/package.json
-!backend/package-lock.json
-!backend/Dockerfile
-!backend/server.js
+
+# Version control & CI
+.git
+.github
+
+# Other apps in this repo that the backend image doesn't need
+frontend
+jobblo-app
+
+# Test output and logs
+coverage
+**/coverage
+*.log
+**/*.log
+
+# Build output (rebuilt inside the container)
+**/dist
+
+# Editor / OS junk
+.vscode
+.DS_Store

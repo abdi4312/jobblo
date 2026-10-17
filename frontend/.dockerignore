@@ -1,0 +1,18 @@
+# Things Docker should NOT copy into the image (keeps builds fast & safe)
+
+# Installed packages (the image runs its own npm install)
+node_modules
+
+# Secrets & local settings (never bake these into an image)
+.env
+.env.*
+
+# Build output (rebuilt inside the container)
+dist
+
+# Logs
+*.log
+
+# Editor / OS junk
+.vscode
+.DS_Store

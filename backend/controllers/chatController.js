@@ -264,7 +264,6 @@ exports.sendMessage = async (req, res) => {
     };
 
     chat.messages.push(message);
-    const savedMessage = chat.messages[chat.messages.length - 1];
     chat.lastMessage = trimmed;
     // A new message brings the conversation back for anyone who had hidden it —
     // otherwise a reply landed in an inbox the recipient could no longer see, and the
@@ -273,8 +272,10 @@ exports.sendMessage = async (req, res) => {
 
     await chat.save();
 
-    const messagePayload =
-      typeof savedMessage.toObject === 'function' ? savedMessage.toObject() : savedMessage;
+    const savedMessage = chat.messages[chat.messages.length - 1];
+    const messagePayload = typeof savedMessage.toObject === 'function'
+      ? savedMessage.toObject()
+      : savedMessage;
 
     // Emit socket event to notify users in the chat room
     const io = req.app.get('io');
@@ -284,9 +285,6 @@ exports.sendMessage = async (req, res) => {
         message: messagePayload,
       });
     }
-
-    const recipientId =
-      chat.clientId.toString() === id ? chat.providerId.toString() : chat.clientId.toString();
 
     res.status(201).json(messagePayload);
   } catch (error) {

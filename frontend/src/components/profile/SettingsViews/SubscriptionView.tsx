@@ -1,7 +1,23 @@
 import { useState } from 'react';
-import { CreditCard, History, Package, Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  CreditCard,
+  History,
+  Package,
+  Loader2,
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  ExternalLink,
+  RotateCcw,
+} from 'lucide-react';
+import { isAxiosError } from 'axios';
+import { toast } from 'react-hot-toast';
 import mainLink from '../../../api/mainURLs';
-import { useQuery } from '@tanstack/react-query';
+import { ConfirmDialog } from '../../Ui/ConfirmDialog';
+
+const errorMessage = (error: unknown, fallback: string) =>
+  isAxiosError<{ message?: string }>(error) ? error.response?.data?.message || fallback : fallback;
 
 interface Transaction {
   _id: string;
@@ -30,10 +46,19 @@ interface CurrentSubscription {
   plan: string | null;
   planType: 'private' | 'business';
   contacts: ContactSummary;
+  status: string;
+  stripeStatus?: string;
+  stripeSubscriptionId: string | null;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd?: string;
+  renewalDate?: string;
+  price?: number | null;
+  pendingPlan?: { plan: string; effectiveAt: string } | null;
 }
 
 export function SubscriptionView() {
   const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     queryKey: ['userTransactions', page],
@@ -46,6 +71,41 @@ export function SubscriptionView() {
   const { data: currentSubscription, isLoading: isSubscriptionLoading } = useQuery<CurrentSubscription | null>({
     queryKey: ['my-subscription'],
     queryFn: async () => (await mainLink.get<{ subscription: CurrentSubscription | null }>('/api/stripe/subscription')).data.subscription,
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async () => (await mainLink.post('/api/stripe/subscription/cancel')).data,
+    onSuccess: (result) => {
+      toast.success(result?.message || 'Abonnementet avsluttes ved periodens slutt');
+      queryClient.invalidateQueries({ queryKey: ['my-subscription'] });
+    },
+    onError: (error: unknown) => toast.error(errorMessage(error, 'Kunne ikke si opp abonnementet')),
+  });
+  const resumeMutation = useMutation({
+    mutationFn: async () => (await mainLink.post('/api/stripe/subscription/resume')).data,
+    onSuccess: (result) => {
+      toast.success(result?.message || 'Abonnementet fortsetter');
+      queryClient.invalidateQueries({ queryKey: ['my-subscription'] });
+    },
+    onError: (error: unknown) => toast.error(errorMessage(error, 'Kunne ikke gjenoppta abonnementet')),
+  });
+  const cancelPendingPlanMutation = useMutation({
+    mutationFn: async () => (await mainLink.post('/api/stripe/subscription/change/cancel')).data,
+    onSuccess: (result) => {
+      toast.success(result?.message || 'Den planlagte nedgraderingen er avbrutt');
+      queryClient.invalidateQueries({ queryKey: ['my-subscription'] });
+    },
+    onError: (error: unknown) =>
+      toast.error(errorMessage(error, 'Kunne ikke avbryte planendringen')),
+  });
+  const portalMutation = useMutation({
+    mutationFn: async () => (await mainLink.post('/api/stripe/subscription/portal')).data,
+    onSuccess: (result) => {
+      if (result?.url) window.location.assign(result.url);
+      else toast.error('Kunne ikke åpne betalingsadministrasjonen.');
+    },
+    onError: (error: unknown) =>
+      toast.error(errorMessage(error, 'Kunne ikke åpne betalingsadministrasjonen')),
   });
 
   const transactions = data?.transactions || [];
@@ -75,9 +135,9 @@ export function SubscriptionView() {
           <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <p className="text-white/70 text-sm font-medium uppercase tracking-wider mb-1">
-                Aktiv plan
+                Abonnementsstatus
               </p>
-              <h4 className="text-3xl font-black">{currentSubscription?.hasPlan ? currentSubscription.plan : 'Ingen aktivt abonnement'}</h4>
+              <h4 className="text-3xl font-black">{currentSubscription?.plan || 'Ingen aktivt abonnement'}</h4>
               <p className="text-white/60 text-xs mt-2">
                 Din kontotype er satt til{' '}
                 <span className="text-white font-bold">
@@ -92,6 +152,123 @@ export function SubscriptionView() {
               Administrer plan
             </button>
           </div>
+          {currentSubscription?.stripeSubscriptionId && (
+            <div className="relative z-10 mt-5 border-t border-white/15 pt-4">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="rounded-full bg-white/15 px-3 py-1 font-semibold">
+                  {currentSubscription.status === 'past_due' || currentSubscription.stripeStatus === 'unpaid'
+                    ? 'Betaling forfalt'
+                    : currentSubscription.status === 'expired'
+                      ? 'Utløpt'
+                      : currentSubscription.status === 'cancelled'
+                        ? 'Avsluttet'
+                        : currentSubscription.cancelAtPeriodEnd
+                          ? 'Avsluttes ved periodens slutt'
+                          : currentSubscription.status === 'inactive'
+                            ? 'Inaktiv'
+                            : 'Aktivt'}
+                </span>
+                {currentSubscription.price != null && (
+                  <span>{currentSubscription.price.toLocaleString('nb-NO')} kr per måned</span>
+                )}
+                {currentSubscription.currentPeriodEnd && (
+                  <span className="flex items-center gap-1 text-white/75">
+                    <CalendarDays size={14} />
+                    {currentSubscription.cancelAtPeriodEnd
+                        ? 'Tilgang til'
+                        : currentSubscription.status === 'expired'
+                          ? 'Utløpt'
+                          : currentSubscription.status === 'past_due'
+                            ? 'Betalingsperiode slutt'
+                            : 'Neste betaling'}{' '}
+                    {formatDate(currentSubscription.currentPeriodEnd)}
+                  </span>
+                )}
+              </div>
+              {currentSubscription.pendingPlan && (
+                <div className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-sm">
+                  Planlagt endring til {currentSubscription.pendingPlan.plan}{' '}
+                  {formatDate(currentSubscription.pendingPlan.effectiveAt)}. Du beholder{' '}
+                  {currentSubscription.plan} frem til da.
+                </div>
+              )}
+              {currentSubscription.status === 'past_due' && (
+                <p role="status" className="mt-3 text-sm font-semibold text-amber-100">
+                  Betalingen er forsinket. Oppdater betalingsmåten for å beholde abonnementet.
+                </p>
+              )}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.location.assign('/membership')}
+                  className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-[#2d4a3e] hover:bg-white/90"
+                >
+                  Endre abonnement
+                </button>
+                <button
+                  type="button"
+                  onClick={() => portalMutation.mutate()}
+                  disabled={portalMutation.isPending}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-4 py-2 text-sm font-bold text-white hover:bg-white/10 disabled:opacity-60"
+                >
+                  {portalMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
+                  Betalingsmåte og faktura
+                </button>
+                {currentSubscription.cancelAtPeriodEnd ? (
+                  <button
+                    type="button"
+                    onClick={() => resumeMutation.mutate()}
+                    disabled={resumeMutation.isPending}
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-4 py-2 text-sm font-bold text-white hover:bg-white/10 disabled:opacity-60"
+                  >
+                    {resumeMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+                    {currentSubscription.pendingPlan
+                      ? 'Avbryt planlagt endring'
+                      : 'Fortsett abonnement'}
+                  </button>
+                ) : ['active', 'past_due'].includes(currentSubscription.status) ? (
+                  <>
+                  {currentSubscription.pendingPlan && (
+                    <ConfirmDialog
+                      title="Avbryte planlagt nedgradering?"
+                      description={`Abonnementet fortsetter på ${currentSubscription.plan}. Planendringen til ${currentSubscription.pendingPlan.plan} ${formatDate(currentSubscription.pendingPlan.effectiveAt)} blir avbrutt.`}
+                      confirmText="Avbryt planlagt endring"
+                      cancelText="Behold endringen"
+                      onConfirm={() => cancelPendingPlanMutation.mutateAsync()}
+                      trigger={
+                        <button
+                          type="button"
+                          disabled={cancelPendingPlanMutation.isPending}
+                          className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-4 py-2 text-sm font-bold text-white hover:bg-white/10 disabled:opacity-60"
+                        >
+                          {cancelPendingPlanMutation.isPending && <Loader2 size={14} className="animate-spin" />}
+                          Avbryt planlagt endring
+                        </button>
+                      }
+                    />
+                  )}
+                  <ConfirmDialog
+                    title="Si opp abonnementet?"
+                    description={`Du beholder tilgangen til ${currentSubscription.currentPeriodEnd ? formatDate(currentSubscription.currentPeriodEnd) : 'ut den betalte perioden'}. Abonnementet fornyes ikke etter dette.`}
+                    confirmText="Si opp abonnementet"
+                    cancelText="Behold abonnementet"
+                    variant="destructive"
+                    onConfirm={() => cancelMutation.mutateAsync()}
+                    trigger={
+                      <button
+                        type="button"
+                        disabled={cancelMutation.isPending}
+                        className="rounded-xl px-4 py-2 text-sm font-bold text-white/80 hover:bg-white/10 disabled:opacity-60"
+                      >
+                        Si opp abonnement
+                      </button>
+                    }
+                  />
+                  </>
+                ) : null}
+              </div>
+            </div>
+          )}
           {/* Decorative Pattern */}
           <div className="absolute top-0 right-0 -translate-y-1/4 translate-x-1/4 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
         </div>

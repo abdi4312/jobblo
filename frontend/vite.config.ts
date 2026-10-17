@@ -18,9 +18,12 @@ export default defineConfig({
     },
   },
   server: {
+    // In Docker the backend is reachable at http://backend:5001 (the compose
+    // service name); locally it defaults to http://localhost:5001. Override with
+    // VITE_PROXY_TARGET when needed.
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: process.env.VITE_PROXY_TARGET || 'http://localhost:5001',
         changeOrigin: true,
       },
     },

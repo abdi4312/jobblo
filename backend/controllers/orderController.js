@@ -10,6 +10,11 @@ const User = require('../models/User');
 const { calculatePointsFromService } = require('../utils/points');
 const { notify } = require('../services/notifications');
 const { ensureProviderConnectReady } = require('../middleware/requireProviderConnect');
+const {
+  consumeApplicationContact,
+  releaseContact,
+  V2EntitlementError,
+} = require('../services/subscriptions/v2Entitlements');
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -122,12 +127,47 @@ exports.createJobRequest = async (req, res) => {
       });
     }
 
-    const jobRequest = await JobRequest.create({
-      serviceId,
-      customerId,
-      providerId,
-      ...(message && { message }),
-    });
+    const jobRequestId = new mongoose.Types.ObjectId();
+    let contactConsumption;
+    try {
+      contactConsumption = await consumeApplicationContact({
+        userId: customerId,
+        jobRequestId,
+        servicePrice: service.price,
+      });
+    } catch (error) {
+      if (error instanceof V2EntitlementError) throw error;
+      console.error('[Orders] contact entitlement preflight failed:', error);
+      throw new V2EntitlementError(
+        503,
+        'CONTACT_ENTITLEMENT_UNAVAILABLE',
+        'Could not verify contact entitlement. Please retry later.'
+      );
+    }
+
+    let jobRequest;
+    try {
+      jobRequest = await JobRequest.create({
+        _id: jobRequestId,
+        serviceId,
+        customerId,
+        providerId,
+        ...(message && { message }),
+      });
+    } catch (err) {
+      if (contactConsumption?.newlyConsumed) {
+        await releaseContact(
+          contactConsumption,
+          async () => Boolean(await JobRequest.exists({ _id: jobRequestId }))
+        );
+      }
+      if (err.code === 11000) {
+        return res.status(400).json({
+          error: 'Du har allerede sendt en forespørsel på dette oppdraget',
+        });
+      }
+      throw err;
+    }
 
     await jobRequest.populate('serviceId');
     await jobRequest.populate('customerId', 'name');
@@ -189,6 +229,9 @@ exports.createJobRequest = async (req, res) => {
 
     res.status(201).json({ ...jobRequest.toObject(), chatId: chat._id });
   } catch (err) {
+    if (err instanceof V2EntitlementError) {
+      return res.status(err.status).json({ code: err.code, message: err.message });
+    }
     res.status(500).json({ error: err.message });
   }
 };

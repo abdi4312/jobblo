@@ -144,7 +144,7 @@ app.get('/api/test', (req, res) => {
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-server.listen(port, () => {
+server.listen({ port, host: process.env.HOST }, () => {
   console.log(`🚀  Jobblo API listening on http://localhost:${port}`);
   console.log(`Swagger-docs på http://localhost:${port}/api/docs`);
   console.log(`WebSocket server running on ws://localhost:${port}`);

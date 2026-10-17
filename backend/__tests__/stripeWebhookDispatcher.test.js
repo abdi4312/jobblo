@@ -22,6 +22,9 @@ jest.mock('../controllers/SafePayCheckoutController', () => ({
 }));
 jest.mock('../models/Order', () => ({ updateOne: jest.fn() }));
 jest.mock('../utils/errorLogger', () => ({ logApplicationError: jest.fn() }));
+jest.mock('../services/subscriptions/v2WebhookProcessor', () => ({
+  processVerifiedEvent: jest.fn(),
+}));
 
 const { getStripeConfiguration, getStripeForMode } = require('../config/stripe');
 const webhookReadiness = require('../services/stripe/webhookReadiness');
@@ -30,6 +33,7 @@ const { confirmPaidSession } = require('../controllers/SafePayCheckoutController
 const Order = require('../models/Order');
 const { logApplicationError } = require('../utils/errorLogger');
 const { stripeWebhook, ORDER_EVENT_TYPES } = require('../services/stripe/webhookDispatcher');
+const { processVerifiedEvent } = require('../services/subscriptions/v2WebhookProcessor');
 const Stripe = require('stripe');
 
 function makeRes() {
@@ -94,6 +98,7 @@ beforeEach(() => {
   ledger.markProcessed.mockResolvedValue();
   ledger.releaseClaim.mockResolvedValue();
   confirmPaidSession.mockResolvedValue({ ok: true });
+  processVerifiedEvent.mockResolvedValue({ handled: 'subscription_activated' });
 });
 
 describe('signature verification', () => {
@@ -369,25 +374,121 @@ describe('legacy subscription webhook events', () => {
   it.each([
     'invoice.paid',
     'invoice.payment_failed',
-    'invoice.payment_action_required',
     'customer.subscription.created',
     'customer.subscription.updated',
     'customer.subscription.deleted',
-    'customer.subscription.paused',
-    'customer.subscription.resumed',
-    'customer.subscription.pending_update_applied',
-    'subscription_schedule.completed',
-    'subscription_schedule.canceled',
   ])('does not claim or reconcile %s', async (type) => {
-    expect(ORDER_EVENT_TYPES.has(type)).toBe(false);
+    expect(ORDER_EVENT_TYPES.has(type)).toBe(true);
     mockStripeConstructing({ id: `evt_${type}`, type, data: { object: { id: 'sub_1' } } });
 
     const res = makeRes();
     await stripeWebhook(makeReq(), res);
 
-    expect(ledger.claimEvent).not.toHaveBeenCalled();
+    expect(ledger.claimEvent).toHaveBeenCalled();
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ received: true, ignored: true });
+    expect(res.body).toEqual({ received: true, handled: 'subscription_rebuild_in_progress' });
+  });
+});
+
+describe('Subscription V2 webhook routing', () => {
+  it('routes only V2-marked subscription checkout events to the V2 processor', async () => {
+    const session = {
+      id: 'cs_v2',
+      mode: 'subscription',
+      status: 'complete',
+      payment_status: 'paid',
+      metadata: { subscriptionV2: 'true', userId: 'u1', planId: 'p1', operationId: 'op1' },
+    };
+    mockStripeConstructing({
+      id: 'evt_v2',
+      type: 'checkout.session.completed',
+      data: { object: session },
+    });
+
+    const res = makeRes();
+    await stripeWebhook(makeReq(), res);
+
+    expect(processVerifiedEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'evt_v2' }),
+      'test',
+      expect.objectContaining({ webhooks: expect.any(Object) })
+    );
+    expect(res.body).toEqual({ received: true, handled: 'subscription_activated' });
+    expect(confirmPaidSession).not.toHaveBeenCalled();
+  });
+
+  it('routes V2 invoice events while safely ignoring V1 invoice events', async () => {
+    mockStripeConstructing({
+      id: 'evt_invoice_v2',
+      type: 'invoice.paid',
+      data: {
+        object: {
+          id: 'in_v2',
+          parent: {
+            subscription_details: {
+              metadata: { subscriptionV2: 'true' },
+            },
+          },
+        },
+      },
+    });
+    await stripeWebhook(makeReq(), makeRes());
+    expect(processVerifiedEvent).toHaveBeenCalledTimes(1);
+
+    processVerifiedEvent.mockClear();
+    mockStripeConstructing({
+      id: 'evt_invoice_v1',
+      type: 'invoice.paid',
+      data: { object: { id: 'in_v1', parent: { subscription_details: { metadata: {} } } } },
+    });
+    const res = makeRes();
+    await stripeWebhook(makeReq(), res);
+    expect(processVerifiedEvent).not.toHaveBeenCalled();
+    expect(res.body).toEqual({
+      received: true,
+      handled: 'subscription_rebuild_in_progress',
+    });
+  });
+
+  it.each([
+    'subscription_schedule.created',
+    'subscription_schedule.updated',
+    'subscription_schedule.canceled',
+    'subscription_schedule.released',
+    'subscription_schedule.aborted',
+  ])('routes V2 %s events and ignores unmarked schedules', async (type) => {
+    const schedule = {
+      id: 'sub_sched_v2',
+      metadata: { subscriptionV2: 'true' },
+    };
+    mockStripeConstructing({
+      id: `evt_${type}_v2`,
+      type,
+      data: { object: schedule },
+    });
+
+    const v2Response = makeRes();
+    await stripeWebhook(makeReq(), v2Response);
+    expect(ORDER_EVENT_TYPES.has(type)).toBe(true);
+    expect(processVerifiedEvent).toHaveBeenCalledTimes(1);
+
+    processVerifiedEvent.mockClear();
+    mockStripeConstructing({
+      id: `evt_${type}_legacy`,
+      type,
+      data: { object: { id: 'sub_sched_legacy', metadata: {} } },
+    });
+    const legacyResponse = makeRes();
+    await stripeWebhook(makeReq(), legacyResponse);
+    if (type === 'subscription_schedule.created') {
+      expect(processVerifiedEvent).toHaveBeenCalledTimes(1);
+    } else {
+      expect(processVerifiedEvent).not.toHaveBeenCalled();
+      expect(legacyResponse.body).toEqual({
+        received: true,
+        handled: 'subscription_event_ignored',
+      });
+    }
   });
 });
 

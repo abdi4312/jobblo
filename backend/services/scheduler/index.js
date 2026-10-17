@@ -23,6 +23,8 @@ const SCHEDULE = [
   { name: 'cancelExpiredUnconnectedSafePayOrders', fn: jobs.cancelExpiredUnconnectedSafePayOrders, everyMs: 15 * MINUTE, delayMs: 90 * 1000 },
   { name: 'reconcileMoneyState', fn: jobs.reconcileMoneyState, everyMs: 24 * HOUR, delayMs: 6 * MINUTE },
   { name: 'reconcileStripeFinancialHistory', fn: jobs.reconcileStripeFinancialHistory, everyMs: 24 * HOUR, delayMs: 7 * MINUTE },
+  { name: 'cancelExpiredSubscriptionRecoveries', fn: jobs.cancelExpiredSubscriptionRecoveries, everyMs: MINUTE, delayMs: 8 * MINUTE },
+  { name: 'dispatchSubscriptionRecoveryEmails', fn: jobs.dispatchSubscriptionRecoveryEmails, everyMs: 5 * MINUTE, delayMs: 9 * MINUTE },
 ];
 
 const timers = [];

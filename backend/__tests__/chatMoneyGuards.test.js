@@ -10,6 +10,7 @@ jest.mock('../models/ChatMessage', () => ({
   findById: jest.fn(),
   findOne: jest.fn(),
   create: jest.fn(),
+  findOneAndUpdate: jest.fn(),
   findByIdAndUpdate: jest.fn(),
   findByIdAndDelete: jest.fn(),
 }));
@@ -25,16 +26,28 @@ jest.mock('../models/Order', () => {
 });
 jest.mock('../models/User', () => ({ findById: jest.fn() }));
 jest.mock('../models/Service', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
+jest.mock('../models/JobRequest', () => ({ findOne: jest.fn() }));
 jest.mock('../models/Dispute', () => ({ findOne: jest.fn() }));
 jest.mock('../models/ChatReport', () => ({ findOne: jest.fn() }));
 jest.mock('../config/stripe', () => ({ getStripe: jest.fn() }));
 jest.mock('../services/stripe/customers', () => ({ resolveStripeCustomer: jest.fn() }));
+jest.mock('../services/subscriptions/v2Entitlements', () => ({
+  enabled: jest.fn(() => false),
+  consumeApplicationContact: jest.fn(),
+  V2EntitlementError: class V2EntitlementError extends Error {},
+}));
 
 const mongoose = require('mongoose');
 const Chat = require('../models/ChatMessage');
 const User = require('../models/User');
+const Service = require('../models/Service');
+const JobRequest = require('../models/JobRequest');
 const { getStripe } = require('../config/stripe');
 const { resolveStripeCustomer } = require('../services/stripe/customers');
+const {
+  enabled,
+  consumeApplicationContact,
+} = require('../services/subscriptions/v2Entitlements');
 const chatController = require('../controllers/chatController');
 
 const OWNER = new mongoose.Types.ObjectId();
@@ -68,6 +81,7 @@ function populateChain(value) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  enabled.mockReturnValue(true);
 });
 
 describe('updateAgreedPrice', () => {
@@ -307,6 +321,83 @@ describe('sendMessage hygiene', () => {
     expect(chat.deletedFor).toEqual([]);
     expect(chat.messages).toHaveLength(1);
     expect(chat.messages[0].text).toBe('Hei, er du der?');
+  });
+
+  it('sends the first and subsequent messages without consuming contacts', async () => {
+    const chat = {
+      ...chatDoc(),
+      serviceId: SERVICE,
+      orderId: ORDER,
+    };
+    Chat.findById.mockResolvedValue(chat);
+
+    for (let i = 0; i < 100; i += 1) {
+      const res = makeRes();
+      await chatController.sendMessage({
+        user: { id: String(OWNER) },
+        params: { chatId: String(CHAT) },
+        body: { text: `Progress update ${i}` },
+        app: { get: () => null },
+      }, res);
+      expect(res.statusCode).toBe(201);
+    }
+
+    expect(chat.messages).toHaveLength(100);
+    expect(chat.save).toHaveBeenCalledTimes(100);
+    expect(consumeApplicationContact).not.toHaveBeenCalled();
+  });
+
+  it('does not consume a contact when chat persistence fails or when the message is retried', async () => {
+    const chat = chatDoc();
+    chat.save.mockRejectedValueOnce(new Error('chat write failed'));
+    Chat.findById.mockResolvedValue(chat);
+
+    const failed = makeRes();
+    await chatController.sendMessage({
+      user: { id: String(OWNER) },
+      params: { chatId: String(CHAT) },
+      body: { text: 'Retry me' },
+      app: { get: () => null },
+    }, failed);
+    expect(failed.statusCode).toBe(500);
+
+    const retried = makeRes();
+    await chatController.sendMessage({
+      user: { id: String(OWNER) },
+      params: { chatId: String(CHAT) },
+      body: { text: 'Retry me' },
+      app: { get: () => null },
+    }, retried);
+    expect(retried.statusCode).toBe(201);
+    expect(consumeApplicationContact).not.toHaveBeenCalled();
+  });
+});
+
+describe('createOrGetChat usage accounting', () => {
+  it('opens or creates a chat without consuming an included contact', async () => {
+    User.findById.mockReturnValue({
+      select: jest.fn().mockResolvedValue({ _id: WORKER, name: 'Worker' }),
+    });
+    Service.findById.mockReturnValue({
+      select: jest.fn().mockResolvedValue({ _id: SERVICE, userId: OWNER }),
+    });
+    JobRequest.findOne.mockReturnValue({
+      select: jest.fn().mockResolvedValue({ _id: new mongoose.Types.ObjectId() }),
+    });
+    Chat.findOneAndUpdate.mockResolvedValue({
+      lastErrorObject: { updatedExisting: true },
+      value: { _id: CHAT },
+    });
+    Chat.findById.mockReturnValue(populateChain({ _id: CHAT }));
+
+    const res = makeRes();
+    await chatController.createOrGetChat({
+      user: { id: String(OWNER) },
+      body: { providerId: String(WORKER), serviceId: String(SERVICE) },
+    }, res);
+
+    expect(res.body).toEqual({ _id: CHAT });
+    expect(consumeApplicationContact).not.toHaveBeenCalled();
   });
 });
 
