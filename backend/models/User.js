@@ -319,6 +319,21 @@ const userSchema = new mongoose.Schema(
       type: Date,
       select: false,
     },
+    // Wrong guesses against the current emailed code; the code is deleted at the limit.
+    passwordResetAttempts: {
+      type: Number,
+      select: false,
+    },
+    // The 32-byte token handed out after a correct code. Kept apart from the code's
+    // hash so /reset-password can never be satisfied by a 6-digit guess.
+    passwordResetSessionToken: {
+      type: String,
+      select: false,
+    },
+    passwordResetSessionExpires: {
+      type: Date,
+      select: false,
+    },
   },
   { timestamps: true }
 );

@@ -2,7 +2,6 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const Session = require('../models/Session');
 const User = require('../models/User');
-const requestIp = require('request-ip');
 
 /**
  * Access and refresh tokens used to be indistinguishable: same `{id, sid}` payload and,
@@ -102,8 +101,7 @@ const getGeoLocation = async (ip) => {
     if (!ip || ip === '::1' || ip === '127.0.0.1' || ip.includes('127.0.0.1')) {
       return 'Localhost';
     }
-    const cleanIp = ip.replace(/^.*:/, '');
-    const response = await axios.get(`http://ip-api.com/json/${cleanIp}`);
+    const response = await axios.get(`http://ip-api.com/json/${encodeURIComponent(ip)}`);
     if (response.data && response.data.status === 'success') {
       return `${response.data.city}, ${response.data.country}`;
     }
@@ -115,7 +113,10 @@ const getGeoLocation = async (ip) => {
 
 const createSession = async (req, userId) => {
   try {
-    const clientIp = requestIp.getClientIp(req);
+    // Express's req.ip honours `trust proxy` (app.js), the same address the rate limiters
+    // use. request-ip also believed client-set headers such as X-Client-IP. The
+    // IPv4-mapped "::ffff:" prefix is display noise.
+    const clientIp = String(req.ip || '').replace(/^::ffff:/, '') || 'unknown';
     const agent = req.useragent || {};
     const location = await getGeoLocation(clientIp);
 
