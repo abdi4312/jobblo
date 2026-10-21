@@ -436,7 +436,7 @@ async function confirmPaidSession(session, io) {
       notify({
         userId: order.providerId,
         type: 'payment',
-        content: `Fullfør Stripe Connect-oppsettet innen ${updatedOrder.providerConnectDeadlineAt.toLocaleDateString('nb-NO')} for å motta utbetaling: ${(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')}/settings/payout`,
+        content: `Start oppdraget innen ${updatedOrder.providerConnectDeadlineAt.toLocaleDateString('nb-NO')}, ellers kanselleres det og kunden får full refusjon. Stripe Connect må være klart for å starte: ${(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')}/settings/payout`,
         orderId: order._id,
         senderId: order.customerId,
         event: 'provider_connect_deadline',
@@ -501,6 +501,19 @@ exports.getCheckoutDetails = async (req, res) => {
     const total = order.agreedPrice + fee;
     const netProvider = order.agreedPrice - fee;
 
+    // The start deadline the customer is promised before paying: not started in time
+    // means an automatic full refund (providerConnectTimeout.js).
+    let startDeadline = null;
+    try {
+      const snapshot = deadlineSnapshot(await getProviderConnectDeadlineDays());
+      startDeadline = {
+        days: snapshot.providerConnectDeadlineDays,
+        testMinutes: snapshot.providerConnectDeadlineTestMinutes ?? null,
+      };
+    } catch (err) {
+      console.error('SafePay start deadline unavailable:', err.message);
+    }
+
     res.json({
       order,
       calculation: {
@@ -509,6 +522,7 @@ exports.getCheckoutDetails = async (req, res) => {
         total,
         providerNet: netProvider,
       },
+      startDeadline,
     });
   } catch (err) {
     console.error('Error fetching checkout details:', err);

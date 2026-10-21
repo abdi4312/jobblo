@@ -13,14 +13,19 @@ const jobs = require('./jobs');
 
 const HOUR = 60 * 60 * 1000;
 const MINUTE = 60 * 1000;
+// Minute test deadlines (disabled in production, see providerConnectDeadline.js) need a
+// check every minute, or the start-deadline refund lags up to 15 minutes behind.
+const SAFEPAY_CHECK_MS = process.env.NODE_ENV !== 'production' && process.env.SAFEPAY_CONNECT_TEST_DEADLINE_MINUTES
+  ? MINUTE
+  : 15 * MINUTE;
 
 const SCHEDULE = [
   { name: 'autoReleaseStaleReviews', fn: jobs.autoReleaseStaleReviews, everyMs: 6 * HOUR, delayMs: 2 * MINUTE },
   { name: 'warnBeforeAutoRelease', fn: jobs.warnBeforeAutoRelease, everyMs: 12 * HOUR, delayMs: 3 * MINUTE },
   { name: 'retryFailedPayouts', fn: jobs.retryFailedPayouts, everyMs: 2 * HOUR, delayMs: 4 * MINUTE },
   { name: 'cleanupAbandonedOrders', fn: jobs.cleanupAbandonedOrders, everyMs: 6 * HOUR, delayMs: 5 * MINUTE },
-  { name: 'recordSafePayConnectReadiness', fn: jobs.recordSafePayConnectReadiness, everyMs: 15 * MINUTE, delayMs: 60 * 1000 },
-  { name: 'cancelExpiredUnconnectedSafePayOrders', fn: jobs.cancelExpiredUnconnectedSafePayOrders, everyMs: 15 * MINUTE, delayMs: 90 * 1000 },
+  { name: 'recordSafePayConnectReadiness', fn: jobs.recordSafePayConnectReadiness, everyMs: SAFEPAY_CHECK_MS, delayMs: 60 * 1000 },
+  { name: 'cancelExpiredUnconnectedSafePayOrders', fn: jobs.cancelExpiredUnconnectedSafePayOrders, everyMs: SAFEPAY_CHECK_MS, delayMs: 90 * 1000 },
   { name: 'reconcileMoneyState', fn: jobs.reconcileMoneyState, everyMs: 24 * HOUR, delayMs: 6 * MINUTE },
   { name: 'reconcileStripeFinancialHistory', fn: jobs.reconcileStripeFinancialHistory, everyMs: 24 * HOUR, delayMs: 7 * MINUTE },
   { name: 'cancelExpiredSubscriptionRecoveries', fn: jobs.cancelExpiredSubscriptionRecoveries, everyMs: MINUTE, delayMs: 8 * MINUTE },
