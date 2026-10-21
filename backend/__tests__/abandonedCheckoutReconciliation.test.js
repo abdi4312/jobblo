@@ -7,7 +7,7 @@ jest.mock('../models/Payment', () => ({}));
 jest.mock('../models/Payout', () => ({}));
 jest.mock('../models/Dispute', () => ({}));
 jest.mock('../models/Notification', () => ({}));
-jest.mock('../models/Service', () => ({ findOneAndUpdate: jest.fn() }));
+jest.mock('../models/Service', () => ({ findOneAndUpdate: jest.fn(), updateOne: jest.fn() }));
 jest.mock('../models/JobRequest', () => ({ updateMany: jest.fn() }));
 jest.mock('../config/stripe', () => ({
   getStripeConfiguration: jest.fn(),

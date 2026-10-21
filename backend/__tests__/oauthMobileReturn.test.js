@@ -292,11 +292,12 @@ describe('the destination for a finished flow', () => {
   const mobile = (options) => oauthDestination({ req: makeReq(), platform: 'mobile', ...options });
 
   /**
-   * Byte-for-byte the URLs these callbacks built by hand before the bridge existed. The
-   * whole website depends on this pair and nothing about it is allowed to drift.
+   * The website lands on /oauth-success WITHOUT a token: the callback has set the
+   * httpOnly cookies, and a bearer token in the URL was both a leak (history, logs,
+   * Referer) and a login-CSRF vector. Failures are unchanged.
    */
-  it('sends the website exactly where it always went', () => {
-    expect(web({ accessToken: TOKEN })).toBe(`https://jobblo.example/oauth-success?token=${TOKEN}`);
+  it('sends the website to the success page without a token in the URL', () => {
+    expect(web({ accessToken: TOKEN })).toBe('https://jobblo.example/oauth-success');
     expect(web({ error: 'google_failed' })).toBe(
       'https://jobblo.example/login?error=google_failed'
     );
@@ -349,9 +350,7 @@ describe('the destination for a finished flow', () => {
   /** Mid-sign-in, the person has to land somewhere real; the misconfiguration is logged. */
   it('falls back to the website when the bridge origin is unusable', () => {
     process.env.MOBILE_RETURN_URL = 'ftp://api.example';
-    expect(mobile({ accessToken: TOKEN })).toBe(
-      `https://jobblo.example/oauth-success?token=${TOKEN}`
-    );
+    expect(mobile({ accessToken: TOKEN })).toBe('https://jobblo.example/oauth-success');
     expect(error).toHaveBeenCalled();
   });
 
@@ -362,9 +361,7 @@ describe('the destination for a finished flow', () => {
 
     process.env.NODE_ENV = 'production';
     expect(resolveMobileReturnBase(makeReq()).error).toMatch(/MOBILE_RETURN_URL/);
-    expect(mobile({ accessToken: TOKEN })).toBe(
-      `https://jobblo.example/oauth-success?token=${TOKEN}`
-    );
+    expect(mobile({ accessToken: TOKEN })).toBe('https://jobblo.example/oauth-success');
   });
 });
 describe('the bridge page', () => {

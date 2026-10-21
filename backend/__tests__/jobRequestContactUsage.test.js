@@ -43,6 +43,7 @@ const {
   releaseContact,
 } = require('../services/subscriptions/v2Entitlements');
 const orderController = require('../controllers/orderController');
+let sessions;
 
 const applicantId = new mongoose.Types.ObjectId();
 const ownerId = new mongoose.Types.ObjectId();
@@ -83,6 +84,15 @@ function application(data) {
 
 function setup() {
   jest.clearAllMocks();
+  sessions = [];
+  jest.spyOn(mongoose, 'startSession').mockImplementation(async () => {
+    const session = {
+      withTransaction: jest.fn(async (callback) => callback()),
+      endSession: jest.fn(async () => {}),
+    };
+    sessions.push(session);
+    return session;
+  });
   const service = {
     _id: serviceId,
     userId: ownerId,
@@ -94,7 +104,7 @@ function setup() {
   Order.findOne.mockResolvedValue(null);
   JobRequest.findOne.mockResolvedValue(null);
   JobRequest.exists.mockResolvedValue(false);
-  JobRequest.create.mockImplementation(async (data) => application(data));
+  JobRequest.create.mockImplementation(async ([data]) => [application(data)]);
   Chat.findOne.mockResolvedValue(null);
   Chat.create.mockResolvedValue({ _id: new mongoose.Types.ObjectId() });
   notify.mockResolvedValue(undefined);
@@ -109,12 +119,18 @@ describe('contact usage is tied only to successful JobRequests', () => {
     await orderController.createJobRequest(request(), res);
 
     expect(res.statusCode).toBe(201);
-    const created = JobRequest.create.mock.calls[0][0];
+    const created = JobRequest.create.mock.calls[0][0][0];
     expect(consumeApplicationContact).toHaveBeenCalledWith({
       userId: String(applicantId),
       jobRequestId: created._id,
       servicePrice: 12000,
-    });
+      serviceId: expect.anything(),
+    }, { session: sessions[0] });
+    expect(JobRequest.create).toHaveBeenCalledWith([expect.objectContaining({
+      _id: created._id,
+    })], { session: sessions[0] });
+    expect(sessions[0].withTransaction).toHaveBeenCalledTimes(1);
+    expect(sessions[0].endSession).toHaveBeenCalledTimes(1);
     expect(res.body._id).toEqual(created._id);
   });
 
@@ -129,8 +145,8 @@ describe('contact usage is tied only to successful JobRequests', () => {
     const second = response();
     await orderController.createJobRequest(request(otherServiceId), second);
 
-    const firstRequestId = JobRequest.create.mock.calls[0][0]._id;
-    const secondRequestId = JobRequest.create.mock.calls[1][0]._id;
+    const firstRequestId = JobRequest.create.mock.calls[0][0][0]._id;
+    const secondRequestId = JobRequest.create.mock.calls[1][0][0]._id;
     expect(firstRequestId).not.toEqual(secondRequestId);
     expect(consumeApplicationContact.mock.calls.map(([call]) => call.jobRequestId))
       .toEqual([firstRequestId, secondRequestId]);
@@ -151,21 +167,53 @@ describe('contact usage is tied only to successful JobRequests', () => {
     expect(consumeApplicationContact).not.toHaveBeenCalled();
   });
 
-  test('a failed application insert releases only its own reservation', async () => {
-    JobRequest.create.mockRejectedValueOnce(new Error('write failed'));
+  test('an interrupted transaction can retry without retaining an orphaned contact charge', async () => {
+    const events = [];
+    consumeApplicationContact.mockImplementationOnce(async () => {
+      events.push('contact-reserved-in-transaction');
+      return { newlyConsumed: true };
+    });
+    JobRequest.create.mockImplementationOnce(async () => {
+      events.push('application-write-failed');
+      throw new Error('write failed');
+    });
+    sessions = [];
+    mongoose.startSession.mockImplementationOnce(async () => {
+      const session = {
+        withTransaction: jest.fn(async (callback) => {
+          events.push('transaction-start');
+          await callback();
+        }),
+        endSession: jest.fn(async () => {}),
+      };
+      sessions.push(session);
+      return session;
+    });
     const res = response();
     await orderController.createJobRequest(request(), res);
 
-    expect(res.statusCode).toBe(500);
-    expect(releaseContact).toHaveBeenCalledTimes(1);
-    const [consumption, actionExists] = releaseContact.mock.calls[0];
-    expect(consumption.operationId).toBe(`job-request:${JobRequest.create.mock.calls[0][0]._id}`);
-    expect(await actionExists()).toBe(false);
+    expect(res.statusCode).toBe(503);
+    expect(events).toEqual([
+      'transaction-start',
+      'contact-reserved-in-transaction',
+      'application-write-failed',
+    ]);
+    expect(releaseContact).not.toHaveBeenCalled();
+    expect(Chat.create).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
+    expect(sessions[0].endSession).toHaveBeenCalledTimes(1);
+
+    const retry = response();
+    await orderController.createJobRequest(request(), retry);
+
+    expect(retry.statusCode).toBe(201);
+    expect(sessions).toHaveLength(2);
+    expect(sessions[1].withTransaction).toHaveBeenCalledTimes(1);
   });
 
-  test('concurrent duplicate submissions create one application and release the losing reservation', async () => {
+  test('concurrent duplicate submissions persist one application in separate transactions', async () => {
     const persisted = new Set();
-    JobRequest.create.mockImplementation(async (data) => {
+    JobRequest.create.mockImplementation(async ([data]) => {
       const key = `${data.serviceId}:${data.customerId}`;
       if ([...persisted].some((entry) => entry.key === key)) {
         const error = new Error('duplicate pending application');
@@ -173,7 +221,7 @@ describe('contact usage is tied only to successful JobRequests', () => {
         throw error;
       }
       persisted.add({ key, id: data._id });
-      return application(data);
+      return [application(data)];
     });
     JobRequest.exists.mockImplementation(async ({ _id }) =>
       [...persisted].some((entry) => String(entry.id) === String(_id))
@@ -188,7 +236,8 @@ describe('contact usage is tied only to successful JobRequests', () => {
     expect(results.map((res) => res.statusCode).sort()).toEqual([201, 400]);
     expect(JobRequest.create).toHaveBeenCalledTimes(2);
     expect(consumeApplicationContact).toHaveBeenCalledTimes(2);
-    expect(releaseContact).toHaveBeenCalledTimes(1);
+    expect(sessions).toHaveLength(2);
+    expect(sessions.every((session) => session.withTransaction.mock.calls.length === 1)).toBe(true);
     expect(persisted.size).toBe(1);
   });
 
@@ -199,7 +248,7 @@ describe('contact usage is tied only to successful JobRequests', () => {
       customerId: applicantId,
       providerId: ownerId,
     });
-    JobRequest.create.mockResolvedValueOnce(saved);
+    JobRequest.create.mockResolvedValueOnce([saved]);
     notify.mockRejectedValueOnce(new Error('notification failed'));
 
     const first = response();

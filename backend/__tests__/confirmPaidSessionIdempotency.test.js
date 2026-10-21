@@ -12,7 +12,7 @@ jest.mock('../models/Payment', () => ({ updateOne: jest.fn() }));
 jest.mock('../models/User', () => ({ updateMany: jest.fn(), findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
 jest.mock('../models/Notification', () => ({ create: jest.fn(), findById: jest.fn() }));
 jest.mock('../models/ChatMessage', () => ({ findById: jest.fn() }));
-jest.mock('../models/Service', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
+jest.mock('../models/Service', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn(), updateOne: jest.fn() }));
 jest.mock('../models/SafePayHistory', () => ({ updateOne: jest.fn() }));
 jest.mock('../models/GlobalConfig', () => ({ findOneAndUpdate: jest.fn() }));
 jest.mock('../models/Review', () => ({ create: jest.fn(), findOne: jest.fn() }));
@@ -185,6 +185,12 @@ describe('confirmPaidSession', () => {
       { orderId: String(ORDER_ID) },
       expect.objectContaining({ $setOnInsert: expect.any(Object) }),
       { upsert: true }
+    );
+    // A replay must not move the in-progress job's listing back to 'paid'.
+    expect(Service.findByIdAndUpdate).not.toHaveBeenCalled();
+    expect(Service.updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({ status: { $in: ['open', 'pending', 'awaiting_payment'] } }),
+      { $set: { status: 'paid' } }
     );
   });
 

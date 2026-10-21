@@ -6,6 +6,7 @@ jest.mock('../models/User', () => ({
 jest.mock('../models/Session', () => ({ deleteMany: jest.fn() }));
 jest.mock('../services/admin/activityService', () => ({ logActivity: jest.fn() }));
 jest.mock('jsonwebtoken', () => ({ verify: jest.fn() }));
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
 
 const User = require('../models/User');
 const Session = require('../models/Session');
@@ -116,7 +117,13 @@ test('status endpoint also revokes sessions when an admin deactivates a user', a
 });
 
 test('an existing access token is rejected after the user is deactivated', async () => {
-  jwt.verify.mockReturnValue({ id: TARGET_ID, sid: 'session_1' });
+  jwt.verify.mockReturnValue({
+    id: TARGET_ID,
+    sid: 'session_1',
+    typ: 'access',
+    aud: 'jobblo:access',
+    iss: 'jobblo-api',
+  });
   const session = { lastUsed: null, save: jest.fn() };
   Session.findOne = jest.fn().mockResolvedValue(session);
   User.findById.mockReturnValue({
