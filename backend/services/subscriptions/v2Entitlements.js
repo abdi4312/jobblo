@@ -281,9 +281,12 @@ async function resolveEntitlements(userId, overrides = {}) {
     record.status !== 'past_due' &&
     period.start.getTime() === new Date(record.currentPeriodStart).getTime() &&
     period.end.getTime() === new Date(record.currentPeriodEnd).getTime();
-  if (!usage && activePaidPeriod) {
+  const renewalUnsettled = !usage && !inRecovery &&
+    subscription.status === 'active' && record.status !== 'past_due';
+  let latestInvoice = null;
+  if (renewalUnsettled) {
     const invoice = subscription.latest_invoice;
-    let latestInvoice = invoice;
+    latestInvoice = invoice;
     if (typeof invoice === 'string' || !Array.isArray(latestInvoice?.lines?.data)) {
       const invoiceId = typeof invoice === 'string' ? invoice : latestInvoice?.id;
       if (invoiceId) {
@@ -296,6 +299,8 @@ async function resolveEntitlements(userId, overrides = {}) {
         }
       }
     }
+  }
+  if (!usage && activePaidPeriod) {
     if (invoiceConfirmsPeriod(latestInvoice, record, period)) {
       usage = await createUsagePeriod({
         userId,
@@ -307,6 +312,25 @@ async function resolveEntitlements(userId, overrides = {}) {
         UsageModel: deps.UsageModel,
       });
     }
+  }
+  if (
+    !usage &&
+    renewalUnsettled &&
+    ['draft', 'open'].includes(latestInvoice?.status) &&
+    idOf(latestInvoice.parent?.subscription_details?.subscription) === record.stripeSubscriptionId
+  ) {
+    // Stripe rolls the period over and charges the renewal invoice about an hour later.
+    // In between there is no paid usage for the new period, and this used to answer
+    // 503 SUBSCRIPTION_USAGE_UNAVAILABLE — blocking applications every renewal. Keep
+    // the previous paid period's REMAINING allowance until the invoice settles: paid ->
+    // invoice.paid creates the new period; failed -> grace anchors to this same period.
+    // Nothing new is granted here.
+    usage = await deps.UsageModel.findOne({
+      userId,
+      subscriptionId: record._id,
+      periodType: 'paid',
+      billingPeriodEnd: period.start,
+    }).lean();
   }
   if (!usage) {
     if (subscription.status === 'active' && record.status !== 'past_due') {
@@ -334,7 +358,7 @@ async function ensurePaidUsagePeriod({ userId, subscriptionId, plan, start, end 
     UsageModel,
   });
   if (usage.periodType === 'free') {
-    await UsageModel.updateOne(
+    const result = await UsageModel.updateOne(
       { _id: usage._id, periodType: 'free' },
       {
         $set: {
@@ -347,6 +371,9 @@ async function ensurePaidUsagePeriod({ userId, subscriptionId, plan, start, end 
         },
       }
     );
+    if (result.matchedCount === 0) {
+      throw new Error('subscription_usage_period_conversion_unconfirmed');
+    }
   }
   return usage;
 }
@@ -359,10 +386,13 @@ async function setPaidPeriodAllowance({ userId, subscriptionId, plan, start, end
     start,
     end,
   }, UsageModel);
-  await UsageModel.updateOne(
+  const result = await UsageModel.updateOne(
     { _id: usage._id },
     { $set: { planId: plan._id, includedContacts: plan.entitlements?.freeContact || 0 } }
   );
+  if (result.matchedCount === 0) {
+    throw new Error('subscription_usage_period_update_unconfirmed');
+  }
 }
 
 function contactQuotaError(entitlements) {
@@ -372,7 +402,7 @@ function contactQuotaError(entitlements) {
 }
 
 async function consumeApplicationContact(
-  { userId, jobRequestId, servicePrice },
+  { userId, jobRequestId, servicePrice, serviceId },
   overrides = {}
 ) {
   if (!mongoose.Types.ObjectId.isValid(String(jobRequestId || ''))) {
@@ -424,6 +454,16 @@ async function consumeApplicationContact(
   );
   if (repeated) return { enabled: true, newlyConsumed: false, usagePeriodId: usage._id, operationId };
 
+  // A paid extra contact bought for this job is used first: the applicant paid for this
+  // specific application, and taking an included contact instead would strand it.
+  const extraContacts = require('./v2ExtraContacts');
+  if (await extraContacts.consumePaidExtraContact(
+    { userId, serviceId, jobRequestId, usagePeriodId: usage._id, operationId, now: (deps.now || (() => new Date()))() },
+    { session: overrides.session, ...(overrides.ExtraContactModel && { Model: overrides.ExtraContactModel }), UsageModel: deps.UsageModel }
+  )) {
+    return { enabled: true, newlyConsumed: true, extra: true, usagePeriodId: usage._id, operationId };
+  }
+
   const filter = {
     _id: usage._id,
     $expr: { $lt: ['$consumedIncludedContacts', '$includedContacts'] },
@@ -444,12 +484,13 @@ async function consumeApplicationContact(
         },
       },
     ],
-    { new: true }
+    { new: true, ...(overrides.session && { session: overrides.session }) }
   );
   if (!updated) {
-    const existing = await deps.UsageModel.findOne({
-      _id: usage._id,
-    });
+    const existingQuery = deps.UsageModel.findOne({ _id: usage._id });
+    const existing = await (overrides.session
+      ? existingQuery.session(overrides.session)
+      : existingQuery);
     const operation = existing?.contactOperations?.find((entry) => entry.operationId === operationId);
     if (operation?.status === 'consumed') {
       return { enabled: true, newlyConsumed: false, usagePeriodId: usage._id, operationId };
@@ -457,7 +498,20 @@ async function consumeApplicationContact(
     if (operation?.status === 'released') {
       throw fail(409, 'APPLICATION_CONTACT_RELEASED', 'This application contact was already released.');
     }
-    throw contactQuotaError(entitlements);
+    const quotaError = contactQuotaError(entitlements);
+    if (quotaError.code === 'CONTACT_LIMIT_REACHED') {
+      // Tell the client whether (and when) an extra contact can be bought for this job.
+      // Informational only: a lookup failure must not change the quota error itself.
+      try {
+        quotaError.extraContact = await extraContacts.extraContactOffer(
+          { userId, serviceId, entitlements: { ...entitlements, remainingIncludedContacts: 0 } },
+          overrides.ExtraContactModel
+        );
+      } catch (offerError) {
+        console.error('[extra-contact] offer lookup failed:', offerError.message);
+      }
+    }
+    throw quotaError;
   }
   return { enabled: true, newlyConsumed: true, usagePeriodId: usage._id, operationId };
 }

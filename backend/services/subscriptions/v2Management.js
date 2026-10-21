@@ -207,7 +207,7 @@ async function createBillingPortalSession(userId, overrides = {}) {
   try {
     const origin = new URL(configuredUrl);
     if (!['http:', 'https:'].includes(origin.protocol)) throw new Error('invalid scheme');
-    returnUrl = new URL('/profile/settings/subscriptions', origin).toString();
+    returnUrl = new URL('/settings/subscriptions', origin).toString();
   } catch {
     throw fail(503, 'BILLING_RETURN_URL_UNAVAILABLE', 'Billing settings are not configured.');
   }
@@ -915,7 +915,10 @@ async function cancelScheduledPlanChange(userId, overrides = {}) {
     );
     if (
       schedule.id !== pending.stripeScheduleId ||
-      idOf(schedule.subscription) !== context.record.stripeSubscriptionId ||
+      // Released schedules carry the subscription in `released_subscription` instead.
+      (idOf(schedule.subscription) ||
+        (schedule.status === 'released' ? idOf(schedule.released_subscription) : null)) !==
+        context.record.stripeSubscriptionId ||
       schedule.metadata?.subscriptionV2 !== 'true' ||
       String(schedule.metadata?.userId) !== String(context.record.userId) ||
       String(schedule.metadata?.subscriptionId) !== String(context.record._id) ||

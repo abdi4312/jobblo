@@ -213,15 +213,12 @@ export default function Header() {
    * the marketing header offered a home icon and a login button and nothing else — no
    * way into the product from the page most first-time visitors land on. Its old targets
    * (/slik-fungerer-det, /priser) were not routes either; these point at the landing
-   * page section, the real browse route, and the pricing page.
-   *
-   * "Priser" pointed at `/#priser` — a landing section that no longer exists, since
-   * pricing is now answered in full by its own page. It goes straight there.
+   * page section, the real browse route, and the membership page (plans and prices).
    */
   const navLinks: NavLinkItem[] = [
     { name: 'Finn oppdrag', path: '/search/job/all' },
     { name: 'Slik fungerer det', path: '/#slik-fungerer-det' },
-    { name: 'Priser', path: '/pricing' },
+    { name: 'Priser', path: '/membership' },
   ];
 
   const navLinkUse: NavLinkItem[] = [

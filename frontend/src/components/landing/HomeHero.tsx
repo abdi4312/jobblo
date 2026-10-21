@@ -151,7 +151,7 @@ export function HomeHero() {
                   Gratis å legge ut
                 </button>{' '}
                 —{' '}
-                <button type="button" onClick={() => navigate('/pricing')} className={TEXT_LINK}>
+                <button type="button" onClick={() => navigate('/membership')} className={TEXT_LINK}>
                   3 % når jobben faktisk blir gjort
                 </button>
                 .

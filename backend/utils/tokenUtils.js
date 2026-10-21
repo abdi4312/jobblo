@@ -1,23 +1,99 @@
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const Session = require('../models/Session');
 const User = require('../models/User');
 const requestIp = require('request-ip');
 
-const generateTokens = (userId, sessionId) => {
-  const accessToken = jwt.sign(
-    { id: userId, sid: sessionId },
-    process.env.JWT_SECRET,
-    { expiresIn: '1h' } // Access token extended to 1 hour
-  );
-
-  const refreshToken = jwt.sign(
-    { id: userId, sid: sessionId },
-    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-    { expiresIn: '7d' } // Longer lived refresh token
-  );
-
-  return { accessToken, refreshToken };
+/**
+ * Access and refresh tokens used to be indistinguishable: same `{id, sid}` payload and,
+ * with JWT_REFRESH_SECRET unset, the same secret. authenticate() only checked the
+ * signature, so the 7-day refresh token worked as a Bearer/cookie access token — outside
+ * rotation and its reuse detection. Every token now names its purpose (`typ`, `aud`) and
+ * issuer, and verifyToken() refuses a token presented for the other purpose.
+ */
+const ACCESS_TTL_S = 60 * 60; // 1 hour
+const REFRESH_TTL_S = 7 * 24 * 60 * 60; // 7 days
+const ISSUER = 'jobblo-api';
+const PURPOSES = {
+  access: { audience: 'jobblo:access', ttl: ACCESS_TTL_S },
+  refresh: { audience: 'jobblo:refresh', ttl: REFRESH_TTL_S },
 };
+const ALGORITHM = 'HS256';
+
+function signingSecret(purpose) {
+  const secret =
+    purpose === 'access'
+      ? process.env.JWT_SECRET
+      : process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT signing secret is not configured');
+  return secret;
+}
+
+/**
+ * Secrets a token of this purpose may be signed with. Access tokens: JWT_SECRET only,
+ * so once JWT_REFRESH_SECRET is set a refresh token fails the signature here outright.
+ * Refresh tokens: JWT_REFRESH_SECRET, then JWT_SECRET — what every refresh token was
+ * signed with until JWT_REFRESH_SECRET is configured. (The refresh endpoint also requires
+ * the exact token string to be the session's current or grace-period token in the DB.)
+ */
+function verificationSecrets(purpose) {
+  const list =
+    purpose === 'access'
+      ? [process.env.JWT_SECRET]
+      : [process.env.JWT_REFRESH_SECRET, process.env.JWT_SECRET];
+  return [...new Set(list.filter(Boolean))];
+}
+
+const generateTokens = (userId, sessionId) => {
+  // jwtid: without it two tokens for one session minted in the same second were
+  // byte-identical, so a "rotated" refresh token could equal the one it replaced.
+  const sign = (purpose) =>
+    jwt.sign({ id: userId, sid: sessionId, typ: purpose }, signingSecret(purpose), {
+      algorithm: ALGORITHM,
+      expiresIn: PURPOSES[purpose].ttl,
+      issuer: ISSUER,
+      audience: PURPOSES[purpose].audience,
+      jwtid: crypto.randomUUID(),
+    });
+  return { accessToken: sign('access'), refreshToken: sign('refresh') };
+};
+
+/**
+ * Verify a token for one purpose ('access' | 'refresh'). Throws jsonwebtoken's errors:
+ * TokenExpiredError for an expired token, JsonWebTokenError for everything else.
+ *
+ * Tokens issued before purpose claims existed carry no `typ`/`aud`/`iss`. They are told
+ * apart by lifetime, which jsonwebtoken set exactly (exp - iat = 3600 or 604800), so
+ * live sessions survive the deploy while a legacy refresh token still cannot pass as an
+ * access token. ponytail: the legacy branch is dead weight 7 days after deploy (the
+ * longest legacy lifetime); remove it then.
+ */
+function verifyToken(token, purpose) {
+  const expected = PURPOSES[purpose];
+  if (!expected) throw new Error(`verifyToken: unknown purpose ${purpose}`);
+  const secrets = verificationSecrets(purpose);
+  if (!secrets.length) throw new jwt.JsonWebTokenError('JWT secret is not configured');
+
+  let decoded;
+  let lastError;
+  for (const secret of secrets) {
+    try {
+      decoded = jwt.verify(token, secret, { algorithms: [ALGORITHM] });
+      break;
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') throw err; // signature was valid
+      lastError = err;
+    }
+  }
+  if (!decoded) throw lastError;
+
+  const isLegacy = decoded.typ === undefined && decoded.aud === undefined && decoded.iss === undefined;
+  const ok = isLegacy
+    ? decoded.exp - decoded.iat === expected.ttl
+    : decoded.typ === purpose && decoded.aud === expected.audience && decoded.iss === ISSUER;
+  if (!ok) throw new jwt.JsonWebTokenError(`token is not a valid ${purpose} token`);
+  return decoded;
+}
 
 const axios = require('axios');
 
@@ -78,4 +154,4 @@ const createSession = async (req, userId) => {
   }
 };
 
-module.exports = { generateTokens, createSession };
+module.exports = { generateTokens, verifyToken, createSession, ACCESS_TTL_S, REFRESH_TTL_S };

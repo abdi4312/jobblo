@@ -8,6 +8,7 @@
     "build": "node scripts/check-env.mjs && vite build",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "lint": "eslint .",
+    "test:e2e": "playwright test",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -23,7 +24,7 @@
     "@tanstack/react-query-devtools": "^5.91.3",
     "@vis.gl/react-google-maps": "^1.9.0",
     "antd": "^5.27.6",
-    "axios": "^1.13.2",
+    "axios": "^1.20.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -42,7 +43,6 @@
     "react-router-dom": "^7.9.4",
     "react-toastify": "^11.0.5",
     "recharts": "^3.9.2",
-    "shadcn": "^4.6.0",
     "socket.io-client": "^4.8.3",
     "sonner": "^2.0.7",
     "sweetalert2": "^11.26.17",
@@ -55,6 +55,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
+    "@playwright/test": "^1.64.1",
     "@types/leaflet": "^1.9.21",
     "@types/lodash.debounce": "^4.0.9",
     "@types/node": "^25.6.0",
@@ -66,8 +67,12 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
+    "shadcn": "^4.22.1",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
-    "vite": "7.1.11"
+    "vite": "7.3.7"
+  },
+  "overrides": {
+    "proxy-addr": "2.0.8"
   }
 }
