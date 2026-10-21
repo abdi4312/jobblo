@@ -127,6 +127,10 @@ app.post('/api/stripe/webhook', stripeRawBody, stripeWebhookHandler);
 app.post('/api/safepay-checkout/webhook', stripeRawBody, stripeWebhookHandler);
 
 app.use(cors(corsOptions));
+// CSRF: refuse state-changing requests from browsers on other sites, before any body
+// parsing. Same allowlist as CORS. The Stripe webhooks above are mounted earlier and
+// never reach this (they are signature-verified server-to-server calls).
+app.use(require('./middleware/csrfOrigin').createCsrfOriginGuard(allowedOrigins));
 app.use(apiLimiter); // Apply general API rate limiting
 app.use(useragent.express());
 // 'dev' logging writes a line per request to stdout in production too.

@@ -71,7 +71,7 @@ async function sendSubscriptionRecoveryEmail({
   } catch {
     throw new Error('FRONTEND_URL must be a valid http(s) URL for recovery emails');
   }
-  const billingUrl = new URL('/profile/settings/subscriptions', origin).toString();
+  const billingUrl = new URL('/settings/subscriptions', origin).toString();
   const deadline = gracePeriodEndsAt instanceof Date && Number.isFinite(gracePeriodEndsAt.getTime())
     ? new Intl.DateTimeFormat('nb-NO', {
         dateStyle: 'long',

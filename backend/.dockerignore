@@ -7,6 +7,18 @@ node_modules
 .env
 .env.*
 
+# Google/Firebase service-account keys. The Admin SDK reads one at RUNTIME from
+# GOOGLE_APPLICATION_CREDENTIALS (a mounted secret file) — never from the image.
+# The Dockerfile also refuses to build if a private key slips past this list.
+*firebase-adminsdk*.json
+**/*firebase-adminsdk*.json
+*service-account*.json
+**/*service-account*.json
+*.pem
+**/*.pem
+*.p12
+**/*.p12
+
 # Test output and logs
 coverage
 *.log

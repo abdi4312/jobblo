@@ -119,10 +119,83 @@ async function deleteFromAzure(blobNameOrUrl) {
   }
 }
 
+/** Listing photos and their OG derivatives (middleware/upload.js, uploadController). */
+const LISTING_PREFIX = 'job_images/';
+
+/**
+ * A blob name a listing may own: under job_images/, no traversal, no URL syntax.
+ * Deliberately not a strict `<uuid>.<ext>` match — historical names include
+ * `job_images/<userId>/<uuid>.<ext>` and `job_images/og/<uuid>.jpg`.
+ */
+function isListingBlobName(name) {
+  return (
+    typeof name === 'string' &&
+    name.length <= 1024 &&
+    name.startsWith(LISTING_PREFIX) &&
+    !name.split('/').some((seg) => seg === '' || seg === '.' || seg === '..') &&
+    !/[\u0000-\u001f\\?#%]/.test(name)
+  );
+}
+
+/**
+ * Delete one listing image entry (original + OG derivative) — only when it provably
+ * belongs to this listing and to nothing else.
+ *
+ * imageMetadata used to be accepted from the request body, so a listing could carry
+ * `{ blobName: 'profile_images/<victim>.jpg' }` and its owner (or an admin cleaning it
+ * up) would delete someone else's file. Persisted metadata is therefore NOT trusted on
+ * its own. A blob is deleted only if:
+ *   1. it is under job_images/ (never profiles, reviews, evidence, hero, reports);
+ *   2. its name is exactly what the entry's own stored URL points at in our container;
+ *   3. no other listing references it — job_images/<uuid> names carry no owner, and
+ *      another listing's public photo URL is easy to copy into forged metadata.
+ * Anything else is skipped (logged) and left in storage: fail closed, orphan at worst.
+ *
+ * ponytail: check 3 is an unindexed Service scan per blob; add an index on
+ * imageMetadata.blobName if listing deletes get slow.
+ */
+async function deleteListingImage(meta, serviceId) {
+  if (!meta) return;
+  const Service = require('../models/Service');
+  const pairs = [
+    [meta.url, meta.blobName],
+    [meta.ogUrl, meta.ogBlobName],
+  ];
+  for (const [url, name] of pairs) {
+    if (!name) continue;
+    if (!isListingBlobName(name) || blobNameFromUrl(url) !== name) {
+      console.warn('Listing image delete refused for service %s: unverifiable blob', serviceId);
+      continue;
+    }
+    try {
+      const sharedElsewhere = await Service.exists({
+        _id: { $ne: serviceId },
+        $or: [
+          { images: url },
+          { 'imageMetadata.url': url },
+          { 'imageMetadata.blobName': name },
+          { 'imageMetadata.ogUrl': url },
+          { 'imageMetadata.ogBlobName': name },
+        ],
+      });
+      if (sharedElsewhere) {
+        console.warn('Listing image delete refused for service %s: blob used elsewhere', serviceId);
+        continue;
+      }
+      await deleteFromAzure(name);
+    } catch (error) {
+      // Runs after the listing is saved; a storage hiccup must not fail that request.
+      console.error('Listing image cleanup failed for service %s: %s', serviceId, error.message);
+    }
+  }
+}
+
 module.exports = {
   uploadBufferToAzure,
   uploadToAzure,
   deleteFromAzure,
+  deleteListingImage,
+  isListingBlobName,
   blobNameFromUrl,
   containerName,
 };

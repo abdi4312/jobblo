@@ -14,6 +14,14 @@ RUN npm install --include=optional
 # Copy the rest of the backend code into the container
 COPY . .
 
+# Second lock behind .dockerignore: refuse to produce an image that contains a
+# private key (e.g. a Firebase service-account JSON). Firebase credentials are
+# provided at runtime via GOOGLE_APPLICATION_CREDENTIALS pointing at a mounted file.
+RUN if grep -rlIq --exclude-dir=node_modules -e '-----BEGIN [A-Z ]*PRIVATE KEY-----' . ; then \
+      echo 'Refusing to build: a private key is in the build context (see .dockerignore).' >&2; \
+      exit 1; \
+    fi
+
 # The server runs on port 5001 (see server.js)
 EXPOSE 5001
 

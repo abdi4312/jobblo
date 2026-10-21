@@ -8,6 +8,14 @@ const { sendSubscriptionRecoveryEmail } = require('../../utils/emailService');
 
 const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
 const LEASE_MS = 2 * 60 * 1000;
+/**
+ * A late payment (after the grace deadline) waits for manual reconciliation; the worker
+ * cannot resolve it. It used to clear the lease, so every such record was re-selected
+ * every minute and, with the batch capped at 50, could crowd out real expiries.
+ * ponytail: parked for a day at a time; >50 unresolved late payments per day would
+ * still need an index-backed exclusion.
+ */
+const LATE_PAYMENT_PARK_MS = 24 * 60 * 60 * 1000;
 const REMINDERS = [
   { kind: 'reminder_day_3', day: 3 },
   { kind: 'reminder_day_6', day: 6 },
@@ -23,6 +31,14 @@ function recoveryJobEnabled(env = process.env) {
 
 function recoveryEmailsEnabled(env = process.env) {
   return env.SUBSCRIPTION_V2_RECOVERY_EMAILS_ENABLED === 'true';
+}
+
+/**
+ * Void the unpaid renewal invoice after a grace-expiry cancellation (policy Option A).
+ * Default OFF: business/accounting approval is required before it may run anywhere.
+ */
+function graceExpiryInvoiceVoidEnabled(env = process.env) {
+  return env.SUBSCRIPTION_V2_GRACE_EXPIRY_INVOICE_VOID_ENABLED === 'true';
 }
 
 function idOf(value) {
@@ -110,14 +126,24 @@ async function startRecovery({ record, invoice, subscription, mode, now = new Da
     EmailModel: SubscriptionRecoveryEmailV2,
     ...overrides,
   };
-  const usageStart = record.currentPeriodStart;
-  if (!usageStart) return { started: false, noPaidUsage: true };
+  // Grace keeps the LAST PAID period's allowance. This used to look for paid usage
+  // starting exactly at record.currentPeriodStart — but by the time a renewal fails,
+  // customer.subscription.updated (and updateSubscriptionState on the failure itself)
+  // has already moved currentPeriodStart to the new, unpaid period, which never has a
+  // paid usage row. So in real renewals grace never started: no emails, straight to free.
+  // Take the newest paid period that reaches currentPeriodStart (the one just ended,
+  // or the current one if the record has not advanced yet); never an older one.
+  const anchor = record.currentPeriodStart;
+  if (!anchor) return { started: false, noPaidUsage: true };
   const paidUsage = await deps.UsageModel.findOne({
     userId: record.userId,
     subscriptionId: record._id,
     periodType: 'paid',
-    billingPeriodStart: usageStart,
-  }).lean();
+    billingPeriodStart: { $lte: anchor },
+    billingPeriodEnd: { $gte: anchor },
+  })
+    .sort({ billingPeriodStart: -1 })
+    .lean();
   if (!paidUsage) return { started: false, noPaidUsage: true };
 
   const existing = await deps.SubscriptionModel.findOne({
@@ -243,6 +269,7 @@ async function markCanceled(record, invoice, operationId, overrides = {}) {
   const deps = {
     SubscriptionModel: SubscriptionV2,
     EmailModel: SubscriptionRecoveryEmailV2,
+    OperationModel: SubscriptionBillingOperationV2,
     ...overrides,
   };
   const now = (overrides.now || (() => new Date()))();
@@ -266,6 +293,21 @@ async function markCanceled(record, invoice, operationId, overrides = {}) {
     },
     { new: true }
   ).lean();
+  if (updated) {
+    // The unpaid renewal's own operation stayed 'pending' forever after the subscription
+    // ended. Its outcome is final now: it failed. (A later payment of the still-open
+    // invoice moves it to reconciliation_required via recordLatePayment.)
+    await deps.OperationModel.updateOne(
+      { stripeMode: record.stripeMode, operationId: `invoice:${invoice.id}`, status: 'pending' },
+      {
+        $set: {
+          status: 'failed',
+          lastErrorCode: 'renewal_unpaid_subscription_canceled',
+          lastErrorMessage: 'The renewal was not paid within the grace period; the subscription was canceled.',
+        },
+      }
+    );
+  }
   if (updated && recoveryEmailsEnabled(overrides.env || process.env)) {
     await deps.EmailModel.updateMany(
       {
@@ -340,6 +382,7 @@ async function recordLatePayment(record, invoice, overrides = {}) {
     },
     { upsert: true, new: true }
   );
+  const at = (overrides.now || (() => new Date()))();
   await deps.SubscriptionModel.updateOne(
     {
       _id: record._id,
@@ -347,17 +390,203 @@ async function recordLatePayment(record, invoice, overrides = {}) {
       paymentRecoveryStatus: 'retrying',
     },
     {
-      $set: { recoveryLeaseUntil: null },
+      $set: { recoveryLeaseUntil: new Date(at.getTime() + LATE_PAYMENT_PARK_MS) },
       $push: {
         recoveryHistory: {
           invoiceId: invoice.id,
           action: 'late_payment_reconciliation_required',
-          at: (overrides.now || (() => new Date()))(),
+          at,
         },
       },
     }
   );
   return operation;
+}
+
+const VOID_MAX_ATTEMPTS = 5;
+
+function isRetryableStripeError(err) {
+  return (
+    ['StripeConnectionError', 'StripeAPIError', 'StripeRateLimitError'].includes(err?.type) ||
+    ['ETIMEDOUT', 'ECONNRESET', 'lock_timeout', 'rate_limit'].includes(err?.code) ||
+    Number(err?.statusCode) >= 500
+  );
+}
+
+/**
+ * Void the failed-renewal invoice of a subscription that THIS worker canceled at the end
+ * of its 7-day grace (policy Option A, gated by SUBSCRIPTION_V2_GRACE_EXPIRY_INVOICE_VOID_ENABLED).
+ *
+ * Without this, the 99 NOK renewal invoice stays `open` and payable (hosted invoice page,
+ * portal, Stripe emails) after the subscription is gone, so a customer can pay for nothing
+ * and finance carries a stale receivable.
+ *
+ * Which invoice: only record.recoveryInvoiceId — the exact invoice the grace was opened
+ * for — never "the customer's latest invoice". It must belong to this subscription,
+ * customer and mode, be a subscription_cycle invoice, and the grace-expiry cancellation
+ * operation for exactly that subscription+invoice must have succeeded.
+ *
+ * Who may start it: only the worker's own cancellation path (`start: true`) creates the
+ * void operation. A subscription found already canceled (customer/portal/Stripe) never
+ * gets one, so voluntary cancellations are never voided. Retries (`start: false`) only
+ * continue an operation that already exists.
+ *
+ * Races: the invoice is re-read right before voiding; paid -> the existing late-payment
+ * policy (reconciliation, nothing restored); payment in flight -> retry later; void
+ * failing because a payment just won -> re-read and treat as paid.
+ */
+async function voidGraceExpiredInvoice({ record, stripe, now = new Date(), start = false }, overrides = {}) {
+  const deps = {
+    SubscriptionModel: SubscriptionV2,
+    OperationModel: SubscriptionBillingOperationV2,
+    ...overrides,
+  };
+  if (!graceExpiryInvoiceVoidEnabled(deps.env || process.env)) return { skipped: 'disabled' };
+  const mode = record?.stripeMode;
+  const invoiceId = record?.recoveryInvoiceId;
+  const subscriptionId = record?.stripeSubscriptionId;
+  if (!invoiceId || !subscriptionId || !['test', 'live'].includes(mode)) return { skipped: 'no_recovery_invoice' };
+
+  const expiry = await deps.OperationModel.findOne({
+    stripeMode: mode,
+    operationId: `grace-expiry:${subscriptionId}:${invoiceId}`,
+  }).lean();
+  if (
+    !expiry ||
+    expiry.status !== 'succeeded' ||
+    expiry.operationType !== 'renewal_recovery' ||
+    expiry.stripeInvoiceId !== invoiceId ||
+    expiry.stripeSubscriptionId !== subscriptionId ||
+    String(expiry.subscriptionId) !== String(record._id)
+  ) return { skipped: 'not_a_confirmed_grace_expiry' };
+
+  const current = await deps.SubscriptionModel.findById(record._id).lean();
+  if (
+    !current ||
+    current.status !== 'canceled' ||
+    current.paymentRecoveryStatus !== 'exhausted' ||
+    current.recoveryInvoiceId !== invoiceId ||
+    current.stripeSubscriptionId !== subscriptionId ||
+    current.stripeMode !== mode
+  ) return { skipped: 'record_not_exhausted' };
+
+  const operationId = `grace-expiry-void:${subscriptionId}:${invoiceId}`;
+  const idempotencyKey = `jobblo-subv2-${mode}-${operationId}`;
+  const operation = start
+    ? await deps.OperationModel.findOneAndUpdate(
+        { stripeMode: mode, operationId },
+        {
+          $setOnInsert: {
+            operationId,
+            idempotencyKey,
+            stripeMode: mode,
+            operationType: 'renewal_recovery',
+            status: 'pending',
+            userId: current.userId,
+            subscriptionId: current._id,
+            stripeSubscriptionId: subscriptionId,
+            stripeCustomerId: current.stripeCustomerId,
+            stripeInvoiceId: invoiceId,
+          },
+        },
+        { upsert: true, new: true }
+      ).lean()
+    : await deps.OperationModel.findOne({ stripeMode: mode, operationId }).lean();
+  if (!operation) return { skipped: 'no_void_operation' };
+  if (operation.status !== 'pending') return { skipped: `already_${operation.status}` };
+  if (
+    operation.idempotencyKey !== idempotencyKey ||
+    operation.stripeInvoiceId !== invoiceId ||
+    operation.stripeSubscriptionId !== subscriptionId ||
+    String(operation.subscriptionId) !== String(current._id)
+  ) throw new Error('invoice_void_operation_ownership_mismatch');
+
+  const finish = async (status, fields = {}) => {
+    await deps.OperationModel.updateOne(
+      { _id: operation._id, status: 'pending' },
+      { $set: { status, attemptedAt: now, ...fields } }
+    );
+    return { status, ...fields };
+  };
+  const review = (code) => finish('reconciliation_required', {
+    lastErrorCode: code,
+    lastErrorMessage: 'Grace-expiry invoice void needs manual review.',
+  });
+  const paidMeanwhile = async (invoice) => {
+    // A payment won the race: existing late-payment policy, nothing restored.
+    await recordLatePayment(current, invoice, deps);
+    return finish('failed', { lastErrorCode: 'invoice_paid_before_void', lastErrorMessage: 'The invoice was paid before it could be voided.' });
+  };
+  const retryLater = async (code) => {
+    if ((operation.attempts || 0) + 1 >= VOID_MAX_ATTEMPTS) return review(code);
+    await deps.OperationModel.updateOne(
+      { _id: operation._id, status: 'pending' },
+      { $set: { lastErrorCode: code, attemptedAt: now }, $inc: { attempts: 1 } }
+    );
+    return { status: 'pending', retry: true, lastErrorCode: code };
+  };
+
+  try {
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    if (!isOwnedSubscription(subscription, current, mode) || subscription.status !== 'canceled') {
+      return review('void_subscription_unverified');
+    }
+    // Authoritative state, read immediately before the irreversible void.
+    const invoice = await stripe.invoices.retrieve(invoiceId);
+    if (!invoiceMatchesSubscription(invoice, current, mode) || invoice.billing_reason !== 'subscription_cycle') {
+      return review('void_invoice_unverified');
+    }
+    if (invoice.status === 'void') return finish('succeeded', { completedAt: now, lastErrorCode: null });
+    if (invoice.status === 'paid') return paidMeanwhile(invoice);
+    if (invoice.status !== 'open') return review(`void_invoice_not_open_${invoice.status}`);
+    if ((invoice.amount_paid || 0) > 0) return review('void_invoice_partially_paid');
+
+    const payments = await stripe.invoicePayments.list({
+      invoice: invoiceId,
+      limit: 100,
+      expand: ['data.payment.payment_intent'],
+    });
+    const inFlight = (payments.data || []).some((p) =>
+      p.status === 'paid' ||
+      ['processing', 'requires_capture', 'succeeded'].includes(p.payment?.payment_intent?.status)
+    );
+    if (inFlight) return retryLater('payment_in_progress');
+
+    const voided = await stripe.invoices.voidInvoice(invoiceId, {}, { idempotencyKey });
+    if (voided?.id !== invoiceId || voided.status !== 'void') return review('void_unconfirmed');
+    await deps.SubscriptionModel.updateOne(
+      { _id: current._id, recoveryInvoiceId: invoiceId },
+      { $push: { recoveryHistory: { invoiceId, action: 'renewal_invoice_voided', at: now, operationId } } }
+    );
+    return finish('succeeded', { completedAt: now, lastErrorCode: null });
+  } catch (err) {
+    // The void may have lost to a payment, or its outcome may be unknown: ask Stripe.
+    try {
+      const again = await stripe.invoices.retrieve(invoiceId);
+      if (again?.id === invoiceId && again.status === 'paid') return paidMeanwhile(again);
+      if (again?.id === invoiceId && again.status === 'void') return finish('succeeded', { completedAt: now, lastErrorCode: null });
+    } catch { /* fall through */ }
+    if (isRetryableStripeError(err)) return retryLater(err.code || err.type || 'stripe_unavailable');
+    return review(err?.code || 'invoice_void_failed');
+  }
+}
+
+/** Continue void operations left pending (timeouts, payment in flight). */
+async function retryPendingInvoiceVoids(deps, now) {
+  const pending = await deps.OperationModel.find({
+    operationId: /^grace-expiry-void:/,
+    status: 'pending',
+  }).limit(20).lean();
+  for (const operation of pending) {
+    try {
+      const record = await deps.SubscriptionModel.findById(operation.subscriptionId).lean();
+      if (!record) continue;
+      const stripe = await deps.stripeForMode(operation.stripeMode === 'test');
+      await voidGraceExpiredInvoice({ record, stripe, now, start: false }, deps);
+    } catch (error) {
+      console.error('[Subscription V2] grace-expiry invoice void retry failed:', error.message);
+    }
+  }
 }
 
 async function cancelExpiredRecoveries(overrides = {}) {
@@ -433,7 +662,7 @@ async function cancelExpiredRecoveries(overrides = {}) {
       ) {
         await deps.SubscriptionModel.updateOne(
           { _id: claimed._id, recoveryInvoiceId: claimed.recoveryInvoiceId },
-          { $set: { recoveryLeaseUntil: null } }
+          { $set: { recoveryLeaseUntil: new Date(now.getTime() + LATE_PAYMENT_PARK_MS) } }
         );
         processed += 1;
         continue;
@@ -448,9 +677,26 @@ async function cancelExpiredRecoveries(overrides = {}) {
         !invoiceMatchesSubscription(invoice, claimed, claimed.stripeMode)
       ) throw new Error('recovery_stripe_ownership_unverified');
 
-      const paidAt = invoice.status_transitions?.paid_at
-        ? new Date(invoice.status_transitions.paid_at * 1000)
-        : null;
+      const paidAtOf = (inv) => (inv.status_transitions?.paid_at
+        ? new Date(inv.status_transitions.paid_at * 1000)
+        : null);
+      const paidAt = paidAtOf(invoice);
+      // Paid invoice: recovered if paid before the deadline, otherwise the existing
+      // late-payment policy (manual reconciliation, access not restored).
+      const settlePaid = async (paidInvoice) => {
+        if (paidAtOf(paidInvoice) >= claimed.gracePeriodEndsAt) {
+          await recordLatePayment(claimed, paidInvoice, deps);
+          return;
+        }
+        const recovered = await markRecovered({ record: claimed, invoice: paidInvoice, subscription, now }, deps);
+        const latestRecord = recovered ? null : await deps.SubscriptionModel.findById(claimed._id).lean();
+        if (recovered || latestRecord?.paymentRecoveryStatus === 'recovered') {
+          await deps.OperationModel.updateOne(
+            { _id: operation._id },
+            { $set: { status: 'succeeded', completedAt: now } }
+          );
+        }
+      };
       if (subscription.status === 'canceled') {
         if (!await markCanceled(claimed, invoice, operationId, deps)) {
           throw new Error('recovery_state_changed_during_cancellation');
@@ -462,30 +708,8 @@ async function cancelExpiredRecoveries(overrides = {}) {
         processed += 1;
         continue;
       }
-      if (
-        invoice.status === 'paid' &&
-        paidAt
-      ) {
-        if (paidAt >= claimed.gracePeriodEndsAt) {
-          await recordLatePayment(claimed, invoice, deps);
-          processed += 1;
-          continue;
-        }
-        const recovered = await markRecovered({ record: claimed, invoice, subscription, now }, deps);
-        if (recovered) {
-          await deps.OperationModel.updateOne(
-            { _id: operation._id },
-            { $set: { status: 'succeeded', completedAt: now } }
-          );
-        } else {
-          const latestRecord = await deps.SubscriptionModel.findById(claimed._id).lean();
-          if (latestRecord?.paymentRecoveryStatus === 'recovered') {
-            await deps.OperationModel.updateOne(
-              { _id: operation._id },
-              { $set: { status: 'succeeded', completedAt: now } }
-            );
-          }
-        }
+      if (invoice.status === 'paid' && paidAt) {
+        await settlePaid(invoice);
         processed += 1;
         continue;
       }
@@ -496,6 +720,14 @@ async function cancelExpiredRecoveries(overrides = {}) {
         latestRecord.paymentRecoveryStatus !== 'retrying' ||
         latestRecord.recoveryInvoiceId !== claimed.recoveryInvoiceId
       ) {
+        processed += 1;
+        continue;
+      }
+      // The customer may have paid since the invoice was read above. Re-read it right
+      // before the irreversible cancel, so a payment is never answered with cancellation.
+      const freshInvoice = await stripe.invoices.retrieve(claimed.recoveryInvoiceId);
+      if (freshInvoice.status === 'paid' && paidAtOf(freshInvoice)) {
+        await settlePaid(freshInvoice);
         processed += 1;
         continue;
       }
@@ -519,11 +751,22 @@ async function cancelExpiredRecoveries(overrides = {}) {
         { $set: { status: 'succeeded', completedAt: now } }
       );
       processed += 1;
+      // Only here — after THIS worker canceled the subscription — may the unpaid renewal
+      // invoice be voided. Its own errors are recorded on its own operation and must not
+      // turn the completed cancellation into a reconciliation.
+      if (graceExpiryInvoiceVoidEnabled(env)) {
+        try {
+          await voidGraceExpiredInvoice({ record: claimed, stripe, now, start: true }, { ...deps, env });
+        } catch (voidError) {
+          console.error('[Subscription V2] grace-expiry invoice void failed:', voidError.message);
+        }
+      }
     } catch (error) {
       await recordReconciliation(claimed, { id: claimed.recoveryInvoiceId }, operationId, error, deps);
       console.error('[Subscription V2] grace expiry requires reconciliation:', error.message);
     }
   }
+  if (graceExpiryInvoiceVoidEnabled(env)) await retryPendingInvoiceVoids({ ...deps, env }, now);
   return { scanned: candidates.length, processed };
 }
 
@@ -629,4 +872,6 @@ module.exports = {
   recordLatePayment,
   cancelExpiredRecoveries,
   dispatchRecoveryEmails,
+  graceExpiryInvoiceVoidEnabled,
+  voidGraceExpiredInvoice,
 };

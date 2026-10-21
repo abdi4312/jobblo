@@ -9,8 +9,8 @@ const crypto = require('crypto');
  * changes that, and no provider is ever handed an app scheme as a redirect URI.
  *
  * What changes is the LAST hop. A browser that finished a provider flow has to land
- * somewhere; for the website that is `FRONTEND_URL/oauth-success?token=…`, and for the
- * app it has to be `jobblo://oauth-success?token=…`. A custom scheme cannot be a provider
+ * somewhere; for the website that is `FRONTEND_URL/oauth-success` (no token — see
+ * oauthDestination), and for the app it has to be `jobblo://oauth-success?token=…`. A custom scheme cannot be a provider
  * redirect URI, so the arrangement SafePay already uses applies here too: redirect to an
  * HTTPS page on this origin (`GET /api/auth/mobile-return`) which hands off to the app
  * scheme. See controllers/SafePayCheckoutController.js — the env vars, the CSP nonce and
@@ -306,8 +306,13 @@ function oauthDestination({ req, platform, accessToken, error, webPath = 'login'
     console.error('OAuth mobile return unavailable: %s', bridge.error);
   }
 
+  // Web: the callback has already set the httpOnly auth cookies, and the page bootstraps
+  // from them (POST /api/auth/refresh-token). A bearer token in this URL leaked into
+  // history, logs and Referer — and the page that read it would log in whoever's token
+  // a link carried (login CSRF). The mobile bridge above still carries one: the app has
+  // no shared cookie jar with the browser tab.
   const base = resolveFrontendBase();
-  if (token) return `${base}/oauth-success?token=${token}`;
+  if (token) return `${base}/oauth-success`;
   return `${base}/${String(webPath).replace(/^\//, '')}?error=${code || GENERIC_ERROR}`;
 }
 

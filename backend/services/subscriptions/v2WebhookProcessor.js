@@ -228,6 +228,21 @@ async function paidLatestInvoice(stripe, subscription) {
   return invoice;
 }
 
+/**
+ * Does this paid invoice pay for the given service period? Upgrade proration invoices
+ * (billing_reason subscription_update) are mid-period and are accepted as-is, as before.
+ * Anything else must carry a line for exactly this period, so the previous period's
+ * paid invoice can never stand in for the new one.
+ */
+function invoiceCoversPeriod(invoice, period) {
+  if (invoice.billing_reason === 'subscription_update') return true;
+  const start = period.start.getTime() / 1000;
+  const end = period.end.getTime() / 1000;
+  return Boolean(
+    invoice.lines?.data?.some((line) => line.period?.start === start && line.period?.end === end)
+  );
+}
+
 async function setOperationReconciliation(operation, reason, OperationModel) {
   await OperationModel.updateOne(
     { _id: operation._id },
@@ -323,6 +338,9 @@ async function recordActivation({
         planType: plan.type,
         stripeCustomerId: idOf(subscription.customer),
         stripeSubscriptionId: subscription.id,
+        // Plan changes set this; activation did not, so a never-changed subscription had
+        // no stripePriceId and its released downgrade schedule could never be cleared.
+        stripePriceId: period.item.price?.id || idOf(period.item.price),
         stripeMode: mode,
         status: 'active',
         currentPeriodStart: period.start,
@@ -462,6 +480,10 @@ async function updateSubscriptionState({
           status: 'succeeded',
           stripeInvoiceId: invoice.id,
           completedAt: new Date(),
+          // A recovered renewal kept 'invoice_payment_failed' from its earlier failed
+          // attempts, so a succeeded operation still read as an error.
+          lastErrorCode: null,
+          lastErrorMessage: null,
         },
       }
     );
@@ -492,13 +514,21 @@ async function findManagementOperation(identity, mode, subscriptionId, Operation
 
 async function completeLifecycleOperation(operation, OperationModel, updates = {}) {
   if (!operation || !['pending', 'reconciliation_required'].includes(operation.status)) return;
-  await OperationModel.updateOne(
-    { _id: operation._id },
+  const result = await OperationModel.updateOne(
+    { _id: operation._id, status: { $in: ['pending', 'reconciliation_required'] } },
     {
       $set: { ...updates, status: 'succeeded', completedAt: new Date() },
       $unset: { lifecycleLock: 1 },
     }
   );
+  if (result.matchedCount === 0) {
+    const completed = await OperationModel.findOne({
+      _id: operation._id,
+      status: 'succeeded',
+      lifecycleLock: { $ne: true },
+    });
+    if (!completed) throw new Error('subscription_lifecycle_operation_completion_unconfirmed');
+  }
 }
 
 async function verifyPlanPrice(stripe, subscription, plan, mode) {
@@ -539,8 +569,13 @@ async function applyVerifiedPlanChange({
   if (
     !operation ||
     !['upgrade', 'downgrade'].includes(operation.operationType) ||
+    !['pending', 'reconciliation_required', 'succeeded'].includes(operation.status) ||
+    operation.operationId !== identity.operationId ||
+    operation.stripeMode !== mode ||
     String(operation.userId) !== String(existing.userId) ||
+    String(operation.subscriptionId) !== String(existing._id) ||
     String(operation.targetPlanId) !== String(identity.planId) ||
+    operation.stripeCustomerId !== existing.stripeCustomerId ||
     String(operation.stripeSubscriptionId) !== subscription.id ||
     idOf(subscription.customer) !== existing.stripeCustomerId
   ) {
@@ -548,12 +583,18 @@ async function applyVerifiedPlanChange({
   }
   const snapshot = await verifyPlanPrice(stripe, subscription, plan, mode);
   if (!snapshot) throw new Error('subscription_plan_change_price_mismatch');
+  if (operation.stripePriceId !== idOf(snapshot.item.price)) {
+    throw new Error('subscription_plan_change_operation_price_mismatch');
+  }
 
   if (operation.operationType === 'upgrade') {
     if (!invoice || invoice.status !== 'paid' || subscription.status !== 'active') {
       return { handled: 'subscription_plan_change_payment_pending' };
     }
     if (
+      invoice.livemode !== (mode === 'live') ||
+      invoice.billing_reason !== 'subscription_update' ||
+      idOf(subscription.latest_invoice) !== invoice.id ||
       idOf(invoice.customer) !== existing.stripeCustomerId ||
       subscriptionIdFromInvoice(invoice) !== subscription.id
     ) {
@@ -604,8 +645,15 @@ async function applyVerifiedPlanChange({
   }
 
   const changeType = operation.operationType;
-  await SubscriptionModel.updateOne(
-    { _id: existing._id, planId: existing.planId },
+  const subscriptionWrite = await SubscriptionModel.updateOne(
+    {
+      _id: existing._id,
+      userId: existing.userId,
+      stripeMode: mode,
+      stripeSubscriptionId: subscription.id,
+      stripeCustomerId: existing.stripeCustomerId,
+      planId: { $in: [existing.planId, plan._id] },
+    },
     {
       $set: {
         planId: plan._id,
@@ -621,7 +669,7 @@ async function applyVerifiedPlanChange({
           : null,
         pendingPlanChange: null,
       },
-      $push: {
+      $addToSet: {
         planHistory: {
           planId: plan._id,
           planName: plan.name,
@@ -640,13 +688,27 @@ async function applyVerifiedPlanChange({
     },
     { runValidators: true }
   );
-  await setPaidPeriodAllowance({
-    userId: existing.userId,
-    subscriptionId: existing._id,
-    plan,
-    start: snapshot.start,
-    end: snapshot.end,
-  }, UsageModel);
+  if (subscriptionWrite.matchedCount === 0) {
+    throw new Error('subscription_plan_change_record_unavailable');
+  }
+  // An upgrade is confirmed by its own paid proration invoice (checked above). A
+  // downgrade takes effect AT renewal, from customer.subscription.updated, before the
+  // renewal invoice is even charged — granting the new period's paid allowance here
+  // meant a renewal that then failed still had a paid period, so entitlements stayed
+  // paid and grace anchored to an unpaid period. Grant it only once that period's
+  // invoice is paid; otherwise invoice.paid creates it (the record now holds the new plan).
+  const allowanceInvoice = operation.operationType === 'upgrade'
+    ? invoice
+    : await paidLatestInvoice(stripe, subscription);
+  if (allowanceInvoice && invoiceCoversPeriod(allowanceInvoice, snapshot)) {
+    await setPaidPeriodAllowance({
+      userId: existing.userId,
+      subscriptionId: existing._id,
+      plan,
+      start: snapshot.start,
+      end: snapshot.end,
+    }, UsageModel);
+  }
   await completeLifecycleOperation(operation, OperationModel, {
     stripeSubscriptionId: subscription.id,
     stripePriceId: idOf(snapshot.item.price),
@@ -734,7 +796,12 @@ async function processSubscriptionScheduleEvent(event, mode, stripe, deps) {
     return { handled: 'subscription_schedule_stale_event' };
   }
 
-  const stripeSubscriptionId = idOf(schedule.subscription);
+  // A released schedule no longer points at its subscription: Stripe moves the id from
+  // `subscription` to `released_subscription`. Reading only `subscription` rejected every
+  // release (e.g. a downgrade cancelled in the billing portal) as an owner mismatch, so
+  // the pending plan change was never cleared.
+  const stripeSubscriptionId = idOf(schedule.subscription) ||
+    (schedule.status === 'released' ? idOf(schedule.released_subscription) : null);
   const record = await deps.SubscriptionModel.findOne({
     _id: identity.subscriptionId,
     userId: identity.userId,
@@ -834,9 +901,13 @@ async function processSubscriptionScheduleEvent(event, mode, stripe, deps) {
   if (alreadyEffective) return { handled: 'subscription_schedule_already_effective' };
 
   const currentPriceId = idOf(currentSnapshot.item.price);
+  // Records activated before stripePriceId was stored lack it; verifyPlanPrice above has
+  // already proven the live price belongs to currentPlan, so that price is the fallback.
+  const recordPriceId = record.stripePriceId ||
+    (mode === 'live' ? currentPlan.stripePriceId : currentPlan.stripePriceIdTest);
   const currentPlanStillActive =
     String(record.planId) !== String(targetPlan._id) &&
-    currentPriceId === record.stripePriceId &&
+    currentPriceId === recordPriceId &&
     currentSnapshot.start < effectiveAt;
 
   if (['active', 'not_started'].includes(schedule.status)) {
@@ -912,7 +983,14 @@ async function processSubscriptionScheduleEvent(event, mode, stripe, deps) {
       },
       { $set: { pendingPlanChange: null } }
     );
-    if (result.matchedCount !== 1) throw new Error('subscription_schedule_state_changed');
+    if (result.matchedCount !== 1) {
+      // Stripe sends `released` and `updated` for the same release together; whichever
+      // lands second finds the change already cleared. That is the desired end state,
+      // not a failure — answering 500 made Stripe retry it and marked the webhook unhealthy.
+      const latest = await deps.SubscriptionModel.findOne({ _id: record._id, userId: record.userId }).lean();
+      if (latest && !latest.pendingPlanChange) return { handled: 'subscription_schedule_already_cleared' };
+      throw new Error('subscription_schedule_state_changed');
+    }
     return { handled: 'subscription_schedule_cleared' };
   }
 
@@ -1050,13 +1128,19 @@ async function processVerifiedEvent(event, mode, stripe, overrides = {}) {
           if (String(existing.userId) !== identity.userId.toString()) {
             throw new Error('subscription_record_owner_mismatch');
           }
-          if (String(existing.planId) !== identity.planId.toString()) {
-            const operation = await findManagementOperation(
-              identity,
-              mode,
-              subscription.id,
-              deps.OperationModel
-            );
+          const operation = await findManagementOperation(
+            identity,
+            mode,
+            subscription.id,
+            deps.OperationModel
+          );
+          if (
+            String(existing.planId) !== identity.planId.toString() ||
+            (
+              ['upgrade', 'downgrade'].includes(operation?.operationType) &&
+              ['pending', 'reconciliation_required'].includes(operation.status)
+            )
+          ) {
             const plan = await deps.PlanModel.findById(identity.planId).lean();
             const invoice = operation?.operationType === 'upgrade'
               ? await paidLatestInvoice(stripe, subscription)
@@ -1095,16 +1179,14 @@ async function processVerifiedEvent(event, mode, stripe, overrides = {}) {
                   existing,
                   recoveryInvoice,
                   `stripe-canceled:${existing.recoveryInvoiceId}`,
-                  { SubscriptionModel: deps.SubscriptionModel, EmailModel: deps.RecoveryEmailModel }
+                  {
+                    SubscriptionModel: deps.SubscriptionModel,
+                    EmailModel: deps.RecoveryEmailModel,
+                    OperationModel: deps.OperationModel,
+                  }
                 );
               }
             }
-            const operation = await findManagementOperation(
-              identity,
-              mode,
-              subscription.id,
-              deps.OperationModel
-            );
             if (operation && ['cancel', 'resume'].includes(operation.operationType)) {
               await completeLifecycleOperation(operation, deps.OperationModel);
             }
@@ -1199,7 +1281,21 @@ async function processVerifiedEvent(event, mode, stripe, overrides = {}) {
           );
           return outcome;
         }
-        if (!existing && paymentSucceeded) {
+        const managementOperation = existing
+          ? await findManagementOperation(identity, mode, subscription.id, deps.OperationModel)
+          : null;
+        if (
+          existing &&
+          paymentSucceeded &&
+          managementOperation?.operationType === 'upgrade' &&
+          managementOperation.status === 'succeeded' &&
+          managementOperation.lifecycleLock !== true &&
+          managementOperation.stripeInvoiceId === invoice.id &&
+          String(existing.planId) === identity.planId.toString() &&
+          existing.stripePriceId === managementOperation.stripePriceId
+        ) {
+          outcome = { handled: 'subscription_upgrade_already_confirmed' };
+        } else if (!existing && paymentSucceeded) {
           const operation = await matchingOperation(identity, mode, deps.OperationModel);
           if (!operation) {
             outcome = await recordUnmatchedV2Event(
@@ -1262,13 +1358,15 @@ async function processVerifiedEvent(event, mode, stripe, overrides = {}) {
           }
         } else if (!existing) {
           outcome = { handled: 'subscription_payment_not_confirmed' };
-        } else if (existing && String(existing.planId) !== identity.planId.toString()) {
-          const operation = await findManagementOperation(
-            identity,
-            mode,
-            subscription.id,
-            deps.OperationModel
-          );
+        } else if (
+          existing &&
+          (String(existing.planId) !== identity.planId.toString() ||
+            (
+              ['upgrade', 'downgrade'].includes(managementOperation?.operationType) &&
+              ['pending', 'reconciliation_required'].includes(managementOperation.status)
+            ))
+        ) {
+          const operation = managementOperation;
           const plan = await deps.PlanModel.findById(identity.planId).lean();
           if (!plan) throw new Error('subscription_plan_change_plan_missing');
           if (paymentSucceeded) {
@@ -1305,6 +1403,22 @@ async function processVerifiedEvent(event, mode, stripe, overrides = {}) {
           } else {
             throw new Error('subscription_record_owner_mismatch');
           }
+        } else if (
+          existing &&
+          paymentSucceeded &&
+          existing.paymentRecoveryStatus === 'exhausted' &&
+          existing.recoveryInvoiceId === invoice.id
+        ) {
+          // The grace worker already canceled this subscription, and the open recovery
+          // invoice was paid afterwards (it stays payable after cancellation). This used to
+          // fall through to updateSubscriptionState and open a PAID usage period for a
+          // canceled subscription. Same policy as any payment after the deadline: record
+          // it for manual reconciliation, restore nothing.
+          await recoveryPolicy.recordLatePayment(existing, invoice, {
+            SubscriptionModel: deps.SubscriptionModel,
+            OperationModel: deps.OperationModel,
+          });
+          outcome = { handled: 'subscription_paid_after_cancellation_reconciliation_required' };
         } else if (existing) {
           let recoveredBeforeStateUpdate = false;
           if (paymentSucceeded && existing.paymentRecoveryStatus === 'retrying') {
@@ -1370,12 +1484,7 @@ async function processVerifiedEvent(event, mode, stripe, overrides = {}) {
               env: deps.env,
             });
           }
-          const operation = await findManagementOperation(
-            identity,
-            mode,
-            subscription.id,
-            deps.OperationModel
-          );
+          const operation = managementOperation;
           if (operation && ['cancel', 'resume'].includes(operation.operationType)) {
             await completeLifecycleOperation(operation, deps.OperationModel, {
               stripeInvoiceId: invoice.id,

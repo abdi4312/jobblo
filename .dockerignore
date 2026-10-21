@@ -7,6 +7,12 @@
 **/.env
 **/.env.*
 
+# Google/Firebase service-account keys — supplied at runtime, never baked in.
+**/*firebase-adminsdk*.json
+**/*service-account*.json
+**/*.pem
+**/*.p12
+
 # Version control & CI
 .git
 .github
