@@ -25,12 +25,13 @@ jest.mock('../models/Order', () => {
   return Order;
 });
 jest.mock('../models/User', () => ({ findById: jest.fn() }));
-jest.mock('../models/Service', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
+jest.mock('../models/Service', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn(), updateOne: jest.fn() }));
 jest.mock('../models/JobRequest', () => ({ findOne: jest.fn() }));
 jest.mock('../models/Dispute', () => ({ findOne: jest.fn() }));
 jest.mock('../models/ChatReport', () => ({ findOne: jest.fn() }));
-jest.mock('../config/stripe', () => ({ getStripe: jest.fn() }));
-jest.mock('../services/stripe/customers', () => ({ resolveStripeCustomer: jest.fn() }));
+jest.mock('../controllers/SafePayCheckoutController', () => ({
+  createSafePaySession: jest.fn(),
+}));
 jest.mock('../services/subscriptions/v2Entitlements', () => ({
   enabled: jest.fn(() => false),
   consumeApplicationContact: jest.fn(),
@@ -42,8 +43,7 @@ const Chat = require('../models/ChatMessage');
 const User = require('../models/User');
 const Service = require('../models/Service');
 const JobRequest = require('../models/JobRequest');
-const { getStripe } = require('../config/stripe');
-const { resolveStripeCustomer } = require('../services/stripe/customers');
+const { createSafePaySession } = require('../controllers/SafePayCheckoutController');
 const {
   enabled,
   consumeApplicationContact,
@@ -194,67 +194,44 @@ describe('createPaymentSession', () => {
     };
   }
 
-  const payableOrder = {
-    _id: ORDER,
-    customerId: OWNER,
-    providerId: WORKER,
-    status: 'awaiting_payment',
-    paymentStatus: 'unpaid',
-    agreedPrice: 1000,
-  };
-
   beforeEach(() => {
-    User.findById.mockResolvedValue({ _id: OWNER, email: 'o@x.no', name: 'Owner' });
-    resolveStripeCustomer.mockResolvedValue('cus_1');
-    getStripe.mockResolvedValue({
-      checkout: { sessions: { create: jest.fn().mockResolvedValue({ url: 'https://stripe/x' }) } },
-    });
+    createSafePaySession.mockImplementation(async (_req, res) =>
+      res.json({ url: 'https://checkout.stripe.com/canonical' })
+    );
   });
 
-  it('refuses the WORKER — only the payer may open a checkout', async () => {
-    // The worker is a participant, so the old participant-only check let them start a
-    // session. metadata.userId then carried their id, confirmPaidSession rejected it
-    // as a customer mismatch, and the charge sat at Stripe unrecorded and unrefunded.
-    Chat.findById.mockReturnValue(populateChain(chatWithOrder(payableOrder)));
+  it('delegates to SafePay with the chat order and authenticated request context', async () => {
+    const chat = chatWithOrder({ _id: ORDER });
+    Chat.findById.mockReturnValue(populateChain(chat));
+    const req = {
+      user: { id: String(OWNER) },
+      userId: String(OWNER),
+      params: { chatId: String(CHAT) },
+      body: { orderId: String(new mongoose.Types.ObjectId()), platform: 'mobile' },
+    };
 
     const res = makeRes();
+    await chatController.createPaymentSession(req, res);
+
+    expect(createSafePaySession).toHaveBeenCalledWith(req, res);
+    expect(req.body).toEqual({ orderId: String(ORDER) });
+    expect(req.userId).toBe(String(OWNER));
+    expect(res.body.url).toBe('https://checkout.stripe.com/canonical');
+  });
+
+  it('refuses a non-participant before delegating to SafePay', async () => {
+    Chat.findById.mockReturnValue(populateChain(chatWithOrder({ _id: ORDER })));
+    const res = makeRes();
     await chatController.createPaymentSession(
-      { user: { id: String(WORKER) }, params: { chatId: String(CHAT) } },
+      {
+        user: { id: String(new mongoose.Types.ObjectId()) },
+        params: { chatId: String(CHAT) },
+      },
       res
     );
 
     expect(res.statusCode).toBe(403);
-    expect(res.body.code).toBe('not_the_payer');
-  });
-
-  it.each([
-    ['already paid', { ...payableOrder, paymentStatus: 'paid' }],
-    ['in progress', { ...payableOrder, status: 'in_progress' }],
-    ['completed', { ...payableOrder, status: 'completed' }],
-  ])('refuses to open a second checkout when the order is %s', async (_label, order) => {
-    Chat.findById.mockReturnValue(populateChain(chatWithOrder(order)));
-
-    const res = makeRes();
-    await chatController.createPaymentSession(
-      { user: { id: String(OWNER) }, params: { chatId: String(CHAT) } },
-      res
-    );
-
-    expect(res.statusCode).toBe(409);
-    expect(res.body.code).toBe('order_not_payable');
-  });
-
-  it('lets the owner pay a payable order', async () => {
-    Chat.findById.mockReturnValue(populateChain(chatWithOrder(payableOrder)));
-
-    const res = makeRes();
-    await chatController.createPaymentSession(
-      { user: { id: String(OWNER) }, params: { chatId: String(CHAT) } },
-      res
-    );
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body.url).toBe('https://stripe/x');
+    expect(createSafePaySession).not.toHaveBeenCalled();
   });
 });
 

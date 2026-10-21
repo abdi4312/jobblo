@@ -31,7 +31,10 @@ const Payout = require('../models/Payout');
 const StripePaymentIncident = require('../models/StripePaymentIncident');
 const StripeFinancialOperation = require('../models/StripeFinancialOperation');
 const { getStripeForMode } = require('../config/stripe');
-const { recordStripePaymentLifecycle } = require('../services/stripe/paymentLifecycle');
+const {
+  recordStripePaymentLifecycle,
+  recordRejectedSafePayPayment,
+} = require('../services/stripe/paymentLifecycle');
 
 const order = {
   _id: 'order_1',
@@ -111,6 +114,47 @@ beforeEach(() => {
   Order.findById.mockResolvedValue(order);
   Order.updateOne.mockResolvedValue({ modifiedCount: 1 });
   Payment.updateOne.mockResolvedValue({ modifiedCount: 1 });
+});
+
+describe('recordRejectedSafePayPayment', () => {
+  it('persists a rejected paid checkout as an idempotent manual-review incident', async () => {
+    const event = {
+      id: 'evt_rejected_1',
+      type: 'checkout.session.completed',
+      livemode: false,
+    };
+    const session = {
+      id: 'cs_rejected_1',
+      payment_intent: 'pi_rejected_1',
+      customer: 'cus_test_1',
+      amount_total: 103000,
+      currency: 'nok',
+      metadata: { orderId: '507f1f77bcf86cd799439011' },
+    };
+
+    await recordRejectedSafePayPayment({ event, session, reason: 'amount_mismatch' });
+
+    expect(StripePaymentIncident.findOneAndUpdate).toHaveBeenCalledWith(
+      { eventId: 'evt_rejected_1' },
+      {
+        $setOnInsert: expect.objectContaining({
+          eventId: 'evt_rejected_1',
+          eventType: 'checkout.session.completed',
+          kind: 'unmatched',
+          status: 'manual_review',
+          orderId: '507f1f77bcf86cd799439011',
+          paymentIntentId: 'pi_rejected_1',
+          checkoutSessionId: 'cs_rejected_1',
+          stripeCustomerId: 'cus_test_1',
+          livemode: false,
+          amount: 103000,
+          currency: 'NOK',
+          reason: expect.stringContaining('amount_mismatch'),
+        }),
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+  });
 });
 
 it('freezes a matched order for a verified Stripe chargeback without automatically reversing a transfer', async () => {
@@ -254,6 +298,74 @@ it('reconciles a successful internally approved refund from its signed Stripe re
     { _id: 'payment_1', status: { $nin: ['disputed', 'refunded'] } },
     { $set: { status: 'partially_refunded' } }
   );
+});
+
+describe('a duplicate-payment refund that settles after the admin request (202 pending)', () => {
+  // The refund is for the DUPLICATE PaymentIntent. Only the original has a Payment row.
+  const duplicateRefund = (status) => ({
+    id: 're_dup_1',
+    charge: 'ch_dup_1',
+    payment_intent: 'pi_dup_1',
+    amount: 103000,
+    currency: 'nok',
+    livemode: false,
+    status,
+    metadata: { jobbloOperationKey: 'duplicate-payment:incident_dup:refund:pi_dup_1' },
+  });
+  const operation = {
+    _id: 'op_dup_1',
+    type: 'refund',
+    paymentIntentId: 'pi_dup_1',
+    chargeId: 'ch_dup_1',
+    amount: 103000,
+    currency: 'NOK',
+    stripeMode: 'test',
+    incidentId: 'incident_dup',
+  };
+  const send = (refund) => {
+    stripe.refunds.retrieve.mockResolvedValue(refund);
+    stripe.charges.retrieve.mockResolvedValue({ ...charge, id: 'ch_dup_1', payment_intent: 'pi_dup_1' });
+    Payment.findOne.mockResolvedValue(null); // no Payment row for the duplicate
+    return recordStripePaymentLifecycle({ id: `evt_${refund.status}`, type: 'refund.updated', livemode: false, data: { object: refund } });
+  };
+
+  it('reconciles the operation and the duplicate-payment incident when Stripe confirms it', async () => {
+    StripeFinancialOperation.findOne.mockResolvedValue({ ...operation });
+    await expect(send(duplicateRefund('succeeded'))).resolves.toEqual({ handled: 'duplicate_payment_refund_reconciled' });
+    expect(StripeFinancialOperation.updateOne).toHaveBeenCalledWith(
+      { _id: 'op_dup_1' },
+      { $set: expect.objectContaining({ status: 'succeeded', stripeObjectId: 're_dup_1' }) }
+    );
+    expect(StripePaymentIncident.updateOne).toHaveBeenCalledWith(
+      { _id: 'incident_dup', kind: 'duplicate_payment', status: 'manual_review' },
+      expect.objectContaining({ $set: expect.objectContaining({ status: 'reconciled' }) })
+    );
+    // No spurious "unmatched" incident, and no order/payment state touched.
+    expect(StripePaymentIncident.findOneAndUpdate).not.toHaveBeenCalled();
+    expect(Order.updateOne).not.toHaveBeenCalled();
+    expect(Payment.updateOne).not.toHaveBeenCalled();
+  });
+
+  it('records a failed refund on the operation and keeps the incident in review', async () => {
+    StripeFinancialOperation.findOne.mockResolvedValue({ ...operation });
+    await send(duplicateRefund('failed'));
+    expect(StripeFinancialOperation.updateOne).toHaveBeenCalledWith(
+      { _id: 'op_dup_1' },
+      { $set: expect.objectContaining({ status: 'failed', lastErrorCode: 'stripe_refund_failed' }) }
+    );
+    expect(StripePaymentIncident.updateOne).not.toHaveBeenCalled();
+  });
+
+  it('still treats a refund whose operation does not match as unmatched', async () => {
+    StripeFinancialOperation.findOne.mockResolvedValue({ ...operation, amount: 999 });
+    await expect(send(duplicateRefund('succeeded'))).resolves.toEqual({ handled: 'unmatched_payment_event' });
+    expect(StripeFinancialOperation.updateOne).not.toHaveBeenCalled();
+    expect(StripePaymentIncident.findOneAndUpdate).toHaveBeenCalledWith(
+      { eventId: 'evt_succeeded' },
+      expect.objectContaining({ $setOnInsert: expect.objectContaining({ kind: 'unmatched' }) }),
+      expect.anything()
+    );
+  });
 });
 
 it('records internal duplicate-payment recovery as an incident only after Stripe confirms both captures', async () => {

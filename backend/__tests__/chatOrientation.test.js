@@ -38,7 +38,7 @@ jest.mock('../models/Order', () => {
   return Order;
 });
 jest.mock('../models/User', () => ({ findById: jest.fn() }));
-jest.mock('../models/Service', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
+jest.mock('../models/Service', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn(), findOneAndUpdate: jest.fn(async () => ({})), updateOne: jest.fn(async () => ({})) }));
 jest.mock('../models/Dispute', () => ({ findOne: jest.fn() }));
 jest.mock('../models/JobRequest', () => ({ findOne: jest.fn() }));
 jest.mock('../config/stripe', () => ({ getStripe: jest.fn() }));
@@ -92,6 +92,8 @@ function populateChain(value) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // safepayController.createContract reads the pair conversation for its agreed price.
+  Chat.findOne.mockReturnValue({ select: () => ({ lean: async () => null }) });
   User.findById.mockReturnValue({ select: jest.fn().mockResolvedValue({ _id: APPLICANT, name: 'Applicant' }) });
   // Default: a legitimate pair — OWNER owns the job, APPLICANT applied to it.
   Service.findById.mockReturnValue(selectChain({ _id: SERVICE, userId: OWNER }));

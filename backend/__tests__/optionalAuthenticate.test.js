@@ -15,6 +15,9 @@
 
 jest.mock('jsonwebtoken');
 jest.mock('../models/User');
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
+// What a verified access token decodes to (purpose claims: utils/tokenUtils.js).
+const ACCESS = { id: 'u1', sid: 's1', typ: 'access', aud: 'jobblo:access', iss: 'jobblo-api' };
 jest.mock('../models/Session');
 
 const jwt = require('jsonwebtoken');
@@ -51,7 +54,7 @@ describe('optionalAuthenticate', () => {
   });
 
   it('attaches the user when a valid bearer token is present', async () => {
-    jwt.verify.mockReturnValue({ id: 'u1', sid: 's1' });
+    jwt.verify.mockReturnValue(ACCESS);
     Session.findOne.mockResolvedValue({ _id: 's1', userId: 'u1', save: jest.fn() });
     User.findById.mockReturnValue({
       select: jest.fn().mockResolvedValue({ _id: { toString: () => 'u1' }, email: 'a@b.no' }),
@@ -89,7 +92,7 @@ describe('optionalAuthenticate', () => {
   });
 
   it('degrades to anonymous when the session has been revoked', async () => {
-    jwt.verify.mockReturnValue({ id: 'u1', sid: 's1' });
+    jwt.verify.mockReturnValue(ACCESS);
     Session.findOne.mockResolvedValue(null);
 
     const req = mockReq({ cookies: { accessToken: 'revoked' } });

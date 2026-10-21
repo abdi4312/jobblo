@@ -51,16 +51,19 @@ jest.mock('../models/StripePaymentIncident', () => ({
 
 jest.mock('../models/User', () => ({
   findById: jest.fn(),
+  updateOne: jest.fn().mockResolvedValue({}),
 }));
 
 jest.mock('../models/Order', () => ({
   findById: jest.fn(),
   findOneAndUpdate: jest.fn().mockResolvedValue(true),
+  updateOne: jest.fn().mockResolvedValue({}),
 }));
 
 jest.mock('../models/Payment', () => ({
   findOne: jest.fn(),
   findOneAndUpdate: jest.fn().mockResolvedValue(true),
+  updateOne: jest.fn().mockResolvedValue({}),
 }));
 
 const { PUBLIC_USER_SELECT, sanitizeUserPublic } = require('../utils/userProjections');
