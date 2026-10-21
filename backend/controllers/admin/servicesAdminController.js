@@ -118,15 +118,12 @@ const deleteService = asyncHandler(async (req, res) => {
   const service = await Service.findById(id);
   if (!service) return sendError(res, 'Tjeneste ikke funnet.', 404);
 
-  // Clean up stored images from Azure if any
-  if (service.imageMetadata?.length > 0) {
-    const { deleteFromAzure } = require('../../utils/azureUpload');
-    for (const meta of service.imageMetadata) {
-      if (meta.blobName) await deleteFromAzure(meta.blobName);
-    }
-  }
-
   await service.deleteOne();
+
+  // Listing metadata may have been client-forged in the past; deleteListingImage only
+  // removes blobs it can verify belong to this listing alone.
+  const { deleteListingImage } = require('../../utils/azureUpload');
+  for (const meta of service.imageMetadata || []) await deleteListingImage(meta, service._id);
 
   await logActivity({
     adminId: req.user._id,
@@ -238,12 +235,12 @@ const updateService = asyncHandler(async (req, res) => {
   }
 
   // ── Image deletion ─────────────────────────────────────────────────────────
+  const removedImageMetadata = [];
   if (b.imagesToDelete) {
-    const { deleteFromAzure } = require('../../utils/azureUpload');
     const toDelete = Array.isArray(b.imagesToDelete) ? b.imagesToDelete : [b.imagesToDelete];
     for (const url of toDelete) {
-      const meta = service.imageMetadata.find((m) => m.url === url);
-      if (meta?.blobName) await deleteFromAzure(meta.blobName);
+      if (typeof url !== 'string') continue;
+      removedImageMetadata.push(...service.imageMetadata.filter((m) => m.url === url));
       service.images = service.images.filter((u) => u !== url);
       service.imageMetadata = service.imageMetadata.filter((m) => m.url !== url);
     }
@@ -256,12 +253,18 @@ const updateService = asyncHandler(async (req, res) => {
       ...req.files.map((f) => ({
         url: f.path,
         blobName: f.filename,
+        ogUrl: f.ogPath,
+        ogBlobName: f.ogFilename,
         uploadedAt: new Date(),
       }))
     );
   }
 
   await service.save();
+
+  // After the save, and verified per blob (see deleteListingImage).
+  const { deleteListingImage } = require('../../utils/azureUpload');
+  for (const meta of removedImageMetadata) await deleteListingImage(meta, service._id);
 
   await logActivity({
     adminId: req.user._id,

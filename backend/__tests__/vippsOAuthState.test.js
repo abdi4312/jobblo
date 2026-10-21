@@ -360,7 +360,8 @@ describe('where a mobile flow comes back to', () => {
 
     // Web, exactly as before the bridge existed — a forged token cannot redirect a flow,
     // and the worst it could ever point at is this server's own hand-off page anyway.
-    expect(res.redirectedTo).toBe('https://jobblo.example/oauth-success?token=at');
+    // (Web success carries no token in the URL; the cookies carry the session.)
+    expect(res.redirectedTo).toBe('https://jobblo.example/oauth-success');
   });
 
   it('a stale token is not mobile', async () => {
@@ -383,7 +384,7 @@ describe('where a mobile flow comes back to', () => {
       session: { vippsAuth: { state, createdAt: Date.now() } },
     });
 
-    expect(res.redirectedTo).toBe('https://jobblo.example/oauth-success?token=at');
+    expect(res.redirectedTo).toBe('https://jobblo.example/oauth-success');
   });
 });
 

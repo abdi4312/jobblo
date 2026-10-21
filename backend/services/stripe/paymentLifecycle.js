@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Order = require('../../models/Order');
 const Payment = require('../../models/Payment');
 const Payout = require('../../models/Payout');
@@ -17,6 +18,56 @@ function lifecycleKind(type) {
   if (type === 'charge.refund.updated') return 'refund';
   if (type.startsWith('refund.')) return 'refund';
   return null;
+}
+
+/** The internal refund operation this Stripe refund belongs to, if every field agrees. */
+async function findVerifiedRefundOperation(refund, paymentIntentId, livemode) {
+  const operationKey = refund.metadata?.jobbloOperationKey;
+  if (!operationKey) return null;
+  const operation = await StripeFinancialOperation.findOne({ operationKey });
+  const verified =
+    operation &&
+    operation.type === 'refund' &&
+    operation.paymentIntentId === paymentIntentId &&
+    operation.amount === refund.amount &&
+    operation.currency === String(refund.currency || '').toUpperCase() &&
+    operation.stripeMode === (livemode ? 'live' : 'test') &&
+    (!operation.chargeId || idOf(refund.charge) === operation.chargeId) &&
+    refund.livemode === livemode;
+  return verified ? operation : null;
+}
+
+/** Record the refund's Stripe status on its operation (and its duplicate-payment incident). */
+async function applyRefundOperationResult(operation, refund) {
+  const status = refund.status === 'succeeded'
+    ? 'succeeded'
+    : refund.status === 'failed' || refund.status === 'canceled'
+      ? 'failed'
+      : 'pending';
+  const changes = {
+    status,
+    stripeObjectId: refund.id,
+    lastErrorCode: status === 'failed' ? 'stripe_refund_failed' : null,
+    ...(status === 'succeeded' ? { completedAt: new Date(), failedAt: null } : {}),
+    ...(status === 'failed' ? { failedAt: new Date() } : {}),
+  };
+  await StripeFinancialOperation.updateOne({ _id: operation._id }, { $set: changes });
+  Object.assign(operation, changes);
+  if (status === 'succeeded' && operation.incidentId) {
+    await StripePaymentIncident.updateOne(
+      { _id: operation.incidentId, kind: 'duplicate_payment', status: 'manual_review' },
+      {
+        $set: {
+          status: 'reconciled',
+          stripeObjectId: refund.id,
+          resolutionOperationId: operation._id,
+          lastError: null,
+          reason: 'The verified duplicate SafePay payment was refunded and confirmed by Stripe.',
+        },
+      }
+    );
+  }
+  return status;
 }
 
 async function recordStripePaymentLifecycle(event) {
@@ -99,9 +150,25 @@ async function recordStripePaymentLifecycle(event) {
     String(verifiedSession.currency || '').toLowerCase() ===
       String(order.checkoutCurrency || 'nok').toLowerCase();
   const matched = Boolean(checkoutMatches);
+  // A refund Jobblo itself issued, verified against its own operation record. The
+  // duplicate-payment refund is for the DUPLICATE PaymentIntent, which has no Payment
+  // row, so it never "matches" the order above — and a refund that was still pending
+  // when the admin approved it (202) was never reconciled: the operation stayed
+  // pending, the incident stayed in manual review, and every refund event added a new
+  // unmatched incident.
+  const refundOperation = kind === 'refund'
+    ? await findVerifiedRefundOperation(object, paymentIntentId, event.livemode)
+    : null;
+  const operationKey = String(object.metadata?.jobbloOperationKey || '');
+  const ownDuplicateRefund = !matched && refundOperation && operationKey.startsWith('duplicate-payment:');
   const stripeDisputeId = kind === 'charge_dispute' ? object.id : undefined;
   const disputeWon = kind === 'charge_dispute' &&
     ['won', 'warning_closed'].includes(object.status);
+
+  if (ownDuplicateRefund) {
+    await applyRefundOperationResult(refundOperation, object);
+    return { handled: 'duplicate_payment_refund_reconciled' };
+  }
 
   await StripePaymentIncident.findOneAndUpdate(
     { eventId: event.id },
@@ -148,63 +215,11 @@ async function recordStripePaymentLifecycle(event) {
 
   if (!matched) return { handled: 'unmatched_payment_event' };
 
-  if (kind === 'refund') {
-    const operationKey = object.metadata?.jobbloOperationKey;
-    if (operationKey) {
-      const operation = await StripeFinancialOperation.findOne({ operationKey });
-      if (
-        operation &&
-        operation.type === 'refund' &&
-        operation.paymentIntentId === paymentIntentId &&
-        operation.amount === object.amount &&
-        operation.currency === String(object.currency || '').toUpperCase() &&
-        operation.stripeMode === (event.livemode ? 'live' : 'test') &&
-        (!operation.chargeId || idOf(object.charge) === operation.chargeId) &&
-        object.livemode === event.livemode
-      ) {
-        const status = object.status === 'succeeded'
-          ? 'succeeded'
-          : object.status === 'failed' || object.status === 'canceled'
-            ? 'failed'
-            : 'pending';
-        await StripeFinancialOperation.updateOne(
-          { _id: operation._id },
-          {
-            $set: {
-              status,
-              stripeObjectId: object.id,
-              lastErrorCode: status === 'failed' ? 'stripe_refund_failed' : null,
-              ...(status === 'succeeded' ? { completedAt: new Date(), failedAt: null } : {}),
-              ...(status === 'failed' ? { failedAt: new Date() } : {}),
-            },
-          }
-        );
-        Object.assign(operation, {
-          status,
-          stripeObjectId: object.id,
-          lastErrorCode: status === 'failed' ? 'stripe_refund_failed' : null,
-          ...(status === 'succeeded' ? { completedAt: new Date(), failedAt: null } : {}),
-          ...(status === 'failed' ? { failedAt: new Date() } : {}),
-        });
-        if (operationKey.startsWith('safepay-connect-timeout:')) {
-          const { applyTimeoutRefundResult } = require('../safepay/providerConnectTimeout');
-          await applyTimeoutRefundResult(order, payment, operation, object, status);
-        }
-        if (status === 'succeeded' && operation.incidentId) {
-          await StripePaymentIncident.updateOne(
-            { _id: operation.incidentId, kind: 'duplicate_payment', status: 'manual_review' },
-            {
-              $set: {
-                status: 'reconciled',
-                stripeObjectId: object.id,
-                resolutionOperationId: operation._id,
-                lastError: null,
-                reason: 'The verified duplicate SafePay payment was refunded and confirmed by Stripe.',
-              },
-            }
-          );
-        }
-      }
+  if (refundOperation) {
+    const status = await applyRefundOperationResult(refundOperation, object);
+    if (operationKey.startsWith('safepay-connect-timeout:')) {
+      const { applyTimeoutRefundResult } = require('../safepay/providerConnectTimeout');
+      await applyTimeoutRefundResult(order, payment, refundOperation, object, status);
     }
   }
 
@@ -406,4 +421,72 @@ async function recordDuplicateSafePayPayment({
   return incident;
 }
 
-module.exports = { recordStripePaymentLifecycle, recordDuplicateSafePayPayment };
+async function recordRejectedSafePayPayment({ event, session, reason }) {
+  if (
+    !event?.id ||
+    !event.type ||
+    typeof event.livemode !== 'boolean' ||
+    !session?.id ||
+    !reason
+  ) {
+    throw new Error('Rejected SafePay payment incident is missing required identifiers');
+  }
+
+  const metadataOrderId = session.metadata?.orderId;
+  const orderId = mongoose.Types.ObjectId.isValid(metadataOrderId)
+    ? metadataOrderId
+    : undefined;
+  const paymentIntentId = idOf(session.payment_intent);
+  const incident = await StripePaymentIncident.findOneAndUpdate(
+    { eventId: event.id },
+    {
+      $setOnInsert: {
+        eventId: event.id,
+        eventType: event.type,
+        kind: 'unmatched',
+        status: 'manual_review',
+        orderId,
+        paymentIntentId: paymentIntentId || undefined,
+        checkoutSessionId: session.id,
+        stripeCustomerId: idOf(session.customer) || undefined,
+        stripeObjectId: session.id,
+        livemode: event.livemode,
+        amount: Number.isSafeInteger(session.amount_total) ? session.amount_total : undefined,
+        currency: typeof session.currency === 'string'
+          ? session.currency.toUpperCase()
+          : undefined,
+        reason: `Paid SafePay checkout failed canonical verification (${reason}). No order payment state was confirmed; manual review is required.`,
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  try {
+    await logApplicationError({
+      error: new Error('Paid SafePay checkout requires manual verification'),
+      requestPath: '/api/stripe/webhook',
+      httpMethod: 'POST',
+      httpStatus: 409,
+      errorCode: 'SAFEPAY_CONFIRMATION_REJECTED',
+      source: 'stripe_payment_incident',
+      metadata: {
+        incidentId: String(incident._id),
+        eventId: event.id,
+        orderId: orderId ? String(orderId) : null,
+        checkoutSessionId: session.id,
+        reason,
+        stripeMode: event.livemode ? 'live' : 'test',
+      },
+    });
+  } catch (error) {
+    console.error('Could not create admin alert for rejected SafePay payment %s', event.id);
+  }
+
+  return incident;
+}
+
+module.exports = {
+  recordStripePaymentLifecycle,
+  recordDuplicateSafePayPayment,
+  recordRejectedSafePayPayment,
+};

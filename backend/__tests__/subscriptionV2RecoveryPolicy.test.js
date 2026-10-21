@@ -440,6 +440,31 @@ describe('grace-expiry recovery worker', () => {
       { idempotencyKey: 'jobblo-subv2-test-grace-expiry:sub_test:in_failed' }
     );
     expect(Subscription.findOneAndUpdate).toHaveBeenCalled();
+    // The unpaid renewal's operation no longer stays 'pending' after the cancellation.
+    expect(Operation.updateOne).toHaveBeenCalledWith(
+      { stripeMode: 'test', operationId: 'invoice:in_failed', status: 'pending' },
+      { $set: expect.objectContaining({ status: 'failed', lastErrorCode: 'renewal_unpaid_subscription_canceled' }) }
+    );
+  });
+
+  test('a cancellation that did not apply leaves the invoice operation untouched', async () => {
+    const f = workerFixture();
+    // markCanceled's compare-and-swap loses (the recovery changed state meanwhile).
+    Subscription.findOneAndUpdate.mockImplementation((filter, update) =>
+      query(update?.$set?.recoveryLeaseUntil ? { ...f.record, recoveryLeaseUntil: new Date(now.getTime() + 120000) } : null)
+    );
+    await cancelExpiredRecoveries({
+      env: { SUBSCRIPTION_V2_GRACE_PERIOD_ENABLED: 'true', SUBSCRIPTION_V2_RECOVERY_JOB_ENABLED: 'true' },
+      now: () => now,
+      SubscriptionModel: Subscription,
+      OperationModel: Operation,
+      EmailModel: RecoveryEmail,
+      stripeForMode: async () => f.stripe,
+    });
+    expect(Operation.updateOne).not.toHaveBeenCalledWith(
+      expect.objectContaining({ operationId: 'invoice:in_failed' }),
+      expect.anything()
+    );
   });
 
   test('a concurrent expiry worker cannot claim and cancel the same recovery twice', async () => {
@@ -483,6 +508,77 @@ describe('grace-expiry recovery worker', () => {
         $set: expect.objectContaining({ status: 'reconciliation_required' }),
       })
     );
+  });
+
+  const workerOptions = (f) => ({
+    env: { SUBSCRIPTION_V2_GRACE_PERIOD_ENABLED: 'true', SUBSCRIPTION_V2_RECOVERY_JOB_ENABLED: 'true' },
+    now: () => now,
+    SubscriptionModel: Subscription,
+    OperationModel: Operation,
+    EmailModel: RecoveryEmail,
+    stripeForMode: async () => f.stripe,
+  });
+
+  describe('race: the customer pays while the worker is expiring the recovery', () => {
+    // First read: still open. Second read (right before cancel): paid.
+    function racing(paidAt) {
+      const f = workerFixture();
+      f.stripe.invoices.retrieve
+        .mockResolvedValueOnce(invoice({ status: 'open' }))
+        .mockResolvedValue(invoice({ status: 'paid', status_transitions: { paid_at: Math.floor(paidAt.getTime() / 1000) } }));
+      return f;
+    }
+
+    test('a payment made before the deadline is honoured, not canceled', async () => {
+      const f = racing(new Date(f0Deadline().getTime() - 60 * 1000));
+      await cancelExpiredRecoveries(workerOptions(f));
+      expect(f.stripe.subscriptions.cancel).not.toHaveBeenCalled();
+      expect(f.stripe.invoices.retrieve).toHaveBeenCalledTimes(2);
+    });
+
+    test('a payment made after the deadline goes to late-payment reconciliation, not cancellation', async () => {
+      const f = racing(new Date(now.getTime()));
+      await cancelExpiredRecoveries(workerOptions(f));
+      expect(f.stripe.subscriptions.cancel).not.toHaveBeenCalled();
+      expect(Operation.findOneAndUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ operationId: 'invoice:in_failed' }),
+        expect.objectContaining({ $set: expect.objectContaining({
+          status: 'reconciliation_required',
+          lastErrorCode: 'late_payment_after_grace',
+        }) }),
+        expect.anything()
+      );
+    });
+
+    function f0Deadline() {
+      return new Date(now.getTime() - 1); // workerFixture's gracePeriodEndsAt
+    }
+  });
+
+  test('a late payment is parked for a day instead of being re-selected every minute', async () => {
+    const f = workerFixture();
+    Operation.findOneAndUpdate.mockResolvedValue({
+      _id: new mongoose.Types.ObjectId(),
+      operationId: 'grace-expiry:sub_test:in_failed',
+      idempotencyKey: 'jobblo-subv2-test-grace-expiry:sub_test:in_failed',
+      stripeMode: 'test',
+      operationType: 'renewal_recovery',
+      status: 'reconciliation_required',
+      lastErrorCode: 'late_payment_after_grace',
+      userId: f.record.userId,
+      subscriptionId: f.record._id,
+      stripeSubscriptionId: f.record.stripeSubscriptionId,
+      stripeInvoiceId: 'in_failed',
+    });
+    await cancelExpiredRecoveries(workerOptions(f));
+    const [, update] = Subscription.updateOne.mock.calls.at(-1);
+    expect(update.$set.recoveryLeaseUntil.getTime() - now.getTime()).toBe(24 * 60 * 60 * 1000);
+    // The candidate query skips any record whose lease is still in the future.
+    expect(Subscription.find.mock.calls[0][0].$or).toEqual([
+      { recoveryLeaseUntil: null },
+      { recoveryLeaseUntil: { $lte: now } },
+    ]);
+    expect(f.stripe.subscriptions.cancel).not.toHaveBeenCalled();
   });
 
   test('the job performs no Stripe work unless both dedicated flags are enabled', async () => {

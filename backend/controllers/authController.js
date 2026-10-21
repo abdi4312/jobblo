@@ -2,9 +2,8 @@ const User = require('../models/User');
 const Session = require('../models/Session');
 const bcrypt = require('bcryptjs');
 const { isBcryptHash } = require('../utils/passwordUtils');
-const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { generateTokens, createSession } = require('../utils/tokenUtils');
+const { generateTokens, verifyToken, createSession } = require('../utils/tokenUtils');
 const { sendOtpEmail } = require('../utils/emailService');
 const { OWN_USER_SELECT, sanitizeUserOwner, SENSITIVE_STRIP } = require('../utils/userProjections');
 
@@ -335,7 +334,15 @@ exports.refreshToken = async (req, res) => {
     let decoded;
 
     try {
-      decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+      // Purpose-checked: an access token in the refreshToken cookie is rejected. The
+      // token must also belong to the session row it was found in.
+      decoded = verifyToken(refreshToken, 'refresh');
+      if (
+        String(decoded.sid) !== String(session._id) ||
+        String(decoded.id) !== String(session.userId)
+      ) {
+        throw new Error('session mismatch');
+      }
     } catch (error) {
       await Session.deleteOne({
         $or: [{ refreshToken }, { oldRefreshToken: refreshToken }],

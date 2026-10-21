@@ -12,7 +12,9 @@ const userSchema = new mongoose.Schema(
       trim: true,
       index: true,
     },
-    password: { type: String, required: true },
+    // select:false so a bare find/populate never returns the hash. Password checks
+    // must opt in with .select('+password') (login, change-password).
+    password: { type: String, required: true, select: false },
     phone: {
       type: String,
       trim: true,

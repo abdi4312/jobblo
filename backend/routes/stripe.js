@@ -1,15 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const subscriptionRebuildInProgress = require('../middleware/subscriptionRebuildInProgress');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const subscriptionV2Controller = require('../controllers/subscriptionV2Controller');
-
-function compatibilityGate(...enabledFlags) {
-  return (req, res, next) => {
-    if (!enabledFlags.every((enabled) => enabled())) return subscriptionRebuildInProgress(req, res);
-    return next();
-  };
-}
 
 router.post('/v2/create-checkout-session', authenticate, subscriptionV2Controller.createCheckoutSession);
 router.get('/v2/subscription', authenticate, subscriptionV2Controller.getCurrentSubscription);
@@ -25,20 +17,14 @@ router.post(
   subscriptionV2Controller.reconcilePaidUpgrade
 );
 router.get('/v2/entitlements', authenticate, subscriptionV2Controller.getEntitlements);
-router.post(
-  '/create-checkout-session',
-  compatibilityGate(require('../services/subscriptions/v2Checkout').checkoutEnabled),
-  authenticate,
-  subscriptionV2Controller.createCheckoutSession
-);
+router.post('/create-checkout-session', authenticate, subscriptionV2Controller.createCheckoutSession);
 router.get(
   '/checkout-session/:sessionId',
-  compatibilityGate(require('../services/subscriptions/v2Checkout').checkoutEnabled),
   authenticate,
   subscriptionV2Controller.getCheckoutStatus
 );
-router.post('/create-extra-contact-payment', subscriptionRebuildInProgress);
-router.get('/extra-contact-status/:sessionId', subscriptionRebuildInProgress);
+router.post('/create-extra-contact-payment', authenticate, subscriptionV2Controller.createExtraContactPayment);
+router.get('/extra-contact-status/:sessionId', authenticate, subscriptionV2Controller.extraContactPaymentStatus);
 router.get(
   '/subscription',
   authenticate,
@@ -46,49 +32,41 @@ router.get(
 );
 router.post(
   '/subscription/cancel',
-  compatibilityGate(subscriptionV2Controller.managementEnabled),
   authenticate,
   subscriptionV2Controller.legacyCancelSubscription
 );
 router.post(
   '/subscription/resume',
-  compatibilityGate(subscriptionV2Controller.managementEnabled),
   authenticate,
   subscriptionV2Controller.legacyResumeSubscription
 );
 router.post(
   '/subscription/portal',
-  compatibilityGate(subscriptionV2Controller.managementEnabled),
   authenticate,
   subscriptionV2Controller.legacyCreateBillingPortalSession
 );
 router.get(
   '/subscription/billing-history',
-  compatibilityGate(subscriptionV2Controller.managementEnabled),
   authenticate,
   subscriptionV2Controller.getBillingHistory
 );
 router.get(
   '/subscription/invoices/:invoiceId/pdf',
-  compatibilityGate(subscriptionV2Controller.managementEnabled),
   authenticate,
   subscriptionV2Controller.getInvoicePdf
 );
 router.post(
   '/subscription/change/preview',
-  compatibilityGate(subscriptionV2Controller.managementEnabled),
   authenticate,
   subscriptionV2Controller.legacyPreviewPlanChange
 );
 router.post(
   '/subscription/change',
-  compatibilityGate(subscriptionV2Controller.managementEnabled),
   authenticate,
   subscriptionV2Controller.legacyChangePlan
 );
 router.post(
   '/subscription/change/cancel',
-  compatibilityGate(subscriptionV2Controller.managementEnabled),
   authenticate,
   subscriptionV2Controller.legacyCancelScheduledPlanChange
 );

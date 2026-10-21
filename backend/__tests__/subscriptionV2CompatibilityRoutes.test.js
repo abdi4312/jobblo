@@ -98,23 +98,23 @@ beforeEach(() => {
 afterAll(disableFlags);
 
 describe('legacy URLs backed by Subscription V2', () => {
-  test('keeps old URLs on the rebuild response when their V2 flags are off', async () => {
-    for (const [method, path] of [
-      ['get', '/api/plans'],
-      ['get', '/api/stripe/subscription'],
-      ['post', '/api/stripe/create-checkout-session'],
-      ['post', '/api/stripe/subscription/cancel'],
-      ['post', '/api/stripe/subscription/resume'],
-      ['post', '/api/stripe/subscription/change/cancel'],
-      ['post', '/api/stripe/subscription/portal'],
-      ['get', '/api/stripe/subscription/billing-history'],
-      ['get', '/api/stripe/checkout-session/cs_test_1'],
+  test('keeps compatibility URLs on V2-specific disabled responses when their flags are off', async () => {
+    for (const [method, path, code] of [
+      ['get', '/api/plans', 'SUBSCRIPTION_V2_PLAN_CATALOGUE_DISABLED'],
+      ['get', '/api/stripe/subscription', 'SUBSCRIPTION_V2_MANAGEMENT_DISABLED'],
+      ['post', '/api/stripe/create-checkout-session', 'SUBSCRIPTION_V2_CHECKOUT_DISABLED'],
+      ['post', '/api/stripe/subscription/cancel', 'SUBSCRIPTION_V2_MANAGEMENT_DISABLED'],
+      ['post', '/api/stripe/subscription/resume', 'SUBSCRIPTION_V2_MANAGEMENT_DISABLED'],
+      ['post', '/api/stripe/subscription/change/cancel', 'SUBSCRIPTION_V2_MANAGEMENT_DISABLED'],
+      ['post', '/api/stripe/subscription/portal', 'SUBSCRIPTION_V2_MANAGEMENT_DISABLED'],
+      ['get', '/api/stripe/subscription/billing-history', 'SUBSCRIPTION_V2_MANAGEMENT_DISABLED'],
+      ['get', '/api/stripe/checkout-session/cs_test_1', 'SUBSCRIPTION_V2_CHECKOUT_DISABLED'],
     ]) {
       const builder = request(app)[method](path);
-      if (path === '/api/stripe/subscription') builder.set('Authorization', 'test-token');
+      if (path !== '/api/plans') builder.set('Authorization', 'test-token');
       const response = await builder;
       expect(response.status).toBe(503);
-      expect(response.body.code).toBe('SUBSCRIPTION_REBUILD_IN_PROGRESS');
+      expect(response.body.code).toBe(code);
     }
     expect(management.cancelSubscription).not.toHaveBeenCalled();
     expect(checkout.createSubscriptionCheckoutSession).not.toHaveBeenCalled();
@@ -126,6 +126,28 @@ describe('legacy URLs backed by Subscription V2', () => {
     const response = await request(app).post('/api/stripe/subscription/cancel');
     expect(response.status).toBe(401);
     expect(management.cancelSubscription).not.toHaveBeenCalled();
+  });
+
+  test('authenticates compatibility URLs before returning disabled feature responses', async () => {
+    for (const [method, path] of [
+      ['get', '/api/stripe/subscription'],
+      ['post', '/api/stripe/create-checkout-session'],
+      ['get', '/api/stripe/checkout-session/cs_test_1'],
+      ['post', '/api/stripe/subscription/cancel'],
+      ['post', '/api/stripe/subscription/resume'],
+      ['post', '/api/stripe/subscription/portal'],
+      ['get', '/api/stripe/subscription/billing-history'],
+      ['get', '/api/stripe/subscription/invoices/in_1/pdf'],
+      ['post', '/api/stripe/subscription/change/preview'],
+      ['post', '/api/stripe/subscription/change'],
+      ['post', '/api/stripe/subscription/change/cancel'],
+    ]) {
+      const response = await request(app)[method](path);
+      expect(response.status).toBe(401);
+      expect(response.body.code).toBe('AUTHENTICATION_REQUIRED');
+    }
+    expect(management.cancelSubscription).not.toHaveBeenCalled();
+    expect(checkout.createSubscriptionCheckoutSession).not.toHaveBeenCalled();
   });
 
   test('serves V2 entitlements to the authenticated V2 owner while the flag is off', async () => {
@@ -200,7 +222,7 @@ describe('legacy URLs backed by Subscription V2', () => {
       .set('Authorization', '******');
 
     expect(response.status).toBe(503);
-    expect(response.body.code).toBe('SUBSCRIPTION_REBUILD_IN_PROGRESS');
+    expect(response.body.code).toBe('SUBSCRIPTION_V2_MANAGEMENT_DISABLED');
     expect(entitlements.resolveEntitlements).not.toHaveBeenCalled();
     expect(management.getCurrentSubscription).not.toHaveBeenCalled();
   });
@@ -213,7 +235,7 @@ describe('legacy URLs backed by Subscription V2', () => {
       .set('Authorization', '******');
 
     expect(response.status).toBe(503);
-    expect(response.body.code).toBe('SUBSCRIPTION_REBUILD_IN_PROGRESS');
+    expect(response.body.code).toBe('SUBSCRIPTION_V2_MANAGEMENT_DISABLED');
     expect(management.cancelSubscription).not.toHaveBeenCalled();
   });
 
@@ -264,11 +286,13 @@ describe('legacy URLs backed by Subscription V2', () => {
     SubscriptionPlan.find.mockReturnValue(query);
 
     const catalogue = await request(app).get('/api/plans');
-    const checkoutResponse = await request(app).post('/api/stripe/create-checkout-session');
+    const checkoutResponse = await request(app)
+      .post('/api/stripe/create-checkout-session')
+      .set('Authorization', '******');
 
     expect(catalogue.status).toBe(200);
     expect(checkoutResponse.status).toBe(503);
-    expect(checkoutResponse.body.code).toBe('SUBSCRIPTION_REBUILD_IN_PROGRESS');
+    expect(checkoutResponse.body.code).toBe('SUBSCRIPTION_V2_CHECKOUT_DISABLED');
     expect(checkout.createSubscriptionCheckoutSession).not.toHaveBeenCalled();
   });
 

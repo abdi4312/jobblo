@@ -4,6 +4,7 @@ const Payment = require('../../models/Payment');
 const Payout = require('../../models/Payout');
 const StripeTransferRecord = require('../../models/StripeTransferRecord');
 const StripePaymentIncident = require('../../models/StripePaymentIncident');
+const StripeFinancialOperation = require('../../models/StripeFinancialOperation');
 const { getStripeForMode } = require('../../config/stripe');
 const {
   executeRefund,
@@ -323,8 +324,25 @@ exports.reverseChargebackTransfer = async (req, res) => {
       return res.status(409).json({ code: 'chargeback_transfer_mismatch' });
     }
 
+    // Cumulative cap. Each approval was bounded only by the incident amount on its own,
+    // and the operation key includes the amount, so two approvals of different amounts
+    // (e.g. 600 then 500 against a 1000 chargeback) both ran and recovered 1100 from the
+    // provider. Count every other recovery already started or done for this incident;
+    // a retry of the SAME amount (same key) is the idempotent case and is not counted.
+    const operationKey = `chargeback:${incident._id}:reversal:${transferId}:${amount}`;
+    const priorRecoveries = await StripeFinancialOperation.find({
+      incidentId: incident._id,
+      type: 'transfer_reversal',
+      status: { $in: ['pending', 'succeeded', 'reconciliation_required'] },
+      operationKey: { $ne: operationKey },
+    }).select('amount').lean();
+    const alreadyRecovered = priorRecoveries.reduce((sum, op) => sum + Number(op.amount || 0), 0);
+    if (amount > incident.amount - alreadyRecovered) {
+      return res.status(409).json({ code: 'chargeback_recovery_exceeds_incident', alreadyRecovered });
+    }
+
     const result = await executeTransferReversal(stripe, {
-      operationKey: `chargeback:${incident._id}:reversal:${transferId}:${amount}`,
+      operationKey,
       orderId: order._id,
       paymentId: payment._id,
       incidentId: incident._id,

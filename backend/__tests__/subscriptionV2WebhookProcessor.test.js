@@ -10,6 +10,7 @@ const periodEnd = Math.floor(new Date('2026-10-01T00:00:00Z').getTime() / 1000);
 function query(value) {
   return {
     lean: async () => value,
+    sort() { return this; },
     then: (resolve, reject) => Promise.resolve(value).then(resolve, reject),
   };
 }
@@ -459,6 +460,223 @@ describe('Subscription V2 webhook processor', () => {
     expect(f.recoveryEmailModel.updateOne).toHaveBeenCalledTimes(3);
   });
 
+  /**
+   * Real Stripe ordering: customer.subscription.updated moves the record to the NEW
+   * period about an hour before the renewal charge, and only the OLD period has a paid
+   * usage row. The previous test kept the record on the old period, which hid that
+   * startRecovery looked for paid usage at the new period start, found none, and never
+   * started grace (no emails, straight to the free tier).
+   */
+  test('starts grace for a real rollover: record already on the new period, paid usage only for the old one', async () => {
+    const newStart = periodEnd;
+    const newEnd = periodEnd + 30 * 24 * 60 * 60;
+    const record = {
+      _id: new mongoose.Types.ObjectId(),
+      userId,
+      planId,
+      stripeMode: 'test',
+      stripeSubscriptionId: 'sub_v2',
+      stripeCustomerId: 'cus_v2',
+      status: 'active',
+      paymentRecoveryStatus: 'none',
+      currentPeriodStart: new Date(newStart * 1000), // advanced by subscription.updated
+      currentPeriodEnd: new Date(newEnd * 1000),
+    };
+    const f = fixture({ existingSubscription: record, invoiceStatus: 'open' });
+    f.invoice.billing_reason = 'subscription_cycle';
+    f.subscription.status = 'past_due';
+    f.subscription.items.data[0].current_period_start = newStart;
+    f.subscription.items.data[0].current_period_end = newEnd;
+    f.stripe.invoices.retrieve.mockResolvedValue(f.invoice);
+    f.subscriptionModel.findOne.mockImplementation((filter) =>
+      query(filter.recoveryInvoiceId ? null : record)
+    );
+    // Only the period that was actually paid for exists.
+    const oldPaid = {
+      _id: new mongoose.Types.ObjectId(),
+      periodType: 'paid',
+      billingPeriodStart: new Date(periodStart * 1000),
+      billingPeriodEnd: new Date(periodEnd * 1000),
+    };
+    f.usageModel.findOne.mockImplementation((filter) => {
+      const s = filter.billingPeriodStart;
+      const e = filter.billingPeriodEnd;
+      const startOk = s instanceof Date ? +s === +oldPaid.billingPeriodStart : +oldPaid.billingPeriodStart <= +s.$lte;
+      const endOk = !e || +oldPaid.billingPeriodEnd >= +e.$gte;
+      return query(filter.periodType === 'paid' && startOk && endOk ? oldPaid : null);
+    });
+
+    await processVerifiedEvent({
+      id: 'evt_rollover_payment_failed',
+      type: 'invoice.payment_failed',
+      livemode: false,
+      created: newStart + 3600,
+      data: { object: f.invoice },
+    }, 'test', f.stripe, {
+      ...f.overrides,
+      env: {
+        SUBSCRIPTION_V2_GRACE_PERIOD_ENABLED: 'true',
+        SUBSCRIPTION_V2_RECOVERY_EMAILS_ENABLED: 'true',
+      },
+    });
+
+    expect(f.subscriptionModel.findOneAndUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ _id: record._id }),
+      expect.objectContaining({
+        $set: expect.objectContaining({
+          paymentRecoveryStatus: 'retrying',
+          recoveryUsagePeriodStart: oldPaid.billingPeriodStart, // keeps the paid allowance
+          gracePeriodEndsAt: new Date((newStart + 3600 + 7 * 24 * 60 * 60) * 1000),
+        }),
+      }),
+      expect.anything()
+    );
+    // payment_failed now, reminders on day 3 and day 6 of the failure.
+    const scheduled = f.recoveryEmailModel.updateOne.mock.calls.map(([, u]) => [
+      u.$setOnInsert.kind,
+      u.$setOnInsert.scheduledAt.getTime() / 1000 - (newStart + 3600),
+    ]);
+    expect(scheduled).toEqual([
+      ['payment_failed', 0],
+      ['reminder_day_3', 3 * 86400],
+      ['reminder_day_6', 6 * 86400],
+    ]);
+  });
+
+  test('a paid renewal opens the NEW period with a fresh allowance; usage does not roll over', async () => {
+    const newStart = periodEnd;
+    const newEnd = periodEnd + 30 * 24 * 60 * 60;
+    const record = {
+      _id: new mongoose.Types.ObjectId(),
+      userId,
+      planId,
+      stripeMode: 'test',
+      stripeSubscriptionId: 'sub_v2',
+      stripeCustomerId: 'cus_v2',
+      status: 'active',
+      paymentRecoveryStatus: 'none',
+      currentPeriodStart: new Date(periodStart * 1000),
+    };
+    const f = fixture({ existingSubscription: record });
+    f.invoice.billing_reason = 'subscription_cycle';
+    f.subscription.items.data[0].current_period_start = newStart;
+    f.subscription.items.data[0].current_period_end = newEnd;
+    f.stripe.invoices.retrieve.mockResolvedValue(f.invoice);
+    f.planModel.findById.mockReturnValue({ lean: async () => ({ _id: planId, entitlements: { freeContact: 15 } }) });
+
+    await processVerifiedEvent({
+      id: 'evt_renewal_paid',
+      type: 'invoice.paid',
+      livemode: false,
+      created: newStart + 3600,
+      data: { object: f.invoice },
+    }, 'test', f.stripe, f.overrides);
+
+    expect(f.subscriptionModel.updateOne).toHaveBeenCalledWith(
+      { _id: record._id },
+      { $set: expect.objectContaining({
+        status: 'active',
+        currentPeriodStart: new Date(newStart * 1000),
+        currentPeriodEnd: new Date(newEnd * 1000),
+        nextRenewalAt: new Date(newEnd * 1000),
+      }) }
+    );
+    expect(f.usageModel.findOneAndUpdate).toHaveBeenCalledWith(
+      { userId, billingPeriodStart: new Date(newStart * 1000) },
+      { $setOnInsert: expect.objectContaining({
+        periodType: 'paid',
+        billingPeriodEnd: new Date(newEnd * 1000),
+        includedContacts: 15,
+        consumedIncludedContacts: 0,
+      }) },
+      expect.objectContaining({ upsert: true })
+    );
+    // The invoice operation succeeds with no stale error left from earlier failed attempts.
+    expect(f.operationModel.updateOne).toHaveBeenCalledWith(
+      { _id: f.operation._id, status: 'pending' },
+      { $set: expect.objectContaining({ status: 'succeeded', lastErrorCode: null, lastErrorMessage: null }) }
+    );
+  });
+
+  test('a retried renewal failure neither restarts the grace timer nor re-queues new emails', async () => {
+    const firstFailure = new Date((periodEnd + 3600) * 1000);
+    const record = {
+      _id: new mongoose.Types.ObjectId(),
+      userId,
+      planId,
+      stripeMode: 'test',
+      stripeSubscriptionId: 'sub_v2',
+      stripeCustomerId: 'cus_v2',
+      status: 'past_due',
+      paymentRecoveryStatus: 'retrying',
+      recoveryInvoiceId: 'in_v2',
+      firstPaymentFailureAt: firstFailure,
+      gracePeriodEndsAt: new Date(firstFailure.getTime() + 7 * 86400 * 1000),
+      currentPeriodStart: new Date(periodEnd * 1000),
+    };
+    const f = fixture({ existingSubscription: record, invoiceStatus: 'open' });
+    f.invoice.billing_reason = 'subscription_cycle';
+    f.subscription.status = 'past_due';
+    f.stripe.invoices.retrieve.mockResolvedValue(f.invoice);
+    f.subscriptionModel.findOne.mockReturnValue(query(record));
+    f.usageModel.findOne.mockReturnValue(query({ periodType: 'paid', billingPeriodStart: new Date(periodStart * 1000) }));
+
+    await processVerifiedEvent({
+      id: 'evt_retry_failed_day_3',
+      type: 'invoice.payment_failed',
+      livemode: false,
+      created: periodEnd + 3 * 86400,
+      data: { object: f.invoice },
+    }, 'test', f.stripe, {
+      ...f.overrides,
+      env: { SUBSCRIPTION_V2_GRACE_PERIOD_ENABLED: 'true', SUBSCRIPTION_V2_RECOVERY_EMAILS_ENABLED: 'true' },
+    });
+
+    expect(f.subscriptionModel.findOneAndUpdate).not.toHaveBeenCalled(); // deadline untouched
+    // Emails are only upserted with $setOnInsert, keyed by invoice + kind, and anchored
+    // to the FIRST failure — a retry cannot add or reschedule any.
+    for (const [filter, update] of f.recoveryEmailModel.updateOne.mock.calls) {
+      expect(filter).toEqual(expect.objectContaining({ invoiceId: 'in_v2' }));
+      expect(Object.keys(update)).toEqual(['$setOnInsert']);
+    }
+    expect(f.recoveryEmailModel.updateOne.mock.calls[0][1].$setOnInsert.scheduledAt).toEqual(firstFailure);
+  });
+
+  test('does not anchor grace to an old paid period that ended before the current one', async () => {
+    const record = {
+      _id: new mongoose.Types.ObjectId(),
+      userId,
+      planId,
+      stripeMode: 'test',
+      stripeSubscriptionId: 'sub_v2',
+      stripeCustomerId: 'cus_v2',
+      status: 'active',
+      paymentRecoveryStatus: 'none',
+      currentPeriodStart: new Date((periodEnd + 60 * 86400) * 1000), // months later
+    };
+    const f = fixture({ existingSubscription: record, invoiceStatus: 'open' });
+    f.invoice.billing_reason = 'subscription_cycle';
+    f.subscription.status = 'past_due';
+    f.stripe.invoices.retrieve.mockResolvedValue(f.invoice);
+    f.subscriptionModel.findOne.mockImplementation((filter) =>
+      query(filter.recoveryInvoiceId ? null : record)
+    );
+    f.usageModel.findOne.mockImplementation((filter) =>
+      // The only paid row ends at periodEnd, well before the anchor.
+      query(filter.billingPeriodEnd && periodEnd * 1000 < +filter.billingPeriodEnd.$gte ? null : {})
+    );
+
+    await processVerifiedEvent({
+      id: 'evt_stale_paid_period',
+      type: 'invoice.payment_failed',
+      livemode: false,
+      created: periodEnd + 61 * 86400,
+      data: { object: f.invoice },
+    }, 'test', f.stripe, { ...f.overrides, env: { SUBSCRIPTION_V2_GRACE_PERIOD_ENABLED: 'true' } });
+
+    expect(f.subscriptionModel.findOneAndUpdate).not.toHaveBeenCalled();
+  });
+
   test('does not restore access for a recovery payment paid at or after the grace deadline', async () => {
     const deadline = new Date('2026-10-01T00:00:00Z');
     const record = {
@@ -495,10 +713,50 @@ describe('Subscription V2 webhook processor', () => {
           action: 'late_payment_reconciliation_required',
           invoiceId: f.invoice.id,
         }) },
-        $set: { recoveryLeaseUntil: null },
+        // Parked for a day so the grace worker does not re-select it every minute.
+        $set: { recoveryLeaseUntil: expect.any(Date) },
       })
     );
+    const parkedUntil = f.subscriptionModel.updateOne.mock.calls
+      .find(([filter]) => filter.paymentRecoveryStatus === 'retrying')[1].$set.recoveryLeaseUntil;
+    expect(parkedUntil.getTime() - Date.now()).toBeGreaterThan(23 * 60 * 60 * 1000);
     expect(f.usageModel.findOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  test('a recovery invoice paid after the worker canceled the subscription opens no paid period', async () => {
+    const record = {
+      _id: new mongoose.Types.ObjectId(),
+      userId,
+      planId,
+      stripeMode: 'test',
+      stripeSubscriptionId: 'sub_v2',
+      stripeCustomerId: 'cus_v2',
+      status: 'canceled',
+      paymentRecoveryStatus: 'exhausted',
+      recoveryInvoiceId: 'in_v2',
+      gracePeriodEndsAt: new Date('2026-10-01T00:00:00Z'),
+    };
+    const f = fixture({ existingSubscription: record });
+    f.invoice.status_transitions = { paid_at: Math.floor(new Date('2026-10-02T00:00:00Z').getTime() / 1000) };
+    f.subscription.status = 'canceled';
+    f.stripe.invoices.retrieve.mockResolvedValue(f.invoice);
+
+    await expect(processVerifiedEvent({
+      id: 'evt_paid_after_cancel',
+      type: 'invoice.paid',
+      livemode: false,
+      data: { object: f.invoice },
+    }, 'test', f.stripe, f.overrides)).resolves.toEqual({
+      handled: 'subscription_paid_after_cancellation_reconciliation_required',
+    });
+
+    expect(f.usageModel.findOneAndUpdate).not.toHaveBeenCalled();
+    expect(f.subscriptionModel.updateOne).not.toHaveBeenCalledWith({ _id: record._id }, expect.anything());
+    expect(f.operationModel.findOneAndUpdate).toHaveBeenCalledWith(
+      { stripeMode: 'test', operationId: 'invoice:in_v2' },
+      expect.objectContaining({ $set: expect.objectContaining({ status: 'reconciliation_required' }) }),
+      expect.anything()
+    );
   });
 
   test('does not apply a webhook to a V2 record owned by a different plan', async () => {

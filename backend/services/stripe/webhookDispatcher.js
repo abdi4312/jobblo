@@ -5,7 +5,10 @@ const {
 } = require('./webhookReadiness');
 const { claimEvent, markProcessed, releaseClaim } = require('./eventLedger');
 const { logApplicationError } = require('../../utils/errorLogger');
-const { recordStripePaymentLifecycle } = require('./paymentLifecycle');
+const {
+  recordStripePaymentLifecycle,
+  recordRejectedSafePayPayment,
+} = require('./paymentLifecycle');
 
 /**
  * The single verified ingress for Stripe events.
@@ -57,12 +60,35 @@ const ORDER_EVENT_TYPES = new Set([
   'payout.canceled',
 ]);
 
+const PERMANENT_SAFEPAY_REJECTION_REASONS = new Set([
+  'missing_order_metadata',
+  'order_not_found',
+  'session_customer_mismatch',
+  'session_details_mismatch',
+  'session_mode_missing',
+  'stripe_mode_mismatch',
+  'amount_mismatch',
+  'currency_mismatch',
+  'customer_mismatch',
+  'checkout_attempt_mismatch',
+  'checkout_session_mismatch',
+  'payment_intent_mismatch',
+  'charge_missing',
+  'charge_mismatch',
+  'duplicate_successful_payment',
+  'order_state_conflict',
+]);
+
 function isLegacySubscriptionSession(session) {
   return (
     session?.mode === 'subscription' ||
-    session?.metadata?.type === 'subscription' ||
-    session?.metadata?.type === 'extra_contact'
+    session?.metadata?.type === 'subscription'
   );
+}
+
+/** Paid extra contact (services/subscriptions/v2ExtraContacts.js). */
+function isExtraContactSession(session) {
+  return session?.metadata?.type === 'extra_contact';
 }
 
 function isV2SubscriptionEvent(event) {
@@ -125,6 +151,15 @@ async function handleEvent(event, { io, stripe } = {}) {
     recordStripeTransfer,
     recordStripeBankPayout,
   } = require('./financialHistory');
+  const confirmSafePay = async (session) => {
+    const confirmation = await confirmPaidSession(session, io);
+    if (confirmation.ok) return { handled: 'safepay', result: confirmation };
+    if (!PERMANENT_SAFEPAY_REJECTION_REASONS.has(confirmation.reason)) {
+      throw new Error('SafePay checkout confirmation returned an unknown result');
+    }
+    await recordRejectedSafePayPayment({ event, session, reason: confirmation.reason });
+    return { handled: 'safepay_manual_review' };
+  };
 
   switch (event.type) {
     case 'checkout.session.completed': {
@@ -132,6 +167,9 @@ async function handleEvent(event, { io, stripe } = {}) {
       if (isV2SubscriptionEvent(event)) {
         const result = await handleV2SubscriptionEvent(event, stripe);
         return result;
+      }
+      if (isExtraContactSession(session)) {
+        return require('../subscriptions/v2ExtraContacts').confirmExtraContactSession(session);
       }
       if (isLegacySubscriptionSession(session)) {
         return { handled: 'subscription_rebuild_in_progress' };
@@ -142,9 +180,7 @@ async function handleEvent(event, { io, stripe } = {}) {
 
       // Default is SafePay: the original behaviour of this endpoint, and the only
       // type whose sessions predate the metadata convention.
-      const confirmation = await confirmPaidSession(session, io);
-      if (!confirmation.ok) throw new Error('SafePay checkout confirmation rejected');
-      return { handled: 'safepay', result: confirmation };
+      return confirmSafePay(session);
     }
 
     case 'checkout.session.async_payment_succeeded': {
@@ -152,18 +188,25 @@ async function handleEvent(event, { io, stripe } = {}) {
       if (isV2SubscriptionEvent(event)) {
         return handleV2SubscriptionEvent(event, stripe);
       }
+      if (isExtraContactSession(session)) {
+        return require('../subscriptions/v2ExtraContacts').confirmExtraContactSession(session);
+      }
       if (isLegacySubscriptionSession(session)) {
         return { handled: 'subscription_rebuild_in_progress' };
       }
-      const confirmation = await confirmPaidSession(session, io);
-      if (!confirmation.ok) throw new Error('SafePay checkout confirmation rejected');
-      return { handled: 'safepay_async_payment_succeeded', result: confirmation };
+      const outcome = await confirmSafePay(session);
+      return outcome.handled === 'safepay'
+        ? { ...outcome, handled: 'safepay_async_payment_succeeded' }
+        : outcome;
     }
 
     case 'checkout.session.async_payment_failed': {
       const session = event.data.object;
       if (isV2SubscriptionEvent(event)) {
         return handleV2SubscriptionEvent(event, stripe);
+      }
+      if (isExtraContactSession(session)) {
+        return require('../subscriptions/v2ExtraContacts').expireExtraContactSession(session);
       }
       if (isLegacySubscriptionSession(session)) {
         return { handled: 'subscription_rebuild_in_progress' };
@@ -178,6 +221,9 @@ async function handleEvent(event, { io, stripe } = {}) {
     case 'checkout.session.expired':
       if (isV2SubscriptionEvent(event)) {
         return handleV2SubscriptionEvent(event, stripe);
+      }
+      if (isExtraContactSession(event.data.object)) {
+        return require('../subscriptions/v2ExtraContacts').expireExtraContactSession(event.data.object);
       }
       if (isLegacySubscriptionSession(event.data.object)) {
         return { handled: 'subscription_rebuild_in_progress' };

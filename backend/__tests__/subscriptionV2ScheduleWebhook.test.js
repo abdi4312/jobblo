@@ -330,6 +330,105 @@ test('clears a matching schedule aborted after the underlying subscription is ca
   );
 });
 
+test('clears a schedule released in Stripe (e.g. billing portal), where Stripe nulls `subscription`', async () => {
+  const pending = {
+    targetPlanId,
+    targetPlanType: 'private',
+    targetStripePriceId: targetPriceId,
+    effectiveAt: new Date(periodEnd * 1000),
+    operationId,
+    stripeScheduleId: scheduleId,
+  };
+  const f = fixture({ status: 'released', pending });
+  f.event.type = 'subscription_schedule.released';
+  // What Stripe actually returns for a released schedule.
+  f.schedule.subscription = null;
+  f.schedule.released_subscription = subscriptionId;
+  f.event.data.object.subscription = null;
+
+  await expect(processVerifiedEvent(f.event, 'test', f.stripe, f.overrides)).resolves.toEqual({
+    handled: 'subscription_schedule_cleared',
+  });
+  expect(f.SubscriptionModel.findOne).toHaveBeenCalledWith(expect.objectContaining({ stripeSubscriptionId: subscriptionId }));
+  expect(f.SubscriptionModel.updateOne).toHaveBeenCalledWith(
+    expect.objectContaining({ _id: subscriptionRecordId, 'pendingPlanChange.stripeScheduleId': scheduleId }),
+    { $set: { pendingPlanChange: null } }
+  );
+});
+
+test('clears a released schedule on a record activated without stripePriceId (never changed plan)', async () => {
+  const pending = {
+    targetPlanId,
+    targetPlanType: 'private',
+    targetStripePriceId: targetPriceId,
+    effectiveAt: new Date(periodEnd * 1000),
+    operationId,
+    stripeScheduleId: scheduleId,
+  };
+  const f = fixture({ status: 'released', pending });
+  f.event.type = 'subscription_schedule.released';
+  f.schedule.subscription = null;
+  f.schedule.released_subscription = subscriptionId;
+  // Activation never stored the top-level price, so this stayed "transition pending" forever.
+  f.SubscriptionModel.findOne.mockImplementation(() => query({
+    _id: subscriptionRecordId, userId, planId: currentPlanId, planType: 'private', stripeMode: 'test',
+    stripeCustomerId: customerId, stripeSubscriptionId: subscriptionId, status: 'active',
+    currentPeriodStart: new Date(periodStart * 1000), currentPeriodEnd: new Date(periodEnd * 1000), pendingPlanChange: pending,
+  }));
+
+  await expect(processVerifiedEvent(f.event, 'test', f.stripe, f.overrides)).resolves.toEqual({
+    handled: 'subscription_schedule_cleared',
+  });
+});
+
+describe('the two simultaneous release events (released + updated)', () => {
+  const pending = () => ({
+    targetPlanId, targetPlanType: 'private', targetStripePriceId: targetPriceId,
+    effectiveAt: new Date(periodEnd * 1000), operationId, stripeScheduleId: scheduleId,
+  });
+  const released = () => {
+    const f = fixture({ status: 'released', pending: pending() });
+    f.event.type = 'subscription_schedule.updated';
+    f.schedule.subscription = null;
+    f.schedule.released_subscription = subscriptionId;
+    f.SubscriptionModel.updateOne.mockResolvedValue({ matchedCount: 0, modifiedCount: 0 }); // the other event won
+    return f;
+  };
+
+  it('the loser finds the change already cleared and succeeds instead of answering 500', async () => {
+    const f = released();
+    const first = f.SubscriptionModel.findOne.getMockImplementation();
+    f.SubscriptionModel.findOne
+      .mockImplementationOnce(first) // initial read: pending still set
+      .mockImplementationOnce(() => query({ _id: subscriptionRecordId, userId, pendingPlanChange: null }));
+    await expect(processVerifiedEvent(f.event, 'test', f.stripe, f.overrides)).resolves.toEqual({
+      handled: 'subscription_schedule_already_cleared',
+    });
+  });
+
+  it('still fails if the record now holds a different pending change', async () => {
+    const f = released();
+    const first = f.SubscriptionModel.findOne.getMockImplementation();
+    f.SubscriptionModel.findOne
+      .mockImplementationOnce(first)
+      .mockImplementationOnce(() => query({ _id: subscriptionRecordId, userId, pendingPlanChange: { ...pending(), operationId: 'newer', stripeScheduleId: 'sub_sched_new' } }));
+    await expect(processVerifiedEvent(f.event, 'test', f.stripe, f.overrides))
+      .rejects.toThrow('subscription_schedule_state_changed');
+  });
+});
+
+test('a released schedule pointing at another subscription is still rejected', async () => {
+  const f = fixture({ status: 'released' });
+  f.event.type = 'subscription_schedule.released';
+  f.schedule.subscription = null;
+  f.schedule.released_subscription = 'sub_someone_else';
+  f.SubscriptionModel.findOne.mockImplementation((q) => query(q.stripeSubscriptionId === subscriptionId ? {} : null));
+
+  await expect(processVerifiedEvent(f.event, 'test', f.stripe, f.overrides))
+    .rejects.toThrow('subscription_schedule_owner_mismatch');
+  expect(f.SubscriptionModel.updateOne).not.toHaveBeenCalled();
+});
+
 test('ignores an out-of-order schedule snapshot after canonical metadata changes', async () => {
   const f = fixture();
   f.schedule.metadata = { ...f.schedule.metadata, operationId: 'newer-operation' };

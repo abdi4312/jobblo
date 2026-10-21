@@ -1,5 +1,6 @@
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
+const mongoose = require('mongoose');
 // GET ALL TRANSACTIONS (FOR ADMIN)
 exports.getTransactions = async (req, res) => {
   try {
@@ -72,7 +73,17 @@ exports.getUserTransactions = async (req, res) => {
 // GET SINGLE TRANSACTION
 exports.getTransactionById = async (req, res) => {
   try {
-    const transaction = await Transaction.findById(req.params.id).populate('userId serviceId');
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid transaction ID' });
+    }
+
+    // Owner-scoped in the query itself: another user's transaction is indistinguishable
+    // from a missing one (404), so ids cannot be probed. Admin policy matches requireAdmin.
+    const filter = req.user.role === 'superAdmin' ? { _id: id } : { _id: id, userId: req.userId };
+    const transaction = await Transaction.findOne(filter)
+      .populate('userId', 'name lastName email')
+      .populate('serviceId', 'title');
 
     if (!transaction) {
       return res.status(404).json({ success: false, error: 'Transaction not found' });
@@ -80,7 +91,8 @@ exports.getTransactionById = async (req, res) => {
 
     res.status(200).json({ success: true, transaction });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('getTransactionById failed:', error);
+    res.status(500).json({ success: false, error: 'Internal Server Error' });
   }
 };
 

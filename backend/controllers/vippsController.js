@@ -139,13 +139,19 @@ exports.vippsCallback = async (req, res, options = {}) => {
   const cancelled = () => (platform === 'mobile' ? failed(ERRORS.CANCELLED) : frontendUrl('login'));
 
   /**
-   * The state is single-use. Reading it clears it, whatever happens next, so a
-   * captured callback URL cannot be replayed against the same session -- previously
-   * it was deleted only on the success path, leaving a usable state behind after
-   * every failure.
+   * The state is single-use: the callback that carries it consumes it, whatever happens
+   * next (cancel, failed token exchange, success), so a captured callback URL cannot be
+   * replayed against the same session -- previously it was deleted only on the success
+   * path, leaving a usable state behind after every failure.
+   *
+   * A callback carrying a DIFFERENT state is not this flow's callback and is rejected
+   * below, but it no longer erases the pending state: otherwise any forged
+   * /vipps/callback link could abort a sign-in the user has in flight. A mismatched
+   * state can never authenticate, so keeping the pending one costs no replay safety.
    */
   const pending = req.session?.vippsAuth || null;
-  if (req.session) delete req.session.vippsAuth;
+  const stateMatches = Boolean(pending && statesMatch(String(state || ''), pending.state));
+  if (stateMatches && req.session) delete req.session.vippsAuth;
 
   if (error) {
     return res.redirect(cancelled());
@@ -166,7 +172,7 @@ exports.vippsCallback = async (req, res, options = {}) => {
    * mattered. A staging deployment or a developer machine running with real Vipps test
    * credentials had no protection at all.
    */
-  if (!pending || !statesMatch(String(state || ''), pending.state)) {
+  if (!stateMatches) {
     console.warn('Vipps: state mismatch or missing');
     return res.redirect(failed(ERRORS.INVALID_STATE));
   }

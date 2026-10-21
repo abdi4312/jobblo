@@ -137,6 +137,14 @@ const orderSchema = new mongoose.Schema(
     // ever read it — this is what makes the auto-release window observable.
     autoReleaseWarnedAt: { type: Date, default: null },
 
+    // Fence between a Stripe transfer and a dispute opening. releasePayoutToProvider
+    // claims it (compare-and-swap on this order, with the order still releasable)
+    // immediately before transfers.create; openDispute refuses while it is held. Both
+    // sides write the same document, so one of them always loses — the old
+    // read-then-transfer let money leave while a dispute was being opened.
+    payoutLockId: { type: String, default: null },
+    payoutLockedAt: { type: Date, default: null },
+
     // Checklist completion status (per order)
     checklist: [
       {

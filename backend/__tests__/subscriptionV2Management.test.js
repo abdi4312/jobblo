@@ -5,6 +5,7 @@ const {
   cancelScheduledPlanChange,
   resumeSubscription,
   getCurrentSubscription,
+  createBillingPortalSession,
   previewPlanChange,
   changePlan,
 } = require('../services/subscriptions/v2Management');
@@ -151,6 +152,11 @@ function managementFixture({ cancelAtPeriodEnd = false, recovery = false } = {})
       retrieve: jest.fn(),
       list: jest.fn(async () => ({ data: [] })),
     },
+    billingPortal: {
+      sessions: {
+        create: jest.fn(async () => ({ url: 'https://billing.stripe.test/session' })),
+      },
+    },
     customers: {
       retrieve: jest.fn(async () => ({
         id: customerId,
@@ -267,6 +273,7 @@ describe('Subscription V2 management lifecycle', () => {
         },
       ],
     });
+
     const result = await require('../services/subscriptions/v2Management')
       .getBillingHistory(userId, f.overrides);
 
@@ -287,6 +294,20 @@ describe('Subscription V2 management lifecycle', () => {
       name: null,
       line1: 'Testgata 1',
       city: 'Oslo',
+    });
+  });
+
+  test('returns billing portal customers to the existing subscription settings route', async () => {
+    const f = managementFixture();
+
+    await expect(createBillingPortalSession(userId, {
+      ...f.overrides,
+      env: { FRONTEND_URL: 'http://localhost:5173' },
+    })).resolves.toEqual({ url: 'https://billing.stripe.test/session' });
+
+    expect(f.stripe.billingPortal.sessions.create).toHaveBeenCalledWith({
+      customer: customerId,
+      return_url: 'http://localhost:5173/settings/subscriptions',
     });
   });
 
@@ -561,6 +582,63 @@ describe('Subscription V2 management lifecycle', () => {
       canceled: true,
     });
     expect(f.stripe.subscriptionSchedules.release).not.toHaveBeenCalled();
+  });
+
+  test('clears a pending change whose schedule was already released in Stripe (subscription: null)', async () => {
+    // Stripe nulls `subscription` on release and moves the id to `released_subscription`.
+    // The verification compared only `subscription`, so a downgrade cancelled in the
+    // billing portal could never be cleared from the app: 409 SCHEDULE_NOT_OWNED forever.
+    const f = managementFixture();
+    const pending = {
+      targetPlanId,
+      targetPlanType: 'private',
+      targetStripePriceId: 'price_target',
+      effectiveAt: new Date(periodEnd * 1000),
+      operationId: 'downgrade-op',
+      stripeScheduleId: 'sub_sched',
+    };
+    f.record.pendingPlanChange = pending;
+    f.OperationModel.findOne.mockImplementation((query) =>
+      query.operationType === 'downgrade'
+        ? Promise.resolve({
+            operationId: pending.operationId,
+            operationType: 'downgrade',
+            status: 'succeeded',
+            userId,
+            subscriptionId: f.record._id,
+            targetPlanId,
+            stripeScheduleId: pending.stripeScheduleId,
+            stripeSubscriptionId: subscriptionId,
+            stripeMode: 'test',
+          })
+        : Promise.resolve(null)
+    );
+    f.stripe.subscriptionSchedules.retrieve.mockResolvedValue({
+      id: pending.stripeScheduleId,
+      subscription: null,
+      released_subscription: subscriptionId,
+      status: 'released',
+      metadata: {
+        subscriptionV2: 'true',
+        userId: String(userId),
+        subscriptionId: String(f.record._id),
+        planId: String(targetPlanId),
+        operationId: pending.operationId,
+        stripeMode: 'test',
+      },
+      phases: [
+        { start_date: periodStart, end_date: periodEnd, items: [{ price: 'price_current', quantity: 1 }] },
+        { start_date: periodEnd, items: [{ price: 'price_target', quantity: 1 }] },
+      ],
+    });
+    f.stripe.subscriptionSchedules.release = jest.fn();
+
+    await expect(cancelScheduledPlanChange(userId, f.overrides)).resolves.toMatchObject({ canceled: true });
+    expect(f.stripe.subscriptionSchedules.release).not.toHaveBeenCalled();
+    expect(f.SubscriptionModel.updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({ 'pendingPlanChange.stripeScheduleId': pending.stripeScheduleId }),
+      { $set: { pendingPlanChange: null } }
+    );
   });
 
   test('previews an immediate upgrade and applies it with the same proration policy', async () => {
@@ -849,7 +927,9 @@ describe('Subscription V2 management lifecycle', () => {
       operationType: 'upgrade',
       status: 'pending',
       targetPlanId,
+      subscriptionId: f.record._id,
       stripeSubscriptionId: subscriptionId,
+      stripePriceId: 'price_target',
     };
     const metadata = {
       subscriptionV2: 'true',
@@ -861,6 +941,8 @@ describe('Subscription V2 management lifecycle', () => {
     const invoice = {
       id: 'in_upgrade',
       status: 'paid',
+      livemode: false,
+      billing_reason: 'subscription_update',
       customer: customerId,
       currency: 'nok',
       parent: {
@@ -911,18 +993,25 @@ describe('Subscription V2 management lifecycle', () => {
 
     expect(result).toEqual({ handled: 'subscription_upgrade_confirmed' });
     expect(f.SubscriptionModel.updateOne).toHaveBeenCalledWith(
-      { _id: f.record._id, planId: currentPlanId },
+      expect.objectContaining({
+        _id: f.record._id,
+        userId,
+        stripeMode: 'test',
+        stripeSubscriptionId: subscriptionId,
+        stripeCustomerId: customerId,
+        planId: { $in: [currentPlanId, targetPlanId] },
+      }),
       expect.objectContaining({
         $set: expect.objectContaining({
           planId: targetPlanId,
           stripePriceId: 'price_target',
         }),
-        $push: { planHistory: expect.objectContaining({ changeType: 'upgrade' }) },
+        $addToSet: { planHistory: expect.objectContaining({ changeType: 'upgrade' }) },
       }),
       { runValidators: true }
     );
     expect(f.OperationModel.updateOne).toHaveBeenCalledWith(
-      { _id: upgradeOperation._id },
+      { _id: upgradeOperation._id, status: { $in: ['pending', 'reconciliation_required'] } },
       expect.objectContaining({
         $set: expect.objectContaining({ status: 'succeeded' }),
         $unset: { lifecycleLock: 1 },
@@ -930,7 +1019,243 @@ describe('Subscription V2 management lifecycle', () => {
     );
   });
 
-  test('applies a downgrade only after the owned Stripe schedule reaches its target phase', async () => {
+  test('acknowledges a late paid-upgrade event after its operation is already reconciled', async () => {
+    const f = managementFixture();
+    const operation = {
+      ...f.operation,
+      operationId: 'upgrade-op',
+      operationType: 'upgrade',
+      status: 'succeeded',
+      targetPlanId,
+      subscriptionId: f.record._id,
+      stripeSubscriptionId: subscriptionId,
+      stripePriceId: 'price_target',
+      stripeInvoiceId: 'in_upgrade',
+      lifecycleLock: false,
+    };
+    const metadata = {
+      subscriptionV2: 'true',
+      userId: String(userId),
+      planId: String(targetPlanId),
+      operationId: operation.operationId,
+      stripeMode: 'test',
+    };
+    const invoice = {
+      id: operation.stripeInvoiceId,
+      status: 'paid',
+      livemode: false,
+      billing_reason: 'subscription_update',
+      customer: customerId,
+      parent: {
+        subscription_details: { subscription: subscriptionId, metadata },
+      },
+    };
+    f.record.planId = targetPlanId;
+    f.record.stripePriceId = operation.stripePriceId;
+    f.OperationModel.findOne.mockResolvedValue(operation);
+    f.SubscriptionModel.findOne.mockReturnValue(lean(f.record));
+    f.stripe.invoices.retrieve.mockResolvedValue(invoice);
+    f.stripe.subscriptions.retrieve.mockResolvedValue({
+      ...f.subscription,
+      metadata,
+      latest_invoice: invoice,
+    });
+    f.EventModel = {
+      create: jest.fn(async () => ({ _id: new mongoose.Types.ObjectId() })),
+      updateOne: jest.fn(async () => ({ modifiedCount: 1 })),
+    };
+
+    await expect(processVerifiedEvent({
+      id: 'evt_late_upgrade_paid',
+      type: 'invoice.paid',
+      livemode: false,
+      data: { object: invoice },
+    }, 'test', f.stripe, {
+      EventModel: f.EventModel,
+      SubscriptionModel: f.SubscriptionModel,
+      OperationModel: f.OperationModel,
+      PlanModel: f.PlanModel,
+      UsageModel: f.UsageModel,
+    })).resolves.toEqual({ handled: 'subscription_upgrade_already_confirmed' });
+
+    expect(f.SubscriptionModel.updateOne).not.toHaveBeenCalled();
+    expect(f.UsageModel.findOneAndUpdate).not.toHaveBeenCalled();
+    expect(f.OperationModel.updateOne).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['customer.subscription.updated', 'usage-period creation'],
+    ['customer.subscription.updated', 'allowance update'],
+    ['customer.subscription.updated', 'operation completion'],
+    ['invoice.paid', 'usage-period creation'],
+    ['invoice.paid', 'allowance update'],
+    ['invoice.paid', 'operation completion'],
+  ])('resumes a %s paid upgrade safely after a %s failure', async (eventType, failAt) => {
+    const f = managementFixture();
+    f.record.planHistory = [];
+    const upgradeOperation = {
+      ...f.operation,
+      operationId: 'upgrade-op',
+      operationType: 'upgrade',
+      status: 'pending',
+      targetPlanId,
+      subscriptionId: f.record._id,
+      stripeSubscriptionId: subscriptionId,
+      stripePriceId: 'price_target',
+    };
+    const metadata = {
+      subscriptionV2: 'true',
+      userId: String(userId),
+      planId: String(targetPlanId),
+      operationId: upgradeOperation.operationId,
+      stripeMode: 'test',
+    };
+    const invoice = {
+      id: 'in_upgrade',
+      status: 'paid',
+      livemode: false,
+      billing_reason: 'subscription_update',
+      customer: customerId,
+      parent: {
+        subscription_details: { subscription: subscriptionId, metadata },
+      },
+    };
+    const updatedSubscription = {
+      ...f.subscription,
+      metadata,
+      latest_invoice: invoice,
+      items: {
+        data: [{
+          current_period_start: periodStart,
+          current_period_end: periodEnd,
+          price: {
+            id: 'price_target',
+            active: true,
+            livemode: false,
+            type: 'recurring',
+            currency: 'nok',
+            recurring: { interval: 'month', interval_count: 1 },
+          },
+        }],
+      },
+    };
+    const usage = {
+      _id: new mongoose.Types.ObjectId(),
+      periodType: 'paid',
+      includedContacts: 15,
+      consumedIncludedContacts: 7,
+    };
+    let faultInjected = false;
+    f.SubscriptionModel.findOne.mockReturnValue(lean(f.record));
+    f.SubscriptionModel.updateOne.mockImplementation(async (_filter, update) => {
+      Object.assign(f.record, update.$set);
+      const history = update.$addToSet?.planHistory;
+      if (history && !f.record.planHistory.some((entry) => entry.operationId === history.operationId)) {
+        f.record.planHistory.push(history);
+      }
+      return { matchedCount: 1, modifiedCount: 1 };
+    });
+    f.OperationModel.findOne.mockResolvedValue(upgradeOperation);
+    f.OperationModel.updateOne.mockImplementation(async (_filter, update) => {
+      if (failAt === 'operation completion' && update.$set?.status === 'succeeded' && !faultInjected) {
+        faultInjected = true;
+        throw new Error('injected operation completion failure');
+      }
+      if (update.$set) Object.assign(upgradeOperation, update.$set);
+      if (update.$unset?.lifecycleLock) delete upgradeOperation.lifecycleLock;
+      return { matchedCount: 1, modifiedCount: 1 };
+    });
+    f.UsageModel.findOneAndUpdate.mockImplementation(async () => {
+      if (failAt === 'usage-period creation' && !faultInjected) {
+        faultInjected = true;
+        throw new Error('injected usage period creation failure');
+      }
+      return usage;
+    });
+    f.UsageModel.updateOne.mockImplementation(async (_filter, update) => {
+      if (failAt === 'allowance update' && !faultInjected) {
+        faultInjected = true;
+        throw new Error('injected usage allowance failure');
+      }
+      Object.assign(usage, update.$set);
+      return { matchedCount: 1, modifiedCount: 1 };
+    });
+    f.stripe.invoices.retrieve.mockResolvedValue(invoice);
+    f.stripe.subscriptions.retrieve.mockResolvedValue(updatedSubscription);
+    f.PlanModel.findById.mockReturnValue(lean(f.targetPlan));
+
+    let savedEvent;
+    const EventModel = {
+      create: jest.fn(async (data) => {
+        if (savedEvent) {
+          const duplicate = new Error('duplicate event');
+          duplicate.code = 11000;
+          throw duplicate;
+        }
+        savedEvent = { ...data, _id: new mongoose.Types.ObjectId(), updatedAt: new Date() };
+        return savedEvent;
+      }),
+      findOne: jest.fn(async () => savedEvent),
+      findOneAndUpdate: jest.fn(async (_filter, update) => {
+        if (savedEvent.status === 'failed') {
+          Object.assign(savedEvent, update.$set);
+          return savedEvent;
+        }
+        return null;
+      }),
+      updateOne: jest.fn(async (_filter, update) => {
+        Object.assign(savedEvent, update.$set);
+        return { matchedCount: 1, modifiedCount: 1 };
+      }),
+    };
+    const event = {
+      id: 'evt_upgrade_retry',
+      type: eventType,
+      livemode: false,
+      data: {
+        object: eventType === 'invoice.paid'
+          ? invoice
+          : { id: subscriptionId, metadata },
+      },
+    };
+    const dependencies = {
+      EventModel,
+      SubscriptionModel: f.SubscriptionModel,
+      OperationModel: f.OperationModel,
+      PlanModel: f.PlanModel,
+      UsageModel: f.UsageModel,
+    };
+
+    await expect(processVerifiedEvent(event, 'test', f.stripe, dependencies))
+      .rejects.toThrow(`injected ${failAt === 'usage-period creation'
+        ? 'usage period creation'
+        : failAt === 'allowance update'
+          ? 'usage allowance'
+          : 'operation completion'} failure`);
+    expect(upgradeOperation.status).toBe('pending');
+    expect(upgradeOperation.lifecycleLock).toBe(true);
+    await expect(processVerifiedEvent(event, 'test', f.stripe, dependencies))
+      .resolves.toEqual({ handled: 'subscription_upgrade_confirmed' });
+
+    expect(f.record.planId).toEqual(targetPlanId);
+    expect(f.record.planHistory.filter((entry) => entry.operationId === upgradeOperation.operationId))
+      .toHaveLength(1);
+    expect(usage.includedContacts).toBe(35);
+    expect(usage.consumedIncludedContacts).toBe(7);
+    expect(upgradeOperation.status).toBe('succeeded');
+    expect(upgradeOperation.lifecycleLock).toBeUndefined();
+    expect(faultInjected).toBe(true);
+  });
+
+  const nextEnd = Math.floor(new Date('2026-12-01T00:00:00Z').getTime() / 1000);
+  const renewalLine = (start, end) => ({ lines: { data: [{ period: { start, end } }] } });
+  test.each([
+    // The renewal invoice for the new period is created but not charged yet: the plan
+    // changes, but no paid allowance for an unpaid period (invoice.paid grants it).
+    ['renewal invoice not paid yet', { id: 'in_r', status: 'draft' }, false],
+    ['renewal invoice paid', { id: 'in_r', status: 'paid', billing_reason: 'subscription_cycle', ...renewalLine(periodEnd, nextEnd) }, true],
+    ["only the previous period's invoice is paid", { id: 'in_old', status: 'paid', billing_reason: 'subscription_cycle', ...renewalLine(periodEnd - 30 * 86400, periodEnd) }, false],
+  ])('applies a downgrade only after the owned Stripe schedule reaches its target phase (%s)', async (_label, latestInvoice, grantsAllowance) => {
     const f = managementFixture();
     const operation = {
       ...f.operation,
@@ -938,8 +1263,10 @@ describe('Subscription V2 management lifecycle', () => {
       operationType: 'downgrade',
       status: 'succeeded',
       targetPlanId,
+      subscriptionId: f.record._id,
       stripeScheduleId: 'sub_sched',
       stripeSubscriptionId: subscriptionId,
+      stripePriceId: 'price_target',
     };
     const effectiveAt = new Date(periodEnd * 1000);
     f.record.pendingPlanChange = {
@@ -961,6 +1288,11 @@ describe('Subscription V2 management lifecycle', () => {
     const canonical = {
       ...f.subscription,
       metadata,
+      latest_invoice: {
+        customer: customerId,
+        parent: { subscription_details: { subscription: subscriptionId } },
+        ...latestInvoice,
+      },
       items: {
         data: [{
           current_period_start: periodEnd,
@@ -1017,13 +1349,30 @@ describe('Subscription V2 management lifecycle', () => {
     expect(result).toEqual({ handled: 'subscription_downgrade_confirmed' });
     expect(f.stripe.subscriptionSchedules.retrieve).toHaveBeenCalledWith('sub_sched');
     expect(f.SubscriptionModel.updateOne).toHaveBeenCalledWith(
-      { _id: f.record._id, planId: currentPlanId },
+      expect.objectContaining({
+        _id: f.record._id,
+        userId,
+        stripeMode: 'test',
+        stripeSubscriptionId: subscriptionId,
+        stripeCustomerId: customerId,
+        planId: { $in: [currentPlanId, targetPlanId] },
+      }),
       expect.objectContaining({
         $set: expect.objectContaining({ planId: targetPlanId, pendingPlanChange: null }),
-        $push: { planHistory: expect.objectContaining({ changeType: 'downgrade' }) },
+        $addToSet: { planHistory: expect.objectContaining({ changeType: 'downgrade' }) },
       }),
       { runValidators: true }
     );
+    if (grantsAllowance) {
+      expect(f.UsageModel.findOneAndUpdate).toHaveBeenCalledWith(
+        { userId, billingPeriodStart: new Date(periodEnd * 1000) },
+        expect.anything(),
+        expect.anything()
+      );
+    } else {
+      expect(f.UsageModel.findOneAndUpdate).not.toHaveBeenCalled();
+      expect(f.UsageModel.updateOne).not.toHaveBeenCalled();
+    }
   });
 
   test('does not grant an upgrade when the canonical invoice payment failed', async () => {

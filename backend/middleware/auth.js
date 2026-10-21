@@ -1,6 +1,6 @@
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Session = require('../models/Session');
+const { verifyToken } = require('../utils/tokenUtils');
 
 /**
  * Middleware to authenticate JWT tokens
@@ -29,9 +29,10 @@ const authenticate = async (req, res, next) => {
     }
 
     // Verify token
+    // Purpose-checked: a refresh token (cookie or Bearer) is rejected here.
     let decoded;
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
+      decoded = verifyToken(token, 'access');
     } catch (err) {
       if (err.name === 'TokenExpiredError') {
         return res.status(401).json({

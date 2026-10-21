@@ -420,6 +420,72 @@ describe('Subscription V2 entitlements and usage periods', () => {
     expect(f.UsageModel.findOneAndUpdate).not.toHaveBeenCalled();
   });
 
+  describe('the hour between period rollover and the renewal charge', () => {
+    // Stripe has moved the subscription to [start, end) and created the renewal invoice
+    // as a draft; it is finalised and charged about an hour later. The only paid usage
+    // row is the previous period, which ends exactly at `start`.
+    const previous = {
+      _id: new mongoose.Types.ObjectId(),
+      userId,
+      subscriptionId,
+      planId,
+      periodType: 'paid',
+      billingPeriodStart: new Date(start.getTime() - 30 * 24 * 60 * 60 * 1000),
+      billingPeriodEnd: start,
+      includedContacts: 15,
+      consumedIncludedContacts: 9,
+      purchasedExtraContacts: 0,
+      consumedExtraContacts: 0,
+      contactOperations: [],
+    };
+    const renewalInvoice = (status, subscription = 'sub_test') => ({
+      id: 'in_renewal',
+      status,
+      livemode: false,
+      customer: 'cus_test',
+      parent: { subscription_details: { subscription } },
+      lines: { data: [] },
+    });
+    function rollover(record) {
+      const f = fixture({ accountType: 'business', noUsage: true, now: new Date(start.getTime() + 20 * 60 * 1000), record });
+      f.stripeSubscription.latest_invoice = 'in_renewal';
+      f.UsageModel.findOne.mockImplementation((filter) =>
+        query(filter.periodType === 'paid' && +filter.billingPeriodEnd === +start ? previous : null)
+      );
+      return f;
+    }
+    const baseRecord = {
+      _id: subscriptionId, userId, planId, planType: 'business', stripeMode: 'test',
+      stripeCustomerId: 'cus_test', stripeSubscriptionId: 'sub_test', status: 'active',
+      currentPeriodStart: start, currentPeriodEnd: end, pendingPlanChange: null,
+      paymentRecoveryStatus: 'none',
+    };
+
+    test.each(['draft', 'open'])(
+      'keeps the previous paid allowance (not a new one) while the renewal invoice is %s',
+      async (status) => {
+        const f = rollover(baseRecord);
+        f.stripe.invoices.retrieve.mockResolvedValue(renewalInvoice(status));
+        const result = await resolveEntitlements(userId, f.overrides);
+        expect(result).toMatchObject({ isPaid: true, includedContacts: 15, remainingIncludedContacts: 6 });
+        expect(result.period.end).toBe(start.toISOString());
+        expect(f.UsageModel.findOneAndUpdate).not.toHaveBeenCalled(); // nothing new granted
+      }
+    );
+
+    test('also covers the window before customer.subscription.updated is processed', async () => {
+      const f = rollover({ ...baseRecord, currentPeriodStart: previous.billingPeriodStart, currentPeriodEnd: start });
+      f.stripe.invoices.retrieve.mockResolvedValue(renewalInvoice('draft'));
+      await expect(resolveEntitlements(userId, f.overrides)).resolves.toMatchObject({ isPaid: true, remainingIncludedContacts: 6 });
+    });
+
+    test('still fails closed for an invoice belonging to another subscription', async () => {
+      const f = rollover(baseRecord);
+      f.stripe.invoices.retrieve.mockResolvedValue(renewalInvoice('open', 'sub_someone_else'));
+      await expect(resolveEntitlements(userId, f.overrides)).rejects.toMatchObject({ status: 503 });
+    });
+  });
+
   test('expires cancel-at-period-end access at the exact Stripe period boundary', async () => {
     const f = fixture({
       accountType: 'business',
@@ -527,6 +593,24 @@ describe('Subscription V2 entitlements and usage periods', () => {
       plan: null,
       includedContacts: 0,
     }));
+  });
+
+  test('uses the application transaction session for the contact counter update', async () => {
+    const f = fixture();
+    const session = {};
+    await consumeApplicationContact({
+      userId,
+      jobRequestId: new mongoose.Types.ObjectId(),
+      servicePrice: 12000,
+    }, {
+      ...f.overrides,
+      env: { SUBSCRIPTION_V2_ENTITLEMENTS_ENABLED: 'true' },
+      session,
+    });
+
+    expect(f.UsageModel.findOneAndUpdate.mock.calls.at(-1)[2]).toEqual(
+      expect.objectContaining({ session })
+    );
   });
 
   test('falls back to private Free after Stripe cancellation and rejects an unknown business Free tier', async () => {
@@ -771,5 +855,50 @@ describe('Subscription V2 entitlements and usage periods', () => {
       `job-request:${secondId}`,
     ]);
     expect(current.remainingIncludedContacts).toBe(0);
+  });
+
+  describe('paid extra contacts in the application path', () => {
+    const serviceId = new mongoose.Types.ObjectId();
+    const purchaseModel = (rows) => ({
+      findOneAndUpdate: jest.fn(async (filter, update) => {
+        const row = rows.find((r) => String(r.serviceId) === String(filter.serviceId) && r.status === filter.status);
+        if (!row) return null;
+        Object.assign(row, update.$set);
+        return row;
+      }),
+      exists: jest.fn(async () => null),
+      countDocuments: jest.fn(async () => 0),
+      findOne: jest.fn(() => ({ sort() { return this; }, select() { return this; }, lean: async () => null })),
+    });
+
+    test('a paid extra contact for this job is used before the included allowance', async () => {
+      const f = fixture();
+      const { usage } = addPrivateV2UsageFixture(f);
+      f.UsageModel.updateOne = jest.fn(async () => ({ matchedCount: 1 }));
+      const rows = [{ serviceId, status: 'paid' }];
+      const result = await consumeApplicationContact(
+        { userId, jobRequestId: new mongoose.Types.ObjectId(), servicePrice: 12000, serviceId },
+        { ...f.overrides, env: { SUBSCRIPTION_V2_ENTITLEMENTS_ENABLED: 'true' }, ExtraContactModel: purchaseModel(rows) }
+      );
+      expect(result).toMatchObject({ newlyConsumed: true, extra: true });
+      expect(rows[0].status).toBe('consumed');
+      expect(usage.consumedIncludedContacts).toBe(0); // included allowance untouched
+    });
+
+    test('the quota error carries the extra-contact offer for this job', async () => {
+      const f = fixture();
+      const { usage } = addPrivateV2UsageFixture(f);
+      usage.consumedIncludedContacts = usage.includedContacts;
+      // Like MongoDB's $expr guard: no included contact left, no update.
+      f.UsageModel.findOneAndUpdate.mockImplementation(async (filter) => (filter.$expr ? null : usage));
+      f.paidPlan.entitlements = { ...f.paidPlan.entitlements, perContactPrice: 29, maxContact: 2, ContactUnlock: 60 };
+      await expect(consumeApplicationContact(
+        { userId, jobRequestId: new mongoose.Types.ObjectId(), servicePrice: 12000, serviceId },
+        { ...f.overrides, env: { SUBSCRIPTION_V2_ENTITLEMENTS_ENABLED: 'true' }, ExtraContactModel: purchaseModel([]) }
+      )).rejects.toMatchObject({
+        code: 'CONTACT_LIMIT_REACHED',
+        extraContact: { available: true, priceNok: 29, maxPerPeriod: 2, cooldownMinutes: 60 },
+      });
+    });
   });
 });

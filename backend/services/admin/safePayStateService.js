@@ -13,6 +13,8 @@ const { notify } = require('../../services/notifications');
  * (ready_for_review), plus post-completion. BUG-003.
  */
 const DISPUTE_ELIGIBLE_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed'];
+// Must match PROCESSING_LEASE_MS in services/payout/releasePayoutToProvider.js.
+const PAYOUT_LOCK_LEASE_MS = 5 * 60 * 1000;
 
 /**
  * Transition legality now lives in services/order/orderState.js so there is one
@@ -178,7 +180,9 @@ async function openDispute({
     }],
   });
 
-  // Claim the order before creating the dispute so a timeout refund cannot race it.
+  // Claim the order before creating the dispute so a timeout refund cannot race it,
+  // nor a provider transfer that releasePayoutToProvider has fenced (payoutLockId).
+  // A lock older than the payout lease is abandoned and no longer blocks.
   const claimedOrder = await Order.findOneAndUpdate(
     {
       _id: orderId,
@@ -186,6 +190,10 @@ async function openDispute({
       'providerConnectTimeout.status': {
         $nin: ['processing', 'pending', 'reconciliation_required', 'failed', 'manual_review'],
       },
+      $or: [
+        { payoutLockId: null },
+        { payoutLockedAt: { $lte: new Date(openedAt.getTime() - PAYOUT_LOCK_LEASE_MS) } },
+      ],
     },
     {
       $set: { status: 'disputed' },
@@ -201,7 +209,7 @@ async function openDispute({
     { new: true }
   );
   if (!claimedOrder) {
-    throw new Error('Ordren er under refusjonsbehandling eller har endret status');
+    throw new Error('Ordren er under refusjons- eller utbetalingsbehandling eller har endret status. Prøv igjen om litt.');
   }
   order = claimedOrder;
   try {

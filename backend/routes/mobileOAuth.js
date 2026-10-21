@@ -7,11 +7,11 @@ const vippsController = require('../controllers/vippsController');
 
 const router = express.Router();
 
+// Read by the Google state store (config/passport.js), which binds it to the OAuth
+// state. Identity comes only from the authenticated session, never from the query.
 function setGoogleLinkIntent(req) {
-  if (req.session && (req.query.link === '1' || req.query.intent === 'link') && req.userId) {
-    req.session.googleLinkUserId = String(req.userId);
-  } else if (req.session) {
-    delete req.session.googleLinkUserId;
+  if ((req.query.link === '1' || req.query.intent === 'link') && req.userId && req.sessionId) {
+    req.googleLinkRequest = { userId: req.userId, sessionId: req.sessionId };
   }
 }
 
@@ -66,7 +66,8 @@ function googleCallback(req, res, next) {
 }
 
 router.get('/google', optionalAuthenticate, googleStart);
-router.get('/google/callback', googleCallback);
+// optionalAuthenticate so a link callback can be checked against the session that started it.
+router.get('/google/callback', optionalAuthenticate, googleCallback);
 router.get('/vipps', optionalAuthenticate, (req, res) =>
   vippsController.redirectToVipps(req, res, { platform: 'mobile' })
 );
