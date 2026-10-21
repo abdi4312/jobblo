@@ -22,6 +22,10 @@ jest.mock('../controllers/SafePayCheckoutController', () => ({
 }));
 jest.mock('../models/Order', () => ({ updateOne: jest.fn() }));
 jest.mock('../utils/errorLogger', () => ({ logApplicationError: jest.fn() }));
+jest.mock('../services/stripe/paymentLifecycle', () => ({
+  recordStripePaymentLifecycle: jest.fn(),
+  recordRejectedSafePayPayment: jest.fn(),
+}));
 jest.mock('../services/subscriptions/v2WebhookProcessor', () => ({
   processVerifiedEvent: jest.fn(),
 }));
@@ -32,6 +36,7 @@ const ledger = require('../services/stripe/eventLedger');
 const { confirmPaidSession } = require('../controllers/SafePayCheckoutController');
 const Order = require('../models/Order');
 const { logApplicationError } = require('../utils/errorLogger');
+const paymentLifecycle = require('../services/stripe/paymentLifecycle');
 const { stripeWebhook, ORDER_EVENT_TYPES } = require('../services/stripe/webhookDispatcher');
 const { processVerifiedEvent } = require('../services/subscriptions/v2WebhookProcessor');
 const Stripe = require('stripe');
@@ -97,6 +102,7 @@ beforeEach(() => {
   ledger.claimEvent.mockResolvedValue({ claimed: true });
   ledger.markProcessed.mockResolvedValue();
   ledger.releaseClaim.mockResolvedValue();
+  paymentLifecycle.recordRejectedSafePayPayment.mockResolvedValue({ _id: 'incident_1' });
   confirmPaidSession.mockResolvedValue({ ok: true });
   processVerifiedEvent.mockResolvedValue({ handled: 'subscription_activated' });
 });
@@ -251,8 +257,35 @@ describe('event-level idempotency', () => {
     );
   });
 
-  it('does not mark an unconfirmed SafePay webhook as processed', async () => {
+  it('acknowledges a permanent verification failure only after recording manual review', async () => {
     confirmPaidSession.mockResolvedValue({ ok: false, reason: 'amount_mismatch' });
+    const session = { ...paidSafePaySession, amount_total: 5000 };
+    mockStripeConstructing({
+      id: 'evt_rejected_safepay',
+      type: 'checkout.session.completed',
+      data: { object: session },
+    });
+
+    const res = makeRes();
+    await stripeWebhook(makeReq(), res);
+
+    expect(paymentLifecycle.recordRejectedSafePayPayment).toHaveBeenCalledWith({
+      event: expect.objectContaining({ id: 'evt_rejected_safepay' }),
+      session,
+      reason: 'amount_mismatch',
+    });
+    expect(ledger.markProcessed).toHaveBeenCalledWith('evt_rejected_safepay');
+    expect(ledger.releaseClaim).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      received: true,
+      handled: 'safepay_manual_review',
+    });
+  });
+
+  it('keeps the event retryable if manual-review incident persistence fails', async () => {
+    confirmPaidSession.mockResolvedValue({ ok: false, reason: 'amount_mismatch' });
+    paymentLifecycle.recordRejectedSafePayPayment.mockRejectedValue(new Error('mongo is down'));
     mockStripeConstructing({
       id: 'evt_rejected_safepay',
       type: 'checkout.session.completed',
@@ -262,12 +295,26 @@ describe('event-level idempotency', () => {
     const res = makeRes();
     await stripeWebhook(makeReq(), res);
 
-    expect(res.statusCode).toBe(500);
     expect(ledger.markProcessed).not.toHaveBeenCalled();
-    expect(ledger.releaseClaim).toHaveBeenCalledWith(
-      'evt_rejected_safepay',
-      expect.any(Error)
-    );
+    expect(ledger.releaseClaim).toHaveBeenCalledWith('evt_rejected_safepay', expect.any(Error));
+    expect(res.statusCode).toBe(500);
+  });
+
+  it('retries an unknown confirmation result instead of acknowledging it', async () => {
+    confirmPaidSession.mockResolvedValue({ ok: false, reason: 'unexpected_result' });
+    mockStripeConstructing({
+      id: 'evt_unknown_safepay',
+      type: 'checkout.session.completed',
+      data: { object: paidSafePaySession },
+    });
+
+    const res = makeRes();
+    await stripeWebhook(makeReq(), res);
+
+    expect(paymentLifecycle.recordRejectedSafePayPayment).not.toHaveBeenCalled();
+    expect(ledger.markProcessed).not.toHaveBeenCalled();
+    expect(ledger.releaseClaim).toHaveBeenCalledWith('evt_unknown_safepay', expect.any(Error));
+    expect(res.statusCode).toBe(500);
   });
 });
 
@@ -295,7 +342,7 @@ describe('routing by session type', () => {
     expect(ledger.markProcessed).toHaveBeenCalledWith('evt_sub');
   });
 
-  it('acknowledges a legacy extra-contact checkout without provisioning it', async () => {
+  it('routes an extra-contact checkout to the extra-contact handler, never to SafePay', async () => {
     mockStripeConstructing({
       id: 'evt_extra',
       type: 'checkout.session.completed',
@@ -313,7 +360,8 @@ describe('routing by session type', () => {
     await stripeWebhook(makeReq(), res);
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ received: true, handled: 'subscription_rebuild_in_progress' });
+    // No purchaseId in this metadata: the handler refuses it instead of confirming anything.
+    expect(res.body).toEqual({ received: true, handled: 'extra_contact_invalid_metadata' });
     expect(confirmPaidSession).not.toHaveBeenCalled();
   });
 
@@ -508,6 +556,38 @@ describe('SafePay event routing', () => {
       { $set: { checkoutSessionStatus: 'expired' } }
     );
   });
+
+  it('marks a failed delayed SafePay payment as failed, never as paid', async () => {
+    Order.updateOne.mockResolvedValue({});
+    mockStripeConstructing({
+      id: 'evt_async_failed',
+      type: 'checkout.session.async_payment_failed',
+      data: { object: { id: 'cs_async', metadata: { type: 'safepay_payment', orderId: 'o1' } } },
+    });
+
+    await stripeWebhook(makeReq(), makeRes());
+
+    expect(Order.updateOne).toHaveBeenCalledTimes(1);
+    const [filter, update] = Order.updateOne.mock.calls[0];
+    expect(filter).toEqual(expect.objectContaining({ checkoutSessionId: 'cs_async', paymentStatus: { $ne: 'paid' } }));
+    expect(update).toEqual({ $set: { checkoutSessionStatus: 'failed' } });
+    expect(JSON.stringify(update)).not.toMatch(/"paid"/);
+  });
+
+  it.each(['invoice.voided', 'invoice.updated'])(
+    'acks %s for a V2 subscription invoice without processing it (no paid entitlement)',
+    async (type) => {
+      mockStripeConstructing({
+        id: `evt_${type}`,
+        type,
+        data: { object: { id: 'in_g', status: 'void', parent: { subscription_details: { subscription: 'sub_g', metadata: { subscriptionV2: 'true' } } } } },
+      });
+      const res = makeRes();
+      await stripeWebhook(makeReq(), res);
+      expect(ledger.claimEvent).not.toHaveBeenCalled();
+      expect(res.body).toEqual(expect.objectContaining({ ignored: true }));
+    }
+  );
 
   it('acks an event type it does not handle without claiming a ledger row', async () => {
     mockStripeConstructing({ id: 'evt_other', type: 'charge.succeeded', data: { object: {} } });

@@ -84,6 +84,8 @@ export type UserState = {
   user: User | null;
   tokens: AuthTokens | null;
   isAuthenticated: boolean;
+  /** False until bootstrap() has asked the server who (if anyone) is signed in. */
+  authReady: boolean;
   notificationsEnabled: boolean;
   browserNotificationsEnabled: boolean;
   emailNotificationsEnabled: boolean;
@@ -99,4 +101,5 @@ export type UserState = {
   login: (user: User, tokens: AuthTokens) => void;
   logout: () => Promise<void>;
   fetchProfile: () => Promise<void>;
+  bootstrap: () => Promise<void>;
 };

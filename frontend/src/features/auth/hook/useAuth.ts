@@ -165,6 +165,10 @@ export const useAuth = () => {
       }
     },
     refetchInterval: 1000 * 60 * 45, // Proactively refresh every 45 minutes
+    // Login and the page-load bootstrap have just minted a token; without these the
+    // query fired a second, back-to-back rotation the moment isAuthenticated flipped.
+    initialData: null,
+    staleTime: 1000 * 60 * 45,
     enabled: isAuthenticated,
     retry: 2,
   });

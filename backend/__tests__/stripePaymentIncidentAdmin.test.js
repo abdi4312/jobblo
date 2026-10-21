@@ -11,6 +11,9 @@ jest.mock('../models/StripePaymentIncident', () => ({
   find: jest.fn(),
   countDocuments: jest.fn(),
 }));
+jest.mock('../models/StripeFinancialOperation', () => ({
+  find: jest.fn(() => ({ select: () => ({ lean: async () => [] }) })),
+}));
 jest.mock('../config/stripe', () => ({ getStripeForMode: jest.fn() }));
 jest.mock('../services/stripe/financialOperations', () => ({
   executeRefund: jest.fn(),
@@ -22,6 +25,7 @@ const Order = require('../models/Order');
 const Payment = require('../models/Payment');
 const Payout = require('../models/Payout');
 const StripePaymentIncident = require('../models/StripePaymentIncident');
+const StripeFinancialOperation = require('../models/StripeFinancialOperation');
 const { getStripeForMode } = require('../config/stripe');
 const { executeTransferReversal } = require('../services/stripe/financialOperations');
 const { reverseChargebackTransfer } = require('../controllers/admin/stripePaymentIncidentController');
@@ -212,4 +216,36 @@ it('reverses only an admin-approved amount after verifying the lost dispute, cha
     resolutionOperationId: 'operation_1',
   });
   expect(res.statusCode).toBe(200);
+});
+
+describe('cumulative recovery cap', () => {
+  const priorOps = (ops) =>
+    StripeFinancialOperation.find.mockReturnValue({ select: () => ({ lean: async () => ops }) });
+
+  it('refuses a second approval that would recover more than the chargeback in total', async () => {
+    // 30000 of this incident was already recovered by an earlier, different-amount approval.
+    priorOps([{ amount: 30000 }]);
+    const res = response();
+
+    await reverseChargebackTransfer(request(), res); // asks for 50000 more; incident is 50000
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toMatchObject({ code: 'chargeback_recovery_exceeds_incident', alreadyRecovered: 30000 });
+    expect(executeTransferReversal).not.toHaveBeenCalled();
+  });
+
+  it('counts only this incident\'s other recoveries and lets an idempotent retry through', async () => {
+    priorOps([]);
+    const res = response();
+    await reverseChargebackTransfer(request(), res);
+
+    const [filter] = StripeFinancialOperation.find.mock.calls.at(-1);
+    expect(filter).toMatchObject({
+      incidentId: expect.anything(),
+      type: 'transfer_reversal',
+      status: { $in: ['pending', 'succeeded', 'reconciliation_required'] },
+      operationKey: { $ne: `chargeback:${incidentId}:reversal:tr_test_1:50000` },
+    });
+    expect(executeTransferReversal).toHaveBeenCalledTimes(1);
+  });
 });

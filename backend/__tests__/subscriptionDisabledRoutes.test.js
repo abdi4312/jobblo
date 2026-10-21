@@ -18,33 +18,31 @@ app.use('/api/admin', require('../routes/admin/index'));
 
 describe('legacy subscription endpoints', () => {
   it.each([
-    ['get', '/api/stripe/subscription'],
-    ['post', '/api/stripe/subscription/cancel'],
-    ['post', '/api/stripe/subscription/resume'],
-    ['post', '/api/stripe/subscription/portal'],
-    ['get', '/api/stripe/subscription/billing-history'],
-    ['get', '/api/stripe/subscription/invoices/in_1/pdf'],
-    ['post', '/api/stripe/subscription/change/preview'],
-    ['post', '/api/stripe/subscription/change'],
-    ['post', '/api/stripe/create-checkout-session'],
-    ['get', '/api/stripe/checkout-session/cs_1'],
-    ['post', '/api/stripe/create-extra-contact-payment'],
-    ['get', '/api/stripe/extra-contact-status/cs_1'],
-    ['get', '/api/plans'],
-    ['post', '/api/coupons/validate'],
-    ['get', '/api/admin/billing/subscriptions/summary'],
-    ['post', '/api/admin/billing/subscriptions/reconcile'],
-    ['get', '/api/admin/promotion-codes'],
-    ['post', '/api/admin/promotion-codes'],
-    ['post', '/api/admin/promotion-codes/coupon_1/deactivate'],
-  ])('%s %s returns the disabled response', async (method, path) => {
+    ['get', '/api/stripe/subscription', 'AUTHENTICATION_REQUIRED'],
+    ['post', '/api/stripe/subscription/cancel', 'SUBSCRIPTION_V2_MANAGEMENT_DISABLED'],
+    ['post', '/api/stripe/subscription/resume', 'SUBSCRIPTION_V2_MANAGEMENT_DISABLED'],
+    ['post', '/api/stripe/subscription/portal', 'SUBSCRIPTION_V2_MANAGEMENT_DISABLED'],
+    ['get', '/api/stripe/subscription/billing-history', 'SUBSCRIPTION_V2_MANAGEMENT_DISABLED'],
+    ['get', '/api/stripe/subscription/invoices/in_1/pdf', 'SUBSCRIPTION_V2_MANAGEMENT_DISABLED'],
+    ['post', '/api/stripe/subscription/change/preview', 'SUBSCRIPTION_V2_MANAGEMENT_DISABLED'],
+    ['post', '/api/stripe/subscription/change', 'SUBSCRIPTION_V2_MANAGEMENT_DISABLED'],
+    ['post', '/api/stripe/create-checkout-session', 'SUBSCRIPTION_V2_CHECKOUT_DISABLED'],
+    ['get', '/api/stripe/checkout-session/cs_1', 'SUBSCRIPTION_V2_CHECKOUT_DISABLED'],
+    // Paid extra contacts are a V2 entitlement feature: off with the entitlements flag.
+    ['post', '/api/stripe/create-extra-contact-payment', 'SUBSCRIPTION_V2_ENTITLEMENTS_DISABLED'],
+    ['get', '/api/stripe/extra-contact-status/cs_1', 'SUBSCRIPTION_V2_ENTITLEMENTS_DISABLED'],
+    ['get', '/api/plans', 'SUBSCRIPTION_V2_PLAN_CATALOGUE_DISABLED'],
+    ['post', '/api/coupons/validate', 'SUBSCRIPTION_REBUILD_IN_PROGRESS'],
+    ['get', '/api/admin/billing/subscriptions/summary', 'SUBSCRIPTION_REBUILD_IN_PROGRESS'],
+    ['post', '/api/admin/billing/subscriptions/reconcile', 'SUBSCRIPTION_REBUILD_IN_PROGRESS'],
+    ['get', '/api/admin/promotion-codes', 'SUBSCRIPTION_REBUILD_IN_PROGRESS'],
+    ['post', '/api/admin/promotion-codes', 'SUBSCRIPTION_REBUILD_IN_PROGRESS'],
+    ['post', '/api/admin/promotion-codes/coupon_1/deactivate', 'SUBSCRIPTION_REBUILD_IN_PROGRESS'],
+  ])('%s %s returns the appropriate disabled response', async (method, path, code) => {
     const response = await request(app)[method](path);
 
     expect(response.status).toBe(503);
-    expect(response.body).toEqual({
-      code: 'SUBSCRIPTION_REBUILD_IN_PROGRESS',
-      message: 'Subscription functionality is temporarily unavailable.',
-    });
+    expect(response.body.code).toBe(code);
 
   });
 

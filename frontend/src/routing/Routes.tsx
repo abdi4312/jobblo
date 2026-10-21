@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import type { RouteObject } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import App from '../App.tsx';
 import { ProtectedRoute } from '../components/shared/ProtectedRoute.tsx';
 import { PublicRoute } from '../components/shared/PublicRoute.tsx';
@@ -106,7 +107,6 @@ const ContactSuccessPage = lazy(() => import('../pages/ContactSuccessPage.tsx'))
 const ServiceListingPage = lazy(() => import('../pages/ServiceListingPage/ServiceListing.tsx'));
 const UpcomingFeatures = lazy(() => import('../pages/UpcomingFeaturesPage/UpcomingFeatures.tsx'));
 const MembershipPage = lazy(() => import('../pages/MembershipPage/MembershipPage.tsx'));
-const PricingPage = lazy(() => import('../pages/PricingPage/PricingPage.tsx'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage/NotFoundPage.tsx'));
 const FavoritesPage = lazy(() =>
   import('../pages/FavoritesPage/FavoritesPage.tsx').then((m) => ({
@@ -323,7 +323,8 @@ export const routes: RouteObject[] = [
         element: <ProtectedRoute>{withSuspense(MembershipPage)}</ProtectedRoute>,
       },
       // Public: reachable from the job-detail upsell CTA by logged-out visitors too.
-      { path: 'pricing', element: withSuspense(PricingPage) },
+      // The pricing page was folded into /membership; old links and bookmarks still land.
+      { path: 'pricing', element: <Navigate to="/membership" replace /> },
       { path: 'kampanjevilkar', element: withSuspense(CampaignTermsPage) },
       { path: 'upcoming', element: withSuspense(UpcomingFeatures) },
       { path: '*', element: withSuspense(NotFoundPage) },

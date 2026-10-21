@@ -1,10 +1,10 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import type { AxiosError } from 'axios';
 import { toast } from 'react-hot-toast';
 import { useUserStore } from '../../stores/userStore';
 import {
   useJobDetailQuery,
   useSendMessageMutation,
-  useStripeMutation,
   useCreateJobRequestMutation,
   useMyJobRequestsQuery,
 } from '../../features/jobDetail/hook.ts';
@@ -34,13 +34,11 @@ import {
 import { BackLink } from '../../components/Ui/BackLink';
 import { dateFormatter } from '../../utils/dateFormatter';
 import { isClosedService, statusLabel } from '../../constants/statuses';
-import { apiUrl } from '../../config/env';
 import { listingUrl } from '../../utils/shareListing';
 
 const SITE_URL = (import.meta.env.VITE_PUBLIC_SITE_URL as string | undefined)?.replace(/\/$/, '') || 'https://jobblo.no';
 import { ShareModal } from '../../components/shared/ShareModal/ShareModal';
-import { UpgradeModal } from '../../components/shared/UpgradeModal';
-import { BuyContactModal } from '../../components/shared/BuyContactModal';
+import { UpgradeModal, type ExtraContactOffer } from '../../components/shared/UpgradeModal';
 import OrderRequestModal from '../../components/job/OrderRequestModal';
 import ReportJobModal from '../../components/job/ReportJobModal';
 import { submitUserJobReport } from '../../api/admin/jobReports';
@@ -133,11 +131,9 @@ const JobListingDetailPage = () => {
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
-  const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isConnectRequiredModalOpen, setIsConnectRequiredModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [isPaymentRedirecting, setIsPaymentRedirecting] = useState(false);
   const [isTimerActive, setIsTimerActive] = useState(false);
   const [unlockTime, setUnlockTime] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<string>('');
@@ -145,11 +141,12 @@ const JobListingDetailPage = () => {
     message?: string;
     limit?: number;
     usage?: number;
-    perContactPrice?: number;
+    serviceId?: string;
+    extraContact?: ExtraContactOffer;
   }>({});
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const sendMessageMutation = useSendMessageMutation();
-  const stripeMutation = useStripeMutation();
   const createJobRequestMutation = useCreateJobRequestMutation();
 
   const submitReportMutation = useMutation({
@@ -166,6 +163,16 @@ const JobListingDetailPage = () => {
 
   const isAuth = useUserStore((state) => state.isAuthenticated);
   const currentUser = useUserStore((state) => state.user);
+  const entitlementsQuery = useQuery<{
+    includedContacts: number;
+    consumedIncludedContacts: number;
+    remainingIncludedContacts: number;
+  }, AxiosError<{ code?: string }>>({
+    queryKey: ['v2-contact-entitlements', currentUser?._id],
+    queryFn: async () => (await mainLink.get('/api/stripe/v2/entitlements')).data,
+    enabled: isAuth,
+    retry: false,
+  });
   const connectStatusQuery = useQuery({
     queryKey: ['connect-readiness', currentUser?._id],
     queryFn: async () => (await mainLink.get('/api/connect/status')).data,
@@ -176,6 +183,24 @@ const JobListingDetailPage = () => {
 
   const { data: plans } = usePlans();
   const { data: jobRequests } = useMyJobRequestsQuery(isAuth);
+  const accountPlanType = currentUser?.role === 'company' ? 'business' : 'private';
+  const currentPlan = plans?.find(
+    (plan) =>
+      plan.name === (currentUser?.subscription || 'Standard') &&
+      plan.type === accountPlanType
+  );
+  const entitlementErrorCode = entitlementsQuery.error?.response?.data?.code;
+  const useLegacyContactUsage =
+    entitlementsQuery.isError &&
+    entitlementErrorCode === 'SUBSCRIPTION_V2_ENTITLEMENTS_DISABLED';
+  const includedContactLimit = entitlementsQuery.data?.includedContacts ??
+    (useLegacyContactUsage ? currentPlan?.entitlements?.freeContact : undefined);
+  const includedContactsUsed = entitlementsQuery.data?.consumedIncludedContacts ??
+    (useLegacyContactUsage ? currentUser?.monthlyContactUsage || 0 : undefined);
+  const includedContactsRemaining = entitlementsQuery.data?.remainingIncludedContacts ??
+    (includedContactLimit !== undefined && includedContactsUsed !== undefined
+      ? Math.max(0, includedContactLimit - includedContactsUsed)
+      : undefined);
   const [freeJobsToggle, setFreeJobsToggle] = useState(false);
 
   const {
@@ -187,6 +212,43 @@ const JobListingDetailPage = () => {
   const isOwnJob = job?.userId?._id === currentUser?._id;
 
   useListingSeo(job, id);
+
+  // Back from Stripe after buying an extra contact for this job: confirm it with the
+  // server (never trust the redirect alone), then open the application form.
+  useEffect(() => {
+    const outcome = searchParams.get('extra_contact');
+    if (!outcome || !isAuth) return;
+    const sessionId = searchParams.get('session_id');
+    setSearchParams({}, { replace: true });
+    if (outcome !== 'success' || !sessionId) {
+      toast('Betalingen for ekstra kontakt ble avbrutt.');
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      for (let attempt = 0; attempt < 10 && !cancelled; attempt += 1) {
+        try {
+          const { data } = await mainLink.get<{ status: string }>(`/api/stripe/extra-contact-status/${sessionId}`);
+          if (data.status === 'paid') {
+            toast.success('Ekstra kontakt er betalt. Send forespørselen nå.');
+            setIsOrderModalOpen(true);
+            return;
+          }
+          if (data.status === 'consumed') return;
+          if (data.status === 'expired') {
+            toast.error('Betalingen ble ikke fullført.');
+            return;
+          }
+        } catch {
+          // Retry below; the webhook may still be on its way.
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      if (!cancelled) toast('Betalingen bekreftes fortsatt. Prøv å sende forespørselen om litt.');
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuth]);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -202,8 +264,18 @@ const JobListingDetailPage = () => {
 
   useEffect(() => {
     if (isAuth && currentUser && plans && jobRequests && job) {
+      if (entitlementsQuery.isLoading || entitlementsQuery.isSuccess) {
+        setIsTimerActive(false);
+        setUnlockTime(null);
+        return;
+      }
+      if (!useLegacyContactUsage) {
+        setIsTimerActive(false);
+        setUnlockTime(null);
+        return;
+      }
+
       // Bypass cooldown if job is under 10k and toggle is ON (Private users only)
-      const accountPlanType = currentUser.role === 'company' ? 'business' : 'private';
       const isFreeUnder10k =
         accountPlanType === 'private' && freeJobsToggle && job.price < 10000;
 
@@ -212,12 +284,6 @@ const JobListingDetailPage = () => {
         setUnlockTime(null);
         return;
       }
-
-      const currentPlan = plans.find(
-        (p) =>
-          p.name === (currentUser.subscription || 'Standard') &&
-          p.type === accountPlanType
-      );
 
       const usage = currentUser.monthlyContactUsage || 0;
       const freeLimit = currentPlan?.entitlements?.freeContact || 0;
@@ -254,7 +320,19 @@ const JobListingDetailPage = () => {
       setIsTimerActive(false);
       setUnlockTime(null);
     }
-  }, [isAuth, currentUser, plans, jobRequests, job, freeJobsToggle]);
+  }, [
+    isAuth,
+    currentUser,
+    plans,
+    jobRequests,
+    job,
+    freeJobsToggle,
+    accountPlanType,
+    currentPlan,
+    entitlementsQuery.isLoading,
+    entitlementsQuery.isSuccess,
+    useLegacyContactUsage,
+  ]);
 
   // Only a *pending* request blocks re-applying — that is exactly what the
   // backend enforces (orderController: findOne({..., status: 'pending'})).
@@ -354,15 +432,24 @@ const JobListingDetailPage = () => {
             toast.error(err.response.data.message);
             return;
           }
-          if (err.response?.status === 402 || err.response?.data?.upgradeRequired) {
+          const errorCode = err.response?.data?.code;
+          if (
+            errorCode === 'CONTACT_LIMIT_REACHED' ||
+            errorCode === 'PAID_SUBSCRIPTION_REQUIRED' ||
+            err.response?.status === 402 ||
+            err.response?.data?.upgradeRequired
+          ) {
             setUpgradeInfo({
-              message: err.response.data.message,
-              limit: err.response.data.limit,
-              usage: err.response.data.usage,
-              perContactPrice: err.response.data.perContactPrice,
+              message: errorCode === 'CONTACT_LIMIT_REACHED'
+                ? 'Du har brukt alle inkluderte kontakter denne perioden.'
+                : err.response?.data?.message,
+              limit: includedContactLimit ?? err.response?.data?.limit,
+              usage: includedContactsUsed ?? err.response?.data?.usage,
+              serviceId: job._id,
+              extraContact: err.response?.data?.extraContact,
             });
             setIsOrderModalOpen(false);
-            setIsBuyModalOpen(true);
+            setIsUpgradeModalOpen(true);
             return;
           }
           toast.error(
@@ -373,28 +460,9 @@ const JobListingDetailPage = () => {
     );
   };
 
-  const handleBuyContact = async () => {
-    if (!job?._id || !upgradeInfo.perContactPrice) return;
-
-    setIsPaymentRedirecting(true);
-    try {
-      const res = await mainLink.post('/api/stripe/create-extra-contact-payment', {
-        amount: upgradeInfo.perContactPrice,
-        serviceId: job._id,
-      });
-      window.location.href = res.data.url;
-    } catch (error: any) {
-      console.error('Payment redirect failed:', error);
-      toast.error(error.response?.data?.message || 'Kunne ikke starte betaling');
-      setIsPaymentRedirecting(false);
-    }
-  };
-
   const isMessageLoading =
     sendMessageMutation.isPending ||
-    stripeMutation.isPending ||
-    createJobRequestMutation.isPending ||
-    isPaymentRedirecting;
+    createJobRequestMutation.isPending;
 
   const handleShare = () => {
     setIsShareModalOpen(true);
@@ -809,6 +877,17 @@ const JobListingDetailPage = () => {
                     />
                   </div>
 
+                  {isAuth && includedContactLimit !== undefined && includedContactsUsed !== undefined &&
+                    includedContactsRemaining !== undefined && (
+                      <p
+                        data-testid="contact-usage-summary"
+                        className="rounded-xl bg-[#F4F6F0] px-4 py-3 text-sm text-[#63665F]"
+                      >
+                        Kontakter denne perioden: {includedContactsUsed} brukt av {includedContactLimit}
+                        {' · '}{includedContactsRemaining} igjen
+                      </p>
+                    )}
+
                   {isTimerActive && (
                     <div className="rounded-2xl bg-[#F4F6F0] px-4 py-3.5">
                       <p className="text-[0.875rem] font-semibold text-[#0B0B0B]">
@@ -817,7 +896,7 @@ const JobListingDetailPage = () => {
                       <p className="mt-1 text-[0.8125rem] leading-relaxed text-[#63665F]">
                         Med Plus eller Pro slipper du ventetiden.{' '}
                         <button
-                          onClick={() => navigate('/pricing')}
+                          onClick={() => navigate('/membership')}
                           className="font-semibold text-[#2E6641] underline-offset-[3px] hover:underline"
                         >
                           Se planer
@@ -962,14 +1041,6 @@ const JobListingDetailPage = () => {
         isOpen={isUpgradeModalOpen}
         onClose={() => setIsUpgradeModalOpen(false)}
         {...upgradeInfo}
-      />
-
-      <BuyContactModal
-        isOpen={isBuyModalOpen}
-        onClose={() => setIsBuyModalOpen(false)}
-        onConfirm={handleBuyContact}
-        price={upgradeInfo.perContactPrice || 0}
-        isLoading={isPaymentRedirecting}
       />
 
       <OrderRequestModal

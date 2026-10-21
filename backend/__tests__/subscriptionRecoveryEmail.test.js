@@ -23,7 +23,7 @@ describe('subscription recovery email templates', () => {
     expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({
       to: 'customer@example.test',
       subject: 'Betalingen for Jobblo-abonnementet mislyktes',
-      text: expect.stringContaining('https://jobblo.example/profile/settings/subscriptions'),
+      text: expect.stringContaining('https://jobblo.example/settings/subscriptions'),
       html: expect.stringContaining('&lt;script&gt;alert(1)&lt;/script&gt;'),
     }));
     expect(sendMail.mock.calls[0][0].html).not.toContain('<script>alert(1)</script>');

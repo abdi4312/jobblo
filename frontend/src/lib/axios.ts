@@ -96,10 +96,9 @@ export const setupInterceptors = (instance: AxiosInstance) => {
           const { accessToken } = refreshResponse.data;
           if (!accessToken) throw new Error('No access token returned');
 
-          const { user, login } = useUserStore.getState();
-          if (user) {
-            login(user, { accessToken });
-          }
+          // Always store it: gating on `user` dropped the new token whenever the profile
+          // had not loaded yet, so every later request re-sent the expired one.
+          useUserStore.getState().setTokens({ accessToken });
 
           isRefreshing = false;
           onTokenRefreshed(accessToken);
