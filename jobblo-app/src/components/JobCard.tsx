@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Bookmark, MapPin, Badge } from 'lucide-react-native';
+import { Bookmark, MapPin, Image as ImageIcon } from 'lucide-react-native';
 import type { Job } from '../types/Jobs';
 import { useIsServiceSaved } from '../hooks/useFavoriteLists';
 import { useAuthStore } from '../store/authStore';
@@ -38,8 +38,8 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false, 
     router.push({ pathname: '/(app)/jobs/[id]', params: { id: job._id } });
   };
 
-  // Get the first image or use a fallback
-  const imageUrl = job.images?.[0] || 'https://via.placeholder.com/300x375?text=No+Image';
+  // No remote fallback: the old via.placeholder.com service is gone and rendered a broken image.
+  const imageUrl = job.images?.[0];
 
   // Format price as Norwegian locale
   const priceFormatted = job.price ? job.price.toLocaleString('nb-NO') : 'Variabelt';
@@ -56,11 +56,17 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false, 
         className="relative overflow-hidden rounded-2xl bg-[#EAF1E9]"
         style={{ aspectRatio: 4 / 5, minHeight: 130 }}
       >
-        <Image
-          source={{ uri: imageUrl }}
-          style={{ width: '100%', height: '100%', aspectRatio: 4 / 5 }}
-          resizeMode="cover"
-        />
+        {imageUrl ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={{ width: '100%', height: '100%', aspectRatio: 4 / 5 }}
+            resizeMode="cover"
+          />
+        ) : (
+          <View className="h-full w-full items-center justify-center">
+            <ImageIcon size={28} color="#8FBF9A" />
+          </View>
+        )}
 
         {/* Status badges overlay — top left */}
         {(job.promoted || job.urgent) && (

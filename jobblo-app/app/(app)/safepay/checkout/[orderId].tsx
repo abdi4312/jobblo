@@ -9,9 +9,9 @@ import { useSafePayCheckout, useCreateSafePaySessionMutation } from '../../../..
 import { getSafePaySessionStatus } from '../../../../src/services/safepay.service';
 import { queryKeys } from '../../../../src/queryKeys';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
-import { SafePayCheckoutSkeleton, SafePayPartiesCard, DigitalContractCard, SafePayPaymentCard } from '../../../../src/components/domain/SafePayCheckoutSections';
+import { SafePayCancelledCard, SafePayCheckoutSkeleton, SafePayPartiesCard, DigitalContractCard, SafePayPaymentCard } from '../../../../src/components/domain/SafePayCheckoutSections';
 import { SafePayProgressSteps } from '../../../../src/components/domain/SafePayProgressSteps';
-import { providerOrderRoute } from '../../../../src/utils/orderRoute';
+import { customerOrderRoute, providerOrderRoute } from '../../../../src/utils/orderRoute';
 import { isValidOrderId, isValidSessionId, runStripeCheckout, sessionIdFromCheckoutUrl } from '../../../../src/utils/safepayCheckoutSession';
 
 const SETTLED_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed', 'disputed', 'refunded'];
@@ -96,15 +96,15 @@ export default function SafePayCheckoutScreen() {
   }, [error]);
 
   if (!orderId) {
-    return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ErrorState title="Ugyldig lenke" message="Lenken mangler en gyldig ordre-ID, så betalingen kan ikke åpnes. Åpne oppdraget fra Mine søkere og prøv derfra." /></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><ErrorState title="Ugyldig lenke" message="Lenken mangler en gyldig ordre-ID, så betalingen kan ikke åpnes. Åpne oppdraget fra Mine søkere og prøv derfra." /></SafeAreaView>;
   }
 
   if (isLoading) {
-    return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ScrollView contentContainerStyle={{ paddingBottom: 100 }}><SafePayCheckoutSkeleton /></ScrollView></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><ScrollView contentContainerStyle={{ paddingBottom: 100 }}><SafePayCheckoutSkeleton /></ScrollView></SafeAreaView>;
   }
 
   if (isError || !data?.order || !data.calculation) {
-    return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ErrorState title={errorCopy.title} message={errorCopy.message} actionLabel="Prøv igjen" onAction={() => refetch()} /></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><ErrorState title={errorCopy.title} message={errorCopy.message} actionLabel="Prøv igjen" onAction={() => refetch()} /></SafeAreaView>;
   }
 
   const { order, calculation } = data;
@@ -114,17 +114,17 @@ export default function SafePayCheckoutScreen() {
   const isProvider = !!currentUserId && currentUserId === getId(order.providerId);
 
   if (!service) {
-    return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ErrorState title="Oppdraget finnes ikke lenger" message="Oppdraget denne kontrakten gjelder er slettet, så betalingen kan ikke gjennomføres. Ta kontakt med support hvis dette ser feil ut." /></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><ErrorState title="Oppdraget finnes ikke lenger" message="Oppdraget denne kontrakten gjelder er slettet, så betalingen kan ikke gjennomføres. Ta kontakt med support hvis dette ser feil ut." /></SafeAreaView>;
   }
 
   if (isProvider && !isCustomer) {
     // `replace`, not `push`: this screen is a wall for providers, so it must not stay on the
     // stack for the back gesture to return to.
-    return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><View className="flex-1 justify-center px-4"><View className="rounded-3xl border border-[#E6E7E1] bg-white p-8"><View className="mx-auto h-11 w-11 items-center justify-center rounded-full bg-[#EAF1E9]"><ShieldCheck size={20} color="#2E6641" /></View><Text className="mt-4 text-center text-[1.0625rem] font-semibold text-[#0B0B0B]">Betaling håndteres av oppdragsgiver</Text><Text className="mt-2 text-center text-[0.875rem] leading-relaxed text-[#63665F]">Du kan følge oppdragets status og starte arbeidet fra din egen arbeidsside.</Text><Pressable onPress={() => router.replace(providerOrderRoute(order._id))} className="mt-6 rounded-full bg-[#2E6641] px-6 py-3"><Text className="text-center text-[0.9375rem] font-semibold text-white">Gå til mitt oppdrag</Text></Pressable></View></View></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><View className="flex-1 justify-center px-4"><View className="rounded-3xl border border-[#E6E7E1] bg-white p-8"><View className="mx-auto h-11 w-11 items-center justify-center rounded-full bg-[#EAF1E9]"><ShieldCheck size={20} color="#2E6641" /></View><Text className="mt-4 text-center text-[1.0625rem] font-semibold text-[#0B0B0B]">Betaling håndteres av oppdragsgiver</Text><Text className="mt-2 text-center text-[0.875rem] leading-relaxed text-[#63665F]">Du kan følge oppdragets status og starte arbeidet fra din egen arbeidsside.</Text><Pressable onPress={() => router.replace(providerOrderRoute(order._id))} className="mt-6 rounded-full bg-[#2E6641] px-6 py-3"><Text className="text-center text-[0.9375rem] font-semibold text-white">Gå til mitt oppdrag</Text></Pressable></View></View></SafeAreaView>;
   }
 
   if (!isCustomer && !isProvider) {
-    return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><View className="flex-1 justify-center px-4"><View className="rounded-3xl border border-[#E6E7E1] bg-white p-8"><Text className="text-center text-[1.0625rem] font-semibold text-[#0B0B0B]">Ikke tilgang</Text><Text className="mt-2 text-center text-[0.875rem] text-[#63665F]">Denne kontrakten tilhører andre parter.</Text></View></View></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><View className="flex-1 justify-center px-4"><View className="rounded-3xl border border-[#E6E7E1] bg-white p-8"><Text className="text-center text-[1.0625rem] font-semibold text-[#0B0B0B]">Ikke tilgang</Text><Text className="mt-2 text-center text-[0.875rem] text-[#63665F]">Denne kontrakten tilhører andre parter.</Text></View></View></SafeAreaView>;
   }
 
   const isPaid = order.paymentStatus === 'paid' || SETTLED_STATUSES.includes(order.status);
@@ -187,16 +187,27 @@ export default function SafePayCheckoutScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 120 }}>
         <Pressable onPress={() => router.push({ pathname: '/(app)/job-applicants/[serviceId]', params: { serviceId: service._id } })} className="mb-5 flex-row items-center gap-2 self-start"><ArrowLeft size={17} color="#63665F" /><Text className="text-[0.8125rem] text-[#63665F]">Tilbake til søkere</Text></Pressable>
         <View className="mb-6"><Text className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-[#9B9E96]">SafePay</Text><Text className="mt-2 text-[1.9rem] font-bold leading-tight text-[#0B0B0B]">Kontrakt og betaling</Text><Text className="mt-2 text-[0.9375rem] leading-relaxed text-[#63665F]">Beløpet trekkes nå og holdes av Jobblo til du har godkjent arbeidet.</Text></View>
         <SafePayProgressSteps currentStep={2} />
         <SafePayPartiesCard order={order} />
         <DigitalContractCard service={service} order={order} calculation={calculation} contractDate={contractDate} duration={duration} />
-        <SafePayPaymentCard calculation={calculation} isPaid={isPaid} providerName={order.providerId?.name} onPay={handlePay} isPending={paymentMutation.isPending || launching} />
+        {order.status === 'cancelled' ? <SafePayCancelledCard order={order} total={calculation.total} /> : <SafePayPaymentCard
+          calculation={calculation}
+          isPaid={isPaid}
+          providerName={order.providerId?.name}
+          onPay={handlePay}
+          isPending={paymentMutation.isPending || launching}
+          startDeadline={data.startDeadline}
+          paidAction={{
+            label: order.status === 'ready_for_review' ? 'Gå til godkjenning' : 'Se status på oppdraget',
+            onPress: () => router.replace(customerOrderRoute(order._id, order.status, order.paymentStatus)),
+          }}
+        />}
         {order.paymentStatus === 'failed' ? <Text className="mt-4 text-center text-[0.8125rem] font-medium text-[#B4453A]">Forrige betalingsforsøk mislyktes. Du kan prøve igjen over.</Text> : null}
-        <Text className="mt-5 text-center text-[0.75rem] leading-relaxed text-[#9B9E96]">Ved å bekrefte godtar du Jobblos vilkår og SafePay-avtalen.</Text>
+        {order.status === 'cancelled' ? null : <Text className="mt-5 text-center text-[0.75rem] leading-relaxed text-[#9B9E96]">Ved å bekrefte godtar du Jobblos vilkår og SafePay-avtalen.</Text>}
       </ScrollView>
     </SafeAreaView>
   );

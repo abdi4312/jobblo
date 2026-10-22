@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Alert, AppState, Linking, Pressable, ScrollView, Text, View } from 'react-native';
-import { AlertCircle, ArrowLeft, CheckCircle2, Clock3, ExternalLink, Info, Loader2, ShieldCheck } from 'lucide-react-native';
+import { AlertCircle, CheckCircle2, Clock3, ExternalLink, Info, Loader2, ShieldCheck } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useConnectStatus, useCreateAccountLinkMutation, useRefreshStatusMutation } from '../../../../src/hooks/usePayout';
 import type { ConnectStatusResponse } from '../../../../src/services/payout.service';
 import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
+import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
 
 type StatusKind = 'ready' | 'pending_verification' | 'started' | 'restricted' | 'not_configured';
 
@@ -93,7 +94,7 @@ export default function PayoutSettingsScreen() {
 
   if (statusQuery.isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <LoadingIndicator message="Laster utbetalingsstatus..." />
       </SafeAreaView>
     );
@@ -107,7 +108,7 @@ export default function PayoutSettingsScreen() {
         ? 'Serverfeil. Prøv igjen litt senere.'
         : info.message || 'Utbetalingsstatusen kunne ikke hentes akkurat nå.';
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <ErrorState
           title={title}
           message={message}
@@ -247,19 +248,9 @@ export default function PayoutSettingsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 36 }}>
-        <Pressable onPress={() => router.back()} className="mb-5 flex-row items-center self-start py-2">
-          <ArrowLeft size={18} color="#63665F" />
-          <Text className="ml-2 text-sm font-medium text-[#63665F]">Innstillinger</Text>
-        </Pressable>
-
-        <View className="mb-5">
-          <Text className="text-[1.5rem] font-bold leading-tight text-[#0B0B0B]">Utbetalinger</Text>
-          <Text className="mt-1 text-[0.9375rem] leading-6 text-[#63665F]">
-            Administrer Stripe Connect-kontoen din og se status for utbetalinger.
-          </Text>
-        </View>
+        <ScreenHeader title="Utbetalinger" subtitle="Administrer Stripe Connect-kontoen din og se status for utbetalinger." />
 
         {status.mode === 'test' ? (
           <View className="mb-4 rounded-2xl bg-white p-4">

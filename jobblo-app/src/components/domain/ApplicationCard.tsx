@@ -96,7 +96,7 @@ export function ApplicationCard({
     'flex-row items-center justify-center gap-1.5 rounded-full bg-[#2E6641] px-3 py-2';
 
   return (
-    <View className="overflow-hidden rounded-[20px] border border-[#E6E7E1] bg-white">
+    <View className="overflow-hidden rounded-xl border border-[#E6E7E1] bg-white">
       <View className="p-5">
         <View className="flex-row items-start gap-4">
           <View className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#EAF1E9]">
@@ -160,7 +160,7 @@ export function ApplicationCard({
         />
 
         {application.message ? (
-          <View className="mt-4 rounded-xl border-l-2 border-[#2E6641] bg-[#F4F6F0] px-3 py-2.5">
+          <View className="mt-4 rounded-lg border-l-2 border-[#2E6641] bg-[#F4F6F0] px-3 py-2.5">
             <Text className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-[#63665F]">
               Din melding
             </Text>
@@ -213,13 +213,6 @@ export function ApplicationCard({
           <Pressable onPress={() => onChat?.(chatId)} className={actionButtonClass}>
             <MessageCircle size={13} color="#0B0B0B" />
             <Text className="text-[0.8125rem] font-medium text-[#0B0B0B]">Chat</Text>
-          </Pressable>
-        ) : null}
-
-        {orderId && !['paid', 'in_progress', 'ready_for_review', 'completed'].includes(application.order?.status ?? '') ? (
-          <Pressable onPress={() => onOrder?.(orderId)} className={actionButtonClass}>
-            <FileText size={13} color="#0B0B0B" />
-            <Text className="text-[0.8125rem] font-medium text-[#0B0B0B]">Oppdrag</Text>
           </Pressable>
         ) : null}
 

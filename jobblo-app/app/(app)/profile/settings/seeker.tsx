@@ -17,6 +17,7 @@
  */
 import React, { useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Image,
     KeyboardAvoidingView,
@@ -31,16 +32,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import {
-    ArrowLeft,
     Award,
     Briefcase,
-    Calendar,
+    ChevronLeft,
     FileText,
     Image as ImageIcon,
-    Loader2,
     Plus,
     Trash2,
     X,
+    type LucideIcon,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
@@ -48,9 +48,10 @@ import { useProfile, useUpdateProfile } from '../../../../src/hooks/useProfile';
 import { useAuthStore } from '../../../../src/store/authStore';
 import { Button } from '../../../../src/components/ui/Button';
 import { Dialog } from '../../../../src/components/ui/Dialog';
-import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
+import { Card, SectionLabel } from '../../../../src/components/ui/Card';
+import { FormRow } from '../../../../src/components/ui/FormRow';
 import {
     useAddExperience,
     useDeleteExperience,
@@ -65,74 +66,6 @@ import {
 
 // ─── Max file size: must match backend (8 MB) ────────────────────────────────
 const MAX_BYTES = 8 * 1024 * 1024;
-
-// ─── Tiny reusable primitives ─────────────────────────────────────────────────
-
-function SectionHeader({
-    icon: Icon,
-    title,
-    onAdd,
-    addLabel,
-}: {
-    icon: React.ComponentType<{ size?: number; color?: string }>;
-    title: string;
-    onAdd?: () => void;
-    addLabel?: string;
-}) {
-    return (
-        <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-2">
-                <Icon size={18} color="#2E6641" />
-                <Text className="text-[1.0625rem] font-bold text-[#0B0B0B]">{title}</Text>
-            </View>
-            {onAdd ? (
-                <Pressable
-                    onPress={onAdd}
-                    className="flex-row items-center gap-1 rounded-full px-3 py-2 active:bg-[#F4F6F0]"
-                >
-                    <Plus size={15} color="#2E6641" />
-                    <Text className="text-[0.8125rem] font-semibold text-[#2E6641]">{addLabel}</Text>
-                </Pressable>
-            ) : null}
-        </View>
-    );
-}
-
-function FieldLabel({ text }: { text: string }) {
-    return (
-        <Text className="mb-1 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]">
-            {text}
-        </Text>
-    );
-}
-
-function StyledInput({
-    value,
-    onChangeText,
-    placeholder,
-    multiline,
-    numberOfLines,
-}: {
-    value: string;
-    onChangeText: (v: string) => void;
-    placeholder?: string;
-    multiline?: boolean;
-    numberOfLines?: number;
-}) {
-    return (
-        <TextInput
-            value={value}
-            onChangeText={onChangeText}
-            placeholder={placeholder}
-            placeholderTextColor="#9B9E96"
-            multiline={multiline}
-            numberOfLines={numberOfLines}
-            textAlignVertical={multiline ? 'top' : 'auto'}
-            className="rounded-xl border border-[#E6E7E1] bg-white px-4 py-3 text-[0.9375rem] text-[#0B0B0B]"
-            style={multiline ? { minHeight: 80 } : undefined}
-        />
-    );
-}
 
 // Norwegian locale date display — YYYY-MM-DD → "12. jan. 2023"
 function fmtDate(iso: string | undefined): string {
@@ -416,34 +349,31 @@ export default function SeekerScreen() {
             },
         ]);
 
+    const leave = () => {
+        if (baseUnchanged) return router.back();
+        Alert.alert('Forkast endringer?', 'Endringer i tilgjengelighet og ferdigheter blir ikke lagret.', [
+            { text: 'Fortsett å redigere', style: 'cancel' },
+            { text: 'Forkast', style: 'destructive', onPress: () => router.back() },
+        ]);
+    };
+    const canSaveBase = !baseUnchanged && !updateProfile.isPending;
+
     // ─────────────────────────────────────────────────────────────────────────
     // Render guards
     // ─────────────────────────────────────────────────────────────────────────
 
     if (isLoading) {
         return (
-            <SafeAreaView className="flex-1 bg-[#EFF0EA]">
-                <View className="flex-row items-center border-b border-[#E6E7E1] bg-white px-4 py-3">
-                    <Pressable onPress={() => router.back()} className="h-10 w-10 items-center justify-center rounded-full">
-                        <ArrowLeft size={22} color="#0B0B0B" />
-                    </Pressable>
-                    <Text className="ml-2 text-lg font-semibold text-[#0B0B0B]">Jobbsøker-profil</Text>
-                </View>
-                <LoadingIndicator />
+            <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+                <LoadingIndicator message="Laster jobbsøker-profil..." />
             </SafeAreaView>
         );
     }
 
     if (isError || !profile) {
         return (
-            <SafeAreaView className="flex-1 bg-[#EFF0EA]">
-                <View className="flex-row items-center border-b border-[#E6E7E1] bg-white px-4 py-3">
-                    <Pressable onPress={() => router.back()} className="h-10 w-10 items-center justify-center rounded-full">
-                        <ArrowLeft size={22} color="#0B0B0B" />
-                    </Pressable>
-                    <Text className="ml-2 text-lg font-semibold text-[#0B0B0B]">Jobbsøker-profil</Text>
-                </View>
-                <ErrorState onAction={() => void refetch()} />
+            <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+                <ErrorState title="Kunne ikke laste profilen" onAction={() => void refetch()} />
             </SafeAreaView>
         );
     }
@@ -458,197 +388,146 @@ export default function SeekerScreen() {
     // ─────────────────────────────────────────────────────────────────────────
 
     return (
-        <SafeAreaView className="flex-1 bg-[#EFF0EA]">
-            {/* Header */}
-            <View className="flex-row items-center border-b border-[#E6E7E1] bg-white px-4 py-3">
-                <Pressable
-                    onPress={() => router.back()}
-                    accessibilityLabel="Tilbake"
-                    className="h-10 w-10 items-center justify-center rounded-full"
-                >
-                    <ArrowLeft size={22} color="#0B0B0B" />
+        <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+            {/* Top bar: Tilbake · title · Lagre (Lagre saves availability + skills). */}
+            <View className="h-14 flex-row items-center justify-between border-b border-[#E6E7E1] bg-[#EFF0EA] px-2">
+                <Pressable onPress={leave} hitSlop={8} accessibilityRole="button" className="min-w-[72px] flex-row items-center px-2 py-2">
+                    <ChevronLeft size={20} color="#3C3F38" />
+                    <Text className="text-[1rem] text-[#3C3F38]">Tilbake</Text>
                 </Pressable>
-                <Text className="ml-2 text-lg font-semibold text-[#0B0B0B]">Jobbsøker-profil</Text>
+                <Text className="text-[1.0625rem] font-semibold text-[#0B0B0B]">Jobbsøker-profil</Text>
+                <Pressable
+                    onPress={saveBase}
+                    disabled={!canSaveBase}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: !canSaveBase }}
+                    className="min-w-[72px] items-end px-2 py-2"
+                >
+                    {updateProfile.isPending ? (
+                        <ActivityIndicator size="small" color="#2E6641" />
+                    ) : (
+                        <Text className={`text-[1rem] font-semibold ${canSaveBase ? 'text-[#2E6641]' : 'text-[#B5B8B0]'}`}>Lagre</Text>
+                    )}
+                </Pressable>
             </View>
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                className="flex-1"
-            >
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
                 <ScrollView
                     contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
+                    <Text className="mb-5 px-1 text-[0.875rem] leading-5 text-[#63665F]">
+                        Det oppdragsgivere ser når de vurderer deg. Erfaring, portfolio, prosjekter og
+                        sertifiseringer lagres med en gang du legger dem til.
+                    </Text>
 
-                    {/* ── 1. Tilgjengelighet ─────────────────────────────────────── */}
-                    <View className="rounded-3xl border border-[#E6E7E1] bg-white p-5">
-                        <SectionHeader icon={Calendar} title="Tilgjengelighet" />
-                        <View className="mt-4">
-                            <FieldLabel text="Når er du tilgjengelig?" />
-                            <TextInput
-                                value={availability}
-                                onChangeText={setAvailability}
-                                placeholder="F.eks. Mandag–fredag: 08:00–16:00"
-                                placeholderTextColor="#9B9E96"
-                                multiline
-                                numberOfLines={3}
-                                textAlignVertical="top"
-                                className="rounded-xl border border-[#E6E7E1] bg-[#FBFCF8] px-4 py-3 text-[0.9375rem] text-[#0B0B0B]"
-                                style={{ minHeight: 72 }}
-                            />
-                        </View>
-                    </View>
+                    {/* ── 1. Tilgjengelighet ── */}
+                    <SectionLabel>Tilgjengelighet</SectionLabel>
+                    <Card className="mb-6 overflow-hidden">
+                        <FormRow
+                            label="Når er du tilgjengelig?"
+                            value={availability}
+                            onChangeText={setAvailability}
+                            placeholder="F.eks. Mandag–fredag 08–16, og helger"
+                            multiline
+                        />
+                    </Card>
 
-                    {/* ── 2. Ferdigheter ────────────────────────────────────────── */}
-                    <View className="mt-4 rounded-3xl border border-[#E6E7E1] bg-white p-5">
-                        <SectionHeader icon={Briefcase} title="Ferdigheter" />
-
-                        <View className="mt-4 flex-row gap-2">
-                            <TextInput
-                                value={skillInput}
-                                onChangeText={setSkillInput}
-                                onSubmitEditing={addSkill}
-                                placeholder="Legg til en ferdighet …"
-                                placeholderTextColor="#9B9E96"
-                                returnKeyType="done"
-                                className="flex-1 rounded-xl border border-[#E6E7E1] bg-[#FBFCF8] px-4 py-3 text-[0.9375rem] text-[#0B0B0B]"
-                            />
-                            <Pressable
-                                onPress={addSkill}
-                                className="items-center justify-center rounded-xl bg-[#2E6641] px-4"
-                            >
-                                <Plus size={18} color="#FFFFFF" />
-                            </Pressable>
-                        </View>
-
-                        {skills.length > 0 && (
-                            <View className="mt-3 flex-row flex-wrap gap-2">
+                    {/* ── 2. Ferdigheter ── */}
+                    <SectionLabel>Ferdigheter</SectionLabel>
+                    <Card className="mb-2 overflow-hidden">
+                        {skills.length ? (
+                            <View className="flex-row flex-wrap gap-2 px-4 pt-4">
                                 {skills.map((skill) => (
-                                    <View
-                                        key={skill}
-                                        className="flex-row items-center gap-1.5 rounded-full border border-[#2E6641]/20 bg-[#EAF1E9] px-3 py-1.5"
-                                    >
-                                        <Text className="text-[0.8125rem] font-semibold text-[#2E6641]">{skill}</Text>
-                                        <Pressable onPress={() => setSkills((p) => p.filter((s) => s !== skill))}>
+                                    <View key={skill} className="flex-row items-center rounded-full bg-[#EAF1E9] py-1 pl-3 pr-1">
+                                        <Text className="text-[0.8125rem] font-medium text-[#2E6641]">{skill}</Text>
+                                        <Pressable
+                                            onPress={() => setSkills((p) => p.filter((s) => s !== skill))}
+                                            accessibilityLabel={`Fjern ${skill}`}
+                                            hitSlop={6}
+                                            className="ml-1 rounded-full p-1"
+                                        >
                                             <X size={13} color="#2E6641" />
                                         </Pressable>
                                     </View>
                                 ))}
                             </View>
-                        )}
-                    </View>
+                        ) : null}
+                        <View className="flex-row items-center gap-3 px-4 py-3">
+                            <TextInput
+                                value={skillInput}
+                                onChangeText={setSkillInput}
+                                onSubmitEditing={addSkill}
+                                placeholder={skills.length ? 'Legg til en ferdighet til' : 'F.eks. Maling, Flytting, Rengjøring'}
+                                placeholderTextColor="#B5B8B0"
+                                returnKeyType="done"
+                                accessibilityLabel="Ny ferdighet"
+                                style={{ paddingVertical: 6, paddingHorizontal: 0 }}
+                                className="flex-1 text-[1rem] text-[#0B0B0B]"
+                            />
+                            <Pressable
+                                onPress={addSkill}
+                                disabled={!skillInput.trim()}
+                                accessibilityRole="button"
+                                accessibilityLabel="Legg til ferdighet"
+                                className={`h-9 w-9 items-center justify-center rounded-full ${skillInput.trim() ? 'bg-[#2E6641]' : 'bg-[#E6E7E1]'}`}
+                            >
+                                <Plus size={17} color="#FFFFFF" />
+                            </Pressable>
+                        </View>
+                    </Card>
+                    <Text className="mb-6 px-1 text-[0.75rem] text-[#9B9E96]">
+                        {baseUnchanged ? 'Tilgjengelighet og ferdigheter er lagret.' : 'Trykk «Lagre» øverst for å lagre endringene.'}
+                    </Text>
 
-                    {/* ── Save base fields ────────────────────────────────────────── */}
-                    <View className="mt-4">
-                        <Button
-                            label={updateProfile.isPending ? 'Lagrer …' : 'Lagre endringer'}
-                            onPress={saveBase}
-                            disabled={baseUnchanged || updateProfile.isPending}
-                            fullWidth
-                        />
-                    </View>
-
-                    {/* ── 3. Erfaring ───────────────────────────────────────────── */}
-                    <View className="mt-6 rounded-3xl border border-[#E6E7E1] bg-white p-5">
-                        <SectionHeader
-                            icon={Briefcase}
-                            title="Erfaring"
-                            onAdd={() => setExpDialogOpen(true)}
-                            addLabel="Legg til"
-                        />
+                    {/* ── 3. Erfaring ── */}
+                    <GroupHeader title="Erfaring" onAdd={() => setExpDialogOpen(true)} />
+                    <Card className="mb-6 overflow-hidden">
                         {experience.length === 0 ? (
-                            <EmptyState
-                                title="Ingen erfaring lagt til ennå"
-                                message="Legg til tidligere arbeidserfaring som vises på profilen din."
-                            />
+                            <EmptyRow icon={Briefcase} text="Legg til tidligere arbeidserfaring som vises på profilen din." />
                         ) : (
-                            <View className="mt-4 gap-3">
-                                {experience.map((exp: any) => (
-                                    <View
-                                        key={exp._id}
-                                        className="rounded-2xl border border-[#E6E7E1] bg-[#FBFCF8] p-4"
-                                    >
-                                        <View className="flex-row items-start justify-between gap-2">
-                                            <View className="flex-1">
-                                                <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">
-                                                    {exp.title}
-                                                </Text>
-                                                {exp.company ? (
-                                                    <Text className="mt-0.5 text-[0.875rem] font-semibold text-[#2E6641]">
-                                                        {exp.company}
-                                                    </Text>
-                                                ) : null}
-                                                <Text className="mt-1 text-[0.75rem] text-[#9B9E96]">
-                                                    {fmtDate(exp.startDate)} – {fmtDate(exp.endDate)}
-                                                </Text>
-                                                {exp.description ? (
-                                                    <Text className="mt-2 text-[0.875rem] leading-5 text-[#63665F]">
-                                                        {exp.description}
-                                                    </Text>
-                                                ) : null}
-                                            </View>
-                                            <Pressable
-                                                onPress={() => confirmDeleteExp(exp._id)}
-                                                disabled={delExp.isPending}
-                                                className="p-2"
-                                                accessibilityLabel="Slett erfaring"
-                                            >
-                                                <Trash2 size={17} color="#B4544A" />
-                                            </Pressable>
-                                        </View>
+                            experience.map((exp: any, index: number) => (
+                                <View key={exp._id} className={`flex-row items-start gap-3 px-4 py-3.5 ${index > 0 ? 'border-t border-[#EFF0EA]' : ''}`}>
+                                    <View className="mt-0.5 h-9 w-9 items-center justify-center rounded-xl bg-[#EAF1E9]">
+                                        <Briefcase size={16} color="#2E6641" />
                                     </View>
-                                ))}
-                            </View>
+                                    <View className="min-w-0 flex-1">
+                                        <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">{exp.title}</Text>
+                                        {exp.company ? <Text className="mt-0.5 text-[0.8125rem] text-[#3C3F38]">{exp.company}</Text> : null}
+                                        <Text className="mt-0.5 text-[0.75rem] text-[#9B9E96]">
+                                            {fmtDate(exp.startDate)} – {fmtDate(exp.endDate)}
+                                        </Text>
+                                        {exp.description ? (
+                                            <Text className="mt-1.5 text-[0.8125rem] leading-5 text-[#63665F]">{exp.description}</Text>
+                                        ) : null}
+                                    </View>
+                                    <DeleteButton label="Slett erfaring" disabled={delExp.isPending} onPress={() => confirmDeleteExp(exp._id)} />
+                                </View>
+                            ))
                         )}
-                    </View>
+                    </Card>
 
-                    {/* ── 4. Portfolio ─────────────────────────────────────────── */}
-                    <View className="mt-4 rounded-3xl border border-[#E6E7E1] bg-white p-5">
-                        <SectionHeader
-                            icon={ImageIcon}
-                            title="Portfolio"
-                            onAdd={() => setPortDialogOpen(true)}
-                            addLabel="Legg til"
-                        />
+                    {/* ── 4. Portfolio ── */}
+                    <GroupHeader title="Portfolio" onAdd={() => setPortDialogOpen(true)} />
+                    <Card className="mb-6 overflow-hidden">
                         {portfolio.length === 0 ? (
-                            <EmptyState
-                                title="Ingen portfolio-elementer ennå"
-                                message="Legg til bilder som viser frem arbeidet ditt."
-                            />
+                            <EmptyRow icon={ImageIcon} text="Legg til bilder som viser frem arbeidet ditt." />
                         ) : (
-                            <View className="mt-4 flex-row flex-wrap gap-3">
+                            <View className="flex-row flex-wrap justify-between gap-y-3 p-3">
                                 {portfolio.map((item: any) => (
-                                    <View
-                                        key={item._id}
-                                        className="relative overflow-hidden rounded-2xl border border-[#E6E7E1]"
-                                        style={{ width: '47%', aspectRatio: 1 }}
-                                    >
+                                    <View key={item._id} className="overflow-hidden rounded-2xl bg-[#F4F6F0]" style={{ width: '48.5%', aspectRatio: 1 }}>
                                         {item.imageUrl ? (
-                                            <Image
-                                                source={{ uri: item.imageUrl }}
-                                                className="h-full w-full"
-                                                resizeMode="cover"
-                                                accessibilityLabel={item.title}
-                                            />
+                                            <Image source={{ uri: item.imageUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" accessibilityLabel={item.title} />
                                         ) : (
-                                            <View className="h-full w-full items-center justify-center bg-[#F4F6F0]">
+                                            <View className="h-full w-full items-center justify-center">
                                                 <ImageIcon size={24} color="#9B9E96" />
                                             </View>
                                         )}
-                                        <View className="absolute bottom-0 left-0 right-0 flex-row items-center justify-between bg-[#0B0B0B]/60 px-2 py-1.5">
-                                            <Text
-                                                className="flex-1 text-[0.75rem] font-semibold text-white"
-                                                numberOfLines={1}
-                                            >
-                                                {item.title}
-                                            </Text>
-                                            <Pressable
-                                                onPress={() => confirmDeletePort(item._id)}
-                                                disabled={delPort.isPending}
-                                                className="ml-2 p-1"
-                                                accessibilityLabel="Slett"
-                                            >
+                                        <View className="absolute bottom-0 left-0 right-0 flex-row items-center bg-[#0B0B0B]/55 py-1.5 pl-2.5 pr-1">
+                                            <Text className="flex-1 text-[0.75rem] font-semibold text-white" numberOfLines={1}>{item.title}</Text>
+                                            <Pressable onPress={() => confirmDeletePort(item._id)} disabled={delPort.isPending} hitSlop={6} className="p-1" accessibilityLabel={`Slett ${item.title}`}>
                                                 <Trash2 size={14} color="#FFFFFF" />
                                             </Pressable>
                                         </View>
@@ -656,401 +535,205 @@ export default function SeekerScreen() {
                                 ))}
                             </View>
                         )}
-                    </View>
+                    </Card>
 
-                    {/* ── 5. Tidligere prosjekter ───────────────────────────────── */}
-                    <View className="mt-4 rounded-3xl border border-[#E6E7E1] bg-white p-5">
-                        <SectionHeader
-                            icon={FileText}
-                            title="Tidligere prosjekter"
-                            onAdd={() => setProjDialogOpen(true)}
-                            addLabel="Legg til"
-                        />
+                    {/* ── 5. Tidligere prosjekter ── */}
+                    <GroupHeader title="Tidligere prosjekter" onAdd={() => setProjDialogOpen(true)} />
+                    <Card className="mb-6 overflow-hidden">
                         {previousProjects.length === 0 ? (
-                            <EmptyState
-                                title="Ingen prosjekter lagt til ennå"
-                                message="Vis frem tidligere oppdrag du er stolt av."
-                            />
+                            <EmptyRow icon={FileText} text="Vis frem tidligere oppdrag du er stolt av." />
                         ) : (
-                            <View className="mt-4 gap-3">
-                                {previousProjects.map((proj: any) => (
-                                    <View
-                                        key={proj._id}
-                                        className="flex-row items-center gap-3 rounded-2xl border border-[#E6E7E1] bg-[#FBFCF8] p-4"
-                                    >
-                                        {proj.imageUrl ? (
-                                            <Image
-                                                source={{ uri: proj.imageUrl }}
-                                                className="h-14 w-14 rounded-xl"
-                                                resizeMode="cover"
-                                            />
-                                        ) : (
-                                            <View className="h-14 w-14 items-center justify-center rounded-xl bg-[#F4F6F0]">
-                                                <FileText size={20} color="#9B9E96" />
-                                            </View>
-                                        )}
-                                        <View className="flex-1">
-                                            <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">
-                                                {proj.title}
-                                            </Text>
-                                            {proj.category ? (
-                                                <Text className="text-[0.8125rem] font-semibold text-[#2E6641]">
-                                                    {proj.category}
-                                                </Text>
-                                            ) : null}
-                                            {proj.date ? (
-                                                <Text className="text-[0.75rem] text-[#9B9E96]">
-                                                    {new Date(proj.date).getFullYear()}
-                                                </Text>
-                                            ) : null}
+                            previousProjects.map((proj: any, index: number) => (
+                                <View key={proj._id} className={`flex-row items-center gap-3 px-4 py-3 ${index > 0 ? 'border-t border-[#EFF0EA]' : ''}`}>
+                                    {proj.imageUrl ? (
+                                        <Image source={{ uri: proj.imageUrl }} style={{ width: 52, height: 52, borderRadius: 12 }} resizeMode="cover" />
+                                    ) : (
+                                        <View className="h-[52px] w-[52px] items-center justify-center rounded-xl bg-[#F4F6F0]">
+                                            <FileText size={20} color="#9B9E96" />
                                         </View>
-                                        <Pressable
-                                            onPress={() => confirmDeleteProj(proj._id)}
-                                            disabled={delProj.isPending}
-                                            className="p-2"
-                                            accessibilityLabel="Slett prosjekt"
-                                        >
-                                            <Trash2 size={17} color="#B4544A" />
-                                        </Pressable>
+                                    )}
+                                    <View className="min-w-0 flex-1">
+                                        <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]" numberOfLines={1}>{proj.title}</Text>
+                                        <Text className="mt-0.5 text-[0.8125rem] text-[#63665F]" numberOfLines={1}>
+                                            {[proj.category, proj.date ? new Date(proj.date).getFullYear() : null].filter(Boolean).join(' · ') || 'Prosjekt'}
+                                        </Text>
                                     </View>
-                                ))}
-                            </View>
+                                    <DeleteButton label="Slett prosjekt" disabled={delProj.isPending} onPress={() => confirmDeleteProj(proj._id)} />
+                                </View>
+                            ))
                         )}
-                    </View>
+                    </Card>
 
-                    {/* ── 6. Sertifiseringer ───────────────────────────────────── */}
-                    <View className="mt-4 rounded-3xl border border-[#E6E7E1] bg-white p-5">
-                        <SectionHeader
-                            icon={Award}
-                            title="Sertifiseringer / Fagbrev"
-                            onAdd={() => setCertDialogOpen(true)}
-                            addLabel="Legg til"
-                        />
+                    {/* ── 6. Sertifiseringer ── */}
+                    <GroupHeader title="Sertifiseringer og fagbrev" onAdd={() => setCertDialogOpen(true)} />
+                    <Card className="overflow-hidden">
                         {certifications.length === 0 ? (
-                            <EmptyState
-                                title="Ingen sertifiseringer ennå"
-                                message="Legg til fagbrev, kurs eller andre sertifikater."
-                            />
+                            <EmptyRow icon={Award} text="Legg til fagbrev, kurs eller andre sertifikater." />
                         ) : (
-                            <View className="mt-4 gap-3">
-                                {certifications.map((cert: any) => (
-                                    <View
-                                        key={cert._id}
-                                        className="flex-row items-center gap-3 rounded-2xl border border-[#E6E7E1] bg-[#FBFCF8] p-4"
-                                    >
-                                        <View className="h-11 w-11 items-center justify-center rounded-xl bg-[#EAF1E9]">
-                                            <Award size={20} color="#2E6641" />
-                                        </View>
-                                        <View className="flex-1">
-                                            <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">
-                                                {cert.title}
-                                            </Text>
-                                            {cert.issuedBy ? (
-                                                <Text className="text-[0.8125rem] text-[#63665F]">{cert.issuedBy}</Text>
-                                            ) : null}
-                                        </View>
-                                        <Pressable
-                                            onPress={() => confirmDeleteCert(cert._id)}
-                                            disabled={delCert.isPending}
-                                            className="p-2"
-                                            accessibilityLabel="Slett sertifisering"
-                                        >
-                                            <Trash2 size={17} color="#B4544A" />
-                                        </Pressable>
+                            certifications.map((cert: any, index: number) => (
+                                <View key={cert._id} className={`flex-row items-center gap-3 px-4 py-3.5 ${index > 0 ? 'border-t border-[#EFF0EA]' : ''}`}>
+                                    <View className="h-9 w-9 items-center justify-center rounded-xl bg-[#EAF1E9]">
+                                        <Award size={17} color="#2E6641" />
                                     </View>
-                                ))}
-                            </View>
+                                    <View className="min-w-0 flex-1">
+                                        <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">{cert.title}</Text>
+                                        {cert.issuedBy ? <Text className="mt-0.5 text-[0.8125rem] text-[#63665F]">{cert.issuedBy}</Text> : null}
+                                    </View>
+                                    <DeleteButton label="Slett sertifisering" disabled={delCert.isPending} onPress={() => confirmDeleteCert(cert._id)} />
+                                </View>
+                            ))
                         )}
-                    </View>
+                    </Card>
                 </ScrollView>
             </KeyboardAvoidingView>
 
-            {/* ── Dialog: Add Experience ──────────────────────────────────────── */}
-            <Dialog visible={expDialogOpen} onClose={() => setExpDialogOpen(false)}>
-                <Text className="text-[1.0625rem] font-bold text-[#0B0B0B]">Legg til erfaring</Text>
-                <View className="mt-4 gap-3">
-                    <View>
-                        <FieldLabel text="Jobbtittel *" />
-                        <StyledInput
-                            value={expForm.title}
-                            onChangeText={(v) => setExpForm((p) => ({ ...p, title: v }))}
-                            placeholder="F.eks. Snekker"
-                        />
-                    </View>
-                    <View>
-                        <FieldLabel text="Bedrift / klient" />
-                        <StyledInput
-                            value={expForm.company}
-                            onChangeText={(v) => setExpForm((p) => ({ ...p, company: v }))}
-                            placeholder="F.eks. Johansen Bygg AS"
-                        />
-                    </View>
-                    <View>
-                        <FieldLabel text="Startdato (ÅÅÅÅ-MM-DD)" />
-                        <StyledInput
-                            value={expForm.startDate}
-                            onChangeText={(v) => setExpForm((p) => ({ ...p, startDate: v }))}
-                            placeholder="2022-01-15"
-                        />
-                    </View>
-                    <View>
-                        <FieldLabel text="Sluttdato (valgfritt)" />
-                        <StyledInput
-                            value={expForm.endDate ?? ''}
-                            onChangeText={(v) => setExpForm((p) => ({ ...p, endDate: v }))}
-                            placeholder="2024-06-30 – la stå tomt for nåværende"
-                        />
-                    </View>
-                    <View>
-                        <FieldLabel text="Beskrivelse (valgfritt)" />
-                        <StyledInput
-                            value={expForm.description ?? ''}
-                            onChangeText={(v) => setExpForm((p) => ({ ...p, description: v }))}
-                            placeholder="Beskriv arbeidsoppgavene …"
-                            multiline
-                            numberOfLines={3}
-                        />
-                    </View>
-                </View>
-                <View className="mt-5 flex-row gap-3">
-                    <Pressable
-                        onPress={() => setExpDialogOpen(false)}
-                        className="flex-1 items-center rounded-full border border-[#E6E7E1] py-3"
-                    >
-                        <Text className="text-[0.875rem] font-semibold text-[#63665F]">Avbryt</Text>
-                    </Pressable>
-                    <Pressable
-                        onPress={submitExperience}
-                        disabled={!expForm.title.trim() || addExp.isPending}
-                        className="flex-1 items-center rounded-full bg-[#2E6641] py-3 disabled:opacity-50"
-                    >
-                        {addExp.isPending ? (
-                            <Loader2 size={16} color="#FFFFFF" />
-                        ) : (
-                            <Text className="text-[0.875rem] font-semibold text-white">Lagre</Text>
-                        )}
-                    </Pressable>
-                </View>
-            </Dialog>
+            {/* ── Dialog: Add Experience ── */}
+            <FormDialog
+                visible={expDialogOpen}
+                title="Legg til erfaring"
+                onClose={() => setExpDialogOpen(false)}
+                onSubmit={submitExperience}
+                canSubmit={!!expForm.title.trim()}
+                pending={addExp.isPending}
+            >
+                <FormRow label="Jobbtittel *" value={expForm.title} onChangeText={(v) => setExpForm((p) => ({ ...p, title: v }))} placeholder="F.eks. Snekker" />
+                <FormRow divider label="Bedrift / klient" value={expForm.company} onChangeText={(v) => setExpForm((p) => ({ ...p, company: v }))} placeholder="F.eks. Johansen Bygg AS" />
+                <FormRow divider label="Startdato (ÅÅÅÅ-MM-DD)" value={expForm.startDate} onChangeText={(v) => setExpForm((p) => ({ ...p, startDate: v }))} placeholder="2022-01-15" keyboardType="numbers-and-punctuation" />
+                <FormRow divider label="Sluttdato (tom = nåværende)" value={expForm.endDate ?? ''} onChangeText={(v) => setExpForm((p) => ({ ...p, endDate: v }))} placeholder="2024-06-30" keyboardType="numbers-and-punctuation" />
+                <FormRow divider label="Beskrivelse" value={expForm.description ?? ''} onChangeText={(v) => setExpForm((p) => ({ ...p, description: v }))} placeholder="Beskriv arbeidsoppgavene …" multiline />
+            </FormDialog>
 
-            {/* ── Dialog: Add Portfolio ────────────────────────────────────────── */}
-            <Dialog visible={portDialogOpen} onClose={() => setPortDialogOpen(false)}>
-                <Text className="text-[1.0625rem] font-bold text-[#0B0B0B]">Legg til portfolio-element</Text>
-                <View className="mt-4 gap-3">
-                    <View>
-                        <FieldLabel text="Tittel *" />
-                        <StyledInput
-                            value={portForm.title}
-                            onChangeText={(v) => setPortForm((p) => ({ ...p, title: v }))}
-                            placeholder="F.eks. Kjøkkenrenovering"
-                        />
-                    </View>
-                    <View>
-                        <FieldLabel text="Beskrivelse" />
-                        <StyledInput
-                            value={portForm.description}
-                            onChangeText={(v) => setPortForm((p) => ({ ...p, description: v }))}
-                            placeholder="Kort beskrivelse …"
-                            multiline
-                            numberOfLines={2}
-                        />
-                    </View>
-                    <View>
-                        <FieldLabel text="Lenke (valgfritt)" />
-                        <StyledInput
-                            value={portForm.link}
-                            onChangeText={(v) => setPortForm((p) => ({ ...p, link: v }))}
-                            placeholder="https://"
-                        />
-                    </View>
-                    <Pressable
-                        onPress={() => void pickPortImage()}
-                        className="flex-row items-center gap-2 rounded-xl border border-dashed border-[#E6E7E1] px-4 py-3"
-                    >
-                        <ImageIcon size={18} color={portImageUri ? '#2E6641' : '#9B9E96'} />
-                        <Text
-                            className="flex-1 text-[0.875rem]"
-                            style={{ color: portImageUri ? '#2E6641' : '#9B9E96' }}
-                            numberOfLines={1}
-                        >
-                            {portImageName ?? 'Velg bilde (valgfritt)'}
-                        </Text>
-                    </Pressable>
-                </View>
-                <View className="mt-5 flex-row gap-3">
-                    <Pressable
-                        onPress={() => setPortDialogOpen(false)}
-                        className="flex-1 items-center rounded-full border border-[#E6E7E1] py-3"
-                    >
-                        <Text className="text-[0.875rem] font-semibold text-[#63665F]">Avbryt</Text>
-                    </Pressable>
-                    <Pressable
-                        onPress={submitPortfolio}
-                        disabled={!portForm.title.trim() || addPort.isPending}
-                        className="flex-1 items-center rounded-full bg-[#2E6641] py-3 disabled:opacity-50"
-                    >
-                        {addPort.isPending ? (
-                            <Loader2 size={16} color="#FFFFFF" />
-                        ) : (
-                            <Text className="text-[0.875rem] font-semibold text-white">Lagre</Text>
-                        )}
-                    </Pressable>
-                </View>
-            </Dialog>
+            {/* ── Dialog: Add Portfolio ── */}
+            <FormDialog
+                visible={portDialogOpen}
+                title="Legg til i portfolio"
+                onClose={() => setPortDialogOpen(false)}
+                onSubmit={submitPortfolio}
+                canSubmit={!!portForm.title.trim()}
+                pending={addPort.isPending}
+                attachment={{ icon: ImageIcon, label: portImageName ?? 'Velg bilde (valgfritt)', chosen: !!portImageUri, onPress: () => void pickPortImage() }}
+            >
+                <FormRow label="Tittel *" value={portForm.title} onChangeText={(v) => setPortForm((p) => ({ ...p, title: v }))} placeholder="F.eks. Kjøkkenrenovering" />
+                <FormRow divider label="Beskrivelse" value={portForm.description} onChangeText={(v) => setPortForm((p) => ({ ...p, description: v }))} placeholder="Kort beskrivelse …" multiline />
+                <FormRow divider label="Lenke" value={portForm.link} onChangeText={(v) => setPortForm((p) => ({ ...p, link: v }))} placeholder="https://" keyboardType="url" autoCapitalize="none" autoCorrect={false} />
+            </FormDialog>
 
-            {/* ── Dialog: Add Previous Project ─────────────────────────────────── */}
-            <Dialog visible={projDialogOpen} onClose={() => setProjDialogOpen(false)}>
-                <Text className="text-[1.0625rem] font-bold text-[#0B0B0B]">Legg til prosjekt</Text>
-                <View className="mt-4 gap-3">
-                    <View>
-                        <FieldLabel text="Tittel *" />
-                        <StyledInput
-                            value={projForm.title}
-                            onChangeText={(v) => setProjForm((p) => ({ ...p, title: v }))}
-                            placeholder="F.eks. Baderomsrenovering"
-                        />
-                    </View>
-                    <View>
-                        <FieldLabel text="Kategori" />
-                        <StyledInput
-                            value={projForm.category}
-                            onChangeText={(v) => setProjForm((p) => ({ ...p, category: v }))}
-                            placeholder="F.eks. Maling, Snekker"
-                        />
-                    </View>
-                    <View>
-                        <FieldLabel text="Dato (ÅÅÅÅ-MM-DD, valgfritt)" />
-                        <StyledInput
-                            value={projForm.date}
-                            onChangeText={(v) => setProjForm((p) => ({ ...p, date: v }))}
-                            placeholder="2024-03-01"
-                        />
-                    </View>
-                    <View>
-                        <FieldLabel text="Lenke (valgfritt)" />
-                        <StyledInput
-                            value={projForm.link}
-                            onChangeText={(v) => setProjForm((p) => ({ ...p, link: v }))}
-                            placeholder="https://"
-                        />
-                    </View>
-                    <View>
-                        <FieldLabel text="Beskrivelse" />
-                        <StyledInput
-                            value={projForm.description}
-                            onChangeText={(v) => setProjForm((p) => ({ ...p, description: v }))}
-                            placeholder="Beskriv prosjektet …"
-                            multiline
-                            numberOfLines={2}
-                        />
-                    </View>
-                    <Pressable
-                        onPress={() => void pickProjImage()}
-                        className="flex-row items-center gap-2 rounded-xl border border-dashed border-[#E6E7E1] px-4 py-3"
-                    >
-                        <ImageIcon size={18} color={projImageUri ? '#2E6641' : '#9B9E96'} />
-                        <Text
-                            className="flex-1 text-[0.875rem]"
-                            style={{ color: projImageUri ? '#2E6641' : '#9B9E96' }}
-                            numberOfLines={1}
-                        >
-                            {projImageName ?? 'Velg bilde (valgfritt)'}
-                        </Text>
-                    </Pressable>
-                </View>
-                <View className="mt-5 flex-row gap-3">
-                    <Pressable
-                        onPress={() => setProjDialogOpen(false)}
-                        className="flex-1 items-center rounded-full border border-[#E6E7E1] py-3"
-                    >
-                        <Text className="text-[0.875rem] font-semibold text-[#63665F]">Avbryt</Text>
-                    </Pressable>
-                    <Pressable
-                        onPress={submitProject}
-                        disabled={!projForm.title.trim() || addProj.isPending}
-                        className="flex-1 items-center rounded-full bg-[#2E6641] py-3 disabled:opacity-50"
-                    >
-                        {addProj.isPending ? (
-                            <Loader2 size={16} color="#FFFFFF" />
-                        ) : (
-                            <Text className="text-[0.875rem] font-semibold text-white">Lagre</Text>
-                        )}
-                    </Pressable>
-                </View>
-            </Dialog>
+            {/* ── Dialog: Add Previous Project ── */}
+            <FormDialog
+                visible={projDialogOpen}
+                title="Legg til prosjekt"
+                onClose={() => setProjDialogOpen(false)}
+                onSubmit={submitProject}
+                canSubmit={!!projForm.title.trim()}
+                pending={addProj.isPending}
+                attachment={{ icon: ImageIcon, label: projImageName ?? 'Velg bilde (valgfritt)', chosen: !!projImageUri, onPress: () => void pickProjImage() }}
+            >
+                <FormRow label="Tittel *" value={projForm.title} onChangeText={(v) => setProjForm((p) => ({ ...p, title: v }))} placeholder="F.eks. Baderomsrenovering" />
+                <FormRow divider label="Kategori" value={projForm.category} onChangeText={(v) => setProjForm((p) => ({ ...p, category: v }))} placeholder="F.eks. Maling, Snekker" />
+                <FormRow divider label="Dato (ÅÅÅÅ-MM-DD)" value={projForm.date} onChangeText={(v) => setProjForm((p) => ({ ...p, date: v }))} placeholder="2024-03-01" keyboardType="numbers-and-punctuation" />
+                <FormRow divider label="Lenke" value={projForm.link} onChangeText={(v) => setProjForm((p) => ({ ...p, link: v }))} placeholder="https://" keyboardType="url" autoCapitalize="none" autoCorrect={false} />
+                <FormRow divider label="Beskrivelse" value={projForm.description} onChangeText={(v) => setProjForm((p) => ({ ...p, description: v }))} placeholder="Beskriv prosjektet …" multiline />
+            </FormDialog>
 
-            {/* ── Dialog: Add Certification ────────────────────────────────────── */}
-            <Dialog visible={certDialogOpen} onClose={() => setCertDialogOpen(false)}>
-                <Text className="text-[1.0625rem] font-bold text-[#0B0B0B]">Legg til sertifisering</Text>
-                <View className="mt-4 gap-3">
-                    <View>
-                        <FieldLabel text="Tittel *" />
-                        <StyledInput
-                            value={certForm.title}
-                            onChangeText={(v) => setCertForm((p) => ({ ...p, title: v }))}
-                            placeholder="F.eks. Fagbrev tømrer"
-                        />
-                    </View>
-                    <View>
-                        <FieldLabel text="Utstedt av" />
-                        <StyledInput
-                            value={certForm.issuedBy}
-                            onChangeText={(v) => setCertForm((p) => ({ ...p, issuedBy: v }))}
-                            placeholder="F.eks. Fagopplæringskontoret"
-                        />
-                    </View>
-                    <View>
-                        <FieldLabel text="Dato (ÅÅÅÅ-MM-DD, valgfritt)" />
-                        <StyledInput
-                            value={certForm.date}
-                            onChangeText={(v) => setCertForm((p) => ({ ...p, date: v }))}
-                            placeholder="2020-06-15"
-                        />
-                    </View>
-                    <View>
-                        <FieldLabel text="Beskrivelse (valgfritt)" />
-                        <StyledInput
-                            value={certForm.description}
-                            onChangeText={(v) => setCertForm((p) => ({ ...p, description: v }))}
-                            placeholder="Kort beskrivelse …"
-                            multiline
-                            numberOfLines={2}
-                        />
-                    </View>
-                    <Pressable
-                        onPress={() => void pickCertFile()}
-                        className="flex-row items-center gap-2 rounded-xl border border-dashed border-[#E6E7E1] px-4 py-3"
-                    >
-                        <FileText size={18} color={certFileUri ? '#2E6641' : '#9B9E96'} />
-                        <Text
-                            className="flex-1 text-[0.875rem]"
-                            style={{ color: certFileUri ? '#2E6641' : '#9B9E96' }}
-                            numberOfLines={1}
-                        >
-                            {certFileName ?? 'Velg fil — PDF eller bilde (valgfritt, maks 8 MB)'}
-                        </Text>
-                    </Pressable>
-                </View>
-                <View className="mt-5 flex-row gap-3">
-                    <Pressable
-                        onPress={() => setCertDialogOpen(false)}
-                        className="flex-1 items-center rounded-full border border-[#E6E7E1] py-3"
-                    >
-                        <Text className="text-[0.875rem] font-semibold text-[#63665F]">Avbryt</Text>
-                    </Pressable>
-                    <Pressable
-                        onPress={submitCertification}
-                        disabled={!certForm.title.trim() || addCert.isPending}
-                        className="flex-1 items-center rounded-full bg-[#2E6641] py-3 disabled:opacity-50"
-                    >
-                        {addCert.isPending ? (
-                            <Loader2 size={16} color="#FFFFFF" />
-                        ) : (
-                            <Text className="text-[0.875rem] font-semibold text-white">Lagre</Text>
-                        )}
-                    </Pressable>
-                </View>
-            </Dialog>
+            {/* ── Dialog: Add Certification ── */}
+            <FormDialog
+                visible={certDialogOpen}
+                title="Legg til sertifisering"
+                onClose={() => setCertDialogOpen(false)}
+                onSubmit={submitCertification}
+                canSubmit={!!certForm.title.trim()}
+                pending={addCert.isPending}
+                attachment={{ icon: FileText, label: certFileName ?? 'Velg fil – PDF eller bilde (maks 8 MB)', chosen: !!certFileUri, onPress: () => void pickCertFile() }}
+            >
+                <FormRow label="Tittel *" value={certForm.title} onChangeText={(v) => setCertForm((p) => ({ ...p, title: v }))} placeholder="F.eks. Fagbrev tømrer" />
+                <FormRow divider label="Utstedt av" value={certForm.issuedBy} onChangeText={(v) => setCertForm((p) => ({ ...p, issuedBy: v }))} placeholder="F.eks. Fagopplæringskontoret" />
+                <FormRow divider label="Dato (ÅÅÅÅ-MM-DD)" value={certForm.date} onChangeText={(v) => setCertForm((p) => ({ ...p, date: v }))} placeholder="2020-06-15" keyboardType="numbers-and-punctuation" />
+                <FormRow divider label="Beskrivelse" value={certForm.description} onChangeText={(v) => setCertForm((p) => ({ ...p, description: v }))} placeholder="Kort beskrivelse …" multiline />
+            </FormDialog>
         </SafeAreaView>
+    );
+}
+
+// ─── Small pieces used only on this screen ────────────────────────────────────
+
+/** Section title with a "+ Legg til" action on the right. */
+function GroupHeader({ title, onAdd }: { title: string; onAdd: () => void }) {
+    return (
+        <View className="mb-2 flex-row items-center justify-between px-1">
+            <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]">{title}</Text>
+            <Pressable onPress={onAdd} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Legg til ${title.toLowerCase()}`} className="flex-row items-center gap-1">
+                <Plus size={15} color="#2E6641" />
+                <Text className="text-[0.8125rem] font-semibold text-[#2E6641]">Legg til</Text>
+            </Pressable>
+        </View>
+    );
+}
+
+/** One-line empty state inside a Card (no nested card). */
+function EmptyRow({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
+    return (
+        <View className="flex-row items-center gap-3 px-4 py-4">
+            <View className="h-9 w-9 items-center justify-center rounded-xl bg-[#F4F6F0]">
+                <Icon size={17} color="#9B9E96" />
+            </View>
+            <Text className="flex-1 text-[0.8125rem] leading-5 text-[#63665F]">{text}</Text>
+        </View>
+    );
+}
+
+function DeleteButton({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
+    return (
+        <Pressable onPress={onPress} disabled={disabled} hitSlop={8} accessibilityRole="button" accessibilityLabel={label} className="h-8 w-8 items-center justify-center rounded-full active:bg-[#FBF4F2]">
+            <Trash2 size={16} color="#B4544A" />
+        </Pressable>
+    );
+}
+
+/** Add-item dialog: title, grouped FormRows, optional file picker, Avbryt / Lagre. */
+function FormDialog({
+    visible,
+    title,
+    onClose,
+    onSubmit,
+    canSubmit,
+    pending,
+    attachment,
+    children,
+}: {
+    visible: boolean;
+    title: string;
+    onClose: () => void;
+    onSubmit: () => void;
+    canSubmit: boolean;
+    pending: boolean;
+    attachment?: { icon: LucideIcon; label: string; chosen: boolean; onPress: () => void };
+    children: React.ReactNode;
+}) {
+    const AttachIcon = attachment?.icon;
+    return (
+        <Dialog visible={visible} onClose={onClose} contentClassName="p-5">
+            <Text className="text-[1.125rem] font-bold text-[#0B0B0B]">{title}</Text>
+            <View className="mt-4 overflow-hidden rounded-2xl border border-[#E6E7E1]">{children}</View>
+            {attachment && AttachIcon ? (
+                <Pressable
+                    onPress={attachment.onPress}
+                    accessibilityRole="button"
+                    className={`mt-3 flex-row items-center gap-2.5 rounded-2xl border border-dashed px-4 py-3 ${attachment.chosen ? 'border-[#2E6641] bg-[#EAF1E9]' : 'border-[#CFD2C8]'}`}
+                >
+                    <AttachIcon size={18} color={attachment.chosen ? '#2E6641' : '#9B9E96'} />
+                    <Text className={`flex-1 text-[0.875rem] ${attachment.chosen ? 'font-medium text-[#2E6641]' : 'text-[#63665F]'}`} numberOfLines={1}>
+                        {attachment.label}
+                    </Text>
+                </Pressable>
+            ) : null}
+            <View className="mt-5 flex-row gap-3">
+                <View className="flex-1">
+                    <Button label="Avbryt" variant="secondary" fullWidth onPress={onClose} />
+                </View>
+                <View className="flex-1">
+                    <Button label={pending ? 'Lagrer…' : 'Lagre'} fullWidth onPress={onSubmit} disabled={!canSubmit || pending} />
+                </View>
+            </View>
+        </Dialog>
     );
 }

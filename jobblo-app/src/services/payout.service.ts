@@ -33,7 +33,7 @@ export async function getConnectStatus(): Promise<ConnectStatusResponse> {
 }
 
 export async function createAccountLink(): Promise<AccountLinkResponse> {
-  const response = await apiClient.post<AccountLinkResponse>('/connect/account-link');
+  const response = await apiClient.post<AccountLinkResponse>('/connect/account-link', { platform: 'mobile' });
   return response.data;
 }
 

@@ -29,7 +29,7 @@ export function ApplicantServiceCard({
     <Pressable
       onPress={() => onPress?.(service._id)}
       disabled={!onPress}
-      className="rounded-[20px] border border-[#E6E7E1] bg-white p-5 active:opacity-90"
+      className="rounded-xl border border-[#E6E7E1] bg-white p-5 active:opacity-90"
     >
       <View className="flex-row items-start gap-3">
         <View className="h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EAF1E9]">

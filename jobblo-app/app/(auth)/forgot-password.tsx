@@ -47,8 +47,13 @@ export default function ForgotPasswordScreen() {
   const verifyOtpMutation = useMutation({
     mutationFn: ({ targetEmail, targetOtp }: { targetEmail: string; targetOtp: string }) =>
       verifyOtp(targetEmail, targetOtp),
-    onError: () => {
-      setOtpError('Ugyldig eller utløpt kode. Prøv igjen.');
+    onError: (error: unknown) => {
+      const hasResponse = Boolean((error as { response?: unknown })?.response);
+      setOtpError(
+        hasResponse
+          ? 'Ugyldig eller utløpt kode. Etter 5 feil må du be om en ny kode.'
+          : 'Ingen nettforbindelse. Sjekk internett og trykk «Bekreft kode» igjen.'
+      );
     },
   });
 
@@ -154,6 +159,9 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
+    // An explicit tap may retry the same code (e.g. after a network error); only the
+    // automatic submit is de-duplicated, so it cannot burn the 5 allowed attempts on its own.
+    lastSubmittedOtpRef.current = null;
     submitOtp(otpValue);
   };
 
@@ -289,7 +297,8 @@ export default function ForgotPasswordScreen() {
                       Sjekk e-posten din
                     </Text>
                     <Text className="mt-2 text-[15px] leading-6 text-muted">
-                      Vi sendte en 6-sifret kode til <Text className="font-semibold text-ink">{email}</Text>
+                      Hvis det finnes en konto for <Text className="font-semibold text-ink">{email}</Text>, har vi
+                      sendt en 6-sifret kode dit.
                     </Text>
 
                     <View className="mt-6 gap-4">

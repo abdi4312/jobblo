@@ -87,8 +87,8 @@ export default function SafePayApprovalScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [approvalResult, setApprovalResult] = useState<ApprovalResult | null>(null);
 
-  if (query.isLoading) return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><LoadingIndicator message="Laster oppdrag..." /></SafeAreaView>;
-  if (query.isError || !query.data?.order) return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ErrorState title="Kunne ikke laste oppdraget" message="Sjekk internettforbindelsen din og prøv igjen." actionLabel="Prøv igjen" onAction={() => void query.refetch()} /></SafeAreaView>;
+  if (query.isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><LoadingIndicator message="Laster oppdrag..." /></SafeAreaView>;
+  if (query.isError || !query.data?.order) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><ErrorState title="Kunne ikke laste oppdraget" message="Sjekk internettforbindelsen din og prøv igjen." actionLabel="Prøv igjen" onAction={() => void query.refetch()} /></SafeAreaView>;
 
   const { order, calculation } = query.data;
   const currentUserId = idOf(user);
@@ -102,7 +102,7 @@ export default function SafePayApprovalScreen() {
   const hasAnyEvidence = Boolean(order.completionNote?.trim()) || beforeImages.length > 0 || afterImages.length > 0;
 
   if (!isCustomer) {
-    return <SafeAreaView className="flex-1 justify-center bg-[#EFF0EA] px-4"><View className="rounded-3xl bg-white p-8"><Text className="text-center text-lg font-semibold">Ikke tilgang</Text><Text className="mt-2 text-center text-sm text-[#63665F]">Kun oppdragsgiver kan godkjenne en jobb og frigi betalingen.</Text></View></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 justify-center bg-[#EFF0EA] px-4"><View className="rounded-3xl bg-white p-8"><Text className="text-center text-lg font-semibold">Ikke tilgang</Text><Text className="mt-2 text-center text-sm text-[#63665F]">Kun oppdragsgiver kan godkjenne en jobb og frigi betalingen.</Text></View></SafeAreaView>;
   }
 
   const choosePhotos = async () => {
@@ -166,7 +166,7 @@ export default function SafePayApprovalScreen() {
 
   if (approvalResult) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
           <Pressable onPress={() => router.back()} className="mb-5 flex-row items-center gap-2"><ArrowLeft size={16} color="#63665F" /><Text className="text-sm text-[#63665F]">Tilbake</Text></Pressable>
           <View className="rounded-3xl bg-white p-6">
@@ -192,7 +192,7 @@ export default function SafePayApprovalScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
         <Pressable onPress={() => router.back()} className="mb-5 flex-row items-center gap-2"><ArrowLeft size={16} color="#63665F" /><Text className="text-sm text-[#63665F]">Tilbake</Text></Pressable>
         <SafePayProgressSteps currentStep={status.step} orderId={orderId} serviceId={order.serviceId?._id} />
