@@ -111,6 +111,18 @@ const getGeoLocation = async (ip) => {
   }
 };
 
+/**
+ * Device model sent by the mobile app in `X-Device-Name` (e.g. "iPhone 15 Pro").
+ * Client-supplied and display-only: letters, digits and `space . _ ( ) + , / -`, at most
+ * 60 characters, or null.
+ */
+const deviceNameFrom = (req) => {
+  const raw = req.headers?.['x-device-name'];
+  if (typeof raw !== 'string') return null;
+  const name = raw.replace(/[^A-Za-z0-9 ._()+,/-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  return name || null;
+};
+
 const createSession = async (req, userId) => {
   try {
     // Express's req.ip honours `trust proxy` (app.js), the same address the rate limiters
@@ -133,6 +145,7 @@ const createSession = async (req, userId) => {
       location,
       userAgent: req.headers['user-agent'] || 'Unknown',
       device: `${os} ${device}`,
+      deviceName: deviceNameFrom(req),
       browser: browser || 'Unknown',
       os: os || 'Unknown',
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
@@ -155,4 +168,4 @@ const createSession = async (req, userId) => {
   }
 };
 
-module.exports = { generateTokens, verifyToken, createSession, ACCESS_TTL_S, REFRESH_TTL_S };
+module.exports = { generateTokens, verifyToken, createSession, deviceNameFrom, ACCESS_TTL_S, REFRESH_TTL_S };

@@ -52,7 +52,7 @@ export const ForgotPasswordForm = () => {
     const verifyOtpMutation = useMutation({
         mutationFn: ({ email, otp }: { email: string; otp: string }) => verifyOtp(email, otp),
         onError: () => {
-            setOtpError('Ugyldig eller utløpt kode. Prøv igjen.');
+            setOtpError('Ugyldig eller utløpt kode. Etter 5 feil må du be om en ny kode.');
         },
     });
 

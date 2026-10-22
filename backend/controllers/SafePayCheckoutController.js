@@ -1153,11 +1153,13 @@ function escapeHtml(value) {
  * The copy never claims the payment went through. Only the app says that, and only after
  * asking the server.
  */
-function mobileReturnPage({ nonce, target, cancelled }) {
+function mobileReturnPage({ nonce, target, cancelled, connect }) {
   const href = escapeHtml(target);
   const title = target ? 'Åpner Jobblo…' : 'Åpne Jobblo-appen';
   const lead = !target
     ? 'Vi klarte ikke å lage lenken tilbake til appen. Bytt til Jobblo-appen og åpne oppdraget — betalingsstatusen vises der.'
+    : connect
+      ? 'Vi tar deg tilbake til appen. Utbetalingsstatusen oppdateres der.'
     : cancelled
       ? 'Vi tar deg tilbake til appen, der du kan fortsette betalingen.'
       : 'Vi tar deg tilbake til appen. Betalingen bekreftes der.';
@@ -1232,6 +1234,19 @@ ${
  * parameters on a public endpoint, so at this point they are attacker-controlled strings
  * that merely usually happen to come from Stripe.
  */
+/**
+ * Stripe Connect onboarding return/refresh URL for the app: the same bridge with
+ * `state=connect`, which hands off to the app's payout screen. Stripe requires http(s)
+ * here too, so the app scheme cannot be used directly.
+ */
+exports.connectMobileReturnUrl = (req) => {
+  const link = resolveAppLinkPrefix();
+  if (link.error) return { error: link.error };
+  const origin = resolveMobileReturnBase(req);
+  if (origin.error) return { error: origin.error };
+  return { url: `${origin.base}/api/safepay-checkout/mobile-return?state=connect` };
+};
+
 exports.mobileReturn = (req, res) => {
   res.set({
     'Content-Type': 'text/html; charset=utf-8',
@@ -1245,6 +1260,7 @@ exports.mobileReturn = (req, res) => {
   const query = req.query || {};
   const pick = (value) => (typeof value === 'string' ? value.trim() : '');
   const cancelled = pick(query.state) === 'cancel';
+  const connect = pick(query.state) === 'connect';
   // Anything that is not exactly the expected shape becomes an empty string and is simply
   // left out of the deep link. Both id charsets are URL-safe by construction, so no
   // encoding step is needed — and `{CHECKOUT_SESSION_ID}` failing to substitute lands here
@@ -1256,6 +1272,9 @@ exports.mobileReturn = (req, res) => {
   let target = '';
   if (link.error) {
     console.error('mobileReturn: %s', link.error);
+  } else if (connect) {
+    // Stripe Connect onboarding finished (or its link expired); the payout screen re-reads the status.
+    target = `${link.prefix}profile/settings/payout`;
   } else if (cancelled) {
     // Back to the screen the payment was started from; the app re-reads the order there.
     target = orderId ? `${link.prefix}safepay/checkout/${orderId}` : link.prefix;
@@ -1279,7 +1298,7 @@ exports.mobileReturn = (req, res) => {
   // having just paid — but the status code distinguishes "we are misconfigured" from
   // "those query parameters were not usable" for whoever reads the logs.
   const status = target ? 200 : link.error ? 500 : 400;
-  res.status(status).send(mobileReturnPage({ nonce, target, cancelled }));
+  res.status(status).send(mobileReturnPage({ nonce, target, cancelled, connect }));
 };
 
 exports.checkoutSessionStatus = async (req, res) => {

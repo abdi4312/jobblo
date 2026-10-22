@@ -7,6 +7,8 @@ interface Session {
   isCurrent: boolean;
   device: string;
   browser: string;
+  /** Phone model reported by the Jobblo app; null for browser sessions. */
+  deviceName?: string | null;
   os: string;
   location?: string;
   ip: string;
@@ -111,7 +113,7 @@ export const SessionsView = () => {
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-gray-900 text-sm">
-                      {session.browser} · {session.os}
+                      {session.deviceName ? `${session.deviceName} · Jobblo-appen` : `${session.browser} · ${session.os}`}
                     </span>
                     {session.isCurrent && (
                       <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-black uppercase rounded-full tracking-wide">

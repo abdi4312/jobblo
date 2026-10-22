@@ -44,6 +44,10 @@ module.exports = {
     plugins,
     extra: {
       ...(appJson.expo.extra || {}),
+      // Read by src/utils/mapProvider.ts: Google Maps on iOS only when the SDK is in the build.
+      iosGoogleMaps: Boolean(iosKey),
+      // Android has no fallback SDK: a MapView in a build without the key crashes the app.
+      androidGoogleMaps: Boolean(androidKey),
       eas: {
         projectId: '8f719d88-1d48-46f4-b74c-344ac749c875',
       },
