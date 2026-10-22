@@ -94,7 +94,7 @@ export default function FavoritesScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <View className="flex-row items-center justify-between px-4 pb-3 pt-3">
         <Pressable
           onPress={() => router.back()}

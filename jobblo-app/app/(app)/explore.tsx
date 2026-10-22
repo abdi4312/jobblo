@@ -188,7 +188,7 @@ export default function ExploreScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <SearchFilterSheet
         visible={sheetVisible}
         onClose={() => setSheetVisible(false)}

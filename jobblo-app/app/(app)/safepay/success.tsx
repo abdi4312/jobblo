@@ -102,7 +102,7 @@ export default function SafePaySuccessScreen() {
   }, [statusQuery.error, orderQuery.error]);
 
   if (statusQuery.isLoading || orderQuery.isLoading) {
-    return <SafeAreaView className="flex-1 items-center justify-center bg-[#EFF0EA]"><Text className="text-[0.9375rem] text-[#63665F]">Bekrefter betalingen…</Text></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 items-center justify-center bg-[#EFF0EA]"><Text className="text-[0.9375rem] text-[#63665F]">Bekrefter betalingen…</Text></SafeAreaView>;
   }
 
   if (paymentState !== 'paid') {
@@ -123,7 +123,7 @@ export default function SafePaySuccessScreen() {
     };
     const pending = paymentState === 'pending';
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 16 }}>
           <View className="rounded-3xl border border-[#E6E7E1] bg-white p-8">
             <View className="mx-auto h-12 w-12 items-center justify-center rounded-full bg-[#F4F6F0]"><AlertCircle size={22} color="#63665F" /></View>
@@ -141,7 +141,7 @@ export default function SafePaySuccessScreen() {
   }
 
   if (!order) {
-    return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ErrorState title="Vi fikk ikke bekreftet betalingen" message="Betalingen er bekreftet, men ordredetaljene kunne ikke lastes ennå." actionLabel="Sjekk på nytt" onAction={() => void orderQuery.refetch()} /></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><ErrorState title="Vi fikk ikke bekreftet betalingen" message="Betalingen er bekreftet, men ordredetaljene kunne ikke lastes ennå." actionLabel="Sjekk på nytt" onAction={() => void orderQuery.refetch()} /></SafeAreaView>;
   }
 
   const readyForApproval = isCustomer && order.status === 'ready_for_review';
@@ -151,7 +151,7 @@ export default function SafePaySuccessScreen() {
   const goApplicants = () => serviceId ? router.push({ pathname: '/(app)/job-applicants/[serviceId]', params: { serviceId } }) : goOverview();
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 24, paddingBottom: 120 }}>
         <SafePayProgressSteps currentStep={3} />
         <View className="rounded-3xl border border-[#E6E7E1] bg-white p-8">

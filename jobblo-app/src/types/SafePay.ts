@@ -50,6 +50,10 @@ export interface SafePayOrder {
    */
   checkoutSessionId?: string;
   checkoutSessionStatus?: string;
+  /** `provider_stripe_connect_timeout` when the provider did not start in time. */
+  cancellationReason?: string;
+  providerConnectDeadlineAt?: string | null;
+  providerConnectTimeout?: { status?: string } | null;
   serviceId: SafePayService | null;
   customerId: SafePayParty | null;
   providerId: SafePayParty | null;
@@ -76,9 +80,17 @@ export interface SafePayCalculation {
   providerNet: number;
 }
 
+/** Start deadline promised at checkout: not started in time means a full refund. */
+export interface SafePayStartDeadline {
+  days: number;
+  /** Set only on test backends (minutes instead of days). */
+  testMinutes?: number | null;
+}
+
 export interface SafePayCheckoutResponse {
   order: SafePayOrder;
   calculation: SafePayCalculation;
+  startDeadline?: SafePayStartDeadline | null;
 }
 
 export interface SafePaySessionResponse {

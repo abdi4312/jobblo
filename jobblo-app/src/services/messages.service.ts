@@ -35,6 +35,7 @@ export interface MessageConversation {
   lastMessage?: string;
   updatedAt?: string;
   status?: string;
+  agreedPrice?: number | null;
 }
 
 export interface ChatMessage {
@@ -96,4 +97,9 @@ export type ChatReportResponse = {
 export async function submitChatReport(chatId: string, payload: ChatReportPayload): Promise<ChatReportResponse> {
   const response = await apiClient.post<ChatReportResponse>(`/chats/${chatId.trim()}/reports`, payload);
   return response.data;
+}
+
+/** Customer-only: turns the chat into a SafePay contract (order awaiting payment). Price is set server-side. */
+export async function createChatContract(chatId: string): Promise<void> {
+  await apiClient.post(`/chats/${chatId.trim()}/contracts`);
 }

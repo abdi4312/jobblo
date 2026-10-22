@@ -122,23 +122,42 @@ export interface OpenDisputeResponse {
   disputeId?: string;
 }
 
+/** Same labels as the web (frontend/src/constants/disputes.ts). */
 export const DISPUTE_REASON_LABELS: Record<DisputeReasonCategory, string> = {
-  work_not_started: 'Arbeidet er ikke startet',
-  work_not_completed: 'Arbeidet er ikke fullført',
+  work_not_started: 'Arbeidet er ikke påbegynt',
+  work_not_completed: 'Jobben er ikke fullført',
   poor_quality: 'Dårlig kvalitet på arbeidet',
-  different_from_agreement: 'Annerledes enn avtalt',
+  different_from_agreement: 'Avviker fra avtalen',
   customer_not_cooperating: 'Oppdragsgiver samarbeider ikke',
-  provider_not_cooperating: 'Utfører samarbeider ikke',
-  payment_issue: 'Problem med betaling',
+  provider_not_cooperating: 'Oppdragstaker samarbeider ikke',
+  payment_issue: 'Betalingsproblem',
   unauthorized_payment: 'Uautorisert betaling',
   fraud_or_scam: 'Svindel eller bedrageri',
   damaged_property: 'Skade på eiendom',
-  missing_evidence: 'Manglende dokumentasjon',
+  missing_evidence: 'Manglende dokumentasjon fra oppdragsgiver',
   other: 'Annet',
 };
 
 /** Picker order. Derived from the label map so it can never drift from the enum. */
 export const DISPUTE_REASON_CATEGORIES = Object.keys(DISPUTE_REASON_LABELS) as DisputeReasonCategory[];
+
+/**
+ * Reasons offered to each side, as on the web. A shared list let a party file a dispute
+ * accusing themselves (a customer picking "Oppdragsgiver samarbeider ikke").
+ */
+const CUSTOMER_REASONS: DisputeReasonCategory[] = [
+  'work_not_started', 'work_not_completed', 'poor_quality', 'provider_not_cooperating', 'damaged_property', 'unauthorized_payment',
+];
+const PROVIDER_REASONS: DisputeReasonCategory[] = ['customer_not_cooperating', 'missing_evidence'];
+const SHARED_REASONS: DisputeReasonCategory[] = ['different_from_agreement', 'payment_issue', 'fraud_or_scam', 'other'];
+
+export function disputeReasonsFor(role: 'customer' | 'provider'): DisputeReasonCategory[] {
+  return [...(role === 'customer' ? CUSTOMER_REASONS : PROVIDER_REASONS), ...SHARED_REASONS];
+}
+
+/** Minimum lengths used by the web form. */
+export const DISPUTE_TITLE_MIN_LENGTH = 5;
+export const DISPUTE_DESCRIPTION_MIN_LENGTH = 20;
 
 export function isDisputeReasonCategory(value: unknown): value is DisputeReasonCategory {
   return typeof value === 'string' && value in DISPUTE_REASON_LABELS;

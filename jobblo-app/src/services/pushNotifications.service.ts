@@ -40,7 +40,8 @@ export function configurePushNotifications() {
       await notifications.setNotificationChannelAsync('messages', {
         name: 'Meldinger',
         importance: 5,
-        sound: 'default',
+        // No `sound`: expo-notifications reads it as a bundled file name, so 'default' failed
+        // with "Custom sound 'default' not found". Left out, the channel uses the system sound.
         enableVibrate: true,
       });
     }

@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { Image, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import { Image, View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { FileText, Locate, ShieldCheck, Star } from 'lucide-react-native';
+import { Briefcase, ChevronRight, FileText, Locate, MapPin, Plus, Search, ShieldCheck, Star } from 'lucide-react-native';
+import { Card } from '../../src/components/ui/Card';
+import { Button } from '../../src/components/ui/Button';
 import { useJobs } from '../../src/hooks/useJobs';
 import { useTopUsers } from '../../src/hooks/useTopUsers';
 import { useCategories } from '../../src/hooks/useCategories';
@@ -152,21 +154,6 @@ export default function HomeScreen() {
     avatarUrl: worker.avatarUrl,
   }));
 
-  const SectionHeader = ({ eyebrow, title, actionLabel, action }: { eyebrow: string; title: string; actionLabel?: string; action?: () => void }) => (
-    <View className="mb-6">
-      <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[#63665F]">
-        {eyebrow}
-      </Text>
-      <View className="mt-3 flex-row items-center justify-between">
-        <Text className="text-[1.25rem] font-bold text-[#0B0B0B]">{title}</Text>
-        {actionLabel && (
-          <TouchableOpacity onPress={action} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text className="text-[0.875rem] font-medium text-[#2E6641]">{actionLabel}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
   const seasonImage = season.category === 'Rørlegger' ? require('../../assets/category-showcase/rorlegger.webp') : season.category === 'Hagearbeid' ? require('../../assets/category-showcase/hagearbeid.webp') : season.category === 'Maling' ? require('../../assets/category-showcase/maling.webp') : require('../../assets/category-showcase/rengjoring.webp');
   const handleNearbyJobs = async () => {
     try {
@@ -182,195 +169,222 @@ export default function HomeScreen() {
     router.push('/(app)/explore');
   };
 
+  const initials = userName.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || '?';
+  const avatarUrl = typeof user?.avatarUrl === 'string' ? user.avatarUrl : undefined;
+
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 28 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 28 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" colors={['#2E6641']} />}
       >
-        <View className="relative overflow-hidden rounded-[28px] bg-[#2E6641]">
-          <Image source={seasonImage} className="absolute inset-y-0 right-0 h-full w-2/3 opacity-25" resizeMode="cover" />
-          <View className="absolute inset-y-0 right-0 w-2/3 bg-[#2E6641]/70" />
-          <View className="relative px-6 py-8">
-            <Text className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-[#8FBF9A]">
+        {/* Greeting + avatar */}
+        <View className="flex-row items-center justify-between">
+          <View className="min-w-0 flex-1">
+            <Text className="text-[0.8125rem] text-[#63665F]">{greeting},</Text>
+            <Text className="text-[1.375rem] font-bold tracking-[-0.02em] text-[#0B0B0B]" numberOfLines={1}>{userName}</Text>
+          </View>
+          <Pressable
+            onPress={() => router.push('/(app)/profile')}
+            accessibilityRole="button"
+            accessibilityLabel="Profil"
+            className="h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[#E6E7E1] bg-[#EAF1E9]"
+          >
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={{ width: 44, height: 44 }} />
+            ) : (
+              <Text className="text-[0.9375rem] font-semibold text-[#2E6641]">{initials}</Text>
+            )}
+          </Pressable>
+        </View>
+
+        {/* Search entry */}
+        <Pressable
+          onPress={() => router.push('/(app)/explore')}
+          accessibilityRole="search"
+          accessibilityLabel="Søk etter oppdrag"
+          className="mt-4 h-12 flex-row items-center gap-2.5 rounded-full border border-[#E6E7E1] bg-white px-4"
+        >
+          <Search size={18} color="#63665F" />
+          <Text className="flex-1 text-[0.9375rem] text-[#9B9E96]">Søk etter oppdrag eller tjenester</Text>
+          <View className="flex-row items-center gap-1">
+            <MapPin size={14} color="#2E6641" />
+            <Text className="text-[0.75rem] font-medium text-[#2E6641]" numberOfLines={1}>{userLocation}</Text>
+          </View>
+        </Pressable>
+
+        {/* Seasonal hero */}
+        <View className="mt-4 overflow-hidden rounded-[28px] bg-[#2E6641]">
+          <Image source={seasonImage} style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '55%', opacity: 0.3 }} resizeMode="cover" />
+          <View className="absolute bottom-0 right-0 top-0 w-[55%] bg-[#2E6641]/60" />
+          <View className="p-5">
+            <Text className="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[#B9D9C0]">
               {season.label} · {userLocation}
             </Text>
-            <Text className="mt-4 text-[1.625rem] font-bold leading-[1.1] text-white">
-              {greeting}, {userName}.
-            </Text>
-            <Text className="mt-2 text-[1.1rem] font-semibold text-[#8FBF9A]">
-              Hva trenger du hjelp med i dag?
-            </Text>
-            <Text className="mt-3 text-[0.9375rem] leading-relaxed text-white/70">{season.line}</Text>
-
-            <View className="mt-7 flex-row flex-wrap gap-2.5">
-              <TouchableOpacity
-                onPress={() => void handleNearbyJobs()}
-                className="rounded-full bg-white px-5 py-3.5"
-                activeOpacity={0.9}
+            <Text className="mt-2 text-[1.25rem] font-bold leading-tight text-white">Hva trenger du hjelp med i dag?</Text>
+            <Text className="mt-1.5 text-[0.875rem] leading-5 text-white/75">{season.line}</Text>
+            <View className="mt-4 flex-row gap-2">
+              <Pressable
+                onPress={() => router.push('/(app)/create-job')}
+                className="h-10 flex-row items-center gap-1.5 rounded-full bg-white px-4 active:opacity-90"
               >
-                <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Oppdrag nær meg</Text>
-              </TouchableOpacity>
-
-              {seasonalCategory && (
-                <TouchableOpacity
-                  onPress={() => setSelectedCategory(seasonalCategory)}
-                  className="rounded-full border border-white/40 px-5 py-3.5"
-                  activeOpacity={0.9}
-                >
-                  <Text className="text-[0.9375rem] font-semibold text-white">{seasonalCategory}</Text>
-                </TouchableOpacity>
-              )}
+                <Plus size={16} color="#2E6641" />
+                <Text className="text-[0.875rem] font-semibold text-[#2E6641]">Legg ut oppdrag</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => void handleNearbyJobs()}
+                className="h-10 flex-row items-center gap-1.5 rounded-full border border-white/40 px-4 active:opacity-90"
+              >
+                <Locate size={15} color="#FFFFFF" />
+                <Text className="text-[0.875rem] font-semibold text-white">Nær meg</Text>
+              </Pressable>
             </View>
-            {dashboardStats.data ? <View className="mt-6 flex-row gap-5 border-t border-white/20 pt-4">{[[dashboardStats.data.activeJobs, 'Aktive oppdrag'], [dashboardStats.data.totalUsers, 'Brukere'], [dashboardStats.data.averageRating.toFixed(1), 'Snittrating']].map(([value, label]) => <View key={label}><Text className="text-base font-bold text-white">{value}</Text><Text className="mt-0.5 text-[0.6875rem] text-white/70">{label}</Text></View>)}</View> : null}
-          </View>
-        </View>
-
-        <View className="mt-14">
-          <SectionHeader eyebrow="01 — Kategorier" title="Hva trenger du hjelp til?" actionLabel="Se alle" action={() => router.push('/(app)/explore')} />
-
-          {categoriesLoading ? (
-            <View className="items-center py-8">
-              <ActivityIndicator color="#2E6641" size="small" />
-            </View>
-          ) : (
-            <View className="flex-row flex-wrap -mx-1.5">
-              <View className="w-1/3 px-1.5 pb-3">
-                <CategoryChip
-                  category={{ name: 'Alle' }}
-                  isSelected={selectedCategory === ''}
-                  onPress={() => setSelectedCategory('')}
-                />
-              </View>
-
-              {categories.map((cat) => (
-                <View key={cat._id} className="w-1/3 px-1.5 pb-3">
-                  <CategoryChip
-                    category={cat}
-                    isSelected={selectedCategory === cat.name}
-                    onPress={() => setSelectedCategory((current) => (current === cat.name ? '' : cat.name))}
-                  />
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View className="mt-14">
-          <SectionHeader
-            eyebrow="02 — Ute nå"
-            title={`Oppdrag nær deg — ${userLocation}`}
-            actionLabel="Se alle oppdrag"
-            action={() => router.push('/(app)/explore')}
-          />
-
-            <View className="flex-row items-center justify-end"><Text className="mr-2 text-[0.8125rem] font-medium text-[#63665F]">Sorter</Text><Select value={sortValue} options={SORT_OPTIONS.map((option) => ({ ...option }))} onValueChange={setSortValue} />
-          </View>
-
-          {jobsLoading && (
-            <View className="items-center justify-center py-12">
-              <ActivityIndicator color="#2E6641" size="large" />
-              <Text className="mt-4 text-[0.875rem] text-[#63665F]">Laster oppdrag...</Text>
-            </View>
-          )}
-
-          {jobsError && !jobsLoading && (
-            <View className="rounded-2xl border border-[#E6E7E1] bg-white p-6">
-              <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Kunne ikke laste oppdrag</Text>
-              <Text className="mt-1.5 text-[0.875rem] text-[#63665F]">
-                Sjekk internettforbindelsen din og prøv igjen.
-              </Text>
-              <TouchableOpacity onPress={() => refetchJobs()} className="mt-4 rounded-lg bg-[#2E6641] px-4 py-2.5">
-                <Text className="text-center text-[0.875rem] font-semibold text-white">Prøv igjen</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {!jobsLoading && !jobsError && jobs.length === 0 && (
-            <View className="rounded-2xl border border-[#E6E7E1] bg-white p-6">
-              <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Ingen oppdrag å vise akkurat nå</Text>
-              <Text className="mt-1.5 text-[0.875rem] text-[#63665F]">
-                Prøv en annen kategori, eller legg ut ditt eget oppdrag.
-              </Text>
-              <TouchableOpacity onPress={() => router.push('/(app)/explore')} className="mt-4 rounded-lg bg-[#2E6641] px-4 py-2.5">
-                <Text className="text-center text-[0.875rem] font-semibold text-white">Se alle oppdrag</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/(app)/create-job')} className="mt-3 rounded-lg border border-[#2E6641] bg-white px-4 py-2.5">
-                <Text className="text-center text-[0.875rem] font-semibold text-[#2E6641]">Legg ut et oppdrag</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {!jobsLoading && !jobsError && jobs.length > 0 && (
-            <View className="flex-row flex-wrap -mx-2">
-              {jobs.slice(0, 8).map((job) => (
-                <View key={job._id} className="w-1/2 px-2 pb-8">
-                  <JobCard job={job} onSavePress={(id) => setSaveSheetServiceId(id)} />
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {workerCards.length > 0 && (
-          <View className="mt-14">
-            <SectionHeader eyebrow="03 — I nærheten" title="Anbefalte oppdragstakere" actionLabel="Se alle" action={() => router.push('/(app)/recommended-taskers')} />
-
-            <View className="space-y-4">
-              {workerCards.map((worker: {
-                _id?: string;
-                initials: string;
-                name: string;
-                role: string;
-                rating: number;
-                count: number;
-                rate: string;
-                location: string;
-                avatarUrl?: string;
-              }) => (
-                <TouchableOpacity
-                  key={worker._id ?? worker.name}
-                  activeOpacity={0.9}
-                  disabled={!worker._id}
-                  className="flex-row items-center gap-3 rounded-2xl border border-[#E6E7E1] bg-white p-4"
-                  onPress={() => {
-                    if (!worker._id) return;
-                    router.push({ pathname: '/(app)/profile/[userId]', params: { userId: worker._id } });
-                  }}
-                >
-                  <WorkerAvatar avatarUrl={worker.avatarUrl} initials={worker.initials} />
-
-                  <View className="flex-1">
-                    <View className="flex-row items-center gap-2">
-                      <Text className="truncate text-[0.9375rem] font-semibold text-[#0B0B0B]">{worker.name}</Text>
-                    </View>
-
-                    <Text className="mt-0.5 text-[0.8125rem] text-[#63665F]">{worker.role}</Text>
-
-                    {worker.rating > 0 && (
-                      <View className="mt-1.5 flex-row items-center gap-1.5">
-                        <Star size={13} color="#2E6641" fill="#2E6641" />
-                        <Text className="text-[0.8125rem] font-semibold text-[#0B0B0B]">{worker.rating.toFixed(1)}</Text>
-                        <Text className="text-[0.8125rem] text-[#63665F]">({worker.count} {worker.count === 1 ? 'anmeldelse' : 'anmeldelser'})</Text>
-                      </View>
-                    )}
-
-                    <Text className="mt-1.5 text-[0.8125rem] text-[#0B0B0B]">
-                      {worker.rate} · {worker.location}
-                    </Text>
+            {dashboardStats.data ? (
+              <View className="mt-5 flex-row border-t border-white/20 pt-3">
+                {[
+                  [dashboardStats.data.activeJobs, 'Aktive oppdrag'],
+                  [dashboardStats.data.totalUsers, 'Brukere'],
+                  [dashboardStats.data.averageRating.toFixed(1), 'Snittrating'],
+                ].map(([value, label]) => (
+                  <View key={String(label)} className="flex-1">
+                    <Text className="text-[1rem] font-bold tabular-nums text-white">{value}</Text>
+                    <Text className="mt-0.5 text-[0.6875rem] text-white/70">{label}</Text>
                   </View>
-                </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        </View>
+
+        {/* Categories */}
+        <SectionHeader title="Kategorier" actionLabel="Se alle" action={() => router.push('/(app)/explore')} />
+        {categoriesLoading ? (
+          <ActivityIndicator color="#2E6641" size="small" className="py-4" />
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-4" contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+            <CategoryChip category={{ name: 'Alle' }} isSelected={selectedCategory === ''} onPress={() => setSelectedCategory('')} />
+            {seasonalCategory ? (
+              <CategoryChip
+                category={categories.find((cat) => cat.name === seasonalCategory) ?? { name: seasonalCategory }}
+                isSelected={selectedCategory === seasonalCategory}
+                onPress={() => setSelectedCategory((current) => (current === seasonalCategory ? '' : seasonalCategory))}
+              />
+            ) : null}
+            {categories
+              .filter((cat) => cat.name !== seasonalCategory)
+              .map((cat) => (
+                <CategoryChip
+                  key={cat._id}
+                  category={cat}
+                  isSelected={selectedCategory === cat.name}
+                  onPress={() => setSelectedCategory((current) => (current === cat.name ? '' : cat.name))}
+                />
               ))}
+          </ScrollView>
+        )}
+
+        {/* Jobs */}
+        <SectionHeader
+          title={selectedCategory ? `Oppdrag · ${selectedCategory}` : 'Oppdrag nær deg'}
+          actionLabel="Se alle"
+          action={() => router.push('/(app)/explore')}
+        />
+        <View className="mb-3 flex-row items-center justify-between">
+          <Text className="text-[0.8125rem] text-[#63665F]">{jobsLoading ? 'Laster…' : `${jobs.length} oppdrag`}</Text>
+          <Select value={sortValue} options={SORT_OPTIONS.map((option) => ({ ...option }))} onValueChange={setSortValue} placeholder="Sorter" />
+        </View>
+
+        {jobsLoading ? (
+          <View className="items-center justify-center py-12">
+            <ActivityIndicator color="#2E6641" size="large" />
+            <Text className="mt-3 text-[0.875rem] text-[#63665F]">Laster oppdrag...</Text>
+          </View>
+        ) : jobsError ? (
+          <Card className="rounded-2xl p-5">
+            <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Kunne ikke laste oppdrag</Text>
+            <Text className="mt-1 text-[0.875rem] text-[#63665F]">Sjekk internettforbindelsen din og prøv igjen.</Text>
+            <View className="mt-4">
+              <Button label="Prøv igjen" onPress={() => void refetchJobs()} small />
             </View>
+          </Card>
+        ) : jobs.length === 0 ? (
+          <Card className="items-center rounded-2xl p-6">
+            <View className="h-12 w-12 items-center justify-center rounded-full bg-[#EAF1E9]">
+              <Briefcase size={22} color="#2E6641" />
+            </View>
+            <Text className="mt-3 text-center text-[0.9375rem] font-semibold text-[#0B0B0B]">Ingen oppdrag å vise akkurat nå</Text>
+            <Text className="mt-1 text-center text-[0.875rem] text-[#63665F]">Prøv en annen kategori, eller legg ut ditt eget oppdrag.</Text>
+            <View className="mt-4 flex-row gap-2">
+              <Button label="Se alle oppdrag" variant="secondary" small onPress={() => router.push('/(app)/explore')} />
+              <Button label="Legg ut oppdrag" small onPress={() => router.push('/(app)/create-job')} />
+            </View>
+          </Card>
+        ) : (
+          <View className="-mx-1.5 flex-row flex-wrap">
+            {jobs.slice(0, 8).map((job) => (
+              <View key={job._id} className="w-1/2 px-1.5 pb-5">
+                <JobCard job={job} compact onSavePress={(id) => setSaveSheetServiceId(id)} />
+              </View>
+            ))}
           </View>
         )}
 
-        <View className="mt-14"><SectionHeader eyebrow="" title="Tryggere sammen" actionLabel="" action={() => undefined} />{[
-          [ShieldCheck, 'Trygg betaling med SafePay', 'Pengene holdes sikkert til jobben er godkjent. Du betaler aldri for noe du ikke er fornøyd med.'],
-          [FileText, 'Automatisk kontrakt', 'Hver avtale genererer en digital kontrakt som beskytter både deg og oppdragstakeren.'],
-          [Star, 'Verifiserte ratings', 'Alle anmeldelser er fra ekte fullførte oppdrag. Du ser alltid hvem du leier inn.'],
-        ].map(([Icon, title, body]) => <View key={title as string} className="mb-3 flex-row items-start rounded-2xl border border-[#E6E7E1] bg-white p-4"><View className="h-10 w-10 items-center justify-center rounded-xl bg-[#EAF1E9]"><Icon size={18} color="#2E6641" /></View><View className="ml-3 flex-1"><Text className="text-sm font-semibold text-[#0B0B0B]">{title as string}</Text><Text className="mt-1 text-xs leading-5 text-[#63665F]">{body as string}</Text></View></View>)}</View>
+        {/* Recommended taskers */}
+        {workerCards.length > 0 ? (
+          <>
+            <SectionHeader title="Anbefalte oppdragstakere" actionLabel="Se alle" action={() => router.push('/(app)/recommended-taskers')} />
+            <Card className="overflow-hidden rounded-2xl">
+              {workerCards.map((worker, index) => (
+                <Pressable
+                  key={worker._id ?? worker.name}
+                  disabled={!worker._id}
+                  onPress={() => {
+                    if (worker._id) router.push({ pathname: '/(app)/profile/[userId]', params: { userId: worker._id } });
+                  }}
+                  className={`flex-row items-center gap-3 px-4 py-3.5 active:bg-[#F4F6F0] ${index > 0 ? 'border-t border-[#EFF0EA]' : ''}`}
+                >
+                  <WorkerAvatar avatarUrl={worker.avatarUrl} initials={worker.initials} />
+                  <View className="min-w-0 flex-1">
+                    <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]" numberOfLines={1}>{worker.name}</Text>
+                    <Text className="mt-0.5 text-[0.8125rem] text-[#63665F]" numberOfLines={1}>{worker.role}</Text>
+                    <View className="mt-1 flex-row items-center gap-1.5">
+                      {worker.rating > 0 ? (
+                        <>
+                          <Star size={12} color="#B7791F" fill="#B7791F" />
+                          <Text className="text-[0.75rem] font-semibold text-[#0B0B0B]">{worker.rating.toFixed(1)}</Text>
+                          <Text className="text-[0.75rem] text-[#9B9E96]">({worker.count}) ·</Text>
+                        </>
+                      ) : null}
+                      <Text className="shrink text-[0.75rem] text-[#63665F]" numberOfLines={1}>{worker.rate} · {worker.location}</Text>
+                    </View>
+                  </View>
+                  <ChevronRight size={18} color="#9B9E96" />
+                </Pressable>
+              ))}
+            </Card>
+          </>
+        ) : null}
+
+        {/* Trust */}
+        <SectionHeader title="Tryggere sammen" />
+        <Card className="overflow-hidden rounded-2xl">
+          {([
+            [ShieldCheck, 'Trygg betaling med SafePay', 'Pengene holdes sikkert til jobben er godkjent.'],
+            [FileText, 'Automatisk kontrakt', 'Hver avtale får en digital kontrakt som beskytter begge parter.'],
+            [Star, 'Verifiserte ratings', 'Alle anmeldelser er fra ekte, fullførte oppdrag.'],
+          ] as const).map(([Icon, title, body], index) => (
+            <View key={title} className={`flex-row items-start gap-3 px-4 py-3.5 ${index > 0 ? 'border-t border-[#EFF0EA]' : ''}`}>
+              <View className="h-9 w-9 items-center justify-center rounded-xl bg-[#EAF1E9]">
+                <Icon size={17} color="#2E6641" />
+              </View>
+              <View className="min-w-0 flex-1">
+                <Text className="text-[0.875rem] font-semibold text-[#0B0B0B]">{title}</Text>
+                <Text className="mt-0.5 text-[0.8125rem] leading-5 text-[#63665F]">{body}</Text>
+              </View>
+            </View>
+          ))}
+        </Card>
       </ScrollView>
 
       <SaveToListSheet
@@ -379,5 +393,19 @@ export default function HomeScreen() {
         serviceId={saveSheetServiceId ?? ''}
       />
     </SafeAreaView>
+  );
+}
+
+function SectionHeader({ title, actionLabel, action }: { title: string; actionLabel?: string; action?: () => void }) {
+  return (
+    <View className="mb-3 mt-8 flex-row items-center justify-between">
+      <Text className="text-[1.125rem] font-bold tracking-[-0.01em] text-[#0B0B0B]">{title}</Text>
+      {actionLabel && action ? (
+        <Pressable onPress={action} hitSlop={8} className="flex-row items-center gap-0.5">
+          <Text className="text-[0.8125rem] font-semibold text-[#2E6641]">{actionLabel}</Text>
+          <ChevronRight size={15} color="#2E6641" />
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
