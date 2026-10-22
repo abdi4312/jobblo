@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { ArrowLeft, CheckCircle2, Info, MapPin } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { CheckCircle2, Info, MapPin } from 'lucide-react-native';
 import { useProfile, useUpdateProfile } from '../../../../src/hooks/useProfile';
 import { useAuthStore } from '../../../../src/store/authStore';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
+import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
 
 /**
  * Location settings — profile country only.
@@ -62,7 +62,6 @@ function saveErrorMessage(error: unknown): string {
 }
 
 export default function LocationSettingsScreen() {
-  const router = useRouter();
   const { data: profile, isLoading, isError, refetch } = useProfile();
   const update = useUpdateProfile();
 
@@ -87,7 +86,7 @@ export default function LocationSettingsScreen() {
 
   if (isLoading || draft === null) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <LoadingIndicator message="Laster lokasjon..." />
       </SafeAreaView>
     );
@@ -95,7 +94,7 @@ export default function LocationSettingsScreen() {
 
   if (isError || !profile) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <ErrorState
           title="Kunne ikke laste lokasjonen"
           message="Vi fikk ikke hentet profilen din. Sjekk internettforbindelsen og prøv igjen."
@@ -129,25 +128,12 @@ export default function LocationSettingsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-          <Pressable onPress={() => router.back()} className="mb-5 flex-row items-center self-start py-2">
-            <ArrowLeft size={18} color="#63665F" />
-            <Text className="ml-2 text-sm font-medium text-[#63665F]">Innstillinger</Text>
-          </Pressable>
+          <ScreenHeader title="Lokasjon" subtitle="Landet som vises på profilen din." icon={MapPin} />
 
           <View className="rounded-3xl border border-[#E6E7E1] bg-white p-5">
-            <View className="mb-5 flex-row items-center">
-              <View className="h-10 w-10 items-center justify-center rounded-xl bg-[#EAF1E9]">
-                <MapPin size={18} color="#2E6641" />
-              </View>
-              <View className="ml-3 min-w-0 flex-1">
-                <Text className="text-lg font-bold text-[#0B0B0B]">Lokasjon</Text>
-                <Text className="mt-1 text-xs leading-4 text-[#63665F]">Landet som vises på profilen din.</Text>
-              </View>
-            </View>
-
             <View className="mb-4">
               <Text className="mb-1.5 text-[0.8125rem] font-semibold text-[#0B0B0B]">Land</Text>
               <TextInput

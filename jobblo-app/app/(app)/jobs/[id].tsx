@@ -34,6 +34,7 @@ import { ApplyModal } from '../../../src/components/domain/ApplyModal';
 import { JobMetaRow } from '../../../src/components/domain/JobMetaRow';
 import { SaveToListSheet } from '../../../src/components/domain/SaveToListSheet';
 import { getCategoryIcon } from '../../../src/utils/categoryIcons';
+import { MEMBERSHIP_ENABLED } from '../../../src/config/features';
 import type { Job } from '../../../src/types/Jobs';
 
 function formatDate(value?: string) {
@@ -87,7 +88,9 @@ export default function JobDetailsScreen() {
         const minutesLeft = Math.ceil((new Date(errorData.unlockAt).getTime() - Date.now()) / 60000);
         errorMessage = `Du må vente ${minutesLeft} minutter før du kan søke på nytt.`;
       } else if (error.response?.status === 402) {
-        errorMessage = 'Du har nådd din månedlige grense for kontakter. Oppgrader planen din for å søke videre.';
+        errorMessage = MEMBERSHIP_ENABLED
+          ? 'Du har nådd din månedlige grense for kontakter. Oppgrader planen din for å søke videre.'
+          : 'Du har nådd din månedlige grense for kontakter.';
       } else if (errorData?.code === 'STRIPE_CONNECT_REQUIRED') {
         void connectStatusQuery.refetch();
         errorMessage = 'Du må fullføre og verifisere Stripe Connect-kontoen din før du kan sende forespørsler eller starte oppdrag.';
@@ -159,7 +162,7 @@ export default function JobDetailsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <LoadingIndicator message="Laster oppdrag..." />
       </SafeAreaView>
     );
@@ -167,7 +170,7 @@ export default function JobDetailsScreen() {
 
   if (isError) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <ErrorState
           title="Kunne ikke laste oppdraget"
           message="Sjekk internettforbindelsen din og prøv igjen."
@@ -180,7 +183,7 @@ export default function JobDetailsScreen() {
 
   if (!job) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <EmptyState
           title="Oppdraget finnes ikke"
           message="Annonsen er kanskje fjernet, eller lenken er feil."
@@ -190,7 +193,7 @@ export default function JobDetailsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 120 }}

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Keyboard,
   KeyboardAvoidingView,
@@ -8,29 +9,28 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Crosshair, Loader2, MapPinHouse, Navigation2 } from 'lucide-react-native';
+import { Crosshair, MapPinHouse } from 'lucide-react-native';
 import MapView, {
   LatLng,
   MapPressEvent,
   Marker,
   MarkerDragStartEndEvent,
-  PROVIDER_GOOGLE,
   Region,
 } from 'react-native-maps';
 import * as Location from 'expo-location';
+import { MAP_PROVIDER, MAPS_AVAILABLE } from '../../../../src/utils/mapProvider';
+import { MapUnavailable } from '../../../../src/components/ui/MapUnavailable';
 import { useRouter } from 'expo-router';
 import { useProfile, useUpdateProfile } from '../../../../src/hooks/useProfile';
 import { useAuthStore } from '../../../../src/store/authStore';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
+import { Card, SectionLabel } from '../../../../src/components/ui/Card';
+import { FormRow } from '../../../../src/components/ui/FormRow';
 import type { CurrentProfile } from '../../../../src/services/profile.service';
-
-const FIELD_BASE =
-  'rounded-2xl border border-[#E6E7E1] bg-white px-4 pt-6 pb-3 text-[0.9375rem] text-[#0B0B0B] placeholder:text-[#9B9E96]';
 
 type Draft = { address: string; postNumber: string; postSted: string };
 
@@ -100,7 +100,6 @@ export default function AddressesSettingsScreen() {
   const [selectedCoordinate, setSelectedCoordinate] = useState<LatLng | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const [initialCentered, setInitialCentered] = useState(false);
 
   useEffect(() => {
     if (profile && !draft) {
@@ -126,7 +125,6 @@ export default function AddressesSettingsScreen() {
             if (!selectedCoordinate) {
               setSelectedCoordinate(coord);
               animateTo(coord);
-              setInitialCentered(true);
             }
           } catch {
             // GPS unavailable — fall through, user can still tap the map
@@ -246,7 +244,6 @@ export default function AddressesSettingsScreen() {
       setCurrentDeviceLocation(coord);
       setSelectedCoordinate(coord);
       animateTo(coord);
-      setInitialCentered(true);
       await applyReverseGeocodeResult(coord);
     } catch {
       // GPS off or lookup failed
@@ -275,14 +272,14 @@ export default function AddressesSettingsScreen() {
 
   if (isLoading || !draft) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <LoadingIndicator message="Laster adresser..." />
       </SafeAreaView>
     );
   }
   if (isError || !profile) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <ErrorState title="Kunne ikke laste adresser" onAction={() => void refetch()} />
       </SafeAreaView>
     );
@@ -329,224 +326,137 @@ export default function AddressesSettingsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View className="flex-row items-center border-b border-[#E6E7E1] bg-white px-4 py-3">
-          <Pressable
-            onPress={leave}
-            accessibilityLabel="Tilbake"
-            className="h-10 w-10 items-center justify-center rounded-full"
-          >
-            <ArrowLeft size={22} color="#0B0B0B" />
-          </Pressable>
-          <Text className="ml-2 text-lg font-semibold text-[#0B0B0B]">Adresser</Text>
-        </View>
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      {/* Top bar: Avbryt · title · Lagre, same as Rediger profil. */}
+      <View className="h-14 flex-row items-center justify-between border-b border-[#E6E7E1] bg-[#EFF0EA] px-2">
+        <Pressable onPress={leave} hitSlop={8} accessibilityRole="button" className="min-w-[72px] px-2 py-2">
+          <Text className="text-[1rem] text-[#3C3F38]">Avbryt</Text>
+        </Pressable>
+        <Text className="text-[1.0625rem] font-semibold text-[#0B0B0B]">Adresse</Text>
+        <Pressable
+          onPress={save}
+          disabled={!canSave}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canSave }}
+          className="min-w-[72px] items-end px-2 py-2"
+        >
+          {update.isPending ? (
+            <ActivityIndicator size="small" color="#2E6641" />
+          ) : (
+            <Text className={`text-[1rem] font-semibold ${canSave ? 'text-[#2E6641]' : 'text-[#B5B8B0]'}`}>Lagre</Text>
+          )}
+        </Pressable>
+      </View>
 
+      <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
           nestedScrollEnabled
-          contentContainerStyle={{ padding: 16, paddingBottom: 36 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         >
-          <View className="mb-4 flex-row items-start gap-3 rounded-3xl border border-[#E6E7E1] bg-white p-5">
-            <View className="h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EAF1E9]">
-              <MapPinHouse size={18} color="#2E6641" />
-            </View>
-            <View className="min-w-0 flex-1">
-              <Text className="text-sm font-bold text-[#0B0B0B]">Kontaktadresse</Text>
-              <Text className="mt-1 text-xs leading-5 text-[#63665F]">
-                Gateadresse, postnummer og sted lagres på Jobblo-kontoen din.
-              </Text>
-            </View>
-          </View>
+          <Text className="mb-5 px-1 text-[0.875rem] leading-5 text-[#63665F]">
+            Velg på kartet eller skriv inn adressen. Den lagres på Jobblo-kontoen din.
+          </Text>
 
-          <View className="rounded-3xl border border-[#E6E7E1] bg-white p-5">
-            <Text className="mb-4 text-base font-semibold text-[#0B0B0B]">Adresse</Text>
-
-            <View>
-              <Text className="pointer-events-none absolute left-4 top-3 z-10 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]">
-                Gateadresse
-              </Text>
-              <TextInput
-                value={draft.address}
-                onChangeText={(v) => set('address', v)}
-                placeholder="Karl Johans gate 10"
-                placeholderTextColor="#9B9E96"
-                autoComplete="street-address"
-                className={FIELD_BASE}
-              />
-            </View>
-
-            <View className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <View>
-                <Text className="pointer-events-none absolute left-4 top-3 z-10 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]">
-                  Postnummer
-                </Text>
-                <TextInput
-                  value={draft.postNumber}
-                  onChangeText={(v) => set('postNumber', formatPostalCode(v))}
-                  placeholder="0150"
-                  placeholderTextColor="#9B9E96"
-                  maxLength={4}
-                  autoComplete="postal-code"
-                  keyboardType="number-pad"
-                  className={FIELD_BASE}
-                />
-                <Text className="mt-1 text-[0.6875rem] text-right text-[#9B9E96]">
-                  {draft.postNumber.length}/4
-                </Text>
-              </View>
-
-              <View>
-                <Text className="pointer-events-none absolute left-4 top-3 z-10 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]">
-                  Sted
-                </Text>
-                <TextInput
-                  value={draft.postSted}
-                  onChangeText={(v) => set('postSted', v)}
-                  placeholder="Oslo"
-                  placeholderTextColor="#9B9E96"
-                  autoComplete="address-line2"
-                  className={FIELD_BASE}
-                />
-              </View>
-            </View>
-
-            {validation ? <Text className="mt-3 text-xs text-[#B4544A]">{validation}</Text> : null}
-          </View>
-
-          <View className="mt-6 rounded-3xl border border-[#E6E7E1] bg-white p-5">
-            <View className="mb-3 flex-row items-center justify-between">
-              <Text className="text-base font-semibold text-[#0B0B0B]">Velg adresse på kartet</Text>
-              {isGeocoding ? (
-                <View className="flex-row items-center gap-1.5">
-                  <Loader2 size={14} color="#63665F" />
-                  <Text className="text-[0.75rem] text-[#63665F]">Finner adresse…</Text>
-                </View>
-              ) : null}
-            </View>
-
-            <View
-              style={{ height: 288 }}
-              className="relative w-full overflow-hidden rounded-2xl bg-[#F4F6F0]"
-            >
-              <MapView
+          {/* Map */}
+          <SectionLabel>Velg på kartet</SectionLabel>
+          <Card className="mb-6 overflow-hidden">
+            <View style={{ height: 260 }} className="w-full bg-[#F4F6F0]">
+              {MAPS_AVAILABLE ? <MapView
                 ref={mapRef}
-                provider={PROVIDER_GOOGLE}
-                style={{ ...StyleSheet.absoluteFill, flex: 1, width: '100%', height: '100%' }}
+                provider={MAP_PROVIDER}
+                style={StyleSheet.absoluteFill}
                 mapType="standard"
-                region={
+                // Uncontrolled: a `region` prop re-centred the map on every render, so it
+                // snapped back whenever the user panned. animateTo() moves it on purpose.
+                initialRegion={
                   selectedCoordinate
                     ? { ...selectedCoordinate, latitudeDelta: 0.02, longitudeDelta: 0.02 }
-                    : currentDeviceLocation
-                      ? { ...currentDeviceLocation, latitudeDelta: 0.02, longitudeDelta: 0.02 }
-                      : DEFAULT_REGION
+                    : DEFAULT_REGION
                 }
-                initialRegion={DEFAULT_REGION}
                 showsUserLocation={permission.status === 'granted'}
                 showsMyLocationButton={false}
                 showsCompass
-                showsBuildings
-                showsTraffic={false}
-                zoomEnabled
-                scrollEnabled
                 rotateEnabled={false}
                 pitchEnabled={false}
                 moveOnMarkerPress={false}
                 onPress={handleMapPress}
               >
                 {selectedCoordinate ? (
-                  <Marker
-                    coordinate={selectedCoordinate}
-                    draggable
-                    onDragEnd={handleMarkerDragEnd}
-                    tracksViewChanges={false}
-                  >
-                    <View className="items-center justify-center">
-                      <View className="h-10 w-10 items-center justify-center rounded-full bg-[#2E6641] shadow-lg shadow-black/20">
-                        <Navigation2 size={18} color="#FFFFFF" fill="#FFFFFF" />
+                  <Marker coordinate={selectedCoordinate} draggable onDragEnd={handleMarkerDragEnd} tracksViewChanges={false}>
+                    <View className="items-center">
+                      <View className="h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-[#2E6641]">
+                        <MapPinHouse size={18} color="#FFFFFF" />
                       </View>
                       <View className="h-2 w-2 rounded-full bg-[#2E6641]" />
                     </View>
                   </Marker>
                 ) : null}
-              </MapView>
+              </MapView> : <MapUnavailable />}
 
-              <Pressable
-                onPress={() => void locateAndUse()}
-                disabled={isLocating}
-                accessibilityLabel="Bruk min posisjon"
-                className="absolute bottom-3 right-3 h-11 w-11 items-center justify-center rounded-full bg-white shadow-md shadow-black/20"
-              >
-                {isLocating ? (
-                  <Loader2 size={18} color="#2E6641" />
-                ) : (
-                  <Crosshair size={18} color="#2E6641" />
-                )}
-              </Pressable>
+              {isGeocoding ? (
+                <View className="absolute left-3 top-3 flex-row items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5" pointerEvents="none">
+                  <ActivityIndicator size="small" color="#2E6641" />
+                  <Text className="text-[0.75rem] font-medium text-[#3C3F38]">Finner adresse…</Text>
+                </View>
+              ) : null}
             </View>
 
-            <View className="mt-3 flex-row flex-wrap items-center gap-3">
+            <View className="flex-row items-center gap-3 border-t border-[#EFF0EA] px-4 py-3">
+              <Text className="flex-1 text-[0.8125rem] leading-5 text-[#63665F]">
+                {permissionMessage || 'Trykk på kartet, eller dra merket til riktig sted.'}
+              </Text>
               <Pressable
                 onPress={() => void locateAndUse()}
                 disabled={isLocating}
-                className="flex-row items-center gap-2 rounded-full bg-[#EAF1E9] px-4 py-2"
+                accessibilityRole="button"
+                accessibilityLabel="Bruk min posisjon"
+                className="flex-row items-center gap-1.5 rounded-full bg-[#EAF1E9] px-3.5 py-2"
               >
-                {isLocating ? (
-                  <Loader2 size={14} color="#2E6641" />
-                ) : (
-                  <Crosshair size={14} color="#2E6641" />
-                )}
+                {isLocating ? <ActivityIndicator size="small" color="#2E6641" /> : <Crosshair size={15} color="#2E6641" />}
                 <Text className="text-[0.8125rem] font-semibold text-[#2E6641]">
-                  {isLocating ? 'Henter posisjon…' : 'Bruk min posisjon'}
+                  {isLocating ? 'Henter…' : 'Min posisjon'}
                 </Text>
               </Pressable>
             </View>
+          </Card>
 
-            {permissionMessage ? (
-              <Text className="mt-3 text-[0.75rem] leading-5 text-[#63665F]">
-                {permissionMessage}
-              </Text>
-            ) : (
-              <Text className="mt-3 text-[0.75rem] leading-5 text-[#63665F]">
-                Trykk på kartet for å velge adresse. Du kan også dra det grønne merket til rett
-                plassering.
-              </Text>
-            )}
-          </View>
+          {/* Fields */}
+          <SectionLabel>Adresse</SectionLabel>
+          <Card className="overflow-hidden">
+            <FormRow
+              label="Gateadresse"
+              value={draft.address}
+              onChangeText={(v) => set('address', v)}
+              placeholder="Karl Johans gate 10"
+              autoComplete="street-address"
+            />
+            <FormRow
+              divider
+              label="Postnummer"
+              value={draft.postNumber}
+              onChangeText={(v) => set('postNumber', formatPostalCode(v))}
+              placeholder="0150"
+              maxLength={4}
+              keyboardType="number-pad"
+              autoComplete="postal-code"
+              error={validation || undefined}
+            />
+            <FormRow
+              divider
+              label="Sted"
+              value={draft.postSted}
+              onChangeText={(v) => set('postSted', v)}
+              placeholder="Oslo"
+            />
+          </Card>
 
-          <View className="mt-4 rounded-2xl bg-[#FBFCF8] px-4 py-3">
-            <Text className="text-[0.75rem] leading-5 text-[#63665F]">
-              Feltene er valgfritt. Du kan tømme dem når som helst — tomme verdier lagres direkte.
-              Land / profilplassering endres fra den egne Innstillinger → Lokasjon-skjermen.
-            </Text>
-          </View>
+          <Text className="mt-4 px-1 text-[0.75rem] leading-5 text-[#9B9E96]">
+            Alle feltene er valgfrie, og tomme felt lagres som tomme. Landet på profilen endrer du under
+            Innstillinger → Lokasjon.
+          </Text>
         </ScrollView>
-
-        <View className="border-t border-[#E6E7E1] bg-white px-4 py-3">
-          <Pressable
-            onPress={save}
-            disabled={!canSave}
-            className={[
-              'flex-row items-center justify-center rounded-full py-3.5',
-              canSave ? 'bg-[#2E6641]' : 'bg-[#F4F6F0] border border-[#E6E7E1]',
-            ].join(' ')}
-          >
-            {update.isPending ? (
-              <Loader2 size={16} color={canSave ? '#FFFFFF' : '#9B9E96'} />
-            ) : null}
-            <Text
-              className={[
-                'ml-2 text-sm font-semibold',
-                canSave ? 'text-white' : 'text-[#9B9E96]',
-              ].join(' ')}
-            >
-              {update.isPending ? 'Lagrer...' : 'Lagre adresser'}
-            </Text>
-          </Pressable>
-        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

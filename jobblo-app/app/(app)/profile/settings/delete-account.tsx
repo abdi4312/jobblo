@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AlertTriangle, ArrowLeft, ShieldAlert, Trash2 } from 'lucide-react-native';
+import { AlertTriangle, ShieldAlert, Trash2 } from 'lucide-react-native';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,6 +14,8 @@ import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../../../src/store/authStore';
 import { deleteCurrentUser } from '../../../../src/services/profile.service';
+import { MEMBERSHIP_ENABLED } from '../../../../src/config/features';
+import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
 
 const CONFIRM_WORD = 'SLETT';
 
@@ -69,7 +71,7 @@ export default function DeleteAccountScreen() {
   const isActiveSubscription = errorInfo?.code === 'active_subscription_exists';
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -78,27 +80,9 @@ export default function DeleteAccountScreen() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         >
-          <Pressable
-            onPress={() => router.back()}
-            className="mb-5 flex-row items-center self-start py-2"
-          >
-            <ArrowLeft size={18} color="#63665F" />
-            <Text className="ml-2 text-sm font-medium text-[#63665F]">Innstillinger</Text>
-          </Pressable>
+          <ScreenHeader title="Slett profil" subtitle="Denne handlingen kan ikke angres." icon={Trash2} destructive />
 
           <View className="rounded-3xl border border-[#E6E7E1] bg-white p-5">
-            <View className="mb-5 flex-row items-center">
-              <View className="h-10 w-10 items-center justify-center rounded-xl bg-[#FBF4F2]">
-                <Trash2 size={18} color="#B4544A" />
-              </View>
-              <View className="ml-3 flex-1">
-                <Text className="text-lg font-bold text-[#0B0B0B]">Slett profil</Text>
-                <Text className="mt-1 text-xs leading-4 text-[#63665F]">
-                  Denne handlingen kan ikke angres.
-                </Text>
-              </View>
-            </View>
-
             <View className="flex flex-col gap-3 mb-5">
               <Text className="text-[0.875rem] leading-relaxed text-[#0B0B0B]">
                 Det er trist å se deg dra! Sletting av profilen din er irreversibel. Alle
@@ -135,14 +119,14 @@ export default function DeleteAccountScreen() {
                     <Text className="mt-1 text-[0.75rem] leading-relaxed text-[#8A3C32]">
                       {errorInfo?.message}
                     </Text>
-                    <Pressable
+                    {MEMBERSHIP_ENABLED ? <Pressable
                       onPress={() => router.push('/profile/settings/subscription')}
                       className="mt-3 rounded-full bg-[#B4544A] px-4 py-2.5 self-start"
                     >
                       <Text className="text-[0.8125rem] font-semibold text-white">
                         Gå til abonnementer
                       </Text>
-                    </Pressable>
+                    </Pressable> : null}
                   </View>
                 </View>
               </View>

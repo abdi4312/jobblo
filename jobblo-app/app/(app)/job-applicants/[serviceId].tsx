@@ -122,7 +122,7 @@ export default function JobApplicantsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
           <View className="h-5 w-24 rounded bg-[#E6E7E1]" />
           <View className="h-32 rounded-2xl bg-[#E6E7E1]" />
@@ -136,7 +136,7 @@ export default function JobApplicantsScreen() {
 
   if (isError || !data?.service) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <ErrorState title={errorCopy.title} message={errorCopy.message} onAction={() => refetch()} />
       </SafeAreaView>
     );
@@ -207,7 +207,7 @@ export default function JobApplicantsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 120 }}

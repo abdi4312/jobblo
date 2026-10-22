@@ -7,9 +7,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../src/store/authStore';
 import { messageIdentity, upsertChatMessage, useChatDetail, useSendChatMessage } from '../../../src/hooks/useChatDetail';
 import { getChatSocket } from '../../../src/services/chatSocket.service';
-import { submitChatReport, type ChatDetail, type ChatMessage, type MessageParticipant } from '../../../src/services/messages.service';
+import { createChatContract, submitChatReport, type ChatDetail, type ChatMessage, type MessageParticipant } from '../../../src/services/messages.service';
 import { queryKeys } from '../../../src/queryKeys';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
+import { Button } from '../../../src/components/ui/Button';
 import { orderRouteForRole } from '../../../src/utils/orderRoute';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -28,6 +29,10 @@ function initials(name: string) { return name.split(/\s+/).filter(Boolean).slice
 function formatTime(value?: string) { if (!value) return ''; const date = new Date(value); return Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }); }
 function messageKey(message: ChatMessage) { return message._id || `${message.createdAt || ''}:${message.text || ''}:${idOf(message.senderId) || ''}`; }
 function isSystem(message: ChatMessage) { return message.type?.startsWith('system_'); }
+function serverError(error: unknown) {
+  const data = (error as { response?: { data?: { message?: string; error?: string } } } | null)?.response?.data;
+  return data?.message ?? data?.error;
+}
 
 function JobContext({ chat, userId, onPress }: { chat: ChatDetail; userId: string | null; onPress: () => void }) {
   const service = chat.serviceId;
@@ -42,7 +47,7 @@ function JobContext({ chat, userId, onPress }: { chat: ChatDetail; userId: strin
       <View className="min-w-0 flex-1">
         <Text className="text-[0.875rem] font-semibold text-[#0B0B0B]" numberOfLines={1}>{service?.title || 'Oppdrag'}</Text>
         {service?.categories?.length ? <Text className="mt-0.5 text-[0.6875rem] text-[#63665F]" numberOfLines={1}>{service.categories.join(', ')}</Text> : null}
-        {service?.price != null ? <Text className="mt-1 text-[0.75rem] font-semibold text-[#2E6641]">{service.price.toLocaleString('nb-NO')} kr</Text> : null}
+        {chat.agreedPrice != null ? <Text className="mt-1 text-[0.75rem] font-semibold text-[#2E6641]">Avtalt pris: {chat.agreedPrice.toLocaleString('nb-NO')} kr</Text> : service?.price != null ? <Text className="mt-1 text-[0.75rem] font-semibold text-[#2E6641]">{service.price.toLocaleString('nb-NO')} kr</Text> : null}
       </View>
       {status ? <View className="rounded-full bg-[#F4F6F0] px-2.5 py-1"><Text className="text-[0.625rem] font-semibold text-[#63665F]">{STATUS_LABELS[status] || (order?.paymentStatus === 'paid' ? 'Betalt' : 'Forespørsel')}</Text></View> : null}
       <ShieldCheck size={16} color={isCustomer ? '#2E6641' : '#63665F'} />
@@ -62,11 +67,18 @@ export default function ChatDetailScreen() {
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const [text, setText] = useState('');
   const [reporting, setReporting] = useState(false);
+  const [creatingContract, setCreatingContract] = useState(false);
 
   useEffect(() => {
     if (!chatId) return;
     const socket = getChatSocket();
-    const joinChat = () => socket.emit('join-chat', chatId);
+    let joined = false;
+    const joinChat = () => {
+      // On every REconnect, fetch what arrived while the socket was down.
+      if (joined) void queryClient.invalidateQueries({ queryKey: queryKeys.chats.detail(chatId) });
+      joined = true;
+      socket.emit('join-chat', chatId);
+    };
     const handleMessage = (data: { chatId: string; message: ChatMessage }) => {
       if (data.chatId !== chatId) return;
       queryClient.setQueryData(queryKeys.chats.detail(chatId), (current: { pages: ChatDetail[]; pageParams: unknown[] } | undefined) => upsertChatMessage(current, data.message));
@@ -94,12 +106,25 @@ export default function ChatDetailScreen() {
     if (!trimmed || sendMutation.isPending || !chatId) return;
     sendMutation.mutate(trimmed, { onSuccess: () => { setText(''); setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50); } });
   };
-  const openOrder = () => {
-    if (!chat?.orderId) return;
-    const orderId = idOf(chat.orderId);
-    if (!orderId) return;
-    const order = typeof chat.orderId === 'object' ? chat.orderId : undefined;
-    router.push(orderRouteForRole(orderId, chat.serviceId?.userId === userId, order?.status || chat.status, order?.paymentStatus));
+  /** Opens the chat's order, or the one a system message points at. Customers land on checkout/status/approval, providers on their work page. */
+  const openOrder = (targetId?: string) => {
+    const orderId = targetId || idOf(chat?.orderId);
+    if (!chat || !orderId) return;
+    const order = typeof chat.orderId === 'object' && chat.orderId?._id === orderId ? chat.orderId : undefined;
+    router.push(orderRouteForRole(orderId, chat.serviceId?.userId === userId, order ? order.status || chat.status : undefined, order?.paymentStatus));
+  };
+
+  const createContract = async () => {
+    if (!chatId || creatingContract) return;
+    try {
+      setCreatingContract(true);
+      await createChatContract(chatId);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.chats.detail(chatId) });
+    } catch (error) {
+      Alert.alert('Kunne ikke opprette kontrakt', serverError(error) || 'Prøv igjen.');
+    } finally {
+      setCreatingContract(false);
+    }
   };
 
   const reportChat = () => {
@@ -123,12 +148,7 @@ export default function ChatDetailScreen() {
 
               Alert.alert('Rapport sendt', result.message || 'Jobblo har mottatt rapporten og vil vurdere den.');
             } catch (error) {
-              const serverMessage = error && typeof error === 'object' && 'response' in error
-                ? (error as { response?: { data?: { message?: string; error?: string } } }).response?.data?.message
-                  ?? (error as { response?: { data?: { message?: string; error?: string } } }).response?.data?.error
-                : undefined;
-
-              Alert.alert('Kunne ikke sende rapport', serverMessage || 'Prøv igjen senere.');
+              Alert.alert('Kunne ikke sende rapport', serverError(error) || 'Prøv igjen senere.');
             } finally {
               setReporting(false);
             }
@@ -138,15 +158,24 @@ export default function ChatDetailScreen() {
     );
   };
 
-  if (query.isLoading) return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><View className="flex-1 items-center justify-center"><ActivityIndicator color="#2E6641" /><Text className="mt-3 text-[#63665F]">Laster samtale...</Text></View></SafeAreaView>;
-  if (query.isError || !chat) return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ErrorState title="Samtale ikke funnet" message="Kunne ikke laste denne samtalen." actionLabel="Tilbake" onAction={() => router.back()} /></SafeAreaView>;
+  if (query.isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><View className="flex-1 items-center justify-center"><ActivityIndicator color="#2E6641" /><Text className="mt-3 text-[#63665F]">Laster samtale...</Text></View></SafeAreaView>;
+  if (query.isError || !chat) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><ErrorState title="Samtale ikke funnet" message="Kunne ikke laste denne samtalen." actionLabel="Tilbake" onAction={() => router.back()} /></SafeAreaView>;
 
   const other = chat.clientId?._id === userId ? chat.providerId : chat.clientId;
+  // Same action bar as the web chat: only the job owner (customer) creates the contract and pays.
+  const chatOrder = typeof chat.orderId === 'object' ? chat.orderId : null;
+  const isCustomer = !!userId && chat.serviceId?.userId === userId;
+  const chatReady = chat.status === 'agreed' || chat.agreedPrice != null || !!chat.orderId;
+  const action = !isCustomer || !chat.serviceId || !chatReady ? null
+    : !chat.orderId ? { label: creatingContract ? 'Oppretter kontrakt…' : 'Opprett kontrakt', onPress: () => void createContract() }
+    : chatOrder?.paymentStatus !== 'paid' ? { label: 'Start fiks ferdig-betaling', onPress: () => openOrder() }
+    : null;
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View className="flex-row items-center gap-3 border-b border-[#E6E7E1] bg-white px-4 py-3"><Pressable onPress={() => router.back()} className="h-9 w-9 items-center justify-center"><ArrowLeft size={19} color="#0B0B0B" /></Pressable><View className="h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9]">{other?.avatarUrl ? <Image source={{ uri: other.avatarUrl }} className="h-full w-full" /> : <Text className="font-semibold text-[#2E6641]">{initials(nameOf(other))}</Text>}</View><Text className="flex-1 text-[1rem] font-semibold text-[#0B0B0B]" numberOfLines={1}>{nameOf(other)}</Text><Pressable onPress={reportChat} disabled={reporting} className="rounded-full border border-[#E6E7E1] bg-[#F4F6F0] px-3 py-1.5 disabled:opacity-60"><Text className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[#63665F]">{reporting ? 'Sender…' : 'Rapporter'}</Text></Pressable></View>
-        <FlatList ref={listRef} data={messages} keyExtractor={messageKey} contentContainerStyle={{ padding: 16, paddingBottom: 18, flexGrow: messages.length ? 0 : 1 }} onContentSizeChange={() => { if (!query.isFetchingNextPage) listRef.current?.scrollToEnd({ animated: false }); }} onScroll={(event) => { if (event.nativeEvent.contentOffset.y < 80 && query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage(); }} scrollEventThrottle={200} maintainVisibleContentPosition={{ minIndexForVisible: 1 }} ListHeaderComponent={<JobContext chat={chat} userId={userId} onPress={openOrder} />} ListEmptyComponent={<View className="flex-1 items-center justify-center"><Text className="text-[0.875rem] text-[#63665F]">Ingen meldinger i denne samtalen.</Text></View>} renderItem={({ item }) => { const own = idOf(item.senderId) === userId; if (isSystem(item)) return <View className="my-2 rounded-full bg-[#F4F6F0] px-4 py-2"><Text className="text-center text-[0.75rem] text-[#63665F]">{item.text || 'Status oppdatert'}</Text></View>; return <View className={['mb-2 max-w-[82%] rounded-2xl px-4 py-3', own ? 'self-end rounded-br-md bg-[#2E6641]' : 'self-start rounded-bl-md bg-white'].join(' ')}><Text className={own ? 'text-[0.9375rem] leading-relaxed text-white' : 'text-[0.9375rem] leading-relaxed text-[#0B0B0B]'}>{item.text || ''}</Text><Text className={['mt-1 text-[0.625rem]', own ? 'text-white/70' : 'text-[#9B9E96]'].join(' ')}>{formatTime(item.createdAt)}</Text></View>; }} />
+        {action ? <View className="border-b border-[#E6E7E1] bg-white px-4 py-3"><Button label={action.label} onPress={action.onPress} disabled={creatingContract} fullWidth /></View> : null}
+        <FlatList ref={listRef} data={messages} keyExtractor={messageKey} contentContainerStyle={{ padding: 16, paddingBottom: 18, flexGrow: messages.length ? 0 : 1 }} onContentSizeChange={() => { if (!query.isFetchingNextPage) listRef.current?.scrollToEnd({ animated: false }); }} onScroll={(event) => { if (event.nativeEvent.contentOffset.y < 80 && query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage(); }} scrollEventThrottle={200} maintainVisibleContentPosition={{ minIndexForVisible: 1 }} ListHeaderComponent={<JobContext chat={chat} userId={userId} onPress={() => openOrder()} />} ListEmptyComponent={<View className="flex-1 items-center justify-center"><Text className="text-[0.875rem] text-[#63665F]">Ingen meldinger i denne samtalen.</Text></View>} renderItem={({ item }) => { const own = idOf(item.senderId) === userId; if (isSystem(item)) { const target = item.systemData?.orderId; return <Pressable disabled={!target} onPress={() => openOrder(target)} className="my-2 rounded-full bg-[#F4F6F0] px-4 py-2"><Text className="text-center text-[0.75rem] text-[#63665F]">{item.text || 'Status oppdatert'}{target ? <Text className="font-semibold text-[#2E6641]">  Se oppdrag ›</Text> : null}</Text></Pressable>; } return <View className={['mb-2 max-w-[82%] rounded-2xl px-4 py-3', own ? 'self-end rounded-br-md bg-[#2E6641]' : 'self-start rounded-bl-md bg-white'].join(' ')}><Text className={own ? 'text-[0.9375rem] leading-relaxed text-white' : 'text-[0.9375rem] leading-relaxed text-[#0B0B0B]'}>{item.text || ''}</Text><Text className={['mt-1 text-[0.625rem]', own ? 'text-white/70' : 'text-[#9B9E96]'].join(' ')}>{formatTime(item.createdAt)}</Text></View>; }} />
         <View className="flex-row items-end gap-2 border-t border-[#E6E7E1] bg-white px-4 py-3"><TextInput value={text} onChangeText={setText} placeholder="Skriv en melding..." placeholderTextColor="#9B9E96" multiline className="max-h-28 min-h-[44px] flex-1 rounded-2xl border border-[#E6E7E1] bg-[#F4F6F0] px-4 py-3 text-[0.9375rem] text-[#0B0B0B]" /><Pressable onPress={send} disabled={!text.trim() || sendMutation.isPending} className="h-11 w-11 items-center justify-center rounded-full bg-[#2E6641] disabled:opacity-50"><Send size={17} color="#FFF" /></Pressable></View>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -1,8 +1,8 @@
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, Text, View } from 'react-native';
+import Constants from 'expo-constants';
 import {
-  ArrowLeft,
   AtSign,
   Bell,
   Briefcase,
@@ -16,208 +16,146 @@ import {
   MapPin,
   Monitor,
   Phone,
+  ShieldBan,
   ShieldCheck,
   Sparkles,
   Trash2,
   UserRound,
+  Wallet,
+  type LucideIcon,
 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
+import { Card, SectionLabel } from '../../../../src/components/ui/Card';
+import { ListRow } from '../../../../src/components/ui/ListRow';
+import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
+import { MEMBERSHIP_ENABLED } from '../../../../src/config/features';
+import { useProfile } from '../../../../src/hooks/useProfile';
 
-type SettingsRowProps = {
-  title: string;
-  subtitle?: string;
-  icon: React.ComponentType<{ size?: number; color?: string }>;
-  onPress?: () => void;
-  danger?: boolean;
-};
+type Row = { label: string; description?: string; icon: LucideIcon; href: Href; destructive?: boolean };
 
-function SettingsRow({ title, subtitle, icon: Icon, onPress, danger = false }: SettingsRowProps) {
-  const disabled = !onPress;
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      className={[
-        'flex-row items-center px-4 py-4',
-        disabled ? 'opacity-50' : 'active:bg-[#F4F6F0]',
-      ].join(' ')}
-    >
-      <View
-        className={[
-          'h-10 w-10 items-center justify-center rounded-xl',
-          danger ? 'bg-[#FBF4F2]' : 'bg-[#EAF1E9]',
-        ].join(' ')}
-      >
-        <Icon size={18} color={danger ? '#B4544A' : '#2E6641'} />
-      </View>
-      <View className="ml-3 min-w-0 flex-1">
-        <Text
-          className={['text-sm font-semibold', danger ? 'text-[#B4544A]' : 'text-[#0B0B0B]'].join(
-            ' '
-          )}
-        >
-          {title}
-        </Text>
-        {subtitle ? (
-          <Text className="mt-1 text-xs leading-4 text-[#63665F]">{subtitle}</Text>
-        ) : null}
-      </View>
-      {disabled ? (
-        <Text className="text-[0.6875rem] font-medium text-[#9B9E96]">Kommer</Text>
-      ) : (
-        <ChevronRight size={18} color="#63665F" />
-      )}
-    </Pressable>
-  );
-}
-
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View className="mt-5 overflow-hidden rounded-3xl border border-[#E6E7E1] bg-white">
-      <Text className="border-b border-[#E6E7E1] px-4 pb-3 pt-4 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[#9B9E96]">
-        {title}
-      </Text>
-      {children}
-    </View>
-  );
-}
+const GROUPS: { title: string; rows: Row[] }[] = [
+  {
+    title: 'Profil',
+    rows: [
+      { label: 'Adresser', description: 'Gateadresse, postnummer og sted', icon: Home, href: '/profile/settings/addresses' },
+      { label: 'Jobbsøker-profil', description: 'Tilgjengelighet, ferdigheter og erfaring', icon: Briefcase, href: '/profile/settings/seeker' },
+    ],
+  },
+  {
+    title: 'Konto og sikkerhet',
+    rows: [
+      { label: 'E-postadresse', description: 'Adressen du logger inn med', icon: AtSign, href: '/profile/settings/email' },
+      { label: 'Telefonnummer', description: 'Kontaktinformasjon', icon: Phone, href: '/profile/settings/phone' },
+      { label: 'Endre passord', description: 'Med kode på e-post', icon: KeyRound, href: '/profile/settings/password' },
+      { label: 'Aktive økter', description: 'Enheter som er logget inn', icon: Monitor, href: '/profile/settings/sessions' },
+    ],
+  },
+  {
+    title: 'Betaling',
+    rows: [
+      { label: 'SafePay-historikk', description: 'Betalinger, utbetalinger og refusjoner', icon: ShieldCheck, href: '/profile/settings/safepay' },
+      { label: 'Utbetalinger', description: 'Stripe Connect-oppsett', icon: Wallet, href: '/profile/settings/payout' },
+      ...(MEMBERSHIP_ENABLED ? [
+        { label: 'Abonnement', description: 'Administrer aktivt abonnement', icon: CreditCard, href: '/profile/settings/subscription' },
+        { label: 'Medlemskap', description: 'Planvalg og kjøp', icon: Sparkles, href: '/profile/membership' },
+      ] satisfies Row[] : []),
+    ],
+  },
+  {
+    title: 'Varsler og personvern',
+    rows: [
+      { label: 'Varsler', description: 'Push-varsler på denne enheten', icon: Bell, href: '/profile/settings/notifications' },
+      { label: 'Personvern og informasjonskapsler', description: 'Personvernerklæring og cookie-policy', icon: ShieldCheck, href: '/profile/settings/privacy' },
+      { label: 'Søkemotorsynlighet', description: 'Om profilen din vises i søk', icon: Eye, href: '/profile/settings/visibility' },
+      { label: 'Blokkerte brukere', description: 'Personer du har blokkert', icon: ShieldBan, href: '/profile/settings/blocked-users' },
+    ],
+  },
+  {
+    title: 'Annet',
+    rows: [
+      { label: 'Kundesenter', description: 'FAQ, e-post og saksregistrering', icon: HelpCircle, href: '/profile/support' },
+      { label: 'Lokasjon', description: 'Landet som vises på profilen din', icon: MapPin, href: '/profile/settings/location' },
+      { label: 'Om Jobblo', icon: Info, href: '/profile/settings/about' },
+    ],
+  },
+  {
+    title: 'Faresone',
+    rows: [
+      { label: 'Slett profilen min', description: 'Kan ikke angres', icon: Trash2, href: '/profile/settings/delete-account', destructive: true },
+    ],
+  },
+];
 
 export default function SettingsOverviewScreen() {
   const router = useRouter();
+  const { data: profile } = useProfile();
+  const name =
+    profile?.role === 'company'
+      ? profile.companyName || profile.name || 'Bedrift'
+      : `${profile?.name || ''} ${profile?.lastName || ''}`.trim() || 'Profil';
+  const initials = name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+  const version = Constants.expoConfig?.version;
+
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 36 }}>
-        <Pressable
-          onPress={() => router.back()}
-          className="mb-3 flex-row items-center self-start py-2"
-        >
-          <ArrowLeft size={18} color="#63665F" />
-          <Text className="ml-2 text-sm font-medium text-[#63665F]">Til profilen</Text>
-        </Pressable>
-        <Text className="text-2xl font-bold text-[#0B0B0B]">Innstillinger</Text>
-        <Text className="mt-1 text-sm leading-5 text-[#63665F]">
-          Konto, betaling og personvern.
-        </Text>
-        <Group title="Profil">
-          <SettingsRow
-            title="Rediger profil"
-            subtitle="Navn, bilde, bio, ferdigheter og sted"
-            icon={UserRound}
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 36, gap: 20 }}>
+        <ScreenHeader
+          title="Innstillinger"
+          subtitle="Konto, betaling og personvern"
+          backLabel="Profil"
+          className="mb-0"
+        />
+
+        {/* Who is signed in; tapping it edits the profile (iOS Settings pattern). */}
+        <Card className="rounded-2xl overflow-hidden">
+          <Pressable
             onPress={() => router.push('/profile/edit')}
-          />
-          <SettingsRow
-            title="Adresser"
-            subtitle="Gateadresse, postnummer og sted"
-            icon={Home}
-            onPress={() => router.push('/profile/settings/addresses')}
-          />
-          <SettingsRow
-            title="Jobbsøker-profil"
-            subtitle="Tilgjengelighet, ferdigheter og erfaring"
-            icon={Briefcase}
-            onPress={() => router.push('/profile/settings/seeker')}
-          />
-        </Group>
-        <Group title="Konto">
-          <SettingsRow
-            title="E-postadresse"
-            subtitle="Adressen du logger inn med"
-            icon={AtSign}
-            onPress={() => router.push('/profile/settings/email')}
-          />
-          <SettingsRow
-            title="Telefonnummer"
-            subtitle="Kontaktinformasjon"
-            icon={Phone}
-            onPress={() => router.push('/profile/settings/phone')}
-          />
-          <SettingsRow
-            title="Endre passord"
-            icon={KeyRound}
-            onPress={() => router.push('/profile/settings/password')}
-          />
-          <SettingsRow
-            title="Aktive økter"
-            subtitle="Innloggede enheter"
-            icon={Monitor}
-            onPress={() => router.push('/profile/settings/sessions')}
-          />
-        </Group>
-        <Group title="Betaling">
-          <SettingsRow
-            title="SafePay-historikk"
-            icon={ShieldCheck}
-            onPress={() => router.push('/profile/settings/safepay')}
-          />
-          <SettingsRow
-            title="Utbetalinger"
-            subtitle="Stripe Connect-oppsett for utbetalinger"
-            icon={CreditCard}
-            onPress={() => router.push('/profile/settings/payout')}
-          />
-          <SettingsRow
-            title="Abonnementer"
-            subtitle="Administrer aktivt abonnement"
-            icon={CreditCard}
-            onPress={() => router.push('/profile/settings/subscription')}
-          />
-          <SettingsRow
-            title="Medlemskap"
-            subtitle="Planvalg og kjøp"
-            icon={Sparkles}
-            onPress={() => router.push('/profile/membership')}
-          />
-        </Group>
-        <Group title="Personvern">
-          <SettingsRow
-            title="Varsler"
-            subtitle="Varslingsinnstillinger"
-            icon={Bell}
-            onPress={() => router.push('/profile/settings/notifications')}
-          />
-          <SettingsRow
-            title="Personvern og informasjonskapsler"
-            subtitle="Personvernerklæring og cookie-policy"
-            icon={ShieldCheck}
-            onPress={() => router.push('/profile/settings/privacy')}
-          />
-          <SettingsRow
-            title="Søkemotorsynlighet"
-            icon={Eye}
-            onPress={() => router.push('/profile/settings/visibility')}
-          />
-          <SettingsRow
-            title="Blokkerte brukere"
-            icon={ShieldCheck}
-            onPress={() => router.push('/profile/settings/blocked-users')}
-          />
-        </Group>
-        <Group title="Annet">
-          <SettingsRow
-            title="Kundesenter"
-            subtitle="FAQ, e-post og saksregistrering"
-            icon={HelpCircle}
-            onPress={() => router.push('/profile/support')}
-          />
-          <SettingsRow
-            title="Lokasjon"
-            subtitle="Landet som vises på profilen din"
-            icon={MapPin}
-            onPress={() => router.push('/profile/settings/location')}
-          />
-          <SettingsRow
-            title="Om Jobblo"
-            icon={Info}
-            onPress={() => router.push('/profile/settings/about')}
-          />
-          <SettingsRow
-            title="Slett profilen min"
-            subtitle="Denne handlingen kan ikke angres"
-            icon={Trash2}
-            danger
-            onPress={() => router.push('/profile/settings/delete-account')}
-          />
-        </Group>
+            accessibilityRole="button"
+            accessibilityLabel={`Rediger profil for ${name}`}
+            className="flex-row items-center gap-3.5 p-4 active:bg-[#F4F6F0]"
+          >
+            <View className="h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[#DCEBDD]">
+              {profile?.avatarUrl ? (
+                <Image source={{ uri: profile.avatarUrl }} className="h-full w-full" />
+              ) : profile ? (
+                <Text className="text-lg font-semibold text-[#2E6641]">{initials || '?'}</Text>
+              ) : (
+                <UserRound size={24} color="#2E6641" />
+              )}
+            </View>
+            <View className="min-w-0 flex-1">
+              <Text className="text-[1.0625rem] font-bold text-[#0B0B0B]" numberOfLines={1}>{name}</Text>
+              {profile?.email ? (
+                <Text className="mt-0.5 text-[0.8125rem] text-[#63665F]" numberOfLines={1}>{profile.email}</Text>
+              ) : null}
+              <Text className="mt-1 text-[0.75rem] font-semibold text-[#2E6641]">Rediger profil</Text>
+            </View>
+            <ChevronRight size={18} color="#9B9E96" />
+          </Pressable>
+        </Card>
+
+        {GROUPS.map((group) => (
+          <View key={group.title}>
+            <SectionLabel>{group.title}</SectionLabel>
+            <Card className="rounded-2xl overflow-hidden">
+              {group.rows.map((row, index) => (
+                <ListRow
+                  key={row.label}
+                  icon={row.icon}
+                  label={row.label}
+                  description={row.description}
+                  destructive={row.destructive}
+                  divider={index > 0}
+                  onPress={() => router.push(row.href)}
+                />
+              ))}
+            </Card>
+          </View>
+        ))}
+
+        <Text className="text-center text-[0.75rem] text-[#9B9E96]">
+          Jobblo{version ? ` · versjon ${version}` : ''}
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );

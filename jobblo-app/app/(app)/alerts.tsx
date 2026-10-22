@@ -2,8 +2,9 @@ import { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
-  FlatList,
-  TouchableOpacity,
+  SectionList,
+  ScrollView,
+  Pressable,
   RefreshControl,
   Image,
   ActivityIndicator,
@@ -13,12 +14,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   Bell,
+  BellOff,
   Briefcase,
   Banknote,
   MessageSquare,
   Star,
   ClipboardCheck,
-  Check,
+  CheckCheck,
+  Settings2,
   Trash2,
   type LucideIcon,
 } from 'lucide-react-native';
@@ -33,25 +36,31 @@ import {
 import { useAuthStore } from '../../src/store/authStore';
 import { resolveOrderRoute } from '../../src/utils/orderRoute';
 import { ConfirmDialog } from '../../src/components/ui/ConfirmDialog';
-import { Select } from '../../src/components/ui/Select';
+import { Button } from '../../src/components/ui/Button';
+import { Chip } from '../../src/components/ui/Chip';
+import { EmptyState } from '../../src/components/ui/EmptyState';
+import { ErrorState } from '../../src/components/ui/ErrorState';
+import { LoadingIndicator } from '../../src/components/ui/LoadingIndicator';
+import { cn } from '../../src/lib/utils';
 import type { Notification } from '../../src/types/Notification';
 
 /* ── Notification type metadata ──────────────────────────────────────────── */
 
-const META: Record<string, { label: string; Icon: LucideIcon }> = {
-  order: { label: 'Bestilling', Icon: Banknote },
-  payment: { label: 'Betaling', Icon: Banknote },
-  application: { label: 'Søknad', Icon: Briefcase },
-  message: { label: 'Melding', Icon: MessageSquare },
-  review: { label: 'Anmeldelse', Icon: Star },
-  job_update: { label: 'Jobboppdatering', Icon: ClipboardCheck },
+type Meta = { label: string; Icon: LucideIcon; tint: string; color: string };
+
+const META: Record<string, Meta> = {
+  order: { label: 'Bestilling', Icon: Banknote, tint: 'bg-[#EAF1E9]', color: '#2E6641' },
+  payment: { label: 'Betaling', Icon: Banknote, tint: 'bg-[#EAF1E9]', color: '#2E6641' },
+  application: { label: 'Søknad', Icon: Briefcase, tint: 'bg-[#EAF0FA]', color: '#2F5D9E' },
+  message: { label: 'Melding', Icon: MessageSquare, tint: 'bg-[#F2EEF9]', color: '#6B4FA0' },
+  review: { label: 'Anmeldelse', Icon: Star, tint: 'bg-[#FBF4E3]', color: '#96752A' },
+  job_update: { label: 'Jobboppdatering', Icon: ClipboardCheck, tint: 'bg-[#F4F6F0]', color: '#63665F' },
 };
 
-function notificationMeta(type: string): { label: string; Icon: LucideIcon } {
-  return META[type] || { label: 'Varsel', Icon: ClipboardCheck };
-}
+const notificationMeta = (type: string): Meta =>
+  META[type] || { label: 'Varsel', Icon: Bell, tint: 'bg-[#F4F6F0]', color: '#63665F' };
 
-/* ── Relative time ───────────────────────────────────────────────────────── */
+/* ── Time ────────────────────────────────────────────────────────────────── */
 
 function formatNotificationTime(date: string): string {
   const minutes = Math.floor((Date.now() - new Date(date).getTime()) / 60000);
@@ -62,22 +71,108 @@ function formatNotificationTime(date: string): string {
   return new Date(date).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' });
 }
 
+/** Groups by calendar day in the device's time zone: I dag, I går, Denne uken, Eldre. */
+function sectionTitle(date: string): string {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const days = Math.floor((startOfToday.getTime() - new Date(date).getTime()) / 86400000) + 1;
+  if (days <= 0) return 'I dag';
+  if (days === 1) return 'I går';
+  if (days < 7) return 'Denne uken';
+  return 'Eldre';
+}
+
 /* ── Category filter — value is the API `type` enum, label is display-only ─ */
 
 const FILTER_OPTIONS = [
-  { value: 'all', label: 'Alle varsler' },
+  { value: 'all', label: 'Alle' },
   { value: 'application', label: 'Søknader' },
   { value: 'payment', label: 'Betalinger' },
   { value: 'message', label: 'Meldinger' },
   { value: 'review', label: 'Anmeldelser' },
-  { value: 'job_update', label: 'Jobboppdateringer' },
+  { value: 'job_update', label: 'Oppdrag' },
 ];
-
-/* ── Safe id extractor ───────────────────────────────────────────────────── */
 
 const keyExtractor = (item: Notification) => item._id;
 
-/* ── Component ───────────────────────────────────────────────────────────── */
+/* ── One notification ────────────────────────────────────────────────────── */
+
+function NotificationRow({
+  item,
+  onOpen,
+  onDelete,
+}: {
+  item: Notification;
+  onOpen: (item: Notification) => void;
+  onDelete: (id: string) => void;
+}) {
+  const { label, Icon, tint, color } = notificationMeta(item.type);
+  const isUnread = !item.read;
+  const isSystem = !!item.isSystem || (!item.userId && item.readBy);
+  const sender = item.senderId?.name
+    ? [item.senderId.name, item.senderId.lastName].filter(Boolean).join(' ')
+    : null;
+
+  return (
+    <Pressable
+      onPress={() => onOpen(item)}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${item.content}${isUnread ? ', ulest' : ''}`}
+      className={cn(
+        'mx-4 mb-2 flex-row items-start gap-3 rounded-2xl border p-3.5 active:opacity-80',
+        isUnread ? 'border-[#2E6641]/25 bg-white' : 'border-[#E6E7E1] bg-white/70'
+      )}
+    >
+      <View>
+        {item.senderId?.avatarUrl ? (
+          <Image source={{ uri: item.senderId.avatarUrl }} className="h-11 w-11 rounded-full bg-[#EAF1E9]" />
+        ) : (
+          <View className={cn('h-11 w-11 items-center justify-center rounded-full', tint)}>
+            <Icon size={18} color={color} />
+          </View>
+        )}
+        {item.senderId?.avatarUrl ? (
+          <View className={cn('absolute -bottom-0.5 -right-0.5 h-5 w-5 items-center justify-center rounded-full border-2 border-white', tint)}>
+            <Icon size={10} color={color} />
+          </View>
+        ) : null}
+      </View>
+
+      <View className="min-w-0 flex-1">
+        <View className="flex-row items-center gap-2">
+          <Text className="flex-1 text-[0.75rem] font-semibold text-[#63665F]" numberOfLines={1}>
+            {sender ? `${label} · ${sender}` : label}
+          </Text>
+          <Text className="text-[0.6875rem] tabular-nums text-[#9B9E96]">{formatNotificationTime(item.createdAt)}</Text>
+          {isUnread ? <View className="h-2 w-2 rounded-full bg-[#2E6641]" accessibilityLabel="Ulest" /> : null}
+        </View>
+        <Text
+          className={cn('mt-1 text-[0.875rem] leading-5', isUnread ? 'font-semibold text-[#0B0B0B]' : 'text-[#3C3F38]')}
+          numberOfLines={3}
+        >
+          {item.content}
+        </Text>
+      </View>
+
+      {!isSystem ? (
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation?.();
+            onDelete(item._id);
+          }}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Slett varsel"
+          className="-mr-1 h-8 w-8 items-center justify-center rounded-full active:bg-[#F4F6F0]"
+        >
+          <Trash2 size={15} color="#9B9E96" />
+        </Pressable>
+      ) : null}
+    </Pressable>
+  );
+}
+
+/* ── Screen ──────────────────────────────────────────────────────────────── */
 
 export default function AlertsScreen() {
   const router = useRouter();
@@ -91,16 +186,8 @@ export default function AlertsScreen() {
 
   const typeFilter = activeCategory === 'all' ? undefined : activeCategory;
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    isError,
-    refetch,
-  } = useNotifications(typeFilter);
-
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch } =
+    useNotifications(typeFilter);
   const { data: unreadCountData, refetch: refetchUnreadCount } = useUnreadCount();
   const markAsRead = useMarkAsRead();
   const markAll = useMarkAllAsRead();
@@ -113,17 +200,28 @@ export default function AlertsScreen() {
     try { await Promise.all([refetch(), refetchUnreadCount()]); } finally { setRefreshing(false); }
   };
 
-  const allNotifications: Notification[] = useMemo(() => {
-    if (!data?.pages) return [];
-    return data.pages.flatMap((p) => p.data);
-  }, [data]);
-
-  const filtered = useMemo(
-    () => (showUnreadOnly ? allNotifications.filter((n) => !n.read) : allNotifications),
-    [allNotifications, showUnreadOnly]
+  const allNotifications: Notification[] = useMemo(
+    () => (data?.pages ? data.pages.flatMap((p) => p.data) : []),
+    [data]
   );
 
+  const sections = useMemo(() => {
+    const visible = showUnreadOnly ? allNotifications.filter((n) => !n.read) : allNotifications;
+    const groups: { title: string; data: Notification[] }[] = [];
+    for (const n of visible) {
+      const title = sectionTitle(n.createdAt);
+      const last = groups[groups.length - 1];
+      if (last?.title === title) last.data.push(n);
+      else groups.push({ title, data: [n] });
+    }
+    return groups;
+  }, [allNotifications, showUnreadOnly]);
+
   const hasFilter = showUnreadOnly || activeCategory !== 'all';
+  const resetFilters = () => {
+    setShowUnreadOnly(false);
+    setActiveCategory('all');
+  };
 
   /* ── Actions ───────────────────────────────────────────────────────────── */
 
@@ -144,7 +242,6 @@ export default function AlertsScreen() {
   const handleDeleteSingle = useCallback(() => {
     if (!deleteTargetId) return;
     deleteSingle.mutate(deleteTargetId, {
-      onSuccess: () => Alert.alert('Slettet', 'Varselet er slettet.'),
       onError: () => Alert.alert('Feil', 'Kunne ikke slette varselet.'),
       onSettled: () => setDeleteTargetId(null),
     });
@@ -170,8 +267,7 @@ export default function AlertsScreen() {
 
       if (n.requestId) {
         const request = n.requestId as { serviceId?: string | { _id?: string } };
-        const serviceId =
-          typeof request.serviceId === 'object' ? request.serviceId?._id : request.serviceId;
+        const serviceId = typeof request.serviceId === 'object' ? request.serviceId?._id : request.serviceId;
         if (serviceId) {
           router.push({ pathname: '/(app)/job-applicants/[serviceId]', params: { serviceId } });
         }
@@ -180,238 +276,136 @@ export default function AlertsScreen() {
 
       if (n.senderId?._id) {
         router.push({ pathname: '/(app)/profile/[userId]', params: { userId: n.senderId._id } });
-        return;
       }
     },
     [markAsRead, userId, router]
   );
 
-  /* ── Render helpers ────────────────────────────────────────────────────── */
+  /* ── Render ────────────────────────────────────────────────────────────── */
 
-  const renderNotification = useCallback(
-    ({ item }: { item: Notification }) => {
-      const { label, Icon } = notificationMeta(item.type);
-      const isUnread = !item.read;
-      const isSystem = !!item.isSystem || (!item.userId && item.readBy);
-
-      return (
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => openNotification(item)}
-          className={`mx-4 mb-2 flex-row items-start gap-3 rounded-3xl border p-4 ${
-            isUnread ? 'border-[#2E6641]/30 bg-white' : 'border-[#E6E7E1] bg-white'
-          }`}
-          accessibilityLabel={`${label}: ${item.content}${isUnread ? ', ulest' : ''}`}
-          accessibilityRole="button"
-        >
-          <View className="shrink-0">
-            {item.senderId?.avatarUrl ? (
-              <View className="h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9]">
-                <Image
-                  source={{ uri: item.senderId.avatarUrl }}
-                  className="h-full w-full"
-                  resizeMode="cover"
-                />
-              </View>
-            ) : (
-              <View
-                className={`h-10 w-10 items-center justify-center rounded-xl ${
-                  isUnread ? 'bg-[#EAF1E9] text-[#2E6641]' : 'bg-[#F4F6F0]'
-                }`}
-              >
-                <Icon size={16} color={isUnread ? '#2E6641' : '#9B9E96'} />
-              </View>
-            )}
-          </View>
-
-          <View className="min-w-0 flex-1">
-            <View className="flex-row items-baseline justify-between gap-2">
-              <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.08em] text-[#9B9E96]">
-                {label}
-              </Text>
-              <Text className="shrink-0 text-[0.6875rem] tabular-nums text-[#9B9E96]">
-                {formatNotificationTime(item.createdAt)}
-              </Text>
-            </View>
-            <Text
-              className={`mt-1 text-[0.875rem] leading-relaxed ${
-                isUnread ? 'font-medium text-[#0B0B0B]' : 'text-[#63665F]'
-              }`}
-              numberOfLines={3}
-            >
-              {item.content}
-            </Text>
-          </View>
-
-          <View className="shrink-0 flex-row items-center gap-1">
-            {isUnread && (
-              <View className="mr-1 h-2 w-2 rounded-full bg-[#2E6641]" accessibilityLabel="Ulest" />
-            )}
-            {!isSystem && (
-              <TouchableOpacity
-                onPress={(e) => {
-                  e.stopPropagation?.();
-                  setDeleteTargetId(item._id);
-                }}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                className="h-8 w-8 items-center justify-center rounded-full"
-                accessibilityLabel="Slett varsel"
-              >
-                <Trash2 size={14} color="#9B9E96" />
-              </TouchableOpacity>
-            )}
-          </View>
-        </TouchableOpacity>
-      );
-    },
+  const renderItem = useCallback(
+    ({ item }: { item: Notification }) => (
+      <NotificationRow item={item} onOpen={openNotification} onDelete={setDeleteTargetId} />
+    ),
     [openNotification]
   );
 
-  /* ── Empty state ───────────────────────────────────────────────────────── */
-
-  const renderEmpty = useCallback(() => {
-    if (isLoading) return null;
-
-    return (
-      <View className="mx-4 mt-4 items-center rounded-3xl border border-[#E6E7E1] bg-white p-12">
-        <View className="mb-4 h-11 w-11 items-center justify-center rounded-full bg-[#EAF1E9]">
-          <Bell size={20} color="#2E6641" />
+  const header = (
+    <View className="px-4 pb-3 pt-2">
+      <View className="flex-row items-start justify-between gap-3">
+        <View className="flex-1">
+          <Text className="text-[1.75rem] font-bold tracking-[-0.03em] text-[#0B0B0B]">Varsler</Text>
+          <Text className="mt-0.5 text-[0.875rem] text-[#63665F]">
+            {unreadCount > 0 ? `Du har ${unreadCount} ${unreadCount === 1 ? 'ulest varsel' : 'uleste varsler'}` : 'Du er oppdatert'}
+          </Text>
         </View>
-        <Text className="text-center text-[1.0625rem] font-semibold text-[#0B0B0B]">
-          {hasFilter ? 'Ingen treff' : 'Ingen varsler ennå'}
-        </Text>
-        <Text className="mt-2 max-w-sm text-center text-[0.875rem] leading-relaxed text-[#63665F]">
-          {hasFilter
-            ? 'Prøv en annen kategori, eller nullstill filtrene.'
-            : 'Du får beskjed her når det skjer noe med oppdragene, søknadene eller betalingene dine.'}
-        </Text>
-      </View>
-    );
-  }, [isLoading, hasFilter]);
-
-  /* ── Footer ────────────────────────────────────────────────────────────── */
-
-  const renderFooter = useCallback(() => {
-    if (!hasNextPage || isFetchingNextPage) return null;
-    return (
-      <View className="items-center py-6">
-        <TouchableOpacity
-          onPress={() => fetchNextPage()}
-          activeOpacity={0.8}
-          className="h-11 flex-row items-center gap-2 rounded-full border border-[#E6E7E1] bg-white px-6"
+        <Pressable
+          onPress={() => router.push('/(app)/profile/settings/notifications')}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Varslingsinnstillinger"
+          className="h-10 w-10 items-center justify-center rounded-full border border-[#E6E7E1] bg-white active:opacity-80"
         >
-          <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Se flere</Text>
-        </TouchableOpacity>
+          <Settings2 size={18} color="#0B0B0B" />
+        </Pressable>
       </View>
-    );
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  /* ── Main render ───────────────────────────────────────────────────────── */
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        className="-mx-4 mt-4"
+        contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+      >
+        <Chip
+          label="Uleste"
+          selected={showUnreadOnly}
+          count={unreadCount}
+          onPress={() => setShowUnreadOnly((v) => !v)}
+        />
+        <View className="mx-1 w-px self-stretch bg-[#E6E7E1]" />
+        {FILTER_OPTIONS.map((option) => (
+          <Chip
+            key={option.value}
+            label={option.label}
+            selected={activeCategory === option.value}
+            onPress={() => setActiveCategory(option.value)}
+          />
+        ))}
+      </ScrollView>
+
+      {(unreadCount > 0 || allNotifications.length > 0) && (
+        <View className="mt-3 flex-row items-center justify-between">
+          {unreadCount > 0 ? (
+            <Button
+              label="Merk alle som lest"
+              variant="secondary"
+              small
+              disabled={markAll.isPending}
+              onPress={handleMarkAll}
+              icon={<CheckCheck size={15} color="#0B0B0B" style={{ marginRight: 6 }} />}
+            />
+          ) : <View />}
+          {allNotifications.length > 0 ? (
+            <Button label="Slett alle" variant="ghost" small onPress={() => setDeleteAllVisible(true)} />
+          ) : null}
+        </View>
+      )}
+    </View>
+  );
+
+  const empty = isLoading ? (
+    <LoadingIndicator message="Laster varsler..." />
+  ) : (
+    <EmptyState
+      icon={
+        <View className="h-14 w-14 items-center justify-center rounded-full bg-[#EAF1E9]">
+          {hasFilter ? <BellOff size={24} color="#2E6641" /> : <Bell size={24} color="#2E6641" />}
+        </View>
+      }
+      title={hasFilter ? 'Ingen treff' : 'Ingen varsler ennå'}
+      message={
+        hasFilter
+          ? 'Ingen varsler passer filteret ditt.'
+          : 'Du får beskjed her når det skjer noe med oppdragene, søknadene eller betalingene dine.'
+      }
+      action={hasFilter ? <Button label="Nullstill filter" variant="secondary" small onPress={resetFilters} /> : undefined}
+    />
+  );
+
+  const footer = isFetchingNextPage ? (
+    <ActivityIndicator className="py-6" color="#2E6641" />
+  ) : hasNextPage ? (
+    <View className="items-center py-4">
+      <Button label="Vis flere" variant="secondary" small onPress={() => fetchNextPage()} />
+    </View>
+  ) : null;
 
   return (
     <SafeAreaView className="flex-1 bg-[#EFF0EA]" edges={['top']}>
-      {/* Header — this is a tab root, so there is no back destination to offer. */}
-      <View className="flex-row items-center px-4 pb-2 pt-2">
-        <View className="flex-1">
-          <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[#63665F]">
-            Varsler
-          </Text>
-          <Text className="mt-1 text-[1.25rem] font-bold text-[#0B0B0B]">
-            {unreadCount > 0 ? `${unreadCount} uleste varsler` : 'Alt er lest'}
-          </Text>
-          <Text className="mt-0.5 text-[0.875rem] text-[#63665F]">
-            Alt som skjer med oppdragene dine, samlet her.
-          </Text>
-        </View>
-        {unreadCount > 0 && (
-          <TouchableOpacity
-            onPress={handleMarkAll}
-            disabled={markAll.isPending}
-            activeOpacity={0.8}
-            className="h-10 flex-row items-center gap-1.5 rounded-full border border-[#E6E7E1] bg-white px-4"
-            accessibilityLabel="Merk alle som lest"
-          >
-            <Check size={15} color="#0B0B0B" />
-            <Text className="text-[0.8125rem] font-semibold text-[#0B0B0B]">Merk alle som lest</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Category filter — reusable shadcn Select. `activeCategory` is the API
-          `type` enum; it feeds `typeFilter` below, so pagination resets via the
-          distinct queryKey in useNotifications. */}
-      <View className="flex-row items-center gap-3 px-4 py-3">
-        <Text className="text-[0.8125rem] font-medium text-[#63665F]">Filter</Text>
-        <Select value={activeCategory} options={FILTER_OPTIONS} onValueChange={setActiveCategory} />
-      </View>
-
-      {/* Unread toggle + reset + delete all */}
-      <View className="flex-row items-center gap-2 px-4 pb-3">
-        <TouchableOpacity
-          onPress={() => setShowUnreadOnly((v) => !v)}
-          activeOpacity={0.8}
-          className={`flex-row h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 ${
-            showUnreadOnly ? 'border-[#2E6641] bg-[#2E6641]' : 'border-[#E6E7E1] bg-white'
-          }`}
-          accessibilityLabel="Kun uleste"
-          accessibilityState={{ selected: showUnreadOnly }}
-        >
-          <Text
-            className={`text-[0.8125rem] font-medium ${
-              showUnreadOnly ? 'text-white' : 'text-[#63665F]'
-            }`}
-          >
-            Kun uleste
-          </Text>
-        </TouchableOpacity>
-
-        {hasFilter && (
-          <TouchableOpacity
-            onPress={() => {
-              setShowUnreadOnly(false);
-              setActiveCategory('all');
-            }}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text className="text-[0.8125rem] font-semibold text-[#63665F] underline">
-              Nullstill
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {allNotifications.length > 0 && (
-          <TouchableOpacity
-            onPress={() => setDeleteAllVisible(true)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            className="ml-auto"
-            accessibilityLabel="Slett alle varsler"
-          >
-            <Text className="text-[0.8125rem] font-medium text-[#9B9E96]">Slett alle</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Notification list */}
       {isError && !isLoading ? (
-        <View className="mx-4 mt-4 rounded-3xl border border-[#E6E7E1] bg-white p-6">
-          <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">
-            Vi fikk ikke hentet varslene dine.
-          </Text>
-          <TouchableOpacity
-            onPress={() => refetch()}
-            className="mt-4 rounded-full bg-[#2E6641] px-4 py-2.5"
-          >
-            <Text className="text-center text-[0.875rem] font-semibold text-white">Prøv igjen</Text>
-          </TouchableOpacity>
-        </View>
+        <>
+          {header}
+          <ErrorState
+            title="Vi fikk ikke hentet varslene dine"
+            message="Sjekk internettforbindelsen din og prøv igjen."
+            onAction={() => refetch()}
+          />
+        </>
       ) : (
-        <FlatList
-          data={filtered}
+        <SectionList
+          sections={sections}
           keyExtractor={keyExtractor}
-          renderItem={renderNotification}
-          ListEmptyComponent={renderEmpty}
-          ListFooterComponent={renderFooter}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          renderItem={renderItem}
+          renderSectionHeader={({ section }) => (
+            <Text className="bg-[#EFF0EA] px-4 pb-2 pt-3 text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]">
+              {section.title}
+            </Text>
+          )}
+          stickySectionHeadersEnabled={false}
+          ListHeaderComponent={header}
+          ListEmptyComponent={empty}
+          ListFooterComponent={footer}
+          contentContainerStyle={{ paddingBottom: 24 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -424,30 +418,9 @@ export default function AlertsScreen() {
             if (hasNextPage && !isFetchingNextPage) fetchNextPage();
           }}
           onEndReachedThreshold={0.3}
-          ListHeaderComponent={
-            isLoading ? (
-              <View className="items-center py-12">
-                <ActivityIndicator size="large" color="#2E6641" />
-                <Text className="mt-4 text-[0.875rem] text-[#63665F]">Laster varsler...</Text>
-              </View>
-            ) : null
-          }
         />
       )}
 
-      {/* Settings link */}
-      <View className="border-t border-[#E6E7E1] bg-white px-4 py-3">
-        <TouchableOpacity
-          onPress={() => router.push('/(app)/profile/settings/notifications')}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Text className="text-center text-[0.8125rem] font-medium text-[#63665F]">
-            Varslingsinnstillinger
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Delete single confirm */}
       <ConfirmDialog
         visible={!!deleteTargetId}
         title="Slett varsel?"
@@ -459,7 +432,6 @@ export default function AlertsScreen() {
         onClose={() => setDeleteTargetId(null)}
       />
 
-      {/* Delete all confirm */}
       <ConfirmDialog
         visible={deleteAllVisible}
         title="Slett alle varsler?"

@@ -11,7 +11,7 @@ import {
   Loader2,
   Sparkles,
 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../src/store/authStore';
 import { useCurrentSubscription } from '../../../src/hooks/useSubscription';
@@ -22,6 +22,7 @@ import {
 } from '../../../src/hooks/useMembership';
 import type { SubscriptionPlan } from '../../../src/services/plans.service';
 import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
+import { MEMBERSHIP_ENABLED } from '../../../src/config/features';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 
 type PlanType = 'private' | 'business';
@@ -84,7 +85,7 @@ function hasPaidSubscription(sub: {
   if (localStatus) return !dead.includes(localStatus);
   return true;
 }
-  export default function MembershipScreen() {
+  function MembershipScreen() {
     const router = useRouter();
     const user = useAuthStore((state) => state.user);
     const plansQuery = usePlans();
@@ -284,7 +285,7 @@ function planFeatures(plan: SubscriptionPlan): string[] {
 
   if (plansQuery.isLoading || subscriptionQuery.isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <LoadingIndicator message="Laster medlemskap..." />
       </SafeAreaView>
     );
@@ -293,7 +294,7 @@ function planFeatures(plan: SubscriptionPlan): string[] {
   if (plansQuery.isError) {
     const info = getErrorInfo(plansQuery.error);
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <ErrorState
           title="Kunne ikke laste medlemskap"
           message={
@@ -311,7 +312,7 @@ function planFeatures(plan: SubscriptionPlan): string[] {
   const checkoutPending = checkoutMutation.isPending;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         <Pressable onPress={() => router.back()} className="mb-5 flex-row items-center self-start py-2">
           <ArrowLeft size={18} color="#63665F" />
@@ -611,4 +612,9 @@ function planFeatures(plan: SubscriptionPlan): string[] {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+/** Hidden in store builds, also against deep links (see src/config/features.ts). */
+export default function MembershipScreenRoute() {
+  return MEMBERSHIP_ENABLED ? <MembershipScreen /> : <Redirect href="/profile/settings" />;
 }

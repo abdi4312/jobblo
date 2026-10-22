@@ -6,6 +6,7 @@ import { ArrowLeft, ChevronDown, CheckCircle2, Mail, Search, Send, ShieldCheck, 
 import { useCreateTicket, useMyTickets } from '../../../src/hooks/useSupport';
 import type { SupportTicket, SupportTicketStatus } from '../../../src/services/support.service';
 import { Button } from '../../../src/components/ui/Button';
+import { MEMBERSHIP_ENABLED } from '../../../src/config/features';
 import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 
 const SUPPORT_EMAIL = 'support@jobblo.no';
@@ -17,7 +18,7 @@ const FAQ_ITEMS: FAQ[] = [
   { id: 2, question: 'Hvordan publiserer jeg et oppdrag?', answer: 'Trykk på «Legg ut oppdrag», velg oppdragstype og legg inn beskrivelse, budsjett og ønsket tidsplan før du publiserer.', search: 'publisere oppdrag legge ut jobb' },
   { id: 3, question: 'Er det trygt å betale gjennom Jobblo?', answer: 'Ja. Betalinger håndteres via SafePay og Stripe. Pengene holdes i escrow til jobben er godkjent — du betaler aldri for noe du ikke er fornøyd med.', search: 'betaling trygt sikker safepay stripe' },
   { id: 4, question: 'Hvordan fungerer vurderingssystemet?', answer: 'Etter et fullført oppdrag kan begge parter legge igjen en vurdering. Dette bidrar til trygghet og bedre valg for hele Jobblo-fellesskapet.', search: 'anmeldelser vurderinger review' },
-  { id: 5, question: 'Hva koster det å bruke Jobblo?', answer: 'Det er gratis å komme i gang. Du kan oppgradere til et medlemskap for flere kontakter, bedre synlighet og ekstra funksjoner.', search: 'pris koste medlemskap planer' },
+  { id: 5, question: 'Hva koster det å bruke Jobblo?', answer: MEMBERSHIP_ENABLED ? 'Det er gratis å komme i gang. Du kan oppgradere til et medlemskap for flere kontakter, bedre synlighet og ekstra funksjoner.' : 'Det er gratis å komme i gang. Ved betaling med SafePay legges det til et gebyr på 3 %.', search: 'pris koste medlemskap planer' },
   { id: 6, question: 'Hvordan sier jeg opp abonnementet?', answer: 'Gå til Innstillinger → Abonnementer og velg å si opp. Tilgangen varer ut perioden du allerede har betalt for, og du blir ikke belastet igjen.', search: 'si opp abonnement kansellere' },
 ];
 
@@ -91,7 +92,7 @@ export default function SupportScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 36 }}
         keyboardShouldPersistTaps="handled"

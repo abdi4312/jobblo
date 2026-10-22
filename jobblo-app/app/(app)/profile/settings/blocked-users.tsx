@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Alert, Image, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Check, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { Check, ChevronLeft, ChevronRight, ShieldBan } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useBlockedUsers, useUnblockUser } from '../../../../src/hooks/useBlockedUsers';
 import type { BlockedUser } from '../../../../src/services/users.service';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
+import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
 
 const PAGE_SIZE = 10;
 
@@ -62,25 +63,22 @@ export default function BlockedUsersScreen() {
     );
   };
 
-  if (query.isLoading) return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><LoadingIndicator message="Laster blokkerte brukere..." /></SafeAreaView>;
-  if (query.isError) return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ErrorState title="Kunne ikke laste blokkerte brukere" message="Sjekk internettforbindelsen din og prøv igjen." actionLabel="Prøv igjen" onAction={() => void query.refetch()} /></SafeAreaView>;
+  if (query.isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><LoadingIndicator message="Laster blokkerte brukere..." /></SafeAreaView>;
+  if (query.isError) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><ErrorState title="Kunne ikke laste blokkerte brukere" message="Sjekk internettforbindelsen din og prøv igjen." actionLabel="Prøv igjen" onAction={() => void query.refetch()} /></SafeAreaView>;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
-      <View className="flex-row items-center border-b border-[#E6E7E1] bg-white px-4 py-3">
-        <Pressable onPress={() => router.back()} accessibilityLabel="Tilbake" className="h-10 w-10 items-center justify-center rounded-full">
-          <ArrowLeft size={22} color="#0B0B0B" />
-        </Pressable>
-        <Text className="ml-2 text-lg font-semibold text-[#0B0B0B]">Blokkerte brukere</Text>
-      </View>
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <ScreenHeader
+        title="Blokkerte brukere"
+        subtitle="Når du blokkerer noen, kan de ikke sende deg meldinger, følge deg eller like annonsene dine. Du vil heller ikke se varsler fra dem."
+        icon={ShieldBan}
+        className="px-4 pt-2"
+      />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: 48, flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor="#2E6641" />}
       >
-        <Text className="mb-5 text-[0.9375rem] leading-6 text-[#63665F]">
-          Når du blokkerer noen, kan de ikke sende deg meldinger, følge deg eller like annonsene dine. Du vil heller ikke se varsler fra dem.
-        </Text>
         {users.length ? users.map((user) => (
           <View key={user._id} className="mb-3 flex-row items-center rounded-2xl border border-[#E6E7E1] bg-white p-3">
             <Pressable onPress={() => router.push(`/profile/${user._id}`)} className="flex-1 flex-row items-center gap-3">

@@ -7,9 +7,11 @@ import { useFetchDisputeByOrder, useOpenDisputeMutation } from '../../../src/hoo
 import { useProviderOrder } from '../../../src/hooks/useProviderOrder';
 import {
   DISPUTE_DESCRIPTION_MAX_LENGTH,
-  DISPUTE_REASON_CATEGORIES,
+  DISPUTE_DESCRIPTION_MIN_LENGTH,
   DISPUTE_REASON_LABELS,
   DISPUTE_TITLE_MAX_LENGTH,
+  DISPUTE_TITLE_MIN_LENGTH,
+  disputeReasonsFor,
   isDisputeEligibleOrderStatus,
   isDisputeReasonCategory,
   type DisputeReasonCategory,
@@ -44,7 +46,12 @@ export default function CreateDisputeScreen() {
   const trimmedTitle = title.trim();
   const trimmedDescription = description.trim();
   const validCategory = isDisputeReasonCategory(reasonCategory);
-  const formValid = validCategory && trimmedTitle.length > 0 && trimmedDescription.length > 0;
+  const formValid =
+    validCategory &&
+    trimmedTitle.length >= DISPUTE_TITLE_MIN_LENGTH &&
+    trimmedDescription.length >= DISPUTE_DESCRIPTION_MIN_LENGTH;
+  // Only reasons that make sense for this side of the order (as on the web).
+  const reasons = disputeReasonsFor(data?.isProvider && !data?.isCustomer ? 'provider' : 'customer');
 
   const openThread = () => router.replace({ pathname: '/(app)/disputes/order/[orderId]', params: { orderId } });
 
@@ -59,12 +66,12 @@ export default function CreateDisputeScreen() {
       Alert.alert('Velg en kategori', 'Du må velge hva tvisten handler om.');
       return;
     }
-    if (!trimmedTitle) {
-      Alert.alert('Tittel mangler', 'Skriv en kort tittel for tvisten.');
+    if (trimmedTitle.length < DISPUTE_TITLE_MIN_LENGTH) {
+      Alert.alert('Tittel mangler', `Skriv en kort tittel for tvisten (minst ${DISPUTE_TITLE_MIN_LENGTH} tegn).`);
       return;
     }
-    if (!trimmedDescription) {
-      Alert.alert('Beskrivelse mangler', 'Beskriv hva som har skjedd.');
+    if (trimmedDescription.length < DISPUTE_DESCRIPTION_MIN_LENGTH) {
+      Alert.alert('Beskrivelse mangler', `Beskriv hva som har skjedd (minst ${DISPUTE_DESCRIPTION_MIN_LENGTH} tegn).`);
       return;
     }
     if (openDisputeMutation.isPending) return;
@@ -97,7 +104,7 @@ export default function CreateDisputeScreen() {
 
   if (!orderId) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <ErrorState
           title="Mangler oppdrag"
           message="Vi fant ingen ordre-ID i lenken. Åpne tvisten fra oppdraget ditt."
@@ -110,7 +117,7 @@ export default function CreateDisputeScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <LoadingIndicator message="Laster oppdrag..." />
       </SafeAreaView>
     );
@@ -119,7 +126,7 @@ export default function CreateDisputeScreen() {
   if (isError || !data?.order) {
     const forbidden = httpStatus(error) === 403;
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <ErrorState
           title={forbidden ? 'Ingen tilgang' : 'Kunne ikke laste oppdrag'}
           message={orderErrorMessage(error)}
@@ -139,7 +146,7 @@ export default function CreateDisputeScreen() {
   // form the API is guaranteed to reject.
   if (activeDispute) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <View className="mx-4 my-8 rounded-3xl border border-[#E6E7E1] bg-white p-6">
           <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Tvist finnes allerede</Text>
           <Text className="mt-1.5 text-[0.875rem] leading-relaxed text-[#63665F]">
@@ -156,7 +163,7 @@ export default function CreateDisputeScreen() {
 
   if (!eligible) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <ErrorState
           title="Tvist kan ikke åpnes nå"
           message="Tvist kan bare åpnes etter at betalingen er sikret i SafePay, og før oppdraget er avsluttet."
@@ -168,7 +175,7 @@ export default function CreateDisputeScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -202,7 +209,7 @@ export default function CreateDisputeScreen() {
           <View className="mb-4 rounded-2xl border border-[#E6E7E1] bg-white p-5">
             <Text className="mb-1 text-[0.9375rem] font-semibold text-[#0B0B0B]">Hva handler tvisten om?</Text>
             <Text className="mb-3 text-[0.75rem] text-[#63665F]">Velg kategorien som passer best.</Text>
-            {DISPUTE_REASON_CATEGORIES.map((reason) => {
+            {reasons.map((reason) => {
               const selected = reasonCategory === reason;
               return (
                 <Pressable
@@ -233,6 +240,7 @@ export default function CreateDisputeScreen() {
               className="rounded-xl border border-[#E6E7E1] p-3 text-[0.8125rem] text-[#0B0B0B]"
             />
             <Text className="mb-3 mt-1 text-right text-[0.6875rem] text-[#9B9E96]">
+              {trimmedTitle.length < DISPUTE_TITLE_MIN_LENGTH ? `Minst ${DISPUTE_TITLE_MIN_LENGTH} tegn · ` : ''}
               {title.length}/{DISPUTE_TITLE_MAX_LENGTH}
             </Text>
             <TextInput
@@ -247,6 +255,7 @@ export default function CreateDisputeScreen() {
               className="min-h-[120px] rounded-xl border border-[#E6E7E1] p-3 text-[0.8125rem] text-[#0B0B0B]"
             />
             <Text className="mt-1 text-right text-[0.6875rem] text-[#9B9E96]">
+              {trimmedDescription.length < DISPUTE_DESCRIPTION_MIN_LENGTH ? `Minst ${DISPUTE_DESCRIPTION_MIN_LENGTH} tegn · ` : ''}
               {description.length}/{DISPUTE_DESCRIPTION_MAX_LENGTH}
             </Text>
           </View>

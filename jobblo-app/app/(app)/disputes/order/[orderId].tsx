@@ -82,7 +82,7 @@ export default function DisputeThreadScreen() {
 
   if (!orderId) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <ErrorState
           title="Mangler oppdrag"
           message="Vi fant ingen ordre-ID i lenken, så tvisten kan ikke åpnes."
@@ -95,7 +95,7 @@ export default function DisputeThreadScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <LoadingIndicator message="Laster tvist..." />
       </SafeAreaView>
     );
@@ -105,7 +105,7 @@ export default function DisputeThreadScreen() {
     const status = httpStatus(error);
     const forbidden = status === 403;
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <ErrorState
           title={forbidden ? 'Ingen tilgang' : 'Kunne ikke laste tvisten'}
           message={disputeErrorMessage(error, 'Prøv igjen om litt.')}
@@ -119,7 +119,7 @@ export default function DisputeThreadScreen() {
   // 404 from the API means "no dispute on this order yet", not a failure.
   if (!dispute) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <View className="mx-4 my-8 rounded-3xl border border-[#E6E7E1] bg-white p-6">
           <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Ingen tvist på dette oppdraget</Text>
           <Text className="mt-1.5 text-[0.875rem] leading-relaxed text-[#63665F]">
@@ -145,7 +145,7 @@ export default function DisputeThreadScreen() {
   const openedLabel = dateLabel(dispute.openedAt ?? dispute.createdAt);
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
       <View className="flex-row items-center gap-3 border-b border-[#E6E7E1] bg-white px-4 py-3">
         <Pressable onPress={() => router.back()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Tilbake">
           <ArrowLeft size={18} color="#63665F" />

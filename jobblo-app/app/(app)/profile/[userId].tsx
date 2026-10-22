@@ -162,7 +162,7 @@ export default function PublicProfileScreen() {
 
   if (selfLoading && !isSelf) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <LoadingIndicator message="Laster profil..." />
       </SafeAreaView>
     );
@@ -171,7 +171,7 @@ export default function PublicProfileScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <LoadingIndicator message="Laster profil..." />
       </SafeAreaView>
     );
@@ -179,7 +179,7 @@ export default function PublicProfileScreen() {
 
   if (isError || !user) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
         <ErrorState
           title="Fant ikke brukeren"
           message="Profilen finnes ikke lenger, eller lenken er feil."
