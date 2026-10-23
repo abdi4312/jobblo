@@ -59,6 +59,14 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(async (config) => {
   if (DEVICE_NAME && config.headers) config.headers['X-Device-Name'] = DEVICE_NAME;
 
+  // With the default JSON Content-Type, axios turns a FormData body into JSON, so files
+  // never arrive (the server saw no fields: 400 on avatar upload). Uploads are multipart,
+  // whichever service sends them, and get time to finish on mobile data.
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData && config.headers) {
+    config.headers['Content-Type'] = 'multipart/form-data';
+    if (!config.timeout || config.timeout < 90_000) config.timeout = 90_000;
+  }
+
   // The caller brought its own credential; overwriting it from storage would send the old
   // session's token to an endpoint that was asked to check a different one.
   if (config._callerSuppliedAuth) return config;
