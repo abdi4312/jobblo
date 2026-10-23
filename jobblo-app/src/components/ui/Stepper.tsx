@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Check } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
+import { TC } from '../../theme/colors';
 
 interface StepperProps {
   steps: string[];
@@ -9,15 +10,17 @@ interface StepperProps {
   current: number;
   /** Called with a 1-based step; only steps already reached are tappable. */
   onStepPress?: (step: number) => void;
+  /** Furthest step reached so far (defaults to `current`), so the user can jump forward again after going back. */
+  maxReached?: number;
 }
 
 /** Numbered step indicator: done steps show a tick, the current one is filled. */
-export function Stepper({ steps, current, onStepPress }: StepperProps) {
+export function Stepper({ steps, current, onStepPress, maxReached = current }: StepperProps) {
   return (
     <View>
       <View className="mb-2.5 flex-row items-baseline justify-between">
-        <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">{steps[current - 1]}</Text>
-        <Text className="text-[0.8125rem] text-[#63665F]">
+        <Text className="text-[0.9375rem] font-semibold text-ink">{steps[current - 1]}</Text>
+        <Text className="text-[0.8125rem] text-muted">
           Steg {current} av {steps.length}
         </Text>
       </View>
@@ -26,24 +29,26 @@ export function Stepper({ steps, current, onStepPress }: StepperProps) {
           const number = index + 1;
           const done = number < current;
           const active = number === current;
+          const reachable = number <= Math.max(current, maxReached) && !active && !!onStepPress;
           return (
             <Pressable
               key={label}
-              disabled={number > current || !onStepPress}
+              disabled={!reachable}
               onPress={() => onStepPress?.(number)}
+              hitSlop={{ top: 10, bottom: 10 }}
               accessibilityRole="button"
               accessibilityLabel={`Steg ${number}: ${label}`}
-              accessibilityState={{ selected: active, disabled: number > current }}
-              className="flex-1 gap-1.5"
+              accessibilityState={{ selected: active, disabled: !reachable }}
+              className="flex-1 gap-1.5 active:opacity-50"
             >
-              <View className={cn('h-1 rounded-full', number <= current ? 'bg-[#2E6641]' : 'bg-[#E6E7E1]')} />
+              <View className={cn('h-1 rounded-full', number <= current ? 'bg-brand' : 'bg-line')} />
               <View className="flex-row items-center gap-1">
-                {done ? <Check size={11} color="#2E6641" /> : null}
+                {done ? <Check size={11} color={TC.brandText} /> : null}
                 <Text
                   numberOfLines={1}
                   className={cn(
-                    'text-[0.6875rem]',
-                    active ? 'font-semibold text-[#0B0B0B]' : done ? 'text-[#2E6641]' : 'text-[#9B9E96]'
+                    'text-[0.8125rem]',
+                    active ? 'font-semibold text-ink' : done || reachable ? 'text-brand-text' : 'text-subtle'
                   )}
                 >
                   {label}

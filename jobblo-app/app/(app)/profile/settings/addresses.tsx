@@ -31,6 +31,7 @@ import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator
 import { Card, SectionLabel } from '../../../../src/components/ui/Card';
 import { FormRow } from '../../../../src/components/ui/FormRow';
 import type { CurrentProfile } from '../../../../src/services/profile.service';
+import { TC } from '../../../../src/theme/colors';
 
 type Draft = { address: string; postNumber: string; postSted: string };
 
@@ -272,14 +273,14 @@ export default function AddressesSettingsScreen() {
 
   if (isLoading || !draft) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <LoadingIndicator message="Laster adresser..." />
       </SafeAreaView>
     );
   }
   if (isError || !profile) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState title="Kunne ikke laste adresser" onAction={() => void refetch()} />
       </SafeAreaView>
     );
@@ -326,13 +327,13 @@ export default function AddressesSettingsScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       {/* Top bar: Avbryt · title · Lagre, same as Rediger profil. */}
-      <View className="h-14 flex-row items-center justify-between border-b border-[#E6E7E1] bg-[#EFF0EA] px-2">
+      <View className="h-14 flex-row items-center justify-between border-b border-line bg-page px-2">
         <Pressable onPress={leave} hitSlop={8} accessibilityRole="button" className="min-w-[72px] px-2 py-2">
-          <Text className="text-[1rem] text-[#3C3F38]">Avbryt</Text>
+          <Text className="text-[1rem] text-ink-2">Avbryt</Text>
         </Pressable>
-        <Text className="text-[1.0625rem] font-semibold text-[#0B0B0B]">Adresse</Text>
+        <Text className="text-[1.0625rem] font-semibold text-ink">Adresse</Text>
         <Pressable
           onPress={save}
           disabled={!canSave}
@@ -342,9 +343,9 @@ export default function AddressesSettingsScreen() {
           className="min-w-[72px] items-end px-2 py-2"
         >
           {update.isPending ? (
-            <ActivityIndicator size="small" color="#2E6641" />
+            <ActivityIndicator size="small" color={TC.brandText} />
           ) : (
-            <Text className={`text-[1rem] font-semibold ${canSave ? 'text-[#2E6641]' : 'text-[#B5B8B0]'}`}>Lagre</Text>
+            <Text className={`text-[1rem] font-semibold ${canSave ? 'text-brand-text' : 'text-[#B5B8B0]'}`}>Lagre</Text>
           )}
         </Pressable>
       </View>
@@ -355,14 +356,14 @@ export default function AddressesSettingsScreen() {
           nestedScrollEnabled
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         >
-          <Text className="mb-5 px-1 text-[0.875rem] leading-5 text-[#63665F]">
+          <Text className="mb-5 px-1 text-[0.875rem] leading-5 text-muted">
             Velg på kartet eller skriv inn adressen. Den lagres på Jobblo-kontoen din.
           </Text>
 
           {/* Map */}
           <SectionLabel>Velg på kartet</SectionLabel>
           <Card className="mb-6 overflow-hidden">
-            <View style={{ height: 260 }} className="w-full bg-[#F4F6F0]">
+            <View style={{ height: 260 }} className="w-full bg-surface-2">
               {MAPS_AVAILABLE ? <MapView
                 ref={mapRef}
                 provider={MAP_PROVIDER}
@@ -386,10 +387,10 @@ export default function AddressesSettingsScreen() {
                 {selectedCoordinate ? (
                   <Marker coordinate={selectedCoordinate} draggable onDragEnd={handleMarkerDragEnd} tracksViewChanges={false}>
                     <View className="items-center">
-                      <View className="h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-[#2E6641]">
+                      <View className="h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-brand">
                         <MapPinHouse size={18} color="#FFFFFF" />
                       </View>
-                      <View className="h-2 w-2 rounded-full bg-[#2E6641]" />
+                      <View className="h-2 w-2 rounded-full bg-brand" />
                     </View>
                   </Marker>
                 ) : null}
@@ -397,14 +398,14 @@ export default function AddressesSettingsScreen() {
 
               {isGeocoding ? (
                 <View className="absolute left-3 top-3 flex-row items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5" pointerEvents="none">
-                  <ActivityIndicator size="small" color="#2E6641" />
-                  <Text className="text-[0.75rem] font-medium text-[#3C3F38]">Finner adresse…</Text>
+                  <ActivityIndicator size="small" color={TC.brandText} />
+                  <Text className="text-[0.8125rem] font-medium text-ink-2">Finner adresse…</Text>
                 </View>
               ) : null}
             </View>
 
-            <View className="flex-row items-center gap-3 border-t border-[#EFF0EA] px-4 py-3">
-              <Text className="flex-1 text-[0.8125rem] leading-5 text-[#63665F]">
+            <View className="flex-row items-center gap-3 border-t border-line-soft px-4 py-3">
+              <Text className="flex-1 text-[0.8125rem] leading-5 text-muted">
                 {permissionMessage || 'Trykk på kartet, eller dra merket til riktig sted.'}
               </Text>
               <Pressable
@@ -412,10 +413,10 @@ export default function AddressesSettingsScreen() {
                 disabled={isLocating}
                 accessibilityRole="button"
                 accessibilityLabel="Bruk min posisjon"
-                className="flex-row items-center gap-1.5 rounded-full bg-[#EAF1E9] px-3.5 py-2"
+                className="flex-row items-center gap-1.5 rounded-full bg-tint px-3.5 py-2"
               >
-                {isLocating ? <ActivityIndicator size="small" color="#2E6641" /> : <Crosshair size={15} color="#2E6641" />}
-                <Text className="text-[0.8125rem] font-semibold text-[#2E6641]">
+                {isLocating ? <ActivityIndicator size="small" color={TC.brandText} /> : <Crosshair size={15} color={TC.brandText} />}
+                <Text className="text-[0.8125rem] font-semibold text-brand-text">
                   {isLocating ? 'Henter…' : 'Min posisjon'}
                 </Text>
               </Pressable>
@@ -452,7 +453,7 @@ export default function AddressesSettingsScreen() {
             />
           </Card>
 
-          <Text className="mt-4 px-1 text-[0.75rem] leading-5 text-[#9B9E96]">
+          <Text className="mt-4 px-1 text-[0.8125rem] leading-5 text-subtle">
             Alle feltene er valgfrie, og tomme felt lagres som tomme. Landet på profilen endrer du under
             Innstillinger → Lokasjon.
           </Text>

@@ -20,6 +20,8 @@ export interface CreateJobFormValues {
   categories: string[];
   tags: string[];
   equipment: 'utstyrfri' | 'delvis utstyr' | 'trengs utstyr';
+  /** "Ny annonse" choice; '' until the user has picked. */
+  customerType: '' | 'private' | 'business';
   maxApplicants: string;
   urgent: boolean;
   address: string;
@@ -60,11 +62,14 @@ export function buildJobFormData(values: CreateJobFormValues, images: CreateJobI
   append('title', values.title.trim());
   append('description', values.description.trim());
   append('price', String(price));
-  if (values.hourlyRate.trim()) append('hourlyRate', values.hourlyRate.trim());
+  // Only Timepris has an hourly rate; AI fill could leave one on a Fastpris job, which then
+  // showed both "800 kr" and "400 kr/t".
+  if (values.paymentType === 'Timepris' && values.hourlyRate.trim()) append('hourlyRate', values.hourlyRate.trim());
   append('paymentType', values.paymentType);
   append('urgent', String(values.urgent));
   append('maxApplicants', values.maxApplicants.trim() || '0');
   append('equipment', values.equipment);
+  if (values.customerType) append('customerType', values.customerType);
   append('fromDate', values.fromDate);
   append('toDate', values.toDate);
   append('duration[value]', values.durationValue.trim());
@@ -97,6 +102,9 @@ export async function createJob(values: CreateJobFormValues, images: CreateJobIm
 
   const response = await apiClient.post<CreateServiceResponse>('/services', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    // Image uploads outlast the 15 s default on mobile data; a timeout here made users
+    // publish again while the first request had already succeeded.
+    timeout: 90_000,
   });
   if (!response.data?._id) throw new Error('Oppdraget ble opprettet uten gyldig ID');
   return response.data;
@@ -106,6 +114,9 @@ export async function updateJob(serviceId: string, values: CreateJobFormValues, 
   if (!serviceId.trim()) throw new Error('Mangler gyldig annonse-ID');
   const response = await apiClient.put<CreateServiceResponse>(`/services/${serviceId.trim()}`, buildJobFormData(values, images, imagesToDelete), {
     headers: { 'Content-Type': 'multipart/form-data' },
+    // Image uploads outlast the 15 s default on mobile data; a timeout here made users
+    // publish again while the first request had already succeeded.
+    timeout: 90_000,
   });
   return response.data;
 }

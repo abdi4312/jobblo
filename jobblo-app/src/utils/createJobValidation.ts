@@ -30,7 +30,14 @@ export interface CreateJobValidationInput {
   phone: string;
   /** Total price shown to applicants (Timepris: rate × duration). */
   displayedPrice: number;
+  /** Today as YYYY-MM-DD (local); defaults to the device date. */
+  today?: string;
 }
+
+const localToday = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
 
 const isDate = (value: string) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -44,11 +51,12 @@ const isDate = (value: string) => {
  * (Tid & sted), 5 checks step 4 (Kontakt). Step 3 (Sjekkliste) is optional.
  */
 export function validateCreateJobStep(target: number, input: CreateJobValidationInput): CreateJobErrors {
-  const { values, imageCount, phone, displayedPrice } = input;
+  const { values, imageCount, phone, displayedPrice, today = localToday() } = input;
   const next: CreateJobErrors = {};
 
   if (target === 2) {
-    if (!imageCount) next.images = 'Vennligst last opp minst ett bilde.';
+    // Images are optional: many jobs (assembling a chair) have nothing to photograph; the
+    // app and web show a category photo instead.
     const title = values.title.trim();
     if (!title) next.title = 'Vennligst skriv inn en tittel.';
     else if (title.length < 5) next.title = 'Tittelen må være minst 5 tegn.';
@@ -61,16 +69,18 @@ export function validateCreateJobStep(target: number, input: CreateJobValidation
   }
 
   if (target === 3) {
-    if (!values.address.trim()) next.address = 'Vennligst skriv inn en adresse.';
-    if (!values.countyCode) next.countyCode = 'Velg fylke.';
-    if (!values.municipalityCode) next.municipalityCode = 'Velg kommune.';
-    if (!values.city.trim()) next.city = 'Vennligst skriv inn et sted/by.';
-    if (values.coordinates[0] === 0 && values.coordinates[1] === 0)
-      next.coordinates = 'Bekreft hvor oppdraget er — finn adressen på kartet eller trykk i kartet.';
+    // One address search fills address, sted, fylke/kommune and the map point together, so
+    // only the address and the point are checked; fylke/kommune follow from the address.
+    if (!values.address.trim()) next.address = 'Søk etter adressen og velg et forslag, eller trykk i kartet.';
+    else if (values.coordinates[0] === 0 && values.coordinates[1] === 0)
+      next.coordinates = 'Velg adressen fra forslagslisten, eller trykk i kartet.';
     if (!values.fromDate) next.fromDate = 'Vennligst velg startdato.';
     else if (!isDate(values.fromDate)) next.fromDate = 'Ugyldig fra-dato.';
-    if (!values.toDate) next.toDate = 'Vennligst velg sluttdato.';
-    else if (!isDate(values.toDate)) next.toDate = 'Ugyldig sluttdato.';
+    else if (values.fromDate < today) next.fromDate = 'Startdato kan ikke være i fortiden.';
+    // "Til dato" is optional (flexible end); checked only when set.
+    if (!values.toDate) {
+      /* optional */
+    } else if (!isDate(values.toDate)) next.toDate = 'Ugyldig sluttdato.';
     else if (values.fromDate && values.toDate < values.fromDate) next.toDate = 'Sluttdato kan ikke være før startdato.';
     const duration = Number(values.durationValue) || 0;
     if (!values.durationValue.trim() || duration <= 0) next.durationValue = 'Vennligst oppgi forventet varighet.';

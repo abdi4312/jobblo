@@ -12,13 +12,13 @@ const base = {
   contactPhone: '', contactEmail: '', checklist: [],
 };
 const run = (target, values = {}, extra = {}) =>
-  validateCreateJobStep(target, { values: { ...base, ...values }, imageCount: 1, phone: '', displayedPrice: 3000, ...extra });
+  validateCreateJobStep(target, { values: { ...base, ...values }, imageCount: 1, phone: '', displayedPrice: 3000, today: '2026-10-01', ...extra });
 
 // A complete form passes every step.
 for (const target of [2, 3, 5]) assert.deepEqual(run(target), {}, `step target ${target}`);
 
 // Step 1
-assert.equal(run(2, {}, { imageCount: 0 }).images, 'Vennligst last opp minst ett bilde.');
+assert.equal(run(2, {}, { imageCount: 0 }).images, undefined); // images are optional
 assert.equal(run(2, { title: '  ' }).title, 'Vennligst skriv inn en tittel.');
 assert.equal(run(2, { title: 'Male' }).title, 'Tittelen må være minst 5 tegn.');
 assert.equal(run(2, { title: 'x'.repeat(71) }).title, 'Tittelen kan være maks 70 tegn.');
@@ -27,7 +27,12 @@ assert.equal(run(2, { description: 'For kort' }).description, 'Beskrivelsen må 
 
 // Step 2
 assert.ok(run(3, { coordinates: [0, 0] }).coordinates);
+assert.ok(run(3, { address: '' }).address);
+// Fylke/kommune/sted come from the address search; a kommune Kartverket knows but our tree lacks must not block.
+assert.deepEqual(run(3, { countyCode: '', municipalityCode: '', city: '' }), {});
 assert.equal(run(3, { toDate: '2026-10-30' }).toDate, 'Sluttdato kan ikke være før startdato.');
+assert.equal(run(3, { toDate: '' }).toDate, undefined); // Til dato is optional
+assert.equal(run(3, {}, { today: '2026-11-02' }).fromDate, 'Startdato kan ikke være i fortiden.');
 assert.equal(run(3, { fromDate: '2026-02-30' }).fromDate, 'Ugyldig fra-dato.');
 assert.equal(run(3, { durationValue: '' }).durationValue, 'Vennligst oppgi forventet varighet.');
 assert.equal(run(3, { durationValue: '1001' }).durationValue, 'Varigheten kan ikke overstige 1000.');
