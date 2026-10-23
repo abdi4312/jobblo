@@ -13,6 +13,7 @@ import { ArrowLeft, Eye, EyeOff, Loader2, Mail, ShieldCheck } from 'lucide-react
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import { forgotPassword, resetPassword, verifyOtp } from '@/services/auth.service';
+import { TC, tc } from '../../src/theme/colors';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -47,8 +48,13 @@ export default function ForgotPasswordScreen() {
   const verifyOtpMutation = useMutation({
     mutationFn: ({ targetEmail, targetOtp }: { targetEmail: string; targetOtp: string }) =>
       verifyOtp(targetEmail, targetOtp),
-    onError: () => {
-      setOtpError('Ugyldig eller utløpt kode. Prøv igjen.');
+    onError: (error: unknown) => {
+      const hasResponse = Boolean((error as { response?: unknown })?.response);
+      setOtpError(
+        hasResponse
+          ? 'Ugyldig eller utløpt kode. Etter 5 feil må du be om en ny kode.'
+          : 'Ingen nettforbindelse. Sjekk internett og trykk «Bekreft kode» igjen.'
+      );
     },
   });
 
@@ -154,6 +160,9 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
+    // An explicit tap may retry the same code (e.g. after a network error); only the
+    // automatic submit is de-duplicated, so it cannot burn the 5 allowed attempts on its own.
+    lastSubmittedOtpRef.current = null;
     submitOtp(otpValue);
   };
 
@@ -205,20 +214,20 @@ export default function ForgotPasswordScreen() {
                     }}
                     className="mb-6 flex-row items-center gap-2"
                   >
-                    <ArrowLeft size={16} color="#63665F" />
+                    <ArrowLeft size={16} color={tc('#63665F', 'muted')} />
                     <Text className="text-[13px] font-medium text-muted">Tilbake</Text>
                   </Pressable>
                 ) : (
                   <Pressable onPress={() => router.back()} className="mb-6 flex-row items-center gap-2">
-                    <ArrowLeft size={16} color="#63665F" />
+                    <ArrowLeft size={16} color={tc('#63665F', 'muted')} />
                     <Text className="text-[13px] font-medium text-muted">Tilbake til innlogging</Text>
                   </Pressable>
                 )}
 
                 {step === 'email' ? (
                   <>
-                    <View className="mb-5 h-12 w-12 items-center justify-center rounded-full bg-[#F0F1EB]">
-                      <Mail size={22} color="#0B0B0B" />
+                    <View className="mb-5 h-12 w-12 items-center justify-center rounded-full bg-[#F0F1EB] dark:bg-surface-2">
+                      <Mail size={22} color={TC.ink} />
                     </View>
                     <Text className="text-[30px] font-bold leading-tight tracking-[-0.05em] text-ink">
                       Glemt passordet?
@@ -229,8 +238,8 @@ export default function ForgotPasswordScreen() {
 
                     <View className="mt-6 gap-4">
                       {serverError ? (
-                        <View className="rounded-xl border border-[#D8B0AB] bg-[#FCF5F4] px-3 py-2.5">
-                          <Text className="text-[13px] leading-5 text-[#B0453B]">{serverError}</Text>
+                        <View className="rounded-xl border border-danger-line bg-[#FCF5F4] dark:bg-danger-tint px-3 py-2.5">
+                          <Text className="text-[13px] leading-5 text-[#B0453B] dark:text-danger">{serverError}</Text>
                         </View>
                       ) : null}
 
@@ -242,17 +251,17 @@ export default function ForgotPasswordScreen() {
                           keyboardType="email-address"
                           value={email}
                           placeholder="deg@eksempel.no"
-                          placeholderTextColor="#9B9E96"
+                          placeholderTextColor={TC.placeholder}
                           onChangeText={(value) => {
                             setEmail(value);
                             setEmailError('');
                             setServerError('');
                           }}
-                          className={`h-[46px] rounded-xl border bg-[#F5F6F1] px-3.5 text-[15px] text-ink ${
-                            emailError ? 'border-[#D8B0AB] bg-[#FCF5F4]' : 'border-transparent'
+                          className={`h-[46px] rounded-xl border bg-[#F5F6F1] dark:bg-surface-2 px-3.5 text-[15px] text-ink ${
+                            emailError ? 'border-danger-line bg-[#FCF5F4] dark:bg-danger-tint' : 'border-transparent'
                           }`}
                         />
-                        {emailError ? <Text className="text-[12px] text-[#B0453B]">{emailError}</Text> : null}
+                        {emailError ? <Text className="text-[12px] text-[#B0453B] dark:text-danger">{emailError}</Text> : null}
                       </View>
 
                       <Pressable
@@ -282,14 +291,15 @@ export default function ForgotPasswordScreen() {
 
                 {step === 'otp' ? (
                   <>
-                    <View className="mb-5 h-12 w-12 items-center justify-center rounded-full bg-[#F0F1EB]">
-                      <ShieldCheck size={22} color="#0B0B0B" />
+                    <View className="mb-5 h-12 w-12 items-center justify-center rounded-full bg-[#F0F1EB] dark:bg-surface-2">
+                      <ShieldCheck size={22} color={TC.ink} />
                     </View>
                     <Text className="text-[30px] font-bold leading-tight tracking-[-0.05em] text-ink">
                       Sjekk e-posten din
                     </Text>
                     <Text className="mt-2 text-[15px] leading-6 text-muted">
-                      Vi sendte en 6-sifret kode til <Text className="font-semibold text-ink">{email}</Text>
+                      Hvis det finnes en konto for <Text className="font-semibold text-ink">{email}</Text>, har vi
+                      sendt en 6-sifret kode dit.
                     </Text>
 
                     <View className="mt-6 gap-4">
@@ -309,15 +319,15 @@ export default function ForgotPasswordScreen() {
                               onKeyPress={(event) => handleOtpKeyPress(index, event.nativeEvent.key)}
                               textContentType={index === 0 ? 'oneTimeCode' : 'none'}
                               autoComplete={index === 0 ? 'one-time-code' : 'off'}
-                              className={`h-[52px] flex-1 rounded-xl border bg-[#F5F6F1] text-center text-[18px] font-semibold text-ink ${
-                                otpError ? 'border-[#D8B0AB] bg-[#FCF5F4]' : 'border-transparent'
+                              className={`h-[52px] flex-1 rounded-xl border bg-[#F5F6F1] dark:bg-surface-2 text-center text-[18px] font-semibold text-ink ${
+                                otpError ? 'border-danger-line bg-[#FCF5F4] dark:bg-danger-tint' : 'border-transparent'
                               }`}
                             />
                           );
                         })}
                       </View>
 
-                      {otpError ? <Text className="text-[12px] text-[#B0453B]">{otpError}</Text> : null}
+                      {otpError ? <Text className="text-[12px] text-[#B0453B] dark:text-danger">{otpError}</Text> : null}
 
                       <Pressable
                         onPress={handleVerifyOtp}
@@ -348,8 +358,8 @@ export default function ForgotPasswordScreen() {
 
                 {step === 'newPassword' ? (
                   <>
-                    <View className="mb-5 h-12 w-12 items-center justify-center rounded-full bg-[#F0F1EB]">
-                      <ShieldCheck size={22} color="#0B0B0B" />
+                    <View className="mb-5 h-12 w-12 items-center justify-center rounded-full bg-[#F0F1EB] dark:bg-surface-2">
+                      <ShieldCheck size={22} color={TC.ink} />
                     </View>
                     <Text className="text-[30px] font-bold leading-tight tracking-[-0.05em] text-ink">
                       Nytt passord
@@ -366,23 +376,23 @@ export default function ForgotPasswordScreen() {
                             secureTextEntry={!showPassword}
                             value={password}
                             placeholder="Minimum 8 tegn"
-                            placeholderTextColor="#9B9E96"
+                            placeholderTextColor={TC.placeholder}
                             onChangeText={(value) => {
                               setPassword(value);
                               setPasswordError('');
                             }}
-                            className={`h-[46px] rounded-xl border bg-[#F5F6F1] px-3.5 pr-12 text-[15px] text-ink ${
-                              passwordError ? 'border-[#D8B0AB] bg-[#FCF5F4]' : 'border-transparent'
+                            className={`h-[46px] rounded-xl border bg-[#F5F6F1] dark:bg-surface-2 px-3.5 pr-12 text-[15px] text-ink ${
+                              passwordError ? 'border-danger-line bg-[#FCF5F4] dark:bg-danger-tint' : 'border-transparent'
                             }`}
                           />
                           <Pressable
                             onPress={() => setShowPassword((current) => !current)}
                             className="absolute right-3 top-0 h-[46px] items-center justify-center"
                           >
-                            {showPassword ? <EyeOff size={18} color="#63665F" /> : <Eye size={18} color="#63665F" />}
+                            {showPassword ? <EyeOff size={18} color={tc('#63665F', 'muted')} /> : <Eye size={18} color={tc('#63665F', 'muted')} />}
                           </Pressable>
                         </View>
-                        {passwordError ? <Text className="text-[12px] text-[#B0453B]">{passwordError}</Text> : null}
+                        {passwordError ? <Text className="text-[12px] text-[#B0453B] dark:text-danger">{passwordError}</Text> : null}
                       </View>
 
                       <View className="gap-2">
@@ -392,13 +402,13 @@ export default function ForgotPasswordScreen() {
                             secureTextEntry={!showConfirmPassword}
                             value={confirmPassword}
                             placeholder="Gjenta passordet"
-                            placeholderTextColor="#9B9E96"
+                            placeholderTextColor={TC.placeholder}
                             onChangeText={(value) => {
                               setConfirmPassword(value);
                               setConfirmPasswordError('');
                             }}
-                            className={`h-[46px] rounded-xl border bg-[#F5F6F1] px-3.5 pr-12 text-[15px] text-ink ${
-                              confirmPasswordError ? 'border-[#D8B0AB] bg-[#FCF5F4]' : 'border-transparent'
+                            className={`h-[46px] rounded-xl border bg-[#F5F6F1] dark:bg-surface-2 px-3.5 pr-12 text-[15px] text-ink ${
+                              confirmPasswordError ? 'border-danger-line bg-[#FCF5F4] dark:bg-danger-tint' : 'border-transparent'
                             }`}
                           />
                           <Pressable
@@ -406,14 +416,14 @@ export default function ForgotPasswordScreen() {
                             className="absolute right-3 top-0 h-[46px] items-center justify-center"
                           >
                             {showConfirmPassword ? (
-                              <EyeOff size={18} color="#63665F" />
+                              <EyeOff size={18} color={tc('#63665F', 'muted')} />
                             ) : (
-                              <Eye size={18} color="#63665F" />
+                              <Eye size={18} color={tc('#63665F', 'muted')} />
                             )}
                           </Pressable>
                         </View>
                         {confirmPasswordError ? (
-                          <Text className="text-[12px] text-[#B0453B]">{confirmPasswordError}</Text>
+                          <Text className="text-[12px] text-[#B0453B] dark:text-danger">{confirmPasswordError}</Text>
                         ) : null}
                       </View>
 

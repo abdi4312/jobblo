@@ -24,17 +24,17 @@ export function Button({
 }: ButtonProps) {
   const variantClass =
     variant === 'primary'
-      ? 'bg-[#2E6641]'
+      ? 'bg-brand'
       : variant === 'secondary'
-        ? 'bg-white border border-[#E6E7E1]'
+        ? 'bg-surface border border-line'
         : 'bg-transparent';
 
   const labelClass =
     variant === 'primary'
       ? 'text-white'
       : variant === 'secondary'
-        ? 'text-[#0B0B0B]'
-        : 'text-[#63665F]';
+        ? 'text-ink'
+        : 'text-muted';
 
   return (
     <TouchableOpacity

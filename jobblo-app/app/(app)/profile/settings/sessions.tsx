@@ -1,14 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import {
-  ArrowLeft,
-  ChevronRight,
-  Clock,
+  CheckCircle2,
   KeyRound,
   LogOut,
-  MapPin,
   Monitor,
+  MonitorSmartphone,
   ShieldAlert,
   Smartphone,
   Tablet,
@@ -20,10 +18,14 @@ import {
   useRevokeSessionMutation,
 } from '../../../../src/hooks/useSessions';
 import type { ActiveSession } from '../../../../src/services/auth.service';
-import { Dialog } from '../../../../src/components/ui/Dialog';
+import { ConfirmDialog } from '../../../../src/components/ui/ConfirmDialog';
+import { Card, SectionLabel } from '../../../../src/components/ui/Card';
+import { ListRow } from '../../../../src/components/ui/ListRow';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
+import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
+import { TC, tc } from '../../../../src/theme/colors';
 
 /* ------------------------------------------------------------------ *
  * Presentation helpers
@@ -69,6 +71,9 @@ function deviceKind(session: ActiveSession): DeviceKind {
  * string "Unknown · Unknown" the way an unguarded join would.
  */
 function deviceTitle(session: ActiveSession): string {
+  // The app reports its model ("iPhone 15 Pro"); browsers cannot, so they fall back below.
+  const model = clean(session.deviceName ?? undefined);
+  if (model) return model;
   const parts = [clean(session.browser), clean(session.os)].filter(Boolean);
   if (parts.length) return parts.join(' · ');
   const kind = deviceKind(session);
@@ -142,12 +147,8 @@ function revokeErrorMessage(error: unknown): { tone: 'info' | 'error'; text: str
   }
   if (status === 401) {
     // The current session itself is no longer valid — most likely revoked from
-    // another device. The centralized 401 handling stays authoritative and no
-    // logout logic is duplicated here. Being precise about what that handling
-    // actually does: api/client.ts removes the stored 'token' and 'user' keys
-    // but does NOT call authStore.logout(), so isAuthenticated stays true until
-    // the next hydrate(). That is a pre-existing app-wide gap affecting every
-    // endpoint, not something this screen introduces or should patch around.
+    // another device. The centralized 401 handling in api/client.ts (refresh, then
+    // authStore.logout()) stays authoritative; no logout logic is duplicated here.
     return { tone: 'error', text: 'Økten din er ikke lenger gyldig. Logg inn på nytt.' };
   }
   if (status === undefined) {
@@ -230,7 +231,7 @@ export default function ActiveSessionsScreen() {
 
   if (sessionsQuery.isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <LoadingIndicator message="Laster aktive økter..." />
       </SafeAreaView>
     );
@@ -243,7 +244,7 @@ export default function ActiveSessionsScreen() {
   if (sessionsQuery.isError && !sessionsQuery.data) {
     const status = statusOf(sessionsQuery.error);
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState
           title={status === 401 ? 'Pålogging kreves' : 'Kunne ikke laste øktene'}
           message={
@@ -262,274 +263,202 @@ export default function ActiveSessionsScreen() {
     );
   }
 
+  const current = ordered.find((session) => session.isCurrent) ?? null;
+  const others = ordered.filter((session) => !session.isCurrent);
+
+  /** One device row. `isCurrent` comes from the server (session id vs the token's sid). */
+  const renderSession = (session: ActiveSession, index: number) => {
+    const kind = deviceKind(session);
+    const DeviceIcon = kind === 'phone' ? Smartphone : kind === 'tablet' ? Tablet : Monitor;
+    const locationLabel = formatLocation(session);
+    const ipLabel = formatIp(session.ip);
+    // Loopback resolves both the location and the IP to the same label; show it once.
+    const ip = ipLabel === locationLabel ? '' : ipLabel;
+    const isRevokingThis = revokeOne.isPending && revokeOne.variables === session._id;
+
+    return (
+      <View
+        key={session._id}
+        className={`flex-row items-center gap-3 px-4 py-3.5 ${index > 0 ? 'border-t border-line-soft' : ''}`}
+      >
+        <View
+          className={`h-11 w-11 items-center justify-center rounded-2xl ${session.isCurrent ? 'bg-tint' : 'bg-surface-2'}`}
+        >
+          <DeviceIcon size={20} color={session.isCurrent ? TC.brandText : tc('#63665F', 'muted')} />
+        </View>
+        <View className="min-w-0 flex-1">
+          <View className="flex-row items-center gap-2">
+            <Text className="shrink text-[0.9375rem] font-semibold text-ink" numberOfLines={1}>
+              {deviceTitle(session)}
+            </Text>
+            {session.isCurrent ? (
+              <View className="rounded-full bg-tint px-2 py-0.5">
+                <Text className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-brand-text">Nåværende</Text>
+              </View>
+            ) : null}
+          </View>
+          {clean(session.deviceName ?? undefined) ? (
+            <Text className="mt-0.5 text-[0.8125rem] font-medium text-brand-text" numberOfLines={1}>
+              Jobblo-appen{clean(session.os) ? ` · ${clean(session.os)}` : ''}
+            </Text>
+          ) : null}
+          <Text className="mt-0.5 text-[0.8125rem] text-muted" numberOfLines={1}>
+            {locationLabel}
+            {ip ? ` · ${ip}` : ''}
+          </Text>
+          <Text className="mt-0.5 text-[0.8125rem] text-subtle" numberOfLines={1}>
+            Sist aktiv {formatLastUsed(session.lastUsed)}
+          </Text>
+        </View>
+        {/* The current session has no revoke action: «Logg ut» on the profile screen ends
+            it (authStore.logout() → POST /auth/logout deletes it by the token's session id). */}
+        {!session.isCurrent ? (
+          <Pressable
+            onPress={() => {
+              setFeedback(null);
+              setConfirmation({ kind: 'one', session });
+            }}
+            disabled={busy}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel={`Logg ut ${deviceTitle(session)}`}
+            className={`rounded-full border border-[#EED8D4] px-3 py-1.5 ${busy ? 'opacity-60' : 'active:bg-danger-tint'}`}
+          >
+            {isRevokingThis ? (
+              <ActivityIndicator size="small" color={tc('#B4544A', 'danger')} />
+            ) : (
+              <Text className="text-[0.8125rem] font-semibold text-[#B4544A] dark:text-danger">Logg ut</Text>
+            )}
+          </Pressable>
+        ) : null}
+      </View>
+    );
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: 36 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={TC.brandText} colors={[TC.brandText]} />}
       >
-        <Pressable
-          onPress={() => router.back()}
-          className="mb-5 flex-row items-center self-start py-2"
-        >
-          <ArrowLeft size={18} color="#63665F" />
-          <Text className="ml-2 text-sm font-medium text-[#63665F]">Innstillinger</Text>
-        </Pressable>
-
-        <View className="mb-5">
-          <Text className="text-[1.5rem] font-bold leading-tight text-[#0B0B0B]">Aktive økter</Text>
-          <Text className="mt-1 text-[0.9375rem] leading-6 text-[#63665F]">
-            Administrer dine aktive innlogginger på forskjellige enheter og nettlesere.
-          </Text>
-        </View>
+        <ScreenHeader title="Aktive økter" subtitle="Enheter som er logget inn på kontoen din." icon={MonitorSmartphone} />
 
         {feedback ? (
           <View
-            className={[
-              'mb-4 rounded-2xl border px-4 py-3',
-              feedback.tone === 'error'
-                ? 'border-[#EED8D4] bg-[#FBF4F2]'
-                : 'border-[#D1E7D9] bg-[#F2F9F4]',
-            ].join(' ')}
+            className={`mb-4 flex-row items-center gap-2.5 rounded-2xl border px-4 py-3 ${
+              feedback.tone === 'error' ? 'border-[#EED8D4] bg-danger-tint' : 'border-[#D1E7D9] bg-[#F2F9F4]'
+            }`}
           >
-            <Text
-              className={[
-                'text-[0.8125rem] leading-5',
-                feedback.tone === 'error' ? 'text-[#8A3B33]' : 'text-[#173A24]',
-              ].join(' ')}
-            >
+            {feedback.tone === 'error' ? <ShieldAlert size={16} color="#8A3B33" /> : <CheckCircle2 size={16} color={TC.brandText} />}
+            <Text className={`flex-1 text-[0.8125rem] leading-5 ${feedback.tone === 'error' ? 'text-[#8A3B33]' : 'text-[#173A24] dark:text-brand-text'}`}>
               {feedback.text}
             </Text>
           </View>
         ) : null}
 
-        {/* Shown when a refetch failed but a previously loaded list is still in
-            cache, so the user knows the list may be out of date instead of
-            silently trusting a stale view. */}
+        {/* A refetch failed but an older list is cached: say it may be stale. */}
         {sessionsQuery.isError && sessionsQuery.data ? (
           <Pressable
             onPress={() => void sessionsQuery.refetch()}
-            className="mb-4 rounded-2xl border border-[#F1E1C4] bg-[#FBF5E9] px-4 py-3 active:opacity-80"
+            className="mb-4 rounded-2xl border border-warn-line bg-warn-tint px-4 py-3 active:opacity-80"
           >
-            <Text className="text-[0.8125rem] leading-5 text-[#614109]">
+            <Text className="text-[0.8125rem] leading-5 text-warn">
               Listen kunne ikke oppdateres og kan være utdatert. Trykk for å prøve igjen.
             </Text>
           </Pressable>
         ) : null}
 
-        {otherSessionsCount > 0 ? (
-          <Pressable
-            onPress={() => {
-              setFeedback(null);
-              setConfirmation({ kind: 'all', count: otherSessionsCount });
-            }}
-            disabled={busy}
-            className={[
-              'mb-4 flex-row items-center justify-center rounded-2xl border border-[#EED8D4] bg-white px-4 py-3.5',
-              busy ? 'opacity-60' : 'active:bg-[#FBF4F2]',
-            ].join(' ')}
-          >
-            <LogOut size={16} color="#B4544A" />
-            <Text className="ml-2 flex-shrink text-[0.875rem] font-semibold text-[#B4544A]">
-              {revokeOthers.isPending
-                ? 'Logger ut...'
-                : `Logg ut alle andre (${otherSessionsCount})`}
-            </Text>
-          </Pressable>
-        ) : null}
-
         {ordered.length === 0 ? (
-          /* Truthful empty state. No local "this device" row is manufactured — if
-             the server returns nothing, we say nothing was found. */
           <EmptyState
             title="Ingen aktive økter funnet"
             message="Vi fant ingen registrerte innlogginger på kontoen din."
           />
         ) : (
-          ordered.map((session) => {
-            const kind = deviceKind(session);
-            const DeviceIcon = kind === 'phone' ? Smartphone : kind === 'tablet' ? Tablet : Monitor;
-            const locationLabel = formatLocation(session);
-            const ipLabel = formatIp(session.ip);
-            // Loopback resolves both the location and the IP to the same label,
-            // so suppress the duplicate rather than printing it twice.
-            const ip = ipLabel === locationLabel ? '' : ipLabel;
-            const isRevokingThis = revokeOne.isPending && revokeOne.variables === session._id;
+          <>
+            {current ? (
+              <>
+                <SectionLabel>Denne enheten</SectionLabel>
+                <Card className="mb-6 overflow-hidden">{renderSession(current, 0)}</Card>
+              </>
+            ) : null}
 
-            return (
-              <View
-                key={session._id}
-                className={[
-                  'mb-3 rounded-3xl border p-4',
-                  session.isCurrent ? 'border-[#D1E7D9] bg-[#F7FBF8]' : 'border-[#E6E7E1] bg-white',
-                ].join(' ')}
-              >
-                <View className="flex-row items-start">
-                  <View
-                    className={[
-                      'h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
-                      session.isCurrent ? 'bg-[#DCEDE2]' : 'bg-[#F4F6F0]',
-                    ].join(' ')}
-                  >
-                    <DeviceIcon size={20} color={session.isCurrent ? '#2E6641' : '#63665F'} />
-                  </View>
-
-                  <View className="ml-3 min-w-0 flex-1">
-                    <View className="flex-row flex-wrap items-center">
-                      <Text className="text-[0.9375rem] font-bold text-[#0B0B0B]">
-                        {deviceTitle(session)}
-                      </Text>
-                      {/* `isCurrent` comes from the server comparing this session's
-                          _id against the `sid` claim of the presented token. It is
-                          never inferred from device name, IP, platform, lastUsed or
-                          list position. */}
-                      {session.isCurrent ? (
-                        <View className="ml-2 rounded-full bg-[#DCEDE2] px-2 py-0.5">
-                          <Text className="text-[0.625rem] font-bold uppercase tracking-[0.12em] text-[#173A24]">
-                            Nåværende
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
-
-                    <View className="mt-2 flex-row items-start">
-                      <View className="mt-0.5">
-                        <MapPin size={13} color="#9B9E96" />
-                      </View>
-                      <Text className="ml-1.5 flex-1 text-[0.8125rem] leading-5 text-[#63665F]">
-                        {locationLabel}
-                        {ip ? <Text className="text-[#9B9E96]">{`  ·  ${ip}`}</Text> : null}
-                      </Text>
-                    </View>
-
-                    <View className="mt-1 flex-row items-start">
-                      <View className="mt-0.5">
-                        <Clock size={13} color="#9B9E96" />
-                      </View>
-                      <Text className="ml-1.5 flex-1 text-[0.8125rem] leading-5 text-[#63665F]">
-                        Sist aktiv {formatLastUsed(session.lastUsed)}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* The current session intentionally has no revoke action here.
-                    Note this is NOT the same as "logging out ends this session
-                    server-side": mobile logout (authStore.logout) is local only —
-                    it clears the stored token, the query cache, the chat socket
-                    and this device's push token, but never calls the backend.
-                    `authController.logout` deletes the Session row by the
-                    refreshToken *cookie*, which the RN client never holds, so
-                    this device's row survives until the 7-day TTL on
-                    Session.expiresAt. Ending the current session server-side
-                    from mobile is therefore not implemented, and the copy below
-                    must not imply otherwise. */}
-                {session.isCurrent ? (
-                  <Text className="mt-3 text-[0.75rem] leading-5 text-[#63665F]">
-                    Dette er enheten du bruker nå, så den kan ikke logges ut herfra. Bruk «Logg ut»
-                    på profilsiden for å logge ut av appen på denne enheten.
+            <View className="mb-2 flex-row items-center justify-between px-1">
+              <Text className="text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-subtle">
+                Andre enheter{others.length ? ` (${others.length})` : ''}
+              </Text>
+              {others.length > 0 ? (
+                <Pressable
+                  onPress={() => {
+                    setFeedback(null);
+                    setConfirmation({ kind: 'all', count: otherSessionsCount });
+                  }}
+                  disabled={busy}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  className="flex-row items-center gap-1"
+                >
+                  <LogOut size={14} color={tc('#B4544A', 'danger')} />
+                  <Text className="text-[0.8125rem] font-semibold text-[#B4544A] dark:text-danger">
+                    {revokeOthers.isPending ? 'Logger ut…' : 'Logg ut alle'}
                   </Text>
-                ) : (
-                  <Pressable
-                    onPress={() => {
-                      setFeedback(null);
-                      setConfirmation({ kind: 'one', session });
-                    }}
-                    disabled={busy}
-                    className={[
-                      'mt-3 flex-row items-center justify-center rounded-2xl border border-[#EED8D4] bg-white px-4 py-2.5',
-                      busy ? 'opacity-60' : 'active:bg-[#FBF4F2]',
-                    ].join(' ')}
-                  >
-                    <LogOut size={14} color="#B4544A" />
-                    <Text className="ml-2 text-[0.8125rem] font-semibold text-[#B4544A]">
-                      {isRevokingThis ? 'Logger ut...' : 'Logg ut'}
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-            );
-          })
+                </Pressable>
+              ) : null}
+            </View>
+            <Card className="mb-6 overflow-hidden">
+              {others.length ? (
+                others.map((session, index) => renderSession(session, index))
+              ) : (
+                <View className="flex-row items-center gap-3 px-4 py-4">
+                  <View className="h-9 w-9 items-center justify-center rounded-xl bg-tint">
+                    <CheckCircle2 size={17} color={TC.brandText} />
+                  </View>
+                  <Text className="flex-1 text-[0.8125rem] leading-5 text-muted">
+                    Ingen andre enheter er logget inn.
+                  </Text>
+                </View>
+              )}
+            </Card>
+          </>
         )}
 
-        <View className="mt-2 rounded-3xl border border-[#F1E1C4] bg-[#FBF5E9] p-5">
-          <View className="flex-row items-start">
-            <View className="mt-0.5 shrink-0">
-              <ShieldAlert size={18} color="#B7791F" />
-            </View>
-            <View className="ml-3 flex-1">
-              <Text className="text-[0.875rem] font-bold text-[#614109]">Sikkerhetsmerknad</Text>
-              <Text className="mt-1.5 text-[0.8125rem] leading-6 text-[#614109]">
-                Hvis du ser en enhet eller et sted du ikke kjenner igjen, bør du logge ut økten
-                umiddelbart og endre passordet ditt. Sted og IP er omtrentlige opplysninger utledet
-                fra nettverket, ikke nøyaktig posisjon.
-              </Text>
-            </View>
-          </View>
-
-          <Pressable
+        <SectionLabel>Sikkerhet</SectionLabel>
+        <Card className="overflow-hidden">
+          <ListRow
+            icon={KeyRound}
+            label="Endre passord"
+            description="Ser du en enhet du ikke kjenner? Logg den ut og bytt passord."
             onPress={() => router.push('/profile/settings/password')}
-            className="mt-4 flex-row items-center rounded-2xl border border-[#F0DDB7] bg-white px-4 py-3 active:bg-[#FBF5E9]"
-          >
-            <KeyRound size={16} color="#B7791F" />
-            <Text className="ml-2 flex-1 text-[0.875rem] font-semibold text-[#614109]">
-              Endre passord
-            </Text>
-            <ChevronRight size={16} color="#B7791F" />
-          </Pressable>
-        </View>
-
-        <Text className="mt-5 px-1 text-[0.75rem] leading-5 text-[#9B9E96]">
-          Når du logger ut en økt, mister enheten tilgangen umiddelbart ved sitt neste kall mot
-          Jobblo.
+          />
+        </Card>
+        <Text className="mt-4 px-1 text-[0.8125rem] leading-5 text-subtle">
+          Sted og IP er omtrentlige og utledet fra nettverket. En utlogget enhet mister tilgangen ved
+          sitt neste kall mot Jobblo.
         </Text>
       </ScrollView>
 
-      <Dialog visible={confirmation !== null} onClose={() => setConfirmation(null)}>
-        <Text className="text-[1.0625rem] font-bold text-[#0B0B0B]">
-          {confirmation?.kind === 'all' ? 'Logg ut alle andre enheter?' : 'Logg ut denne enheten?'}
-        </Text>
-        <Text className="mt-2 text-[0.875rem] leading-6 text-[#63665F]">
-          {confirmation?.kind === 'all'
-            ? `Er du sikker på at du vil logge ut alle andre enheter? ${
-                confirmation.count === 1 ? '1 annen økt' : `${confirmation.count} andre økter`
-              } blir avsluttet. Denne enheten forblir innlogget.`
+      <ConfirmDialog
+        visible={confirmation !== null}
+        title={confirmation?.kind === 'all' ? 'Logg ut alle andre enheter?' : 'Logg ut denne enheten?'}
+        message={
+          confirmation?.kind === 'all'
+            ? `${confirmation.count === 1 ? '1 annen økt' : `${confirmation.count} andre økter`} blir avsluttet. Denne enheten forblir innlogget.`
             : confirmation?.kind === 'one'
-              ? `Er du sikker på at du vil logge ut denne enheten? ${deviceTitle(
-                  confirmation.session
-                )} mister tilgangen til kontoen din.`
-              : ''}
-        </Text>
-
-        <View className="mt-5">
-          <Pressable
-            onPress={() => {
-              if (!confirmation) return;
-              if (confirmation.kind === 'all') confirmRevokeOthers();
-              else confirmRevokeOne(confirmation.session);
-            }}
-            disabled={busy}
-            className={[
-              'flex-row items-center justify-center rounded-2xl px-5 py-3.5',
-              busy ? 'opacity-60' : '',
-            ].join(' ')}
-            style={{ backgroundColor: '#B4544A' }}
-          >
-            <LogOut size={16} color="#FFFFFF" />
-            <Text className="ml-2 text-[0.9375rem] font-semibold text-white">
-              {confirmation?.kind === 'all' ? 'Logg ut alle andre' : 'Logg ut enheten'}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => setConfirmation(null)}
-            className="mt-2.5 items-center justify-center rounded-2xl border border-[#E6E7E1] bg-white px-5 py-3.5 active:bg-[#F4F6F0]"
-          >
-            <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Avbryt</Text>
-          </Pressable>
-        </View>
-      </Dialog>
+              ? `${deviceTitle(confirmation.session)} mister tilgangen til kontoen din.`
+              : ''
+        }
+        confirmLabel={confirmation?.kind === 'all' ? 'Logg ut alle andre' : 'Logg ut enheten'}
+        pendingLabel="Logger ut…"
+        cancelLabel="Avbryt"
+        destructive
+        isPending={busy}
+        onConfirm={() => {
+          if (!confirmation) return;
+          if (confirmation.kind === 'all') confirmRevokeOthers();
+          else confirmRevokeOne(confirmation.session);
+        }}
+        onClose={() => setConfirmation(null)}
+      />
     </SafeAreaView>
   );
 }

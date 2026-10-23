@@ -14,6 +14,8 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 60 * 1000,
+      // Keep visited screens in memory for 30 min so going back is instant (default 5 min).
+      gcTime: 30 * 60 * 1000,
       refetchOnWindowFocus: false,
       retry: 1,
     },

@@ -7,9 +7,11 @@ import { useFetchDisputeByOrder, useOpenDisputeMutation } from '../../../src/hoo
 import { useProviderOrder } from '../../../src/hooks/useProviderOrder';
 import {
   DISPUTE_DESCRIPTION_MAX_LENGTH,
-  DISPUTE_REASON_CATEGORIES,
+  DISPUTE_DESCRIPTION_MIN_LENGTH,
   DISPUTE_REASON_LABELS,
   DISPUTE_TITLE_MAX_LENGTH,
+  DISPUTE_TITLE_MIN_LENGTH,
+  disputeReasonsFor,
   isDisputeEligibleOrderStatus,
   isDisputeReasonCategory,
   type DisputeReasonCategory,
@@ -18,6 +20,7 @@ import { disputeErrorMessage, httpStatus, isDuplicateDisputeError } from '../../
 import { Button } from '../../../src/components/ui/Button';
 import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
+import { TC, tc } from '../../../src/theme/colors';
 
 function orderErrorMessage(error: unknown) {
   const status = httpStatus(error);
@@ -44,7 +47,12 @@ export default function CreateDisputeScreen() {
   const trimmedTitle = title.trim();
   const trimmedDescription = description.trim();
   const validCategory = isDisputeReasonCategory(reasonCategory);
-  const formValid = validCategory && trimmedTitle.length > 0 && trimmedDescription.length > 0;
+  const formValid =
+    validCategory &&
+    trimmedTitle.length >= DISPUTE_TITLE_MIN_LENGTH &&
+    trimmedDescription.length >= DISPUTE_DESCRIPTION_MIN_LENGTH;
+  // Only reasons that make sense for this side of the order (as on the web).
+  const reasons = disputeReasonsFor(data?.isProvider && !data?.isCustomer ? 'provider' : 'customer');
 
   const openThread = () => router.replace({ pathname: '/(app)/disputes/order/[orderId]', params: { orderId } });
 
@@ -59,12 +67,12 @@ export default function CreateDisputeScreen() {
       Alert.alert('Velg en kategori', 'Du må velge hva tvisten handler om.');
       return;
     }
-    if (!trimmedTitle) {
-      Alert.alert('Tittel mangler', 'Skriv en kort tittel for tvisten.');
+    if (trimmedTitle.length < DISPUTE_TITLE_MIN_LENGTH) {
+      Alert.alert('Tittel mangler', `Skriv en kort tittel for tvisten (minst ${DISPUTE_TITLE_MIN_LENGTH} tegn).`);
       return;
     }
-    if (!trimmedDescription) {
-      Alert.alert('Beskrivelse mangler', 'Beskriv hva som har skjedd.');
+    if (trimmedDescription.length < DISPUTE_DESCRIPTION_MIN_LENGTH) {
+      Alert.alert('Beskrivelse mangler', `Beskriv hva som har skjedd (minst ${DISPUTE_DESCRIPTION_MIN_LENGTH} tegn).`);
       return;
     }
     if (openDisputeMutation.isPending) return;
@@ -97,7 +105,7 @@ export default function CreateDisputeScreen() {
 
   if (!orderId) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState
           title="Mangler oppdrag"
           message="Vi fant ingen ordre-ID i lenken. Åpne tvisten fra oppdraget ditt."
@@ -110,7 +118,7 @@ export default function CreateDisputeScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <LoadingIndicator message="Laster oppdrag..." />
       </SafeAreaView>
     );
@@ -119,7 +127,7 @@ export default function CreateDisputeScreen() {
   if (isError || !data?.order) {
     const forbidden = httpStatus(error) === 403;
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState
           title={forbidden ? 'Ingen tilgang' : 'Kunne ikke laste oppdrag'}
           message={orderErrorMessage(error)}
@@ -139,10 +147,10 @@ export default function CreateDisputeScreen() {
   // form the API is guaranteed to reject.
   if (activeDispute) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
-        <View className="mx-4 my-8 rounded-3xl border border-[#E6E7E1] bg-white p-6">
-          <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Tvist finnes allerede</Text>
-          <Text className="mt-1.5 text-[0.875rem] leading-relaxed text-[#63665F]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
+        <View className="mx-4 my-8 rounded-3xl border border-line bg-surface p-6">
+          <Text className="text-[0.9375rem] font-semibold text-ink">Tvist finnes allerede</Text>
+          <Text className="mt-1.5 text-[0.875rem] leading-relaxed text-muted">
             Det finnes allerede en aktiv tvist for dette oppdraget. Fortsett i den eksisterende tvisten.
           </Text>
           <View className="mt-4 gap-2">
@@ -156,7 +164,7 @@ export default function CreateDisputeScreen() {
 
   if (!eligible) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState
           title="Tvist kan ikke åpnes nå"
           message="Tvist kan bare åpnes etter at betalingen er sikret i SafePay, og før oppdraget er avsluttet."
@@ -168,7 +176,7 @@ export default function CreateDisputeScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -176,33 +184,33 @@ export default function CreateDisputeScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Pressable onPress={() => router.back()} className="mb-5 flex-row items-center gap-2" hitSlop={8}>
-            <ArrowLeft size={16} color="#63665F" />
-            <Text className="text-[0.8125rem] text-[#63665F]">Tilbake</Text>
+            <ArrowLeft size={16} color={tc('#63665F', 'muted')} />
+            <Text className="text-[0.8125rem] text-muted">Tilbake</Text>
           </Pressable>
 
-          <View className="mb-4 rounded-2xl bg-[#FBF4F2] p-5">
+          <View className="mb-4 rounded-2xl bg-danger-tint p-5">
             <View className="flex-row items-center gap-3">
               <View className="h-10 w-10 items-center justify-center rounded-full bg-[#F2D5D0]">
-                <ShieldAlert size={18} color="#B4453A" />
+                <ShieldAlert size={18} color={TC.danger} />
               </View>
               <View className="flex-1">
-                <Text className="text-[0.9375rem] font-semibold text-[#B4453A]">Åpne tvist</Text>
-                <Text className="text-[0.75rem] leading-relaxed text-[#63665F]">
+                <Text className="text-[0.9375rem] font-semibold text-danger">Åpne tvist</Text>
+                <Text className="text-[0.8125rem] leading-relaxed text-muted">
                   Jobblo gjennomgår saken og kontakter begge parter. Betalingen holdes tilbake til tvisten er avgjort.
                 </Text>
               </View>
             </View>
           </View>
 
-          <View className="mb-4 rounded-2xl border border-[#E6E7E1] bg-white p-5">
-            <Text className="mb-1 text-[0.8125rem] font-medium text-[#0B0B0B]" numberOfLines={2}>{serviceTitle}</Text>
-            <Text className="text-[0.75rem] text-[#63665F]">Avtalt beløp: {amount} kr</Text>
+          <View className="mb-4 rounded-2xl border border-line bg-surface p-5">
+            <Text className="mb-1 text-[0.8125rem] font-medium text-ink" numberOfLines={2}>{serviceTitle}</Text>
+            <Text className="text-[0.8125rem] text-muted">Avtalt beløp: {amount} kr</Text>
           </View>
 
-          <View className="mb-4 rounded-2xl border border-[#E6E7E1] bg-white p-5">
-            <Text className="mb-1 text-[0.9375rem] font-semibold text-[#0B0B0B]">Hva handler tvisten om?</Text>
-            <Text className="mb-3 text-[0.75rem] text-[#63665F]">Velg kategorien som passer best.</Text>
-            {DISPUTE_REASON_CATEGORIES.map((reason) => {
+          <View className="mb-4 rounded-2xl border border-line bg-surface p-5">
+            <Text className="mb-1 text-[0.9375rem] font-semibold text-ink">Hva handler tvisten om?</Text>
+            <Text className="mb-3 text-[0.8125rem] text-muted">Velg kategorien som passer best.</Text>
+            {reasons.map((reason) => {
               const selected = reasonCategory === reason;
               return (
                 <Pressable
@@ -210,43 +218,45 @@ export default function CreateDisputeScreen() {
                   onPress={() => setReasonCategory(reason)}
                   accessibilityRole="radio"
                   accessibilityState={{ selected }}
-                  className={['mb-2 flex-row items-center justify-between rounded-xl border p-3', selected ? 'border-[#2E6641] bg-[#EAF1E9]' : 'border-[#E6E7E1]'].join(' ')}
+                  className={['mb-2 flex-row items-center justify-between rounded-xl border p-3', selected ? 'border-brand-text bg-tint' : 'border-line'].join(' ')}
                 >
-                  <Text className={['flex-1 text-[0.8125rem]', selected ? 'font-medium text-[#2E6641]' : 'text-[#0B0B0B]'].join(' ')}>
+                  <Text className={['flex-1 text-[0.8125rem]', selected ? 'font-medium text-brand-text' : 'text-ink'].join(' ')}>
                     {DISPUTE_REASON_LABELS[reason]}
                   </Text>
-                  {selected ? <Check size={16} color="#2E6641" /> : null}
+                  {selected ? <Check size={16} color={TC.brandText} /> : null}
                 </Pressable>
               );
             })}
           </View>
 
-          <View className="mb-4 rounded-2xl border border-[#E6E7E1] bg-white p-5">
-            <Text className="mb-3 text-[0.9375rem] font-semibold text-[#0B0B0B]">Detaljer</Text>
+          <View className="mb-4 rounded-2xl border border-line bg-surface p-5">
+            <Text className="mb-3 text-[0.9375rem] font-semibold text-ink">Detaljer</Text>
             <TextInput
               value={title}
               onChangeText={setTitle}
               placeholder="Kort tittel"
-              placeholderTextColor="#9B9E96"
+              placeholderTextColor={TC.placeholder}
               maxLength={DISPUTE_TITLE_MAX_LENGTH}
               editable={!openDisputeMutation.isPending}
-              className="rounded-xl border border-[#E6E7E1] p-3 text-[0.8125rem] text-[#0B0B0B]"
+              className="rounded-xl border border-line p-3 text-[0.8125rem] text-ink"
             />
-            <Text className="mb-3 mt-1 text-right text-[0.6875rem] text-[#9B9E96]">
+            <Text className="mb-3 mt-1 text-right text-[0.8125rem] text-subtle">
+              {trimmedTitle.length < DISPUTE_TITLE_MIN_LENGTH ? `Minst ${DISPUTE_TITLE_MIN_LENGTH} tegn · ` : ''}
               {title.length}/{DISPUTE_TITLE_MAX_LENGTH}
             </Text>
             <TextInput
               value={description}
               onChangeText={setDescription}
               placeholder="Beskriv hva som har skjedd"
-              placeholderTextColor="#9B9E96"
+              placeholderTextColor={TC.placeholder}
               multiline
               maxLength={DISPUTE_DESCRIPTION_MAX_LENGTH}
               textAlignVertical="top"
               editable={!openDisputeMutation.isPending}
-              className="min-h-[120px] rounded-xl border border-[#E6E7E1] p-3 text-[0.8125rem] text-[#0B0B0B]"
+              className="min-h-[120px] rounded-xl border border-line p-3 text-[0.8125rem] text-ink"
             />
-            <Text className="mt-1 text-right text-[0.6875rem] text-[#9B9E96]">
+            <Text className="mt-1 text-right text-[0.8125rem] text-subtle">
+              {trimmedDescription.length < DISPUTE_DESCRIPTION_MIN_LENGTH ? `Minst ${DISPUTE_DESCRIPTION_MIN_LENGTH} tegn · ` : ''}
               {description.length}/{DISPUTE_DESCRIPTION_MAX_LENGTH}
             </Text>
           </View>

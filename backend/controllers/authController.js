@@ -355,6 +355,11 @@ exports.logout = async (req, res) => {
         $or: [{ refreshToken }, { oldRefreshToken: refreshToken }],
       });
     }
+    // Clients that send a Bearer token (the mobile app) may not carry the refresh cookie;
+    // the token's own session is ended too, so "Logg ut" always ends it server-side.
+    if (req.sessionId && req.userId) {
+      await Session.deleteOne({ _id: req.sessionId, userId: req.userId });
+    }
 
     clearAuthCookies(res);
 

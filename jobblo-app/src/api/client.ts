@@ -1,5 +1,21 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
+import * as Device from 'expo-device';
 import { authStorage as storage } from '../utils/authStorage';
+
+/**
+ * This phone's model for the "Aktive økter" list, e.g. "iPhone 15 Pro" or "Samsung SM-S911B".
+ * The backend stores it on the session (X-Device-Name); a User-Agent from React Native
+ * carries no model at all. Printable ASCII only, so it is always a valid header value.
+ */
+const DEVICE_NAME = (() => {
+  const model = Device.modelName ?? '';
+  const maker = Device.manufacturer ?? '';
+  const withMaker =
+    maker && maker.toLowerCase() !== 'apple' && !model.toLowerCase().startsWith(maker.toLowerCase())
+      ? `${maker.charAt(0).toUpperCase()}${maker.slice(1)} ${model}`
+      : model;
+  return withMaker.replace(/[^\x20-\x7E]/g, '').trim().slice(0, 60);
+})();
 
 /**
  * Opt out of this client's session handling for one request.
@@ -41,6 +57,16 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use(async (config) => {
+  if (DEVICE_NAME && config.headers) config.headers['X-Device-Name'] = DEVICE_NAME;
+
+  // With the default JSON Content-Type, axios turns a FormData body into JSON, so files
+  // never arrive (the server saw no fields: 400 on avatar upload). Uploads are multipart,
+  // whichever service sends them, and get time to finish on mobile data.
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData && config.headers) {
+    config.headers['Content-Type'] = 'multipart/form-data';
+    if (!config.timeout || config.timeout < 90_000) config.timeout = 90_000;
+  }
+
   // The caller brought its own credential; overwriting it from storage would send the old
   // session's token to an endpoint that was asked to check a different one.
   if (config._callerSuppliedAuth) return config;

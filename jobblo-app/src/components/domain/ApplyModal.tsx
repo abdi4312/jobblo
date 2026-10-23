@@ -8,6 +8,7 @@ import { View, Text, TextInput, Pressable, ActivityIndicator, Platform } from 'r
 import { Send, X } from 'lucide-react-native';
 import { Dialog } from '../ui/Dialog';
 import type { CreateJobRequestPayload } from '../../types/Application';
+import { TC, tc } from '../../theme/colors';
 
 export interface ApplyModalProps {
   visible: boolean;
@@ -58,7 +59,7 @@ export const ApplyModal = React.memo(
       <Dialog visible={visible} onClose={handleClose}>
         <View className="w-full">
           <View className="mb-4 flex-row items-center justify-between">
-            <Text className="text-lg font-bold text-[#0B0B0B]">Send forespørsel</Text>
+            <Text className="text-lg font-bold text-ink">Send forespørsel</Text>
             <Pressable
               onPress={handleClose}
               disabled={isLoading}
@@ -66,32 +67,32 @@ export const ApplyModal = React.memo(
               accessibilityRole="button"
               accessibilityLabel="Lukk modal"
             >
-              <X size={20} color="#63665F" />
+              <X size={20} color={tc('#63665F', 'muted')} />
             </Pressable>
           </View>
 
           {jobTitle ? (
-            <Text className="mb-4 text-sm text-[#63665F]">
-              <Text className="font-medium text-[#0B0B0B]">{jobTitle}</Text>
+            <Text className="mb-4 text-sm text-muted">
+              <Text className="font-medium text-ink">{jobTitle}</Text>
             </Text>
           ) : null}
 
           {connectStatus !== 'ready' ? (
-            <View className="mb-4 rounded-xl border border-[#E6E7E1] bg-[#F4F6F0] px-4 py-3">
-              <Text className="text-sm font-semibold text-[#0B0B0B]">
+            <View className="mb-4 rounded-xl border border-line bg-surface-2 px-4 py-3">
+              <Text className="text-sm font-semibold text-ink">
                 {connectStatus === 'loading'
                   ? 'Kontrollerer Stripe Connect-status...'
                   : 'Du må fullføre og verifisere Stripe Connect-kontoen din før du kan sende forespørsler eller starte oppdrag.'}
               </Text>
               {connectStatus === 'unavailable' ? (
-                <Text className="mt-2 text-sm text-[#63665F]">
+                <Text className="mt-2 text-sm text-muted">
                   Stripe Connect-status kan ikke bekreftes akkurat nå. Prøv igjen senere.
                 </Text>
               ) : null}
               {connectStatus !== 'loading' ? (
                 <Pressable
                   onPress={onGoToPayout}
-                  className="mt-3 items-center rounded-xl bg-[#2E6641] px-4 py-3"
+                  className="mt-3 items-center rounded-xl bg-brand px-4 py-3"
                   accessibilityRole="button"
                 >
                   <Text className="text-sm font-semibold text-white">Fullfør Stripe Connect</Text>
@@ -110,20 +111,20 @@ export const ApplyModal = React.memo(
 
           {connectStatus === 'ready' ? (
             <View className="mb-4">
-              <Text className="mb-2 text-sm font-medium text-[#0B0B0B]">
-                Melding til leverandøren <Text className="font-normal text-[#63665F]">(valgfritt)</Text>
+              <Text className="mb-2 text-sm font-medium text-ink">
+                Melding til leverandøren <Text className="font-normal text-muted">(valgfritt)</Text>
               </Text>
 
               <TextInput
                 value={message}
                 onChangeText={setMessage}
                 placeholder="Skriv en melding til leverandøren..."
-                placeholderTextColor="#9B9E96"
+                placeholderTextColor={TC.placeholder}
                 multiline
                 maxLength={maxLength}
                 editable={!isLoading}
                 numberOfLines={4}
-                className="min-h-[104px] w-full rounded-xl border border-[#E6E7E1] bg-white px-4 py-3 text-sm text-[#0B0B0B]"
+                className="min-h-[104px] w-full rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink"
                 style={{
                   textAlignVertical: 'top',
                   fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
@@ -131,7 +132,7 @@ export const ApplyModal = React.memo(
                 }}
               />
 
-              <Text className="mt-1 text-right text-[11px] text-[#9B9E96]">
+              <Text className="mt-1 text-right text-[11px] text-subtle">
                 {messageLength}/{maxLength}
               </Text>
             </View>
@@ -143,11 +144,11 @@ export const ApplyModal = React.memo(
                 onPress={handleClose}
                 disabled={isLoading}
                 className={[
-                  'flex-1 items-center justify-center rounded-xl border border-[#E6E7E1] bg-white px-4 py-3',
+                  'flex-1 items-center justify-center rounded-xl border border-line bg-surface px-4 py-3',
                   isLoading ? 'opacity-60' : '',
                 ].join(' ')}
               >
-                <Text className="text-sm font-medium text-[#0B0B0B]">Avbryt</Text>
+                <Text className="text-sm font-medium text-ink">Avbryt</Text>
               </Pressable>
 
               <Pressable

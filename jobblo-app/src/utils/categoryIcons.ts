@@ -18,6 +18,7 @@ import {
   MoreHorizontal,
   Home,
   Grid3x3,
+  Car,
   LucideIcon,
 } from 'lucide-react-native';
 
@@ -43,6 +44,7 @@ const ICON_MAP: Record<string, any> = {
   Home,
   MoreHorizontal,
   Grid3x3,
+  Car,
 };
 
 /**
@@ -83,6 +85,7 @@ export function getCategoryIcon(
   if (lowerName.includes('transport')) return Package;
   if (lowerName.includes('rørlegger')) return Wrench;
   if (lowerName.includes('småjobber')) return Handshake;
+  if (lowerName.includes('bil')) return Car;
 
   return MoreHorizontal;
 }

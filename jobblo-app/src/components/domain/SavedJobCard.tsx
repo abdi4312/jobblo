@@ -3,6 +3,7 @@ import { ActivityIndicator, Image, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MapPin, Trash2 } from 'lucide-react-native';
 import type { Job } from '../../types/Jobs';
+import { TC, tc } from '../../theme/colors';
 
 interface SavedJobCardProps {
   job: Job;
@@ -35,42 +36,42 @@ export function SavedJobCard({ job, onRemove, isRemoving = false }: SavedJobCard
     job.status === 'expired';
 
   return (
-    <View className="flex-row items-center gap-3.5 rounded-[24px] border border-[#E6E7E1] bg-white p-3">
+    <View className="flex-row items-center gap-3.5 rounded-[24px] border border-line bg-surface p-3">
       <Pressable
         onPress={() => router.push({ pathname: '/(app)/jobs/[id]', params: { id: job._id } })}
         className="flex-1 flex-row items-center gap-3.5"
         accessibilityRole="button"
         accessibilityLabel={`Åpne ${job.title || 'oppdrag'}`}
       >
-        <View className="h-[76px] w-[76px] items-center justify-center overflow-hidden rounded-2xl bg-[#EAF1E9]">
+        <View className="h-[76px] w-[76px] items-center justify-center overflow-hidden rounded-2xl bg-tint">
           {image ? (
             <Image source={{ uri: image }} className="h-full w-full" resizeMode="cover" />
           ) : (
-            <Text className="text-[0.625rem] text-[#63665F]">Ingen bilde</Text>
+            <Text className="text-[0.6875rem] text-muted">Ingen bilde</Text>
           )}
         </View>
 
         <View className="flex-1">
-          <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]" numberOfLines={2}>
+          <Text className="text-[0.9375rem] font-semibold text-ink" numberOfLines={2}>
             {job.title || 'Uten tittel'}
           </Text>
 
           <View className="mt-1.5 flex-row items-center gap-1">
-            <MapPin size={12} color="#9B9E96" strokeWidth={2} />
-            <Text className="flex-1 text-[0.8125rem] text-[#63665F]" numberOfLines={1}>
+            <MapPin size={12} color={tc('#9B9E96', 'subtle')} strokeWidth={2} />
+            <Text className="flex-1 text-[0.8125rem] text-muted" numberOfLines={1}>
               {place}
             </Text>
           </View>
 
           <View className="mt-1.5 flex-row items-center gap-2">
             {price ? (
-              <Text className="text-[0.875rem] font-semibold text-[#0B0B0B]">{price}</Text>
+              <Text className="text-[0.875rem] font-semibold text-ink">{price}</Text>
             ) : (
-              <Text className="text-[0.8125rem] text-[#63665F]">Pris ikke satt</Text>
+              <Text className="text-[0.8125rem] text-muted">Pris ikke satt</Text>
             )}
             {isClosed ? (
-              <View className="rounded-full bg-[#F4F6F0] px-2 py-0.5">
-                <Text className="text-[0.625rem] font-semibold text-[#63665F]">Lukket</Text>
+              <View className="rounded-full bg-surface-2 px-2 py-0.5">
+                <Text className="text-[0.6875rem] font-semibold text-muted">Lukket</Text>
               </View>
             ) : null}
           </View>
@@ -82,14 +83,14 @@ export function SavedJobCard({ job, onRemove, isRemoving = false }: SavedJobCard
           onPress={onRemove}
           disabled={isRemoving}
           hitSlop={8}
-          className="h-10 w-10 items-center justify-center rounded-full border border-[#E6E7E1] bg-white"
+          className="h-10 w-10 items-center justify-center rounded-full border border-line bg-surface"
           accessibilityRole="button"
           accessibilityLabel={`Fjern ${job.title || 'oppdrag'} fra listen`}
         >
           {isRemoving ? (
-            <ActivityIndicator size="small" color="#B4544A" />
+            <ActivityIndicator size="small" color={tc('#B4544A', 'danger')} />
           ) : (
-            <Trash2 size={16} color="#B4544A" />
+            <Trash2 size={16} color={tc('#B4544A', 'danger')} />
           )}
         </Pressable>
       ) : null}

@@ -47,8 +47,8 @@ export default function ForgotPasswordStepOtp({
           Sjekk e-posten din
         </h1>
         <p className="text-base text-[#6B7280]">
-          Vi sendte en 6-sifret kode til{' '}
-          <span className="font-semibold text-black">{email}</span>
+          Hvis det finnes en konto for{' '}
+          <span className="font-semibold text-black">{email}</span>, har vi sendt en 6-sifret kode dit.
         </p>
       </div>
 

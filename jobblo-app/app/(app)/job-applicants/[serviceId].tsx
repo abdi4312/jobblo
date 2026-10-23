@@ -12,7 +12,9 @@ import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { useApplicants, useCreateSafePayContractMutation, useDeclineApplicantMutation, useToggleApplicantArchiveMutation, useToggleApplicantFavoriteMutation } from '../../../src/hooks/useApplicants';
 import { useCreateOrGetChatMutation } from '../../../src/hooks/useCreateOrGetChat';
+import { orderStatusLabel } from '../../../src/constants/orderStatus';
 import { customerOrderRoute, type OrderRoute } from '../../../src/utils/orderRoute';
+import { TC, tc } from '../../../src/theme/colors';
 
 const SORT_OPTIONS = [
   { value: 'createdAt', label: 'Nyeste først' },
@@ -122,10 +124,10 @@ export default function JobApplicantsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
-          <View className="h-5 w-24 rounded bg-[#E6E7E1]" />
-          <View className="h-32 rounded-2xl bg-[#E6E7E1]" />
+          <View className="h-5 w-24 rounded bg-line" />
+          <View className="h-32 rounded-2xl bg-line" />
           {Array.from({ length: 3 }).map((_, index) => (
             <ApplicantOverviewSkeleton key={index} />
           ))}
@@ -136,7 +138,7 @@ export default function JobApplicantsScreen() {
 
   if (isError || !data?.service) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState title={errorCopy.title} message={errorCopy.message} onAction={() => refetch()} />
       </SafeAreaView>
     );
@@ -207,19 +209,19 @@ export default function JobApplicantsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 120 }}
       >
         <Pressable onPress={() => router.back()} className="mb-5 flex-row items-center gap-2 self-start">
-          <ArrowLeft size={17} color="#63665F" />
-          <Text className="text-[0.8125rem] text-[#63665F]">Tilbake til oversikt</Text>
+          <ArrowLeft size={17} color={tc('#63665F', 'muted')} />
+          <Text className="text-[0.8125rem] text-muted">Tilbake til oversikt</Text>
         </Pressable>
 
         <SafePayProgressSteps currentStep={getApplicantProgressStep(activeOrder?.status)} />
 
-        <View className="mb-5 rounded-2xl bg-[#122A1C] p-5">
+        <View className="mb-5 rounded-2xl bg-brand-deep p-5">
           <View className="flex-row items-start justify-between gap-3">
             <View className="min-w-0 flex-1">
               <Text className="text-[1.125rem] font-semibold text-white" numberOfLines={2}>
@@ -228,30 +230,30 @@ export default function JobApplicantsScreen() {
               <View className="mt-2 flex-row flex-wrap gap-x-3 gap-y-1">
                 <View className="flex-row items-center gap-1">
                   <MapPin size={12} color="#8FBF9A" />
-                  <Text className="text-[0.75rem] text-white/70">{service.location?.city || 'Ikke angitt'}</Text>
+                  <Text className="text-[0.8125rem] text-white/70">{service.location?.city || 'Ikke angitt'}</Text>
                 </View>
                 <View className="flex-row items-center gap-1">
                   <CalendarDays size={12} color="#8FBF9A" />
-                  <Text className="text-[0.75rem] text-white/70">{formatDate(service.date)}</Text>
+                  <Text className="text-[0.8125rem] text-white/70">{formatDate(service.date)}</Text>
                 </View>
                 {duration ? (
                   <View className="flex-row items-center gap-1">
                     <Clock size={12} color="#8FBF9A" />
-                    <Text className="text-[0.75rem] text-white/70">{duration}</Text>
+                    <Text className="text-[0.8125rem] text-white/70">{duration}</Text>
                   </View>
                 ) : null}
               </View>
             </View>
             <View className="items-end">
               <Text className="text-[1.25rem] font-semibold text-[#8FBF9A]">{formatPrice(service.price)}</Text>
-              <Text className="mt-0.5 text-[0.625rem] uppercase tracking-[0.08em] text-white/50">Oppdragsbeløp</Text>
+              <Text className="mt-0.5 text-[0.6875rem] uppercase tracking-[0.08em] text-white/50">Oppdragsbeløp</Text>
             </View>
           </View>
           {activeOrder ? (
             <View className="mt-4 gap-2.5 rounded-xl bg-white/10 p-3">
               <View className="flex-row items-center gap-2">
                 <Text className="text-[0.8125rem] font-semibold text-white">Utfører valgt</Text>
-                <Text className="text-[0.75rem] text-white/70">Aktiv kontrakt: {activeOrder.status}</Text>
+                <Text className="text-[0.8125rem] text-white/70">Aktiv kontrakt: {orderStatusLabel(activeOrder.status)}</Text>
               </View>
               {/* The only other way into the contract was the per-applicant "Se godkjenning"
                   button, which disappears when the list is empty, archived or filtered — so the
@@ -260,9 +262,9 @@ export default function JobApplicantsScreen() {
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => router.push(activeOrderRoute)}
-                  className="rounded-full bg-white px-4 py-2.5"
+                  className="rounded-full bg-surface px-4 py-2.5"
                 >
-                  <Text className="text-center text-[0.8125rem] font-semibold text-[#122A1C]">
+                  <Text className="text-center text-[0.8125rem] font-semibold text-[#122A1C] dark:text-brand-text">
                     {activeOrderActionLabel(activeOrderRoute, activeOrder.status)}
                   </Text>
                 </Pressable>
@@ -278,8 +280,8 @@ export default function JobApplicantsScreen() {
 
         <View className="mb-4 flex-row flex-wrap items-center justify-between gap-2">
           <View className="flex-row items-center gap-2">
-            <Users size={16} color="#2E6641" />
-            <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">{applicants.length} {applicants.length === 1 ? 'søker' : 'søkere'}</Text>
+            <Users size={16} color={TC.brandText} />
+            <Text className="text-[0.9375rem] font-semibold text-ink">{applicants.length} {applicants.length === 1 ? 'søker' : 'søkere'}</Text>
           </View>
           <View className="flex-row gap-2">
             <Select value={filter} options={FILTER_OPTIONS} onValueChange={setFilter} placeholder="Filter" />

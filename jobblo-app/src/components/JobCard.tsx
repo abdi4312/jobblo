@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Bookmark, MapPin, Badge } from 'lucide-react-native';
+import { Heart, MapPin } from 'lucide-react-native';
 import type { Job } from '../types/Jobs';
 import { useIsServiceSaved } from '../hooks/useFavoriteLists';
 import { useAuthStore } from '../store/authStore';
+import { categoryImage } from '../utils/categoryImage';
+import { TC, tc } from '../theme/colors';
 
 interface JobCardProps {
   job: Job;
@@ -38,8 +40,11 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false, 
     router.push({ pathname: '/(app)/jobs/[id]', params: { id: job._id } });
   };
 
-  // Get the first image or use a fallback
-  const imageUrl = job.images?.[0] || 'https://via.placeholder.com/300x375?text=No+Image';
+  // The job's own photo, or its category photo when it has none or the URL fails to load
+  // (a broken upload used to leave an empty white frame in the feed).
+  const imageUrl = job.images?.[0];
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageSource = imageUrl && !imageFailed ? { uri: imageUrl } : categoryImage(job.categories, job._id.charCodeAt(job._id.length - 1) || 0);
 
   // Format price as Norwegian locale
   const priceFormatted = job.price ? job.price.toLocaleString('nb-NO') : 'Variabelt';
@@ -53,13 +58,14 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false, 
     >
       {/* Photo container — 4:5 aspect ratio, rounded 2xl, brand bg */}
       <View
-        className="relative overflow-hidden rounded-2xl bg-[#EAF1E9]"
+        className="relative overflow-hidden rounded-2xl bg-tint"
         style={{ aspectRatio: 4 / 5, minHeight: 130 }}
       >
         <Image
-          source={{ uri: imageUrl }}
+          source={imageSource}
           style={{ width: '100%', height: '100%', aspectRatio: 4 / 5 }}
           resizeMode="cover"
+          onError={() => setImageFailed(true)}
         />
 
         {/* Status badges overlay — top left */}
@@ -67,12 +73,12 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false, 
           <View className="absolute top-3 left-3 flex gap-2">
             {job.urgent && (
               <View className="bg-[#E8A8A0] px-2.5 py-1 rounded-full">
-                <Text className="text-[0.65rem] font-semibold text-white">Haster</Text>
+                <Text className="text-[0.6875rem] font-semibold text-white">Haster</Text>
               </View>
             )}
             {job.promoted && (
-              <View className="bg-[#2E6641] px-2.5 py-1 rounded-full">
-                <Text className="text-[0.65rem] font-semibold text-white">Sponset</Text>
+              <View className="bg-brand px-2.5 py-1 rounded-full">
+                <Text className="text-[0.6875rem] font-semibold text-white">Sponset</Text>
               </View>
             )}
           </View>
@@ -85,9 +91,10 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false, 
           </View>
         )}
 
-        {/* Bookmark — top right, only shown when the parent provides onSavePress */}
+        {/* Favourite, FINN style: a white outline heart straight on the photo (no circle,
+            no shadow). Only when onSavePress is given. */}
         {onSavePress && (
-          <View className="absolute right-3 top-3" pointerEvents="box-none">
+          <View className="absolute right-0 top-0" pointerEvents="box-none">
             <Pressable
               onPress={() => {
                 if (!isAuthenticated) {
@@ -96,14 +103,15 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false, 
                 }
                 onSavePress(job._id);
               }}
-              className="h-9 w-9 items-center justify-center rounded-full bg-white/95"
+              hitSlop={8}
+              className="h-10 w-10 items-center justify-center active:opacity-70"
               accessibilityRole="button"
               accessibilityLabel={isSaved ? 'Fjern fra lagrede lister' : 'Lagre i liste'}
             >
               {savedLoading ? (
-                <View className="h-4 w-4" />
+                <View className="h-5 w-5" />
               ) : (
-                <Bookmark size={16} color="#0B0B0B" fill={isSaved ? '#0B0B0B' : 'none'} />
+                <Heart size={24} color="#FFFFFF" strokeWidth={2} fill={isSaved ? '#E5484D' : 'none'} />
               )}
             </Pressable>
           </View>
@@ -114,27 +122,33 @@ export const JobCard: React.FC<JobCardProps> = ({ job, showDescription = false, 
       <View className="mt-2.5">
         {/* Title — 2 line clamp */}
         <Text
-          className="text-[0.875rem] font-semibold text-[#0B0B0B] leading-tight"
+          className="text-[0.875rem] font-semibold text-ink leading-tight"
           numberOfLines={2}
         >
           {job.title}
         </Text>
 
+        {job.categories?.[0] ? (
+          <Text className="mt-0.5 text-[0.8125rem] text-muted" numberOfLines={1}>
+            {job.categories[0]}
+          </Text>
+        ) : null}
+
         {/* Description — optional, 1 line clamp if shown */}
         {showDescription && (
-          <Text className="text-[0.8125rem] text-[#63665F] leading-tight mt-1" numberOfLines={1}>
+          <Text className="text-[0.8125rem] text-muted leading-tight mt-1" numberOfLines={1}>
             {job.description}
           </Text>
         )}
 
         {/* Price and location row */}
         <View className="flex-row items-center justify-between mt-2">
-          <Text className={['text-[0.875rem] font-semibold text-[#0B0B0B] tabular-nums', compact && 'flex-shrink'].join(' ')} numberOfLines={1}>
+          <Text className={['text-[0.875rem] font-semibold text-ink tabular-nums', compact && 'flex-shrink'].join(' ')} numberOfLines={1}>
             {priceFormatted} kr
           </Text>
           <View className={['flex-row items-center gap-1', compact && 'ml-2 flex-1 min-w-0'].join(' ')}>
-            <MapPin size={13} color="#63665F" strokeWidth={2} />
-            <Text className="text-[0.8125rem] text-[#63665F]" numberOfLines={1}>
+            <MapPin size={13} color={tc('#63665F', 'muted')} strokeWidth={2} />
+            <Text className="text-[0.8125rem] text-muted" numberOfLines={1}>
               {location}
             </Text>
           </View>

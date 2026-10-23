@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const Session = require('../models/Session');
-const { verifyToken } = require('../utils/tokenUtils');
+const { verifyToken, deviceNameFrom } = require('../utils/tokenUtils');
 
 /**
  * Middleware to authenticate JWT tokens
@@ -69,8 +69,11 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    // Update session lastUsed
+    // Update session lastUsed. The app's device model is filled in here too, so sessions
+    // created before the app sent it, or by an OAuth login in the browser, get it as well.
     sessionExists.lastUsed = new Date();
+    const deviceName = deviceNameFrom(req);
+    if (deviceName && sessionExists.deviceName !== deviceName) sessionExists.deviceName = deviceName;
     await sessionExists.save();
 
     // Fetch user from database

@@ -15,7 +15,9 @@ import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { JobCard } from '../../../src/components/JobCard';
+import { ProfileSkeleton } from '../../../src/components/domain/ProfileSkeleton';
 import type { PublicUser, Review, ExperienceItem } from '../../../src/types/UserProfile';
+import { TC, tc } from '../../../src/theme/colors';
 
 function initials(name: string) {
   return (
@@ -55,14 +57,14 @@ function ExperienceCard({ item }: { item: ExperienceItem }) {
   const description = typeof item.description === 'string' ? item.description : '';
   if (!title && !company && !description) return null;
   return (
-    <View className="rounded-2xl bg-[#F4F6F0] p-3">
-      {title ? <Text className="text-sm font-semibold text-[#0B0B0B]">{title}</Text> : null}
-      {company ? <Text className="mt-0.5 text-xs font-medium text-[#2E6641]">{company}</Text> : null}
+    <View className="rounded-2xl bg-surface-2 p-3">
+      {title ? <Text className="text-sm font-semibold text-ink">{title}</Text> : null}
+      {company ? <Text className="mt-0.5 text-[0.8125rem] font-medium text-brand-text">{company}</Text> : null}
       {formatDateRange(item) ? (
-        <Text className="mt-0.5 text-[0.6875rem] text-[#9B9E96]">{formatDateRange(item)}</Text>
+        <Text className="mt-0.5 text-[0.8125rem] text-subtle">{formatDateRange(item)}</Text>
       ) : null}
       {description ? (
-        <Text className="mt-2 text-xs leading-5 text-[#63665F]">{description}</Text>
+        <Text className="mt-2 text-[0.8125rem] leading-5 text-muted">{description}</Text>
       ) : null}
     </View>
   );
@@ -93,28 +95,28 @@ function ReviewCard({ review }: { review: Review }) {
   const reviewer = review.reviewerId;
   const reviewerName = [reviewer?.name, reviewer?.lastName].filter(Boolean).join(' ') || 'Bruker';
   return (
-    <View className="rounded-3xl border border-[#E6E7E1] bg-white p-4">
+    <View className="rounded-3xl border border-line bg-surface p-4">
       <View className="flex-row items-center gap-3">
-        <View className="h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-[#DCEBDD]">
+        <View className="h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-tint">
           {reviewer?.avatarUrl ? (
             <Image source={{ uri: reviewer.avatarUrl }} className="h-full w-full" />
           ) : (
-            <Text className="text-xs font-semibold text-[#2E6641]">{initials(reviewerName)}</Text>
+            <Text className="text-[0.8125rem] font-semibold text-brand-text">{initials(reviewerName)}</Text>
           )}
         </View>
         <View className="flex-1">
-          <Text className="text-sm font-semibold text-[#0B0B0B]">{reviewerName}</Text>
+          <Text className="text-sm font-semibold text-ink">{reviewerName}</Text>
           {review.serviceId?.title ? (
-            <Text className="text-xs text-[#63665F]">{review.serviceId.title}</Text>
+            <Text className="text-[0.8125rem] text-muted">{review.serviceId.title}</Text>
           ) : null}
         </View>
         <View className="flex-row items-center gap-0.5">
-          <Star size={13} color="#2E6641" fill="#2E6641" />
-          <Text className="text-sm font-semibold text-[#0B0B0B]">{review.rating}</Text>
+          <Star size={13} color={TC.brandText} fill={TC.brandText} />
+          <Text className="text-sm font-semibold text-ink">{review.rating}</Text>
         </View>
       </View>
       {review.comment ? (
-        <Text className="mt-3 text-sm leading-5 text-[#63665F]">{review.comment}</Text>
+        <Text className="mt-3 text-sm leading-5 text-muted">{review.comment}</Text>
       ) : null}
     </View>
   );
@@ -122,12 +124,12 @@ function ReviewCard({ review }: { review: Review }) {
 
 function StatChip({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <View className={`flex-row items-center gap-1.5 rounded-full px-3 py-1.5 ${accent ? 'bg-[#EAF1E9]' : 'bg-[#F4F6F0]'}`}>
+    <View className={`flex-row items-center gap-1.5 rounded-full px-3 py-1.5 ${accent ? 'bg-tint' : 'bg-surface-2'}`}>
       {accent ? (
-        <Star size={12} color="#2E6641" fill="#2E6641" />
+        <Star size={12} color={TC.brandText} fill={TC.brandText} />
       ) : null}
-      <Text className="text-sm font-semibold text-[#0B0B0B]">{value}</Text>
-      {label ? <Text className="text-xs text-[#63665F]">{label}</Text> : null}
+      <Text className="text-sm font-semibold text-ink">{value}</Text>
+      {label ? <Text className="text-[0.8125rem] text-muted">{label}</Text> : null}
     </View>
   );
 }
@@ -162,8 +164,8 @@ export default function PublicProfileScreen() {
 
   if (selfLoading && !isSelf) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
-        <LoadingIndicator message="Laster profil..." />
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
+        <ProfileSkeleton />
       </SafeAreaView>
     );
   }
@@ -171,15 +173,15 @@ export default function PublicProfileScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
-        <LoadingIndicator message="Laster profil..." />
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
+        <ProfileSkeleton />
       </SafeAreaView>
     );
   }
 
   if (isError || !user) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState
           title="Fant ikke brukeren"
           message="Profilen finnes ikke lenger, eller lenken er feil."
@@ -223,8 +225,8 @@ export default function PublicProfileScreen() {
   const hasExperience = experience.length > 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]" edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />}>
+    <SafeAreaView className="flex-1 bg-page" edges={['top', 'bottom']}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={TC.brandText} />}>
         {/* This screen is pushed from Home, alerts and chat with headerShown: false, so the
             back control has to live in the content. */}
         <Pressable
@@ -233,34 +235,34 @@ export default function PublicProfileScreen() {
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           className="flex-row items-center gap-2 px-4 py-3"
         >
-          <ArrowLeft size={20} color="#0B0B0B" />
-          <Text className="text-[0.875rem] font-medium text-[#0B0B0B]">Tilbake</Text>
+          <ArrowLeft size={20} color={TC.ink} />
+          <Text className="text-[0.875rem] font-medium text-ink">Tilbake</Text>
         </Pressable>
         {/* Header */}
-        <View className="border-b border-[#E6E7E1] bg-[#EAF1E9] px-5 pb-8 pt-6">
+        <View className="border-b border-line bg-tint px-5 pb-8 pt-6">
           <View className="items-center">
-            <View className="h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-[#DCEBDD]">
+            <View className="h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-tint">
               {user.avatarUrl ? (
                 <Image source={{ uri: user.avatarUrl }} className="h-full w-full" />
               ) : (
-                <Text className="text-2xl font-semibold text-[#2E6641]">{initials(fullName)}</Text>
+                <Text className="text-2xl font-semibold text-brand-text">{initials(fullName)}</Text>
               )}
             </View>
             <View className="mt-4 flex-row flex-wrap items-center justify-center gap-2">
-              <Text className="text-2xl font-bold text-[#0B0B0B]">{fullName}</Text>
-              {isVerified ? <BadgeCheck size={19} color="#2E6641" /> : null}
+              <Text className="text-2xl font-bold text-ink">{fullName}</Text>
+              {isVerified ? <BadgeCheck size={19} color={TC.brandText} /> : null}
             </View>
-            <Text className="mt-1 text-sm text-[#63665F]">
+            <Text className="mt-1 text-sm text-muted">
               {user.role === 'company' ? 'Bedrift' : 'Jobbsøker'}
             </Text>
             {location ? (
               <View className="mt-3 flex-row items-center gap-1.5">
-                <MapPin size={14} color="#63665F" />
-                <Text className="text-sm text-[#63665F]">{location}</Text>
+                <MapPin size={14} color={tc('#63665F', 'muted')} />
+                <Text className="text-sm text-muted">{location}</Text>
               </View>
             ) : null}
             {since ? (
-              <Text className="mt-1 text-xs text-[#63665F]">Medlem siden {since}</Text>
+              <Text className="mt-1 text-[0.8125rem] text-muted">Medlem siden {since}</Text>
             ) : null}
           </View>
           {stats.length > 0 ? (
@@ -273,16 +275,16 @@ export default function PublicProfileScreen() {
         </View>
 
         {/* Tabs */}
-        <View className="flex-row border-b border-[#E6E7E1] bg-white px-5">
+        <View className="flex-row border-b border-line bg-surface px-5">
           {TABS.map((tab) => {
             const active = activeTab === tab;
             return (
               <Pressable
                 key={tab}
                 onPress={() => setActiveTab(tab)}
-                className={`mr-6 border-b-2 py-3 ${active ? 'border-[#2E6641]' : 'border-transparent'}`}
+                className={`mr-6 border-b-2 py-3 ${active ? 'border-brand-text' : 'border-transparent'}`}
               >
-                <Text className={`text-sm font-semibold ${active ? 'text-[#2E6641]' : 'text-[#63665F]'}`}>
+                <Text className={`text-sm font-semibold ${active ? 'text-brand-text' : 'text-muted'}`}>
                   {tab}
                 </Text>
               </Pressable>
@@ -295,19 +297,19 @@ export default function PublicProfileScreen() {
           {activeTab === 'Om meg' && (
             <View className="gap-4">
               {user.bio ? (
-                <View className="rounded-3xl border border-[#E6E7E1] bg-white p-5">
-                  <Text className="text-base font-semibold text-[#0B0B0B]">Om meg</Text>
-                  <Text className="mt-3 text-sm leading-6 text-[#63665F]">{user.bio}</Text>
+                <View className="rounded-3xl border border-line bg-surface p-5">
+                  <Text className="text-base font-semibold text-ink">Om meg</Text>
+                  <Text className="mt-3 text-sm leading-6 text-muted">{user.bio}</Text>
                 </View>
               ) : null}
 
               {user.skills?.length ? (
-                <View className="rounded-3xl border border-[#E6E7E1] bg-white p-5">
-                  <Text className="text-base font-semibold text-[#0B0B0B]">Ferdigheter</Text>
+                <View className="rounded-3xl border border-line bg-surface p-5">
+                  <Text className="text-base font-semibold text-ink">Ferdigheter</Text>
                   <View className="mt-3 flex-row flex-wrap gap-2">
                     {user.skills.map((skill) => (
-                      <View key={skill} className="rounded-full bg-[#EAF1E9] px-3 py-2">
-                        <Text className="text-xs font-medium text-[#2E6641]">{skill}</Text>
+                      <View key={skill} className="rounded-full bg-tint px-3 py-2">
+                        <Text className="text-[0.8125rem] font-medium text-brand-text">{skill}</Text>
                       </View>
                     ))}
                   </View>
@@ -315,8 +317,8 @@ export default function PublicProfileScreen() {
               ) : null}
 
               {hasExperience ? (
-                <View className="rounded-3xl border border-[#E6E7E1] bg-white p-5">
-                  <Text className="text-base font-semibold text-[#0B0B0B]">Erfaring</Text>
+                <View className="rounded-3xl border border-line bg-surface p-5">
+                  <Text className="text-base font-semibold text-ink">Erfaring</Text>
                   <View className="mt-3 gap-3">
                     {experience.map((item, index) => (
                       <ExperienceCard key={item._id ?? item.id ?? index} item={item} />
@@ -326,14 +328,14 @@ export default function PublicProfileScreen() {
               ) : null}
 
               {user.portfolio?.length ? (
-                <View className="rounded-3xl border border-[#E6E7E1] bg-white p-5">
-                  <Text className="text-base font-semibold text-[#0B0B0B]">Portfolio</Text>
+                <View className="rounded-3xl border border-line bg-surface p-5">
+                  <Text className="text-base font-semibold text-ink">Portfolio</Text>
                   <View className="mt-3 gap-3">
                     {user.portfolio.map((item) => (
-                      <View key={item._id} className="rounded-2xl bg-[#F4F6F0] p-3">
-                        <Text className="text-sm font-semibold text-[#0B0B0B]">{item.title}</Text>
+                      <View key={item._id} className="rounded-2xl bg-surface-2 p-3">
+                        <Text className="text-sm font-semibold text-ink">{item.title}</Text>
                         {item.description ? (
-                          <Text className="mt-1 text-xs leading-5 text-[#63665F]">{item.description}</Text>
+                          <Text className="mt-1 text-[0.8125rem] leading-5 text-muted">{item.description}</Text>
                         ) : null}
                       </View>
                     ))}
@@ -342,14 +344,14 @@ export default function PublicProfileScreen() {
               ) : null}
 
               {user.previousProjects?.length ? (
-                <View className="rounded-3xl border border-[#E6E7E1] bg-white p-5">
-                  <Text className="text-base font-semibold text-[#0B0B0B]">Tidligere prosjekter</Text>
+                <View className="rounded-3xl border border-line bg-surface p-5">
+                  <Text className="text-base font-semibold text-ink">Tidligere prosjekter</Text>
                   <View className="mt-3 gap-3">
                     {user.previousProjects.map((item) => (
-                      <View key={item._id} className="rounded-2xl bg-[#F4F6F0] p-3">
-                        <Text className="text-sm font-semibold text-[#0B0B0B]">{item.title}</Text>
+                      <View key={item._id} className="rounded-2xl bg-surface-2 p-3">
+                        <Text className="text-sm font-semibold text-ink">{item.title}</Text>
                         {item.description ? (
-                          <Text className="mt-1 text-xs leading-5 text-[#63665F]">{item.description}</Text>
+                          <Text className="mt-1 text-[0.8125rem] leading-5 text-muted">{item.description}</Text>
                         ) : null}
                       </View>
                     ))}

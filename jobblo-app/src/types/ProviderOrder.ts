@@ -26,6 +26,8 @@ export interface ProviderOrder extends Omit<SafePayOrder, 'serviceId' | 'custome
   history?: ProviderOrderHistoryItem[];
   chatId?: string | null;
   startedAt?: string | null;
+  /** Unstarted paid orders past this are auto-cancelled and fully refunded. */
+  providerConnectDeadlineAt?: string | null;
   readyForReviewAt?: string | null;
 }
 

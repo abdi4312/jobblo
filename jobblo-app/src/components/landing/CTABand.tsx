@@ -1,13 +1,14 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { TC } from '../../theme/colors';
 
 export function CTABand() {
   const router = useRouter();
 
   return (
     <View style={{ paddingHorizontal: 20, paddingBottom: 52 }}>
-      <View style={{ borderRadius: 28, backgroundColor: '#2E6641', paddingHorizontal: 22, paddingVertical: 28, gap: 16 }}>
+      <View style={{ borderRadius: 28, backgroundColor: TC.brand, paddingHorizontal: 22, paddingVertical: 28, gap: 16 }}>
         <Text style={{ color: '#FFFFFF', fontSize: 38, fontWeight: '700', lineHeight: 42, letterSpacing: -1.3 }}>
           Klar til å komme i gang?
         </Text>
@@ -18,9 +19,9 @@ export function CTABand() {
         <View style={{ gap: 10 }}>
           <Pressable
             onPress={() => router.push('/(auth)/register')}
-            style={{ backgroundColor: '#FFFFFF', borderRadius: 999, paddingVertical: 16, alignItems: 'center' }}
+            style={{ backgroundColor: TC.surface, borderRadius: 999, paddingVertical: 16, alignItems: 'center' }}
           >
-            <Text style={{ color: '#0B0B0B', fontWeight: '700', fontSize: 15 }}>Legg ut oppdrag</Text>
+            <Text style={{ color: TC.ink, fontWeight: '700', fontSize: 15 }}>Legg ut oppdrag</Text>
           </Pressable>
 
           <Pressable

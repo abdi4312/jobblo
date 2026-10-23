@@ -6,7 +6,9 @@ import { ArrowLeft, ChevronDown, CheckCircle2, Mail, Search, Send, ShieldCheck, 
 import { useCreateTicket, useMyTickets } from '../../../src/hooks/useSupport';
 import type { SupportTicket, SupportTicketStatus } from '../../../src/services/support.service';
 import { Button } from '../../../src/components/ui/Button';
+import { MEMBERSHIP_ENABLED } from '../../../src/config/features';
 import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
+import { TC, tc } from '../../../src/theme/colors';
 
 const SUPPORT_EMAIL = 'support@jobblo.no';
 
@@ -17,7 +19,7 @@ const FAQ_ITEMS: FAQ[] = [
   { id: 2, question: 'Hvordan publiserer jeg et oppdrag?', answer: 'Trykk på «Legg ut oppdrag», velg oppdragstype og legg inn beskrivelse, budsjett og ønsket tidsplan før du publiserer.', search: 'publisere oppdrag legge ut jobb' },
   { id: 3, question: 'Er det trygt å betale gjennom Jobblo?', answer: 'Ja. Betalinger håndteres via SafePay og Stripe. Pengene holdes i escrow til jobben er godkjent — du betaler aldri for noe du ikke er fornøyd med.', search: 'betaling trygt sikker safepay stripe' },
   { id: 4, question: 'Hvordan fungerer vurderingssystemet?', answer: 'Etter et fullført oppdrag kan begge parter legge igjen en vurdering. Dette bidrar til trygghet og bedre valg for hele Jobblo-fellesskapet.', search: 'anmeldelser vurderinger review' },
-  { id: 5, question: 'Hva koster det å bruke Jobblo?', answer: 'Det er gratis å komme i gang. Du kan oppgradere til et medlemskap for flere kontakter, bedre synlighet og ekstra funksjoner.', search: 'pris koste medlemskap planer' },
+  { id: 5, question: 'Hva koster det å bruke Jobblo?', answer: MEMBERSHIP_ENABLED ? 'Det er gratis å komme i gang. Du kan oppgradere til et medlemskap for flere kontakter, bedre synlighet og ekstra funksjoner.' : 'Det er gratis å komme i gang. Ved betaling med SafePay legges det til et gebyr på 3 %.', search: 'pris koste medlemskap planer' },
   { id: 6, question: 'Hvordan sier jeg opp abonnementet?', answer: 'Gå til Innstillinger → Abonnementer og velg å si opp. Tilgangen varer ut perioden du allerede har betalt for, og du blir ikke belastet igjen.', search: 'si opp abonnement kansellere' },
 ];
 
@@ -29,10 +31,10 @@ const STATUS_LABEL: Record<SupportTicketStatus, string> = {
 };
 
 const STATUS_CLASS: Record<SupportTicketStatus, string> = {
-  open: 'bg-[#F4F6F0] text-[#63665F]',
+  open: 'bg-surface-2 text-muted',
   in_progress: 'bg-[#FFF6E8] text-[#A36A1C]',
-  resolved: 'bg-[#EAF1E9] text-[#2E6641]',
-  closed: 'border border-[#E6E7E1] bg-white text-[#9B9E96]',
+  resolved: 'bg-tint text-brand-text',
+  closed: 'border border-line bg-surface text-subtle',
 };
 
 function getErrorMessage(err: unknown, fallback: string): string {
@@ -91,7 +93,7 @@ export default function SupportScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 36 }}
         keyboardShouldPersistTaps="handled"
@@ -100,54 +102,54 @@ export default function SupportScreen() {
           onPress={() => router.back()}
           className="mb-3 flex-row items-center self-start py-2"
         >
-          <ArrowLeft size={18} color="#63665F" />
-          <Text className="ml-2 text-sm font-medium text-[#63665F]">Tilbake</Text>
+          <ArrowLeft size={18} color={tc('#63665F', 'muted')} />
+          <Text className="ml-2 text-sm font-medium text-muted">Tilbake</Text>
         </Pressable>
 
-        <Text className="text-2xl font-bold text-[#0B0B0B]">Kundesenter</Text>
-        <Text className="mt-1 text-sm leading-5 text-[#63665F]">Hva kan vi hjelpe med?</Text>
+        <Text className="text-2xl font-bold text-ink">Kundesenter</Text>
+        <Text className="mt-1 text-sm leading-5 text-muted">Hva kan vi hjelpe med?</Text>
 
-        <View className="mt-5 overflow-hidden rounded-3xl border border-[#E6E7E1] bg-white">
+        <View className="mt-5 overflow-hidden rounded-3xl border border-line bg-surface">
           <View className="flex-row items-center gap-4 p-5">
-            <View className="h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EAF1E9]">
-              <Mail size={18} color="#2E6641" />
+            <View className="h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-tint">
+              <Mail size={18} color={TC.brandText} />
             </View>
             <View className="min-w-0 flex-1">
-              <Text className="text-sm font-bold text-[#0B0B0B]">E-post</Text>
-              <Text className="text-xs text-[#63665F]">{SUPPORT_EMAIL}</Text>
+              <Text className="text-sm font-bold text-ink">E-post</Text>
+              <Text className="text-[0.8125rem] text-muted">{SUPPORT_EMAIL}</Text>
             </View>
             <Pressable
               onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
-              className="shrink-0 rounded-full border border-[#E6E7E1] bg-white px-3.5 py-2"
+              className="shrink-0 rounded-full border border-line bg-surface px-3.5 py-2"
             >
-              <Text className="text-xs font-bold text-[#2E6641]">Send e-post</Text>
+              <Text className="text-[0.8125rem] font-bold text-brand-text">Send e-post</Text>
             </Pressable>
           </View>
-          <View className="border-t border-[#E6E7E1] px-5 py-3.5">
+          <View className="border-t border-line px-5 py-3.5">
             <View className="flex-row items-center gap-1.5">
-              <ShieldCheck size={12} color="#2E6641" />
-              <Text className="text-[11px] text-[#63665F]">Vi svarer normalt innen 24 timer på hverdager</Text>
+              <ShieldCheck size={12} color={TC.brandText} />
+              <Text className="text-[11px] text-muted">Vi svarer normalt innen 24 timer på hverdager</Text>
             </View>
           </View>
         </View>
 
-        <View className="mt-5 overflow-hidden rounded-3xl border border-[#E6E7E1] bg-white">
+        <View className="mt-5 overflow-hidden rounded-3xl border border-line bg-surface">
           <View className="px-5 pb-4 pt-5">
-            <Text className="mb-3 text-sm font-bold text-[#0B0B0B]">Ofte stilte spørsmål</Text>
-            <View className="h-11 flex-row items-center rounded-full border border-[#E6E7E1] bg-[#EFF0EA] pl-3.5 pr-2">
-              <Search size={15} color="#9B9E96" />
+            <Text className="mb-3 text-sm font-bold text-ink">Ofte stilte spørsmål</Text>
+            <View className="h-11 flex-row items-center rounded-full border border-line bg-page pl-3.5 pr-2">
+              <Search size={15} color={tc('#9B9E96', 'subtle')} />
               <TextInput
                 value={faqSearch}
                 onChangeText={setFaqSearch}
                 placeholder="Søk i FAQ..."
-                placeholderTextColor="#9B9E96"
-                className="ml-2 flex-1 text-sm text-[#0B0B0B]"
+                placeholderTextColor={TC.placeholder}
+                className="ml-2 flex-1 text-sm text-ink"
                 autoCapitalize="none"
                 autoCorrect={false}
               />
             </View>
           </View>
-          <View className="border-t border-[#E6E7E1]">
+          <View className="border-t border-line">
             {filteredFaq.length > 0 ? (
               filteredFaq.map((faq, idx) => {
                 const open = openFaqId === faq.id;
@@ -156,29 +158,29 @@ export default function SupportScreen() {
                   <View key={faq.id}>
                     <Pressable
                       onPress={() => setOpenFaqId(open ? null : faq.id)}
-                      className="flex w-full flex-row items-start justify-between gap-3 bg-white px-5 py-4 active:bg-[#F4F6F0]"
+                      className="flex w-full flex-row items-start justify-between gap-3 bg-surface px-5 py-4 active:bg-surface-2"
                     >
-                      <Text className="flex-1 text-sm font-semibold text-[#0B0B0B] leading-5 pt-0.5">
+                      <Text className="flex-1 text-sm font-semibold text-ink leading-5 pt-0.5">
                         {faq.question}
                       </Text>
                       <ChevronDown
                         size={15}
-                        color={open ? '#2E6641' : '#9B9E96'}
+                        color={open ? TC.brandText : tc('#9B9E96', 'subtle')}
                         style={{ transform: [{ rotate: open ? '180deg' : '0deg' }], marginTop: 4 }}
                       />
                     </Pressable>
                     {open ? (
-                      <View className="border-t border-[#F4F6F0] bg-[#FBFCF8] px-5 pb-4 pt-3">
-                        <Text className="text-sm leading-6 text-[#63665F]">{faq.answer}</Text>
+                      <View className="border-t border-[#F4F6F0] bg-[#FBFCF8] dark:bg-surface-2 px-5 pb-4 pt-3">
+                        <Text className="text-sm leading-6 text-muted">{faq.answer}</Text>
                       </View>
                     ) : null}
-                    {!isLast ? <View className="h-px bg-[#E6E7E1] mx-5" /> : null}
+                    {!isLast ? <View className="h-px bg-line mx-5" /> : null}
                   </View>
                 );
               })
             ) : (
               <View className="py-8 px-5">
-                <Text className="text-center text-sm text-[#63665F]">
+                <Text className="text-center text-sm text-muted">
                   Ingen treff for «{faqSearch}».
                 </Text>
               </View>
@@ -186,64 +188,64 @@ export default function SupportScreen() {
           </View>
         </View>
 
-        <View className="mt-5 overflow-hidden rounded-3xl border border-[#E6E7E1] bg-white p-5">
-          <Text className="text-sm font-bold uppercase tracking-[0.14em] text-[#2E6641]">
+        <View className="mt-5 overflow-hidden rounded-3xl border border-line bg-surface p-5">
+          <Text className="text-sm font-bold uppercase tracking-[0.14em] text-brand-text">
             Send en sak
           </Text>
           <View className="mt-2 flex-row items-center gap-1.5">
-            <ShieldCheck size={12} color="#2E6641" />
-            <Text className="text-[11px] text-[#63665F]">
+            <ShieldCheck size={12} color={TC.brandText} />
+            <Text className="text-[11px] text-muted">
               Vi svarer til e-postadressen på Jobblo-kontoen din.
             </Text>
           </View>
 
           {sent ? (
             <View className="items-center py-8">
-              <CheckCircle2 size={36} color="#2E6641" />
-              <Text className="mt-3 text-sm font-bold text-[#0B0B0B]">Saken din er registrert</Text>
-              <Text className="mt-1 text-center text-xs leading-5 text-[#63665F]">
+              <CheckCircle2 size={36} color={TC.brandText} />
+              <Text className="mt-3 text-sm font-bold text-ink">Saken din er registrert</Text>
+              <Text className="mt-1 text-center text-[0.8125rem] leading-5 text-muted">
                 {createTicket.data?.message || 'Vi svarer normalt innen 24 timer på hverdager.'}
               </Text>
               <Pressable onPress={resetForm} className="mt-5">
-                <Text className="text-xs font-bold text-[#2E6641]">Send en ny sak</Text>
+                <Text className="text-[0.8125rem] font-bold text-brand-text">Send en ny sak</Text>
               </Pressable>
             </View>
           ) : (
             <View className="mt-4 space-y-4">
               <View>
-                <Text className="mb-1.5 text-xs font-bold text-[#4B4D47]">Emne</Text>
+                <Text className="mb-1.5 text-[0.8125rem] font-bold text-[#4B4D47]">Emne</Text>
                 <TextInput
                   value={subject}
                   onChangeText={(v) => { setSubject(v); setSubmitError(null); }}
                   placeholder="Kort beskrivelse av problemet"
-                  placeholderTextColor="#9B9E96"
+                  placeholderTextColor={TC.placeholder}
                   maxLength={200}
-                  className="rounded-xl border border-[#E6E7E1] bg-white px-3.5 py-3 text-sm text-[#0B0B0B] placeholder:text-[#9B9E96]"
+                  className="rounded-xl border border-line bg-surface px-3.5 py-3 text-sm text-ink placeholder:text-subtle"
                 />
-                <Text className="mt-1 text-[10px] text-right text-[#9B9E96]">
+                <Text className="mt-1 text-[10px] text-right text-subtle">
                   {subject.length}/200
                 </Text>
               </View>
               <View>
-                <Text className="mb-1.5 text-xs font-bold text-[#4B4D47]">Melding</Text>
+                <Text className="mb-1.5 text-[0.8125rem] font-bold text-[#4B4D47]">Melding</Text>
                 <TextInput
                   value={message}
                   onChangeText={(v) => { setMessage(v); setSubmitError(null); }}
                   placeholder="Beskriv problemet ditt i detalj..."
-                  placeholderTextColor="#9B9E96"
+                  placeholderTextColor={TC.placeholder}
                   multiline
                   maxLength={5000}
                   numberOfLines={6}
                   textAlignVertical="top"
-                  className="min-h-[140px] rounded-xl border border-[#E6E7E1] bg-white px-3.5 py-3 text-sm leading-6 text-[#0B0B0B] placeholder:text-[#9B9E96]"
+                  className="min-h-[140px] rounded-xl border border-line bg-surface px-3.5 py-3 text-sm leading-6 text-ink placeholder:text-subtle"
                 />
-                <Text className="mt-1 text-[10px] text-right text-[#9B9E96]">
+                <Text className="mt-1 text-[10px] text-right text-subtle">
                   {message.length}/5000
                 </Text>
               </View>
 
               {submitError ? (
-                <Text className="text-xs text-[#B4544A]">{submitError}</Text>
+                <Text className="text-[0.8125rem] text-[#B4544A] dark:text-danger">{submitError}</Text>
               ) : null}
 
               <Button
@@ -254,23 +256,23 @@ export default function SupportScreen() {
                 icon={createTicket.isPending ? null : <Send size={15} color="#FFFFFF" />}
                 onPress={handleSubmit}
               />
-              <Text className="text-center text-[11px] text-[#63665F]">
+              <Text className="text-center text-[11px] text-muted">
                 Vi svarer normalt innen 24 timer på hverdager.
               </Text>
             </View>
           )}
         </View>
 
-        <View className="mt-5 overflow-hidden rounded-3xl border border-[#E6E7E1] bg-white">
-          <View className="flex-row items-center gap-3 border-b border-[#E6E7E1] px-5 py-4">
-            <MessageSquare size={18} color="#2E6641" />
+        <View className="mt-5 overflow-hidden rounded-3xl border border-line bg-surface">
+          <View className="flex-row items-center gap-3 border-b border-line px-5 py-4">
+            <MessageSquare size={18} color={TC.brandText} />
             <View className="flex-1 min-w-0">
-              <Text className="text-sm font-bold text-[#0B0B0B]">Mine saker</Text>
-              <Text className="text-xs text-[#63665F]">Tidligere henvendelser du har sendt</Text>
+              <Text className="text-sm font-bold text-ink">Mine saker</Text>
+              <Text className="text-[0.8125rem] text-muted">Tidligere henvendelser du har sendt</Text>
             </View>
             {ticketsError ? (
-              <Pressable onPress={() => void refetchTickets()} className="shrink-0 rounded-full border border-[#E6E7E1] bg-white px-3 py-1.5">
-                <Text className="text-xs font-bold text-[#2E6641]">Prøv igjen</Text>
+              <Pressable onPress={() => void refetchTickets()} className="shrink-0 rounded-full border border-line bg-surface px-3 py-1.5">
+                <Text className="text-[0.8125rem] font-bold text-brand-text">Prøv igjen</Text>
               </Pressable>
             ) : null}
           </View>
@@ -281,13 +283,13 @@ export default function SupportScreen() {
             </View>
           ) : ticketsError ? (
             <View className="px-5 py-6">
-              <Text className="text-sm text-[#63665F]">
+              <Text className="text-sm text-muted">
                 Kunne ikke hente sakene dine akkurat nå.
               </Text>
             </View>
           ) : !tickets || tickets.length === 0 ? (
             <View className="px-5 py-8">
-              <Text className="text-sm text-[#63665F]">
+              <Text className="text-sm text-muted">
                 Du har ikke sendt noen saker ennå.
               </Text>
             </View>
@@ -299,13 +301,13 @@ export default function SupportScreen() {
                   <View className="px-5 py-4">
                     <View className="flex-row items-start justify-between gap-3">
                       <View className="min-w-0 flex-1">
-                        <Text className="text-sm font-semibold text-[#0B0B0B] leading-5" numberOfLines={2}>
+                        <Text className="text-sm font-semibold text-ink leading-5" numberOfLines={2}>
                           {ticket.subject}
                         </Text>
-                        <Text className="mt-2 text-xs text-[#63665F] leading-5" numberOfLines={2}>
+                        <Text className="mt-2 text-[0.8125rem] text-muted leading-5" numberOfLines={2}>
                           {ticket.message}
                         </Text>
-                        <Text className="mt-2 text-[11px] text-[#9B9E96]">
+                        <Text className="mt-2 text-[11px] text-subtle">
                           {formatDate(ticket.createdAt)}
                         </Text>
                       </View>
@@ -321,7 +323,7 @@ export default function SupportScreen() {
                       </View>
                     </View>
                   </View>
-                  {!isLast ? <View className="h-px bg-[#E6E7E1] mx-5" /> : null}
+                  {!isLast ? <View className="h-px bg-line mx-5" /> : null}
                 </View>
               );
             })

@@ -251,6 +251,11 @@ exports.createOrGetAccount = async (req, res) => {
 exports.createAccountLink = async (req, res) => {
   try {
     const userId = req.userId;
+    // Same closed enum as SafePay checkout: the app says "mobile", the URLs come from server config.
+    const platform = req.body?.platform;
+    if (platform !== undefined && platform !== 'web' && platform !== 'mobile') {
+      return res.status(400).json({ error: 'Ugyldig plattform', code: 'invalid_platform' });
+    }
     const stripeConfig = await getStripeConfiguration();
     if (stripeConfig.keyModeValid === false) {
       const error = new Error('Stripe mode configuration is invalid.');
@@ -272,10 +277,22 @@ exports.createAccountLink = async (req, res) => {
       return res.json({ url: loginLink.url });
     }
 
+    let refreshUrl = `${frontendUrl}/settings/payout?refresh=1`;
+    let returnUrl = `${frontendUrl}/settings/payout?success=1`;
+    if (platform === 'mobile') {
+      // Lazy require: SafePayCheckoutController is large and only this branch needs it.
+      const bridge = require('./SafePayCheckoutController').connectMobileReturnUrl(req);
+      if (bridge.error) {
+        console.error('createAccountLink: %s', bridge.error);
+        return res.status(500).json({ error: 'Kunne ikke lage lenken tilbake til appen.' });
+      }
+      refreshUrl = returnUrl = bridge.url;
+    }
+
     const link = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${frontendUrl}/settings/payout?refresh=1`,
-      return_url: `${frontendUrl}/settings/payout?success=1`,
+      refresh_url: refreshUrl,
+      return_url: returnUrl,
       type: 'account_onboarding',
     });
 

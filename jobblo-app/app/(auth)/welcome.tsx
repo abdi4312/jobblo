@@ -8,10 +8,11 @@ import { SafePayExplainer } from '../../src/components/landing/SafePayExplainer'
 import { HowItWorks } from '../../src/components/landing/HowItWorks';
 import { Jobs } from '../../src/components/landing/Jobs';
 import { CTABand } from '../../src/components/landing/CTABand';
+import { TC } from '../../src/theme/colors';
 
 export default function WelcomeScreen() {
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#EFF0EA' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: TC.page }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
         <View>
           <HomeHero />

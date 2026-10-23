@@ -5,11 +5,14 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "scheme": "jobblo",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.jobblo.app"
+      "bundleIdentifier": "com.jobblo.app",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.jobblo.app",
@@ -27,7 +30,20 @@
     "plugins": [
       "expo-router",
       "expo-notifications",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Jobblo trenger tilgang til bildene dine slik at du kan legge til bilder av oppdraget, profilbilde og dokumentasjon av utført arbeid.",
+          "cameraPermission": "Jobblo bruker kameraet slik at du kan ta bilder av oppdraget og dokumentere utført arbeid."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Jobblo bruker posisjonen din til å plassere oppdraget ditt på kartet og vise oppdrag i nærheten av deg."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

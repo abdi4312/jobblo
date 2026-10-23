@@ -106,7 +106,7 @@ router.post('/accept-terms', authenticate, authController.acceptTerms);
  */
 router.post('/login', authLimiter, authController.login);
 
-router.post('/logout', authController.logout);
+router.post('/logout', optionalAuthenticate, authController.logout);
 router.post('/refresh-token', authController.refreshToken);
 router.get('/profile', authenticate, authController.getProfile);
 router.get('/sessions', authenticate, authController.getSessions);

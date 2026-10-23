@@ -46,13 +46,13 @@ export default function TermsAcceptanceScreen() {
           </Text>
 
           {error ? (
-            <View className="mt-4 rounded-xl border border-[#D8B0AB] bg-[#FCF5F4] px-3 py-2.5">
-              <Text className="text-[13px] leading-5 text-[#B0453B]">{error}</Text>
+            <View className="mt-4 rounded-xl border border-danger-line bg-[#FCF5F4] dark:bg-danger-tint px-3 py-2.5">
+              <Text className="text-[13px] leading-5 text-[#B0453B] dark:text-danger">{error}</Text>
             </View>
           ) : null}
 
-          <View className="mt-5 rounded-2xl border border-line bg-[#F5F6F1] p-3">
-            <Text className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#9B9E96]">Brukervilkår</Text>
+          <View className="mt-5 rounded-2xl border border-line bg-[#F5F6F1] dark:bg-surface-2 p-3">
+            <Text className="text-[12px] font-semibold uppercase tracking-[0.18em] text-subtle">Brukervilkår</Text>
             <Text className="mt-2 text-[13px] font-semibold text-ink">{userTerms.title}</Text>
             <Text className="mt-1 text-[11px] text-muted">Sist oppdatert: {userTerms.lastUpdatedDisplay}</Text>
             <Text className="mt-3 text-[12px] leading-5 text-muted">{userTerms.intro}</Text>
@@ -61,7 +61,7 @@ export default function TermsAcceptanceScreen() {
           <View className="mt-5 gap-3">
             <Pressable
               onPress={() => router.push('/(auth)/terms')}
-              className="h-[46px] items-center justify-center rounded-xl border border-line bg-white"
+              className="h-[46px] items-center justify-center rounded-xl border border-line bg-surface"
             >
               <Text className="text-[15px] font-semibold text-brand">Vis full tekst</Text>
             </Pressable>
@@ -78,7 +78,7 @@ export default function TermsAcceptanceScreen() {
 
             <Pressable
               onPress={() => void logout()}
-              className="h-[46px] items-center justify-center rounded-xl bg-[#F0F1EB]"
+              className="h-[46px] items-center justify-center rounded-xl bg-[#F0F1EB] dark:bg-surface-2"
             >
               <Text className="text-[15px] font-semibold text-ink">Logg ut</Text>
             </Pressable>

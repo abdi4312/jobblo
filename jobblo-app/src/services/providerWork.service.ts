@@ -40,6 +40,9 @@ export async function uploadProviderEvidence(
   if (completionNote?.trim()) formData.append('completionNote', completionNote.trim());
   const response = await apiClient.post(`/safepay/orders/${safeOrderId}/evidence`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    // The server uploads each file to storage before answering; the 15 s default timed out
+    // on mobile data while the upload still succeeded, so the retry posted it twice.
+    timeout: 90_000,
   });
   return response.data;
 }

@@ -52,6 +52,10 @@ export function customerOrderRoute(
 ): OrderRoute {
   const id = orderId.trim();
 
+  // Cancelled (e.g. provider never started): the contract screen shows reason + refund status.
+  if (status === 'cancelled') {
+    return { pathname: '/(app)/safepay/checkout/[orderId]', params: { orderId: id } };
+  }
   if (status && APPROVABLE_STATUSES.includes(status)) {
     return { pathname: '/(app)/safepay/approval/[orderId]', params: { orderId: id } };
   }

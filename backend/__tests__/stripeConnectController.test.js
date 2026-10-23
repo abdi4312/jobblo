@@ -96,6 +96,30 @@ it('keeps incomplete accounts on the existing hosted onboarding flow', async () 
   );
 });
 
+it('sends the app back through the mobile bridge, and rejects unknown platforms', async () => {
+  getConnectReadiness.mockResolvedValue({ ready: false });
+  process.env.MOBILE_RETURN_URL = 'https://api.jobblo.test';
+  const res = makeRes();
+
+  await controller.createAccountLink({ userId: 'worker', body: { platform: 'mobile' } }, res);
+
+  const bridge = 'https://api.jobblo.test/api/safepay-checkout/mobile-return?state=connect';
+  expect(stripe.accountLinks.create).toHaveBeenCalledWith(
+    expect.objectContaining({ return_url: bridge, refresh_url: bridge })
+  );
+
+  const bad = makeRes();
+  await controller.createAccountLink({ userId: 'worker', body: { platform: 'ios' } }, bad);
+  expect(bad.statusCode).toBe(400);
+  delete process.env.MOBILE_RETURN_URL;
+
+  // ...and the bridge hands off to the app's payout screen.
+  const page = { headers: {}, set(h, v) { Object.assign(this.headers, typeof h === 'string' ? { [h]: v } : h); return this; }, status(c) { this.statusCode = c; return this; }, send(b) { this.body = b; return this; } };
+  require('../controllers/SafePayCheckoutController').mobileReturn({ query: { state: 'connect' } }, page);
+  expect(page.statusCode).toBe(200);
+  expect(page.body).toContain('href="jobblo://profile/settings/payout"');
+});
+
 it('uses only the selected live account ID and API client', async () => {
   getStripeConfiguration.mockResolvedValue({ testMode: false, mode: 'live', keyModeValid: true });
   User.findById.mockReturnValue({

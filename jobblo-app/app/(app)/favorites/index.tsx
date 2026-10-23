@@ -11,6 +11,7 @@ import {
   useFavoriteLists,
 } from '../../../src/hooks/useFavoriteLists';
 import { favoriteListErrorMessage } from '../../../src/utils/favoriteListErrors';
+import { TC } from '../../../src/theme/colors';
 
 const GRID_GAP = 12;
 const PAGE_PADDING = 16;
@@ -27,11 +28,11 @@ function ListsSkeleton({ cardWidth, columns }: { cardWidth: number; columns: num
         <View
           key={index}
           style={{ width: cardWidth }}
-          className="overflow-hidden rounded-[24px] border border-[#E6E7E1] bg-white"
+          className="overflow-hidden rounded-[24px] border border-line bg-surface"
         >
-          <View className="aspect-[4/5] bg-[#EAF1E9]" />
+          <View className="aspect-[4/5] bg-tint" />
           <View className="px-3.5 py-3">
-            <View className="h-3.5 w-4/5 rounded-full bg-[#EAF1E9]" />
+            <View className="h-3.5 w-4/5 rounded-full bg-tint" />
             <View className="mt-2 h-2.5 w-1/2 rounded-full bg-[#F1F3EE]" />
           </View>
         </View>
@@ -94,18 +95,18 @@ export default function FavoritesScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <View className="flex-row items-center justify-between px-4 pb-3 pt-3">
         <Pressable
           onPress={() => router.back()}
-          className="h-10 w-10 items-center justify-center rounded-full border border-[#E6E7E1] bg-white"
+          className="h-10 w-10 items-center justify-center rounded-full border border-line bg-surface"
           accessibilityRole="button"
           accessibilityLabel="Tilbake"
         >
-          <ArrowLeft size={18} color="#0B0B0B" />
+          <ArrowLeft size={18} color={TC.ink} />
         </Pressable>
 
-        <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[#63665F]">
+        <Text className="text-[0.8125rem] font-semibold uppercase tracking-[0.16em] text-muted">
           Lagrede lister
         </Text>
 
@@ -114,7 +115,7 @@ export default function FavoritesScreen() {
             setCreateError(null);
             setIsCreateOpen(true);
           }}
-          className="h-10 w-10 items-center justify-center rounded-full bg-[#2E6641]"
+          className="h-10 w-10 items-center justify-center rounded-full bg-brand"
           accessibilityRole="button"
           accessibilityLabel="Opprett ny liste"
         >
@@ -125,12 +126,12 @@ export default function FavoritesScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: PAGE_PADDING, paddingBottom: 32 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={TC.brandText} />}
       >
-        <Text className="mb-1 text-[1.75rem] font-bold leading-tight tracking-[-0.04em] text-[#0B0B0B]">
+        <Text className="mb-1 text-[1.75rem] font-bold leading-tight tracking-[-0.04em] text-ink">
           Lagrede lister
         </Text>
-        <Text className="mb-5 text-[0.875rem] text-[#63665F]">
+        <Text className="mb-5 text-[0.875rem] text-muted">
           Oppdragene du har lagret, samlet i dine egne lister.
         </Text>
 
@@ -144,11 +145,11 @@ export default function FavoritesScreen() {
             onAction={() => void refetch()}
           />
         ) : sortedLists.length === 0 ? (
-          <View className="rounded-[24px] border border-[#E6E7E1] bg-white p-8">
-            <Text className="text-center text-[1.0625rem] font-semibold text-[#0B0B0B]">
+          <View className="rounded-[24px] border border-line bg-surface p-8">
+            <Text className="text-center text-[1.0625rem] font-semibold text-ink">
               Du har ingen lister ennå
             </Text>
-            <Text className="mt-2 text-center text-[0.875rem] leading-relaxed text-[#63665F]">
+            <Text className="mt-2 text-center text-[0.875rem] leading-relaxed text-muted">
               Lag en liste for å samle oppdragene du vil komme tilbake til.
             </Text>
             <Pressable
@@ -156,7 +157,7 @@ export default function FavoritesScreen() {
                 setCreateError(null);
                 setIsCreateOpen(true);
               }}
-              className="mt-5 flex-row items-center justify-center gap-2 rounded-full bg-[#2E6641] px-4 py-3.5"
+              className="mt-5 flex-row items-center justify-center gap-2 rounded-full bg-brand px-4 py-3.5"
               accessibilityRole="button"
             >
               <Plus size={16} color="#FFFFFF" />
@@ -182,7 +183,7 @@ export default function FavoritesScreen() {
             </View>
 
             {isRefetching ? (
-              <Text className="mt-5 text-center text-[0.75rem] text-[#63665F]">Oppdaterer...</Text>
+              <Text className="mt-5 text-center text-[0.8125rem] text-muted">Oppdaterer...</Text>
             ) : null}
           </>
         )}

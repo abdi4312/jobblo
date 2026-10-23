@@ -8,11 +8,18 @@ import {
   Pressable,
   Share,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowLeft,
   Bookmark,
+  Building2,
+  Home,
+  Heart,
+  BadgeCheck,
+  ChevronRight,
+  Lock,
+  RotateCcw,
   CalendarDays,
   Clock3,
   MapPin,
@@ -34,7 +41,12 @@ import { ApplyModal } from '../../../src/components/domain/ApplyModal';
 import { JobMetaRow } from '../../../src/components/domain/JobMetaRow';
 import { SaveToListSheet } from '../../../src/components/domain/SaveToListSheet';
 import { getCategoryIcon } from '../../../src/utils/categoryIcons';
-import type { Job } from '../../../src/types/Jobs';
+import { ImageViewer } from '../../../src/components/ui/ImageViewer';
+import { categoryImage } from '../../../src/utils/categoryImage';
+import { serviceStatusLabel } from '../../../src/components/domain/ServiceStatusBadge';
+import { MEMBERSHIP_ENABLED } from '../../../src/config/features';
+import { EQUIPMENT_LABELS, type Job } from '../../../src/types/Jobs';
+import { TC, tc } from '../../../src/theme/colors';
 
 function formatDate(value?: string) {
   if (!value) return 'Ikke angitt';
@@ -55,6 +67,22 @@ function formatDuration(duration?: Job['duration']) {
   return `${duration.value} ${unit}`;
 }
 
+/** Round white button floating over the listing photo (FINN style). */
+function FloatingButton({ label, onPress, children }: { label: string; onPress: () => void; children: React.ReactNode }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={6}
+      className="h-10 w-10 items-center justify-center rounded-full bg-white/95 active:opacity-80"
+      style={{ shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 4 }}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
 export default function JobDetailsScreen() {
   const params = useLocalSearchParams<{ id: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -71,6 +99,9 @@ export default function JobDetailsScreen() {
   const [isApplyModalOpen, setIsApplyModalOpen] = React.useState(false);
   const [applyError, setApplyError] = React.useState<string | null>(null);
   const [saveSheetVisible, setSaveSheetVisible] = React.useState(false);
+  const [activeImage, setActiveImage] = React.useState(0);
+  const [viewerIndex, setViewerIndex] = React.useState<number | null>(null);
+  const insets = useSafeAreaInsets();
   const { isSaved, isLoading: savedLoading } = useIsServiceSaved(id ?? '');
 
   const { mutate: applyToJob, isPending: isApplyLoading } = useApplyMutation({
@@ -87,7 +118,9 @@ export default function JobDetailsScreen() {
         const minutesLeft = Math.ceil((new Date(errorData.unlockAt).getTime() - Date.now()) / 60000);
         errorMessage = `Du må vente ${minutesLeft} minutter før du kan søke på nytt.`;
       } else if (error.response?.status === 402) {
-        errorMessage = 'Du har nådd din månedlige grense for kontakter. Oppgrader planen din for å søke videre.';
+        errorMessage = MEMBERSHIP_ENABLED
+          ? 'Du har nådd din månedlige grense for kontakter. Oppgrader planen din for å søke videre.'
+          : 'Du har nådd din månedlige grense for kontakter.';
       } else if (errorData?.code === 'STRIPE_CONNECT_REQUIRED') {
         void connectStatusQuery.refetch();
         errorMessage = 'Du må fullføre og verifisere Stripe Connect-kontoen din før du kan sende forespørsler eller starte oppdrag.';
@@ -113,7 +146,6 @@ export default function JobDetailsScreen() {
     if (!serviceId || !customerId) return false;
     return String(serviceId) === String(id) && String(customerId) === currentUserId && request.status === 'pending';
   });
-  const requestStateLoading = isAuthenticated && !isOwner && requestsQuery.isLoading;
   const imageList = Array.isArray(job?.images) && job.images.length > 0 ? job.images : [];
 
   const primaryCtaLabel = !isAuthenticated
@@ -122,11 +154,9 @@ export default function JobDetailsScreen() {
       ? 'Dette er ditt oppdrag'
       : isClosed
         ? 'Oppdraget er lukket'
-        : requestStateLoading
-          ? 'Sjekker forespørsel...'
-          : hasPendingRequest
-            ? 'Forespørsel sendt'
-            : 'Søk på oppdraget';
+        : hasPendingRequest
+          ? 'Forespørsel sendt'
+          : 'Søk på oppdraget';
 
   const handleShare = async () => {
     if (!job) return;
@@ -141,7 +171,7 @@ export default function JobDetailsScreen() {
       return;
     }
 
-    if (isOwner || isClosed || requestStateLoading || hasPendingRequest) {
+    if (isOwner || isClosed || hasPendingRequest) {
       return;
     }
 
@@ -159,15 +189,27 @@ export default function JobDetailsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
-        <LoadingIndicator message="Laster oppdrag..." />
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
+        {/* Skeleton in the page's own shape instead of a full-screen spinner. */}
+        <View className="gap-5 px-4 pt-4" accessibilityLabel="Laster oppdrag">
+          <View className="flex-row justify-between">
+            <View className="h-10 w-10 rounded-full bg-line" />
+            <View className="h-10 w-10 rounded-full bg-line" />
+          </View>
+          <View className="aspect-[4/3] rounded-[28px] bg-line" />
+          <View className="gap-3 rounded-[28px] bg-surface p-5">
+            <View className="h-7 w-4/5 rounded bg-line" />
+            <View className="h-4 w-1/2 rounded bg-page" />
+            <View className="mt-3 h-9 w-2/5 rounded bg-line" />
+          </View>
+        </View>
       </SafeAreaView>
     );
   }
 
   if (isError) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState
           title="Kunne ikke laste oppdraget"
           message="Sjekk internettforbindelsen din og prøv igjen."
@@ -180,7 +222,7 @@ export default function JobDetailsScreen() {
 
   if (!job) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <EmptyState
           title="Oppdraget finnes ikke"
           message="Annonsen er kanskje fjernet, eller lenken er feil."
@@ -190,146 +232,182 @@ export default function JobDetailsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['left', 'right']} className="flex-1 bg-page">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
-        <View className="mb-4 flex-row items-center justify-between">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="h-10 w-10 items-center justify-center rounded-full border border-[#E6E7E1] bg-white"
-          >
-            <ArrowLeft size={18} color="#0B0B0B" />
-          </TouchableOpacity>
-          <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[#63665F]">
-            Oppdrag
-          </Text>
-          <TouchableOpacity
-            onPress={handleShare}
-            className="h-10 w-10 items-center justify-center rounded-full border border-[#E6E7E1] bg-white"
-            accessibilityRole="button"
-            accessibilityLabel="Del oppdrag"
-          >
-            <Share2 size={18} color="#0B0B0B" />
-          </TouchableOpacity>
-        </View>
-
-        <View className="overflow-hidden rounded-[28px] border border-[#E6E7E1] bg-white">
-          <View className="relative aspect-[4/3] bg-[#EAF1E9]">
+        {/* FINN-style: the photo runs edge to edge, under the status bar. */}
+        <View className="bg-surface">
+          <View className="relative aspect-[4/3] bg-tint">
             {imageList.length > 0 ? (
-              <Image source={{ uri: imageList[0] }} className="h-full w-full" resizeMode="cover" />
+              <Pressable
+                onPress={() => setViewerIndex(Math.min(activeImage, imageList.length - 1))}
+                accessibilityRole="imagebutton"
+                accessibilityLabel="Vis bildet i full størrelse"
+                className="h-full w-full"
+              >
+                <Image source={{ uri: imageList[Math.min(activeImage, imageList.length - 1)] }} className="h-full w-full" resizeMode="cover" />
+              </Pressable>
             ) : (
-              <View className="h-full w-full items-center justify-center bg-[#EAF1E9]">
-                <Text className="text-[0.875rem] text-[#63665F]">Ingen bilde</Text>
-              </View>
+              <Image source={categoryImage(job.categories)} className="h-full w-full" resizeMode="cover" />
             )}
 
-            <View className="absolute left-3 top-3 flex-row flex-wrap gap-2">
+            <View className="absolute bottom-3 left-3 flex-row flex-wrap gap-2">
               {job.promoted && (
                 <View className="flex-row items-center gap-1 rounded-full bg-white/95 px-2.5 py-1.5">
                   <Zap size={12} color="#2E6641" fill="#2E6641" />
-                  <Text className="text-[0.6875rem] font-semibold text-[#63665F]">Sponset</Text>
+                  <Text className="text-[0.8125rem] font-semibold text-[#55584F]">Sponset</Text>
                 </View>
               )}
               {job.urgent && (
-                <View className="flex-row items-center gap-1 rounded-full bg-[#122A1C] px-2.5 py-1.5">
+                <View className="flex-row items-center gap-1 rounded-full bg-brand-deep px-2.5 py-1.5">
                   <Zap size={12} color="#FFFFFF" fill="#FFFFFF" />
-                  <Text className="text-[0.6875rem] font-semibold text-white">Haster</Text>
+                  <Text className="text-[0.8125rem] font-semibold text-white">Haster</Text>
                 </View>
               )}
             </View>
+            {imageList.length > 1 ? (
+              <View className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1">
+                <Text className="text-[0.8125rem] font-semibold text-white">
+                  {Math.min(activeImage, imageList.length - 1) + 1}/{imageList.length}
+                </Text>
+              </View>
+            ) : null}
 
-            {!isOwner && (
-              <TouchableOpacity
-                onPress={() => {
-                  if (!isAuthenticated) {
-                    router.push('/(auth)/login');
-                    return;
-                  }
-                  setSaveSheetVisible(true);
-                }}
-                className="absolute right-3 top-3 h-9 w-9 items-center justify-center rounded-full bg-white/95"
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel={isSaved ? 'Fjern fra lagrede lister' : 'Lagre i liste'}
-              >
-                {savedLoading ? (
-                  <View className="h-4 w-4" />
-                ) : (
-                  <Bookmark size={16} color="#0B0B0B" fill={isSaved ? '#0B0B0B' : 'none'} />
-                )}
-              </TouchableOpacity>
-            )}
+            {/* Round floating buttons over the photo (always light: they sit on a picture). */}
+            <View
+              pointerEvents="box-none"
+              className="absolute left-0 right-0 flex-row items-center justify-between px-4"
+              style={{ top: insets.top + 8 }}
+            >
+              <FloatingButton label="Tilbake" onPress={() => router.back()}>
+                <ArrowLeft size={19} color="#0B0B0B" />
+              </FloatingButton>
+              <View className="flex-row gap-2.5">
+                <FloatingButton label="Del oppdrag" onPress={() => void handleShare()}>
+                  <Share2 size={18} color="#0B0B0B" />
+                </FloatingButton>
+                {!isOwner ? (
+                  <FloatingButton
+                    label={isSaved ? 'Fjern fra lagrede lister' : 'Lagre i liste'}
+                    onPress={() => {
+                      if (!isAuthenticated) {
+                        router.push('/(auth)/login');
+                        return;
+                      }
+                      setSaveSheetVisible(true);
+                    }}
+                  >
+                    {savedLoading ? <View className="h-4 w-4" /> : <Heart size={18} color={isSaved ? '#B4453A' : '#0B0B0B'} fill={isSaved ? '#B4453A' : 'none'} />}
+                  </FloatingButton>
+                ) : null}
+              </View>
+            </View>
           </View>
 
           {imageList.length > 1 && (
-            <View className="flex-row gap-2 overflow-x-auto px-3 py-3">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, padding: 12 }}>
               {imageList.map((imageUrl, index) => (
-                <Image
+                <Pressable
                   key={`${imageUrl}-${index}`}
-                  source={{ uri: imageUrl }}
-                  className="h-16 w-16 rounded-xl"
-                  resizeMode="cover"
-                />
+                  onPress={() => setActiveImage(index)}
+                  accessibilityRole="imagebutton"
+                  accessibilityLabel={`Bilde ${index + 1} av ${imageList.length}`}
+                  className={`h-16 w-16 overflow-hidden rounded-xl border-2 bg-tint ${index === activeImage ? 'border-brand-text' : 'border-transparent'}`}
+                >
+                  <Image source={{ uri: imageUrl }} className="h-full w-full" resizeMode="cover" />
+                </Pressable>
               ))}
-            </View>
+            </ScrollView>
           )}
         </View>
 
-        <View className="mt-5 rounded-[28px] border border-[#E6E7E1] bg-white p-5">
-          <Text className="text-[1.75rem] font-bold leading-tight tracking-[-0.04em] text-[#0B0B0B]">
+        <View className="px-4">
+        {/* One sheet with divided sections instead of six stacked cards. */}
+        <View className="mt-4 overflow-hidden rounded-[28px] bg-surface">
+        <View className="px-5 pb-6 pt-5">
+          {job.customerType ? (
+            <View className="mb-2.5 flex-row items-center gap-1.5 self-start rounded-full bg-tint px-2.5 py-1">
+              {job.customerType === 'business' ? <Building2 size={13} color={TC.brandText} /> : <Home size={13} color={TC.brandText} />}
+              <Text className="text-[0.8125rem] font-semibold text-brand-text">
+                {job.customerType === 'business' ? 'Bedriftsoppdrag' : 'Privat oppdrag'}
+              </Text>
+            </View>
+          ) : null}
+          <Text className="text-[1.75rem] font-bold leading-tight tracking-[-0.04em] text-ink">
             {job.title || 'Uten tittel'}
           </Text>
 
           <View className="mt-3 flex-row flex-wrap items-center gap-x-2 gap-y-1">
             <View className="flex-row items-center gap-1">
-              <MapPin size={14} color="#9B9E96" strokeWidth={2} />
-              <Text className="text-[0.875rem] text-[#63665F]">
+              <MapPin size={14} color={tc('#9B9E96', 'subtle')} strokeWidth={2} />
+              <Text className="text-[0.875rem] text-muted">
                 {job.location?.city || job.location?.address || 'Norge'}
               </Text>
             </View>
-            <Text className="text-[#9B9E96]">·</Text>
+            <Text className="text-subtle">·</Text>
             <View className="flex-row items-center gap-1">
-              <CalendarDays size={14} color="#9B9E96" strokeWidth={2} />
-              <Text className="text-[0.875rem] text-[#63665F]">{formatDate(job.createdAt)}</Text>
+              <CalendarDays size={14} color={tc('#9B9E96', 'subtle')} strokeWidth={2} />
+              <Text className="text-[0.875rem] text-muted">{formatDate(job.createdAt)}</Text>
             </View>
           </View>
 
-          <View className="mt-6 border-t border-[#E6E7E1] pt-5">
-            <Text className="text-[2.1rem] font-bold leading-none tracking-[-0.04em] text-[#0B0B0B]">
-              {job.price ? `${job.price.toLocaleString('nb-NO')} kr` : 'Pris ikke satt'}
-            </Text>
-            <Text className="mt-1.5 text-[0.8125rem] text-[#63665F]">
-              {job.hourlyRate
+          <View className="mt-6 border-t border-line pt-5">
+            <Text className="text-[2.1rem] font-bold leading-none tracking-[-0.04em] text-ink">
+              {job.paymentType === 'Timepris' && job.hourlyRate
                 ? `${job.hourlyRate.toLocaleString('nb-NO')} kr/t`
-                : job.paymentType === 'Anbud'
-                  ? 'Antatt budsjett — gi ditt tilbud'
-                  : 'Fastpris for hele oppdraget'}
+                : job.price
+                  ? `${job.price.toLocaleString('nb-NO')} kr`
+                  : 'Pris ikke satt'}
             </Text>
+            <View className="mt-2 self-start rounded-full bg-tint px-3 py-1">
+              <Text className="text-[0.8125rem] font-semibold text-brand-text">
+                {job.paymentType === 'Timepris' ? 'Timepris' : job.paymentType === 'Anbud' ? 'Anbud · antatt budsjett' : 'Fastpris'}
+              </Text>
+            </View>
           </View>
         </View>
 
-        <View className="mt-5 rounded-[28px] border border-[#E6E7E1] bg-white p-5">
-          <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Om oppdraget</Text>
-          <Text className="mt-3 whitespace-pre-wrap text-[0.9375rem] leading-relaxed text-[#63665F]">
+        <View className="px-5 pb-6">
+          <View className="rounded-2xl border border-[#C6E2CE] bg-tint p-4 dark:border-brand-text/30">
+            <View className="flex-row items-center gap-2">
+              <ShieldCheck size={18} color={TC.brandText} />
+              <Text className="text-[1rem] font-semibold text-ink">Trygg handel med SafePay</Text>
+            </View>
+            {[
+              { icon: Lock, text: 'Pengene holdes trygt hos Jobblo til du har godkjent jobben.' },
+              { icon: RotateCcw, text: 'Starter ikke utføreren innen fristen, får kunden hele beløpet tilbake.' },
+              { icon: BadgeCheck, text: 'Uenig om resultatet? Åpne en tvist, så hjelper Jobblo dere.' },
+            ].map(({ icon: Icon, text }) => (
+              <View key={text} className="mt-2.5 flex-row gap-2.5">
+                <Icon size={15} color={TC.brandText} style={{ marginTop: 3 }} />
+                <Text className="flex-1 text-[0.875rem] leading-5 text-ink-2">{text}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View className="border-t border-line-soft px-5 py-6">
+          <Text className="text-[1.0625rem] font-semibold text-ink">Om oppdraget</Text>
+          <Text className="mt-3 whitespace-pre-wrap text-[1rem] leading-relaxed text-ink-2">
             {job.description || 'Ingen beskrivelse tilgjengelig.'}
           </Text>
         </View>
 
         {job.categories?.length > 0 && (
-          <View className="mt-5 rounded-[28px] border border-[#E6E7E1] bg-white p-5">
-            <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Kategorier</Text>
+          <View className="border-t border-line-soft px-5 py-6">
+            <Text className="text-[1.0625rem] font-semibold text-ink">Kategorier</Text>
             <View className="mt-3 flex-row flex-wrap gap-2">
               {job.categories.map((category) => {
                 const Icon = getCategoryIcon({ name: category });
                 return (
                   <View
                     key={category}
-                    className="flex-row items-center gap-1.5 rounded-full border border-[#E6E7E1] bg-[#F4F6F0] px-3 py-2"
+                    className="flex-row items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 py-2"
                   >
-                    <Icon size={15} color="#2E6641" strokeWidth={2} />
-                    <Text className="text-[0.75rem] font-medium text-[#0B0B0B]">{category}</Text>
+                    <Icon size={15} color={TC.brandText} strokeWidth={2} />
+                    <Text className="text-[0.8125rem] font-medium text-ink">{category}</Text>
                   </View>
                 );
               })}
@@ -337,97 +415,129 @@ export default function JobDetailsScreen() {
           </View>
         )}
 
-        <View className="mt-5 rounded-[28px] border border-[#E6E7E1] bg-white p-5">
-          <Text className="mb-2 text-[0.9375rem] font-semibold text-[#0B0B0B]">Detaljer</Text>
+        <View className="border-t border-line-soft px-5 py-6">
+          <Text className="mb-2 text-[1.0625rem] font-semibold text-ink">Detaljer</Text>
           <JobMetaRow label="Sted" value={job.location?.city || job.location?.address || 'Norge'} />
           <JobMetaRow label="Varighet" value={formatDuration(job.duration) || 'Ikke angitt'} />
-          <JobMetaRow label="Utstyr" value={job.equipment || null} />
+          <JobMetaRow label="Utstyr" value={job.equipment ? EQUIPMENT_LABELS[job.equipment] ?? null : null} />
           <JobMetaRow label="Lagt ut" value={formatDate(job.createdAt)} />
-          <JobMetaRow label="Status" value={job.status || null} />
+          <JobMetaRow label="Status" value={job.status ? serviceStatusLabel(job.status) : null} />
         </View>
 
         {poster && (
-          <Pressable
-            onPress={() =>
-              router.push({ pathname: '/(app)/profile/[userId]', params: { userId: String(poster._id) } })
-            }
-            className="mt-5 rounded-[28px] border border-[#E6E7E1] bg-white p-5"
-          >
-            <Text className="mb-3 text-[0.9375rem] font-semibold text-[#0B0B0B]">Oppdragsgiver</Text>
-            <View className="flex-row items-center gap-3">
-              <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9]">
-                {poster.avatarUrl ? (
-                  <Image source={{ uri: poster.avatarUrl }} className="h-full w-full" resizeMode="cover" />
-                ) : (
-                  <Text className="text-[0.9375rem] font-semibold text-[#2E6641]">
-                    {(poster.name || poster.companyName || 'O').charAt(0).toUpperCase()}
-                  </Text>
-                )}
-              </View>
-
-              <View className="flex-1">
-                <View className="flex-row items-center gap-2">
-                  <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">
-                    {poster.companyName || poster.name || 'Oppdragsgiver'}
-                  </Text>
-                  {poster.verified && (
-                    <View className="flex-row items-center gap-1 rounded-full bg-[#EAF1E9] px-2 py-0.5">
-                      <ShieldCheck size={10} color="#2E6641" />
-                      <Text className="text-[0.625rem] font-bold uppercase text-[#2E6641]">Verifisert</Text>
-                    </View>
+          <View className="border-t border-line-soft px-5 py-6">
+            <Text className="mb-3 text-[1.0625rem] font-semibold text-ink">Oppdragsgiver</Text>
+            {/* Seller card, FINN style: who, verified, rating, member since. */}
+            <Pressable
+              onPress={() => router.push({ pathname: '/(app)/profile/[userId]', params: { userId: String(poster._id) } })}
+              accessibilityRole="button"
+              accessibilityLabel={`Se profilen til ${poster.companyName || poster.name || 'oppdragsgiver'}`}
+              className="rounded-2xl border border-line p-4 active:bg-surface-2"
+            >
+              <View className="flex-row items-center gap-3.5">
+                <View className="h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-tint">
+                  {poster.avatarUrl ? (
+                    <Image source={{ uri: poster.avatarUrl }} className="h-full w-full" resizeMode="cover" />
+                  ) : (
+                    <Text className="text-[1.0625rem] font-semibold text-brand-text">
+                      {(poster.companyName || poster.name || 'O').charAt(0).toUpperCase()}
+                    </Text>
                   )}
                 </View>
-
-                {typeof poster.averageRating === 'number' && poster.averageRating > 0 && (
-                  <View className="mt-1 flex-row items-center gap-1.5">
-                    <Star size={12} color="#2E6641" fill="#2E6641" />
-                    <Text className="text-[0.8125rem] font-semibold text-[#0B0B0B]">
-                      {poster.averageRating.toFixed(1)}
-                    </Text>
-                  </View>
-                )}
-
-                {poster.role && (
-                  <Text className="mt-1 text-[0.8125rem] text-[#63665F]">{poster.role}</Text>
-                )}
+                <View className="min-w-0 flex-1">
+                  <Text className="text-[1rem] font-semibold text-ink" numberOfLines={1}>
+                    {poster.companyName || [poster.name, poster.lastName].filter(Boolean).join(' ') || 'Oppdragsgiver'}
+                  </Text>
+                  <Text className="mt-0.5 text-[0.8125rem] text-muted">
+                    {poster.role === 'company' || poster.companyName ? 'Bedrift' : 'Privat'}
+                    {poster.createdAt ? ` · Medlem siden ${new Date(poster.createdAt).getFullYear()}` : ''}
+                  </Text>
+                </View>
+                <ChevronRight size={18} color={tc('#9B9E96', 'subtle')} />
               </View>
-            </View>
-          </Pressable>
+
+              <View className="mt-3.5 gap-2 border-t border-line-soft pt-3.5">
+                {poster.verified ? (
+                  <View className="flex-row items-center gap-2">
+                    <BadgeCheck size={16} color={TC.brandText} />
+                    <Text className="text-[0.875rem] font-medium text-brand-text">Verifisert med BankID</Text>
+                  </View>
+                ) : null}
+                <View className="flex-row items-center gap-2">
+                  <Star size={15} color={TC.brandText} fill={poster.averageRating ? TC.brandText : 'none'} />
+                  <Text className="text-[0.875rem] text-ink-2">
+                    {poster.averageRating
+                      ? `${poster.averageRating.toFixed(1)} · ${poster.reviewCount ?? 0} ${poster.reviewCount === 1 ? 'vurdering' : 'vurderinger'}`
+                      : 'Ingen vurderinger ennå'}
+                  </Text>
+                </View>
+                {poster.completedJobs ? (
+                  <View className="flex-row items-center gap-2">
+                    <ShieldCheck size={15} color={TC.brandText} />
+                    <Text className="text-[0.875rem] text-ink-2">{poster.completedJobs} fullførte oppdrag med SafePay</Text>
+                  </View>
+                ) : null}
+              </View>
+            </Pressable>
+          </View>
         )}
 
         {job.tags?.length > 0 && (
-          <View className="mt-5 rounded-[28px] border border-[#E6E7E1] bg-white p-5">
-            <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Merker</Text>
+          <View className="border-t border-line-soft px-5 py-6">
+            <Text className="text-[1.0625rem] font-semibold text-ink">Merker</Text>
             <View className="mt-3 flex-row flex-wrap gap-2">
               {job.tags.map((tag) => (
-                <View key={tag} className="rounded-full bg-[#F4F6F0] px-3 py-1.5">
-                  <Text className="text-[0.75rem] font-medium text-[#63665F]">#{tag}</Text>
+                <View key={tag} className="rounded-full bg-surface-2 px-3 py-1.5">
+                  <Text className="text-[0.8125rem] font-medium text-muted">#{tag}</Text>
                 </View>
               ))}
             </View>
           </View>
         )}
+        </View>
+        </View>
       </ScrollView>
 
-      <View className="absolute inset-x-0 bottom-0 border-t border-[#E6E7E1] bg-white px-4 pb-5 pt-3">
+      <ImageViewer images={imageList} index={viewerIndex} onClose={() => setViewerIndex(null)} />
+
+      <View className="absolute inset-x-0 bottom-0 border-t border-line bg-surface px-4 pb-5 pt-3">
+        {isOwner ? (
+          <View className="flex-row gap-3">
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: '/(app)/job-applicants/[serviceId]', params: { serviceId: id ?? '' } })}
+              className="flex-1 rounded-full bg-brand px-4 py-3.5"
+              activeOpacity={0.9}
+            >
+              <Text className="text-center text-[0.9375rem] font-semibold text-white">Se søkere</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: '/(app)/create-job', params: { editId: id ?? '' } })}
+              className="flex-1 rounded-full border border-line bg-surface px-4 py-3.5"
+              activeOpacity={0.9}
+            >
+              <Text className="text-center text-[0.9375rem] font-semibold text-ink">Rediger</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
         <TouchableOpacity
           onPress={handlePrimaryAction}
-          disabled={!isAuthenticated || isOwner || isClosed || requestStateLoading || hasPendingRequest}
-          className={`rounded-full px-4 py-3.5 ${!isAuthenticated || isOwner || isClosed || requestStateLoading || hasPendingRequest ? 'bg-[#EAF1E9]' : 'bg-[#2E6641]'
+          disabled={isAuthenticated && (isClosed || hasPendingRequest)}
+          className={`rounded-full px-4 py-3.5 ${isAuthenticated && (isClosed || hasPendingRequest) ? 'bg-tint' : 'bg-brand'
             }`}
           activeOpacity={0.9}
         >
           <Text
-            className={`text-center text-[0.9375rem] font-semibold ${!isAuthenticated || isOwner || isClosed || requestStateLoading || hasPendingRequest ? 'text-[#63665F]' : 'text-white'
+            className={`text-center text-[0.9375rem] font-semibold ${isAuthenticated && (isClosed || hasPendingRequest) ? 'text-muted' : 'text-white'
               }`}
           >
             {primaryCtaLabel}
           </Text>
         </TouchableOpacity>
+        )}
       </View>
 
-      <ApplyModal
-        visible={isApplyModalOpen}
+      {isApplyModalOpen ? <ApplyModal
+        visible
         onClose={() => setIsApplyModalOpen(false)}
         onSubmit={handleApplySubmit}
         jobTitle={job?.title}
@@ -443,7 +553,7 @@ export default function JobDetailsScreen() {
                 : 'required'
         }
         onGoToPayout={() => router.push('/profile/settings/payout')}
-      />
+      /> : null}
 
       <SaveToListSheet
         visible={saveSheetVisible}

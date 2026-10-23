@@ -15,12 +15,12 @@ export function ErrorState({
   onAction,
 }: ErrorStateProps) {
   return (
-    <View className="mx-4 my-8 rounded-3xl border border-[#E6E7E1] bg-white p-6">
-      <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">{title}</Text>
-      <Text className="mt-1.5 text-[0.875rem] leading-relaxed text-[#63665F]">{message}</Text>
+    <View className="mx-4 my-8 rounded-3xl border border-line bg-surface p-6">
+      <Text className="text-[0.9375rem] font-semibold text-ink">{title}</Text>
+      <Text className="mt-1.5 text-[0.875rem] leading-relaxed text-muted">{message}</Text>
 
       {onAction && (
-        <TouchableOpacity onPress={onAction} className="mt-4 rounded-full bg-[#2E6641] px-4 py-2.5">
+        <TouchableOpacity onPress={onAction} className="mt-4 rounded-full bg-brand px-4 py-2.5">
           <Text className="text-center text-[0.875rem] font-semibold text-white">{actionLabel}</Text>
         </TouchableOpacity>
       )}

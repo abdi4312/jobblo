@@ -1,50 +1,87 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Image, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
-import { useState } from 'react';
+import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import Constants from 'expo-constants';
 import {
-  Bookmark,
+  BadgeCheck,
+  Check,
+  Moon,
+  Smartphone,
+  Sun,
   Briefcase,
   ChevronRight,
+  ClipboardList,
+  Heart,
+  HelpCircle,
   LogOut,
-  MapPin,
   Megaphone,
   Settings,
   ShieldCheck,
   Star,
+  UserRound,
+  Wallet,
+  type LucideIcon,
 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { useProfile } from '../../../src/hooks/useProfile';
+import { useRouter, type Href } from 'expo-router';
+import { useProfile, useUpdateProfile } from '../../../src/hooks/useProfile';
+import { Popover, type PopoverAnchor } from '../../../src/components/ui/Popover';
+import { BottomSheet } from '../../../src/components/ui/BottomSheet';
+import { loadThemePreference, setThemePreference, type ThemePreference } from '../../../src/theme/themePreference';
 import { useAuthStore } from '../../../src/store/authStore';
-import { Button } from '../../../src/components/ui/Button';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
-import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { ConfirmDialog } from '../../../src/components/ui/ConfirmDialog';
+import { ProfileSkeleton } from '../../../src/components/domain/ProfileSkeleton';
+import { TC, tc } from '../../../src/theme/colors';
 
-function initials(name: string) {
+/**
+ * "Min Jobblo", in the FINN app's "Min FINN" layout: a centred title, one card with the
+ * person (avatar, name, BankID, e-mail), then plain rows with icon, label and chevron.
+ * The full website-style profile (cover, tabs, reviews) is behind "Jobbprofil".
+ */
+
+type Row = { label: string; icon: LucideIcon; href: Href; destructive?: boolean };
+
+const THEMES: { value: ThemePreference; label: string; icon: LucideIcon }[] = [
+  { value: 'system', label: 'Automatisk', icon: Smartphone },
+  { value: 'light', label: 'Lys', icon: Sun },
+  { value: 'dark', label: 'Mørk', icon: Moon },
+];
+
+const MAIN: Row[] = [
+  { label: 'Mine annonser', icon: Megaphone, href: '/my-jobs' },
+  { label: 'Søkere og søknader', icon: ClipboardList, href: '/my-applications' },
+  { label: 'Favoritter', icon: Heart, href: '/(app)/favorites' },
+  { label: 'SafePay', icon: ShieldCheck, href: '/profile/settings/safepay' },
+  { label: 'Vurderinger', icon: Star, href: { pathname: '/profile/me', params: { tab: 'Vurderinger' } } },
+  { label: 'Jobbprofil', icon: Briefcase, href: '/profile/me' },
+  { label: 'Utbetalinger', icon: Wallet, href: '/profile/settings/payout' },
+];
+
+const ACCOUNT: Row[] = [
+  { label: 'Innstillinger', icon: Settings, href: '/(app)/profile/settings' },
+  { label: 'Personvern', icon: ShieldCheck, href: '/profile/settings/privacy' },
+  { label: 'Kundesenter', icon: HelpCircle, href: '/profile/support' },
+];
+
+/** FINN-style row: line icon, label, chevron; a hairline divider starts after the icon. */
+function MenuRow({ icon: Icon, label, onPress, divider, destructive, value }: { icon: LucideIcon; label: string; onPress: () => void; divider?: boolean; destructive?: boolean; value?: string }) {
   return (
-    name
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0])
-      .join('')
-      .toUpperCase() || '?'
+    <Pressable onPress={onPress} accessibilityRole="button" className="flex-row items-center pl-4 active:bg-surface-2">
+      {/* Fixed icon box + explicit gap (inline style, so no cached class can shrink it). */}
+      <View style={{ width: 28, alignItems: 'center' }}>
+        <Icon size={22} color={destructive ? TC.danger : TC.ink2} strokeWidth={1.75} />
+      </View>
+      <View
+        style={{ marginLeft: 20 }}
+        className={`flex-1 flex-row items-center py-4 pr-4 ${divider ? 'border-t border-line' : ''}`}
+      >
+        <Text className={`flex-1 text-[1.0625rem] ${destructive ? 'text-danger' : 'text-ink'}`}>{label}</Text>
+        {value ? <Text className="mr-1.5 text-[0.9375rem] text-muted">{value}</Text> : null}
+        {destructive ? null : <ChevronRight size={20} color={tc('#9B9E96', 'subtle')} />}
+      </View>
+    </Pressable>
   );
-}
-
-function placeOf(profile: { postSted?: string | { city?: string }; address?: string }) {
-  if (typeof profile.postSted === 'string') return profile.postSted;
-  if (profile.postSted?.city) return profile.postSted.city;
-  return profile.address || '';
-}
-
-function memberSince(createdAt?: string) {
-  if (!createdAt) return '';
-  const date = new Date(createdAt);
-  return Number.isNaN(date.getTime())
-    ? ''
-    : date.toLocaleDateString('nb-NO', { month: 'long', year: 'numeric' });
 }
 
 export default function ProfileScreen() {
@@ -54,10 +91,57 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [logoutVisible, setLogoutVisible] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const version = Constants.expoConfig?.version;
+  const updateProfile = useUpdateProfile();
+  const cardRef = useRef<View | null>(null);
+  const [anchor, setAnchor] = useState<PopoverAnchor | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  // Utseende: same setting as Innstillinger → Utseende (saved on the device).
+  const [theme, setTheme] = useState<ThemePreference>('system');
+  const [themeSheet, setThemeSheet] = useState(false);
+  useEffect(() => {
+    void loadThemePreference().then(setTheme);
+  }, []);
+  const chooseTheme = (value: ThemePreference) => {
+    setTheme(value);
+    setThemeSheet(false);
+    void setThemePreference(value);
+  };
+  const currentTheme = THEMES.find((option) => option.value === theme) ?? THEMES[0];
+
+  const openCardMenu = () => {
+    cardRef.current?.measureInWindow((x, y, width, height) => setAnchor({ x, y, width, height }));
+  };
+
+  /** "Ta nytt bilde" / "Velg bilde …": square crop, then upload as the avatar (PUT /users/:id). */
+  const changePhoto = async (source: 'camera' | 'library') => {
+    if (!profile?._id) return;
+    if (source === 'camera') {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setPhotoError('Gi Jobblo tilgang til kameraet i Innstillinger for å ta et nytt bilde.');
+        return;
+      }
+    }
+    const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.85 };
+    const result = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    const form = new FormData();
+    form.append('avatar', { uri: asset.uri, name: asset.fileName ?? `profil-${Date.now()}.jpg`, type: asset.mimeType ?? 'image/jpeg' } as unknown as Blob);
+    updateProfile.mutate(
+      { userId: profile._id, data: form },
+      { onError: () => setPhotoError('Kunne ikke lagre bildet. Prøv igjen.') }
+    );
+  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    try { await refetch(); } finally { setRefreshing(false); }
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -70,176 +154,128 @@ export default function ProfileScreen() {
       router.replace('/(auth)/login');
     }
   };
+
   if (isLoading)
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
-        <LoadingIndicator message="Laster profilen..." />
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
+        <ProfileSkeleton />
       </SafeAreaView>
     );
   if (isError || !profile)
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
-        <ErrorState
-          title="Kunne ikke laste profilen"
-          message="Profilen kunne ikke hentes akkurat nå."
-          onAction={() => void refetch()}
-        />
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
+        <ErrorState title="Kunne ikke laste profilen" message="Profilen kunne ikke hentes akkurat nå." onAction={() => void refetch()} />
       </SafeAreaView>
     );
 
-  const fullName =
+  const name =
     profile.role === 'company'
       ? profile.companyName || profile.name || 'Bedrift'
-      : `${profile.name || ''} ${profile.lastName || ''}`.trim() || 'Bruker';
-  const location = placeOf(profile);
-  const since = memberSince(profile.createdAt);
-  const rating =
-    typeof profile.averageRating === 'number' && profile.reviewCount
-      ? profile.averageRating.toFixed(1)
-      : null;
-  const stats = [
-    typeof profile.completedJobs === 'number'
-      ? { label: 'Fullførte', value: profile.completedJobs.toString() }
-      : null,
-    typeof profile.postedJobsCount === 'number'
-      ? { label: 'Lagt ut', value: profile.postedJobsCount.toString() }
-      : null,
-    rating ? { label: 'Rating', value: `${rating}★` } : null,
-    typeof profile.reviewCount === 'number'
-      ? { label: 'Anmeldelser', value: profile.reviewCount.toString() }
-      : null,
-  ].filter(Boolean) as { label: string; value: string }[];
+      : [profile.name, profile.lastName].filter(Boolean).join(' ') || 'Bruker';
+  const verified = profile.identityVerified === true;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
-      <ScrollView contentContainerStyle={{ paddingBottom: 32 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />}>
-        <View className="border-b border-[#E6E7E1] bg-[#EAF1E9] px-5 pb-8 pt-8">
-          <View className="items-center">
-            <View className="h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-[#DCEBDD]">
-              {profile.avatarUrl ? (
-                <Image source={{ uri: profile.avatarUrl }} className="h-full w-full" />
-              ) : (
-                <Text className="text-2xl font-semibold text-[#2E6641]">{initials(fullName)}</Text>
-              )}
-            </View>
-            <View className="mt-4 flex-row flex-wrap items-center justify-center gap-2">
-              <Text className="text-2xl font-bold text-[#0B0B0B]">{fullName}</Text>
-              {profile.verified || profile.identityVerified ? (
-                <ShieldCheck size={19} color="#2E6641" />
-              ) : null}
-            </View>
-            <Text className="mt-1 text-sm text-[#63665F]">
-              {profile.role === 'company' ? 'Bedrift' : 'Jobbsøker'}
-            </Text>
-            {location ? (
-              <View className="mt-3 flex-row items-center gap-1.5">
-                <MapPin size={14} color="#63665F" />
-                <Text className="text-sm text-[#63665F]">{location}</Text>
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={TC.brandText} colors={[TC.brandText]} />}
+      >
+        <Text className="py-3 text-center text-[1.0625rem] font-semibold text-ink">Min Jobblo</Text>
+
+        {/* The person: tapping opens the full job profile. */}
+        <View ref={cardRef} collapsable={false} className="mx-4 mt-2">
+        <Pressable
+          onPress={openCardMenu}
+          accessibilityRole="button"
+          accessibilityLabel={`Profil: ${name}`}
+          className="flex-row items-center gap-4 rounded-2xl bg-surface p-4 active:opacity-90"
+        >
+          <View className="h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-line bg-surface-2">
+            {profile.avatarUrl ? (
+              <Image source={{ uri: profile.avatarUrl }} className="h-full w-full" />
+            ) : (
+              <UserRound size={40} color={tc('#9B9E96', 'subtle')} strokeWidth={1.5} />
+            )}
+            {updateProfile.isPending ? (
+              <View className="absolute inset-0 items-center justify-center bg-black/35">
+                <ActivityIndicator color="#FFFFFF" />
               </View>
             ) : null}
-            {since ? (
-              <Text className="mt-1 text-xs text-[#63665F]">Medlem siden {since}</Text>
-            ) : null}
           </View>
-          <View className="mt-6 flex-row justify-center gap-2">
-            <Button
-              label="Rediger profil"
-              variant="secondary"
-              onPress={() => router.push('/profile/edit')}
-            />
+          <View className="min-w-0 flex-1">
+            <Text className="text-[1.5rem] font-bold text-ink" numberOfLines={1}>{name}</Text>
+            {verified ? (
+              <View className="mt-1 flex-row items-center gap-1.5">
+                <BadgeCheck size={17} color={TC.surface} fill={TC.brandText} />
+                <Text className="text-[0.9375rem] text-ink-2">Verifisert med BankID</Text>
+              </View>
+            ) : (
+              <Text className="mt-1 text-[0.9375rem] font-medium text-brand-text">Verifiser med BankID</Text>
+            )}
+            {profile.email ? <Text className="mt-0.5 text-[0.9375rem] text-muted" numberOfLines={1}>{profile.email}</Text> : null}
           </View>
+        </Pressable>
         </View>
-        {stats.length ? (
-          <View className="mx-4 -mt-5 flex-row flex-wrap justify-around rounded-3xl border border-[#E6E7E1] bg-white px-3 py-4">
-            {stats.map((stat) => (
-              <View key={stat.label} className="min-w-[68px] items-center px-2">
-                <Text className="text-base font-bold text-[#0B0B0B]">{stat.value}</Text>
-                <Text className="mt-1 text-[0.6875rem] text-[#63665F]">{stat.label}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-        <View className="px-4 pt-5">
-          {profile.bio ? (
-            <View className="rounded-3xl border border-[#E6E7E1] bg-white p-5">
-              <Text className="text-base font-semibold text-[#0B0B0B]">Om meg</Text>
-              <Text className="mt-3 text-sm leading-6 text-[#63665F]">{profile.bio}</Text>
-            </View>
-          ) : null}
-          {profile.skills?.length ? (
-            <View className="mt-4 rounded-3xl border border-[#E6E7E1] bg-white p-5">
-              <Text className="text-base font-semibold text-[#0B0B0B]">Ferdigheter</Text>
-              <View className="mt-3 flex-row flex-wrap gap-2">
-                {profile.skills.map((skill) => (
-                  <View key={skill} className="rounded-full bg-[#EAF1E9] px-3 py-2">
-                    <Text className="text-xs font-medium text-[#2E6641]">{skill}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          ) : null}
-          <View className="mt-4 overflow-hidden rounded-3xl border border-[#E6E7E1] bg-white">
-            <Pressable
-              onPress={() => router.push('/my-applications')}
-              className="flex-row items-center p-5"
-            >
-              <Briefcase size={18} color="#2E6641" />
-              <Text className="ml-3 flex-1 text-sm font-semibold text-[#0B0B0B]">
-                Mine oppdrag og søknader
-              </Text>
-              <ChevronRight size={18} color="#63665F" />
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/my-jobs')}
-              className="flex-row items-center border-t border-[#E6E7E1] p-5"
-            >
-              <Megaphone size={18} color="#2E6641" />
-              <Text className="ml-3 flex-1 text-sm font-semibold text-[#0B0B0B]">
-                Mine annonser
-              </Text>
-              <ChevronRight size={18} color="#63665F" />
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/(app)/favorites')}
-              className="flex-row items-center border-t border-[#E6E7E1] p-5"
-            >
-              <Bookmark size={18} color="#2E6641" />
-              <Text className="ml-3 flex-1 text-sm font-semibold text-[#0B0B0B]">
-                Lagrede lister
-              </Text>
-              <ChevronRight size={18} color="#63665F" />
-            </Pressable>
-            {rating ? (
-              <View className="flex-row items-center border-t border-[#E6E7E1] p-5">
-                <Star size={18} color="#2E6641" fill="#2E6641" />
-                <Text className="ml-3 text-sm text-[#63665F]">
-                  {rating} av 5 basert på {profile.reviewCount} anmeldelser
-                </Text>
-              </View>
-            ) : null}
-            <Pressable
-              onPress={() => router.push('/(app)/profile/settings')}
-              className="flex-row items-center border-t border-[#E6E7E1] p-5"
-            >
-              <Settings size={18} color="#2E6641" />
-              <Text className="ml-3 flex-1 text-sm font-semibold text-[#0B0B0B]">
-                Innstillinger
-              </Text>
-              <ChevronRight size={18} color="#63665F" />
-            </Pressable>
-          </View>
-          <Pressable
-            onPress={() => setLogoutVisible(true)}
-            className="mt-4 flex-row items-center justify-center rounded-xl border border-[#E6E7E1] bg-white px-4 py-3.5"
-            accessibilityRole="button"
-            accessibilityLabel="Logg ut"
-          >
-            <LogOut size={17} color="#B4544A" />
-            <Text className="ml-2 text-sm font-semibold text-[#B4544A]">Logg ut</Text>
-          </Pressable>
+
+        <View className="mt-6">
+          {MAIN.map((row, index) => (
+            <MenuRow key={row.label} icon={row.icon} label={row.label} divider={index > 0} onPress={() => router.push(row.href)} />
+          ))}
         </View>
+
+        <View className="mt-8">
+          <MenuRow icon={currentTheme.icon} label="Utseende" value={currentTheme.label} onPress={() => setThemeSheet(true)} />
+          {ACCOUNT.map((row) => (
+            <MenuRow key={row.label} icon={row.icon} label={row.label} divider onPress={() => router.push(row.href)} />
+          ))}
+          <MenuRow icon={LogOut} label="Logg ut" divider destructive onPress={() => setLogoutVisible(true)} />
+        </View>
+
+        <Text className="mt-8 text-center text-[0.8125rem] text-subtle">Jobblo{version ? ` · versjon ${version}` : ''}</Text>
       </ScrollView>
 
+      <BottomSheet visible={themeSheet} onClose={() => setThemeSheet(false)} title="Utseende" hideClose>
+        <View className="-mx-2 -my-2">
+          {THEMES.map(({ value, label, icon: Icon }) => {
+            const active = theme === value;
+            return (
+              <Pressable
+                key={value}
+                onPress={() => chooseTheme(value)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                className={`flex-row items-center gap-3 rounded-xl px-3 py-3.5 ${active ? 'bg-tint' : 'active:bg-surface-2'}`}
+              >
+                <Icon size={20} color={active ? TC.brandText : TC.ink2} />
+                <Text className={`flex-1 text-[1rem] ${active ? 'font-semibold text-brand-text' : 'text-ink'}`}>{label}</Text>
+                {active ? <Check size={18} color={TC.brandText} /> : null}
+              </Pressable>
+            );
+          })}
+          <Text className="px-3 pt-2 text-[0.875rem] text-subtle">Automatisk følger innstillingen på telefonen.</Text>
+        </View>
+      </BottomSheet>
+      <Popover
+        visible={!!anchor}
+        anchor={anchor}
+        onClose={() => setAnchor(null)}
+        title="Profil"
+        actions={[
+          { label: 'Se profilen min', onPress: () => router.push('/profile/me') },
+          { label: 'Profilinnstillinger', onPress: () => router.push('/profile/edit') },
+          { label: 'Ta nytt bilde', onPress: () => void changePhoto('camera') },
+          { label: 'Velg bilde …', onPress: () => void changePhoto('library') },
+        ]}
+      />
+      <ConfirmDialog
+        visible={!!photoError}
+        title="Profilbilde"
+        message={photoError ?? undefined}
+        confirmLabel="OK"
+        hideCancel
+        onConfirm={() => setPhotoError(null)}
+        onClose={() => setPhotoError(null)}
+      />
       <ConfirmDialog
         visible={logoutVisible}
         title="Logg ut?"

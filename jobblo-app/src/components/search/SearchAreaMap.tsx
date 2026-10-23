@@ -1,6 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { Text, View } from 'react-native';
-import MapView, { Circle, PROVIDER_GOOGLE, type LatLng, type Region } from 'react-native-maps';
+import MapView, { Circle, type LatLng, type Region } from 'react-native-maps';
+import { MAP_PROVIDER, MAPS_AVAILABLE } from '@/utils/mapProvider';
+import { MapUnavailable } from '@/components/ui/MapUnavailable';
+import { TC } from '../../theme/colors';
 
 export const NORWAY_SEARCH_CENTERS: Record<string, [number, number]> = {
   '03': [10.7522, 59.9139], '11': [5.7331, 58.97], '15': [6.3648, 62.472],
@@ -32,10 +35,10 @@ export function SearchAreaMap({ center, radius }: { center: [number, number]; ra
   }, [region.latitude, region.longitude, region.latitudeDelta, region.longitudeDelta]);
 
   return (
-    <View className="relative h-52 overflow-hidden rounded-2xl border border-[#E6E7E1] bg-[#F4F6F0]">
-      <MapView
+    <View className="relative h-52 overflow-hidden rounded-2xl border border-line bg-surface-2">
+      {MAPS_AVAILABLE ? <MapView
         ref={mapRef}
-        provider={PROVIDER_GOOGLE}
+        provider={MAP_PROVIDER}
         style={{ flex: 1 }}
         initialRegion={regionFor(DEFAULT_CENTER, 5000)}
         showsCompass
@@ -48,13 +51,13 @@ export function SearchAreaMap({ center, radius }: { center: [number, number]; ra
         <Circle
           center={coordinate}
           radius={radius}
-          strokeColor="#2E6641"
+          strokeColor={TC.brandText}
           strokeWidth={2}
-          fillColor="#2E6641"
+          fillColor={TC.brandText}
         />
-      </MapView>
+      </MapView> : <MapUnavailable />}
       <View className="absolute bottom-2 left-2 rounded-full bg-white/95 px-2.5 py-1">
-        <Text className="text-[0.6875rem] font-semibold text-[#63665F]">Oppdrag nær deg</Text>
+        <Text className="text-[0.8125rem] font-semibold text-muted">Oppdrag nær deg</Text>
       </View>
     </View>
   );

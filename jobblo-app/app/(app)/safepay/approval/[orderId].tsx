@@ -12,7 +12,9 @@ import { isDisputeActive, isDisputeEligibleOrderStatus } from '../../../../src/t
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { Button } from '../../../../src/components/ui/Button';
+import * as Haptics from 'expo-haptics';
 import { SafePayProgressSteps } from '../../../../src/components/domain/SafePayProgressSteps';
+import { TC, tc } from '../../../../src/theme/colors';
 
 const STATUS: Record<string, { title: string; step: number; canApprove: boolean }> = {
   awaiting_payment: { title: 'Venter på betaling', step: 2, canApprove: false },
@@ -52,18 +54,18 @@ function toPayloadRatings(ratings: ReviewRatings): { overall: number; punctualit
 function Stars({ value, onChange, label }: { value: number; onChange: (value: number) => void; label?: string }) {
   return (
     <View>
-      {label ? <Text className="mb-2 text-[0.75rem] font-medium text-[#63665F]">{label}</Text> : null}
+      {label ? <Text className="mb-2 text-[0.8125rem] font-medium text-muted">{label}</Text> : null}
       <View className="flex-row gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
           <Pressable key={star} onPress={() => onChange(star)}>
-            <Star size={26} color="#2E6641" fill={star <= value ? '#2E6641' : 'none'} />
+            <Star size={26} color={TC.brandText} fill={star <= value ? TC.brandText : 'none'} />
           </Pressable>
         ))}
       </View>
     </View>
   );
 }
-function Action({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) { return <Pressable onPress={onPress} disabled={disabled} className={['rounded-full bg-[#2E6641] px-5 py-3', disabled ? 'opacity-50' : ''].join(' ')}><Text className="text-center font-semibold text-white">{label}</Text></Pressable>; }
+function Action({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) { return <Pressable onPress={onPress} disabled={disabled} className={['rounded-full bg-brand px-5 py-3', disabled ? 'opacity-50' : ''].join(' ')}><Text className="text-center font-semibold text-white">{label}</Text></Pressable>; }
 
 export default function SafePayApprovalScreen() {
   const router = useRouter();
@@ -87,8 +89,8 @@ export default function SafePayApprovalScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [approvalResult, setApprovalResult] = useState<ApprovalResult | null>(null);
 
-  if (query.isLoading) return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><LoadingIndicator message="Laster oppdrag..." /></SafeAreaView>;
-  if (query.isError || !query.data?.order) return <SafeAreaView className="flex-1 bg-[#EFF0EA]"><ErrorState title="Kunne ikke laste oppdraget" message="Sjekk internettforbindelsen din og prøv igjen." actionLabel="Prøv igjen" onAction={() => void query.refetch()} /></SafeAreaView>;
+  if (query.isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator message="Laster oppdrag..." /></SafeAreaView>;
+  if (query.isError || !query.data?.order) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ErrorState title="Kunne ikke laste oppdraget" message="Sjekk internettforbindelsen din og prøv igjen." actionLabel="Prøv igjen" onAction={() => void query.refetch()} /></SafeAreaView>;
 
   const { order, calculation } = query.data;
   const currentUserId = idOf(user);
@@ -102,7 +104,7 @@ export default function SafePayApprovalScreen() {
   const hasAnyEvidence = Boolean(order.completionNote?.trim()) || beforeImages.length > 0 || afterImages.length > 0;
 
   if (!isCustomer) {
-    return <SafeAreaView className="flex-1 justify-center bg-[#EFF0EA] px-4"><View className="rounded-3xl bg-white p-8"><Text className="text-center text-lg font-semibold">Ikke tilgang</Text><Text className="mt-2 text-center text-sm text-[#63665F]">Kun oppdragsgiver kan godkjenne en jobb og frigi betalingen.</Text></View></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 justify-center bg-page px-4"><View className="rounded-3xl bg-surface p-8"><Text className="text-center text-lg font-semibold">Ikke tilgang</Text><Text className="mt-2 text-center text-sm text-muted">Kun oppdragsgiver kan godkjenne en jobb og frigi betalingen.</Text></View></SafeAreaView>;
   }
 
   const choosePhotos = async () => {
@@ -141,6 +143,7 @@ export default function SafePayApprovalScreen() {
     const payloadRatings = toPayloadRatings(ratings);
     approveMutation.mutate({ orderId: orderId ?? '', ratings: payloadRatings, comment: comment.slice(0, 1000), photos: photoUrls, recommendWorker }, {
       onSuccess: async (result) => {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
         await query.refetch();
         setApprovalResult(result.payoutWarning ? { title: 'Godkjent — men utbetalingen stoppet', message: result.payoutWarning, warning: true } : { title: 'Jobben er godkjent', message: `Oppdraget er fullført og ${calculation.providerNet.toLocaleString('nb-NO')} kr er tilgjengelig for utfører.`, providerNet: calculation.providerNet });
       },
@@ -166,19 +169,19 @@ export default function SafePayApprovalScreen() {
 
   if (approvalResult) {
     return (
-      <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
-          <Pressable onPress={() => router.back()} className="mb-5 flex-row items-center gap-2"><ArrowLeft size={16} color="#63665F" /><Text className="text-sm text-[#63665F]">Tilbake</Text></Pressable>
-          <View className="rounded-3xl bg-white p-6">
-            <View className="mb-4 h-12 w-12 items-center justify-center rounded-full bg-[#EAF1E9]">
-              <CheckCircle2 size={22} color="#2E6641" />
+          <Pressable onPress={() => router.back()} className="mb-5 flex-row items-center gap-2"><ArrowLeft size={16} color={tc('#63665F', 'muted')} /><Text className="text-sm text-muted">Tilbake</Text></Pressable>
+          <View className="rounded-3xl bg-surface p-6">
+            <View className="mb-4 h-12 w-12 items-center justify-center rounded-full bg-tint">
+              <CheckCircle2 size={22} color={TC.brandText} />
             </View>
-            <Text className="text-center text-[1.5rem] font-bold text-[#0B0B0B]">{approvalResult.title}</Text>
-            <Text className="mt-3 text-center text-[0.875rem] leading-relaxed text-[#63665F]">{approvalResult.message}</Text>
+            <Text className="text-center text-[1.5rem] font-bold text-ink">{approvalResult.title}</Text>
+            <Text className="mt-3 text-center text-[0.875rem] leading-relaxed text-muted">{approvalResult.message}</Text>
             {approvalResult.warning ? (
-              <View className="mt-4 rounded-2xl bg-[#F4F6F0] p-4">
-                <Text className="text-center text-[0.8125rem] font-semibold text-[#122A1C]">Ikke utbetalt ennå</Text>
-                <Text className="mt-2 text-center text-[0.75rem] text-[#63665F]">Utbetalingen stoppet, men oppdraget er godkjent og vi holder beløpet trygt.</Text>
+              <View className="mt-4 rounded-2xl bg-surface-2 p-4">
+                <Text className="text-center text-[0.8125rem] font-semibold text-[#122A1C] dark:text-brand-text">Ikke utbetalt ennå</Text>
+                <Text className="mt-2 text-center text-[0.8125rem] text-muted">Utbetalingen stoppet, men oppdraget er godkjent og vi holder beløpet trygt.</Text>
               </View>
             ) : null}
             <View className="mt-6 gap-3">
@@ -192,34 +195,34 @@ export default function SafePayApprovalScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
-        <Pressable onPress={() => router.back()} className="mb-5 flex-row items-center gap-2"><ArrowLeft size={16} color="#63665F" /><Text className="text-sm text-[#63665F]">Tilbake</Text></Pressable>
+        <Pressable onPress={() => router.back()} className="mb-5 flex-row items-center gap-2"><ArrowLeft size={16} color={tc('#63665F', 'muted')} /><Text className="text-sm text-muted">Tilbake</Text></Pressable>
         <SafePayProgressSteps currentStep={status.step} orderId={orderId} serviceId={order.serviceId?._id} />
-        <View className="mb-4 rounded-2xl bg-white p-5"><Text className="font-semibold">Jobbstatus</Text><View className="mt-3 rounded-xl bg-[#EAF1E9] p-4"><Text className="font-bold text-[#2E6641]">{status.title}</Text><Text className="mt-1 text-xs text-[#63665F]">{order.serviceId?.title ?? 'Oppdrag'}</Text></View></View>
-        <View className="mb-4 rounded-2xl bg-white p-5"><View className="flex-row items-center gap-3"><View className="h-12 w-12 items-center justify-center rounded-full bg-[#EAF1E9]"><Text className="font-bold text-[#2E6641]">{order.providerId?.name?.[0] ?? '?'}</Text></View><View><Text className="text-xs uppercase text-[#9B9E96]">Oppdragstaker</Text><Text className="font-bold">{order.providerId?.name} {order.providerId?.lastName}</Text><Text className="text-xs text-[#63665F]">{order.providerId?.averageRating ? `${order.providerId.averageRating.toFixed(1)} av 5 stjerner` : 'Ingen vurderinger enda'}</Text></View></View></View>
+        <View className="mb-4 rounded-2xl bg-surface p-5"><Text className="font-semibold">Jobbstatus</Text><View className="mt-3 rounded-xl bg-tint p-4"><Text className="font-bold text-brand-text">{status.title}</Text><Text className="mt-1 text-[0.8125rem] text-muted">{order.serviceId?.title ?? 'Oppdrag'}</Text></View></View>
+        <View className="mb-4 rounded-2xl bg-surface p-5"><View className="flex-row items-center gap-3"><View className="h-12 w-12 items-center justify-center rounded-full bg-tint"><Text className="font-bold text-brand-text">{order.providerId?.name?.[0] ?? '?'}</Text></View><View><Text className="text-[0.8125rem] uppercase text-subtle">Oppdragstaker</Text><Text className="font-bold">{order.providerId?.name} {order.providerId?.lastName}</Text><Text className="text-[0.8125rem] text-muted">{order.providerId?.averageRating ? `${order.providerId.averageRating.toFixed(1)} av 5 stjerner` : 'Ingen vurderinger enda'}</Text></View></View></View>
 
-        <View className="mb-4 rounded-2xl bg-white p-5">
-          <View className="flex-row items-center gap-2"><Camera size={17} color="#2E6641" /><Text className="font-semibold">Arbeidsbevis / Proof of work</Text></View>
+        <View className="mb-4 rounded-2xl bg-surface p-5">
+          <View className="flex-row items-center gap-2"><Camera size={17} color={TC.brandText} /><Text className="font-semibold">Arbeidsbevis</Text></View>
           {hasAnyEvidence ? (
             <View className="mt-4 gap-4">
               {order.completionNote?.trim() ? (
-                <View className="rounded-xl bg-[#F4F6F0] p-4">
-                  <Text className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]">Ferdigstillingsnotat fra utfører</Text>
-                  <Text className="text-sm leading-relaxed text-[#63665F]">{order.completionNote}</Text>
+                <View className="rounded-xl bg-surface-2 p-4">
+                  <Text className="mb-2 text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-subtle">Ferdigstillingsnotat fra utfører</Text>
+                  <Text className="text-sm leading-relaxed text-muted">{order.completionNote}</Text>
                 </View>
               ) : null}
 
               {beforeImages.length > 0 ? (
                 <View>
-                  <Text className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]">Før arbeid</Text>
+                  <Text className="mb-2 text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-subtle">Før arbeid</Text>
                   <View className="flex-row flex-wrap gap-2">
                     {beforeImages.map((asset, index) => (
-                      <Pressable key={`before-${index}`} onPress={() => asset.toLowerCase().endsWith('.pdf') ? void openDocument(asset) : setSelectedImage(asset)} className="h-24 w-[31%] overflow-hidden rounded-xl bg-[#F4F6F0]">
+                      <Pressable key={`before-${index}`} onPress={() => asset.toLowerCase().endsWith('.pdf') ? void openDocument(asset) : setSelectedImage(asset)} className="h-24 w-[31%] overflow-hidden rounded-xl bg-surface-2">
                         {asset.toLowerCase().endsWith('.pdf') ? (
-                          <View className="h-full w-full items-center justify-center bg-[#EAF1E9]">
-                            <FileText size={24} color="#2E6641" />
-                            <Text className="mt-1 text-[0.5625rem] text-[#2E6641]">PDF #{index + 1}</Text>
+                          <View className="h-full w-full items-center justify-center bg-tint">
+                            <FileText size={24} color={TC.brandText} />
+                            <Text className="mt-1 text-[0.6875rem] text-brand-text">PDF #{index + 1}</Text>
                           </View>
                         ) : (
                           <Image source={{ uri: asset }} className="h-full w-full" resizeMode="cover" />
@@ -232,14 +235,14 @@ export default function SafePayApprovalScreen() {
 
               {afterImages.length > 0 ? (
                 <View>
-                  <Text className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]">Etter arbeid</Text>
+                  <Text className="mb-2 text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-subtle">Etter arbeid</Text>
                   <View className="flex-row flex-wrap gap-2">
                     {afterImages.map((asset, index) => (
-                      <Pressable key={`after-${index}`} onPress={() => asset.toLowerCase().endsWith('.pdf') ? void openDocument(asset) : setSelectedImage(asset)} className="h-24 w-[31%] overflow-hidden rounded-xl bg-[#F4F6F0]">
+                      <Pressable key={`after-${index}`} onPress={() => asset.toLowerCase().endsWith('.pdf') ? void openDocument(asset) : setSelectedImage(asset)} className="h-24 w-[31%] overflow-hidden rounded-xl bg-surface-2">
                         {asset.toLowerCase().endsWith('.pdf') ? (
-                          <View className="h-full w-full items-center justify-center bg-[#EAF1E9]">
-                            <FileText size={24} color="#2E6641" />
-                            <Text className="mt-1 text-[0.5625rem] text-[#2E6641]">PDF #{index + 1}</Text>
+                          <View className="h-full w-full items-center justify-center bg-tint">
+                            <FileText size={24} color={TC.brandText} />
+                            <Text className="mt-1 text-[0.6875rem] text-brand-text">PDF #{index + 1}</Text>
                           </View>
                         ) : (
                           <Image source={{ uri: asset }} className="h-full w-full" resizeMode="cover" />
@@ -251,9 +254,9 @@ export default function SafePayApprovalScreen() {
               ) : null}
             </View>
           ) : (
-            <View className="mt-4 rounded-xl border border-dashed border-[#D6D9D2] bg-[#F4F6F0] p-6">
-              <Text className="text-center text-[0.9375rem] font-semibold text-[#0B0B0B]">Ingen arbeidsbevis lastet opp</Text>
-              <Text className="mt-2 text-center text-[0.75rem] leading-relaxed text-[#63665F]">
+            <View className="mt-4 rounded-xl border border-dashed border-[#D6D9D2] bg-surface-2 p-6">
+              <Text className="text-center text-[0.9375rem] font-semibold text-ink">Ingen arbeidsbevis lastet opp</Text>
+              <Text className="mt-2 text-center text-[0.8125rem] leading-relaxed text-muted">
                 {order.status === 'ready_for_review'
                   ? 'Utfører har ikke lastet opp bilder eller dokumentasjon. Du kan fortsatt godkjenne jobben hvis alt er i orden, eller åpne en tvist hvis du forventet bevis.'
                   : 'Utfører har ikke lastet opp bilder eller dokumentasjon ennå.'}
@@ -263,7 +266,7 @@ export default function SafePayApprovalScreen() {
         </View>
 
         {order.checklist?.length ? (
-          <View className="mb-4 rounded-2xl bg-white p-5">
+          <View className="mb-4 rounded-2xl bg-surface p-5">
             <Text className="mb-3 font-semibold">Sjekkliste</Text>
             {order.checklist.map((item) => (
               <Pressable
@@ -281,34 +284,34 @@ export default function SafePayApprovalScreen() {
                     );
                   },
                 })}
-                className={['mb-2 flex-row items-center gap-3 rounded-xl p-3', canEditChecklist ? 'bg-[#F4F6F0]' : 'bg-[#F2F4EE] opacity-80'].join(' ')}
+                className={['mb-2 flex-row items-center gap-3 rounded-xl p-3', canEditChecklist ? 'bg-surface-2' : 'bg-[#F2F4EE] opacity-80'].join(' ')}
               >
-                <View className={['h-5 w-5 rounded border', item.checked ? 'border-[#2E6641] bg-[#2E6641]' : 'border-[#9B9E96] bg-white'].join(' ')}>{item.checked ? <Check size={14} color="#FFFFFF" /> : null}</View>
-                <Text className="flex-1 text-sm text-[#0B0B0B]">{item.text}</Text>
+                <View className={['h-5 w-5 rounded border', item.checked ? 'border-brand-text bg-brand' : 'border-[#9B9E96] bg-surface'].join(' ')}>{item.checked ? <Check size={14} color="#FFFFFF" /> : null}</View>
+                <Text className="flex-1 text-sm text-ink">{item.text}</Text>
               </Pressable>
             ))}
           </View>
         ) : null}
 
         {!completed ? (
-          <View className="mb-4 rounded-2xl bg-white p-5">
+          <View className="mb-4 rounded-2xl bg-surface p-5">
             <Text className="mb-2 font-semibold">Vurdering</Text>
             <Stars value={ratings.overall} onChange={(value) => setRatings((current) => ({ ...current, overall: value }))} label="Helhetlig opplevelse" />
 
             <View className="mt-4 space-y-4">
               {OPTIONAL_RATINGS.map((story) => (
-                <View key={story.key} className="rounded-xl bg-[#F4F6F0] p-3">
+                <View key={story.key} className="rounded-xl bg-surface-2 p-3">
                   <Stars value={ratings[story.key]} onChange={(value) => setRatings((current) => ({ ...current, [story.key]: value }))} label={story.label} />
                 </View>
               ))}
             </View>
 
-            <TextInput value={comment} onChangeText={(value) => setComment(value.slice(0, 1000))} placeholder="Kommentar" multiline className="mt-4 min-h-[80px] rounded-xl border border-[#E6E7E1] p-3" />
-            <Text className="mt-1 text-right text-[0.6875rem] text-[#9B9E96]">{comment.length}/1000</Text>
+            <TextInput value={comment} onChangeText={(value) => setComment(value.slice(0, 1000))} placeholder="Kommentar" multiline className="mt-4 min-h-[80px] rounded-xl border border-line p-3" />
+            <Text className="mt-1 text-right text-[0.8125rem] text-subtle">{comment.length}/1000</Text>
             <Button label="Velg egne bilder" onPress={() => void choosePhotos()} small />
             {photos.length ? <Button label="Last opp bilder" onPress={uploadPhotos} disabled={photoMutation.isPending} small variant="secondary" /> : null}
-            <View className="mt-4 flex-row items-center justify-between rounded-xl bg-[#F4F6F0] p-3">
-              <Text className="text-sm font-medium text-[#0B0B0B]">Anbefal denne arbeidstaker</Text>
+            <View className="mt-4 flex-row items-center justify-between rounded-xl bg-surface-2 p-3">
+              <Text className="text-sm font-medium text-ink">Anbefal denne arbeidstaker</Text>
               <Switch value={recommendWorker} onValueChange={setRecommendWorker} />
             </View>
           </View>
@@ -320,16 +323,16 @@ export default function SafePayApprovalScreen() {
         {canApprove && !completed ? <Action label={approveMutation.isPending ? 'Godkjenner...' : `Godkjenn jobb og utbetal ${calculation.providerNet.toLocaleString('nb-NO')} kr`} onPress={approve} disabled={approveMutation.isPending} /> : null}
         {/* The CTA used to vanish with no explanation whenever the gate failed. */}
         {!canApprove && !completed && !activeDispute ? (
-          <Text className="rounded-2xl bg-[#F4F6F0] p-4 text-center text-[0.8125rem] leading-relaxed text-[#63665F]">
+          <Text className="rounded-2xl bg-surface-2 p-4 text-center text-[0.8125rem] leading-relaxed text-muted">
             {order.paymentStatus !== 'paid'
               ? 'Betalingen er ikke bekreftet ennå. Godkjenning og utbetaling åpnes så snart SafePay har mottatt beløpet.'
               : 'Du kan godkjenne og utbetale så snart utføreren har meldt jobben som ferdig — vi varsler deg.'}
           </Text>
         ) : null}
-        {completed ? <View className="rounded-2xl bg-[#122A1C] p-5"><Text className="text-center font-bold text-white">Jobb allerede godkjent!</Text></View> : null}
-        {activeDispute ? <Text className="mt-4 rounded-xl bg-[#FBF4F2] p-4 text-center text-sm font-semibold text-[#B4453A]">Tvist pågår — godkjenning og utbetaling er låst.</Text> : null}
-        {hasDispute ? <Pressable onPress={() => router.push({ pathname: '/(app)/disputes/order/[orderId]', params: { orderId: orderId ?? '' } })} className="mt-2 rounded-full border border-[#B4453A] px-4 py-3"><Text className="text-center text-[0.8125rem] font-semibold text-[#B4453A]">Se tvist</Text></Pressable> : null}
-        {!hasDispute && isDisputeEligibleOrderStatus(order.status) ? <Pressable onPress={() => router.push({ pathname: '/(app)/disputes/create', params: { orderId: orderId ?? '' } })} className="mt-4 rounded-full border border-[#B4453A] px-4 py-3"><Text className="text-center text-[0.8125rem] font-semibold text-[#B4453A]">Noe gikk galt? Åpne tvist</Text></Pressable> : null}
+        {completed ? <View className="rounded-2xl bg-brand-deep p-5"><Text className="text-center font-bold text-white">Jobb allerede godkjent!</Text></View> : null}
+        {activeDispute ? <Text className="mt-4 rounded-xl bg-danger-tint p-4 text-center text-sm font-semibold text-danger">Tvist pågår — godkjenning og utbetaling er låst.</Text> : null}
+        {hasDispute ? <Pressable onPress={() => router.push({ pathname: '/(app)/disputes/order/[orderId]', params: { orderId: orderId ?? '' } })} className="mt-2 rounded-full border border-danger px-4 py-3"><Text className="text-center text-[0.8125rem] font-semibold text-danger">Se tvist</Text></Pressable> : null}
+        {!hasDispute && isDisputeEligibleOrderStatus(order.status) ? <Pressable onPress={() => router.push({ pathname: '/(app)/disputes/create', params: { orderId: orderId ?? '' } })} className="mt-4 rounded-full border border-danger px-4 py-3"><Text className="text-center text-[0.8125rem] font-semibold text-danger">Noe gikk galt? Åpne tvist</Text></Pressable> : null}
       </ScrollView>
 
       <Modal visible={!!selectedImage} transparent animationType="fade" onRequestClose={() => setSelectedImage(null)}>

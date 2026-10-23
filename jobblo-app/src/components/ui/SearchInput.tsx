@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TextInput, Pressable } from 'react-native';
 import { Search, X } from 'lucide-react-native';
+import { TC, tc } from '../../theme/colors';
 
 interface SearchInputProps {
   value: string;
@@ -20,15 +21,15 @@ export function SearchInput({
   rightAction,
 }: SearchInputProps) {
   return (
-    <View className="h-12 min-w-0 flex-1 flex-row items-center rounded-full border border-[#E6E7E1] bg-white pl-4 pr-2">
-      <Search size={17} color="#9B9E96" strokeWidth={2.2} />
+    <View className="h-12 min-w-0 flex-1 flex-row items-center rounded-full border border-line bg-surface pl-4 pr-2">
+      <Search size={17} color={tc('#9B9E96', 'subtle')} strokeWidth={2.2} />
 
       <TextInput
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
-        placeholderTextColor="#9B9E96"
-        className="ml-2 flex-1 text-[0.9375rem] text-[#0B0B0B]"
+        placeholderTextColor={TC.placeholder}
+        className="ml-2 flex-1 text-[0.9375rem] text-ink"
         returnKeyType="search"
         onSubmitEditing={onSubmit}
         autoCapitalize="none"
@@ -38,9 +39,9 @@ export function SearchInput({
       {value && showClear ? (
         <Pressable
           onPress={() => onChange('')}
-          className="mr-2 h-7 w-7 items-center justify-center rounded-full bg-[#F4F6F0]"
+          className="mr-2 h-7 w-7 items-center justify-center rounded-full bg-surface-2"
         >
-          <X size={14} color="#63665F" strokeWidth={2.5} />
+          <X size={14} color={tc('#63665F', 'muted')} strokeWidth={2.5} />
         </Pressable>
       ) : null}
 

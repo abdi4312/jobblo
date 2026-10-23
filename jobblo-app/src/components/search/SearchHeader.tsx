@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { SlidersHorizontal } from 'lucide-react-native';
 import { SearchInput } from '../ui/SearchInput';
+import { TC } from '../../theme/colors';
 
 interface SearchHeaderProps {
   searchText: string;
@@ -24,15 +25,15 @@ export function SearchHeader({
     <View className="px-4 pb-3 pt-3 flex-row items-center gap-2">
       <TouchableOpacity
         onPress={onFilterPress}
-        className="h-12 shrink-0 flex-row items-center gap-2 rounded-full border border-[#E6E7E1] bg-white px-4"
+        className="h-12 shrink-0 flex-row items-center gap-2 rounded-full border border-line bg-surface px-4"
       >
-        <SlidersHorizontal size={17} color="#2E6641" strokeWidth={2} />
-        <Text className="text-[0.875rem] font-semibold text-[#0B0B0B]">
+        <SlidersHorizontal size={17} color={TC.brandText} strokeWidth={2} />
+        <Text className="text-[0.875rem] font-semibold text-ink">
           Filtrer
         </Text>
         {activeFilterCount > 0 && (
-          <View className="ml-0.5 h-5 min-w-5 items-center justify-center rounded-full bg-[#2E6641] px-1.5">
-            <Text className="text-[0.6875rem] font-bold text-white">
+          <View className="ml-0.5 h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5">
+            <Text className="text-[0.8125rem] font-bold text-white">
               {activeFilterCount}
             </Text>
           </View>

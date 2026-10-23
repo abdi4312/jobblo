@@ -13,6 +13,10 @@ export type CurrentSubscription = {
   currentPeriodEnd?: string | null;
   stripeSubscriptionId?: string | null;
   cancelAtPeriodEnd: boolean;
+  /** Monthly price in NOK, when the backend knows it. */
+  price?: number | null;
+  /** A downgrade booked for the end of the period (same field the web reads). */
+  pendingPlan?: { plan: string; effectiveAt: string } | null;
   contacts: {
     includedLimit: number;
     includedUsed: number;
@@ -84,4 +88,16 @@ export async function cancelCurrentSubscription() {
 export async function resumeCurrentSubscription() {
   const response = await apiClient.post('/stripe/subscription/resume');
   return response.data as { message?: string; cancelAtPeriodEnd?: boolean };
+}
+
+/** Stripe Customer Portal (payment method and invoices); returns the URL to open. */
+export async function createBillingPortalSession(): Promise<string | null> {
+  const response = await apiClient.post<{ url?: string }>('/stripe/subscription/portal');
+  return typeof response.data?.url === 'string' ? response.data.url : null;
+}
+
+/** Cancels a downgrade that was booked for the end of the period. */
+export async function cancelScheduledPlanChange() {
+  const response = await apiClient.post('/stripe/subscription/change/cancel');
+  return response.data as { message?: string };
 }

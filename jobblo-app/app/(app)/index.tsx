@@ -1,18 +1,23 @@
-import React, { useMemo, useState } from 'react';
-import { Image, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Image, Platform, View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import { BlurView } from 'expo-blur';
 import * as Location from 'expo-location';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { FileText, Locate, ShieldCheck, Star } from 'lucide-react-native';
+import { Briefcase, ChevronRight, FileText, Locate, MapPin, Plus, Search, ShieldCheck, Star } from 'lucide-react-native';
+import { Card } from '../../src/components/ui/Card';
+import { Button } from '../../src/components/ui/Button';
 import { useJobs } from '../../src/hooks/useJobs';
 import { useTopUsers } from '../../src/hooks/useTopUsers';
 import { useCategories } from '../../src/hooks/useCategories';
 import { useAuthStore } from '../../src/store/authStore';
 import { JobCard } from '../../src/components/JobCard';
-import { CategoryChip } from '../../src/components/CategoryChip';
+import { CategoryGrid } from '../../src/components/CategoryGrid';
+import { HomeHero } from '../../src/components/HomeHero';
 import { SaveToListSheet } from '../../src/components/domain/SaveToListSheet';
 import { Select } from '../../src/components/ui/Select';
-import { useDashboardStats } from '../../src/hooks/useDashboardStats';
+import { useTabBarSpace } from '../../src/components/GlassTabBar';
+import { TC, tc } from '../../src/theme/colors';
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Nyeste først' },
@@ -60,7 +65,7 @@ function WorkerAvatar({ avatarUrl, initials }: { avatarUrl?: string; initials: s
   const showImage = typeof avatarUrl === 'string' && avatarUrl.trim().length > 0 && !imageFailed;
 
   return (
-    <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9]">
+    <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-tint">
       {showImage ? (
         <Image
           source={{ uri: avatarUrl }}
@@ -69,13 +74,24 @@ function WorkerAvatar({ avatarUrl, initials }: { avatarUrl?: string; initials: s
           onError={() => setImageFailed(true)}
         />
       ) : (
-        <Text className="text-[0.9375rem] font-semibold text-[#2E6641]">{initials}</Text>
+        <Text className="text-[0.9375rem] font-semibold text-brand-text">{initials}</Text>
       )}
     </View>
   );
 }
 
 export default function HomeScreen() {
+  const tabBarSpace = useTabBarSpace();
+  const insets = useSafeAreaInsets();
+  // FINN-style: once the feed reaches the top, a blurred header with search + category chips
+  // fades in. `jobsTop` is where the feed starts; the flag only flips when the line is crossed.
+  const jobsTop = useRef(0);
+  const [compact, setCompact] = useState(false);
+  const compactRef = useRef(false);
+  const headerFade = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(headerFade, { toValue: compact ? 1 : 0, duration: 180, useNativeDriver: true }).start();
+  }, [compact, headerFade]);
   const router = useRouter();
   const { user } = useAuthStore();
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -83,7 +99,6 @@ export default function HomeScreen() {
   const [saveSheetServiceId, setSaveSheetServiceId] = useState<string | null>(null);
 
   const { data: filterOptions, isLoading: categoriesLoading, refetch: refetchCategories } = useCategories();
-  const dashboardStats = useDashboardStats();
 
   const {
     data: jobsData,
@@ -110,7 +125,7 @@ export default function HomeScreen() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([refetchJobs(), refetchCategories(), recommendedWorkers.refetch(), dashboardStats.refetch()]);
+      await Promise.all([refetchJobs(), refetchCategories(), recommendedWorkers.refetch()]);
     } finally {
       setRefreshing(false);
     }
@@ -152,22 +167,6 @@ export default function HomeScreen() {
     avatarUrl: worker.avatarUrl,
   }));
 
-  const SectionHeader = ({ eyebrow, title, actionLabel, action }: { eyebrow: string; title: string; actionLabel?: string; action?: () => void }) => (
-    <View className="mb-6">
-      <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[#63665F]">
-        {eyebrow}
-      </Text>
-      <View className="mt-3 flex-row items-center justify-between">
-        <Text className="text-[1.25rem] font-bold text-[#0B0B0B]">{title}</Text>
-        {actionLabel && (
-          <TouchableOpacity onPress={action} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text className="text-[0.875rem] font-medium text-[#2E6641]">{actionLabel}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
-  const seasonImage = season.category === 'Rørlegger' ? require('../../assets/category-showcase/rorlegger.webp') : season.category === 'Hagearbeid' ? require('../../assets/category-showcase/hagearbeid.webp') : season.category === 'Maling' ? require('../../assets/category-showcase/maling.webp') : require('../../assets/category-showcase/rengjoring.webp');
   const handleNearbyJobs = async () => {
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
@@ -182,196 +181,245 @@ export default function HomeScreen() {
     router.push('/(app)/explore');
   };
 
+  const initials = userName.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || '?';
+  const avatarUrl = typeof user?.avatarUrl === 'string' ? user.avatarUrl : undefined;
+
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['left', 'right']} className="flex-1 bg-page">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 28 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />}
+        scrollEventThrottle={32}
+        onScroll={(event) => {
+          const next = jobsTop.current > 0 && event.nativeEvent.contentOffset.y > jobsTop.current - insets.top - 110;
+          if (next !== compactRef.current) {
+            compactRef.current = next;
+            setCompact(next);
+          }
+        }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: insets.top + 12, paddingBottom: 28 + tabBarSpace }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={TC.brandText} colors={[TC.brandText]} />}
       >
-        <View className="relative overflow-hidden rounded-[28px] bg-[#2E6641]">
-          <Image source={seasonImage} className="absolute inset-y-0 right-0 h-full w-2/3 opacity-25" resizeMode="cover" />
-          <View className="absolute inset-y-0 right-0 w-2/3 bg-[#2E6641]/70" />
-          <View className="relative px-6 py-8">
-            <Text className="text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-[#8FBF9A]">
-              {season.label} · {userLocation}
-            </Text>
-            <Text className="mt-4 text-[1.625rem] font-bold leading-[1.1] text-white">
-              {greeting}, {userName}.
-            </Text>
-            <Text className="mt-2 text-[1.1rem] font-semibold text-[#8FBF9A]">
-              Hva trenger du hjelp med i dag?
-            </Text>
-            <Text className="mt-3 text-[0.9375rem] leading-relaxed text-white/70">{season.line}</Text>
-
-            <View className="mt-7 flex-row flex-wrap gap-2.5">
-              <TouchableOpacity
-                onPress={() => void handleNearbyJobs()}
-                className="rounded-full bg-white px-5 py-3.5"
-                activeOpacity={0.9}
-              >
-                <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Oppdrag nær meg</Text>
-              </TouchableOpacity>
-
-              {seasonalCategory && (
-                <TouchableOpacity
-                  onPress={() => setSelectedCategory(seasonalCategory)}
-                  className="rounded-full border border-white/40 px-5 py-3.5"
-                  activeOpacity={0.9}
-                >
-                  <Text className="text-[0.9375rem] font-semibold text-white">{seasonalCategory}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            {dashboardStats.data ? <View className="mt-6 flex-row gap-5 border-t border-white/20 pt-4">{[[dashboardStats.data.activeJobs, 'Aktive oppdrag'], [dashboardStats.data.totalUsers, 'Brukere'], [dashboardStats.data.averageRating.toFixed(1), 'Snittrating']].map(([value, label]) => <View key={label}><Text className="text-base font-bold text-white">{value}</Text><Text className="mt-0.5 text-[0.6875rem] text-white/70">{label}</Text></View>)}</View> : null}
+        {/* Greeting + avatar */}
+        <View className="flex-row items-center justify-between">
+          <View className="min-w-0 flex-1">
+            <Text className="text-[0.8125rem] text-muted">{greeting},</Text>
+            <Text className="text-[1.375rem] font-bold tracking-[-0.02em] text-ink" numberOfLines={1}>{userName}</Text>
           </View>
+          <Pressable
+            onPress={() => router.push('/(app)/profile')}
+            accessibilityRole="button"
+            accessibilityLabel="Profil"
+            className="h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-line bg-tint"
+          >
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={{ width: 44, height: 44 }} />
+            ) : (
+              <Text className="text-[0.9375rem] font-semibold text-brand-text">{initials}</Text>
+            )}
+          </Pressable>
         </View>
 
-        <View className="mt-14">
-          <SectionHeader eyebrow="01 — Kategorier" title="Hva trenger du hjelp til?" actionLabel="Se alle" action={() => router.push('/(app)/explore')} />
+        {/* Search entry */}
+        <Pressable
+          onPress={() => router.push('/(app)/explore')}
+          accessibilityRole="search"
+          accessibilityLabel="Søk etter oppdrag"
+          className="mt-4 h-12 flex-row items-center gap-2.5 rounded-full border border-line bg-surface px-4"
+        >
+          <Search size={18} color={tc('#63665F', 'muted')} />
+          <Text className="flex-1 text-[0.9375rem] text-subtle">Søk etter oppdrag eller tjenester</Text>
+          <View className="flex-row items-center gap-1">
+            <MapPin size={14} color={TC.brandText} />
+            <Text className="text-[0.8125rem] font-medium text-brand-text" numberOfLines={1}>{userLocation}</Text>
+          </View>
+        </Pressable>
 
-          {categoriesLoading ? (
-            <View className="items-center py-8">
-              <ActivityIndicator color="#2E6641" size="small" />
-            </View>
-          ) : (
-            <View className="flex-row flex-wrap -mx-1.5">
-              <View className="w-1/3 px-1.5 pb-3">
-                <CategoryChip
-                  category={{ name: 'Alle' }}
-                  isSelected={selectedCategory === ''}
-                  onPress={() => setSelectedCategory('')}
-                />
-              </View>
+        {/* Website-style hero */}
+        <HomeHero
+          eyebrow={`${season.label} · ${userLocation}`}
+          categories={categories.map((cat) => cat.name)}
+          onPost={() => router.push('/(app)/create-job')}
+          onNearby={() => void handleNearbyJobs()}
+        />
 
-              {categories.map((cat) => (
-                <View key={cat._id} className="w-1/3 px-1.5 pb-3">
-                  <CategoryChip
-                    category={cat}
-                    isSelected={selectedCategory === cat.name}
-                    onPress={() => setSelectedCategory((current) => (current === cat.name ? '' : cat.name))}
-                  />
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View className="mt-14">
-          <SectionHeader
-            eyebrow="02 — Ute nå"
-            title={`Oppdrag nær deg — ${userLocation}`}
-            actionLabel="Se alle oppdrag"
-            action={() => router.push('/(app)/explore')}
+        {/* Categories */}
+        <SectionHeader title="Kategorier" actionLabel="Se alle" action={() => router.push('/(app)/explore')} />
+        {categoriesLoading ? (
+          <ActivityIndicator color={TC.brandText} size="small" className="py-4" />
+        ) : (
+          <CategoryGrid
+            // The seasonal category leads, as before.
+            categories={[
+              ...(seasonalCategory ? [categories.find((cat) => cat.name === seasonalCategory) ?? { name: seasonalCategory }] : []),
+              ...categories.filter((cat) => cat.name !== seasonalCategory),
+            ]}
+            selected={selectedCategory}
+            onSelect={setSelectedCategory}
           />
+        )}
 
-            <View className="flex-row items-center justify-end"><Text className="mr-2 text-[0.8125rem] font-medium text-[#63665F]">Sorter</Text><Select value={sortValue} options={SORT_OPTIONS.map((option) => ({ ...option }))} onValueChange={setSortValue} />
-          </View>
-
-          {jobsLoading && (
-            <View className="items-center justify-center py-12">
-              <ActivityIndicator color="#2E6641" size="large" />
-              <Text className="mt-4 text-[0.875rem] text-[#63665F]">Laster oppdrag...</Text>
-            </View>
-          )}
-
-          {jobsError && !jobsLoading && (
-            <View className="rounded-2xl border border-[#E6E7E1] bg-white p-6">
-              <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Kunne ikke laste oppdrag</Text>
-              <Text className="mt-1.5 text-[0.875rem] text-[#63665F]">
-                Sjekk internettforbindelsen din og prøv igjen.
-              </Text>
-              <TouchableOpacity onPress={() => refetchJobs()} className="mt-4 rounded-lg bg-[#2E6641] px-4 py-2.5">
-                <Text className="text-center text-[0.875rem] font-semibold text-white">Prøv igjen</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {!jobsLoading && !jobsError && jobs.length === 0 && (
-            <View className="rounded-2xl border border-[#E6E7E1] bg-white p-6">
-              <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Ingen oppdrag å vise akkurat nå</Text>
-              <Text className="mt-1.5 text-[0.875rem] text-[#63665F]">
-                Prøv en annen kategori, eller legg ut ditt eget oppdrag.
-              </Text>
-              <TouchableOpacity onPress={() => router.push('/(app)/explore')} className="mt-4 rounded-lg bg-[#2E6641] px-4 py-2.5">
-                <Text className="text-center text-[0.875rem] font-semibold text-white">Se alle oppdrag</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/(app)/create-job')} className="mt-3 rounded-lg border border-[#2E6641] bg-white px-4 py-2.5">
-                <Text className="text-center text-[0.875rem] font-semibold text-[#2E6641]">Legg ut et oppdrag</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {!jobsLoading && !jobsError && jobs.length > 0 && (
-            <View className="flex-row flex-wrap -mx-2">
-              {jobs.slice(0, 8).map((job) => (
-                <View key={job._id} className="w-1/2 px-2 pb-8">
-                  <JobCard job={job} onSavePress={(id) => setSaveSheetServiceId(id)} />
-                </View>
-              ))}
-            </View>
-          )}
+        {/* Jobs */}
+        <View onLayout={(event) => { jobsTop.current = event.nativeEvent.layout.y; }} />
+        <SectionHeader
+          title={selectedCategory ? `Oppdrag · ${selectedCategory}` : 'Oppdrag nær deg'}
+          actionLabel="Se alle"
+          action={() => router.push('/(app)/explore')}
+        />
+        <View className="mb-3 flex-row items-center justify-between">
+          <Text className="text-[0.8125rem] text-muted">{jobsLoading ? 'Laster…' : `${jobs.length} oppdrag`}</Text>
+          <Select value={sortValue} options={SORT_OPTIONS.map((option) => ({ ...option }))} onValueChange={setSortValue} placeholder="Sorter" />
         </View>
 
-        {workerCards.length > 0 && (
-          <View className="mt-14">
-            <SectionHeader eyebrow="03 — I nærheten" title="Anbefalte oppdragstakere" actionLabel="Se alle" action={() => router.push('/(app)/recommended-taskers')} />
-
-            <View className="space-y-4">
-              {workerCards.map((worker: {
-                _id?: string;
-                initials: string;
-                name: string;
-                role: string;
-                rating: number;
-                count: number;
-                rate: string;
-                location: string;
-                avatarUrl?: string;
-              }) => (
-                <TouchableOpacity
-                  key={worker._id ?? worker.name}
-                  activeOpacity={0.9}
-                  disabled={!worker._id}
-                  className="flex-row items-center gap-3 rounded-2xl border border-[#E6E7E1] bg-white p-4"
-                  onPress={() => {
-                    if (!worker._id) return;
-                    router.push({ pathname: '/(app)/profile/[userId]', params: { userId: worker._id } });
-                  }}
-                >
-                  <WorkerAvatar avatarUrl={worker.avatarUrl} initials={worker.initials} />
-
-                  <View className="flex-1">
-                    <View className="flex-row items-center gap-2">
-                      <Text className="truncate text-[0.9375rem] font-semibold text-[#0B0B0B]">{worker.name}</Text>
-                    </View>
-
-                    <Text className="mt-0.5 text-[0.8125rem] text-[#63665F]">{worker.role}</Text>
-
-                    {worker.rating > 0 && (
-                      <View className="mt-1.5 flex-row items-center gap-1.5">
-                        <Star size={13} color="#2E6641" fill="#2E6641" />
-                        <Text className="text-[0.8125rem] font-semibold text-[#0B0B0B]">{worker.rating.toFixed(1)}</Text>
-                        <Text className="text-[0.8125rem] text-[#63665F]">({worker.count} {worker.count === 1 ? 'anmeldelse' : 'anmeldelser'})</Text>
-                      </View>
-                    )}
-
-                    <Text className="mt-1.5 text-[0.8125rem] text-[#0B0B0B]">
-                      {worker.rate} · {worker.location}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+        {jobsLoading ? (
+          <View className="items-center justify-center py-12">
+            <ActivityIndicator color={TC.brandText} size="large" />
+            <Text className="mt-3 text-[0.875rem] text-muted">Laster oppdrag...</Text>
+          </View>
+        ) : jobsError ? (
+          <Card className="rounded-2xl p-5">
+            <Text className="text-[0.9375rem] font-semibold text-ink">Kunne ikke laste oppdrag</Text>
+            <Text className="mt-1 text-[0.875rem] text-muted">Sjekk internettforbindelsen din og prøv igjen.</Text>
+            <View className="mt-4">
+              <Button label="Prøv igjen" onPress={() => void refetchJobs()} small />
             </View>
+          </Card>
+        ) : jobs.length === 0 ? (
+          <Card className="items-center rounded-2xl p-6">
+            <View className="h-12 w-12 items-center justify-center rounded-full bg-tint">
+              <Briefcase size={22} color={TC.brandText} />
+            </View>
+            <Text className="mt-3 text-center text-[0.9375rem] font-semibold text-ink">Ingen oppdrag å vise akkurat nå</Text>
+            <Text className="mt-1 text-center text-[0.875rem] text-muted">Prøv en annen kategori, eller legg ut ditt eget oppdrag.</Text>
+            <View className="mt-4 flex-row gap-2">
+              <Button label="Se alle oppdrag" variant="secondary" small onPress={() => router.push('/(app)/explore')} />
+              <Button label="Legg ut oppdrag" small onPress={() => router.push('/(app)/create-job')} />
+            </View>
+          </Card>
+        ) : (
+          <View className="-mx-1.5 flex-row flex-wrap">
+            {jobs.slice(0, 8).map((job) => (
+              <View key={job._id} className="w-1/2 px-1.5 pb-5">
+                <JobCard job={job} compact onSavePress={(id) => setSaveSheetServiceId(id)} />
+              </View>
+            ))}
           </View>
         )}
 
-        <View className="mt-14"><SectionHeader eyebrow="" title="Tryggere sammen" actionLabel="" action={() => undefined} />{[
-          [ShieldCheck, 'Trygg betaling med SafePay', 'Pengene holdes sikkert til jobben er godkjent. Du betaler aldri for noe du ikke er fornøyd med.'],
-          [FileText, 'Automatisk kontrakt', 'Hver avtale genererer en digital kontrakt som beskytter både deg og oppdragstakeren.'],
-          [Star, 'Verifiserte ratings', 'Alle anmeldelser er fra ekte fullførte oppdrag. Du ser alltid hvem du leier inn.'],
-        ].map(([Icon, title, body]) => <View key={title as string} className="mb-3 flex-row items-start rounded-2xl border border-[#E6E7E1] bg-white p-4"><View className="h-10 w-10 items-center justify-center rounded-xl bg-[#EAF1E9]"><Icon size={18} color="#2E6641" /></View><View className="ml-3 flex-1"><Text className="text-sm font-semibold text-[#0B0B0B]">{title as string}</Text><Text className="mt-1 text-xs leading-5 text-[#63665F]">{body as string}</Text></View></View>)}</View>
+        {/* Recommended taskers */}
+        {workerCards.length > 0 ? (
+          <>
+            <SectionHeader title="Anbefalte oppdragstakere" actionLabel="Se alle" action={() => router.push('/(app)/recommended-taskers')} />
+            <Card className="overflow-hidden rounded-2xl">
+              {workerCards.map((worker, index) => (
+                <Pressable
+                  key={worker._id ?? worker.name}
+                  disabled={!worker._id}
+                  onPress={() => {
+                    if (worker._id) router.push({ pathname: '/(app)/profile/[userId]', params: { userId: worker._id } });
+                  }}
+                  className={`flex-row items-center gap-3 px-4 py-3.5 active:bg-surface-2 ${index > 0 ? 'border-t border-line-soft' : ''}`}
+                >
+                  <WorkerAvatar avatarUrl={worker.avatarUrl} initials={worker.initials} />
+                  <View className="min-w-0 flex-1">
+                    <Text className="text-[0.9375rem] font-semibold text-ink" numberOfLines={1}>{worker.name}</Text>
+                    <Text className="mt-0.5 text-[0.8125rem] text-muted" numberOfLines={1}>{worker.role}</Text>
+                    <View className="mt-1 flex-row items-center gap-1.5">
+                      {worker.rating > 0 ? (
+                        <>
+                          <Star size={12} color="#B7791F" fill="#B7791F" />
+                          <Text className="text-[0.8125rem] font-semibold text-ink">{worker.rating.toFixed(1)}</Text>
+                          <Text className="text-[0.8125rem] text-subtle">({worker.count}) ·</Text>
+                        </>
+                      ) : null}
+                      <Text className="shrink text-[0.8125rem] text-muted" numberOfLines={1}>{worker.rate} · {worker.location}</Text>
+                    </View>
+                  </View>
+                  <ChevronRight size={18} color={tc('#9B9E96', 'subtle')} />
+                </Pressable>
+              ))}
+            </Card>
+          </>
+        ) : null}
+
+        {/* Trust */}
+        <SectionHeader title="Tryggere sammen" />
+        <Card className="overflow-hidden rounded-2xl">
+          {([
+            [ShieldCheck, 'Trygg betaling med SafePay', 'Pengene holdes sikkert til jobben er godkjent.'],
+            [FileText, 'Automatisk kontrakt', 'Hver avtale får en digital kontrakt som beskytter begge parter.'],
+            [Star, 'Verifiserte ratings', 'Alle anmeldelser er fra ekte, fullførte oppdrag.'],
+          ] as const).map(([Icon, title, body], index) => (
+            <View key={title} className={`flex-row items-start gap-3 px-4 py-3.5 ${index > 0 ? 'border-t border-line-soft' : ''}`}>
+              <View className="h-9 w-9 items-center justify-center rounded-xl bg-tint">
+                <Icon size={17} color={TC.brandText} />
+              </View>
+              <View className="min-w-0 flex-1">
+                <Text className="text-[0.875rem] font-semibold text-ink">{title}</Text>
+                <Text className="mt-0.5 text-[0.8125rem] leading-5 text-muted">{body}</Text>
+              </View>
+            </View>
+          ))}
+        </Card>
       </ScrollView>
+
+      {/* Behind the status bar, so scrolled content never runs under the clock. */}
+      {/* zIndex + elevation: Android draws elevated cards above later siblings otherwise. */}
+      <View pointerEvents="none" className="absolute left-0 right-0 top-0 bg-page" style={{ height: insets.top, zIndex: 30, elevation: 30, shadowColor: 'transparent' }} />
+
+      {/* Sticky FINN-style header: blurred, search + category chips. */}
+      <Animated.View
+        pointerEvents={compact ? 'box-none' : 'none'}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          opacity: headerFade,
+          zIndex: 40,
+          elevation: compact ? 40 : 0,
+          // Keep Android's layering, drop its elevation shadow (it drew a dark band).
+          shadowColor: 'transparent',
+          transform: [{ translateY: headerFade.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
+        }}
+      >
+        <View
+          className={Platform.OS === 'ios' ? 'overflow-hidden border-b border-line/70' : 'border-b border-line bg-page'}
+          style={{ paddingTop: insets.top + 6 }}
+        >
+          {Platform.OS === 'ios' ? (
+            <BlurView intensity={80} tint="systemChromeMaterial" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+          ) : null}
+          <Pressable
+            onPress={() => router.push('/(app)/explore')}
+            accessibilityRole="search"
+            accessibilityLabel="Søk etter oppdrag"
+            className="mx-4 h-11 flex-row items-center gap-2.5 rounded-full border border-line bg-surface/90 px-4"
+          >
+            <Search size={17} color={tc('#63665F', 'muted')} />
+            <Text className="flex-1 text-[0.9375rem] text-subtle">Søk etter oppdrag eller tjenester</Text>
+          </Pressable>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}
+          >
+            {['', ...categories.map((cat) => cat.name)].map((name) => {
+              const active = selectedCategory === name;
+              return (
+                <Pressable
+                  key={name || 'alle'}
+                  onPress={() => setSelectedCategory(active && name ? '' : name)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  className={`h-9 justify-center rounded-full border px-3.5 ${active ? 'border-brand bg-brand' : 'border-line bg-surface/90'}`}
+                >
+                  <Text className={`text-[0.875rem] font-medium ${active ? 'text-white' : 'text-ink'}`}>{name || 'Alle'}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </Animated.View>
 
       <SaveToListSheet
         visible={!!saveSheetServiceId}
@@ -379,5 +427,19 @@ export default function HomeScreen() {
         serviceId={saveSheetServiceId ?? ''}
       />
     </SafeAreaView>
+  );
+}
+
+function SectionHeader({ title, actionLabel, action }: { title: string; actionLabel?: string; action?: () => void }) {
+  return (
+    <View className="mb-3 mt-8 flex-row items-center justify-between">
+      <Text className="text-[1.125rem] font-bold tracking-[-0.01em] text-ink">{title}</Text>
+      {actionLabel && action ? (
+        <Pressable onPress={action} hitSlop={8} className="flex-row items-center gap-0.5">
+          <Text className="text-[0.8125rem] font-semibold text-brand-text">{actionLabel}</Text>
+          <ChevronRight size={15} color={TC.brandText} />
+        </Pressable>
+      ) : null}
+    </View>
   );
 }

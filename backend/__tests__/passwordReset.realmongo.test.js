@@ -116,6 +116,15 @@ run('password reset and OTP hardening (real MongoDB)', () => {
     expect((await Session.find({ userId: user._id }).lean()).map((s) => s.refreshToken)).toEqual(['mine']);
   });
 
+  it('logout with only a Bearer session (mobile, no cookie) ends that session server-side', async () => {
+    const base = { userId: user._id, ip: '1', userAgent: 'x', device: 'd', browser: 'b', os: 'o', expiresAt: new Date(Date.now() + 60_000) };
+    const phone = await Session.create({ ...base, refreshToken: 'phone' });
+    await Session.create({ ...base, refreshToken: 'laptop' });
+    const res = await call(auth.logout, { userId: user._id, sessionId: phone._id });
+    expect(res.statusCode).toBe(200);
+    expect((await Session.find({ userId: user._id }).lean()).map((s) => s.refreshToken)).toEqual(['laptop']);
+  });
+
   it('requires the current password to change the login e-mail', async () => {
     const req = (body) => ({ params: { id: String(user._id) }, userId: String(user._id), user: { role: 'user' }, body });
     expect((await call(updateUser, req({ email: 'ny@example.test' }))).statusCode).toBe(403);

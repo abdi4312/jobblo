@@ -32,6 +32,12 @@ const sessionSchema = new mongoose.Schema(
       type: String, // e.g. 'Windows Desktop'
       required: true,
     },
+    // Model reported by the mobile app (X-Device-Name), e.g. 'iPhone 15 Pro'. Browsers
+    // do not expose one, so web sessions keep this null. Display only, never trusted.
+    deviceName: {
+      type: String,
+      default: null,
+    },
     browser: {
       type: String, // e.g. 'Chrome'
       required: true,

@@ -22,21 +22,22 @@ import {
 } from '../../../src/types/FavoriteList';
 import { favoriteListErrorMessage } from '../../../src/utils/favoriteListErrors';
 import { useAuthStore } from '../../../src/store/authStore';
+import { TC, tc } from '../../../src/theme/colors';
 
 function DetailSkeleton() {
   return (
     <View className="px-4">
       <View className="h-7 w-2/3 rounded-full bg-[#E4E7DF]" />
-      <View className="mt-3 h-3.5 w-1/3 rounded-full bg-[#EAF1E9]" />
+      <View className="mt-3 h-3.5 w-1/3 rounded-full bg-tint" />
       <View className="mt-6 gap-3">
         {Array.from({ length: 4 }).map((_, index) => (
           <View
             key={index}
-            className="flex-row items-center gap-3.5 rounded-[24px] border border-[#E6E7E1] bg-white p-3"
+            className="flex-row items-center gap-3.5 rounded-[24px] border border-line bg-surface p-3"
           >
-            <View className="h-[76px] w-[76px] rounded-2xl bg-[#EAF1E9]" />
+            <View className="h-[76px] w-[76px] rounded-2xl bg-tint" />
             <View className="flex-1">
-              <View className="h-3.5 w-5/6 rounded-full bg-[#EAF1E9]" />
+              <View className="h-3.5 w-5/6 rounded-full bg-tint" />
               <View className="mt-2.5 h-2.5 w-1/2 rounded-full bg-[#F1F3EE]" />
               <View className="mt-2.5 h-2.5 w-1/3 rounded-full bg-[#F1F3EE]" />
             </View>
@@ -144,18 +145,18 @@ export default function FavoriteListDetailScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <View className="flex-row items-center justify-between px-4 pb-3 pt-3">
         <Pressable
           onPress={() => router.back()}
-          className="h-10 w-10 items-center justify-center rounded-full border border-[#E6E7E1] bg-white"
+          className="h-10 w-10 items-center justify-center rounded-full border border-line bg-surface"
           accessibilityRole="button"
           accessibilityLabel="Tilbake"
         >
-          <ArrowLeft size={18} color="#0B0B0B" />
+          <ArrowLeft size={18} color={TC.ink} />
         </Pressable>
 
-        <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[#63665F]">
+        <Text className="text-[0.8125rem] font-semibold uppercase tracking-[0.16em] text-muted">
           Liste
         </Text>
 
@@ -166,22 +167,22 @@ export default function FavoriteListDetailScreen() {
                 setEditError(null);
                 setIsEditOpen(true);
               }}
-              className="h-10 w-10 items-center justify-center rounded-full border border-[#E6E7E1] bg-white"
+              className="h-10 w-10 items-center justify-center rounded-full border border-line bg-surface"
               accessibilityRole="button"
               accessibilityLabel="Rediger liste"
             >
-              <Pencil size={16} color="#0B0B0B" />
+              <Pencil size={16} color={TC.ink} />
             </Pressable>
             <Pressable
               onPress={() => {
                 setDeleteError(null);
                 setIsDeleteOpen(true);
               }}
-              className="h-10 w-10 items-center justify-center rounded-full border border-[#E6E7E1] bg-white"
+              className="h-10 w-10 items-center justify-center rounded-full border border-line bg-surface"
               accessibilityRole="button"
               accessibilityLabel="Slett liste"
             >
-              <Trash2 size={16} color="#B4544A" />
+              <Trash2 size={16} color={tc('#B4544A', 'danger')} />
             </Pressable>
           </View>
         ) : (
@@ -203,31 +204,31 @@ export default function FavoriteListDetailScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
         >
-          <Text className="text-[1.75rem] font-bold leading-tight tracking-[-0.04em] text-[#0B0B0B]">
+          <Text className="text-[1.75rem] font-bold leading-tight tracking-[-0.04em] text-ink">
             {list.name}
           </Text>
 
           {list.description ? (
-            <Text className="mt-2 text-[0.875rem] leading-relaxed text-[#63665F]">
+            <Text className="mt-2 text-[0.875rem] leading-relaxed text-muted">
               {list.description}
             </Text>
           ) : null}
 
           <View className="mt-3 flex-row items-center gap-2">
-            <Text className="text-[0.8125rem] text-[#63665F]">
+            <Text className="text-[0.8125rem] text-muted">
               {count === 1 ? '1 oppdrag' : `${count} oppdrag`}
             </Text>
             <ListVisibilityPill isPublic={list.public} />
             {isContributor && !isOwner ? (
-              <View className="rounded-full border border-[#E6E7E1] bg-white px-2.5 py-1.5">
-                <Text className="text-[0.6875rem] font-semibold text-[#63665F]">Delt med deg</Text>
+              <View className="rounded-full border border-line bg-surface px-2.5 py-1.5">
+                <Text className="text-[0.8125rem] font-semibold text-muted">Delt med deg</Text>
               </View>
             ) : null}
           </View>
 
           {banner ? (
-            <View className="mt-4 rounded-2xl border border-[#E7CFCB] bg-[#FBF1F0] px-3.5 py-3">
-              <Text className="text-[0.8125rem] font-medium text-[#B4544A]">{banner}</Text>
+            <View className="mt-4 rounded-2xl border border-[#E7CFCB] dark:border-danger-line bg-[#FBF1F0] dark:bg-danger-tint px-3.5 py-3">
+              <Text className="text-[0.8125rem] font-medium text-[#B4544A] dark:text-danger">{banner}</Text>
             </View>
           ) : null}
 
@@ -235,27 +236,27 @@ export default function FavoriteListDetailScreen() {
             <Pressable
               onPress={handleToggleVisibility}
               disabled={updateList.isPending}
-              className={`mt-4 flex-row items-center justify-center gap-2 rounded-full border border-[#E6E7E1] bg-white px-4 py-3 ${
+              className={`mt-4 flex-row items-center justify-center gap-2 rounded-full border border-line bg-surface px-4 py-3 ${
                 updateList.isPending ? 'opacity-60' : ''
               }`}
               accessibilityRole="button"
               accessibilityLabel={list.public ? 'Gjør listen privat' : 'Gjør listen offentlig'}
             >
               {updateList.isPending ? (
-                <ActivityIndicator size="small" color="#2E6641" />
+                <ActivityIndicator size="small" color={TC.brandText} />
               ) : list.public ? (
-                <Lock size={15} color="#0B0B0B" />
+                <Lock size={15} color={TC.ink} />
               ) : (
-                <Globe size={15} color="#0B0B0B" />
+                <Globe size={15} color={TC.ink} />
               )}
-              <Text className="text-[0.875rem] font-semibold text-[#0B0B0B]">
+              <Text className="text-[0.875rem] font-semibold text-ink">
                 {list.public ? 'Gjør privat' : 'Gjør offentlig'}
               </Text>
             </Pressable>
           ) : null}
 
           {unresolved > 0 ? (
-            <Text className="mt-4 text-[0.75rem] text-[#63665F]">
+            <Text className="mt-4 text-[0.8125rem] text-muted">
               {unresolved === 1
                 ? '1 lagret oppdrag er ikke tilgjengelig lenger.'
                 : `${unresolved} lagrede oppdrag er ikke tilgjengelige lenger.`}
@@ -263,11 +264,11 @@ export default function FavoriteListDetailScreen() {
           ) : null}
 
           {services.length === 0 ? (
-            <View className="mt-5 rounded-[24px] border border-[#E6E7E1] bg-white p-8">
-              <Text className="text-center text-[1.0625rem] font-semibold text-[#0B0B0B]">
+            <View className="mt-5 rounded-[24px] border border-line bg-surface p-8">
+              <Text className="text-center text-[1.0625rem] font-semibold text-ink">
                 Ingen oppdrag i listen ennå
               </Text>
-              <Text className="mt-2 text-center text-[0.875rem] leading-relaxed text-[#63665F]">
+              <Text className="mt-2 text-center text-[0.875rem] leading-relaxed text-muted">
                 Åpne et oppdrag og trykk på bokmerket for å lagre det her.
               </Text>
             </View>
@@ -292,7 +293,7 @@ export default function FavoriteListDetailScreen() {
           )}
 
           {isRefetching ? (
-            <Text className="mt-5 text-center text-[0.75rem] text-[#63665F]">Oppdaterer...</Text>
+            <Text className="mt-5 text-center text-[0.8125rem] text-muted">Oppdaterer...</Text>
           ) : null}
         </ScrollView>
       )}

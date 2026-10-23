@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { Crosshair, Locate, MapPin } from 'lucide-react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, type LatLng, type MapPressEvent } from 'react-native-maps';
+import MapView, { Marker, type LatLng, type MapPressEvent } from 'react-native-maps';
 import * as Location from 'expo-location';
+import { MAP_PROVIDER, MAPS_AVAILABLE } from '@/utils/mapProvider';
+import { MapUnavailable } from '@/components/ui/MapUnavailable';
+import { TC } from '../../theme/colors';
 
 const DEFAULT_REGION = {
   latitude: 59.9127,
@@ -89,10 +92,10 @@ export function CreateJobLocationMap({
 
   return (
     <View className="gap-3">
-      <View className="h-72 overflow-hidden rounded-3xl border border-[#E6E7E1] bg-white">
-        <MapView
+      <View className="h-64 overflow-hidden rounded-lg border border-line bg-surface">
+        {MAPS_AVAILABLE ? <MapView
           ref={mapRef}
-          provider={PROVIDER_GOOGLE}
+          provider={MAP_PROVIDER}
           style={{ flex: 1 }}
           initialRegion={hasMarker ? {
             latitude: coordinates[0],
@@ -112,26 +115,26 @@ export function CreateJobLocationMap({
               title="Jobblokkasjon"
             />
           ) : null}
-        </MapView>
-        {!hasMarker && !isLocating ? (
+        </MapView> : <MapUnavailable />}
+        {MAPS_AVAILABLE && !hasMarker && !isLocating ? (
           <View className="absolute inset-0 items-center justify-center" pointerEvents="none">
-            <View className="flex-row items-center gap-2 rounded-full border border-[#E6E7E1] bg-white/95 px-4 py-2">
-              <Crosshair size={15} color="#2E6641" />
-              <Text className="text-xs font-semibold text-[#63665F]">Trykk på kartet for å sette lokasjon</Text>
+            <View className="flex-row items-center gap-2 rounded-full border border-line bg-white/95 px-4 py-2">
+              <Crosshair size={15} color={TC.brandText} />
+              <Text className="text-[0.8125rem] font-semibold text-muted">Trykk på kartet for å sette lokasjon</Text>
             </View>
           </View>
         ) : null}
       </View>
 
-      {error ? <Text className="text-xs font-medium text-[#B4453A]"><MapPin size={12} color="#B4453A" /> {error}</Text> : null}
-      {locationError ? <Text className="text-xs font-medium text-[#B4453A]">{locationError}</Text> : null}
+      {error ? <Text className="text-[0.8125rem] font-medium text-danger"><MapPin size={12} color={TC.danger} /> {error}</Text> : null}
+      {locationError ? <Text className="text-[0.8125rem] font-medium text-danger">{locationError}</Text> : null}
       <Pressable
         onPress={() => void useCurrentLocation()}
         disabled={isLocating}
-        className="flex-row items-center justify-center gap-2 rounded-xl bg-[#2E6641] px-4 py-3 disabled:opacity-60"
+        className="h-11 flex-row items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 disabled:opacity-60"
       >
-        <Locate size={16} color="#FFF" />
-        <Text className="text-sm font-semibold text-white">
+        <Locate size={16} color={TC.brandText} />
+        <Text className="text-sm font-semibold text-brand-text">
           {isLocating ? 'Henter posisjon...' : 'Bruk min nåværende posisjon'}
         </Text>
       </Pressable>

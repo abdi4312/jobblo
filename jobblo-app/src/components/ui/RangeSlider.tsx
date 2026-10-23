@@ -57,11 +57,11 @@ export const RangeSlider = ({
   return (
     <View className="w-full items-center py-2">
       <View
-        className="relative h-1 w-[280px] rounded-full bg-[#E6E7E1]"
+        className="relative h-1 w-[280px] rounded-full bg-line"
       >
         {/* Active track (between min and max) */}
         <View
-          className="absolute h-1 rounded-full bg-[#2E6641]"
+          className="absolute h-1 rounded-full bg-brand"
           style={{
             left: `${minPercent}%`,
             right: `${100 - maxPercent}%`,
@@ -123,7 +123,7 @@ function PressableThumb({
         top: -6, // Center vertically
       }}
       {...responder.panHandlers}
-      className={`h-4 w-4 rounded-full border-2 border-[#2E6641] bg-white shadow-sm ${
+      className={`h-4 w-4 rounded-full border-2 border-brand-text bg-surface shadow-sm ${
         isDragging ? 'border-4' : ''
       }`}
     />

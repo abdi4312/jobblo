@@ -21,12 +21,15 @@ import { SearchResultsHeader } from '../../src/components/search/SearchResultsHe
 import { ActiveFiltersDisplay } from '../../src/components/search/ActiveFiltersDisplay';
 import { SearchFilterSheet } from '../../src/components/search/SearchFilterSheet';
 import { NORWAY_SEARCH_CENTERS } from '../../src/components/search/SearchAreaMap';
+import { useTabBarSpace } from '../../src/components/GlassTabBar';
 import { SaveToListSheet } from '../../src/components/domain/SaveToListSheet';
+import { TC } from '../../src/theme/colors';
 
 /**
  * Explore/Search screen for browsing jobs with comprehensive filtering.
  */
 export default function ExploreScreen() {
+  const tabBarSpace = useTabBarSpace();
   const router = useRouter();
   const params = useLocalSearchParams<{ search?: string | string[]; lat?: string | string[]; lng?: string | string[] }>();
   const initialSearch = (Array.isArray(params.search) ? params.search[0] : params.search) ?? '';
@@ -105,8 +108,8 @@ export default function ExploreScreen() {
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         className="flex-row items-center gap-2 px-4 pt-3"
       >
-        <ArrowLeft size={20} color="#0B0B0B" />
-        <Text className="text-[0.875rem] font-medium text-[#0B0B0B]">Tilbake</Text>
+        <ArrowLeft size={20} color={TC.ink} />
+        <Text className="text-[0.875rem] font-medium text-ink">Tilbake</Text>
       </Pressable>
 
       <SearchHeader
@@ -188,7 +191,7 @@ export default function ExploreScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <SearchFilterSheet
         visible={sheetVisible}
         onClose={() => setSheetVisible(false)}
@@ -308,22 +311,22 @@ export default function ExploreScreen() {
         ListFooterComponent={
           isFetchingNextPage ? (
             <View className="items-center justify-center py-8">
-              <ActivityIndicator color="#2E6641" size="small" />
+              <ActivityIndicator color={TC.brandText} size="small" />
             </View>
           ) : null
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 32 + tabBarSpace }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefetching && !isFetchingNextPage} onRefresh={() => void refetch()} tintColor="#2E6641" />}
+        refreshControl={<RefreshControl refreshing={isRefetching && !isFetchingNextPage} onRefresh={() => void refetch()} tintColor={TC.brandText} />}
         ListEmptyComponent={
           !isLoading && !isError && allJobs.length === 0 ? (
-            <View className="mx-4 rounded-[24px] border border-[#E6E7E1] bg-white p-6">
-              <Text className="text-[1rem] font-semibold text-[#0B0B0B]">
+            <View className="mx-4 rounded-[24px] border border-line bg-surface p-6">
+              <Text className="text-[1rem] font-semibold text-ink">
                 Ingen oppdrag funnet
               </Text>
-              <Text className="mt-2 text-[0.875rem] leading-relaxed text-[#63665F]">
+              <Text className="mt-2 text-[0.875rem] leading-relaxed text-muted">
                 {filters.searchText ||
                   filters.selectedCategories.length > 0 ||
                   filters.minPrice !== 0 ||
@@ -356,11 +359,11 @@ export default function ExploreScreen() {
       />
 
       {isError && !isLoading && (
-        <View className="absolute inset-x-4 top-24 rounded-[24px] border border-[#E6E7E1] bg-white p-6">
-          <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">
+        <View className="absolute inset-x-4 top-24 rounded-[24px] border border-line bg-surface p-6">
+          <Text className="text-[0.9375rem] font-semibold text-ink">
             Kunne ikke laste oppdrag
           </Text>
-          <Text className="mt-1 text-[0.875rem] text-[#63665F]">
+          <Text className="mt-1 text-[0.875rem] text-muted">
             Sjekk tilkoblingen din og prøv igjen.
           </Text>
           <View className="mt-4">

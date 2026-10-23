@@ -179,6 +179,8 @@ export type ActiveSession = {
   isCurrent: boolean;
   /** Coarse label built server-side as `${os} ${Mobile|Tablet|Desktop}`. */
   device: string;
+  /** Phone model reported by the Jobblo app, e.g. "iPhone 15 Pro"; null for browsers. */
+  deviceName?: string | null;
   browser: string;
   os: string;
   /** Approximate, IP-derived. `'Localhost'` for loopback, `'Unknown'` if lookup failed. */
