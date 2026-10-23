@@ -25,6 +25,7 @@ import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
+import { TC, tc } from '../../../../src/theme/colors';
 
 /* ------------------------------------------------------------------ *
  * Presentation helpers
@@ -230,7 +231,7 @@ export default function ActiveSessionsScreen() {
 
   if (sessionsQuery.isLoading) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <LoadingIndicator message="Laster aktive økter..." />
       </SafeAreaView>
     );
@@ -243,7 +244,7 @@ export default function ActiveSessionsScreen() {
   if (sessionsQuery.isError && !sessionsQuery.data) {
     const status = statusOf(sessionsQuery.error);
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState
           title={status === 401 ? 'Pålogging kreves' : 'Kunne ikke laste øktene'}
           message={
@@ -278,34 +279,34 @@ export default function ActiveSessionsScreen() {
     return (
       <View
         key={session._id}
-        className={`flex-row items-center gap-3 px-4 py-3.5 ${index > 0 ? 'border-t border-[#EFF0EA]' : ''}`}
+        className={`flex-row items-center gap-3 px-4 py-3.5 ${index > 0 ? 'border-t border-line-soft' : ''}`}
       >
         <View
-          className={`h-11 w-11 items-center justify-center rounded-2xl ${session.isCurrent ? 'bg-[#EAF1E9]' : 'bg-[#F4F6F0]'}`}
+          className={`h-11 w-11 items-center justify-center rounded-2xl ${session.isCurrent ? 'bg-tint' : 'bg-surface-2'}`}
         >
-          <DeviceIcon size={20} color={session.isCurrent ? '#2E6641' : '#63665F'} />
+          <DeviceIcon size={20} color={session.isCurrent ? TC.brandText : tc('#63665F', 'muted')} />
         </View>
         <View className="min-w-0 flex-1">
           <View className="flex-row items-center gap-2">
-            <Text className="shrink text-[0.9375rem] font-semibold text-[#0B0B0B]" numberOfLines={1}>
+            <Text className="shrink text-[0.9375rem] font-semibold text-ink" numberOfLines={1}>
               {deviceTitle(session)}
             </Text>
             {session.isCurrent ? (
-              <View className="rounded-full bg-[#EAF1E9] px-2 py-0.5">
-                <Text className="text-[0.625rem] font-bold uppercase tracking-[0.08em] text-[#2E6641]">Nåværende</Text>
+              <View className="rounded-full bg-tint px-2 py-0.5">
+                <Text className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-brand-text">Nåværende</Text>
               </View>
             ) : null}
           </View>
           {clean(session.deviceName ?? undefined) ? (
-            <Text className="mt-0.5 text-[0.75rem] font-medium text-[#2E6641]" numberOfLines={1}>
+            <Text className="mt-0.5 text-[0.8125rem] font-medium text-brand-text" numberOfLines={1}>
               Jobblo-appen{clean(session.os) ? ` · ${clean(session.os)}` : ''}
             </Text>
           ) : null}
-          <Text className="mt-0.5 text-[0.8125rem] text-[#63665F]" numberOfLines={1}>
+          <Text className="mt-0.5 text-[0.8125rem] text-muted" numberOfLines={1}>
             {locationLabel}
             {ip ? ` · ${ip}` : ''}
           </Text>
-          <Text className="mt-0.5 text-[0.75rem] text-[#9B9E96]" numberOfLines={1}>
+          <Text className="mt-0.5 text-[0.8125rem] text-subtle" numberOfLines={1}>
             Sist aktiv {formatLastUsed(session.lastUsed)}
           </Text>
         </View>
@@ -321,12 +322,12 @@ export default function ActiveSessionsScreen() {
             hitSlop={6}
             accessibilityRole="button"
             accessibilityLabel={`Logg ut ${deviceTitle(session)}`}
-            className={`rounded-full border border-[#EED8D4] px-3 py-1.5 ${busy ? 'opacity-60' : 'active:bg-[#FBF4F2]'}`}
+            className={`rounded-full border border-[#EED8D4] px-3 py-1.5 ${busy ? 'opacity-60' : 'active:bg-danger-tint'}`}
           >
             {isRevokingThis ? (
-              <ActivityIndicator size="small" color="#B4544A" />
+              <ActivityIndicator size="small" color={tc('#B4544A', 'danger')} />
             ) : (
-              <Text className="text-[0.75rem] font-semibold text-[#B4544A]">Logg ut</Text>
+              <Text className="text-[0.8125rem] font-semibold text-[#B4544A] dark:text-danger">Logg ut</Text>
             )}
           </Pressable>
         ) : null}
@@ -335,22 +336,22 @@ export default function ActiveSessionsScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: 36 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" colors={['#2E6641']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={TC.brandText} colors={[TC.brandText]} />}
       >
         <ScreenHeader title="Aktive økter" subtitle="Enheter som er logget inn på kontoen din." icon={MonitorSmartphone} />
 
         {feedback ? (
           <View
             className={`mb-4 flex-row items-center gap-2.5 rounded-2xl border px-4 py-3 ${
-              feedback.tone === 'error' ? 'border-[#EED8D4] bg-[#FBF4F2]' : 'border-[#D1E7D9] bg-[#F2F9F4]'
+              feedback.tone === 'error' ? 'border-[#EED8D4] bg-danger-tint' : 'border-[#D1E7D9] bg-[#F2F9F4]'
             }`}
           >
-            {feedback.tone === 'error' ? <ShieldAlert size={16} color="#8A3B33" /> : <CheckCircle2 size={16} color="#2E6641" />}
-            <Text className={`flex-1 text-[0.8125rem] leading-5 ${feedback.tone === 'error' ? 'text-[#8A3B33]' : 'text-[#173A24]'}`}>
+            {feedback.tone === 'error' ? <ShieldAlert size={16} color="#8A3B33" /> : <CheckCircle2 size={16} color={TC.brandText} />}
+            <Text className={`flex-1 text-[0.8125rem] leading-5 ${feedback.tone === 'error' ? 'text-[#8A3B33]' : 'text-[#173A24] dark:text-brand-text'}`}>
               {feedback.text}
             </Text>
           </View>
@@ -360,9 +361,9 @@ export default function ActiveSessionsScreen() {
         {sessionsQuery.isError && sessionsQuery.data ? (
           <Pressable
             onPress={() => void sessionsQuery.refetch()}
-            className="mb-4 rounded-2xl border border-[#F1E1C4] bg-[#FBF5E9] px-4 py-3 active:opacity-80"
+            className="mb-4 rounded-2xl border border-warn-line bg-warn-tint px-4 py-3 active:opacity-80"
           >
-            <Text className="text-[0.8125rem] leading-5 text-[#614109]">
+            <Text className="text-[0.8125rem] leading-5 text-warn">
               Listen kunne ikke oppdateres og kan være utdatert. Trykk for å prøve igjen.
             </Text>
           </Pressable>
@@ -383,7 +384,7 @@ export default function ActiveSessionsScreen() {
             ) : null}
 
             <View className="mb-2 flex-row items-center justify-between px-1">
-              <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]">
+              <Text className="text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-subtle">
                 Andre enheter{others.length ? ` (${others.length})` : ''}
               </Text>
               {others.length > 0 ? (
@@ -397,8 +398,8 @@ export default function ActiveSessionsScreen() {
                   accessibilityRole="button"
                   className="flex-row items-center gap-1"
                 >
-                  <LogOut size={14} color="#B4544A" />
-                  <Text className="text-[0.8125rem] font-semibold text-[#B4544A]">
+                  <LogOut size={14} color={tc('#B4544A', 'danger')} />
+                  <Text className="text-[0.8125rem] font-semibold text-[#B4544A] dark:text-danger">
                     {revokeOthers.isPending ? 'Logger ut…' : 'Logg ut alle'}
                   </Text>
                 </Pressable>
@@ -409,10 +410,10 @@ export default function ActiveSessionsScreen() {
                 others.map((session, index) => renderSession(session, index))
               ) : (
                 <View className="flex-row items-center gap-3 px-4 py-4">
-                  <View className="h-9 w-9 items-center justify-center rounded-xl bg-[#EAF1E9]">
-                    <CheckCircle2 size={17} color="#2E6641" />
+                  <View className="h-9 w-9 items-center justify-center rounded-xl bg-tint">
+                    <CheckCircle2 size={17} color={TC.brandText} />
                   </View>
-                  <Text className="flex-1 text-[0.8125rem] leading-5 text-[#63665F]">
+                  <Text className="flex-1 text-[0.8125rem] leading-5 text-muted">
                     Ingen andre enheter er logget inn.
                   </Text>
                 </View>
@@ -430,7 +431,7 @@ export default function ActiveSessionsScreen() {
             onPress={() => router.push('/profile/settings/password')}
           />
         </Card>
-        <Text className="mt-4 px-1 text-[0.75rem] leading-5 text-[#9B9E96]">
+        <Text className="mt-4 px-1 text-[0.8125rem] leading-5 text-subtle">
           Sted og IP er omtrentlige og utledet fra nettverket. En utlogget enhet mister tilgangen ved
           sitt neste kall mot Jobblo.
         </Text>

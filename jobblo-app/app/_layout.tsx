@@ -1,13 +1,23 @@
 import './global.css';
-import { Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef } from 'react';
 import AppProviders from '../src/providers/AppProviders';
 import { subscribeToPushResponses, type PushNotificationData } from '../src/services/pushNotifications.service';
 import { NotificationRealtime } from '../src/components/NotificationRealtime';
 import { useAuthStore } from '../src/store/authStore';
+import { loadThemePreference } from '../src/theme/themePreference';
+
+// Dark mode only: light keeps React Navigation's default theme exactly as before.
+const JOBBLO_DARK = {
+  ...DarkTheme,
+  colors: { ...DarkTheme.colors, background: '#121411', card: '#1C1F1B', border: '#2E322C', text: '#F2F3EE', primary: '#7DBE92' },
+};
 
 export default function RootLayout() {
+  const { colorScheme } = useColorScheme();
+  const dark = colorScheme === 'dark';
   const router = useRouter();
   const hydrated = useAuthStore((state) => state.hydrated);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -38,6 +48,10 @@ export default function RootLayout() {
     }
   }, [router]);
 
+  useEffect(() => {
+    void loadThemePreference();
+  }, []);
+
   useEffect(() => subscribeToPushResponses(routeNotification), [routeNotification]);
 
   useEffect(() => {
@@ -51,13 +65,15 @@ export default function RootLayout() {
 
   return (
     <AppProviders>
-      <NotificationRealtime />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: '#F8FAFC' },
-        }}
-      />
+      <ThemeProvider value={dark ? JOBBLO_DARK : DefaultTheme}>
+        <NotificationRealtime />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: dark ? '#121411' : '#F8FAFC' },
+          }}
+        />
+      </ThemeProvider>
     </AppProviders>
   );
 }

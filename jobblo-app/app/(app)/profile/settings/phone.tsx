@@ -15,6 +15,7 @@ import { useAuthStore } from '../../../../src/store/authStore';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
+import { TC, tc } from '../../../../src/theme/colors';
 
 /**
  * Phone settings — profile contact phone number.
@@ -33,7 +34,7 @@ import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
  */
 
 const inputClass =
-  'rounded-2xl border border-[#E6E7E1] bg-white px-4 py-3 text-[0.9375rem] text-[#0B0B0B]';
+  'rounded-2xl border border-line bg-surface px-4 py-3 text-[0.9375rem] text-ink';
 
 type Feedback = { tone: 'success' | 'error'; text: string };
 
@@ -81,7 +82,7 @@ export default function PhoneSettingsScreen() {
 
   if (isLoading || draft === null) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <LoadingIndicator message="Laster telefonnummer..." />
       </SafeAreaView>
     );
@@ -89,7 +90,7 @@ export default function PhoneSettingsScreen() {
 
   if (isError || !profile) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState
           title="Kunne ikke laste telefonnummeret"
           message="Vi fikk ikke hentet profilen din. Sjekk internettforbindelsen og prøv igjen."
@@ -134,7 +135,7 @@ export default function PhoneSettingsScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -145,9 +146,9 @@ export default function PhoneSettingsScreen() {
         >
           <ScreenHeader title="Telefonnummer" subtitle="Kontaktinformasjon som vises på profilen din." icon={Phone} />
 
-          <View className="rounded-3xl border border-[#E6E7E1] bg-white p-5">
+          <View className="rounded-3xl border border-line bg-surface p-5">
             <View className="mb-4">
-              <Text className="mb-1.5 text-[0.8125rem] font-semibold text-[#0B0B0B]">
+              <Text className="mb-1.5 text-[0.8125rem] font-semibold text-ink">
                 Telefonnummer
               </Text>
               <TextInput
@@ -157,7 +158,7 @@ export default function PhoneSettingsScreen() {
                   setFeedback(null);
                 }}
                 placeholder="+47 912 34 567"
-                placeholderTextColor="#9B9E96"
+                placeholderTextColor={TC.placeholder}
                 keyboardType="phone-pad"
                 autoComplete="tel"
                 textContentType="telephoneNumber"
@@ -168,19 +169,19 @@ export default function PhoneSettingsScreen() {
                 accessibilityLabel="Telefonnummer"
                 className={[
                   inputClass,
-                  validationHint ? 'border-[#B4544A]' : '',
+                  validationHint ? 'border-[#B4544A] dark:border-danger' : '',
                 ].join(' ')}
               />
               {validationHint ? (
-                <Text className="mt-1.5 text-xs text-[#B4544A]">
+                <Text className="mt-1.5 text-[0.8125rem] text-[#B4544A] dark:text-danger">
                   {validationHint}
                 </Text>
               ) : changed ? (
-                <Text className="mt-1.5 text-xs leading-4 text-[#63665F]">
+                <Text className="mt-1.5 text-[0.8125rem] leading-4 text-muted">
                   Lagret nå: {serverPhone || 'ingen nummer'}
                 </Text>
               ) : (
-                <Text className="mt-1.5 text-xs leading-4 text-[#63665F]">
+                <Text className="mt-1.5 text-[0.8125rem] leading-4 text-muted">
                   Mellomrom og tegn beholdes som du skriver dem.
                 </Text>
               )}
@@ -191,21 +192,21 @@ export default function PhoneSettingsScreen() {
                 className={[
                   'mb-4 flex-row items-start rounded-2xl border p-3',
                   feedback.tone === 'success'
-                    ? 'border-[#E6E7E1] bg-[#EAF1E9]'
-                    : 'border-[#B4544A] bg-[#FBF4F2]',
+                    ? 'border-line bg-tint'
+                    : 'border-[#B4544A] dark:border-danger bg-danger-tint',
                 ].join(' ')}
               >
                 {feedback.tone === 'success' ? (
-                  <CheckCircle2 size={16} color="#2E6641" />
+                  <CheckCircle2 size={16} color={TC.brandText} />
                 ) : (
-                  <Info size={16} color="#B4544A" />
+                  <Info size={16} color={tc('#B4544A', 'danger')} />
                 )}
                 <Text
                   className={[
-                    'ml-2 min-w-0 flex-1 text-xs leading-4',
+                    'ml-2 min-w-0 flex-1 text-[0.8125rem] leading-4',
                     feedback.tone === 'success'
-                      ? 'text-[#2E6641]'
-                      : 'text-[#B4544A]',
+                      ? 'text-brand-text'
+                      : 'text-[#B4544A] dark:text-danger',
                   ].join(' ')}
                 >
                   {feedback.text}
@@ -218,7 +219,7 @@ export default function PhoneSettingsScreen() {
               disabled={disabled}
               accessibilityRole="button"
               accessibilityState={{ disabled }}
-              className="items-center rounded-xl bg-[#2E6641] py-3.5 disabled:opacity-50"
+              className="items-center rounded-xl bg-brand py-3.5 disabled:opacity-50"
             >
               <Text className="text-sm font-semibold text-white">
                 {update.isPending
@@ -228,14 +229,14 @@ export default function PhoneSettingsScreen() {
             </Pressable>
           </View>
 
-          <View className="mt-4 rounded-3xl border border-[#E6E7E1] bg-[#F4F6F0] p-4">
+          <View className="mt-4 rounded-3xl border border-line bg-surface-2 p-4">
             <View className="flex-row items-start">
-              <Info size={16} color="#63665F" />
+              <Info size={16} color={tc('#63665F', 'muted')} />
               <View className="ml-2 min-w-0 flex-1">
-                <Text className="text-[0.8125rem] font-semibold text-[#0B0B0B]">
+                <Text className="text-[0.8125rem] font-semibold text-ink">
                   Om telefonnummeret
                 </Text>
-                <Text className="mt-1.5 text-xs leading-4 text-[#63665F]">
+                <Text className="mt-1.5 text-[0.8125rem] leading-4 text-muted">
                   Nummeret lagres på profilen din og kan vises til andre brukere
                   der det er relevant. Det brukes ikke til SMS-bekreftelse eller
                   oppringing fra denne appen.

@@ -16,6 +16,7 @@ import { apiBaseUrl } from '@/api/client';
 import { GoogleMark, VippsWordmark } from '@/components/auth/SocialAuthLogos';
 import { completeOAuthSignIn } from '@/hooks/useOAuthLoginCompletion';
 import { runOAuthSession, type OAuthProvider } from '@/utils/oauthAuthSession';
+import { TC, tc } from '../../src/theme/colors';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -56,7 +57,7 @@ function SocialButton({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={isVipps ? 'Fortsett med Vipps' : 'Fortsett med Google'}
-      className={`h-[46px] flex-row items-center justify-center gap-2.5 rounded-xl px-4 ${isVipps ? 'bg-[#FF5B24]' : 'border border-line bg-white'
+      className={`h-[46px] flex-row items-center justify-center gap-2.5 rounded-xl px-4 ${isVipps ? 'bg-[#FF5B24]' : 'border border-line bg-surface'
         } ${disabled ? 'opacity-60' : ''}`}
     >
       {isVipps ? (
@@ -203,15 +204,15 @@ export default function LoginScreen() {
 
                 <View className="my-6 flex-row items-center gap-3">
                   <View className="h-px flex-1 bg-line" />
-                  <Text className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9B9E96]">
+                  <Text className="text-[11px] font-semibold uppercase tracking-[0.2em] text-subtle">
                     eller
                   </Text>
                   <View className="h-px flex-1 bg-line" />
                 </View>
 
                 {errorMessage ? (
-                  <View className="mb-4 rounded-xl border border-[#D8B0AB] bg-[#FCF5F4] px-3 py-2.5">
-                    <Text className="text-[13px] leading-5 text-[#B0453B]">{errorMessage}</Text>
+                  <View className="mb-4 rounded-xl border border-danger-line bg-[#FCF5F4] dark:bg-danger-tint px-3 py-2.5">
+                    <Text className="text-[13px] leading-5 text-[#B0453B] dark:text-danger">{errorMessage}</Text>
                   </View>
                 ) : null}
 
@@ -225,15 +226,15 @@ export default function LoginScreen() {
                       keyboardType="email-address"
                       value={form.email}
                       placeholder="deg@eksempel.no"
-                      placeholderTextColor="#9B9E96"
+                      placeholderTextColor={TC.placeholder}
                       onChangeText={(value) => {
                         setForm((current) => ({ ...current, email: value }));
                         setErrors((current) => ({ ...current, email: undefined }));
                       }}
-                      className={`h-[46px] rounded-xl border bg-[#F5F6F1] px-3.5 text-[15px] text-ink ${errors.email ? 'border-[#D8B0AB] bg-[#FCF5F4]' : 'border-transparent'
+                      className={`h-[46px] rounded-xl border bg-[#F5F6F1] dark:bg-surface-2 px-3.5 text-[15px] text-ink ${errors.email ? 'border-danger-line bg-[#FCF5F4] dark:bg-danger-tint' : 'border-transparent'
                         }`}
                     />
-                    {errors.email ? <Text className="text-[12px] text-[#B0453B]">{errors.email}</Text> : null}
+                    {errors.email ? <Text className="text-[12px] text-[#B0453B] dark:text-danger">{errors.email}</Text> : null}
                   </View>
 
                   <View className="gap-2">
@@ -251,12 +252,12 @@ export default function LoginScreen() {
                         secureTextEntry={!showPassword}
                         value={form.password}
                         placeholder="Ditt passord"
-                        placeholderTextColor="#9B9E96"
+                        placeholderTextColor={TC.placeholder}
                         onChangeText={(value) => {
                           setForm((current) => ({ ...current, password: value }));
                           setErrors((current) => ({ ...current, password: undefined }));
                         }}
-                        className={`h-[46px] rounded-xl border bg-[#F5F6F1] px-3.5 pr-12 text-[15px] text-ink ${errors.password ? 'border-[#D8B0AB] bg-[#FCF5F4]' : 'border-transparent'
+                        className={`h-[46px] rounded-xl border bg-[#F5F6F1] dark:bg-surface-2 px-3.5 pr-12 text-[15px] text-ink ${errors.password ? 'border-danger-line bg-[#FCF5F4] dark:bg-danger-tint' : 'border-transparent'
                           }`}
                       />
                       <Pressable
@@ -264,14 +265,14 @@ export default function LoginScreen() {
                         className="absolute right-3 top-0 h-[46px] items-center justify-center"
                       >
                         {showPassword ? (
-                          <EyeOff size={18} color="#63665F" />
+                          <EyeOff size={18} color={tc('#63665F', 'muted')} />
                         ) : (
-                          <Eye size={18} color="#63665F" />
+                          <Eye size={18} color={tc('#63665F', 'muted')} />
                         )}
                       </Pressable>
                     </View>
                     {errors.password ? (
-                      <Text className="text-[12px] text-[#B0453B]">{errors.password}</Text>
+                      <Text className="text-[12px] text-[#B0453B] dark:text-danger">{errors.password}</Text>
                     ) : null}
                   </View>
 

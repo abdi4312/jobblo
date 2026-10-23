@@ -9,6 +9,7 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ErrorState } from '../../src/components/ui/ErrorState';
 import { LoadingIndicator } from '../../src/components/ui/LoadingIndicator';
 import { ScreenHeader } from '../../src/components/ui/ScreenHeader';
+import { TC, tc } from '../../src/theme/colors';
 
 const PAGE_SIZE = 12;
 
@@ -19,11 +20,11 @@ function initials(name?: string, lastName?: string) {
 function Avatar({ uri, label }: { uri?: string; label: string }) {
   const [failed, setFailed] = useState(false);
   return (
-    <View className="h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[#EAF1E9]">
+    <View className="h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-tint">
       {uri && !failed ? (
         <Image source={{ uri }} style={{ width: 56, height: 56 }} onError={() => setFailed(true)} />
       ) : (
-        <Text className="text-[1rem] font-semibold text-[#2E6641]">{label}</Text>
+        <Text className="text-[1rem] font-semibold text-brand-text">{label}</Text>
       )}
     </View>
   );
@@ -63,13 +64,13 @@ export default function RecommendedTaskersScreen() {
 
   if (query.isLoading)
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <LoadingIndicator message="Laster oppdragstakere..." />
       </SafeAreaView>
     );
   if (query.isError)
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState
           title="Kunne ikke laste oppdragstakere"
           message="Sjekk internettforbindelsen din og prøv igjen."
@@ -80,10 +81,10 @@ export default function RecommendedTaskersScreen() {
     );
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor="#2E6641" colors={['#2E6641']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={TC.brandText} colors={[TC.brandText]} />}
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
       >
         <ScreenHeader
@@ -94,28 +95,28 @@ export default function RecommendedTaskersScreen() {
         />
 
         {users.length ? (
-          <View className="mb-3 h-12 flex-row items-center gap-2.5 rounded-full border border-[#E6E7E1] bg-white px-4">
-            <Search size={17} color="#63665F" />
+          <View className="mb-3 h-12 flex-row items-center gap-2.5 rounded-full border border-line bg-surface px-4">
+            <Search size={17} color={tc('#63665F', 'muted')} />
             <TextInput
               value={search}
               onChangeText={setSearch}
               placeholder="Søk på navn eller ferdighet"
-              placeholderTextColor="#9B9E96"
+              placeholderTextColor={TC.placeholder}
               accessibilityLabel="Søk blant oppdragstakere"
               returnKeyType="search"
               style={{ paddingVertical: 0 }}
-              className="flex-1 text-[0.9375rem] text-[#0B0B0B]"
+              className="flex-1 text-[0.9375rem] text-ink"
             />
             {search ? (
               <Pressable onPress={() => setSearch('')} hitSlop={8} accessibilityLabel="Tøm søket">
-                <X size={16} color="#9B9E96" />
+                <X size={16} color={tc('#9B9E96', 'subtle')} />
               </Pressable>
             ) : null}
           </View>
         ) : null}
 
         {users.length ? (
-          <Text className="mb-3 px-1 text-[0.8125rem] text-[#63665F]">
+          <Text className="mb-3 px-1 text-[0.8125rem] text-muted">
             {search ? `${visible.length} treff` : `Viser ${users.length} av ${total}`}
           </Text>
         ) : null}
@@ -123,15 +124,15 @@ export default function RecommendedTaskersScreen() {
         {users.length === 0 ? (
           <EmptyState
             icon={
-              <View className="h-14 w-14 items-center justify-center rounded-full bg-[#EAF1E9]">
-                <Users size={24} color="#2E6641" />
+              <View className="h-14 w-14 items-center justify-center rounded-full bg-tint">
+                <Users size={24} color={TC.brandText} />
               </View>
             }
             title="Ingen oppdragstakere funnet"
             message="Vi fant ingen oppdragstakere i nærheten akkurat nå. Prøv igjen senere."
           />
         ) : visible.length === 0 ? (
-          <Text className="my-8 text-center text-[0.875rem] text-[#63665F]">Ingen treff på «{search.trim()}».</Text>
+          <Text className="my-8 text-center text-[0.875rem] text-muted">Ingen treff på «{search.trim()}».</Text>
         ) : (
           <View className="gap-3">
             {visible.map((worker) => {
@@ -145,61 +146,61 @@ export default function RecommendedTaskersScreen() {
                   onPress={() => router.push({ pathname: '/(app)/profile/[userId]', params: { userId: worker._id } })}
                   accessibilityRole="button"
                   accessibilityLabel={`${name}, se profil`}
-                  className="rounded-2xl border border-[#E6E7E1] bg-white p-4 active:bg-[#FAFAF7]"
+                  className="rounded-2xl border border-line bg-surface p-4 active:bg-[#FAFAF7] dark:bg-surface-2"
                 >
                   <View className="flex-row items-center gap-3">
                     <Avatar uri={worker.avatarUrl} label={initials(worker.name, worker.lastName)} />
                     <View className="min-w-0 flex-1">
-                      <Text className="text-[1rem] font-semibold text-[#0B0B0B]" numberOfLines={1}>{name}</Text>
+                      <Text className="text-[1rem] font-semibold text-ink" numberOfLines={1}>{name}</Text>
                       <View className="mt-1 flex-row items-center gap-1">
                         {reviews > 0 ? (
                           <>
                             <Star size={13} color="#B7791F" fill="#B7791F" />
-                            <Text className="text-[0.8125rem] font-semibold text-[#0B0B0B]">{rating.toFixed(1)}</Text>
-                            <Text className="text-[0.8125rem] text-[#9B9E96]">
+                            <Text className="text-[0.8125rem] font-semibold text-ink">{rating.toFixed(1)}</Text>
+                            <Text className="text-[0.8125rem] text-subtle">
                               ({reviews} {reviews === 1 ? 'anmeldelse' : 'anmeldelser'})
                             </Text>
                           </>
                         ) : (
-                          <View className="rounded-full bg-[#EAF1E9] px-2 py-0.5">
-                            <Text className="text-[0.6875rem] font-semibold text-[#2E6641]">Ny på Jobblo</Text>
+                          <View className="rounded-full bg-tint px-2 py-0.5">
+                            <Text className="text-[0.8125rem] font-semibold text-brand-text">Ny på Jobblo</Text>
                           </View>
                         )}
                       </View>
                     </View>
                     <View className="items-end">
-                      <Text className="text-[0.9375rem] font-bold tabular-nums text-[#0B0B0B]">
+                      <Text className="text-[0.9375rem] font-bold tabular-nums text-ink">
                         {worker.hourlyRate ? `${worker.hourlyRate} kr` : '—'}
                       </Text>
-                      <Text className="text-[0.6875rem] text-[#9B9E96]">{worker.hourlyRate ? 'per time' : 'pris avtales'}</Text>
+                      <Text className="text-[0.8125rem] text-subtle">{worker.hourlyRate ? 'per time' : 'pris avtales'}</Text>
                     </View>
                   </View>
 
                   {skills.length ? (
                     <View className="mt-3 flex-row flex-wrap gap-1.5">
                       {skills.map((skill) => (
-                        <View key={skill} className="rounded-full bg-[#F4F6F0] px-2.5 py-1">
-                          <Text className="text-[0.75rem] font-medium text-[#3C3F38]">{skill}</Text>
+                        <View key={skill} className="rounded-full bg-surface-2 px-2.5 py-1">
+                          <Text className="text-[0.8125rem] font-medium text-ink-2">{skill}</Text>
                         </View>
                       ))}
                       {(worker.skills?.length ?? 0) > 3 ? (
-                        <View className="rounded-full bg-[#F4F6F0] px-2.5 py-1">
-                          <Text className="text-[0.75rem] font-medium text-[#9B9E96]">+{(worker.skills?.length ?? 0) - 3}</Text>
+                        <View className="rounded-full bg-surface-2 px-2.5 py-1">
+                          <Text className="text-[0.8125rem] font-medium text-subtle">+{(worker.skills?.length ?? 0) - 3}</Text>
                         </View>
                       ) : null}
                     </View>
                   ) : null}
 
-                  <View className="mt-3 flex-row items-center justify-between border-t border-[#EFF0EA] pt-3">
+                  <View className="mt-3 flex-row items-center justify-between border-t border-line-soft pt-3">
                     <View className="min-w-0 flex-1 flex-row items-center gap-1">
-                      <MapPin size={13} color="#63665F" />
-                      <Text className="shrink text-[0.8125rem] text-[#63665F]" numberOfLines={1}>
+                      <MapPin size={13} color={tc('#63665F', 'muted')} />
+                      <Text className="shrink text-[0.8125rem] text-muted" numberOfLines={1}>
                         {worker.postSted || worker.locations?.[0] || 'Norge'}
                       </Text>
                     </View>
                     <View className="flex-row items-center gap-0.5">
-                      <Text className="text-[0.8125rem] font-semibold text-[#2E6641]">Se profil</Text>
-                      <ChevronRight size={15} color="#2E6641" />
+                      <Text className="text-[0.8125rem] font-semibold text-brand-text">Se profil</Text>
+                      <ChevronRight size={15} color={TC.brandText} />
                     </View>
                   </View>
                 </Pressable>
@@ -212,7 +213,7 @@ export default function RecommendedTaskersScreen() {
           <Pressable
             onPress={() => setLimit((current) => current + PAGE_SIZE)}
             disabled={loadingMore}
-            className={`mt-5 h-11 flex-row items-center justify-center gap-2 self-center rounded-full bg-[#2E6641] px-6 ${loadingMore ? 'opacity-70' : ''}`}
+            className={`mt-5 h-11 flex-row items-center justify-center gap-2 self-center rounded-full bg-brand px-6 ${loadingMore ? 'opacity-70' : ''}`}
           >
             {loadingMore ? <ActivityIndicator size="small" color="#FFFFFF" /> : null}
             <Text className="text-[0.875rem] font-semibold text-white">{loadingMore ? 'Laster…' : 'Last flere'}</Text>

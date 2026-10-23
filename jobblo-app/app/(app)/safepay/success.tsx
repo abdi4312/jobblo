@@ -10,6 +10,7 @@ import { SafePayProgressSteps } from '../../../src/components/domain/SafePayProg
 import { providerOrderRoute } from '../../../src/utils/orderRoute';
 import { isValidOrderId, isValidSessionId } from '../../../src/utils/safepayCheckoutSession';
 import { reconcileSafePayPayment } from '../../../src/services/safepay.service';
+import { TC, tc } from '../../../src/theme/colors';
 
 const PAID_ORDER_STATUSES = ['paid', 'in_progress', 'ready_for_review', 'completed'];
 type PaymentState = 'verifying' | 'paid' | 'pending' | 'unverified';
@@ -40,8 +41,8 @@ function getErrorMessage(error: unknown) {
 
 function ActionButton({ label, onPress, secondary = false }: { label: string; onPress: () => void; secondary?: boolean }) {
   return (
-    <Pressable onPress={onPress} className={['rounded-full px-5 py-3', secondary ? 'border border-[#E6E7E1] bg-white' : 'bg-[#2E6641]'].join(' ')}>
-      <Text className={['text-center text-[0.9375rem] font-semibold', secondary ? 'text-[#0B0B0B]' : 'text-white'].join(' ')}>{label}</Text>
+    <Pressable onPress={onPress} className={['rounded-full px-5 py-3', secondary ? 'border border-line bg-surface' : 'bg-brand'].join(' ')}>
+      <Text className={['text-center text-[0.9375rem] font-semibold', secondary ? 'text-ink' : 'text-white'].join(' ')}>{label}</Text>
     </Pressable>
   );
 }
@@ -102,7 +103,7 @@ export default function SafePaySuccessScreen() {
   }, [statusQuery.error, orderQuery.error]);
 
   if (statusQuery.isLoading || orderQuery.isLoading) {
-    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 items-center justify-center bg-[#EFF0EA]"><Text className="text-[0.9375rem] text-[#63665F]">Bekrefter betalingen…</Text></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 items-center justify-center bg-page"><Text className="text-[0.9375rem] text-muted">Bekrefter betalingen…</Text></SafeAreaView>;
   }
 
   if (paymentState !== 'paid') {
@@ -123,12 +124,12 @@ export default function SafePaySuccessScreen() {
     };
     const pending = paymentState === 'pending';
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 16 }}>
-          <View className="rounded-3xl border border-[#E6E7E1] bg-white p-8">
-            <View className="mx-auto h-12 w-12 items-center justify-center rounded-full bg-[#F4F6F0]"><AlertCircle size={22} color="#63665F" /></View>
-            <Text className="mt-5 text-center text-[1.25rem] font-bold text-[#0B0B0B]">{pending ? 'Betalingen er ikke fullført' : errorCopy.title}</Text>
-            <Text className="mt-2.5 text-center text-[0.875rem] leading-relaxed text-[#63665F]">{pending ? 'Vi har ikke mottatt bekreftelse på betalingen ennå. Har du nettopp betalt, kan det ta noen sekunder — prøv å sjekke på nytt.' : errorCopy.message}</Text>
+          <View className="rounded-3xl border border-line bg-surface p-8">
+            <View className="mx-auto h-12 w-12 items-center justify-center rounded-full bg-surface-2"><AlertCircle size={22} color={tc('#63665F', 'muted')} /></View>
+            <Text className="mt-5 text-center text-[1.25rem] font-bold text-ink">{pending ? 'Betalingen er ikke fullført' : errorCopy.title}</Text>
+            <Text className="mt-2.5 text-center text-[0.875rem] leading-relaxed text-muted">{pending ? 'Vi har ikke mottatt bekreftelse på betalingen ennå. Har du nettopp betalt, kan det ta noen sekunder — prøv å sjekke på nytt.' : errorCopy.message}</Text>
             <View className="mt-7 gap-2.5">
               {sessionId ? <ActionButton label={statusQuery.isRefetching ? 'Sjekker…' : 'Sjekk på nytt'} onPress={retry} /> : null}
               {resolvedOrderId ? <ActionButton label="Gå til betaling" onPress={checkout} secondary /> : null}
@@ -141,7 +142,7 @@ export default function SafePaySuccessScreen() {
   }
 
   if (!order) {
-    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><ErrorState title="Vi fikk ikke bekreftet betalingen" message="Betalingen er bekreftet, men ordredetaljene kunne ikke lastes ennå." actionLabel="Sjekk på nytt" onAction={() => void orderQuery.refetch()} /></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ErrorState title="Vi fikk ikke bekreftet betalingen" message="Betalingen er bekreftet, men ordredetaljene kunne ikke lastes ennå." actionLabel="Sjekk på nytt" onAction={() => void orderQuery.refetch()} /></SafeAreaView>;
   }
 
   const readyForApproval = isCustomer && order.status === 'ready_for_review';
@@ -151,24 +152,24 @@ export default function SafePaySuccessScreen() {
   const goApplicants = () => serviceId ? router.push({ pathname: '/(app)/job-applicants/[serviceId]', params: { serviceId } }) : goOverview();
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 24, paddingBottom: 120 }}>
         <SafePayProgressSteps currentStep={3} />
-        <View className="rounded-3xl border border-[#E6E7E1] bg-white p-8">
-          <View className="mx-auto h-12 w-12 items-center justify-center rounded-full bg-[#EAF1E9]"><CheckCircle2 size={22} color="#2E6641" /></View>
-          <Text className="mt-5 text-center text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-[#9B9E96]">SafePay</Text>
-          <Text className="mt-2 text-center text-[1.5rem] font-bold text-[#0B0B0B]">Betalingen er bekreftet</Text>
-          <Text className="mt-2.5 text-center text-[0.875rem] leading-relaxed text-[#63665F]">{isProvider ? 'Oppdraget er betalt via SafePay. Du kan starte arbeidet når du er klar.' : 'Beløpet holdes av Jobblo og utbetales til utføreren når arbeidet er gjort og du har godkjent det.'}</Text>
-          <View className="mt-7 flex-row items-center gap-3 rounded-2xl bg-[#F4F6F0] p-4"><ShieldCheck size={20} color="#2E6641" /><View className="flex-1"><Text className="text-[0.8125rem] font-semibold text-[#0B0B0B]">SafePay-beskyttelse</Text><Text className="mt-0.5 text-[0.75rem] leading-relaxed text-[#63665F]">Jobblo holder beløpet frem til du godkjenner.</Text></View></View>
+        <View className="rounded-3xl border border-line bg-surface p-8">
+          <View className="mx-auto h-12 w-12 items-center justify-center rounded-full bg-tint"><CheckCircle2 size={22} color={TC.brand} /></View>
+          <Text className="mt-5 text-center text-[0.8125rem] font-semibold uppercase tracking-[0.16em] text-subtle">SafePay</Text>
+          <Text className="mt-2 text-center text-[1.5rem] font-bold text-ink">Betalingen er bekreftet</Text>
+          <Text className="mt-2.5 text-center text-[0.875rem] leading-relaxed text-muted">{isProvider ? 'Oppdraget er betalt via SafePay. Du kan starte arbeidet når du er klar.' : 'Beløpet holdes av Jobblo og utbetales til utføreren når arbeidet er gjort og du har godkjent det.'}</Text>
+          <View className="mt-7 flex-row items-center gap-3 rounded-2xl bg-surface-2 p-4"><ShieldCheck size={20} color={TC.brand} /><View className="flex-1"><Text className="text-[0.8125rem] font-semibold text-ink">SafePay-beskyttelse</Text><Text className="mt-0.5 text-[0.8125rem] leading-relaxed text-muted">Jobblo holder beløpet frem til du godkjenner.</Text></View></View>
           <View className="mt-7 gap-2.5">
             {isProvider ? <ActionButton label="Gå til aktiv jobb" onPress={goProvider} /> : null}
-            {isCustomer && !readyForApproval && !completed ? <Text className="rounded-2xl bg-[#F4F6F0] px-4 py-3 text-center text-[0.8125rem] leading-relaxed text-[#63665F]">Neste steg er utførerens. Du kan godkjenne og utbetale så snart arbeidet er meldt ferdig — vi varsler deg.</Text> : null}
+            {isCustomer && !readyForApproval && !completed ? <Text className="rounded-2xl bg-surface-2 px-4 py-3 text-center text-[0.8125rem] leading-relaxed text-muted">Neste steg er utførerens. Du kan godkjenne og utbetale så snart arbeidet er meldt ferdig — vi varsler deg.</Text> : null}
             {isCustomer && (readyForApproval || completed) ? <ActionButton label={completed ? 'Se oppsummeringen' : 'Godkjenn jobb og utbetal'} onPress={goApproval} /> : null}
             {isCustomer || isProvider ? <ActionButton label={isProvider ? 'Mine søknader' : 'Mine søkere'} onPress={goOverview} secondary={!isCustomer || readyForApproval || completed} /> : null}
             <ActionButton label="Tilbake til forsiden" onPress={goHome} secondary />
           </View>
         </View>
-        {isCustomer && serviceId ? <Pressable onPress={goApplicants} className="mt-4 flex-row items-center justify-center gap-2"><ArrowLeft size={15} color="#63665F" /><Text className="text-[0.8125rem] text-[#63665F]">Tilbake til søkerne</Text></Pressable> : null}
+        {isCustomer && serviceId ? <Pressable onPress={goApplicants} className="mt-4 flex-row items-center justify-center gap-2"><ArrowLeft size={15} color={tc('#63665F', 'muted')} /><Text className="text-[0.8125rem] text-muted">Tilbake til søkerne</Text></Pressable> : null}
       </ScrollView>
     </SafeAreaView>
   );

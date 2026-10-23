@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AlertCircle } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useOAuthLoginCompletion } from '@/hooks/useOAuthLoginCompletion';
+import { TC, tc } from '../../src/theme/colors';
 
 /**
  * Where a Google or Vipps sign-in lands when the app receives a real deep link.
@@ -31,8 +32,8 @@ export default function OAuthSuccessScreen() {
       <SafeAreaView className="flex-1 bg-page">
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20 }}>
           <View className="rounded-[28px] bg-surface p-8 shadow-sm">
-            <View className="mx-auto h-12 w-12 items-center justify-center rounded-full bg-[#FCF5F4]">
-              <AlertCircle size={22} color="#B0453B" />
+            <View className="mx-auto h-12 w-12 items-center justify-center rounded-full bg-[#FCF5F4] dark:bg-danger-tint">
+              <AlertCircle size={22} color={tc('#B0453B', 'danger')} />
             </View>
             <Text className="mt-5 text-center text-[20px] font-bold text-ink">
               Innloggingen mislyktes
@@ -54,7 +55,7 @@ export default function OAuthSuccessScreen() {
   // swapping in a success card first would flash for a frame and then disappear.
   return (
     <SafeAreaView className="flex-1 items-center justify-center bg-page">
-      <ActivityIndicator size="large" color="#2E6641" />
+      <ActivityIndicator size="large" color={TC.brandText} />
       <Text className="mt-4 text-[15px] text-muted">Fullfører innloggingen…</Text>
     </SafeAreaView>
   );

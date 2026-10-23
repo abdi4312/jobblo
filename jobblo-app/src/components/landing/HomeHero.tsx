@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useCategories } from '../../hooks/useCategories';
 import apiClient from '../../api/client';
+import { TC, tc } from '../../theme/colors';
 
 const SERVICE_SHOWCASE = [
   { name: 'Maling', src: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=900&q=80' },
@@ -49,61 +50,61 @@ export function HomeHero() {
   const categoryShortcuts = categories.slice(0, 6);
 
   return (
-    <View style={{ backgroundColor: '#EFF0EA', paddingBottom: 10 }}>
+    <View style={{ backgroundColor: TC.page, paddingBottom: 10 }}>
       <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
           <View style={{ flex: 1 }} />
           <Pressable
             onPress={() => router.push('/(auth)/login')}
             style={{
-              backgroundColor: '#FFFFFF',
+              backgroundColor: TC.surface,
               borderWidth: 1,
-              borderColor: '#E6E7E1',
+              borderColor: TC.line,
               borderRadius: 999,
               paddingVertical: 10,
               paddingHorizontal: 16,
             }}
           >
-            <Text style={{ color: '#0B0B0B', fontSize: 13, fontWeight: '700' }}>Logg inn</Text>
+            <Text style={{ color: TC.ink, fontSize: 13, fontWeight: '700' }}>Logg inn</Text>
           </Pressable>
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-          <Text style={{ color: '#9B9E96', fontSize: 10, fontWeight: '700', letterSpacing: 2.5, textTransform: 'uppercase' }}>
+          <Text style={{ color: tc('#9B9E96', 'subtle'), fontSize: 10, fontWeight: '700', letterSpacing: 2.5, textTransform: 'uppercase' }}>
             Norges lokale jobbplattform
           </Text>
           {stats ? (
-            <Text style={{ color: '#9B9E96', fontSize: 10, fontWeight: '700', letterSpacing: 2.5, textTransform: 'uppercase' }}>
+            <Text style={{ color: tc('#9B9E96', 'subtle'), fontSize: 10, fontWeight: '700', letterSpacing: 2.5, textTransform: 'uppercase' }}>
               {stats.jobs ?? 0} aktive oppdrag · {stats.users ?? 0} brukere
             </Text>
           ) : null}
         </View>
 
-        <Text style={{ color: '#0B0B0B', fontSize: 42, fontWeight: '800', lineHeight: 44, letterSpacing: -1.4 }}>
+        <Text style={{ color: TC.ink, fontSize: 42, fontWeight: '800', lineHeight: 44, letterSpacing: -1.4 }}>
           Jeg trenger hjelp til
         </Text>
-        <Text style={{ color: '#2E6641', fontSize: 42, fontWeight: '800', lineHeight: 44, letterSpacing: -1.4 }}>
+        <Text style={{ color: TC.brandText, fontSize: 42, fontWeight: '800', lineHeight: 44, letterSpacing: -1.4 }}>
           {words[wordIndex % words.length]}
         </Text>
 
-        <Text style={{ marginTop: 14, color: '#63665F', fontSize: 16, lineHeight: 24 }}>
+        <Text style={{ marginTop: 14, color: tc('#63665F', 'muted'), fontSize: 16, lineHeight: 24 }}>
           Beskriv oppdraget, få tilbud fra folk i nærheten, og betal først når jobben er godkjent.{' '}
-          <Text style={{ color: '#2E6641', fontWeight: '700' }}>Gratis å legge ut</Text> —{' '}
-          <Text style={{ color: '#2E6641', fontWeight: '700' }}>3 % når jobben faktisk blir gjort</Text>.
+          <Text style={{ color: TC.brandText, fontWeight: '700' }}>Gratis å legge ut</Text> —{' '}
+          <Text style={{ color: TC.brandText, fontWeight: '700' }}>3 % når jobben faktisk blir gjort</Text>.
         </Text>
 
-        <View style={{ marginTop: 18, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#E6E7E1', backgroundColor: '#FFFFFF', borderRadius: 999, paddingLeft: 14, paddingRight: 6, paddingVertical: 7 }}>
-          <Search size={18} color="#9B9E96" style={{ marginRight: 8 }} />
+        <View style={{ marginTop: 18, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: TC.line, backgroundColor: TC.surface, borderRadius: 999, paddingLeft: 14, paddingRight: 6, paddingVertical: 7 }}>
+          <Search size={18} color={tc('#9B9E96', 'subtle')} style={{ marginRight: 8 }} />
           <TextInput
             value={query}
             onChangeText={setQuery}
             placeholder="Hva gjelder det?"
-            placeholderTextColor="#9B9E96"
-            style={{ flex: 1, fontSize: 15, color: '#0B0B0B', paddingVertical: 10 }}
+            placeholderTextColor={TC.placeholder}
+            style={{ flex: 1, fontSize: 15, color: TC.ink, paddingVertical: 10 }}
           />
           <Pressable
             onPress={() => router.push('/(auth)/register')}
-            style={{ backgroundColor: '#122A1C', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+            style={{ backgroundColor: TC.brandDeep, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}
           >
             <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Finn hjelp</Text>
             <ArrowRight size={16} color="#FFFFFF" />
@@ -116,17 +117,17 @@ export function HomeHero() {
               <Pressable
                 key={cat._id}
                 onPress={() => router.push('/(auth)/register')}
-                style={{ borderWidth: 1, borderColor: '#E6E7E1', backgroundColor: '#FFFFFF', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 10 }}
+                style={{ borderWidth: 1, borderColor: TC.line, backgroundColor: TC.surface, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 10 }}
               >
-                <Text style={{ color: '#0B0B0B', fontSize: 13, fontWeight: '600' }}>{cat.name}</Text>
+                <Text style={{ color: TC.ink, fontSize: 13, fontWeight: '600' }}>{cat.name}</Text>
               </Pressable>
             ))}
           </ScrollView>
         )}
 
         <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <ShieldCheck size={15} color="#2E6641" />
-          <Text style={{ color: '#2E6641', fontWeight: '700' }}>Betaling holdes trygt til du har godkjent</Text>
+          <ShieldCheck size={15} color={TC.brandText} />
+          <Text style={{ color: TC.brandText, fontWeight: '700' }}>Betaling holdes trygt til du har godkjent</Text>
         </View>
       </View>
 
@@ -136,7 +137,7 @@ export function HomeHero() {
             <Pressable
               key={service.name}
               onPress={() => router.push('/(auth)/register')}
-              style={{ width: 150, height: 180, overflow: 'hidden', borderRadius: 22, borderWidth: 1, borderColor: '#E6E7E1', backgroundColor: '#EAF1E9' }}
+              style={{ width: 150, height: 180, overflow: 'hidden', borderRadius: 22, borderWidth: 1, borderColor: TC.line, backgroundColor: TC.tint }}
             >
               <Image source={{ uri: service.src }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
               <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 60, backgroundColor: 'rgba(11,11,11,0.56)' }} />

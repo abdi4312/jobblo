@@ -41,13 +41,13 @@ export function ApplicationFlowSteps({
           return (
             <View
               key={step.key}
-              className={['h-1.5 flex-1 rounded-full', active ? 'bg-[#2E6641]' : 'bg-[#E6E7E1]'].join(' ')}
+              className={['h-1.5 flex-1 rounded-full', active ? 'bg-brand' : 'bg-line'].join(' ')}
             />
           );
         })}
       </View>
-      <Text className="mt-2 text-[0.75rem] text-[#63665F]">
-        <Text className="font-semibold text-[#0B0B0B]">Steg {Math.min(completedCount, steps.length)} av {steps.length}</Text>
+      <Text className="mt-2 text-[0.8125rem] text-muted">
+        <Text className="font-semibold text-ink">Steg {Math.min(completedCount, steps.length)} av {steps.length}</Text>
         {' · '}
         {completedCount === steps.length ? 'Fullført' : current.label}
       </Text>

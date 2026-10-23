@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, TextInput, View, type TextInputProps } from 'react-native';
 import { cn } from '@/lib/utils';
+import { TC } from '../../theme/colors';
 
 interface FieldProps extends TextInputProps {
   label: string;
@@ -37,18 +38,18 @@ export function Field({
   return (
     <View className={cn('gap-1.5', className)}>
       <View className="flex-row items-center justify-between gap-2">
-        <Text className="text-[0.8125rem] font-semibold text-[#0B0B0B]">
+        <Text className="text-[0.8125rem] font-semibold text-ink">
           {label}
-          {required ? <Text className="text-[#B4453A]"> *</Text> : null}
+          {required ? <Text className="text-danger"> *</Text> : null}
         </Text>
         <View className="flex-row items-center gap-2">
           {badge ? (
-            <View className="rounded bg-[#F4F6F0] px-1.5 py-0.5">
-              <Text className="text-[0.6875rem] font-medium text-[#63665F]">{badge}</Text>
+            <View className="rounded bg-surface-2 px-1.5 py-0.5">
+              <Text className="text-[0.8125rem] font-medium text-muted">{badge}</Text>
             </View>
           ) : null}
           {showCount && maxLength ? (
-            <Text className="text-[0.6875rem] tabular-nums text-[#9B9E96]">
+            <Text className="text-[0.8125rem] tabular-nums text-subtle">
               {(value ?? '').length}/{maxLength}
             </Text>
           ) : null}
@@ -56,29 +57,29 @@ export function Field({
       </View>
       <View
         className={cn(
-          'flex-row rounded-lg border bg-white px-3',
+          'flex-row rounded-lg border bg-surface px-3',
           multiline ? 'items-start py-2' : 'h-11 items-center',
-          error ? 'border-[#B4453A]' : 'border-[#E6E7E1]'
+          error ? 'border-danger' : 'border-line'
         )}
       >
-        {prefix ? <Text className="mr-2 text-[0.9375rem] text-[#63665F]">{prefix}</Text> : null}
+        {prefix ? <Text className="mr-2 text-[0.9375rem] text-muted">{prefix}</Text> : null}
         <TextInput
           value={value}
           multiline={multiline}
           maxLength={maxLength}
-          placeholderTextColor="#9B9E96"
+          placeholderTextColor={TC.placeholder}
           textAlignVertical={multiline ? 'top' : 'center'}
           accessibilityLabel={label}
           style={{ paddingVertical: multiline ? 4 : 0, minHeight: multiline ? 110 : undefined }}
-          className="flex-1 text-[0.9375rem] text-[#0B0B0B]"
+          className="flex-1 text-[0.9375rem] text-ink"
           {...input}
         />
-        {suffix ? <Text className="ml-2 text-[0.8125rem] text-[#63665F]">{suffix}</Text> : null}
+        {suffix ? <Text className="ml-2 text-[0.8125rem] text-muted">{suffix}</Text> : null}
       </View>
       {error ? (
-        <Text className="text-[0.75rem] font-medium text-[#B4453A]">{error}</Text>
+        <Text className="text-[0.8125rem] font-medium text-danger">{error}</Text>
       ) : hint ? (
-        <Text className="text-[0.75rem] leading-4 text-[#63665F]">{hint}</Text>
+        <Text className="text-[0.8125rem] leading-4 text-muted">{hint}</Text>
       ) : null}
     </View>
   );

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Text, View } from 'react-native';
 import { Apple, Landmark, CreditCard, ShieldCheck } from 'lucide-react-native';
+import { TC } from '../../theme/colors';
 
 const SYSTEMS = [
   { name: 'Apple Pay', color: '#000000', Icon: Apple },
@@ -61,8 +62,8 @@ export function TrustBar() {
       style={{
         borderTopWidth: 1,
         borderBottomWidth: 1,
-        borderColor: '#E6E7E1',
-        backgroundColor: '#FFFFFF',
+        borderColor: TC.line,
+        backgroundColor: TC.surface,
         paddingVertical: 18,
         overflow: 'hidden',
       }}

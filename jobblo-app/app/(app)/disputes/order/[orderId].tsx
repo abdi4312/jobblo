@@ -20,16 +20,17 @@ import { disputeErrorMessage, httpStatus } from '../../../../src/utils/disputeEr
 import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { Button } from '../../../../src/components/ui/Button';
+import { TC, tc } from '../../../../src/theme/colors';
 
 const STATUS_TONE: Record<DisputeStatus, string> = {
-  open: 'bg-[#FBF4F2] text-[#B4453A]',
-  under_review: 'bg-[#FFF8E1] text-[#8B6914]',
-  waiting_for_customer: 'bg-[#FFF8E1] text-[#8B6914]',
-  waiting_for_provider: 'bg-[#FFF8E1] text-[#8B6914]',
-  evidence_submitted: 'bg-[#EAF1E9] text-[#2E6641]',
-  resolved: 'bg-[#EAF1E9] text-[#2E6641]',
-  closed: 'bg-[#F4F6F0] text-[#63665F]',
-  cancelled: 'bg-[#F4F6F0] text-[#63665F]',
+  open: 'bg-danger-tint text-danger',
+  under_review: 'bg-[#FFF8E1] dark:bg-warn-tint text-[#8B6914] dark:text-warn',
+  waiting_for_customer: 'bg-[#FFF8E1] dark:bg-warn-tint text-[#8B6914] dark:text-warn',
+  waiting_for_provider: 'bg-[#FFF8E1] dark:bg-warn-tint text-[#8B6914] dark:text-warn',
+  evidence_submitted: 'bg-tint text-brand-text',
+  resolved: 'bg-tint text-brand-text',
+  closed: 'bg-surface-2 text-muted',
+  cancelled: 'bg-surface-2 text-muted',
 };
 
 function dateLabel(value?: string | null) {
@@ -82,7 +83,7 @@ export default function DisputeThreadScreen() {
 
   if (!orderId) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState
           title="Mangler oppdrag"
           message="Vi fant ingen ordre-ID i lenken, så tvisten kan ikke åpnes."
@@ -95,7 +96,7 @@ export default function DisputeThreadScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <LoadingIndicator message="Laster tvist..." />
       </SafeAreaView>
     );
@@ -105,7 +106,7 @@ export default function DisputeThreadScreen() {
     const status = httpStatus(error);
     const forbidden = status === 403;
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState
           title={forbidden ? 'Ingen tilgang' : 'Kunne ikke laste tvisten'}
           message={disputeErrorMessage(error, 'Prøv igjen om litt.')}
@@ -119,10 +120,10 @@ export default function DisputeThreadScreen() {
   // 404 from the API means "no dispute on this order yet", not a failure.
   if (!dispute) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
-        <View className="mx-4 my-8 rounded-3xl border border-[#E6E7E1] bg-white p-6">
-          <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Ingen tvist på dette oppdraget</Text>
-          <Text className="mt-1.5 text-[0.875rem] leading-relaxed text-[#63665F]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
+        <View className="mx-4 my-8 rounded-3xl border border-line bg-surface p-6">
+          <Text className="text-[0.9375rem] font-semibold text-ink">Ingen tvist på dette oppdraget</Text>
+          <Text className="mt-1.5 text-[0.875rem] leading-relaxed text-muted">
             Det er ikke åpnet noen tvist her ennå. Du kan åpne en tvist hvis noe har gått galt med oppdraget.
           </Text>
           <View className="mt-4 gap-2">
@@ -139,20 +140,20 @@ export default function DisputeThreadScreen() {
   }
 
   const statusLabel = DISPUTE_STATUS_LABELS[dispute.status] ?? dispute.status;
-  const statusTone = STATUS_TONE[dispute.status] ?? 'bg-[#F4F6F0] text-[#63665F]';
+  const statusTone = STATUS_TONE[dispute.status] ?? 'bg-surface-2 text-muted';
   const reasonLabel = DISPUTE_REASON_LABELS[dispute.reasonCategory] ?? dispute.reasonCategory;
   const active = isDisputeActive(dispute.status);
   const openedLabel = dateLabel(dispute.openedAt ?? dispute.createdAt);
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
-      <View className="flex-row items-center gap-3 border-b border-[#E6E7E1] bg-white px-4 py-3">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
+      <View className="flex-row items-center gap-3 border-b border-line bg-surface px-4 py-3">
         <Pressable onPress={() => router.back()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Tilbake">
-          <ArrowLeft size={18} color="#63665F" />
+          <ArrowLeft size={18} color={tc('#63665F', 'muted')} />
         </Pressable>
-        <Text className="flex-1 text-[0.9375rem] font-semibold text-[#0B0B0B]" numberOfLines={1}>Tvist</Text>
+        <Text className="flex-1 text-[0.9375rem] font-semibold text-ink" numberOfLines={1}>Tvist</Text>
         <View className={['rounded-full px-3 py-1', statusTone].join(' ')}>
-          <Text className="text-[0.6875rem] font-semibold">{statusLabel}</Text>
+          <Text className="text-[0.8125rem] font-semibold">{statusLabel}</Text>
         </View>
       </View>
 
@@ -162,38 +163,38 @@ export default function DisputeThreadScreen() {
           contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="mb-4 rounded-2xl border border-[#E6E7E1] bg-white p-5">
-            <Text className="mb-1 text-[0.9375rem] font-semibold text-[#0B0B0B]" numberOfLines={3}>{dispute.title}</Text>
-            <Text className="mb-3 text-[0.75rem] text-[#63665F]">Kategori: {reasonLabel}</Text>
-            <Text className="text-[0.8125rem] leading-relaxed text-[#0B0B0B]">{dispute.description}</Text>
+          <View className="mb-4 rounded-2xl border border-line bg-surface p-5">
+            <Text className="mb-1 text-[0.9375rem] font-semibold text-ink" numberOfLines={3}>{dispute.title}</Text>
+            <Text className="mb-3 text-[0.8125rem] text-muted">Kategori: {reasonLabel}</Text>
+            <Text className="text-[0.8125rem] leading-relaxed text-ink">{dispute.description}</Text>
             <View className="mt-3 flex-row flex-wrap items-center gap-x-2">
-              {openedLabel ? <Text className="text-[0.6875rem] text-[#9B9E96]">Opprettet {openedLabel}</Text> : null}
+              {openedLabel ? <Text className="text-[0.8125rem] text-subtle">Opprettet {openedLabel}</Text> : null}
               {dispute.openedByRole ? (
-                <Text className="text-[0.6875rem] text-[#9B9E96]">· Åpnet av {roleLabel(dispute.openedByRole)}</Text>
+                <Text className="text-[0.8125rem] text-subtle">· Åpnet av {roleLabel(dispute.openedByRole)}</Text>
               ) : null}
             </View>
           </View>
 
           {dispute.resolution ? (
-            <View className="mb-4 rounded-2xl border border-[#C6E2CE] bg-[#EAF1E9] p-5">
-              <Text className="mb-1 text-[0.875rem] font-semibold text-[#2E6641]">Avgjørelse</Text>
-              <Text className="text-[0.8125rem] font-medium text-[#0B0B0B]">{outcomeLabel(dispute.resolution.outcome)}</Text>
+            <View className="mb-4 rounded-2xl border border-[#C6E2CE] bg-tint p-5">
+              <Text className="mb-1 text-[0.875rem] font-semibold text-brand-text">Avgjørelse</Text>
+              <Text className="text-[0.8125rem] font-medium text-ink">{outcomeLabel(dispute.resolution.outcome)}</Text>
               {dispute.resolution.reason ? (
-                <Text className="mt-2 text-[0.8125rem] leading-relaxed text-[#63665F]">{dispute.resolution.reason}</Text>
+                <Text className="mt-2 text-[0.8125rem] leading-relaxed text-muted">{dispute.resolution.reason}</Text>
               ) : null}
               {dispute.resolution.resolvedAt ? (
-                <Text className="mt-2 text-[0.6875rem] text-[#63665F]">Avgjort {dateLabel(dispute.resolution.resolvedAt)}</Text>
+                <Text className="mt-2 text-[0.8125rem] text-muted">Avgjort {dateLabel(dispute.resolution.resolvedAt)}</Text>
               ) : null}
             </View>
           ) : null}
 
-          <Text className="mb-2 px-1 text-[0.75rem] font-semibold uppercase tracking-wide text-[#63665F]">
+          <Text className="mb-2 px-1 text-[0.8125rem] font-semibold uppercase tracking-wide text-muted">
             Meldinger ({messages.length})
           </Text>
 
           {messages.length === 0 ? (
-            <View className="rounded-2xl border border-[#E6E7E1] bg-white p-5">
-              <Text className="text-[0.8125rem] leading-relaxed text-[#63665F]">
+            <View className="rounded-2xl border border-line bg-surface p-5">
+              <Text className="text-[0.8125rem] leading-relaxed text-muted">
                 {active
                   ? 'Ingen meldinger ennå. Skriv den første meldingen nedenfor.'
                   : 'Det ble ikke sendt noen meldinger i denne tvisten.'}
@@ -209,10 +210,10 @@ export default function DisputeThreadScreen() {
               if (isSystem) {
                 return (
                   <View key={msg._id} className="mb-3 items-center">
-                    <View className="rounded-full bg-[#E6E7E1] px-3 py-1.5">
-                      <Text className="text-center text-[0.6875rem] text-[#63665F]">{msg.message}</Text>
+                    <View className="rounded-full bg-line px-3 py-1.5">
+                      <Text className="text-center text-[0.8125rem] text-muted">{msg.message}</Text>
                     </View>
-                    <Text className="mt-1 text-[0.625rem] text-[#9B9E96]">{dateLabel(msg.createdAt)}</Text>
+                    <Text className="mt-1 text-[0.6875rem] text-subtle">{dateLabel(msg.createdAt)}</Text>
                   </View>
                 );
               }
@@ -223,22 +224,22 @@ export default function DisputeThreadScreen() {
                     className={[
                       'max-w-[88%] rounded-2xl border p-3',
                       isAdmin
-                        ? 'border-[#D8C9A3] bg-[#FFF8E1]'
+                        ? 'border-[#D8C9A3] bg-[#FFF8E1] dark:bg-warn-tint'
                         : isOwn
-                          ? 'border-[#C6E2CE] bg-[#EAF1E9]'
-                          : 'border-[#E6E7E1] bg-white',
+                          ? 'border-[#C6E2CE] bg-tint'
+                          : 'border-line bg-surface',
                     ].join(' ')}
                   >
                     <Text
                       className={[
-                        'mb-1 text-[0.6875rem] font-semibold',
-                        isAdmin ? 'text-[#8B6914]' : isOwn ? 'text-[#2E6641]' : 'text-[#63665F]',
+                        'mb-1 text-[0.8125rem] font-semibold',
+                        isAdmin ? 'text-[#8B6914] dark:text-warn' : isOwn ? 'text-brand-text' : 'text-muted',
                       ].join(' ')}
                     >
                       {isOwn ? 'Deg' : roleLabel(msg.senderRole)}
                     </Text>
-                    <Text className="text-[0.8125rem] leading-relaxed text-[#0B0B0B]">{msg.message}</Text>
-                    <Text className="mt-1 text-[0.625rem] text-[#9B9E96]">{dateLabel(msg.createdAt)}</Text>
+                    <Text className="text-[0.8125rem] leading-relaxed text-ink">{msg.message}</Text>
+                    <Text className="mt-1 text-[0.6875rem] text-subtle">{dateLabel(msg.createdAt)}</Text>
                   </View>
                 </View>
               );
@@ -247,37 +248,37 @@ export default function DisputeThreadScreen() {
         </ScrollView>
 
         {active ? (
-          <View className="border-t border-[#E6E7E1] bg-white px-4 pb-2 pt-3">
+          <View className="border-t border-line bg-surface px-4 pb-2 pt-3">
             <View className="flex-row items-end gap-2">
               <TextInput
                 value={draft}
                 onChangeText={setDraft}
                 placeholder="Skriv en melding..."
-                placeholderTextColor="#9B9E96"
+                placeholderTextColor={TC.placeholder}
                 multiline
                 maxLength={DISPUTE_MESSAGE_MAX_LENGTH}
                 textAlignVertical="top"
                 editable={!messageMutation.isPending}
-                className="max-h-[120px] min-h-[44px] flex-1 rounded-xl border border-[#E6E7E1] bg-[#F4F6F0] px-3 py-2.5 text-[0.8125rem] text-[#0B0B0B]"
+                className="max-h-[120px] min-h-[44px] flex-1 rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-[0.8125rem] text-ink"
               />
               <Pressable
                 onPress={sendMessage}
                 disabled={!canSend}
                 accessibilityRole="button"
                 accessibilityLabel="Send melding"
-                className={['h-11 w-11 items-center justify-center rounded-full', canSend ? 'bg-[#2E6641]' : 'bg-[#E6E7E1]'].join(' ')}
+                className={['h-11 w-11 items-center justify-center rounded-full', canSend ? 'bg-brand' : 'bg-line'].join(' ')}
               >
-                <Send size={16} color={canSend ? '#FFFFFF' : '#9B9E96'} />
+                <Send size={16} color={canSend ? '#FFFFFF' : tc('#9B9E96', 'subtle')} />
               </Pressable>
             </View>
-            <Text className="mt-1 text-right text-[0.625rem] text-[#9B9E96]">
+            <Text className="mt-1 text-right text-[0.6875rem] text-subtle">
               {messageMutation.isPending ? 'Sender...' : `${draft.length}/${DISPUTE_MESSAGE_MAX_LENGTH}`}
             </Text>
           </View>
         ) : (
-          <View className="flex-row items-center gap-2 border-t border-[#E6E7E1] bg-white px-4 py-4">
-            <Lock size={14} color="#63665F" />
-            <Text className="flex-1 text-[0.8125rem] text-[#63665F]">Tvisten er avsluttet.</Text>
+          <View className="flex-row items-center gap-2 border-t border-line bg-surface px-4 py-4">
+            <Lock size={14} color={tc('#63665F', 'muted')} />
+            <Text className="flex-1 text-[0.8125rem] text-muted">Tvisten er avsluttet.</Text>
           </View>
         )}
       </KeyboardAvoidingView>

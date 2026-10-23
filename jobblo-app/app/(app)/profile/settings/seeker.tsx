@@ -63,6 +63,7 @@ import {
     useDeleteCertification,
     type ExperienceInput,
 } from '../../../../src/hooks/useSeeker';
+import { TC, tc } from '../../../../src/theme/colors';
 
 // ─── Max file size: must match backend (8 MB) ────────────────────────────────
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -364,7 +365,7 @@ export default function SeekerScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+            <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
                 <LoadingIndicator message="Laster jobbsøker-profil..." />
             </SafeAreaView>
         );
@@ -372,7 +373,7 @@ export default function SeekerScreen() {
 
     if (isError || !profile) {
         return (
-            <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+            <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
                 <ErrorState title="Kunne ikke laste profilen" onAction={() => void refetch()} />
             </SafeAreaView>
         );
@@ -388,14 +389,14 @@ export default function SeekerScreen() {
     // ─────────────────────────────────────────────────────────────────────────
 
     return (
-        <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+        <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
             {/* Top bar: Tilbake · title · Lagre (Lagre saves availability + skills). */}
-            <View className="h-14 flex-row items-center justify-between border-b border-[#E6E7E1] bg-[#EFF0EA] px-2">
+            <View className="h-14 flex-row items-center justify-between border-b border-line bg-page px-2">
                 <Pressable onPress={leave} hitSlop={8} accessibilityRole="button" className="min-w-[72px] flex-row items-center px-2 py-2">
-                    <ChevronLeft size={20} color="#3C3F38" />
-                    <Text className="text-[1rem] text-[#3C3F38]">Tilbake</Text>
+                    <ChevronLeft size={20} color={TC.ink2} />
+                    <Text className="text-[1rem] text-ink-2">Tilbake</Text>
                 </Pressable>
-                <Text className="text-[1.0625rem] font-semibold text-[#0B0B0B]">Jobbsøker-profil</Text>
+                <Text className="text-[1.0625rem] font-semibold text-ink">Jobbsøker-profil</Text>
                 <Pressable
                     onPress={saveBase}
                     disabled={!canSaveBase}
@@ -405,9 +406,9 @@ export default function SeekerScreen() {
                     className="min-w-[72px] items-end px-2 py-2"
                 >
                     {updateProfile.isPending ? (
-                        <ActivityIndicator size="small" color="#2E6641" />
+                        <ActivityIndicator size="small" color={TC.brandText} />
                     ) : (
-                        <Text className={`text-[1rem] font-semibold ${canSaveBase ? 'text-[#2E6641]' : 'text-[#B5B8B0]'}`}>Lagre</Text>
+                        <Text className={`text-[1rem] font-semibold ${canSaveBase ? 'text-brand-text' : 'text-[#B5B8B0]'}`}>Lagre</Text>
                     )}
                 </Pressable>
             </View>
@@ -418,7 +419,7 @@ export default function SeekerScreen() {
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
-                    <Text className="mb-5 px-1 text-[0.875rem] leading-5 text-[#63665F]">
+                    <Text className="mb-5 px-1 text-[0.875rem] leading-5 text-muted">
                         Det oppdragsgivere ser når de vurderer deg. Erfaring, portfolio, prosjekter og
                         sertifiseringer lagres med en gang du legger dem til.
                     </Text>
@@ -441,15 +442,15 @@ export default function SeekerScreen() {
                         {skills.length ? (
                             <View className="flex-row flex-wrap gap-2 px-4 pt-4">
                                 {skills.map((skill) => (
-                                    <View key={skill} className="flex-row items-center rounded-full bg-[#EAF1E9] py-1 pl-3 pr-1">
-                                        <Text className="text-[0.8125rem] font-medium text-[#2E6641]">{skill}</Text>
+                                    <View key={skill} className="flex-row items-center rounded-full bg-tint py-1 pl-3 pr-1">
+                                        <Text className="text-[0.8125rem] font-medium text-brand-text">{skill}</Text>
                                         <Pressable
                                             onPress={() => setSkills((p) => p.filter((s) => s !== skill))}
                                             accessibilityLabel={`Fjern ${skill}`}
                                             hitSlop={6}
                                             className="ml-1 rounded-full p-1"
                                         >
-                                            <X size={13} color="#2E6641" />
+                                            <X size={13} color={TC.brandText} />
                                         </Pressable>
                                     </View>
                                 ))}
@@ -465,20 +466,20 @@ export default function SeekerScreen() {
                                 returnKeyType="done"
                                 accessibilityLabel="Ny ferdighet"
                                 style={{ paddingVertical: 6, paddingHorizontal: 0 }}
-                                className="flex-1 text-[1rem] text-[#0B0B0B]"
+                                className="flex-1 text-[1rem] text-ink"
                             />
                             <Pressable
                                 onPress={addSkill}
                                 disabled={!skillInput.trim()}
                                 accessibilityRole="button"
                                 accessibilityLabel="Legg til ferdighet"
-                                className={`h-9 w-9 items-center justify-center rounded-full ${skillInput.trim() ? 'bg-[#2E6641]' : 'bg-[#E6E7E1]'}`}
+                                className={`h-9 w-9 items-center justify-center rounded-full ${skillInput.trim() ? 'bg-brand' : 'bg-line'}`}
                             >
                                 <Plus size={17} color="#FFFFFF" />
                             </Pressable>
                         </View>
                     </Card>
-                    <Text className="mb-6 px-1 text-[0.75rem] text-[#9B9E96]">
+                    <Text className="mb-6 px-1 text-[0.8125rem] text-subtle">
                         {baseUnchanged ? 'Tilgjengelighet og ferdigheter er lagret.' : 'Trykk «Lagre» øverst for å lagre endringene.'}
                     </Text>
 
@@ -489,18 +490,18 @@ export default function SeekerScreen() {
                             <EmptyRow icon={Briefcase} text="Legg til tidligere arbeidserfaring som vises på profilen din." />
                         ) : (
                             experience.map((exp: any, index: number) => (
-                                <View key={exp._id} className={`flex-row items-start gap-3 px-4 py-3.5 ${index > 0 ? 'border-t border-[#EFF0EA]' : ''}`}>
-                                    <View className="mt-0.5 h-9 w-9 items-center justify-center rounded-xl bg-[#EAF1E9]">
-                                        <Briefcase size={16} color="#2E6641" />
+                                <View key={exp._id} className={`flex-row items-start gap-3 px-4 py-3.5 ${index > 0 ? 'border-t border-line-soft' : ''}`}>
+                                    <View className="mt-0.5 h-9 w-9 items-center justify-center rounded-xl bg-tint">
+                                        <Briefcase size={16} color={TC.brandText} />
                                     </View>
                                     <View className="min-w-0 flex-1">
-                                        <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">{exp.title}</Text>
-                                        {exp.company ? <Text className="mt-0.5 text-[0.8125rem] text-[#3C3F38]">{exp.company}</Text> : null}
-                                        <Text className="mt-0.5 text-[0.75rem] text-[#9B9E96]">
+                                        <Text className="text-[0.9375rem] font-semibold text-ink">{exp.title}</Text>
+                                        {exp.company ? <Text className="mt-0.5 text-[0.8125rem] text-ink-2">{exp.company}</Text> : null}
+                                        <Text className="mt-0.5 text-[0.8125rem] text-subtle">
                                             {fmtDate(exp.startDate)} – {fmtDate(exp.endDate)}
                                         </Text>
                                         {exp.description ? (
-                                            <Text className="mt-1.5 text-[0.8125rem] leading-5 text-[#63665F]">{exp.description}</Text>
+                                            <Text className="mt-1.5 text-[0.8125rem] leading-5 text-muted">{exp.description}</Text>
                                         ) : null}
                                     </View>
                                     <DeleteButton label="Slett erfaring" disabled={delExp.isPending} onPress={() => confirmDeleteExp(exp._id)} />
@@ -517,16 +518,16 @@ export default function SeekerScreen() {
                         ) : (
                             <View className="flex-row flex-wrap justify-between gap-y-3 p-3">
                                 {portfolio.map((item: any) => (
-                                    <View key={item._id} className="overflow-hidden rounded-2xl bg-[#F4F6F0]" style={{ width: '48.5%', aspectRatio: 1 }}>
+                                    <View key={item._id} className="overflow-hidden rounded-2xl bg-surface-2" style={{ width: '48.5%', aspectRatio: 1 }}>
                                         {item.imageUrl ? (
                                             <Image source={{ uri: item.imageUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" accessibilityLabel={item.title} />
                                         ) : (
                                             <View className="h-full w-full items-center justify-center">
-                                                <ImageIcon size={24} color="#9B9E96" />
+                                                <ImageIcon size={24} color={tc('#9B9E96', 'subtle')} />
                                             </View>
                                         )}
                                         <View className="absolute bottom-0 left-0 right-0 flex-row items-center bg-[#0B0B0B]/55 py-1.5 pl-2.5 pr-1">
-                                            <Text className="flex-1 text-[0.75rem] font-semibold text-white" numberOfLines={1}>{item.title}</Text>
+                                            <Text className="flex-1 text-[0.8125rem] font-semibold text-white" numberOfLines={1}>{item.title}</Text>
                                             <Pressable onPress={() => confirmDeletePort(item._id)} disabled={delPort.isPending} hitSlop={6} className="p-1" accessibilityLabel={`Slett ${item.title}`}>
                                                 <Trash2 size={14} color="#FFFFFF" />
                                             </Pressable>
@@ -544,17 +545,17 @@ export default function SeekerScreen() {
                             <EmptyRow icon={FileText} text="Vis frem tidligere oppdrag du er stolt av." />
                         ) : (
                             previousProjects.map((proj: any, index: number) => (
-                                <View key={proj._id} className={`flex-row items-center gap-3 px-4 py-3 ${index > 0 ? 'border-t border-[#EFF0EA]' : ''}`}>
+                                <View key={proj._id} className={`flex-row items-center gap-3 px-4 py-3 ${index > 0 ? 'border-t border-line-soft' : ''}`}>
                                     {proj.imageUrl ? (
                                         <Image source={{ uri: proj.imageUrl }} style={{ width: 52, height: 52, borderRadius: 12 }} resizeMode="cover" />
                                     ) : (
-                                        <View className="h-[52px] w-[52px] items-center justify-center rounded-xl bg-[#F4F6F0]">
-                                            <FileText size={20} color="#9B9E96" />
+                                        <View className="h-[52px] w-[52px] items-center justify-center rounded-xl bg-surface-2">
+                                            <FileText size={20} color={tc('#9B9E96', 'subtle')} />
                                         </View>
                                     )}
                                     <View className="min-w-0 flex-1">
-                                        <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]" numberOfLines={1}>{proj.title}</Text>
-                                        <Text className="mt-0.5 text-[0.8125rem] text-[#63665F]" numberOfLines={1}>
+                                        <Text className="text-[0.9375rem] font-semibold text-ink" numberOfLines={1}>{proj.title}</Text>
+                                        <Text className="mt-0.5 text-[0.8125rem] text-muted" numberOfLines={1}>
                                             {[proj.category, proj.date ? new Date(proj.date).getFullYear() : null].filter(Boolean).join(' · ') || 'Prosjekt'}
                                         </Text>
                                     </View>
@@ -571,13 +572,13 @@ export default function SeekerScreen() {
                             <EmptyRow icon={Award} text="Legg til fagbrev, kurs eller andre sertifikater." />
                         ) : (
                             certifications.map((cert: any, index: number) => (
-                                <View key={cert._id} className={`flex-row items-center gap-3 px-4 py-3.5 ${index > 0 ? 'border-t border-[#EFF0EA]' : ''}`}>
-                                    <View className="h-9 w-9 items-center justify-center rounded-xl bg-[#EAF1E9]">
-                                        <Award size={17} color="#2E6641" />
+                                <View key={cert._id} className={`flex-row items-center gap-3 px-4 py-3.5 ${index > 0 ? 'border-t border-line-soft' : ''}`}>
+                                    <View className="h-9 w-9 items-center justify-center rounded-xl bg-tint">
+                                        <Award size={17} color={TC.brandText} />
                                     </View>
                                     <View className="min-w-0 flex-1">
-                                        <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">{cert.title}</Text>
-                                        {cert.issuedBy ? <Text className="mt-0.5 text-[0.8125rem] text-[#63665F]">{cert.issuedBy}</Text> : null}
+                                        <Text className="text-[0.9375rem] font-semibold text-ink">{cert.title}</Text>
+                                        {cert.issuedBy ? <Text className="mt-0.5 text-[0.8125rem] text-muted">{cert.issuedBy}</Text> : null}
                                     </View>
                                     <DeleteButton label="Slett sertifisering" disabled={delCert.isPending} onPress={() => confirmDeleteCert(cert._id)} />
                                 </View>
@@ -660,10 +661,10 @@ export default function SeekerScreen() {
 function GroupHeader({ title, onAdd }: { title: string; onAdd: () => void }) {
     return (
         <View className="mb-2 flex-row items-center justify-between px-1">
-            <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]">{title}</Text>
+            <Text className="text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-subtle">{title}</Text>
             <Pressable onPress={onAdd} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Legg til ${title.toLowerCase()}`} className="flex-row items-center gap-1">
-                <Plus size={15} color="#2E6641" />
-                <Text className="text-[0.8125rem] font-semibold text-[#2E6641]">Legg til</Text>
+                <Plus size={15} color={TC.brandText} />
+                <Text className="text-[0.8125rem] font-semibold text-brand-text">Legg til</Text>
             </Pressable>
         </View>
     );
@@ -673,18 +674,18 @@ function GroupHeader({ title, onAdd }: { title: string; onAdd: () => void }) {
 function EmptyRow({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
     return (
         <View className="flex-row items-center gap-3 px-4 py-4">
-            <View className="h-9 w-9 items-center justify-center rounded-xl bg-[#F4F6F0]">
-                <Icon size={17} color="#9B9E96" />
+            <View className="h-9 w-9 items-center justify-center rounded-xl bg-surface-2">
+                <Icon size={17} color={tc('#9B9E96', 'subtle')} />
             </View>
-            <Text className="flex-1 text-[0.8125rem] leading-5 text-[#63665F]">{text}</Text>
+            <Text className="flex-1 text-[0.8125rem] leading-5 text-muted">{text}</Text>
         </View>
     );
 }
 
 function DeleteButton({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
     return (
-        <Pressable onPress={onPress} disabled={disabled} hitSlop={8} accessibilityRole="button" accessibilityLabel={label} className="h-8 w-8 items-center justify-center rounded-full active:bg-[#FBF4F2]">
-            <Trash2 size={16} color="#B4544A" />
+        <Pressable onPress={onPress} disabled={disabled} hitSlop={8} accessibilityRole="button" accessibilityLabel={label} className="h-8 w-8 items-center justify-center rounded-full active:bg-danger-tint">
+            <Trash2 size={16} color={tc('#B4544A', 'danger')} />
         </Pressable>
     );
 }
@@ -712,16 +713,16 @@ function FormDialog({
     const AttachIcon = attachment?.icon;
     return (
         <Dialog visible={visible} onClose={onClose} contentClassName="p-5">
-            <Text className="text-[1.125rem] font-bold text-[#0B0B0B]">{title}</Text>
-            <View className="mt-4 overflow-hidden rounded-2xl border border-[#E6E7E1]">{children}</View>
+            <Text className="text-[1.125rem] font-bold text-ink">{title}</Text>
+            <View className="mt-4 overflow-hidden rounded-2xl border border-line">{children}</View>
             {attachment && AttachIcon ? (
                 <Pressable
                     onPress={attachment.onPress}
                     accessibilityRole="button"
-                    className={`mt-3 flex-row items-center gap-2.5 rounded-2xl border border-dashed px-4 py-3 ${attachment.chosen ? 'border-[#2E6641] bg-[#EAF1E9]' : 'border-[#CFD2C8]'}`}
+                    className={`mt-3 flex-row items-center gap-2.5 rounded-2xl border border-dashed px-4 py-3 ${attachment.chosen ? 'border-brand-text bg-tint' : 'border-line-strong'}`}
                 >
-                    <AttachIcon size={18} color={attachment.chosen ? '#2E6641' : '#9B9E96'} />
-                    <Text className={`flex-1 text-[0.875rem] ${attachment.chosen ? 'font-medium text-[#2E6641]' : 'text-[#63665F]'}`} numberOfLines={1}>
+                    <AttachIcon size={18} color={attachment.chosen ? TC.brandText : tc('#9B9E96', 'subtle')} />
+                    <Text className={`flex-1 text-[0.875rem] ${attachment.chosen ? 'font-medium text-brand-text' : 'text-muted'}`} numberOfLines={1}>
                         {attachment.label}
                     </Text>
                 </Pressable>

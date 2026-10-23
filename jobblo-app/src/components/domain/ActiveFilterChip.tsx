@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { X } from 'lucide-react-native';
+import { TC } from '../../theme/colors';
 
 interface ActiveFilterChipProps {
   label: string;
@@ -16,12 +17,12 @@ export function ActiveFilterChip({ label, onRemove }: ActiveFilterChipProps) {
   return (
     <Pressable
       onPress={onRemove}
-      className="flex-row items-center gap-1.5 rounded-full border border-[#2E6641]/30 bg-[#EAF1E9] px-3 py-1.5"
+      className="flex-row items-center gap-1.5 rounded-full border border-brand-text/30 bg-tint px-3 py-1.5"
     >
-      <Text className="text-[0.8125rem] font-medium text-[#2E6641]">
+      <Text className="text-[0.8125rem] font-medium text-brand-text">
         {label}
       </Text>
-      <X size={13} color="#2E6641" strokeWidth={2.5} />
+      <X size={13} color={TC.brandText} strokeWidth={2.5} />
     </Pressable>
   );
 }

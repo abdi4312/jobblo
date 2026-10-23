@@ -28,6 +28,7 @@ import { Card, SectionLabel } from '../../../../src/components/ui/Card';
 import { Chip } from '../../../../src/components/ui/Chip';
 import { ListRow } from '../../../../src/components/ui/ListRow';
 import type { SafePayHistoryTransaction } from '../../../../src/services/safepayHistory.service';
+import { TC, tc } from '../../../../src/theme/colors';
 
 const money = (value: number) =>
   `${new Intl.NumberFormat('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value) || 0)} kr`;
@@ -43,51 +44,51 @@ function status(value: string) {
   if (value === 'payment_received')
     return {
       label: 'Betaling mottatt',
-      color: '#2E6641',
-      icon: <CreditCard size={14} color="#2E6641" />,
+      color: TC.brandText,
+      icon: <CreditCard size={14} color={TC.brandText} />,
     };
   if (value === 'waiting_connect')
     return { label: 'Venter på Stripe Connect', color: '#B7791F', icon: <Clock3 size={14} color="#B7791F" /> };
   if (value === 'refund_pending')
     return { label: 'Refusjon pågår', color: '#B7791F', icon: <Clock3 size={14} color="#B7791F" /> };
   if (value === 'refund_failed')
-    return { label: 'Refusjon mislyktes', color: '#B4544A', icon: <XCircle size={14} color="#B4544A" /> };
+    return { label: 'Refusjon mislyktes', color: tc('#B4544A', 'danger'), icon: <XCircle size={14} color={tc('#B4544A', 'danger')} /> };
   if (value === 'automatically_cancelled')
-    return { label: 'Automatisk kansellert', color: '#63665F', icon: <XCircle size={14} color="#63665F" /> };
+    return { label: 'Automatisk kansellert', color: tc('#63665F', 'muted'), icon: <XCircle size={14} color={tc('#63665F', 'muted')} /> };
   if (value === 'transferred' || value === 'completed')
     return {
       label: 'Overført / utbetalt',
-      color: '#2E6641',
-      icon: <ShieldCheck size={14} color="#2E6641" />,
+      color: TC.brandText,
+      icon: <ShieldCheck size={14} color={TC.brandText} />,
     };
   if (value === 'processing' || value === 'in_progress')
     return { label: 'Behandles', color: '#B7791F', icon: <Clock3 size={14} color="#B7791F" /> };
   if (value === 'failed')
-    return { label: 'Mislyktes', color: '#B4544A', icon: <XCircle size={14} color="#B4544A" /> };
+    return { label: 'Mislyktes', color: tc('#B4544A', 'danger'), icon: <XCircle size={14} color={tc('#B4544A', 'danger')} /> };
   if (value === 'refunded')
-    return { label: 'Refundert', color: '#63665F', icon: <Receipt size={14} color="#63665F" /> };
+    return { label: 'Refundert', color: tc('#63665F', 'muted'), icon: <Receipt size={14} color={tc('#63665F', 'muted')} /> };
   if (value === 'cancelled')
-    return { label: 'Kansellert', color: '#63665F', icon: <XCircle size={14} color="#63665F" /> };
+    return { label: 'Kansellert', color: tc('#63665F', 'muted'), icon: <XCircle size={14} color={tc('#63665F', 'muted')} /> };
   if (value === 'pending' || value === 'released_internal' || value === 'disputed')
     return { label: 'Venter', color: '#B7791F', icon: <Clock3 size={14} color="#B7791F" /> };
   if (value === 'awaiting_payout')
-    return { label: 'Avventer utbetaling', color: '#63665F', icon: <Clock3 size={14} color="#63665F" /> };
+    return { label: 'Avventer utbetaling', color: tc('#63665F', 'muted'), icon: <Clock3 size={14} color={tc('#63665F', 'muted')} /> };
   if (value === 'connect_check')
     return { label: 'Stripe Connect-status kontrolleres', color: '#B7791F', icon: <Clock3 size={14} color="#B7791F" /> };
   if (value === 'approval')
-    return { label: 'Venter på godkjenning', color: '#63665F', icon: <Clock3 size={14} color="#63665F" /> };
+    return { label: 'Venter på godkjenning', color: tc('#63665F', 'muted'), icon: <Clock3 size={14} color={tc('#63665F', 'muted')} /> };
   if (value === 'transfer_processing')
     return { label: 'Utbetaling behandles', color: '#B7791F', icon: <Clock3 size={14} color="#B7791F" /> };
   if (value === 'transfer_failed')
-    return { label: 'Utbetaling mislyktes', color: '#B4544A', icon: <XCircle size={14} color="#B4544A" /> };
+    return { label: 'Utbetaling mislyktes', color: tc('#B4544A', 'danger'), icon: <XCircle size={14} color={tc('#B4544A', 'danger')} /> };
   if (value === 'action_required')
     return { label: 'Handling kreves', color: '#B7791F', icon: <XCircle size={14} color="#B7791F" /> };
   if (value === 'reversed')
-    return { label: 'Overføring reversert', color: '#63665F', icon: <XCircle size={14} color="#63665F" /> };
+    return { label: 'Overføring reversert', color: tc('#63665F', 'muted'), icon: <XCircle size={14} color={tc('#63665F', 'muted')} /> };
   return {
     label: value || 'Ukjent status',
-    color: '#63665F',
-    icon: <Clock3 size={14} color="#63665F" />,
+    color: tc('#63665F', 'muted'),
+    icon: <Clock3 size={14} color={tc('#63665F', 'muted')} />,
   };
 }
 
@@ -149,8 +150,8 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
     : Math.max(0, originalAmount - confirmedRefund);
   const incoming = transaction.isProvider;
   const amountColor = incoming
-    ? providerStage === 'transferred' ? 'text-[#2E6641]' : 'text-[#0B0B0B]'
-    : amount === 0 ? 'text-[#2E6641]' : 'text-[#0B0B0B]';
+    ? providerStage === 'transferred' ? 'text-brand-text' : 'text-ink'
+    : amount === 0 ? 'text-brand-text' : 'text-ink';
   const amountSign = incoming ? (providerStage === 'transferred' ? '+' : '') : amount > 0 ? '−' : '';
 
   const copy = async (key: 'transfer' | 'refund', value: string) => {
@@ -169,15 +170,15 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
         accessibilityRole="button"
         accessibilityState={{ expanded }}
         accessibilityLabel={`${transaction.serviceTitle}, ${amountSign}${money(amount)}, ${state.label}`}
-        className="p-4 active:bg-[#FAFAF7]"
+        className="p-4 active:bg-[#FAFAF7] dark:bg-surface-2"
       >
         <View className="flex-row items-start gap-3">
-          <View className={`h-11 w-11 items-center justify-center rounded-2xl ${incoming ? 'bg-[#EAF1E9]' : 'bg-[#F4F6F0]'}`}>
-            {incoming ? <ArrowDownLeft size={20} color="#2E6641" /> : <ArrowUpRight size={20} color="#3C3F38" />}
+          <View className={`h-11 w-11 items-center justify-center rounded-2xl ${incoming ? 'bg-tint' : 'bg-surface-2'}`}>
+            {incoming ? <ArrowDownLeft size={20} color={TC.brandText} /> : <ArrowUpRight size={20} color={TC.ink2} />}
           </View>
           <View className="min-w-0 flex-1">
             <View className="flex-row items-start justify-between gap-2">
-              <Text className="flex-1 text-[0.9375rem] font-semibold text-[#0B0B0B]" numberOfLines={2}>
+              <Text className="flex-1 text-[0.9375rem] font-semibold text-ink" numberOfLines={2}>
                 {transaction.serviceTitle}
               </Text>
               <Text className={`text-[0.9375rem] font-bold tabular-nums ${amountColor}`}>
@@ -185,7 +186,7 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
                 {money(amount)}
               </Text>
             </View>
-            <Text className="mt-0.5 text-[0.8125rem] text-[#63665F]" numberOfLines={1}>
+            <Text className="mt-0.5 text-[0.8125rem] text-muted" numberOfLines={1}>
               {incoming
                 ? `Fra ${transaction.customerName}`
                 : transaction.hasVerifiedProviderTransfer
@@ -196,19 +197,19 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
             <View className="mt-2.5 flex-row items-center justify-between gap-2">
               <View className={`flex-row items-center gap-1 self-start rounded-full px-2.5 py-1 ${toneBg(state.color)}`}>
                 {state.icon}
-                <Text className="text-[0.6875rem] font-semibold" style={{ color: state.color }}>
+                <Text className="text-[0.8125rem] font-semibold" style={{ color: state.color }}>
                   {state.label}
                 </Text>
               </View>
               <View className="flex-row items-center gap-0.5">
-                <Text className="text-[0.75rem] font-medium text-[#9B9E96]">{expanded ? 'Skjul' : 'Detaljer'}</Text>
-                {expanded ? <ChevronUp size={14} color="#9B9E96" /> : <ChevronDown size={14} color="#9B9E96" />}
+                <Text className="text-[0.8125rem] font-medium text-subtle">{expanded ? 'Skjul' : 'Detaljer'}</Text>
+                {expanded ? <ChevronUp size={14} color={tc('#9B9E96', 'subtle')} /> : <ChevronDown size={14} color={tc('#9B9E96', 'subtle')} />}
               </View>
             </View>
             {transaction.status === 'payment_received' &&
             transaction.providerConnectStatus !== 'ready' &&
             transaction.providerConnectDeadlineAt ? (
-              <Text className="mt-2 text-[0.75rem] text-[#B7791F]">
+              <Text className="mt-2 text-[0.8125rem] text-[#B7791F]">
                 {transaction.providerConnectStatus === 'verification_retry'
                   ? 'Stripe Connect-status kontrolleres på nytt'
                   : 'Venter på Stripe Connect'}
@@ -219,7 +220,7 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
       </Pressable>
 
       {expanded ? (
-        <View className="border-t border-[#EFF0EA] bg-[#FAFAF7] px-4 pb-4 pt-3">
+        <View className="border-t border-line-soft bg-[#FAFAF7] dark:bg-surface-2 px-4 pb-4 pt-3">
           {!incoming && transaction.refundStatus && transaction.refundStatus !== 'none' ? (
             <RefundSteps
               status={transaction.refundStatus}
@@ -243,7 +244,7 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
               {providerStage === 'awaiting_payout' ? (
                 <Notice tone="warn">
                   Fullfør Stripe Connect-oppsettet for å kunne motta utbetaling når oppdraget er godkjent.
-                  <Text className="font-semibold text-[#2E6641] underline" onPress={() => router.push('/profile/settings/payout')}>
+                  <Text className="font-semibold text-brand-text underline" onPress={() => router.push('/profile/settings/payout')}>
                     {' '}Fullfør oppsett
                   </Text>
                 </Notice>
@@ -263,7 +264,7 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
                 <Notice tone="error">
                   {transaction.payoutFailureMessage || 'Utbetalingen er ikke bekreftet. Saken krever oppfølging.'}
                   {['PAYOUT_SETUP_REQUIRED', 'PAYOUT_NOT_ENABLED'].includes(transaction.payoutFailureCode || '') ? (
-                    <Text className="font-semibold text-[#2E6641] underline" onPress={() => router.push('/profile/settings/payout')}>
+                    <Text className="font-semibold text-brand-text underline" onPress={() => router.push('/profile/settings/payout')}>
                       {' '}Åpne Stripe Connect
                     </Text>
                   ) : null}
@@ -345,11 +346,11 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
           ) : null}
           {transaction.amounts.tax ? <Detail label="MVA" value={money(transaction.amounts.tax)} /> : null}
 
-          <View className="mt-3 flex-row items-center justify-between border-t border-[#E6E7E1] pt-3">
-            <Text className="text-[0.875rem] font-semibold text-[#0B0B0B]">
+          <View className="mt-3 flex-row items-center justify-between border-t border-line pt-3">
+            <Text className="text-[0.875rem] font-semibold text-ink">
               {incoming ? (providerStage === 'transferred' ? 'Overført til Stripe Connect' : 'Forventet utbetaling') : 'Netto betalt'}
             </Text>
-            <Text className={`text-[0.9375rem] font-bold tabular-nums ${incoming && providerStage === 'transferred' ? 'text-[#2E6641]' : 'text-[#0B0B0B]'}`}>
+            <Text className={`text-[0.9375rem] font-bold tabular-nums ${incoming && providerStage === 'transferred' ? 'text-brand-text' : 'text-ink'}`}>
               {incoming && providerStage === 'transferred' ? '+' : ''}
               {money(amount)}
             </Text>
@@ -386,18 +387,18 @@ function RefundSteps({ status, paidAt, doneAt }: { status: string; paidAt: strin
           <View className="items-center">
             <View
               className={`h-6 w-6 items-center justify-center rounded-full ${
-                step.state === 'done' ? 'bg-[#2E6641]' : step.state === 'failed' ? 'bg-[#B4544A]' : 'bg-[#B7791F]'
+                step.state === 'done' ? 'bg-brand' : step.state === 'failed' ? 'bg-danger-solid' : 'bg-[#B7791F]'
               }`}
             >
               {step.state === 'done' ? <Check size={13} color="#FFFFFF" /> : step.state === 'failed' ? <XCircle size={13} color="#FFFFFF" /> : <Clock3 size={13} color="#FFFFFF" />}
             </View>
-            {index < steps.length - 1 ? <View className="w-0.5 flex-1 bg-[#DCEBDD]" style={{ minHeight: 14 }} /> : null}
+            {index < steps.length - 1 ? <View className="w-0.5 flex-1 bg-[#DCEBDD] dark:bg-tint" style={{ minHeight: 14 }} /> : null}
           </View>
           <View className="min-w-0 flex-1 pb-3">
-            <Text className="text-[0.8125rem] font-semibold text-[#0B0B0B]">{step.label}</Text>
-            {step.date ? <Text className="text-[0.75rem] text-[#63665F]">{step.date}</Text> : null}
+            <Text className="text-[0.8125rem] font-semibold text-ink">{step.label}</Text>
+            {step.date ? <Text className="text-[0.8125rem] text-muted">{step.date}</Text> : null}
             {step.note ? (
-              <Text className={`text-[0.75rem] ${step.state === 'failed' ? 'text-[#8C3932]' : step.state === 'current' ? 'text-[#8A641F]' : 'text-[#63665F]'}`}>{step.note}</Text>
+              <Text className={`text-[0.8125rem] ${step.state === 'failed' ? 'text-[#8C3932]' : step.state === 'current' ? 'text-[#8A641F]' : 'text-muted'}`}>{step.note}</Text>
             ) : null}
           </View>
         </View>
@@ -408,33 +409,33 @@ function RefundSteps({ status, paidAt, doneAt }: { status: string; paidAt: strin
 
 /** Light background matching a status colour, for the status pill. */
 function toneBg(color: string) {
-  if (color === '#2E6641') return 'bg-[#EAF1E9]';
-  if (color === '#B7791F') return 'bg-[#FBF5E9]';
-  if (color === '#B4544A') return 'bg-[#FBF4F2]';
-  return 'bg-[#F4F6F0]';
+  if (color === TC.brandText) return 'bg-tint';
+  if (color === '#B7791F') return 'bg-warn-tint';
+  if (color === tc('#B4544A', 'danger')) return 'bg-danger-tint';
+  return 'bg-surface-2';
 }
 
 function DetailHeading({ children }: { children: React.ReactNode }) {
   return (
-    <Text className="mb-1.5 mt-3 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]">{children}</Text>
+    <Text className="mb-1.5 mt-3 text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-subtle">{children}</Text>
   );
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <View className="flex-row justify-between gap-3 py-1">
-      <Text className="text-[0.8125rem] text-[#63665F]">{label}</Text>
-      <Text className="shrink text-right text-[0.8125rem] font-medium text-[#0B0B0B]">{value}</Text>
+      <Text className="text-[0.8125rem] text-muted">{label}</Text>
+      <Text className="shrink text-right text-[0.8125rem] font-medium text-ink">{value}</Text>
     </View>
   );
 }
 
 function Notice({ children, tone = 'info' }: { children: React.ReactNode; tone?: 'info' | 'warn' | 'error' }) {
-  const box = tone === 'error' ? 'bg-[#FBF4F2]' : tone === 'warn' ? 'bg-[#FBF5E9]' : 'bg-[#F4F6F0]';
-  const text = tone === 'error' ? 'text-[#8C3932]' : tone === 'warn' ? 'text-[#6B5425]' : 'text-[#63665F]';
+  const box = tone === 'error' ? 'bg-danger-tint' : tone === 'warn' ? 'bg-warn-tint' : 'bg-surface-2';
+  const text = tone === 'error' ? 'text-[#8C3932]' : tone === 'warn' ? 'text-[#6B5425]' : 'text-muted';
   return (
     <View className={`mt-2 rounded-xl px-3 py-2.5 ${box}`}>
-      <Text className={`text-[0.75rem] leading-5 ${text}`}>{children}</Text>
+      <Text className={`text-[0.8125rem] leading-5 ${text}`}>{children}</Text>
     </View>
   );
 }
@@ -442,16 +443,16 @@ function Notice({ children, tone = 'info' }: { children: React.ReactNode; tone?:
 function Reference({ label, value, copied, onCopy }: { label: string; value: string; copied: boolean; onCopy: () => void }) {
   return (
     <View className="flex-row items-center justify-between gap-3 py-1">
-      <Text className="text-[0.8125rem] text-[#63665F]">{label}</Text>
+      <Text className="text-[0.8125rem] text-muted">{label}</Text>
       <Pressable
         onPress={onCopy}
         accessibilityRole="button"
         accessibilityLabel={`Kopier ${label.toLowerCase()}`}
         hitSlop={6}
-        className="flex-row items-center gap-1.5 rounded-full bg-white px-2.5 py-1"
+        className="flex-row items-center gap-1.5 rounded-full bg-surface px-2.5 py-1"
       >
-        <Text className="text-[0.75rem] font-medium text-[#0B0B0B]">{`${value.slice(0, 6)}…${value.slice(-3)}`}</Text>
-        {copied ? <Check size={13} color="#2E6641" /> : <Copy size={13} color="#63665F" />}
+        <Text className="text-[0.8125rem] font-medium text-ink">{`${value.slice(0, 6)}…${value.slice(-3)}`}</Text>
+        {copied ? <Check size={13} color={TC.brandText} /> : <Copy size={13} color={tc('#63665F', 'muted')} />}
       </Pressable>
     </View>
   );
@@ -470,13 +471,13 @@ export default function SafePayHistoryScreen() {
   };
   if (query.isLoading)
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <LoadingIndicator message="Laster SafePay-historikk..." />
       </SafeAreaView>
     );
   if (query.isError)
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState
           title="Kunne ikke laste SafePay-historikk"
           message="SafePay-historikken kunne ikke hentes akkurat nå."
@@ -491,22 +492,22 @@ export default function SafePayHistoryScreen() {
   const visible = history.filter((t) => (filter === 'all' ? true : filter === 'received' ? t.isProvider : !t.isProvider));
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 36 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" colors={['#2E6641']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={TC.brandText} colors={[TC.brandText]} />}
       >
         <ScreenHeader title="SafePay-historikk" subtitle="Betalinger, utbetalinger og refusjoner" icon={ShieldCheck} />
 
         {data?.summary ? (
           <Card className="rounded-2xl mb-5 overflow-hidden">
             <View className="flex-row">
-              <SummaryCell label="Totalt tjent" value={money(data.summary.totalEarned)} icon={<TrendingUp size={15} color="#2E6641" />} />
-              <SummaryCell divider label="Totalt brukt" value={money(data.summary.totalSpent)} icon={<TrendingDown size={15} color="#B4544A" />} />
+              <SummaryCell label="Totalt tjent" value={money(data.summary.totalEarned)} icon={<TrendingUp size={15} color={TC.brandText} />} />
+              <SummaryCell divider label="Totalt brukt" value={money(data.summary.totalSpent)} icon={<TrendingDown size={15} color={tc('#B4544A', 'danger')} />} />
             </View>
-            <View className="flex-row border-t border-[#EFF0EA]">
-              <SummaryCell label="Avgifter" value={money(data.summary.totalFees)} icon={<Receipt size={15} color="#63665F" />} />
-              <SummaryCell divider label="Transaksjoner" value={String(data.summary.transactionCount)} icon={<Wallet size={15} color="#2E6641" />} />
+            <View className="flex-row border-t border-line-soft">
+              <SummaryCell label="Avgifter" value={money(data.summary.totalFees)} icon={<Receipt size={15} color={tc('#63665F', 'muted')} />} />
+              <SummaryCell divider label="Transaksjoner" value={String(data.summary.transactionCount)} icon={<Wallet size={15} color={TC.brandText} />} />
             </View>
           </Card>
         ) : null}
@@ -522,15 +523,15 @@ export default function SafePayHistoryScreen() {
         {!history.length ? (
           <EmptyState
             icon={
-              <View className="h-14 w-14 items-center justify-center rounded-full bg-[#EAF1E9]">
-                <ShieldCheck size={24} color="#2E6641" />
+              <View className="h-14 w-14 items-center justify-center rounded-full bg-tint">
+                <ShieldCheck size={24} color={TC.brandText} />
               </View>
             }
             title="Ingen SafePay-historikk ennå"
             message="Når du betaler for eller fullfører oppdrag med SafePay, vises de her."
           />
         ) : !visible.length ? (
-          <Text className="my-8 text-center text-[0.875rem] text-[#63665F]">
+          <Text className="my-8 text-center text-[0.875rem] text-muted">
             {filter === 'paid' ? 'Du har ikke betalt for noen oppdrag ennå.' : 'Du har ikke mottatt noen betalinger ennå.'}
           </Text>
         ) : (
@@ -557,12 +558,12 @@ export default function SafePayHistoryScreen() {
 
 function SummaryCell({ label, value, icon, divider = false }: { label: string; value: string; icon: React.ReactNode; divider?: boolean }) {
   return (
-    <View className={`flex-1 px-4 py-3.5 ${divider ? 'border-l border-[#EFF0EA]' : ''}`}>
+    <View className={`flex-1 px-4 py-3.5 ${divider ? 'border-l border-line-soft' : ''}`}>
       <View className="flex-row items-center gap-1.5">
         {icon}
-        <Text className="text-[0.75rem] text-[#63665F]">{label}</Text>
+        <Text className="text-[0.8125rem] text-muted">{label}</Text>
       </View>
-      <Text className="mt-1.5 text-[1rem] font-bold tabular-nums text-[#0B0B0B]" numberOfLines={1} adjustsFontSizeToFit>
+      <Text className="mt-1.5 text-[1rem] font-bold tabular-nums text-ink" numberOfLines={1} adjustsFontSizeToFit>
         {value}
       </Text>
     </View>

@@ -17,11 +17,11 @@ interface FormRowProps extends TextInputProps {
  */
 export function FormRow({ label, error, showCount, divider = false, multiline, maxLength, value, ...input }: FormRowProps) {
   return (
-    <View className={divider ? 'border-t border-[#EFF0EA] px-4 py-3' : 'px-4 py-3'}>
+    <View className={divider ? 'border-t border-line-soft px-4 py-3' : 'px-4 py-3'}>
       <View className="flex-row items-center justify-between">
-        <Text className="text-[0.75rem] font-medium text-[#63665F]">{label}</Text>
+        <Text className="text-[0.8125rem] font-medium text-muted">{label}</Text>
         {showCount && maxLength ? (
-          <Text className="text-[0.6875rem] tabular-nums text-[#9B9E96]">
+          <Text className="text-[0.8125rem] tabular-nums text-subtle">
             {(value ?? '').length}/{maxLength}
           </Text>
         ) : null}
@@ -34,10 +34,10 @@ export function FormRow({ label, error, showCount, divider = false, multiline, m
         placeholderTextColor="#B5B8B0"
         textAlignVertical={multiline ? 'top' : 'center'}
         style={{ paddingVertical: 4, paddingHorizontal: 0, minHeight: multiline ? 96 : undefined }}
-        className="mt-0.5 text-[1rem] text-[#0B0B0B]"
+        className="mt-0.5 text-[1rem] text-ink"
         {...input}
       />
-      {error ? <Text className="mt-1 text-[0.75rem] text-[#B4544A]">{error}</Text> : null}
+      {error ? <Text className="mt-1 text-[0.8125rem] text-[#B4544A] dark:text-danger">{error}</Text> : null}
     </View>
   );
 }

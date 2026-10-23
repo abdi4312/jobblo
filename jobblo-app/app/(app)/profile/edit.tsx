@@ -11,6 +11,7 @@ import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { Card, SectionLabel } from '../../../src/components/ui/Card';
 import { FormRow } from '../../../src/components/ui/FormRow';
 import type { CurrentProfile, ProfileUpdate } from '../../../src/services/profile.service';
+import { TC } from '../../../src/theme/colors';
 
 const BIO_LIMIT = 600;
 type Draft = { name: string; lastName: string; bio: string; skills: string[]; availabilityText: string; address: string; postNumber: string; postSted: string; companyName: string; orgNumber: string; website: string };
@@ -58,8 +59,8 @@ export default function EditProfileScreen() {
     return '';
   }, [draft]);
 
-  if (isLoading || !draft) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><LoadingIndicator message="Laster redigering..." /></SafeAreaView>;
-  if (isError || !profile) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><ErrorState title="Kunne ikke laste profilen" onAction={() => void refetch()} /></SafeAreaView>;
+  if (isLoading || !draft) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator message="Laster redigering..." /></SafeAreaView>;
+  if (isError || !profile) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ErrorState title="Kunne ikke laste profilen" onAction={() => void refetch()} /></SafeAreaView>;
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((current) => current ? { ...current, [key]: value } : current);
   const addSkill = () => { const skill = skillInput.trim(); if (!skill || draft.skills.some((item) => item.toLowerCase() === skill.toLowerCase())) return setSkillInput(''); set('skills', [...draft.skills, skill]); setSkillInput(''); };
@@ -86,13 +87,13 @@ export default function EditProfileScreen() {
   const canSave = dirty && !validation && !update.isPending;
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       {/* Top bar: Avbryt · title · Lagre (keeps Save reachable above the keyboard). */}
-      <View className="h-14 flex-row items-center justify-between border-b border-[#E6E7E1] bg-[#EFF0EA] px-2">
+      <View className="h-14 flex-row items-center justify-between border-b border-line bg-page px-2">
         <Pressable onPress={leave} hitSlop={8} accessibilityRole="button" className="min-w-[72px] px-2 py-2">
-          <Text className="text-[1rem] text-[#3C3F38]">Avbryt</Text>
+          <Text className="text-[1rem] text-ink-2">Avbryt</Text>
         </Pressable>
-        <Text className="text-[1.0625rem] font-semibold text-[#0B0B0B]">Rediger profil</Text>
+        <Text className="text-[1.0625rem] font-semibold text-ink">Rediger profil</Text>
         <Pressable
           onPress={save}
           disabled={!canSave}
@@ -102,9 +103,9 @@ export default function EditProfileScreen() {
           className="min-w-[72px] items-end px-2 py-2"
         >
           {update.isPending ? (
-            <ActivityIndicator size="small" color="#2E6641" />
+            <ActivityIndicator size="small" color={TC.brandText} />
           ) : (
-            <Text className={`text-[1rem] font-semibold ${canSave ? 'text-[#2E6641]' : 'text-[#B5B8B0]'}`}>Lagre</Text>
+            <Text className={`text-[1rem] font-semibold ${canSave ? 'text-brand-text' : 'text-[#B5B8B0]'}`}>Lagre</Text>
           )}
         </Pressable>
       </View>
@@ -114,19 +115,19 @@ export default function EditProfileScreen() {
           {/* Photo */}
           <View className="mb-6 mt-2 items-center">
             <Pressable onPress={() => void chooseImage()} disabled={update.isPending} accessibilityRole="button" accessibilityLabel="Endre profilbilde">
-              <View className="h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[#DCEBDD]">
+              <View className="h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[#DCEBDD] dark:bg-tint">
                 {avatarUri ? (
                   <Image source={{ uri: avatarUri }} style={{ width: 96, height: 96 }} />
                 ) : (
-                  <Text className="text-[2rem] font-semibold text-[#2E6641]">{text(profile.name).slice(0, 1).toUpperCase() || '?'}</Text>
+                  <Text className="text-[2rem] font-semibold text-brand-text">{text(profile.name).slice(0, 1).toUpperCase() || '?'}</Text>
                 )}
               </View>
-              <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full border-2 border-[#EFF0EA] bg-[#2E6641]">
+              <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full border-2 border-line-soft bg-brand">
                 <Camera size={15} color="#FFFFFF" />
               </View>
             </Pressable>
             <Pressable onPress={() => void chooseImage()} hitSlop={6} className="mt-3">
-              <Text className="text-[0.9375rem] font-semibold text-[#2E6641]">
+              <Text className="text-[0.9375rem] font-semibold text-brand-text">
                 {image ? 'Nytt bilde valgt' : 'Endre profilbilde'}
               </Text>
             </Pressable>
@@ -194,10 +195,10 @@ export default function EditProfileScreen() {
             {draft.skills.length ? (
               <View className="flex-row flex-wrap gap-2 px-4 pt-4">
                 {draft.skills.map((skill) => (
-                  <View key={skill} className="flex-row items-center rounded-full bg-[#EAF1E9] py-1 pl-3 pr-1">
-                    <Text className="text-[0.8125rem] font-medium text-[#2E6641]">{skill}</Text>
+                  <View key={skill} className="flex-row items-center rounded-full bg-tint py-1 pl-3 pr-1">
+                    <Text className="text-[0.8125rem] font-medium text-brand-text">{skill}</Text>
                     <Pressable onPress={() => removeSkill(skill)} accessibilityLabel={`Fjern ${skill}`} hitSlop={6} className="ml-1 rounded-full p-1">
-                      <X size={13} color="#2E6641" />
+                      <X size={13} color={TC.brandText} />
                     </Pressable>
                   </View>
                 ))}
@@ -213,14 +214,14 @@ export default function EditProfileScreen() {
                 returnKeyType="done"
                 accessibilityLabel="Ny ferdighet"
                 style={{ paddingVertical: 6, paddingHorizontal: 0 }}
-                className="flex-1 text-[1rem] text-[#0B0B0B]"
+                className="flex-1 text-[1rem] text-ink"
               />
               <Pressable
                 onPress={addSkill}
                 disabled={!skillInput.trim()}
                 accessibilityRole="button"
                 accessibilityLabel="Legg til ferdighet"
-                className={`h-9 w-9 items-center justify-center rounded-full ${skillInput.trim() ? 'bg-[#2E6641]' : 'bg-[#E6E7E1]'}`}
+                className={`h-9 w-9 items-center justify-center rounded-full ${skillInput.trim() ? 'bg-brand' : 'bg-line'}`}
               >
                 <Plus size={17} color="#FFFFFF" />
               </Pressable>

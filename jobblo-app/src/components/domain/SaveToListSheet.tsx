@@ -16,6 +16,7 @@ import {
   type FavoriteList,
 } from '../../types/FavoriteList';
 import { favoriteListErrorMessage, isAlreadyInListError } from '../../utils/favoriteListErrors';
+import { TC, tc } from '../../theme/colors';
 
 interface SaveToListSheetProps {
   visible: boolean;
@@ -157,7 +158,7 @@ export function SaveToListSheet({
             disabled={isBusy}
             accessibilityRole="button"
           >
-            <Text className="text-[0.875rem] font-semibold text-[#63665F]">Tilbake</Text>
+            <Text className="text-[0.875rem] font-semibold text-muted">Tilbake</Text>
           </Pressable>
         ) : (
           <Pressable
@@ -168,13 +169,13 @@ export function SaveToListSheet({
             disabled={isBusy}
             accessibilityRole="button"
           >
-            <Text className="text-[0.875rem] font-semibold text-[#2E6641]">Ny liste</Text>
+            <Text className="text-[0.875rem] font-semibold text-brand-text">Ny liste</Text>
           </Pressable>
         )
       }
     >
       {serviceTitle ? (
-        <Text className="mb-4 text-[0.8125rem] text-[#63665F]" numberOfLines={2}>
+        <Text className="mb-4 text-[0.8125rem] text-muted" numberOfLines={2}>
           {serviceTitle}
         </Text>
       ) : null}
@@ -183,13 +184,13 @@ export function SaveToListSheet({
         <View
           className={`mb-4 rounded-2xl border px-3.5 py-3 ${
             message.tone === 'error'
-              ? 'border-[#E7CFCB] bg-[#FBF1F0]'
-              : 'border-[#E6E7E1] bg-[#F4F6F0]'
+              ? 'border-[#E7CFCB] dark:border-danger-line bg-[#FBF1F0] dark:bg-danger-tint'
+              : 'border-line bg-surface-2'
           }`}
         >
           <Text
             className={`text-[0.8125rem] font-medium ${
-              message.tone === 'error' ? 'text-[#B4544A]' : 'text-[#0B0B0B]'
+              message.tone === 'error' ? 'text-[#B4544A] dark:text-danger' : 'text-ink'
             }`}
           >
             {message.text}
@@ -199,20 +200,20 @@ export function SaveToListSheet({
 
       {isCreating ? (
         <View>
-          <Text className="mb-2 text-[0.8125rem] font-semibold text-[#0B0B0B]">Navn på liste</Text>
+          <Text className="mb-2 text-[0.8125rem] font-semibold text-ink">Navn på liste</Text>
           <TextInput
             value={newListName}
             onChangeText={setNewListName}
             placeholder="F.eks. Sommerjobber"
-            placeholderTextColor="#9B9E96"
+            placeholderTextColor={TC.placeholder}
             autoFocus
             editable={!isBusy}
             maxLength={FAVORITE_LIST_NAME_MAX_LENGTH}
             returnKeyType="done"
             onSubmitEditing={() => void handleCreateAndSave()}
-            className="rounded-2xl border border-[#E6E7E1] bg-white px-4 py-3 text-[0.9375rem] text-[#0B0B0B]"
+            className="rounded-2xl border border-line bg-surface px-4 py-3 text-[0.9375rem] text-ink"
           />
-          <Text className="mt-1.5 text-right text-[0.6875rem] text-[#9B9E96]">
+          <Text className="mt-1.5 text-right text-[0.8125rem] text-subtle">
             {trimmedName.length}/{FAVORITE_LIST_NAME_MAX_LENGTH}
           </Text>
 
@@ -220,14 +221,14 @@ export function SaveToListSheet({
             onPress={() => void handleCreateAndSave()}
             disabled={!trimmedName || isBusy}
             className={`mt-3 flex-row items-center justify-center gap-2 rounded-full px-4 py-3.5 ${
-              !trimmedName || isBusy ? 'bg-[#EAF1E9]' : 'bg-[#2E6641]'
+              !trimmedName || isBusy ? 'bg-tint' : 'bg-brand'
             }`}
             accessibilityRole="button"
           >
-            {createAndSave.isPending ? <ActivityIndicator size="small" color="#2E6641" /> : null}
+            {createAndSave.isPending ? <ActivityIndicator size="small" color={TC.brandText} /> : null}
             <Text
               className={`text-[0.9375rem] font-semibold ${
-                !trimmedName || isBusy ? 'text-[#63665F]' : 'text-white'
+                !trimmedName || isBusy ? 'text-muted' : 'text-white'
               }`}
             >
               {createAndSave.isPending ? 'Oppretter...' : 'Opprett og lagre'}
@@ -236,17 +237,17 @@ export function SaveToListSheet({
         </View>
       ) : isLoading ? (
         <View className="items-center py-10">
-          <ActivityIndicator size="small" color="#2E6641" />
-          <Text className="mt-3 text-[0.8125rem] text-[#63665F]">Laster listene dine...</Text>
+          <ActivityIndicator size="small" color={TC.brandText} />
+          <Text className="mt-3 text-[0.8125rem] text-muted">Laster listene dine...</Text>
         </View>
       ) : isError ? (
         <View className="items-center py-8">
-          <Text className="text-center text-[0.875rem] text-[#63665F]">
+          <Text className="text-center text-[0.875rem] text-muted">
             Kunne ikke laste listene dine.
           </Text>
           <Pressable
             onPress={() => void refetch()}
-            className="mt-4 rounded-full bg-[#2E6641] px-4 py-2.5"
+            className="mt-4 rounded-full bg-brand px-4 py-2.5"
             accessibilityRole="button"
           >
             <Text className="text-[0.875rem] font-semibold text-white">Prøv igjen</Text>
@@ -254,13 +255,13 @@ export function SaveToListSheet({
         </View>
       ) : sortedLists.length === 0 ? (
         <View className="items-center py-8">
-          <Text className="text-[1rem] font-semibold text-[#0B0B0B]">Du har ingen lister ennå</Text>
-          <Text className="mt-1.5 text-center text-[0.8125rem] text-[#63665F]">
+          <Text className="text-[1rem] font-semibold text-ink">Du har ingen lister ennå</Text>
+          <Text className="mt-1.5 text-center text-[0.8125rem] text-muted">
             Lag en liste for å samle oppdragene du vil komme tilbake til.
           </Text>
           <Pressable
             onPress={() => setIsCreating(true)}
-            className="mt-4 flex-row items-center gap-2 rounded-full bg-[#2E6641] px-4 py-3"
+            className="mt-4 flex-row items-center gap-2 rounded-full bg-brand px-4 py-3"
             accessibilityRole="button"
           >
             <Plus size={16} color="#FFFFFF" />
@@ -280,7 +281,7 @@ export function SaveToListSheet({
                 key={list._id}
                 onPress={() => void handleToggle(list)}
                 disabled={isBusy}
-                className={`flex-row items-center gap-3.5 rounded-2xl border border-[#E6E7E1] p-3 ${
+                className={`flex-row items-center gap-3.5 rounded-2xl border border-line p-3 ${
                   isBusy && !rowBusy ? 'opacity-60' : ''
                 }`}
                 accessibilityRole="button"
@@ -289,27 +290,27 @@ export function SaveToListSheet({
                   saved ? `Fjern fra ${list.name}` : `Lagre i ${list.name}`
                 }
               >
-                <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-[#EAF1E9]">
+                <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-tint">
                   {cover ? (
                     <Image source={{ uri: cover }} className="h-full w-full" resizeMode="cover" />
                   ) : (
-                    <ImageIcon size={18} color="#9B9E96" />
+                    <ImageIcon size={18} color={tc('#9B9E96', 'subtle')} />
                   )}
                 </View>
 
                 <View className="flex-1">
-                  <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]" numberOfLines={1}>
+                  <Text className="text-[0.9375rem] font-semibold text-ink" numberOfLines={1}>
                     {list.name}
                   </Text>
-                  <Text className="mt-0.5 text-[0.75rem] text-[#63665F]">
+                  <Text className="mt-0.5 text-[0.8125rem] text-muted">
                     {count === 1 ? '1 oppdrag' : `${count} oppdrag`}
                   </Text>
                 </View>
 
                 {rowBusy ? (
-                  <ActivityIndicator size="small" color="#2E6641" />
+                  <ActivityIndicator size="small" color={TC.brandText} />
                 ) : saved ? (
-                  <View className="h-6 w-6 items-center justify-center rounded-full bg-[#2E6641]">
+                  <View className="h-6 w-6 items-center justify-center rounded-full bg-brand">
                     <Check size={13} color="#FFFFFF" strokeWidth={3} />
                   </View>
                 ) : (

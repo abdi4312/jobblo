@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useRegisterMutation } from '@/hooks/useRegisterMutation';
 import { useRegistrationStore } from '@/store/registrationStore';
 import { userTerms } from '@/content/userTerms';
+import { TC, tc } from '../../src/theme/colors';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -140,10 +141,10 @@ export default function RegisterScreen() {
   const renderRoleToggle = () => (
     <View className="gap-2">
       <Text className="text-[13px] font-medium text-ink">Jeg er</Text>
-      <View className="relative mt-1 flex-row overflow-hidden rounded-xl bg-[#F0F1EB] p-1">
+      <View className="relative mt-1 flex-row overflow-hidden rounded-xl bg-[#F0F1EB] dark:bg-surface-2 p-1">
         <Pressable
           onPress={() => setFormData({ role: 'user' })}
-          className={`flex-1 items-center justify-center rounded-[10px] py-2.5 ${formData.role === 'user' ? 'bg-white shadow-sm' : ''
+          className={`flex-1 items-center justify-center rounded-[10px] py-2.5 ${formData.role === 'user' ? 'bg-surface shadow-sm' : ''
             }`}
         >
           <Text className={`text-[14px] font-semibold ${formData.role === 'user' ? 'text-ink' : 'text-muted'}`}>
@@ -152,7 +153,7 @@ export default function RegisterScreen() {
         </Pressable>
         <Pressable
           onPress={() => setFormData({ role: 'company' })}
-          className={`flex-1 items-center justify-center rounded-[10px] py-2.5 ${formData.role === 'company' ? 'bg-white shadow-sm' : ''
+          className={`flex-1 items-center justify-center rounded-[10px] py-2.5 ${formData.role === 'company' ? 'bg-surface shadow-sm' : ''
             }`}
         >
           <Text className={`text-[14px] font-semibold ${formData.role === 'company' ? 'text-ink' : 'text-muted'}`}>
@@ -178,7 +179,7 @@ export default function RegisterScreen() {
             <View className="w-full rounded-[28px] bg-surface shadow-sm">
               <View className="px-5 pb-7 pt-6">
                 <Pressable onPress={goBack} className="mb-6 flex-row items-center gap-2">
-                  <ArrowLeft size={16} color="#63665F" />
+                  <ArrowLeft size={16} color={tc('#63665F', 'muted')} />
                   <Text className="text-[13px] font-medium text-muted">
                     {step === 'credentials' ? 'Tilbake' : 'Tilbake til innlogging'}
                   </Text>
@@ -190,7 +191,7 @@ export default function RegisterScreen() {
                     className={`h-1.5 flex-1 rounded-full ${step === 'credentials' ? 'bg-brand' : 'bg-line'
                       }`}
                   />
-                  <Text className="ml-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9B9E96]">
+                  <Text className="ml-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-subtle">
                     Steg {step === 'identity' ? '1' : '2'} av 2
                   </Text>
                 </View>
@@ -215,7 +216,7 @@ export default function RegisterScreen() {
                           <TextInput
                             value={formData.companyName ?? ''}
                             placeholder="F.eks. Nordmann Bygg AS"
-                            placeholderTextColor="#9B9E96"
+                            placeholderTextColor={TC.placeholder}
                             onChangeText={(value) => {
                               setFormData({ companyName: value });
                               setErrors((current) => {
@@ -224,11 +225,11 @@ export default function RegisterScreen() {
                                 return next;
                               });
                             }}
-                            className={`h-[46px] rounded-xl border bg-[#F5F6F1] px-3.5 text-[15px] text-ink ${errors.companyName ? 'border-[#D8B0AB] bg-[#FCF5F4]' : 'border-transparent'
+                            className={`h-[46px] rounded-xl border bg-[#F5F6F1] dark:bg-surface-2 px-3.5 text-[15px] text-ink ${errors.companyName ? 'border-danger-line bg-[#FCF5F4] dark:bg-danger-tint' : 'border-transparent'
                               }`}
                           />
                           {errors.companyName ? (
-                            <Text className="text-[12px] text-[#B0453B]">{errors.companyName}</Text>
+                            <Text className="text-[12px] text-[#B0453B] dark:text-danger">{errors.companyName}</Text>
                           ) : null}
                         </View>
 
@@ -239,7 +240,7 @@ export default function RegisterScreen() {
                             placeholder="9 siffer"
                             keyboardType="numeric"
                             maxLength={9}
-                            placeholderTextColor="#9B9E96"
+                            placeholderTextColor={TC.placeholder}
                             onChangeText={(value) => {
                               const digits = value.replace(/\D/g, '').slice(0, 9);
                               setFormData({ orgNumber: digits });
@@ -249,11 +250,11 @@ export default function RegisterScreen() {
                                 return next;
                               });
                             }}
-                            className={`h-[46px] rounded-xl border bg-[#F5F6F1] px-3.5 text-[15px] text-ink ${errors.orgNumber ? 'border-[#D8B0AB] bg-[#FCF5F4]' : 'border-transparent'
+                            className={`h-[46px] rounded-xl border bg-[#F5F6F1] dark:bg-surface-2 px-3.5 text-[15px] text-ink ${errors.orgNumber ? 'border-danger-line bg-[#FCF5F4] dark:bg-danger-tint' : 'border-transparent'
                               }`}
                           />
                           {errors.orgNumber ? (
-                            <Text className="text-[12px] text-[#B0453B]">{errors.orgNumber}</Text>
+                            <Text className="text-[12px] text-[#B0453B] dark:text-danger">{errors.orgNumber}</Text>
                           ) : null}
                         </View>
                       </View>
@@ -264,7 +265,7 @@ export default function RegisterScreen() {
                           <TextInput
                             value={formData.name}
                             placeholder="Ola"
-                            placeholderTextColor="#9B9E96"
+                            placeholderTextColor={TC.placeholder}
                             onChangeText={(value) => {
                               setFormData({ name: value });
                               setErrors((current) => {
@@ -273,10 +274,10 @@ export default function RegisterScreen() {
                                 return next;
                               });
                             }}
-                            className={`h-[46px] rounded-xl border bg-[#F5F6F1] px-3.5 text-[15px] text-ink ${errors.name ? 'border-[#D8B0AB] bg-[#FCF5F4]' : 'border-transparent'
+                            className={`h-[46px] rounded-xl border bg-[#F5F6F1] dark:bg-surface-2 px-3.5 text-[15px] text-ink ${errors.name ? 'border-danger-line bg-[#FCF5F4] dark:bg-danger-tint' : 'border-transparent'
                               }`}
                           />
-                          {errors.name ? <Text className="text-[12px] text-[#B0453B]">{errors.name}</Text> : null}
+                          {errors.name ? <Text className="text-[12px] text-[#B0453B] dark:text-danger">{errors.name}</Text> : null}
                         </View>
 
                         <View className="flex-1 gap-2">
@@ -284,7 +285,7 @@ export default function RegisterScreen() {
                           <TextInput
                             value={formData.lastName}
                             placeholder="Nordmann"
-                            placeholderTextColor="#9B9E96"
+                            placeholderTextColor={TC.placeholder}
                             onChangeText={(value) => {
                               setFormData({ lastName: value });
                               setErrors((current) => {
@@ -293,11 +294,11 @@ export default function RegisterScreen() {
                                 return next;
                               });
                             }}
-                            className={`h-[46px] rounded-xl border bg-[#F5F6F1] px-3.5 text-[15px] text-ink ${errors.lastName ? 'border-[#D8B0AB] bg-[#FCF5F4]' : 'border-transparent'
+                            className={`h-[46px] rounded-xl border bg-[#F5F6F1] dark:bg-surface-2 px-3.5 text-[15px] text-ink ${errors.lastName ? 'border-danger-line bg-[#FCF5F4] dark:bg-danger-tint' : 'border-transparent'
                               }`}
                           />
                           {errors.lastName ? (
-                            <Text className="text-[12px] text-[#B0453B]">{errors.lastName}</Text>
+                            <Text className="text-[12px] text-[#B0453B] dark:text-danger">{errors.lastName}</Text>
                           ) : null}
                         </View>
                       </View>
@@ -313,8 +314,8 @@ export default function RegisterScreen() {
                 ) : (
                   <View className="mt-6 gap-4">
                     {currentErrorText ? (
-                      <View className="rounded-xl border border-[#D8B0AB] bg-[#FCF5F4] px-3 py-2.5">
-                        <Text className="text-[13px] leading-5 text-[#B0453B]">{currentErrorText}</Text>
+                      <View className="rounded-xl border border-danger-line bg-[#FCF5F4] dark:bg-danger-tint px-3 py-2.5">
+                        <Text className="text-[13px] leading-5 text-[#B0453B] dark:text-danger">{currentErrorText}</Text>
                       </View>
                     ) : null}
 
@@ -326,7 +327,7 @@ export default function RegisterScreen() {
                         keyboardType="email-address"
                         value={formData.email}
                         placeholder="deg@eksempel.no"
-                        placeholderTextColor="#9B9E96"
+                        placeholderTextColor={TC.placeholder}
                         onChangeText={(value) => {
                           setFormData({ email: value });
                           setErrors((current) => {
@@ -336,10 +337,10 @@ export default function RegisterScreen() {
                           });
                           setServerMessage('');
                         }}
-                        className={`h-[46px] rounded-xl border bg-[#F5F6F1] px-3.5 text-[15px] text-ink ${errors.email ? 'border-[#D8B0AB] bg-[#FCF5F4]' : 'border-transparent'
+                        className={`h-[46px] rounded-xl border bg-[#F5F6F1] dark:bg-surface-2 px-3.5 text-[15px] text-ink ${errors.email ? 'border-danger-line bg-[#FCF5F4] dark:bg-danger-tint' : 'border-transparent'
                           }`}
                       />
-                      {errors.email ? <Text className="text-[12px] text-[#B0453B]">{errors.email}</Text> : null}
+                      {errors.email ? <Text className="text-[12px] text-[#B0453B] dark:text-danger">{errors.email}</Text> : null}
                     </View>
 
                     <View className="gap-2">
@@ -351,7 +352,7 @@ export default function RegisterScreen() {
                           secureTextEntry={!showPassword}
                           value={formData.password}
                           placeholder="Velg et passord"
-                          placeholderTextColor="#9B9E96"
+                          placeholderTextColor={TC.placeholder}
                           onChangeText={(value) => {
                             setFormData({ password: value });
                             setErrors((current) => {
@@ -360,18 +361,18 @@ export default function RegisterScreen() {
                               return next;
                             });
                           }}
-                          className={`h-[46px] rounded-xl border bg-[#F5F6F1] px-3.5 pr-12 text-[15px] text-ink ${errors.password ? 'border-[#D8B0AB] bg-[#FCF5F4]' : 'border-transparent'
+                          className={`h-[46px] rounded-xl border bg-[#F5F6F1] dark:bg-surface-2 px-3.5 pr-12 text-[15px] text-ink ${errors.password ? 'border-danger-line bg-[#FCF5F4] dark:bg-danger-tint' : 'border-transparent'
                             }`}
                         />
                         <Pressable
                           onPress={() => setShowPassword((current) => !current)}
                           className="absolute right-3 top-0 h-[46px] items-center justify-center"
                         >
-                          {showPassword ? <EyeOff size={18} color="#63665F" /> : <Eye size={18} color="#63665F" />}
+                          {showPassword ? <EyeOff size={18} color={tc('#63665F', 'muted')} /> : <Eye size={18} color={tc('#63665F', 'muted')} />}
                         </Pressable>
                       </View>
                       {errors.password ? (
-                        <Text className="text-[12px] text-[#B0453B]">{errors.password}</Text>
+                        <Text className="text-[12px] text-[#B0453B] dark:text-danger">{errors.password}</Text>
                       ) : null}
                     </View>
 
@@ -384,7 +385,7 @@ export default function RegisterScreen() {
                           secureTextEntry={!showConfirmPassword}
                           value={formData.confirmPassword}
                           placeholder="Skriv passordet på nytt"
-                          placeholderTextColor="#9B9E96"
+                          placeholderTextColor={TC.placeholder}
                           onChangeText={(value) => {
                             setFormData({ confirmPassword: value });
                             setErrors((current) => {
@@ -393,7 +394,7 @@ export default function RegisterScreen() {
                               return next;
                             });
                           }}
-                          className={`h-[46px] rounded-xl border bg-[#F5F6F1] px-3.5 pr-12 text-[15px] text-ink ${errors.confirmPassword ? 'border-[#D8B0AB] bg-[#FCF5F4]' : 'border-transparent'
+                          className={`h-[46px] rounded-xl border bg-[#F5F6F1] dark:bg-surface-2 px-3.5 pr-12 text-[15px] text-ink ${errors.confirmPassword ? 'border-danger-line bg-[#FCF5F4] dark:bg-danger-tint' : 'border-transparent'
                             }`}
                         />
                         <Pressable
@@ -401,18 +402,18 @@ export default function RegisterScreen() {
                           className="absolute right-3 top-0 h-[46px] items-center justify-center"
                         >
                           {showConfirmPassword ? (
-                            <EyeOff size={18} color="#63665F" />
+                            <EyeOff size={18} color={tc('#63665F', 'muted')} />
                           ) : (
-                            <Eye size={18} color="#63665F" />
+                            <Eye size={18} color={tc('#63665F', 'muted')} />
                           )}
                         </Pressable>
                       </View>
                       {errors.confirmPassword ? (
-                        <Text className="text-[12px] text-[#B0453B]">{errors.confirmPassword}</Text>
+                        <Text className="text-[12px] text-[#B0453B] dark:text-danger">{errors.confirmPassword}</Text>
                       ) : null}
                     </View>
 
-                    <View className="rounded-xl border border-line bg-[#F5F6F1] p-3">
+                    <View className="rounded-xl border border-line bg-[#F5F6F1] dark:bg-surface-2 p-3">
                       <Pressable onPress={() => setShowTerms((current) => !current)} className="flex-row items-center justify-between gap-3">
                         <Text className="flex-1 text-[13px] font-medium text-ink">Jeg godtar Brukervilkårene</Text>
                         <Text className="text-[12px] font-semibold text-brand">{showTerms ? 'Skjul' : 'Vis'}</Text>
@@ -423,7 +424,7 @@ export default function RegisterScreen() {
                         className="mt-3 flex-row items-center gap-2"
                       >
                         <View
-                          className={`h-5 w-5 items-center justify-center rounded border ${formData.acceptedTerms ? 'border-brand bg-brand' : 'border-[#9B9E96] bg-white'}`}
+                          className={`h-5 w-5 items-center justify-center rounded border ${formData.acceptedTerms ? 'border-brand bg-brand' : 'border-[#9B9E96] bg-surface'}`}
                         >
                           {formData.acceptedTerms ? <Text className="text-[10px] font-bold text-white">✓</Text> : null}
                         </View>
@@ -433,7 +434,7 @@ export default function RegisterScreen() {
                       </Pressable>
 
                       {showTerms ? (
-                        <View className="mt-3 max-h-52 rounded-xl border border-line bg-white p-3">
+                        <View className="mt-3 max-h-52 rounded-xl border border-line bg-surface p-3">
                           <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} className="max-h-52">
                             <Text className="text-[12px] font-semibold text-ink">{userTerms.title}</Text>
                             <Text className="mt-2 text-[11px] text-muted">Sist oppdatert: {userTerms.lastUpdatedDisplay}</Text>
@@ -449,24 +450,24 @@ export default function RegisterScreen() {
                       ) : null}
 
                       {errors.acceptedTerms ? (
-                        <Text className="mt-2 text-[12px] text-[#B0453B]">{errors.acceptedTerms}</Text>
+                        <Text className="mt-2 text-[12px] text-[#B0453B] dark:text-danger">{errors.acceptedTerms}</Text>
                       ) : null}
                     </View>
 
-                    <View className="rounded-xl border border-line bg-[#F5F6F1] p-3">
-                      <Text className="mb-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-[#9B9E96]">
+                    <View className="rounded-xl border border-line bg-[#F5F6F1] dark:bg-surface-2 p-3">
+                      <Text className="mb-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-subtle">
                         Passordkrav
                       </Text>
                       <View className="flex-row items-center gap-2">
-                        <ShieldCheck size={14} color={formData.password.length >= 8 ? '#2E6641' : '#9B9E96'} />
+                        <ShieldCheck size={14} color={formData.password.length >= 8 ? TC.brandText : tc('#9B9E96', 'subtle')} />
                         <Text className="text-[12px] text-muted">Minst 8 tegn</Text>
                       </View>
                       <View className="mt-2 flex-row items-center gap-2">
-                        <ShieldCheck size={14} color={/[A-Z]/.test(formData.password) && /[a-z]/.test(formData.password) ? '#2E6641' : '#9B9E96'} />
+                        <ShieldCheck size={14} color={/[A-Z]/.test(formData.password) && /[a-z]/.test(formData.password) ? TC.brandText : tc('#9B9E96', 'subtle')} />
                         <Text className="text-[12px] text-muted">Stor og liten bokstav</Text>
                       </View>
                       <View className="mt-2 flex-row items-center gap-2">
-                        <ShieldCheck size={14} color={/[0-9]/.test(formData.password) ? '#2E6641' : '#9B9E96'} />
+                        <ShieldCheck size={14} color={/[0-9]/.test(formData.password) ? TC.brandText : tc('#9B9E96', 'subtle')} />
                         <Text className="text-[12px] text-muted">Minst ett tall</Text>
                       </View>
                     </View>

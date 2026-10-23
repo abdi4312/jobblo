@@ -11,20 +11,8 @@ module.exports = {
   ],
   theme: {
     extend: {
-      colors: {
-        page: '#EFF0EA',
-        surface: '#FFFFFF',
-        brand: '#2E6641',
-        ink: '#0B0B0B',
-        muted: '#63665F',
-        line: '#E6E7E1',
-        primary: '#2E6641',
-        secondary: '#63665F',
-        accent: '#F59E0B',
-        background: '#EFF0EA',
-        border: '#E6E7E1',
-        text: '#0B0B0B',
-      },
+      // Shared with the website: design-tokens/tokens.json -> node design-tokens/build.mjs
+      colors: require('./src/theme/tailwindColors'),
     },
   },
   plugins: [],

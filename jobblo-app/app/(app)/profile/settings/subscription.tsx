@@ -19,6 +19,7 @@ import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator
 import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
 import { MEMBERSHIP_ENABLED } from '../../../../src/config/features';
 import type { CurrentSubscription, PurchaseHistoryItem, PurchaseStatus } from '../../../../src/services/subscription.service';
+import { TC, tc } from '../../../../src/theme/colors';
 
 /*
  * Mirrors the web SubscriptionView (frontend/src/components/profile/SettingsViews/
@@ -62,11 +63,11 @@ function mutationError(error: unknown, fallback: string) {
 
 function historyStatus(status?: PurchaseStatus): { label: string; color: string; bg: string } {
   switch (status) {
-    case 'succeeded': return { label: 'Fullført', color: '#2E6641', bg: 'bg-[#EAF1E9]' };
-    case 'refunded': return { label: 'Refundert', color: '#63665F', bg: 'bg-[#F4F6F0]' };
-    case 'failed': return { label: 'Feilet', color: '#B4544A', bg: 'bg-[#FBF4F2]' };
-    case 'pending': return { label: 'Venter', color: '#B7791F', bg: 'bg-[#FBF5E9]' };
-    default: return { label: 'Ukjent', color: '#63665F', bg: 'bg-[#F4F6F0]' };
+    case 'succeeded': return { label: 'Fullført', color: TC.brandText, bg: 'bg-tint' };
+    case 'refunded': return { label: 'Refundert', color: tc('#63665F', 'muted'), bg: 'bg-surface-2' };
+    case 'failed': return { label: 'Feilet', color: tc('#B4544A', 'danger'), bg: 'bg-danger-tint' };
+    case 'pending': return { label: 'Venter', color: '#B7791F', bg: 'bg-warn-tint' };
+    default: return { label: 'Ukjent', color: tc('#63665F', 'muted'), bg: 'bg-surface-2' };
   }
 }
 
@@ -92,7 +93,7 @@ function HeroButton({
   pending?: boolean;
 }) {
   const box =
-    variant === 'solid' ? 'bg-white' : variant === 'outline' ? 'border border-white/30' : '';
+    variant === 'solid' ? 'bg-surface' : variant === 'outline' ? 'border border-white/30' : '';
   // The solid variant's colour comes from `style` below: NativeWind cannot compile a class
   // built at runtime from HERO.
   const text = variant === 'solid' ? '' : variant === 'outline' ? 'text-white' : 'text-white/75';
@@ -130,10 +131,10 @@ function SubscriptionScreen() {
   };
 
   if (query.isLoading)
-    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]"><LoadingIndicator message="Laster abonnementet..." /></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator message="Laster abonnementet..." /></SafeAreaView>;
   if (query.isError)
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState title="Kunne ikke laste abonnementet" message="Abonnementet kunne ikke hentes akkurat nå." onAction={() => void query.refetch()} />
       </SafeAreaView>
     );
@@ -170,27 +171,27 @@ function SubscriptionScreen() {
     });
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 36 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" colors={['#2E6641']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={TC.brandText} colors={[TC.brandText]} />}
       >
         <ScreenHeader title="Abonnement" subtitle="Plan, kontakter og kjøp" icon={CreditCard} />
 
         {/* ── Gjeldende abonnement ── */}
         <View className="mb-2 flex-row items-center gap-1.5 px-1">
-          <Package size={15} color="#2E6641" />
-          <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]">Gjeldende abonnement</Text>
+          <Package size={15} color={TC.brandText} />
+          <Text className="text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-subtle">Gjeldende abonnement</Text>
         </View>
         <View className="mb-6 overflow-hidden rounded-2xl p-5" style={{ backgroundColor: HERO }}>
           {/* decorative glow, as on web */}
           <View pointerEvents="none" className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-white/5" />
 
-          <Text className="text-[0.75rem] font-medium uppercase tracking-[0.1em] text-white/70">Abonnementsstatus</Text>
+          <Text className="text-[0.8125rem] font-medium uppercase tracking-[0.1em] text-white/70">Abonnementsstatus</Text>
           <Text className="mt-1 text-[1.75rem] font-black leading-tight text-white">
             {subscription?.hasPlan ? subscription.plan : 'Ingen aktivt abonnement'}
           </Text>
-          <Text className="mt-1.5 text-[0.75rem] text-white/60">
+          <Text className="mt-1.5 text-[0.8125rem] text-white/60">
             Kontotype: <Text className="font-bold text-white">{subscription?.planType === 'business' ? 'bedrift' : 'privat'}</Text>
           </Text>
 
@@ -198,7 +199,7 @@ function SubscriptionScreen() {
             <View className="mt-4 border-t border-white/15 pt-4">
               <View className="flex-row flex-wrap items-center gap-2">
                 <View className="rounded-full bg-white/15 px-3 py-1">
-                  <Text className="text-[0.75rem] font-semibold text-white">{statusLabel(subscription)}</Text>
+                  <Text className="text-[0.8125rem] font-semibold text-white">{statusLabel(subscription)}</Text>
                 </View>
                 {subscription.price != null ? (
                   <Text className="text-[0.8125rem] text-white">{subscription.price.toLocaleString('nb-NO')} kr per måned</Text>
@@ -267,7 +268,7 @@ function SubscriptionScreen() {
         <SectionLabel>Kontakter</SectionLabel>
         <Card className="mb-6 rounded-2xl p-5">
           {!contacts ? (
-            <Text className="text-[0.875rem] text-[#63665F]">Laster kontaktinformasjon...</Text>
+            <Text className="text-[0.875rem] text-muted">Laster kontaktinformasjon...</Text>
           ) : (
             <>
               <View className="flex-row gap-2">
@@ -276,20 +277,20 @@ function SubscriptionScreen() {
                   ['Brukt', contacts.includedUsed],
                   ['Igjen', contacts.includedRemaining],
                 ] as const).map(([label, value]) => (
-                  <View key={label} className="min-w-0 flex-1 rounded-xl bg-[#F5F6F1] p-3">
-                    <Text className="text-[1.5rem] font-black tabular-nums text-[#0B0B0B]">{value}</Text>
-                    <Text className="mt-0.5 text-[0.75rem] font-medium text-[#63665F]">{label}</Text>
+                  <View key={label} className="min-w-0 flex-1 rounded-xl bg-[#F5F6F1] dark:bg-surface-2 p-3">
+                    <Text className="text-[1.5rem] font-black tabular-nums text-ink">{value}</Text>
+                    <Text className="mt-0.5 text-[0.8125rem] font-medium text-muted">{label}</Text>
                   </View>
                 ))}
               </View>
-              <Text className="mt-4 text-[0.8125rem] font-semibold text-[#63665F]">
+              <Text className="mt-4 text-[0.8125rem] font-semibold text-muted">
                 {contacts.includedUsed} / {contacts.includedLimit} brukt
               </Text>
               <View className="mt-2 h-2 overflow-hidden rounded-full bg-[#ECEDE7]">
-                <View className="h-full rounded-full bg-[#2E6641]" style={{ width: `${progress * 100}%` }} />
+                <View className="h-full rounded-full bg-brand" style={{ width: `${progress * 100}%` }} />
               </View>
 
-              <View className="mt-5 gap-2 border-t border-[#EFF0EA] pt-4">
+              <View className="mt-5 gap-2 border-t border-line-soft pt-4">
                 <Row label="Ekstra kontakt" value={contacts.perContactPrice === null ? 'Abonnement kreves' : `${contacts.perContactPrice} NOK`} />
                 {contacts.contactUnlockMinutes !== null ? (
                   <Row
@@ -299,8 +300,8 @@ function SubscriptionScreen() {
                 ) : null}
               </View>
 
-              <View className="mt-5 border-t border-[#EFF0EA] pt-4">
-                <Text className="mb-2 text-[0.875rem] font-bold text-[#0B0B0B]">Betalte ekstra kontakter</Text>
+              <View className="mt-5 border-t border-line-soft pt-4">
+                <Text className="mb-2 text-[0.875rem] font-bold text-ink">Betalte ekstra kontakter</Text>
                 <View className="gap-2">
                   <Row label="Kjøpt" value={String(contacts.paidPurchased)} />
                   <Row label="Brukt" value={String(contacts.paidUsed)} />
@@ -320,22 +321,22 @@ function SubscriptionScreen() {
         <Card className="overflow-hidden rounded-2xl">
           {history.isLoading ? (
             <View className="items-center py-8">
-              <ActivityIndicator color="#2E6641" />
-              <Text className="mt-2 text-[0.8125rem] text-[#63665F]">Laster transaksjoner...</Text>
+              <ActivityIndicator color={TC.brandText} />
+              <Text className="mt-2 text-[0.8125rem] text-muted">Laster transaksjoner...</Text>
             </View>
           ) : history.isError ? (
             <View className="items-center px-4 py-6">
-              <Text className="text-[0.875rem] text-[#63665F]">Kunne ikke hente kjøpshistorikken.</Text>
-              <Pressable onPress={() => void history.refetch()} className="mt-3 rounded-full bg-[#2E6641] px-4 py-2">
+              <Text className="text-[0.875rem] text-muted">Kunne ikke hente kjøpshistorikken.</Text>
+              <Pressable onPress={() => void history.refetch()} className="mt-3 rounded-full bg-brand px-4 py-2">
                 <Text className="text-[0.8125rem] font-semibold text-white">Prøv igjen</Text>
               </Pressable>
             </View>
           ) : transactions.length === 0 ? (
             <View className="items-center px-4 py-8">
-              <CreditCard size={32} color="#CFD2C8" strokeWidth={1.5} />
-              <Text className="mt-2 text-[0.875rem] font-medium text-[#63665F]">Ingen kjøpshistorikk funnet.</Text>
+              <CreditCard size={32} color={TC.lineStrong} strokeWidth={1.5} />
+              <Text className="mt-2 text-[0.875rem] font-medium text-muted">Ingen kjøpshistorikk funnet.</Text>
               <Pressable onPress={() => router.push('/profile/membership')} hitSlop={6} className="mt-2">
-                <Text className="text-[0.875rem] font-bold text-[#2E6641]">Se planer</Text>
+                <Text className="text-[0.875rem] font-bold text-brand-text">Se planer</Text>
               </Pressable>
             </View>
           ) : (
@@ -343,20 +344,20 @@ function SubscriptionScreen() {
               const s = historyStatus(item.status);
               const title = item.type === 'extra_contact' ? 'Ekstra kontakt' : item.planName || 'Medlemskap';
               return (
-                <View key={item._id} className={`flex-row items-center gap-3 px-4 py-3.5 ${index > 0 ? 'border-t border-[#EFF0EA]' : ''}`}>
-                  <View className="h-9 w-9 items-center justify-center rounded-xl bg-[#EAF1E9]">
-                    <Receipt size={16} color="#2E6641" />
+                <View key={item._id} className={`flex-row items-center gap-3 px-4 py-3.5 ${index > 0 ? 'border-t border-line-soft' : ''}`}>
+                  <View className="h-9 w-9 items-center justify-center rounded-xl bg-tint">
+                    <Receipt size={16} color={TC.brandText} />
                   </View>
                   <View className="min-w-0 flex-1">
-                    <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]" numberOfLines={1}>{title}</Text>
+                    <Text className="text-[0.9375rem] font-semibold text-ink" numberOfLines={1}>{title}</Text>
                     {formatDate(item.createdAt) ? (
-                      <Text className="mt-0.5 text-[0.75rem] text-[#9B9E96]">{formatDate(item.createdAt)}</Text>
+                      <Text className="mt-0.5 text-[0.8125rem] text-subtle">{formatDate(item.createdAt)}</Text>
                     ) : null}
                   </View>
                   <View className="items-end gap-1">
-                    <Text className="text-[0.875rem] font-bold tabular-nums text-[#0B0B0B]">{historyAmount(item)}</Text>
+                    <Text className="text-[0.875rem] font-bold tabular-nums text-ink">{historyAmount(item)}</Text>
                     <View className={`rounded-full px-2 py-0.5 ${s.bg}`}>
-                      <Text className="text-[0.625rem] font-bold uppercase tracking-[0.06em]" style={{ color: s.color }}>{s.label}</Text>
+                      <Text className="text-[0.6875rem] font-bold uppercase tracking-[0.06em]" style={{ color: s.color }}>{s.label}</Text>
                     </View>
                   </View>
                 </View>
@@ -396,8 +397,8 @@ function SubscriptionScreen() {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <View className="flex-row justify-between gap-3">
-      <Text className="text-[0.875rem] text-[#63665F]">{label}</Text>
-      <Text className="shrink text-right text-[0.875rem] font-bold text-[#0B0B0B]">{value}</Text>
+      <Text className="text-[0.875rem] text-muted">{label}</Text>
+      <Text className="shrink text-right text-[0.875rem] font-bold text-ink">{value}</Text>
     </View>
   );
 }

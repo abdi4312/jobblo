@@ -16,6 +16,7 @@ import { useAuthStore } from '../../../../src/store/authStore';
 import { deleteCurrentUser } from '../../../../src/services/profile.service';
 import { MEMBERSHIP_ENABLED } from '../../../../src/config/features';
 import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
+import { TC, tc } from '../../../../src/theme/colors';
 
 const CONFIRM_WORD = 'SLETT';
 
@@ -39,7 +40,7 @@ function extractError(err: unknown): { message: string; code: DeleteErrorCode } 
 }
 
 const inputClass =
-  'rounded-2xl border border-[#E6E7E1] bg-white px-4 py-3.5 text-[0.9375rem] text-[#0B0B0B] font-semibold tracking-widest text-center';
+  'rounded-2xl border border-line bg-surface px-4 py-3.5 text-[0.9375rem] text-ink font-semibold tracking-widest text-center';
 
 export default function DeleteAccountScreen() {
   const router = useRouter();
@@ -71,7 +72,7 @@ export default function DeleteAccountScreen() {
   const isActiveSubscription = errorInfo?.code === 'active_subscription_exists';
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -82,26 +83,26 @@ export default function DeleteAccountScreen() {
         >
           <ScreenHeader title="Slett profil" subtitle="Denne handlingen kan ikke angres." icon={Trash2} destructive />
 
-          <View className="rounded-3xl border border-[#E6E7E1] bg-white p-5">
+          <View className="rounded-3xl border border-line bg-surface p-5">
             <View className="flex flex-col gap-3 mb-5">
-              <Text className="text-[0.875rem] leading-relaxed text-[#0B0B0B]">
+              <Text className="text-[0.875rem] leading-relaxed text-ink">
                 Det er trist å se deg dra! Sletting av profilen din er irreversibel. Alle
                 personopplysningene dine blir fjernet, og du blir logget ut av alle enheter.
               </Text>
-              <Text className="text-[0.875rem] leading-relaxed text-[#63665F]">
+              <Text className="text-[0.875rem] leading-relaxed text-muted">
                 Personlige opplastede filer som profilbilde, banner og sertifikater blir slettet fra
                 lagring. Fullførte transaksjonsjournaler beholdes i henhold til bokføringslovens
                 krav, men uten dine normale profildata knyttet til dem.
               </Text>
             </View>
 
-            <View className="mb-5 flex flex-row items-start gap-3 rounded-2xl border border-[#F4D6D1] bg-[#FBF4F2] p-4">
-              <ShieldAlert size={18} color="#B4544A" className="mt-0.5 shrink-0" />
+            <View className="mb-5 flex flex-row items-start gap-3 rounded-2xl border border-[#F4D6D1] bg-danger-tint p-4">
+              <ShieldAlert size={18} color={tc('#B4544A', 'danger')} className="mt-0.5 shrink-0" />
               <View className="flex-1">
-                <Text className="text-[0.8125rem] font-semibold text-[#8A3C32]">
+                <Text className="text-[0.8125rem] font-semibold text-[#8A3C32] dark:text-danger">
                   Kontroller før du sletter
                 </Text>
-                <Text className="mt-1 text-[0.75rem] leading-relaxed text-[#8A3C32]">
+                <Text className="mt-1 text-[0.8125rem] leading-relaxed text-[#8A3C32] dark:text-danger">
                   Pågående oppdrag og betalinger (SafePay) må fullføres eller avsluttes før du kan
                   slette. Aktivt abonnement må avsluttes og perioden må være utløpt først.
                 </Text>
@@ -109,19 +110,19 @@ export default function DeleteAccountScreen() {
             </View>
 
             {isActiveSubscription ? (
-              <View className="mb-5 rounded-2xl border border-[#F4D6D1] bg-[#FBF4F2] p-4">
+              <View className="mb-5 rounded-2xl border border-[#F4D6D1] bg-danger-tint p-4">
                 <View className="flex-row items-start gap-2">
-                  <AlertTriangle size={16} color="#B4544A" />
+                  <AlertTriangle size={16} color={tc('#B4544A', 'danger')} />
                   <View className="flex-1">
-                    <Text className="text-[0.8125rem] font-semibold text-[#8A3C32]">
+                    <Text className="text-[0.8125rem] font-semibold text-[#8A3C32] dark:text-danger">
                       Aktivt abonnement finnes
                     </Text>
-                    <Text className="mt-1 text-[0.75rem] leading-relaxed text-[#8A3C32]">
+                    <Text className="mt-1 text-[0.8125rem] leading-relaxed text-[#8A3C32] dark:text-danger">
                       {errorInfo?.message}
                     </Text>
                     {MEMBERSHIP_ENABLED ? <Pressable
                       onPress={() => router.push('/profile/settings/subscription')}
-                      className="mt-3 rounded-full bg-[#B4544A] px-4 py-2.5 self-start"
+                      className="mt-3 rounded-full bg-danger-solid px-4 py-2.5 self-start"
                     >
                       <Text className="text-[0.8125rem] font-semibold text-white">
                         Gå til abonnementer
@@ -140,7 +141,7 @@ export default function DeleteAccountScreen() {
                     <Text className="text-[0.8125rem] font-semibold text-[#7A5412]">
                       Pågående oppdrag
                     </Text>
-                    <Text className="mt-1 text-[0.75rem] leading-relaxed text-[#7A5412]">
+                    <Text className="mt-1 text-[0.8125rem] leading-relaxed text-[#7A5412]">
                       {errorInfo?.message}
                     </Text>
                   </View>
@@ -149,22 +150,22 @@ export default function DeleteAccountScreen() {
             ) : null}
 
             {errorInfo && !isActiveOrders && !isActiveSubscription ? (
-              <View className="mb-5 rounded-2xl border border-[#F4D6D1] bg-[#FBF4F2] p-4">
-                <Text className="text-[0.8125rem] font-semibold text-[#8A3C32]">
+              <View className="mb-5 rounded-2xl border border-[#F4D6D1] bg-danger-tint p-4">
+                <Text className="text-[0.8125rem] font-semibold text-[#8A3C32] dark:text-danger">
                   Klarte ikke å slette profilen
                 </Text>
-                <Text className="mt-1 text-[0.75rem] leading-relaxed text-[#8A3C32]">
+                <Text className="mt-1 text-[0.8125rem] leading-relaxed text-[#8A3C32] dark:text-danger">
                   {errorInfo.message}
                 </Text>
               </View>
             ) : null}
 
             <View className="mb-3">
-              <Text className="mb-1.5 text-[0.8125rem] font-semibold text-[#0B0B0B]">
+              <Text className="mb-1.5 text-[0.8125rem] font-semibold text-ink">
                 Bekreft sletting
               </Text>
-              <Text className="mb-3 text-[0.75rem] leading-relaxed text-[#63665F]">
-                Skriv ordet <Text className="font-bold text-[#B4544A]">{CONFIRM_WORD}</Text>{' '}
+              <Text className="mb-3 text-[0.8125rem] leading-relaxed text-muted">
+                Skriv ordet <Text className="font-bold text-[#B4544A] dark:text-danger">{CONFIRM_WORD}</Text>{' '}
                 nedenfor for å bekrefte at du forstår at handlingen ikke kan angres.
               </Text>
               <TextInput
@@ -179,7 +180,7 @@ export default function DeleteAccountScreen() {
                 placeholder={CONFIRM_WORD}
                 placeholderTextColor="#BFBFBF"
                 maxLength={10}
-                className={[inputClass, canDelete ? 'border-[#B4544A] bg-[#FBF4F2]' : ''].join(' ')}
+                className={[inputClass, canDelete ? 'border-[#B4544A] dark:border-danger bg-danger-tint' : ''].join(' ')}
               />
             </View>
 
@@ -189,7 +190,7 @@ export default function DeleteAccountScreen() {
               className={[
                 'items-center rounded-xl py-3.5',
                 canDelete && !deleteMutation.isPending
-                  ? 'bg-[#B4544A] active:opacity-90'
+                  ? 'bg-danger-solid active:opacity-90'
                   : 'bg-[#C8CAC3] opacity-70',
               ].join(' ')}
             >
@@ -203,7 +204,7 @@ export default function DeleteAccountScreen() {
               disabled={deleteMutation.isPending}
               className="mt-3 items-center py-2.5"
             >
-              <Text className="text-sm font-semibold text-[#63665F]">
+              <Text className="text-sm font-semibold text-muted">
                 Avbryt og behold profilen
               </Text>
             </Pressable>

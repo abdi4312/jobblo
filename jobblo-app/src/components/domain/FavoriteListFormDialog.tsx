@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-nativ
 import { X } from 'lucide-react-native';
 import { Dialog } from '../ui/Dialog';
 import { FAVORITE_LIST_NAME_MAX_LENGTH } from '../../types/FavoriteList';
+import { TC, tc } from '../../theme/colors';
 
 interface FavoriteListFormDialogProps {
   visible: boolean;
@@ -72,7 +73,7 @@ export function FavoriteListFormDialog({
     <Dialog visible={visible} onClose={isPending ? () => undefined : onClose}>
       <View className="w-full">
         <View className="mb-5 flex-row items-center justify-between">
-          <Text className="text-[1.0625rem] font-bold text-[#0B0B0B]">{title}</Text>
+          <Text className="text-[1.0625rem] font-bold text-ink">{title}</Text>
           <Pressable
             onPress={onClose}
             disabled={isPending}
@@ -80,48 +81,48 @@ export function FavoriteListFormDialog({
             accessibilityRole="button"
             accessibilityLabel="Lukk"
           >
-            <X size={19} color="#63665F" />
+            <X size={19} color={tc('#63665F', 'muted')} />
           </Pressable>
         </View>
 
         {errorMessage ? (
-          <View className="mb-4 rounded-2xl border border-[#E7CFCB] bg-[#FBF1F0] px-3.5 py-3">
-            <Text className="text-[0.8125rem] font-medium text-[#B4544A]">{errorMessage}</Text>
+          <View className="mb-4 rounded-2xl border border-[#E7CFCB] dark:border-danger-line bg-[#FBF1F0] dark:bg-danger-tint px-3.5 py-3">
+            <Text className="text-[0.8125rem] font-medium text-[#B4544A] dark:text-danger">{errorMessage}</Text>
           </View>
         ) : null}
 
-        <Text className="mb-2 text-[0.8125rem] font-semibold text-[#0B0B0B]">Navn på liste</Text>
+        <Text className="mb-2 text-[0.8125rem] font-semibold text-ink">Navn på liste</Text>
         <TextInput
           value={name}
           onChangeText={setName}
           placeholder="F.eks. Sommerjobber"
-          placeholderTextColor="#9B9E96"
+          placeholderTextColor={TC.placeholder}
           autoFocus
           editable={!isPending}
           maxLength={FAVORITE_LIST_NAME_MAX_LENGTH}
           returnKeyType={showDescription ? 'next' : 'done'}
           onSubmitEditing={showDescription ? undefined : handleSubmit}
-          className="rounded-2xl border border-[#E6E7E1] bg-white px-4 py-3 text-[0.9375rem] text-[#0B0B0B]"
+          className="rounded-2xl border border-line bg-surface px-4 py-3 text-[0.9375rem] text-ink"
         />
-        <Text className="mt-1.5 text-right text-[0.6875rem] text-[#9B9E96]">
+        <Text className="mt-1.5 text-right text-[0.8125rem] text-subtle">
           {trimmedName.length}/{FAVORITE_LIST_NAME_MAX_LENGTH}
         </Text>
 
         {showDescription ? (
           <View className="mt-4">
-            <Text className="mb-2 text-[0.8125rem] font-semibold text-[#0B0B0B]">
-              Beskrivelse <Text className="font-normal text-[#63665F]">(valgfritt)</Text>
+            <Text className="mb-2 text-[0.8125rem] font-semibold text-ink">
+              Beskrivelse <Text className="font-normal text-muted">(valgfritt)</Text>
             </Text>
             <TextInput
               value={description}
               onChangeText={setDescription}
               placeholder="Hva samler du i denne listen?"
-              placeholderTextColor="#9B9E96"
+              placeholderTextColor={TC.placeholder}
               multiline
               numberOfLines={4}
               editable={!isPending}
               maxLength={DESCRIPTION_MAX_LENGTH}
-              className="min-h-[96px] rounded-2xl border border-[#E6E7E1] bg-white px-4 py-3 text-[0.9375rem] text-[#0B0B0B]"
+              className="min-h-[96px] rounded-2xl border border-line bg-surface px-4 py-3 text-[0.9375rem] text-ink"
               style={{ textAlignVertical: 'top' }}
             />
           </View>
@@ -131,25 +132,25 @@ export function FavoriteListFormDialog({
           <Pressable
             onPress={onClose}
             disabled={isPending}
-            className={`flex-1 items-center justify-center rounded-full border border-[#E6E7E1] bg-white px-4 py-3.5 ${
+            className={`flex-1 items-center justify-center rounded-full border border-line bg-surface px-4 py-3.5 ${
               isPending ? 'opacity-60' : ''
             }`}
             accessibilityRole="button"
           >
-            <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Avbryt</Text>
+            <Text className="text-[0.9375rem] font-semibold text-ink">Avbryt</Text>
           </Pressable>
 
           <Pressable
             onPress={handleSubmit}
             disabled={!canSubmit}
             className={`flex-1 flex-row items-center justify-center gap-2 rounded-full px-4 py-3.5 ${
-              canSubmit ? 'bg-[#2E6641]' : 'bg-[#EAF1E9]'
+              canSubmit ? 'bg-brand' : 'bg-tint'
             }`}
             accessibilityRole="button"
           >
-            {isPending ? <ActivityIndicator size="small" color="#2E6641" /> : null}
+            {isPending ? <ActivityIndicator size="small" color={TC.brandText} /> : null}
             <Text
-              className={`text-[0.9375rem] font-semibold ${canSubmit ? 'text-white' : 'text-[#63665F]'}`}
+              className={`text-[0.9375rem] font-semibold ${canSubmit ? 'text-white' : 'text-muted'}`}
             >
               {isPending ? pendingLabel : submitLabel}
             </Text>

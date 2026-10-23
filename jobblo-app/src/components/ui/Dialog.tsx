@@ -44,7 +44,7 @@ export function Dialog({
             >
               <View
                 className={[
-                  'w-full rounded-[20px] bg-white p-6 shadow-[0_18px_50px_rgba(11,11,11,0.20)]',
+                  'w-full rounded-[20px] bg-surface p-6 shadow-[0_18px_50px_rgba(11,11,11,0.20)]',
                   contentClassName,
                 ].join(' ')}
               >

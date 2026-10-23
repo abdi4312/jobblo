@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import Constants from 'expo-constants';
@@ -15,6 +15,9 @@ import {
   KeyRound,
   MapPin,
   Monitor,
+  Moon,
+  Smartphone,
+  Sun,
   Phone,
   ShieldBan,
   ShieldCheck,
@@ -30,6 +33,14 @@ import { ListRow } from '../../../../src/components/ui/ListRow';
 import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
 import { MEMBERSHIP_ENABLED } from '../../../../src/config/features';
 import { useProfile } from '../../../../src/hooks/useProfile';
+import { TC, tc } from '../../../../src/theme/colors';
+import { loadThemePreference, setThemePreference, type ThemePreference } from '../../../../src/theme/themePreference';
+
+const THEME_OPTIONS: { value: ThemePreference; label: string; icon: LucideIcon }[] = [
+  { value: 'system', label: 'Automatisk', icon: Smartphone },
+  { value: 'light', label: 'Lys', icon: Sun },
+  { value: 'dark', label: 'Mørk', icon: Moon },
+];
 
 type Row = { label: string; description?: string; icon: LucideIcon; href: Href; destructive?: boolean };
 
@@ -95,9 +106,17 @@ export default function SettingsOverviewScreen() {
       : `${profile?.name || ''} ${profile?.lastName || ''}`.trim() || 'Profil';
   const initials = name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
   const version = Constants.expoConfig?.version;
+  const [theme, setTheme] = useState<ThemePreference>('system');
+  useEffect(() => {
+    void loadThemePreference().then(setTheme);
+  }, []);
+  const chooseTheme = (value: ThemePreference) => {
+    setTheme(value);
+    void setThemePreference(value);
+  };
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 36, gap: 20 }}>
         <ScreenHeader
           title="Innstillinger"
@@ -112,27 +131,54 @@ export default function SettingsOverviewScreen() {
             onPress={() => router.push('/profile/edit')}
             accessibilityRole="button"
             accessibilityLabel={`Rediger profil for ${name}`}
-            className="flex-row items-center gap-3.5 p-4 active:bg-[#F4F6F0]"
+            className="flex-row items-center gap-3.5 p-4 active:bg-surface-2"
           >
-            <View className="h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[#DCEBDD]">
+            <View className="h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[#DCEBDD] dark:bg-tint">
               {profile?.avatarUrl ? (
                 <Image source={{ uri: profile.avatarUrl }} className="h-full w-full" />
               ) : profile ? (
-                <Text className="text-lg font-semibold text-[#2E6641]">{initials || '?'}</Text>
+                <Text className="text-lg font-semibold text-brand-text">{initials || '?'}</Text>
               ) : (
-                <UserRound size={24} color="#2E6641" />
+                <UserRound size={24} color={TC.brandText} />
               )}
             </View>
             <View className="min-w-0 flex-1">
-              <Text className="text-[1.0625rem] font-bold text-[#0B0B0B]" numberOfLines={1}>{name}</Text>
+              <Text className="text-[1.0625rem] font-bold text-ink" numberOfLines={1}>{name}</Text>
               {profile?.email ? (
-                <Text className="mt-0.5 text-[0.8125rem] text-[#63665F]" numberOfLines={1}>{profile.email}</Text>
+                <Text className="mt-0.5 text-[0.8125rem] text-muted" numberOfLines={1}>{profile.email}</Text>
               ) : null}
-              <Text className="mt-1 text-[0.75rem] font-semibold text-[#2E6641]">Rediger profil</Text>
+              <Text className="mt-1 text-[0.8125rem] font-semibold text-brand-text">Rediger profil</Text>
             </View>
-            <ChevronRight size={18} color="#9B9E96" />
+            <ChevronRight size={18} color={tc('#9B9E96', 'subtle')} />
           </Pressable>
         </Card>
+
+        <View>
+          <SectionLabel>Utseende</SectionLabel>
+          <Card className="rounded-2xl p-1.5">
+            <View className="flex-row gap-1.5">
+              {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
+                const active = theme === value;
+                return (
+                  <Pressable
+                    key={value}
+                    onPress={() => chooseTheme(value)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={`Utseende: ${label}`}
+                    className={`flex-1 items-center gap-1.5 rounded-xl py-3 ${active ? 'bg-tint' : 'active:bg-surface-2'}`}
+                  >
+                    <Icon size={20} color={active ? TC.brandText : tc('#9B9E96', 'subtle')} />
+                    <Text className={`text-[0.875rem] ${active ? 'font-semibold text-brand-text' : 'text-muted'}`}>{label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Card>
+          <Text className="mt-2 px-1 text-[0.8125rem] text-subtle">
+            Automatisk følger innstillingen på telefonen.
+          </Text>
+        </View>
 
         {GROUPS.map((group) => (
           <View key={group.title}>
@@ -153,7 +199,7 @@ export default function SettingsOverviewScreen() {
           </View>
         ))}
 
-        <Text className="text-center text-[0.75rem] text-[#9B9E96]">
+        <Text className="text-center text-[0.8125rem] text-subtle">
           Jobblo{version ? ` · versjon ${version}` : ''}
         </Text>
       </ScrollView>

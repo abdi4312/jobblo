@@ -21,15 +21,15 @@ export function Chip({ label, selected = false, onPress, count, icon, className 
       accessibilityState={{ selected }}
       className={cn(
         'h-9 flex-row items-center gap-1.5 rounded-full border px-3.5',
-        selected ? 'border-[#2E6641] bg-[#2E6641]' : 'border-[#E6E7E1] bg-white',
+        selected ? 'border-brand-text bg-brand' : 'border-line bg-surface',
         className
       )}
     >
       {icon}
-      <Text className={cn('text-[0.8125rem] font-medium', selected ? 'text-white' : 'text-[#3C3F38]')}>{label}</Text>
+      <Text className={cn('text-[0.8125rem] font-medium', selected ? 'text-white' : 'text-ink-2')}>{label}</Text>
       {count ? (
-        <View className={cn('min-w-5 items-center rounded-full px-1.5 py-0.5', selected ? 'bg-white/20' : 'bg-[#EAF1E9]')}>
-          <Text className={cn('text-[0.6875rem] font-semibold tabular-nums', selected ? 'text-white' : 'text-[#2E6641]')}>
+        <View className={cn('min-w-5 items-center rounded-full px-1.5 py-0.5', selected ? 'bg-white/20' : 'bg-tint')}>
+          <Text className={cn('text-[0.8125rem] font-semibold tabular-nums', selected ? 'text-white' : 'text-brand-text')}>
             {count > 99 ? '99+' : count}
           </Text>
         </View>

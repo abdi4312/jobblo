@@ -24,6 +24,7 @@ import type { SubscriptionPlan } from '../../../src/services/plans.service';
 import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { MEMBERSHIP_ENABLED } from '../../../src/config/features';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
+import { TC, tc } from '../../../src/theme/colors';
 
 type PlanType = 'private' | 'business';
 const canPurchaseMembershipInApp = Platform.OS !== 'android';
@@ -285,7 +286,7 @@ function planFeatures(plan: SubscriptionPlan): string[] {
 
   if (plansQuery.isLoading || subscriptionQuery.isLoading) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <LoadingIndicator message="Laster medlemskap..." />
       </SafeAreaView>
     );
@@ -294,7 +295,7 @@ function planFeatures(plan: SubscriptionPlan): string[] {
   if (plansQuery.isError) {
     const info = getErrorInfo(plansQuery.error);
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
         <ErrorState
           title="Kunne ikke laste medlemskap"
           message={
@@ -312,20 +313,20 @@ function planFeatures(plan: SubscriptionPlan): string[] {
   const checkoutPending = checkoutMutation.isPending;
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         <Pressable onPress={() => router.back()} className="mb-5 flex-row items-center self-start py-2">
-          <ArrowLeft size={18} color="#63665F" />
-          <Text className="ml-2 text-sm font-medium text-[#63665F]">Innstillinger</Text>
+          <ArrowLeft size={18} color={tc('#63665F', 'muted')} />
+          <Text className="ml-2 text-sm font-medium text-muted">Innstillinger</Text>
         </Pressable>
 
         <View className="mb-5 flex-row items-center">
-          <View className="h-11 w-11 items-center justify-center rounded-xl bg-[#EAF1E9]">
-            <Sparkles size={21} color="#2E6641" />
+          <View className="h-11 w-11 items-center justify-center rounded-xl bg-tint">
+            <Sparkles size={21} color={TC.brandText} />
           </View>
           <View className="ml-3 flex-1">
-            <Text className="text-2xl font-bold text-[#0B0B0B]">Medlemskap</Text>
-            <Text className="mt-1 text-sm leading-5 text-[#63665F]">
+            <Text className="text-2xl font-bold text-ink">Medlemskap</Text>
+            <Text className="mt-1 text-sm leading-5 text-muted">
               Velg planen som passer deg best.
             </Text>
           </View>
@@ -333,27 +334,27 @@ function planFeatures(plan: SubscriptionPlan): string[] {
 
         {/* Current plan, straight from the server */}
         {subscription?.hasPlan ? (
-          <View className="rounded-3xl border border-[#E6E7E1] bg-white p-5">
-            <Text className="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[#9B9E96]">
+          <View className="rounded-3xl border border-line bg-surface p-5">
+            <Text className="text-[0.8125rem] font-semibold uppercase tracking-[0.14em] text-subtle">
               Din nåværende plan
             </Text>
             <View className="mt-2 flex-row items-center">
-              <Text className="text-lg font-bold text-[#0B0B0B]">{subscription.plan}</Text>
+              <Text className="text-lg font-bold text-ink">{subscription.plan}</Text>
               {alreadyPaid ? (
                 <View className="ml-2 rounded-full bg-[#C9E6D2] px-2 py-0.5">
-                  <Text className="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[#173A24]">
+                  <Text className="text-[0.8125rem] font-semibold uppercase tracking-[0.14em] text-[#173A24] dark:text-brand-text">
                     Betalt
                   </Text>
                 </View>
               ) : (
                 <View className="ml-2 rounded-full bg-[#ECEDE7] px-2 py-0.5">
-                  <Text className="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[#63665F]">
+                  <Text className="text-[0.8125rem] font-semibold uppercase tracking-[0.14em] text-muted">
                     Gratis
                   </Text>
                 </View>
               )}
             </View>
-            <Text className="mt-1 text-[0.8125rem] text-[#63665F]">
+            <Text className="mt-1 text-[0.8125rem] text-muted">
               {subscription.planType === 'business' ? 'Bedrift' : 'Privatperson'}
               {subscription.cancelAtPeriodEnd ? ' · avsluttes ved periodeslutt' : ''}
             </Text>
@@ -361,20 +362,20 @@ function planFeatures(plan: SubscriptionPlan): string[] {
         ) : null}
 
         {/* Account type switcher */}
-        <View className="mt-5 flex-row self-start rounded-full border border-[#E6E7E1] bg-white p-1">
+        <View className="mt-5 flex-row self-start rounded-full border border-line bg-surface p-1">
           {(['private', 'business'] as const).map((type) => {
             const active = activeType === type;
             return (
               <Pressable
                 key={type}
                 onPress={() => switchType(type)}
-                className={['rounded-full px-5 py-2.5', active ? '' : 'active:bg-[#F4F6F0]'].join(' ')}
-                style={active ? { backgroundColor: '#2E6641' } : undefined}
+                className={['rounded-full px-5 py-2.5', active ? '' : 'active:bg-surface-2'].join(' ')}
+                style={active ? { backgroundColor: TC.brand } : undefined}
               >
                 <Text
                   className={[
                     'text-[0.875rem] font-semibold',
-                    active ? 'text-white' : 'text-[#63665F]',
+                    active ? 'text-white' : 'text-muted',
                   ].join(' ')}
                 >
                   {type === 'private' ? 'Privatperson' : 'Bedrift'}
@@ -386,11 +387,11 @@ function planFeatures(plan: SubscriptionPlan): string[] {
 
         {/* Plan cards */}
         {typePlans.length === 0 ? (
-          <View className="mt-5 rounded-3xl border border-[#E6E7E1] bg-white p-6">
-            <Text className="text-center text-[0.9375rem] font-semibold text-[#0B0B0B]">
+          <View className="mt-5 rounded-3xl border border-line bg-surface p-6">
+            <Text className="text-center text-[0.9375rem] font-semibold text-ink">
               Ingen planer tilgjengelig
             </Text>
-            <Text className="mt-2 text-center text-[0.8125rem] leading-5 text-[#63665F]">
+            <Text className="mt-2 text-center text-[0.8125rem] leading-5 text-muted">
               Det finnes ingen aktive planer for{' '}
               {activeType === 'private' ? 'privatpersoner' : 'bedrifter'} akkurat nå.
             </Text>
@@ -406,29 +407,29 @@ function planFeatures(plan: SubscriptionPlan): string[] {
                   key={plan._id}
                   onPress={() => selectPlan(plan._id)}
                   className={[
-                    'rounded-3xl border bg-white p-5',
-                    selected ? 'border-[#2E6641]' : 'border-[#E6E7E1] active:bg-[#F4F6F0]',
+                    'rounded-3xl border bg-surface p-5',
+                    selected ? 'border-brand-text' : 'border-line active:bg-surface-2',
                   ].join(' ')}
                   style={selected ? { borderWidth: 2 } : undefined}
                 >
                   <View className="flex-row items-start">
                     <View className="min-w-0 flex-1">
                       <View className="flex-row items-center flex-wrap">
-                        <Text className="text-[1.0625rem] font-bold text-[#0B0B0B]">{plan.name}</Text>
+                        <Text className="text-[1.0625rem] font-bold text-ink">{plan.name}</Text>
                         {isPlanCurrent ? (
                           <View className="ml-2 flex-row items-center rounded-full bg-[#C9E6D2] px-2 py-0.5">
                             <BadgeCheck size={12} color="#173A24" />
-                            <Text className="ml-1 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[#173A24]">
+                            <Text className="ml-1 text-[0.8125rem] font-semibold uppercase tracking-[0.14em] text-[#173A24] dark:text-brand-text">
                               Din plan
                             </Text>
                           </View>
                         ) : null}
                       </View>
                       <View className="mt-1 flex-row items-baseline">
-                        <Text className="text-[1.375rem] font-bold text-[#0B0B0B]">
+                        <Text className="text-[1.375rem] font-bold text-ink">
                           {plan.price > 0 ? money(plan.price) : 'Gratis'}
                         </Text>
-                        <Text className="ml-1 text-[0.8125rem] text-[#63665F]">
+                        <Text className="ml-1 text-[0.8125rem] text-muted">
                           {plan.price > 0 ? 'per måned' : 'alltid'}
                         </Text>
                       </View>
@@ -436,9 +437,9 @@ function planFeatures(plan: SubscriptionPlan): string[] {
                     <View
                       className={[
                         'ml-3 h-6 w-6 items-center justify-center rounded-full border-2',
-                        selected ? 'border-[#2E6641]' : 'border-[#D8DAD2]',
+                        selected ? 'border-brand-text' : 'border-[#D8DAD2]',
                       ].join(' ')}
-                      style={selected ? { backgroundColor: '#2E6641' } : undefined}
+                      style={selected ? { backgroundColor: TC.brand } : undefined}
                     >
                       {selected ? <Check size={14} color="#FFFFFF" /> : null}
                     </View>
@@ -449,9 +450,9 @@ function planFeatures(plan: SubscriptionPlan): string[] {
                       {features.map((feature, index) => (
                         <View key={`${plan._id}-f${index}`} className="flex-row items-start">
                           <View className="mt-0.5">
-                            <Check size={14} color="#2E6641" />
+                            <Check size={14} color={TC.brandText} />
                           </View>
-                          <Text className="ml-2 flex-1 text-[0.8125rem] leading-5 text-[#63665F]">
+                          <Text className="ml-2 flex-1 text-[0.8125rem] leading-5 text-muted">
                             {feature}
                           </Text>
                         </View>
@@ -467,22 +468,22 @@ function planFeatures(plan: SubscriptionPlan): string[] {
         {/* Coupon — only meaningful for a paid plan we can actually buy */}
         {/* Summary + CTA */}
         {selectedPlan ? (
-          <View className="mt-5 rounded-3xl border border-[#E6E7E1] bg-white p-5">
+          <View className="mt-5 rounded-3xl border border-line bg-surface p-5">
             <View className="flex-row items-center justify-between">
-              <Text className="text-[0.875rem] text-[#63665F]">{selectedPlan.name}</Text>
-              <Text className="text-[0.875rem] font-medium text-[#0B0B0B]">
+              <Text className="text-[0.875rem] text-muted">{selectedPlan.name}</Text>
+              <Text className="text-[0.875rem] font-medium text-ink">
                 {selectedPlan.price > 0 ? money(selectedPlan.price) : 'Gratis'}
               </Text>
             </View>
 
-            <View className="mt-3 flex-row items-center justify-between border-t border-[#E6E7E1] pt-3">
-              <Text className="text-[0.9375rem] font-bold text-[#0B0B0B]">Å betale</Text>
-              <Text className="text-[1.125rem] font-bold text-[#0B0B0B]">
+            <View className="mt-3 flex-row items-center justify-between border-t border-line pt-3">
+              <Text className="text-[0.9375rem] font-bold text-ink">Å betale</Text>
+              <Text className="text-[1.125rem] font-bold text-ink">
                 {isFree ? 'Gratis' : money(selectedPlan.price)}
               </Text>
             </View>
             {!isFree ? (
-              <Text className="mt-1 text-[0.75rem] text-[#9B9E96]">
+              <Text className="mt-1 text-[0.8125rem] text-subtle">
                 Per måned. Endelig beløp bekreftes av Stripe.
               </Text>
             ) : null}
@@ -495,15 +496,15 @@ function planFeatures(plan: SubscriptionPlan): string[] {
                 4. Otherwise                  -> start Stripe Checkout
             */}
             {isCurrent ? (
-              <View className="mt-4 rounded-2xl bg-[#F4F6F0] px-4 py-3.5">
-                <Text className="text-center text-[0.875rem] font-semibold text-[#0B0B0B]">
+              <View className="mt-4 rounded-2xl bg-surface-2 px-4 py-3.5">
+                <Text className="text-center text-[0.875rem] font-semibold text-ink">
                   Dette er planen du har nå
                 </Text>
               </View>
             ) : isFree ? (
               <View className="mt-4">
-                <View className="rounded-2xl bg-[#F4F6F0] px-4 py-3.5">
-                  <Text className="text-center text-[0.875rem] leading-5 text-[#63665F]">
+                <View className="rounded-2xl bg-surface-2 px-4 py-3.5">
+                  <Text className="text-center text-[0.875rem] leading-5 text-muted">
                     {alreadyPaid
                       ? 'Du har et betalt abonnement. For å gå ned til gratisplanen må du avslutte abonnementet under Abonnementer.'
                       : 'Gratisplanen krever ingen betaling.'}
@@ -511,8 +512,8 @@ function planFeatures(plan: SubscriptionPlan): string[] {
                 </View>
               </View>
             ) : !isAllowedForAccount ? (
-              <View className="mt-4 rounded-2xl border border-[#E6E7E1] bg-[#F4F6F0] px-4 py-3.5">
-                <Text className="text-center text-[0.875rem] leading-5 text-[#63665F]">
+              <View className="mt-4 rounded-2xl border border-line bg-surface-2 px-4 py-3.5">
+                <Text className="text-center text-[0.875rem] leading-5 text-muted">
                   {allowedPlanType === 'business'
                     ? 'Privatplaner er tilgjengelige for privatkontoer.'
                     : 'Bedriftsplaner er tilgjengelige for bedriftskontoer.'}
@@ -520,12 +521,12 @@ function planFeatures(plan: SubscriptionPlan): string[] {
               </View>
             ) : alreadyPaid ? (
               <View className="mt-4">
-                <View className="rounded-2xl border border-[#F1E1C4] bg-[#FBF5E9] px-4 py-3.5">
+                <View className="rounded-2xl border border-warn-line bg-warn-tint px-4 py-3.5">
                   <View className="flex-row items-start">
                     <View className="mt-0.5">
                       <Info size={16} color="#B7791F" />
                     </View>
-                    <Text className="ml-2 flex-1 text-[0.8125rem] leading-5 text-[#614109]">
+                    <Text className="ml-2 flex-1 text-[0.8125rem] leading-5 text-warn">
                       Du har allerede et aktivt betalt abonnement. Planbytte er ikke tilgjengelig i
                       appen ennå — avslutt det nåværende abonnementet først, så kan du velge en ny
                       plan.
@@ -534,12 +535,12 @@ function planFeatures(plan: SubscriptionPlan): string[] {
                 </View>
                 <Pressable
                   onPress={() => router.push('/profile/settings/subscription')}
-                  className="mt-3 flex-row items-center justify-center rounded-2xl border border-[#E6E7E1] px-5 py-3.5 active:bg-[#F4F6F0]"
+                  className="mt-3 flex-row items-center justify-center rounded-2xl border border-line px-5 py-3.5 active:bg-surface-2"
                 >
-                  <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">
+                  <Text className="text-[0.9375rem] font-semibold text-ink">
                     Administrer abonnement
                   </Text>
-                  <ChevronRight size={17} color="#0B0B0B" />
+                  <ChevronRight size={17} color={TC.ink} />
                 </Pressable>
               </View>
             ) : canCheckout && canPurchaseMembershipInApp ? (
@@ -550,7 +551,7 @@ function planFeatures(plan: SubscriptionPlan): string[] {
                   'mt-4 flex-row items-center justify-center rounded-2xl px-5 py-3.5 shadow-sm',
                   checkoutPending ? 'opacity-70' : '',
                 ].join(' ')}
-                style={{ backgroundColor: '#2E6641' }}
+                style={{ backgroundColor: TC.brand }}
               >
                 {checkoutPending ? (
                   <>
@@ -569,8 +570,8 @@ function planFeatures(plan: SubscriptionPlan): string[] {
                 )}
               </Pressable>
             ) : (
-              <View className="mt-4 rounded-2xl bg-[#F4F6F0] px-4 py-3.5">
-                <Text className="text-center text-[0.875rem] leading-5 text-[#63665F]">
+              <View className="mt-4 rounded-2xl bg-surface-2 px-4 py-3.5">
+                <Text className="text-center text-[0.875rem] leading-5 text-muted">
                   Abonnementskjøp i Android-appen er ikke tilgjengelig akkurat nå.
                 </Text>
               </View>
@@ -582,28 +583,28 @@ function planFeatures(plan: SubscriptionPlan): string[] {
         {!alreadyPaid ? (
           <Pressable
             onPress={() => router.push('/profile/settings/subscription')}
-            className="mt-5 rounded-3xl border border-[#E6E7E1] bg-white p-5 active:bg-[#F4F6F0]"
+            className="mt-5 rounded-3xl border border-line bg-surface p-5 active:bg-surface-2"
           >
             <View className="flex-row items-center">
-              <View className="h-9 w-9 items-center justify-center rounded-xl bg-[#EAF1E9]">
-                <BadgeCheck size={18} color="#2E6641" />
+              <View className="h-9 w-9 items-center justify-center rounded-xl bg-tint">
+                <BadgeCheck size={18} color={TC.brandText} />
               </View>
               <View className="ml-3 flex-1">
-                <Text className="text-sm font-semibold text-[#0B0B0B]">Administrer abonnement</Text>
-                <Text className="mt-1 text-sm leading-5 text-[#63665F]">
+                <Text className="text-sm font-semibold text-ink">Administrer abonnement</Text>
+                <Text className="mt-1 text-sm leading-5 text-muted">
                   Se status, fornyelse og avslutt abonnementet.
                 </Text>
               </View>
-              <ChevronRight size={18} color="#63665F" />
+              <ChevronRight size={18} color={tc('#63665F', 'muted')} />
             </View>
           </Pressable>
         ) : null}
 
         {canPurchaseMembershipInApp ? <View className="mt-5 flex-row items-start px-1">
           <View className="mt-0.5">
-            <Info size={14} color="#9B9E96" />
+            <Info size={14} color={tc('#9B9E96', 'subtle')} />
           </View>
-          <Text className="ml-2 flex-1 text-[0.75rem] leading-5 text-[#9B9E96]">
+          <Text className="ml-2 flex-1 text-[0.8125rem] leading-5 text-subtle">
             Betalingen skjer i Stripes sikre betalingsside i nettleseren. Medlemskapet aktiveres når
             Stripe har bekreftet betalingen — det kan ta noen sekunder etter at du kommer tilbake til
             appen.

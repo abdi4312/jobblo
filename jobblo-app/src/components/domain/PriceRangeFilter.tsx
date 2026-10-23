@@ -32,13 +32,13 @@ export function PriceRangeFilter({
   };
 
   return (
-    <View className="border-b border-[#E6E7E1] py-4">
+    <View className="border-b border-line py-4">
       <View className="flex-row items-center justify-between mb-3">
-        <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">Pris</Text>
+        <Text className="text-[0.9375rem] font-semibold text-ink">Pris</Text>
         {hasValue && (
           <Text
             onPress={onReset}
-            className="text-[0.8125rem] font-medium text-[#2E6641]"
+            className="text-[0.8125rem] font-medium text-brand-text"
           >
             Nullstill
           </Text>
@@ -47,8 +47,8 @@ export function PriceRangeFilter({
 
       <View className="gap-2">
         <RangeSlider min={DEFAULT_MIN} max={DEFAULT_MAX} minValue={minPrice} maxValue={maxPrice} step={100} onMinChange={onMinChange} onMaxChange={onMaxChange} />
-        <View className="flex-row justify-between"><Text className="text-[0.75rem] text-[#63665F]">0 kr</Text><Text className="text-[0.75rem] text-[#63665F]">∞</Text></View>
-        <View className="rounded-lg bg-[#F4F6F0] px-3 py-2"><Text className="text-center text-[0.8125rem] font-medium text-[#2E6641]">{formatPrice(minPrice)} – {maxPrice === DEFAULT_MAX ? '∞' : formatPrice(maxPrice)} kr</Text></View>
+        <View className="flex-row justify-between"><Text className="text-[0.8125rem] text-muted">0 kr</Text><Text className="text-[0.8125rem] text-muted">∞</Text></View>
+        <View className="rounded-lg bg-surface-2 px-3 py-2"><Text className="text-center text-[0.8125rem] font-medium text-brand-text">{formatPrice(minPrice)} – {maxPrice === DEFAULT_MAX ? '∞' : formatPrice(maxPrice)} kr</Text></View>
       </View>
     </View>
   );
