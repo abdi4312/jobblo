@@ -103,3 +103,8 @@ export async function submitChatReport(chatId: string, payload: ChatReportPayloa
 export async function createChatContract(chatId: string): Promise<void> {
   await apiClient.post(`/chats/${chatId.trim()}/contracts`);
 }
+
+/** Hides the conversation from this user's list only; the other party keeps theirs. */
+export async function deleteChatForMe(chatId: string): Promise<void> {
+  await apiClient.patch(`/chats/${chatId.trim()}/delete-for-me`);
+}

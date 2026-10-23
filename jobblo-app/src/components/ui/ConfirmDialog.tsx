@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { Dialog } from './Dialog';
+import { TC } from '../../theme/colors';
 
 interface ConfirmDialogProps {
   visible: boolean;
@@ -13,6 +14,8 @@ interface ConfirmDialogProps {
   destructive?: boolean;
   isPending?: boolean;
   errorMessage?: string | null;
+  /** Only the confirm button, e.g. for a "done" message. */
+  hideCancel?: boolean;
   onConfirm: () => void;
   onClose: () => void;
 }
@@ -34,47 +37,50 @@ export function ConfirmDialog({
   destructive = false,
   isPending = false,
   errorMessage = null,
+  hideCancel = false,
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
   return (
     <Dialog visible={visible} onClose={isPending ? () => undefined : onClose}>
       <View className="w-full">
-        <Text className="text-[1.0625rem] font-bold text-[#0B0B0B]">{title}</Text>
+        <Text className="text-[1.0625rem] font-bold text-ink">{title}</Text>
 
         {message ? (
-          <Text className="mt-2 text-[0.875rem] leading-relaxed text-[#63665F]">{message}</Text>
+          <Text className="mt-2 text-[0.875rem] leading-relaxed text-muted">{message}</Text>
         ) : null}
 
         {errorMessage ? (
-          <View className="mt-4 rounded-2xl border border-[#E7CFCB] bg-[#FBF1F0] px-3.5 py-3">
-            <Text className="text-[0.8125rem] font-medium text-[#B4544A]">{errorMessage}</Text>
+          <View className="mt-4 rounded-2xl border border-[#E7CFCB] dark:border-danger-line bg-[#FBF1F0] dark:bg-danger-tint px-3.5 py-3">
+            <Text className="text-[0.8125rem] font-medium text-[#B4544A] dark:text-danger">{errorMessage}</Text>
           </View>
         ) : null}
 
         <View className="mt-6 flex-row gap-3">
+          {hideCancel ? null : (
           <Pressable
             onPress={onClose}
             disabled={isPending}
-            className={`flex-1 items-center justify-center rounded-full border border-[#E6E7E1] bg-white px-4 py-3.5 ${
+            className={`flex-1 items-center justify-center rounded-full border border-line bg-surface px-4 py-3.5 ${
               isPending ? 'opacity-60' : ''
             }`}
             accessibilityRole="button"
           >
-            <Text className="text-[0.9375rem] font-semibold text-[#0B0B0B]">{cancelLabel}</Text>
+            <Text className="text-[0.9375rem] font-semibold text-ink">{cancelLabel}</Text>
           </Pressable>
+          )}
 
           <Pressable
             onPress={onConfirm}
             disabled={isPending}
             className={`flex-1 flex-row items-center justify-center gap-2 rounded-full px-4 py-3.5 ${
-              isPending ? 'bg-[#EAF1E9]' : destructive ? 'bg-[#B4544A]' : 'bg-[#2E6641]'
+              isPending ? 'bg-tint' : destructive ? 'bg-danger-solid' : 'bg-brand'
             }`}
             accessibilityRole="button"
           >
-            {isPending ? <ActivityIndicator size="small" color="#2E6641" /> : null}
+            {isPending ? <ActivityIndicator size="small" color={TC.brandText} /> : null}
             <Text
-              className={`text-[0.9375rem] font-semibold ${isPending ? 'text-[#63665F]' : 'text-white'}`}
+              className={`text-[0.9375rem] font-semibold ${isPending ? 'text-muted' : 'text-white'}`}
             >
               {isPending ? (pendingLabel ?? confirmLabel) : confirmLabel}
             </Text>
