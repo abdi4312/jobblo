@@ -19,6 +19,7 @@ import { SearchInput } from '../../src/components/ui/SearchInput';
 import { providerOrderRoute } from '../../src/utils/orderRoute';
 import type { MyApplication } from '../../src/types/Application';
 import type { ApplicantOverviewService } from '../../src/types/Applicants';
+import { TC } from '../../src/theme/colors';
 
 const FILTERS = [
   { label: 'Alle', value: '' },
@@ -29,17 +30,17 @@ const FILTERS = [
 
 function Stat({ value, label, highlight }: { value: number; label: string; highlight?: boolean }) {
   return (
-    <Card className={['flex-1 rounded-xl px-3.5 py-3', highlight ? 'border-[#2E6641] bg-[#EAF1E9]' : ''].join(' ')}>
-      <Text className={['text-[1.375rem] font-bold tabular-nums', highlight ? 'text-[#2E6641]' : 'text-[#0B0B0B]'].join(' ')}>{value}</Text>
-      <Text className="mt-0.5 text-[0.75rem] text-[#63665F]" numberOfLines={1}>{label}</Text>
+    <Card className={['flex-1 rounded-xl px-3.5 py-3', highlight ? 'border-brand-text bg-tint' : ''].join(' ')}>
+      <Text className={['text-[1.375rem] font-bold tabular-nums', highlight ? 'text-brand-text' : 'text-ink'].join(' ')}>{value}</Text>
+      <Text className="mt-0.5 text-[0.8125rem] text-muted" numberOfLines={1}>{label}</Text>
     </Card>
   );
 }
 
 function EmptyIcon({ icon: Icon }: { icon: typeof Users }) {
   return (
-    <View className="h-12 w-12 items-center justify-center rounded-full bg-[#EAF1E9]">
-      <Icon size={22} color="#2E6641" />
+    <View className="h-12 w-12 items-center justify-center rounded-full bg-tint">
+      <Icon size={22} color={TC.brandText} />
     </View>
   );
 }
@@ -152,17 +153,17 @@ export default function MyApplicationsScreen() {
     router.push({ pathname: '/(app)/job-applicants/[serviceId]', params: { serviceId } });
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 120 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={TC.brandText} />}
       >
         <View className="mb-5">
-          <Text className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-[#63665F]">Oversikt</Text>
-          <Text className="mt-2 text-[1.9rem] font-bold leading-tight tracking-[-0.04em] text-[#0B0B0B]">Søkere og søknader</Text>
-          <Text className="mt-2 text-[0.9375rem] leading-relaxed text-[#63665F]">
+          <Text className="text-[0.8125rem] font-semibold uppercase tracking-[0.16em] text-muted">Oversikt</Text>
+          <Text className="mt-2 text-[1.9rem] font-bold leading-tight tracking-[-0.04em] text-ink">Søkere og søknader</Text>
+          <Text className="mt-2 text-[0.9375rem] leading-relaxed text-muted">
             Oppdragene du har lagt ut, og oppdragene du selv har søkt på — samlet på ett sted.
           </Text>
         </View>

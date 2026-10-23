@@ -19,6 +19,7 @@ import { Select } from '../../src/components/ui/Select';
 import { customerOrderRoute, type OrderRoute } from '../../src/utils/orderRoute';
 import type { ApplicantOverviewOrder } from '../../src/types/Applicants';
 import type { JobStatus, MyJob } from '../../src/types/Jobs';
+import { TC, tc } from '../../src/theme/colors';
 
 /** Buckets over the 11 Service.status values. Counts are derived from the response. */
 const FILTERS: { label: string; value: string; statuses: JobStatus[] }[] = [
@@ -74,7 +75,7 @@ function formatDate(value: string) {
 }
 
 function formatPrice(job: MyJob) {
-  if (job.paymentType === 'hourly' && typeof job.hourlyRate === 'number') {
+  if (job.paymentType === 'Timepris' && typeof job.hourlyRate === 'number') {
     return `${job.hourlyRate.toLocaleString('nb-NO')} kr/t`;
   }
   return typeof job.price === 'number' ? `${job.price.toLocaleString('nb-NO')} kr` : null;
@@ -82,9 +83,9 @@ function formatPrice(job: MyJob) {
 
 function Stat({ value, label, highlight }: { value: number; label: string; highlight?: boolean }) {
   return (
-    <Card className={['flex-1 rounded-xl px-3.5 py-3', highlight ? 'border-[#2E6641] bg-[#EAF1E9]' : ''].join(' ')}>
-      <Text className={['text-[1.375rem] font-bold tabular-nums', highlight ? 'text-[#2E6641]' : 'text-[#0B0B0B]'].join(' ')}>{value}</Text>
-      <Text className="mt-0.5 text-[0.75rem] text-[#63665F]" numberOfLines={1}>{label}</Text>
+    <Card className={['flex-1 rounded-xl px-3.5 py-3', highlight ? 'border-brand-text bg-tint' : ''].join(' ')}>
+      <Text className={['text-[1.375rem] font-bold tabular-nums', highlight ? 'text-brand-text' : 'text-ink'].join(' ')}>{value}</Text>
+      <Text className="mt-0.5 text-[0.8125rem] text-muted" numberOfLines={1}>{label}</Text>
     </Card>
   );
 }
@@ -118,87 +119,87 @@ function MyJobCard({
   return (
     <Pressable
       onPress={onOpen}
-      className="overflow-hidden rounded-xl border border-[#E6E7E1] bg-white active:opacity-90"
+      className="overflow-hidden rounded-xl border border-line bg-surface active:opacity-90"
     >
       <View className="p-4">
         <View className="flex-row items-start justify-between gap-3">
           <View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-1.5">
             <ServiceStatusBadge status={job.status} />
             {job.urgent ? (
-              <View className="self-start rounded-full bg-[#122A1C] px-2.5 py-1">
-                <Text className="text-[0.6875rem] font-semibold text-white">Hastar</Text>
+              <View className="self-start rounded-full bg-brand-deep px-2.5 py-1">
+                <Text className="text-[0.8125rem] font-semibold text-white">Hastar</Text>
               </View>
             ) : null}
             {job.promoted ? (
-              <View className="self-start rounded-full bg-[#EAF1E9] px-2.5 py-1">
-                <Text className="text-[0.6875rem] font-semibold text-[#2E6641]">Fremhevet</Text>
+              <View className="self-start rounded-full bg-tint px-2.5 py-1">
+                <Text className="text-[0.8125rem] font-semibold text-brand-text">Fremhevet</Text>
               </View>
             ) : null}
           </View>
-          {price ? <Text className="text-[1rem] font-bold text-[#0B0B0B]">{price}</Text> : null}
+          {price ? <Text className="text-[1rem] font-bold text-ink">{price}</Text> : null}
         </View>
 
         <View className="mt-2.5 flex-row items-center gap-2">
-          <Text className="flex-1 text-[1rem] font-semibold tracking-[-0.02em] text-[#0B0B0B]" numberOfLines={2}>
+          <Text className="flex-1 text-[1rem] font-semibold tracking-[-0.02em] text-ink" numberOfLines={2}>
             {job.title}
           </Text>
-          <ChevronRight size={18} color="#9B9E96" />
+          <ChevronRight size={18} color={tc('#9B9E96', 'subtle')} />
         </View>
 
         <View className="mt-1 flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
-          <Text className="text-[0.8125rem] text-[#63665F]">{formatDate(job.createdAt)}</Text>
+          <Text className="text-[0.8125rem] text-muted">{formatDate(job.createdAt)}</Text>
           {job.location?.city ? (
             <View className="flex-row items-center gap-1">
-              <Text className="text-[#9B9E96]">·</Text>
-              <MapPin size={12} color="#9B9E96" />
-              <Text className="text-[0.8125rem] text-[#63665F]">{job.location.city}</Text>
+              <Text className="text-subtle">·</Text>
+              <MapPin size={12} color={tc('#9B9E96', 'subtle')} />
+              <Text className="text-[0.8125rem] text-muted">{job.location.city}</Text>
             </View>
           ) : null}
         </View>
 
         <View className="mt-3 flex-row flex-wrap items-center gap-2">
           {typeof job.views === 'number' ? (
-            <View className="flex-row items-center gap-1.5 rounded-lg bg-[#F4F6F0] px-2.5 py-1.5">
-              <Eye size={13} color="#63665F" />
-              <Text className="text-[0.75rem] text-[#63665F]">{job.views} visninger</Text>
+            <View className="flex-row items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1.5">
+              <Eye size={13} color={tc('#63665F', 'muted')} />
+              <Text className="text-[0.8125rem] text-muted">{job.views} visninger</Text>
             </View>
           ) : null}
           {typeof applicantCount === 'number' ? (
-            <View className="flex-row items-center gap-1.5 rounded-lg bg-[#F4F6F0] px-2.5 py-1.5">
-              <Users size={13} color="#63665F" />
-              <Text className="text-[0.75rem] text-[#63665F]">
+            <View className="flex-row items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1.5">
+              <Users size={13} color={tc('#63665F', 'muted')} />
+              <Text className="text-[0.8125rem] text-muted">
                 {applicantCount} {applicantCount === 1 ? 'søker' : 'søkere'}
               </Text>
             </View>
           ) : null}
           {job.categories?.length ? (
-            <Text className="min-w-0 flex-shrink text-[0.75rem] text-[#9B9E96]" numberOfLines={1}>
+            <Text className="min-w-0 flex-shrink text-[0.8125rem] text-subtle" numberOfLines={1}>
               {job.categories.join(', ')}
             </Text>
           ) : null}
         </View>
 
         {job.status === 'draft' ? (
-          <Text className="mt-3 text-[0.75rem] leading-5 text-[#63665F]">
+          <Text className="mt-3 text-[0.8125rem] leading-5 text-muted">
             Utkastet er lagret på serveren og er ikke synlig for andre.
           </Text>
         ) : null}
 
         {order ? (
-          <View className="mt-3 flex-row items-center gap-2 rounded-lg bg-[#EAF1E9] p-3">
-            <ShieldCheck size={16} color="#2E6641" />
-            <Text className="flex-1 text-[0.8125rem] font-medium text-[#2E6641]">SafePay-ordre er opprettet</Text>
-            <Pressable onPress={onOrder} className="rounded-lg bg-[#2E6641] px-3 py-2">
-              <Text className="text-[0.75rem] font-semibold text-white">{orderActionLabel(order)}</Text>
+          <View className="mt-3 flex-row items-center gap-2 rounded-lg bg-tint p-3">
+            <ShieldCheck size={16} color={TC.brandText} />
+            <Text className="flex-1 text-[0.8125rem] font-medium text-brand-text">SafePay-ordre er opprettet</Text>
+            <Pressable onPress={onOrder} className="rounded-lg bg-brand px-3 py-2">
+              <Text className="text-[0.8125rem] font-semibold text-white">{orderActionLabel(order)}</Text>
             </Pressable>
           </View>
         ) : null}
       </View>
 
-      <View className="flex-row items-center gap-2 border-t border-[#E6E7E1] bg-[#F4F6F0] px-4 py-3">
+      <View className="flex-row items-center gap-2 border-t border-line bg-surface-2 px-4 py-3">
         <Pressable
           onPress={onApplicants}
-          className="flex-1 flex-row items-center justify-center gap-1.5 rounded-lg bg-[#2E6641] px-3 py-2.5"
+          className="flex-1 flex-row items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-2.5"
         >
           <Users size={15} color="#FFFFFF" />
           <Text className="text-[0.8125rem] font-semibold text-white">
@@ -209,12 +210,12 @@ function MyJobCard({
           onPress={onEdit}
           disabled={!canEdit}
           className={[
-            'flex-1 flex-row items-center justify-center gap-1.5 rounded-lg border border-[#E6E7E1] px-3 py-2.5',
-            canEdit ? 'bg-white' : 'bg-[#F4F6F0] opacity-60',
+            'flex-1 flex-row items-center justify-center gap-1.5 rounded-lg border border-line px-3 py-2.5',
+            canEdit ? 'bg-surface' : 'bg-surface-2 opacity-60',
           ].join(' ')}
         >
-          <Pencil size={15} color={canEdit ? '#0B0B0B' : '#9B9E96'} />
-          <Text className={['text-[0.8125rem] font-semibold', canEdit ? 'text-[#0B0B0B]' : 'text-[#9B9E96]'].join(' ')}>Rediger</Text>
+          <Pencil size={15} color={canEdit ? TC.ink : tc('#9B9E96', 'subtle')} />
+          <Text className={['text-[0.8125rem] font-semibold', canEdit ? 'text-ink' : 'text-subtle'].join(' ')}>Rediger</Text>
         </Pressable>
         <Pressable
           onPress={onDelete}
@@ -222,19 +223,19 @@ function MyJobCard({
           accessibilityLabel="Slett annonse"
           className={[
             'h-10 w-10 items-center justify-center rounded-lg border',
-            canDelete ? 'border-[#E7CFCB] bg-white' : 'border-[#E6E7E1] bg-[#F4F6F0] opacity-60',
+            canDelete ? 'border-[#E7CFCB] dark:border-danger-line bg-surface' : 'border-line bg-surface-2 opacity-60',
           ].join(' ')}
         >
           {deleting ? (
-            <ActivityIndicator size="small" color="#B4544A" />
+            <ActivityIndicator size="small" color={tc('#B4544A', 'danger')} />
           ) : (
-            <Trash2 size={16} color={canDelete ? '#B4544A' : '#9B9E96'} />
+            <Trash2 size={16} color={canDelete ? tc('#B4544A', 'danger') : tc('#9B9E96', 'subtle')} />
           )}
         </Pressable>
       </View>
 
       {(!canDelete || !canEdit) && blockedReason ? (
-        <Text className="px-4 pb-3 text-[0.75rem] leading-5 text-[#63665F]">{blockedReason}</Text>
+        <Text className="px-4 pb-3 text-[0.8125rem] leading-5 text-muted">{blockedReason}</Text>
       ) : null}
     </Pressable>
   );
@@ -322,13 +323,13 @@ export default function MyJobsScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#EFF0EA]">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 120 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor="#2E6641" />
+          <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={TC.brandText} />
         }
       >
         <ScreenHeader
@@ -369,7 +370,7 @@ export default function MyJobsScreen() {
               <Pressable
                 onPress={() => router.push('/(app)/create-job')}
                 accessibilityLabel="Legg ut ny annonse"
-                className="h-12 w-12 items-center justify-center rounded-full bg-[#2E6641]"
+                className="h-12 w-12 items-center justify-center rounded-full bg-brand"
               >
                 <Plus size={20} color="#FFFFFF" />
               </Pressable>
@@ -393,7 +394,7 @@ export default function MyJobsScreen() {
             </ScrollView>
 
             <View className="mb-4 mt-4 flex-row items-center justify-between">
-              <Text className="text-[0.8125rem] text-[#63665F]">
+              <Text className="text-[0.8125rem] text-muted">
                 Viser {visibleJobs.length} av {jobs.length}
               </Text>
               <Select value={sort} options={SORTS} onValueChange={setSort} placeholder="Sorter" />
@@ -402,8 +403,8 @@ export default function MyJobsScreen() {
             {visibleJobs.length === 0 ? (
               <EmptyState
                 icon={
-                  <View className="h-12 w-12 items-center justify-center rounded-full bg-[#EAF1E9]">
-                    {searchText.trim() ? <Search size={22} color="#2E6641" /> : <Megaphone size={22} color="#2E6641" />}
+                  <View className="h-12 w-12 items-center justify-center rounded-full bg-tint">
+                    {searchText.trim() ? <Search size={22} color={TC.brandText} /> : <Megaphone size={22} color={TC.brandText} />}
                   </View>
                 }
                 title={
