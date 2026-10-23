@@ -6,7 +6,6 @@ import { useRouter } from 'expo-router';
 import { useDeleteMyJobMutation, useMyJobs } from '../../src/hooks/useMyJobs';
 import { useMyApplicantsOverview } from '../../src/hooks/useMyApplicantsOverview';
 import { ServiceStatusBadge } from '../../src/components/domain/ServiceStatusBadge';
-import { ApplicantOverviewSkeleton } from '../../src/components/domain/ApplicantOverviewSkeleton';
 import { Button } from '../../src/components/ui/Button';
 import { Card } from '../../src/components/ui/Card';
 import { Chip } from '../../src/components/ui/Chip';
@@ -20,6 +19,7 @@ import { customerOrderRoute, type OrderRoute } from '../../src/utils/orderRoute'
 import type { ApplicantOverviewOrder } from '../../src/types/Applicants';
 import type { JobStatus, MyJob } from '../../src/types/Jobs';
 import { TC, tc } from '../../src/theme/colors';
+import { MyJobCardsSkeleton } from '../../src/components/skeletons/ScreenSkeletons';
 
 /** Buckets over the 11 Service.status values. Counts are derived from the response. */
 const FILTERS: { label: string; value: string; statuses: JobStatus[] }[] = [
@@ -344,11 +344,7 @@ export default function MyJobsScreen() {
         />
 
         {isLoading ? (
-          <View className="gap-3">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <ApplicantOverviewSkeleton key={index} />
-            ))}
-          </View>
+          <MyJobCardsSkeleton />
         ) : isError ? (
           <ErrorState
             title="Kunne ikke laste annonsene dine"

@@ -9,7 +9,8 @@ import { useSafePayCheckout, useCreateSafePaySessionMutation } from '../../../..
 import { getSafePaySessionStatus } from '../../../../src/services/safepay.service';
 import { queryKeys } from '../../../../src/queryKeys';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
-import { SafePayCancelledCard, SafePayCheckoutSkeleton, SafePayPartiesCard, DigitalContractCard, SafePayPaymentCard } from '../../../../src/components/domain/SafePayCheckoutSections';
+import { SafePayCancelledCard, SafePayPartiesCard, DigitalContractCard, SafePayPaymentCard } from '../../../../src/components/domain/SafePayCheckoutSections';
+import { CheckoutSkeleton } from '../../../../src/components/skeletons/ScreenSkeletons';
 import { SafePayProgressSteps } from '../../../../src/components/domain/SafePayProgressSteps';
 import { customerOrderRoute, providerOrderRoute } from '../../../../src/utils/orderRoute';
 import * as Haptics from 'expo-haptics';
@@ -102,7 +103,7 @@ export default function SafePayCheckoutScreen() {
   }
 
   if (isLoading) {
-    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ScrollView contentContainerStyle={{ paddingBottom: 100 }}><SafePayCheckoutSkeleton /></ScrollView></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ScrollView contentContainerStyle={{ paddingBottom: 100 }}><CheckoutSkeleton /></ScrollView></SafeAreaView>;
   }
 
   if (isError || !data?.order || !data.calculation) {

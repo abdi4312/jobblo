@@ -3,7 +3,6 @@ import { Image, Text, View } from 'react-native';
 import { CreditCard, FileText, Lock, ShieldCheck, Users } from 'lucide-react-native';
 import type { SafePayCalculation, SafePayOrder, SafePayService, SafePayStartDeadline } from '../../types/SafePay';
 import { Button } from '../ui/Button';
-import { Skeleton } from '../ui/Skeleton';
 import { TC, tc } from '../../theme/colors';
 
 function nameOf(party: SafePayOrder['customerId']) {
@@ -120,8 +119,4 @@ export function SafePayCancelledCard({ order, total }: { order: SafePayOrder; to
       {order.providerConnectDeadlineAt ? <Text className="mt-2 text-[0.8125rem] text-subtle">Fristen utløp: {new Date(order.providerConnectDeadlineAt).toLocaleString('nb-NO')}</Text> : null}
     </View>
   );
-}
-
-export function SafePayCheckoutSkeleton() {
-  return <View className="gap-4 px-4 pt-6"><Skeleton className="h-4 w-24 rounded" /><Skeleton className="h-24 rounded-2xl" /><Skeleton className="h-40 rounded-3xl" /><Skeleton className="h-64 rounded-3xl" /></View>;
 }

@@ -7,9 +7,9 @@ import { useBlockedUsers, useUnblockUser } from '../../../../src/hooks/useBlocke
 import type { BlockedUser } from '../../../../src/services/users.service';
 import { EmptyState } from '../../../../src/components/ui/EmptyState';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
-import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
 import { TC } from '../../../../src/theme/colors';
+import { BlockedUsersSkeleton } from '../../../../src/components/skeletons/ScreenSkeletons';
 
 const PAGE_SIZE = 10;
 
@@ -64,7 +64,7 @@ export default function BlockedUsersScreen() {
     );
   };
 
-  if (query.isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator message="Laster blokkerte brukere..." /></SafeAreaView>;
+  if (query.isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><BlockedUsersSkeleton /></SafeAreaView>;
   if (query.isError) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ErrorState title="Kunne ikke laste blokkerte brukere" message="Sjekk internettforbindelsen din og prøv igjen." actionLabel="Prøv igjen" onAction={() => void query.refetch()} /></SafeAreaView>;
 
   return (

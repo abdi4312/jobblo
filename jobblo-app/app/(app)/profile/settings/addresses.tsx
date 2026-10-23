@@ -27,11 +27,11 @@ import { useRouter } from 'expo-router';
 import { useProfile, useUpdateProfile } from '../../../../src/hooks/useProfile';
 import { useAuthStore } from '../../../../src/store/authStore';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
-import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { Card, SectionLabel } from '../../../../src/components/ui/Card';
 import { FormRow } from '../../../../src/components/ui/FormRow';
 import type { CurrentProfile } from '../../../../src/services/profile.service';
 import { TC } from '../../../../src/theme/colors';
+import { AddressesSkeleton } from '../../../../src/components/skeletons/ScreenSkeletons';
 
 type Draft = { address: string; postNumber: string; postSted: string };
 
@@ -274,7 +274,7 @@ export default function AddressesSettingsScreen() {
   if (isLoading || !draft) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator variant="form" message="Laster adresser..." />
+        <AddressesSkeleton />
       </SafeAreaView>
     );
   }

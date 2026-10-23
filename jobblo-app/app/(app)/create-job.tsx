@@ -81,8 +81,8 @@ import type {
   DurationUnit,
   PaymentType,
 } from '../../src/services/createJob.service';
-import { LoadingIndicator } from '../../src/components/ui/LoadingIndicator';
 import { TC, tc } from '../../src/theme/colors';
+import { CreateJobSkeleton } from '../../src/components/skeletons/ScreenSkeletons';
 
 const DRAFT_KEY = 'jobblo-create-job-draft';
 const STEPS = ['Grunnleggende', 'Tid & sted', 'Sjekkliste', 'Kontakt'];
@@ -666,7 +666,7 @@ export default function CreateJobScreen() {
   const saving = createMutation.isPending || updateMutation.isPending;
 
   if (isEditMode && ownerJobsQuery.isLoading && !editLoaded) {
-    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator variant="form" message="Laster oppdrag..." /></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><CreateJobSkeleton /></SafeAreaView>;
   }
   if (isEditMode && ownerJobsQuery.isError) {
     return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ErrorState title="Kunne ikke laste oppdraget" message="Sjekk internettforbindelsen din og prøv igjen." actionLabel="Prøv igjen" onAction={() => void ownerJobsQuery.refetch()} /></SafeAreaView>;

@@ -10,11 +10,11 @@ import { useApproveSafePayJobMutation, useCustomerChecklistMutation, useReviewPh
 import { useDisputeByOrder } from '../../../../src/hooks/useDisputes';
 import { isDisputeActive, isDisputeEligibleOrderStatus } from '../../../../src/types/Dispute';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
-import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { Button } from '../../../../src/components/ui/Button';
 import * as Haptics from 'expo-haptics';
 import { SafePayProgressSteps } from '../../../../src/components/domain/SafePayProgressSteps';
 import { TC, tc } from '../../../../src/theme/colors';
+import { ApprovalSkeleton } from '../../../../src/components/skeletons/ScreenSkeletons';
 
 const STATUS: Record<string, { title: string; step: number; canApprove: boolean }> = {
   awaiting_payment: { title: 'Venter på betaling', step: 2, canApprove: false },
@@ -89,7 +89,7 @@ export default function SafePayApprovalScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [approvalResult, setApprovalResult] = useState<ApprovalResult | null>(null);
 
-  if (query.isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator variant="detail" message="Laster oppdrag..." /></SafeAreaView>;
+  if (query.isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ApprovalSkeleton /></SafeAreaView>;
   if (query.isError || !query.data?.order) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ErrorState title="Kunne ikke laste oppdraget" message="Sjekk internettforbindelsen din og prøv igjen." actionLabel="Prøv igjen" onAction={() => void query.refetch()} /></SafeAreaView>;
 
   const { order, calculation } = query.data;

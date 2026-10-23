@@ -34,7 +34,6 @@ import { useConnectStatus } from '../../../src/hooks/usePayout';
 import { useMyJobRequests } from '../../../src/hooks/useMyApplications';
 import { useIsServiceSaved } from '../../../src/hooks/useFavoriteLists';
 import { useAuthStore } from '../../../src/store/authStore';
-import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { ApplyModal } from '../../../src/components/domain/ApplyModal';
@@ -46,7 +45,7 @@ import { categoryImage } from '../../../src/utils/categoryImage';
 import { serviceStatusLabel } from '../../../src/components/domain/ServiceStatusBadge';
 import { MEMBERSHIP_ENABLED } from '../../../src/config/features';
 import { EQUIPMENT_LABELS, type Job } from '../../../src/types/Jobs';
-import { Skeleton } from '../../../src/components/ui/Skeleton';
+import { JobDetailSkeleton } from '../../../src/components/skeletons/ScreenSkeletons';
 import { TC, tc } from '../../../src/theme/colors';
 
 function formatDate(value?: string) {
@@ -190,20 +189,8 @@ export default function JobDetailsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        {/* Skeleton in the page's own shape instead of a full-screen spinner. */}
-        <View className="gap-5 px-4 pt-4" accessibilityLabel="Laster oppdrag">
-          <View className="flex-row justify-between">
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <Skeleton className="h-10 w-10 rounded-full" />
-          </View>
-          <Skeleton className="aspect-[4/3] rounded-[28px]" />
-          <View className="gap-3 rounded-[28px] bg-surface p-5">
-            <Skeleton className="h-7 w-4/5 rounded" />
-            <Skeleton className="h-4 w-1/2 rounded" />
-            <Skeleton className="mt-3 h-9 w-2/5 rounded" />
-          </View>
-        </View>
+      <SafeAreaView edges={['left', 'right']} className="flex-1 bg-page">
+        <JobDetailSkeleton />
       </SafeAreaView>
     );
   }

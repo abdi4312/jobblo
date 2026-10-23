@@ -7,9 +7,9 @@ import { useTopUsers } from '../../src/hooks/useTopUsers';
 import { useProfile } from '../../src/hooks/useProfile';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ErrorState } from '../../src/components/ui/ErrorState';
-import { LoadingIndicator } from '../../src/components/ui/LoadingIndicator';
 import { ScreenHeader } from '../../src/components/ui/ScreenHeader';
 import { TC, tc } from '../../src/theme/colors';
+import { TaskersSkeleton } from '../../src/components/skeletons/ScreenSkeletons';
 
 const PAGE_SIZE = 12;
 
@@ -65,7 +65,7 @@ export default function RecommendedTaskersScreen() {
   if (query.isLoading)
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator message="Laster oppdragstakere..." />
+        <TaskersSkeleton />
       </SafeAreaView>
     );
   if (query.isError)

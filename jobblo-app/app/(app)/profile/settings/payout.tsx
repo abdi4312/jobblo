@@ -5,10 +5,10 @@ import { AlertCircle, CheckCircle2, Clock3, ExternalLink, Info, Loader2, ShieldC
 import { useRouter } from 'expo-router';
 import { useConnectStatus, useCreateAccountLinkMutation, useRefreshStatusMutation } from '../../../../src/hooks/usePayout';
 import type { ConnectStatusResponse } from '../../../../src/services/payout.service';
-import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
 import { TC, tc } from '../../../../src/theme/colors';
+import { PayoutSkeleton } from '../../../../src/components/skeletons/ScreenSkeletons';
 
 type StatusKind = 'ready' | 'pending_verification' | 'started' | 'restricted' | 'not_configured';
 
@@ -96,7 +96,7 @@ export default function PayoutSettingsScreen() {
   if (statusQuery.isLoading) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator variant="detail" message="Laster utbetalingsstatus..." />
+        <PayoutSkeleton />
       </SafeAreaView>
     );
   }

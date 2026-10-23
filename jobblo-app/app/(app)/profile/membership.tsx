@@ -21,10 +21,10 @@ import {
   usePlans,
 } from '../../../src/hooks/useMembership';
 import type { SubscriptionPlan } from '../../../src/services/plans.service';
-import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { MEMBERSHIP_ENABLED } from '../../../src/config/features';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { TC, tc } from '../../../src/theme/colors';
+import { MembershipSkeleton } from '../../../src/components/skeletons/ScreenSkeletons';
 
 type PlanType = 'private' | 'business';
 const canPurchaseMembershipInApp = Platform.OS !== 'android';
@@ -287,7 +287,7 @@ function planFeatures(plan: SubscriptionPlan): string[] {
   if (plansQuery.isLoading || subscriptionQuery.isLoading) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator variant="detail" message="Laster medlemskap..." />
+        <MembershipSkeleton />
       </SafeAreaView>
     );
   }

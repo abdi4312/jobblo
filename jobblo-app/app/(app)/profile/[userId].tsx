@@ -13,11 +13,10 @@ import { useJobs } from '../../../src/hooks/useJobs';
 import { useProfile } from '../../../src/hooks/useProfile';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
-import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { JobCard } from '../../../src/components/JobCard';
-import { ProfileSkeleton } from '../../../src/components/domain/ProfileSkeleton';
 import type { PublicUser, Review, ExperienceItem } from '../../../src/types/UserProfile';
 import { TC, tc } from '../../../src/theme/colors';
+import { PublicProfileSkeleton, SkJobGrid } from '../../../src/components/skeletons/ScreenSkeletons';
 
 function initials(name: string) {
   return (
@@ -165,7 +164,7 @@ export default function PublicProfileScreen() {
   if (selfLoading && !isSelf) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <ProfileSkeleton />
+        <PublicProfileSkeleton />
       </SafeAreaView>
     );
   }
@@ -174,7 +173,7 @@ export default function PublicProfileScreen() {
   if (isLoading) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <ProfileSkeleton />
+        <PublicProfileSkeleton />
       </SafeAreaView>
     );
   }
@@ -368,7 +367,7 @@ export default function PublicProfileScreen() {
           {activeTab === 'Aktive' && (
             <View>
               {jobsLoading ? (
-                <LoadingIndicator inline message="Laster aktive oppdrag..." />
+                <SkJobGrid />
               ) : jobsError ? (
                 <ErrorState
                   title="Kunne ikke laste oppdrag"

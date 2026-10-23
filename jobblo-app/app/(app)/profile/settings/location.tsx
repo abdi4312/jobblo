@@ -5,9 +5,9 @@ import { CheckCircle2, Info, MapPin } from 'lucide-react-native';
 import { useProfile, useUpdateProfile } from '../../../../src/hooks/useProfile';
 import { useAuthStore } from '../../../../src/store/authStore';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
-import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { ScreenHeader } from '../../../../src/components/ui/ScreenHeader';
 import { TC, tc } from '../../../../src/theme/colors';
+import { SingleFieldSkeleton } from '../../../../src/components/skeletons/ScreenSkeletons';
 
 /**
  * Location settings — profile country only.
@@ -88,7 +88,7 @@ export default function LocationSettingsScreen() {
   if (isLoading || draft === null) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator variant="form" message="Laster lokasjon..." />
+        <SingleFieldSkeleton />
       </SafeAreaView>
     );
   }

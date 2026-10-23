@@ -40,11 +40,11 @@ import { Button } from '../../src/components/ui/Button';
 import { Chip } from '../../src/components/ui/Chip';
 import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ErrorState } from '../../src/components/ui/ErrorState';
-import { LoadingIndicator } from '../../src/components/ui/LoadingIndicator';
 import { cn } from '../../src/lib/utils';
 import { useTabBarSpace } from '../../src/components/GlassTabBar';
 import type { Notification } from '../../src/types/Notification';
 import { TC, tc } from '../../src/theme/colors';
+import { AlertsSkeleton } from '../../src/components/skeletons/ScreenSkeletons';
 
 /* ── Notification type metadata ──────────────────────────────────────────── */
 
@@ -357,7 +357,7 @@ export default function AlertsScreen() {
   );
 
   const empty = isLoading ? (
-    <LoadingIndicator message="Laster varsler..." />
+    <AlertsSkeleton />
   ) : (
     <EmptyState
       icon={

@@ -9,10 +9,10 @@ import { useProviderOrder, useCreateProviderReviewMutation, useDeleteProviderEvi
 import { isDisputeEligibleOrderStatus } from '../../../../src/types/Dispute';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { Button } from '../../../../src/components/ui/Button';
-import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator';
 import { orderStatusLabel } from '../../../../src/constants/orderStatus';
 import type { ProviderOrderHistoryItem } from '../../../../src/types/ProviderOrder';
 import { TC, tc } from '../../../../src/theme/colors';
+import { ProviderOrderSkeleton } from '../../../../src/components/skeletons/ScreenSkeletons';
 
 const STATUS: Record<string, { label: string; tone: string; note: string }> = {
   awaiting_payment: { label: 'Venter på betaling', tone: 'bg-surface-2 text-muted', note: 'Oppdragsgiver har ikke betalt ennå. Du får beskjed så snart pengene er sikret.' },
@@ -139,7 +139,7 @@ export default function ProviderOrderScreen() {
   const goToCreateDispute = () => router.push({ pathname: '/(app)/disputes/create', params: { orderId: orderId ?? '' } });
   const goToDisputeThread = () => router.push({ pathname: '/(app)/disputes/order/[orderId]', params: { orderId: orderId ?? '' } });
 
-  if (isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator variant="detail" message="Laster oppdrag..." /></SafeAreaView>;
+  if (isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ProviderOrderSkeleton /></SafeAreaView>;
   if (isError || !data?.order) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ErrorState title="Kunne ikke laste oppdrag" message={errorMessage(error, 'Sjekk internettforbindelsen din og prøv igjen.')} actionLabel="Prøv igjen" onAction={() => void refetch()} /></SafeAreaView>;
 
   const { order, calculation, isProvider, activeDispute } = data;

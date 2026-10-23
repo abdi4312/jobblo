@@ -31,8 +31,8 @@ import { loadThemePreference, setThemePreference, type ThemePreference } from '.
 import { useAuthStore } from '../../../src/store/authStore';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { ConfirmDialog } from '../../../src/components/ui/ConfirmDialog';
-import { ProfileSkeleton } from '../../../src/components/domain/ProfileSkeleton';
 import { TC, tc } from '../../../src/theme/colors';
+import { MinJobbloSkeleton } from '../../../src/components/skeletons/ScreenSkeletons';
 
 /**
  * "Min Jobblo", in the FINN app's "Min FINN" layout: a centred title, one card with the
@@ -158,7 +158,7 @@ export default function ProfileScreen() {
   if (isLoading)
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <ProfileSkeleton />
+        <MinJobbloSkeleton />
       </SafeAreaView>
     );
   if (isError || !profile)
