@@ -17,6 +17,7 @@ import { HomeHero } from '../../src/components/HomeHero';
 import { SaveToListSheet } from '../../src/components/domain/SaveToListSheet';
 import { Select } from '../../src/components/ui/Select';
 import { useTabBarSpace } from '../../src/components/GlassTabBar';
+import { Skeleton } from '../../src/components/ui/Skeleton';
 import { TC, tc } from '../../src/theme/colors';
 
 const SORT_OPTIONS = [
@@ -245,7 +246,18 @@ export default function HomeScreen() {
         {/* Categories */}
         <SectionHeader title="Kategorier" actionLabel="Se alle" action={() => router.push('/(app)/explore')} />
         {categoriesLoading ? (
-          <ActivityIndicator color={TC.brandText} size="small" className="py-4" />
+          <View className="gap-4 py-2" accessibilityLabel="Laster kategorier">
+            {[0, 1].map((row) => (
+              <View key={row} className="flex-row justify-between px-2">
+                {[0, 1, 2, 3].map((i) => (
+                  <View key={i} className="items-center gap-2">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <Skeleton className="h-3 w-14" />
+                  </View>
+                ))}
+              </View>
+            ))}
+          </View>
         ) : (
           <CategoryGrid
             // The seasonal category leads, as before.
@@ -271,9 +283,14 @@ export default function HomeScreen() {
         </View>
 
         {jobsLoading ? (
-          <View className="items-center justify-center py-12">
-            <ActivityIndicator color={TC.brandText} size="large" />
-            <Text className="mt-3 text-[0.875rem] text-muted">Laster oppdrag...</Text>
+          <View className="flex-row flex-wrap justify-between gap-y-5" accessible accessibilityRole="progressbar" accessibilityLabel="Laster oppdrag">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <View key={i} style={{ width: '48%' }} className="gap-2">
+                <Skeleton className="w-full rounded-2xl" style={{ aspectRatio: 4 / 5 }} />
+                <Skeleton className="h-4 w-4/5" />
+                <Skeleton className="h-3 w-1/2" />
+              </View>
+            ))}
           </View>
         ) : jobsError ? (
           <Card className="rounded-2xl p-5">

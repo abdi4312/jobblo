@@ -46,6 +46,7 @@ import { categoryImage } from '../../../src/utils/categoryImage';
 import { serviceStatusLabel } from '../../../src/components/domain/ServiceStatusBadge';
 import { MEMBERSHIP_ENABLED } from '../../../src/config/features';
 import { EQUIPMENT_LABELS, type Job } from '../../../src/types/Jobs';
+import { Skeleton } from '../../../src/components/ui/Skeleton';
 import { TC, tc } from '../../../src/theme/colors';
 
 function formatDate(value?: string) {
@@ -193,14 +194,14 @@ export default function JobDetailsScreen() {
         {/* Skeleton in the page's own shape instead of a full-screen spinner. */}
         <View className="gap-5 px-4 pt-4" accessibilityLabel="Laster oppdrag">
           <View className="flex-row justify-between">
-            <View className="h-10 w-10 rounded-full bg-line" />
-            <View className="h-10 w-10 rounded-full bg-line" />
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <Skeleton className="h-10 w-10 rounded-full" />
           </View>
-          <View className="aspect-[4/3] rounded-[28px] bg-line" />
+          <Skeleton className="aspect-[4/3] rounded-[28px]" />
           <View className="gap-3 rounded-[28px] bg-surface p-5">
-            <View className="h-7 w-4/5 rounded bg-line" />
-            <View className="h-4 w-1/2 rounded bg-page" />
-            <View className="mt-3 h-9 w-2/5 rounded bg-line" />
+            <Skeleton className="h-7 w-4/5 rounded" />
+            <Skeleton className="h-4 w-1/2 rounded" />
+            <Skeleton className="mt-3 h-9 w-2/5 rounded" />
           </View>
         </View>
       </SafeAreaView>

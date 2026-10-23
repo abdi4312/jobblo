@@ -15,6 +15,7 @@ import { ConfirmDialog } from '../../../src/components/ui/ConfirmDialog';
 import { DropdownMenu } from '../../../src/components/ui/DropdownMenu';
 import { orderRouteForRole } from '../../../src/utils/orderRoute';
 import { groupSystemMessages, isStatusGroup, type ChatItem } from '../../../src/utils/chatGrouping';
+import { LoadingIndicator } from '../../../src/components/ui/LoadingIndicator';
 import { TC, tc } from '../../../src/theme/colors';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -215,7 +216,7 @@ export default function ChatDetailScreen() {
     }
   };
 
-  if (query.isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><View className="flex-1 items-center justify-center"><ActivityIndicator color={TC.brandText} /><Text className="mt-3 text-muted">Laster samtale...</Text></View></SafeAreaView>;
+  if (query.isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator variant="chat" message="Laster samtale..." /></SafeAreaView>;
   if (query.isError || !chat) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ErrorState title="Samtale ikke funnet" message="Kunne ikke laste denne samtalen." actionLabel="Tilbake" onAction={() => router.back()} /></SafeAreaView>;
 
   const other = chat.clientId?._id === userId ? chat.providerId : chat.clientId;

@@ -3,6 +3,7 @@ import { Image, Text, View } from 'react-native';
 import { CreditCard, FileText, Lock, ShieldCheck, Users } from 'lucide-react-native';
 import type { SafePayCalculation, SafePayOrder, SafePayService, SafePayStartDeadline } from '../../types/SafePay';
 import { Button } from '../ui/Button';
+import { Skeleton } from '../ui/Skeleton';
 import { TC, tc } from '../../theme/colors';
 
 function nameOf(party: SafePayOrder['customerId']) {
@@ -122,5 +123,5 @@ export function SafePayCancelledCard({ order, total }: { order: SafePayOrder; to
 }
 
 export function SafePayCheckoutSkeleton() {
-  return <View className="gap-4 px-4 pt-6"><View className="h-4 w-24 rounded bg-line" /><View className="h-24 rounded-2xl bg-line" /><View className="h-40 rounded-3xl bg-line" /><View className="h-64 rounded-3xl bg-line" /></View>;
+  return <View className="gap-4 px-4 pt-6"><Skeleton className="h-4 w-24 rounded" /><Skeleton className="h-24 rounded-2xl" /><Skeleton className="h-40 rounded-3xl" /><Skeleton className="h-64 rounded-3xl" /></View>;
 }

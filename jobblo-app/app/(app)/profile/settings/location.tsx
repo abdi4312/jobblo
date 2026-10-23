@@ -88,7 +88,7 @@ export default function LocationSettingsScreen() {
   if (isLoading || draft === null) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator message="Laster lokasjon..." />
+        <LoadingIndicator variant="form" message="Laster lokasjon..." />
       </SafeAreaView>
     );
   }

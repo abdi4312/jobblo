@@ -119,7 +119,7 @@ export default function CreateDisputeScreen() {
   if (isLoading) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator message="Laster oppdrag..." />
+        <LoadingIndicator variant="form" message="Laster oppdrag..." />
       </SafeAreaView>
     );
   }

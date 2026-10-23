@@ -368,7 +368,7 @@ export default function PublicProfileScreen() {
           {activeTab === 'Aktive' && (
             <View>
               {jobsLoading ? (
-                <LoadingIndicator message="Laster aktive oppdrag..." />
+                <LoadingIndicator inline message="Laster aktive oppdrag..." />
               ) : jobsError ? (
                 <ErrorState
                   title="Kunne ikke laste oppdrag"

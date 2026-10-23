@@ -59,7 +59,7 @@ export default function EditProfileScreen() {
     return '';
   }, [draft]);
 
-  if (isLoading || !draft) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator message="Laster redigering..." /></SafeAreaView>;
+  if (isLoading || !draft) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator variant="form" message="Laster redigering..." /></SafeAreaView>;
   if (isError || !profile) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ErrorState title="Kunne ikke laste profilen" onAction={() => void refetch()} /></SafeAreaView>;
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((current) => current ? { ...current, [key]: value } : current);

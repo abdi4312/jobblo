@@ -274,7 +274,7 @@ export default function AddressesSettingsScreen() {
   if (isLoading || !draft) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator message="Laster adresser..." />
+        <LoadingIndicator variant="form" message="Laster adresser..." />
       </SafeAreaView>
     );
   }

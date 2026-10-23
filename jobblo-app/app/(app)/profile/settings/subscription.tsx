@@ -131,7 +131,7 @@ function SubscriptionScreen() {
   };
 
   if (query.isLoading)
-    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator message="Laster abonnementet..." /></SafeAreaView>;
+    return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator variant="detail" message="Laster abonnementet..." /></SafeAreaView>;
   if (query.isError)
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">

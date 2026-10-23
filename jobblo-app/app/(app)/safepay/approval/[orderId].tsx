@@ -89,7 +89,7 @@ export default function SafePayApprovalScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [approvalResult, setApprovalResult] = useState<ApprovalResult | null>(null);
 
-  if (query.isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator message="Laster oppdrag..." /></SafeAreaView>;
+  if (query.isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator variant="detail" message="Laster oppdrag..." /></SafeAreaView>;
   if (query.isError || !query.data?.order) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ErrorState title="Kunne ikke laste oppdraget" message="Sjekk internettforbindelsen din og prøv igjen." actionLabel="Prøv igjen" onAction={() => void query.refetch()} /></SafeAreaView>;
 
   const { order, calculation } = query.data;

@@ -97,7 +97,7 @@ export default function DisputeThreadScreen() {
   if (isLoading) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator message="Laster tvist..." />
+        <LoadingIndicator variant="detail" message="Laster tvist..." />
       </SafeAreaView>
     );
   }

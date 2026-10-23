@@ -279,7 +279,7 @@ export default function SupportScreen() {
 
           {ticketsLoading ? (
             <View className="py-8">
-              <LoadingIndicator message="Laster sakene dine..." />
+              <LoadingIndicator inline message="Laster sakene dine..." />
             </View>
           ) : ticketsError ? (
             <View className="px-5 py-6">

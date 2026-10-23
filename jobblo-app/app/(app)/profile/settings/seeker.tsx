@@ -366,7 +366,7 @@ export default function SeekerScreen() {
     if (isLoading) {
         return (
             <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-                <LoadingIndicator message="Laster jobbsøker-profil..." />
+                <LoadingIndicator variant="form" message="Laster jobbsøker-profil..." />
             </SafeAreaView>
         );
     }

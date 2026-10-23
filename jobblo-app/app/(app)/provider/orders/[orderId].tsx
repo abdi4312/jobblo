@@ -139,7 +139,7 @@ export default function ProviderOrderScreen() {
   const goToCreateDispute = () => router.push({ pathname: '/(app)/disputes/create', params: { orderId: orderId ?? '' } });
   const goToDisputeThread = () => router.push({ pathname: '/(app)/disputes/order/[orderId]', params: { orderId: orderId ?? '' } });
 
-  if (isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator message="Laster oppdrag..." /></SafeAreaView>;
+  if (isLoading) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><LoadingIndicator variant="detail" message="Laster oppdrag..." /></SafeAreaView>;
   if (isError || !data?.order) return <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page"><ErrorState title="Kunne ikke laste oppdrag" message={errorMessage(error, 'Sjekk internettforbindelsen din og prøv igjen.')} actionLabel="Prøv igjen" onAction={() => void refetch()} /></SafeAreaView>;
 
   const { order, calculation, isProvider, activeDispute } = data;

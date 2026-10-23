@@ -287,7 +287,7 @@ function planFeatures(plan: SubscriptionPlan): string[] {
   if (plansQuery.isLoading || subscriptionQuery.isLoading) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator message="Laster medlemskap..." />
+        <LoadingIndicator variant="detail" message="Laster medlemskap..." />
       </SafeAreaView>
     );
   }

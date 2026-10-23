@@ -96,7 +96,7 @@ export default function PayoutSettingsScreen() {
   if (statusQuery.isLoading) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator message="Laster utbetalingsstatus..." />
+        <LoadingIndicator variant="detail" message="Laster utbetalingsstatus..." />
       </SafeAreaView>
     );
   }

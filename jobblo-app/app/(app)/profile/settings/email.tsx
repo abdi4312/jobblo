@@ -123,7 +123,7 @@ export default function EmailSettingsScreen() {
   if (isLoading || draft === null) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-page">
-        <LoadingIndicator message="Laster e-postadresse..." />
+        <LoadingIndicator variant="form" message="Laster e-postadresse..." />
       </SafeAreaView>
     );
   }
