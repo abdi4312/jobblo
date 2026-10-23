@@ -186,7 +186,9 @@ export function ProfileHeader({
       label: 'svartid',
     });
   }
-  if (user?.verified) {
+  // BankID sets `identityVerified`; `verified` is the older admin flag. Either earns the badge.
+  const isVerified = user?.identityVerified === true || user?.verified === true;
+  if (isVerified) {
     facts.push({ icon: ShieldCheck, value: 'Verifisert', label: '', accent: true });
   }
   if (facts.length === 0) {
@@ -225,10 +227,10 @@ export function ProfileHeader({
               />
             </div>
 
-            {user?.verified && (
+            {isVerified && (
               <span
                 title="Verifisert bruker"
-                className="absolute bottom-0.5 right-0.5 flex size-7 items-center justify-center rounded-full border-2 border-white bg-[#2E6641] text-white"
+                className="absolute top-2 right-0.5 z-10 flex size-7 items-center justify-center rounded-full border-2 border-white bg-[#2E6641] text-white"
               >
                 <ShieldCheck size={13} strokeWidth={2.4} />
               </span>

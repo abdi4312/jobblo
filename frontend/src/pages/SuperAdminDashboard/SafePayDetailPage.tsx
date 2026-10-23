@@ -362,7 +362,7 @@ export default function SafePayDetailPage() {
                     </Section>
 
                     {order.providerConnectDeadlineAt && (
-                        <Section title="Stripe Connect-frist og automatisk refusjon">
+                        <Section title="Startfrist og automatisk refusjon">
                             <Row label="Betaling bekreftet" value={order.paymentConfirmedAt ? new Date(order.paymentConfirmedAt).toLocaleString('nb-NO') : undefined} />
                             <Row label="Frist (24-timers dager)" value={`${order.providerConnectDeadlineDays ?? '–'} dager`} />
                             <Row label="Frist utløper" value={new Date(order.providerConnectDeadlineAt).toLocaleString('nb-NO')} />

@@ -7,6 +7,7 @@ const Payment = require('../models/Payment');
 const Notification = require('../models/Notification');
 const SafePayHistory = require('../models/SafePayHistory');
 const Review = require('../models/Review');
+const StripePaymentIncident = require('../models/StripePaymentIncident');
 const Chat = require('../models/ChatMessage');
 const { getStripeConfiguration, getStripeForMode } = require('../config/stripe');
 const { getStripeWebhookReadiness } = require('../services/stripe/webhookReadiness');
@@ -317,7 +318,13 @@ async function confirmPaidSession(session, io) {
     }
   }
 
-  await Service.findByIdAndUpdate(updatedOrder.serviceId, { status: 'paid' });
+  // Only a listing still waiting for payment becomes 'paid'. This was unconditional, so
+  // a replayed or re-delivered confirmation (alreadyConfirmed above) moved an
+  // in-progress or completed job's listing back to 'paid'.
+  await Service.updateOne(
+    { _id: updatedOrder.serviceId, status: { $in: ['open', 'pending', 'awaiting_payment'] } },
+    { $set: { status: 'paid' } }
+  );
 
   if (updatedOrder.chatId) {
     const chat = await Chat.findById(updatedOrder.chatId);
@@ -429,7 +436,7 @@ async function confirmPaidSession(session, io) {
       notify({
         userId: order.providerId,
         type: 'payment',
-        content: `Fullfør Stripe Connect-oppsettet innen ${updatedOrder.providerConnectDeadlineAt.toLocaleDateString('nb-NO')} for å motta utbetaling: ${(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')}/settings/payout`,
+        content: `Start oppdraget innen ${updatedOrder.providerConnectDeadlineAt.toLocaleDateString('nb-NO')}, ellers kanselleres det og kunden får full refusjon. Stripe Connect må være klart for å starte: ${(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '')}/settings/payout`,
         orderId: order._id,
         senderId: order.customerId,
         event: 'provider_connect_deadline',
@@ -494,6 +501,19 @@ exports.getCheckoutDetails = async (req, res) => {
     const total = order.agreedPrice + fee;
     const netProvider = order.agreedPrice - fee;
 
+    // The start deadline the customer is promised before paying: not started in time
+    // means an automatic full refund (providerConnectTimeout.js).
+    let startDeadline = null;
+    try {
+      const snapshot = deadlineSnapshot(await getProviderConnectDeadlineDays());
+      startDeadline = {
+        days: snapshot.providerConnectDeadlineDays,
+        testMinutes: snapshot.providerConnectDeadlineTestMinutes ?? null,
+      };
+    } catch (err) {
+      console.error('SafePay start deadline unavailable:', err.message);
+    }
+
     res.json({
       order,
       calculation: {
@@ -502,6 +522,7 @@ exports.getCheckoutDetails = async (req, res) => {
         total,
         providerNet: netProvider,
       },
+      startDeadline,
     });
   } catch (err) {
     console.error('Error fetching checkout details:', err);
@@ -632,6 +653,66 @@ function buildCheckoutRedirects({ orderId, mobile, req }) {
   };
 }
 
+/**
+ * Settle a checkout reservation whose Stripe outcome was never recorded (create call
+ * failed/timed out, or the session id could not be saved) once it is too old to retry
+ * with its idempotency key.
+ *
+ * Every session this controller creates carries metadata.checkoutAttemptId and the
+ * reservation's customer, so the customer's sessions are the complete record:
+ *   - a session for this attempt exists -> adopt its id ('open', so the normal reuse
+ *     path re-checks it with Stripe and confirms it if it was paid), or 'expired';
+ *   - none exists -> no session was ever created; mark the attempt 'failed' so a fresh
+ *     reservation (new attempt id, new idempotency key) can be made.
+ * Returns false (keep the lock) when Stripe cannot be read or the order moved on.
+ *
+ * ponytail: scans at most 1000 of the customer's sessions, newest first; a customer
+ * with more than that falls back to the support message.
+ */
+async function resolveStaleReservation(stripe, order) {
+  if (!order.checkoutCustomerId || !order.checkoutAttemptId) return false;
+  let match = null;
+  try {
+    let seen = 0;
+    for await (const session of stripe.checkout.sessions.list({
+      customer: order.checkoutCustomerId,
+      limit: 100,
+    })) {
+      if (
+        session.metadata?.checkoutAttemptId === order.checkoutAttemptId &&
+        String(session.metadata?.orderId) === String(order._id)
+      ) {
+        match = session;
+        break;
+      }
+      if (++seen >= 1000) return false;
+    }
+  } catch (err) {
+    console.error('SafePay stale reservation lookup failed [order=%s] %s', order._id, err?.code || err?.message);
+    return false;
+  }
+
+  const updated = await Order.findOneAndUpdate(
+    {
+      _id: order._id,
+      checkoutSessionStatus: 'pending',
+      checkoutSessionId: order.checkoutSessionId,
+      checkoutAttemptId: order.checkoutAttemptId,
+      paymentStatus: { $ne: 'paid' },
+    },
+    {
+      $set: match
+        ? {
+            checkoutSessionId: match.id,
+            checkoutSessionStatus: match.status === 'expired' ? 'expired' : 'open',
+          }
+        : { checkoutSessionStatus: 'failed' },
+    },
+    { new: true }
+  );
+  return Boolean(updated);
+}
+
 exports.createSafePaySession = async (req, res) => {
   const { orderId, platform } = req.body || {};
   try {
@@ -720,6 +801,33 @@ exports.createSafePaySession = async (req, res) => {
     }
     if (['paid', 'in_progress', 'ready_for_review', 'completed'].includes(order.status)) {
       return res.status(409).json({ error: 'Ordre er allerede betalt.' });
+    }
+
+    let paymentReview;
+    try {
+      paymentReview = await StripePaymentIncident.findOne({
+        $or: [
+          { orderId: order._id },
+          ...(order.checkoutSessionId ? [{ checkoutSessionId: order.checkoutSessionId }] : []),
+        ],
+        kind: 'unmatched',
+        status: 'manual_review',
+        eventType: {
+          $in: ['checkout.session.completed', 'checkout.session.async_payment_succeeded'],
+        },
+      }).select('_id');
+    } catch (err) {
+      console.error('createSafePaySession: could not verify payment review state for order %s', orderId);
+      return res.status(503).json({
+        error: 'Betalingsstatus må kontrolleres før en ny betaling kan startes.',
+        code: 'payment_review_unavailable',
+      });
+    }
+    if (paymentReview) {
+      return res.status(409).json({
+        error: 'Betalingen må kontrolleres av support før en ny betaling kan startes.',
+        code: 'payment_review_required',
+      });
     }
 
     const user = await User.findById(userId);
@@ -846,6 +954,14 @@ exports.createSafePaySession = async (req, res) => {
         return conflict();
       }
       if (Date.now() - order.checkoutSessionCreatedAt.getTime() >= 23 * 60 * 60 * 1000) {
+        // Too old to replay the idempotency key safely (Stripe keeps keys ~24h). This
+        // used to be a permanent dead end: nothing ever cleared the PENDING_ reservation,
+        // so the customer could never pay. Ask Stripe what really happened to this
+        // attempt and continue from that, once; fail closed if Stripe cannot tell us.
+        if (!req._safepayStaleReservationResolved && await resolveStaleReservation(stripe, order)) {
+          req._safepayStaleReservationResolved = true;
+          return exports.createSafePaySession(req, res);
+        }
         return res.status(409).json({
           error: 'Betalingsforsøket må kontrolleres av support før det kan prøves på nytt.',
           code: 'checkout_review_required',
@@ -1201,9 +1317,8 @@ exports.checkoutSessionStatus = async (req, res) => {
  *
  * Kept as an alias so an endpoint already registered at this URL in the Stripe
  * dashboard keeps working. The verification, event-level idempotency and routing
- * now live in one dispatcher shared with /api/stripe/webhook — this used to handle
- * only SafePay sessions, which is why subscriptions and extra-contact purchases had
- * no server-side confirmation at all.
+ * now live in one dispatcher shared with /api/stripe/webhook. Legacy subscription
+ * and extra-contact processing has been disabled.
  */
 exports.stripeWebhook = (req, res) =>
   require('../services/stripe/webhookDispatcher').stripeWebhook(req, res);
@@ -1506,11 +1621,8 @@ exports.approveAndPayout = async (req, res) => {
         stripeCheckoutSessionId: sourcePayment?.stripeSessionId,
         safePayHistoryId: (await SafePayHistory.findOne({ orderId: order._id }))?._id,
       });
-
-      // Only increment virtual earnings after confirmed transfer
-      if (!payoutResult.alreadyPaid) {
-        await User.findByIdAndUpdate(order.providerId, { $inc: { earnings: netProvider } });
-      }
+      // Provider earnings are credited inside releasePayoutToProvider, once per
+      // transferred payout, so retries and auto-release credit them too.
     } catch (payoutErr) {
       // Transfer failed — funds remain on platform, order stays completed for work credit
       // but provider is NOT marked paid and earnings are NOT incremented

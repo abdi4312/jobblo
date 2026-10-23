@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+const { isBcryptHash } = require('../utils/passwordUtils');
 const User = require('../models/User');
 const Service = require('../models/Service');
 const JobRequest = require('../models/JobRequest');
@@ -641,8 +643,34 @@ exports.updateUser = async (req, res) => {
       return res.status(400).json({ error: 'No valid fields provided for update' });
     }
 
-    const user = await User.findById(id);
+    const user = await User.findById(id).select('+password');
     if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // The login e-mail is where reset codes go, so changing it takes the current
+    // password: a stolen session alone must not be able to redirect account recovery.
+    // A superAdmin editing someone else's account is exempt.
+    if (updates.email !== undefined) {
+      if (String(updates.email).trim().toLowerCase() === user.email) {
+        delete updates.email;
+      } else if (String(req.userId) === String(id)) {
+        const { currentPassword } = req.body;
+        const passwordOk =
+          typeof currentPassword === 'string' &&
+          isBcryptHash(user.password) &&
+          (await bcrypt.compare(currentPassword, user.password));
+        if (!passwordOk) {
+          return res.status(403).json({
+            code: 'CURRENT_PASSWORD_REQUIRED',
+            error: isBcryptHash(user.password)
+              ? 'Skriv inn nåværende passord for å endre e-postadressen.'
+              : 'Opprett et passord under «Endre passord» før du endrer e-postadressen.',
+          });
+        }
+      }
+    }
+    if (Object.keys(updates).length === 0) {
+      return res.json(sanitizeUserOwner(await User.findById(id).select(OWN_USER_SELECT)));
+    }
 
     // Delete old avatar/banner from Azure when a new one is uploaded
     // (avatarPublicId / bannerPublicId now hold the Azure blob name).
@@ -772,7 +800,6 @@ exports.deleteUser = async (req, res) => {
       favorites: [],
       pointsBalance: 0,
       pointsHistory: [],
-      monthlyContactUsage: 0,
       password: crypto.randomBytes(32).toString('hex'),
       refreshTokens: [],
       passwordResetToken: null,

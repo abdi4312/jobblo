@@ -188,8 +188,11 @@ async function warnBeforeAutoRelease() {
 async function retryFailedPayouts() {
   const releasePayoutToProvider = require('../payout/releasePayoutToProvider');
 
+  // Least-recently-tried first: an unsorted .limit(25) re-read the same 25 permanently
+  // failing payouts every run and starved everything behind them.
   const failed = await Payout.find({ status: 'failed' })
-    .select('orderId providerId customerId serviceId grossAmount platformFee')
+    .sort({ lastAttemptedAt: 1, _id: 1 })
+    .select('orderId providerId customerId serviceId grossAmount platformFee releaseSource releasedBy disputeId')
     .limit(25)
     .lean();
 
@@ -204,8 +207,12 @@ async function retryFailedPayouts() {
         serviceId: payout.serviceId,
         grossAmount: payout.grossAmount,
         platformFee: payout.platformFee,
-        releaseSource: 'admin_override',
-        releasedBy: null,
+        // Retry the payout as what it is; it used to be relabelled `admin_override`.
+        releaseSource: ['customer_approve', 'dispute_release'].includes(payout.releaseSource)
+          ? payout.releaseSource
+          : 'admin_override',
+        releasedBy: payout.releasedBy ?? null,
+        disputeId: payout.disputeId,
         stripePaymentIntentId: payment?.stripePaymentIntentId,
         stripeCheckoutSessionId: payment?.stripeSessionId,
       });
@@ -214,6 +221,8 @@ async function retryFailedPayouts() {
       // Expected for a provider who still has not finished Connect onboarding —
       // logged, not escalated, so it does not drown the error log.
       console.error('retryFailedPayouts: order %s still failing: %s', payout.orderId, err.message);
+      // Rotate it to the back of the queue (several failures throw before any write).
+      await Payout.updateOne({ _id: payout._id, status: 'failed' }, { $set: { lastAttemptedAt: new Date() } });
     }
   }
 
@@ -453,6 +462,16 @@ async function cancelExpiredUnconnectedSafePayOrders() {
   return cancelUnconnectedPaidOrders();
 }
 
+async function cancelExpiredSubscriptionRecoveries() {
+  const recovery = require('../subscriptions/v2RecoveryPolicy');
+  return recovery.cancelExpiredRecoveries();
+}
+
+async function dispatchSubscriptionRecoveryEmails() {
+  const recovery = require('../subscriptions/v2RecoveryPolicy');
+  return recovery.dispatchRecoveryEmails();
+}
+
 async function recordSafePayConnectReadiness() {
   const { recordReadyProvidersBeforeDeadline } = require('../safepay/providerConnectTimeout');
   return recordReadyProvidersBeforeDeadline();
@@ -466,6 +485,8 @@ module.exports = {
   reconcileMoneyState,
   reconcileStripeFinancialHistory,
   cancelExpiredUnconnectedSafePayOrders,
+  cancelExpiredSubscriptionRecoveries,
+  dispatchSubscriptionRecoveryEmails,
   recordSafePayConnectReadiness,
   config,
 };

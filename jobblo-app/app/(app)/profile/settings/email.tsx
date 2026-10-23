@@ -27,9 +27,9 @@ import { LoadingIndicator } from '../../../../src/components/ui/LoadingIndicator
  *
  * No email.service.ts was created and there is no Axios or fetch call in here.
  *
- * IMPORTANT for copy: the change is authenticated by the current session but is
- * NOT separately verified — no confirmation link and no OTP is sent to either the
- * old or the new address, and no current-password re-entry is required. Nothing
+ * IMPORTANT for copy: the change requires re-entering the current password (the
+ * backend answers 403 CURRENT_PASSWORD_REQUIRED without it), but is NOT otherwise
+ * verified — no confirmation link and no OTP is sent to either address. Nothing
  * in this screen may claim otherwise, and no `Verifisert` / `Bekreftet` badge is
  * shown, because the backend has no field that would prove it.
  */
@@ -89,7 +89,7 @@ function saveErrorMessage(error: unknown): string {
   if (status === 409) return safeServerMessage(error) || 'Denne e-postadressen er allerede i bruk.';
   if (status === 400) return 'E-postadressen ble ikke godtatt. Kontroller den og prøv igjen.';
   if (status === 401) return 'Økten din er ikke lenger gyldig. Logg inn på nytt.';
-  if (status === 403) return 'Du har ikke tilgang til å endre denne e-postadressen.';
+  if (status === 403) return safeServerMessage(error) || 'Du har ikke tilgang til å endre denne e-postadressen.';
   if (status === 404) return 'Fant ikke profilen din. Prøv å laste inn siden på nytt.';
   if (status >= 500) return 'Serverfeil. Prøv igjen litt senere.';
   return 'Kunne ikke oppdatere e-postadressen. Prøv igjen.';
@@ -110,6 +110,7 @@ export default function EmailSettingsScreen() {
 
   const serverEmail = emailOf(profile);
   const [draft, setDraft] = useState<string | null>(null);
+  const [currentPassword, setCurrentPassword] = useState('');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
   // Seed from the server profile, not from persisted Zustand state. The server
@@ -143,21 +144,22 @@ export default function EmailSettingsScreen() {
   const normalized = normalizeEmail(draft);
   const changed = normalized !== normalizeEmail(serverEmail);
   const valid = emailPattern.test(normalized);
-  const disabled = !changed || !valid || update.isPending || !userId;
+  const disabled = !changed || !valid || !currentPassword || update.isPending || !userId;
   // Only nag about the shape once something has actually been typed and changed.
   const validationHint = changed && !valid ? 'Skriv inn en gyldig e-postadresse.' : '';
 
   const save = () => {
     if (disabled || !userId) return;
     setFeedback(null);
-    // Only the one field is sent — never the whole user object, and never role,
-    // verified, subscription, password, Stripe fields, phone or anything else.
+    // Only the e-mail and the confirming current password are sent — never the whole
+    // user object, and never role, verified, subscription, Stripe fields or phone.
     update.mutate(
-      { userId, data: { email: normalized } },
+      { userId, data: { email: normalized, currentPassword } },
       {
         onSuccess: (saved) => {
           // Show what the server stored, not the local draft.
           setDraft(emailOf(saved) || normalized);
+          setCurrentPassword('');
           setFeedback({ tone: 'success', text: 'E-postadressen er oppdatert.' });
         },
         onError: (error) => setFeedback({ tone: 'error', text: saveErrorMessage(error) }),
@@ -216,6 +218,30 @@ export default function EmailSettingsScreen() {
                 <Text className="mt-1.5 text-xs leading-4 text-[#63665F]">Store bokstaver og mellomrom fjernes automatisk.</Text>
               )}
             </View>
+
+            {changed ? (
+              <View className="mb-4">
+                <Text className="mb-1.5 text-[0.8125rem] font-semibold text-[#0B0B0B]">Nåværende passord</Text>
+                <TextInput
+                  value={currentPassword}
+                  onChangeText={(value) => {
+                    setCurrentPassword(value);
+                    setFeedback(null);
+                  }}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="password"
+                  textContentType="password"
+                  editable={!update.isPending}
+                  accessibilityLabel="Nåværende passord"
+                  className={inputClass}
+                />
+                <Text className="mt-1.5 text-xs leading-4 text-[#63665F]">
+                  Av sikkerhetshensyn må du bekrefte med passordet ditt for å endre e-postadressen.
+                </Text>
+              </View>
+            ) : null}
 
             {feedback ? (
               <View

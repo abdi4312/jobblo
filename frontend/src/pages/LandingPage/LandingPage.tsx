@@ -24,7 +24,7 @@ import { CONTAINER } from '../../theme/brand';
  * nothing measured. `SafePayExplainer` replaces it with the thing a customer actually
  * decides on, stated from the real behaviour of the payment code.
  *
- * "What does it cost?" is answered by `/pricing`, which owns that question in full — the
+ * "What does it cost?" is answered by `/membership`, which owns that question in full — the
  * hero and the header both link there rather than the page carrying a second, shorter
  * version of the same table that would have to be kept in step with it.
  *

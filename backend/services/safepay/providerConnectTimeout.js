@@ -218,7 +218,7 @@ async function cancelTimeoutOrder(order, operationKey) {
         messages: {
           type: 'system_status',
           systemData: { event: 'provider_connect_timeout_refund_started', orderId: order._id },
-          text: 'Oppdraget er automatisk kansellert fordi Stripe Connect-fristen utløp. Se SafePay-historikken for refusjonsstatus.',
+          text: 'Oppdraget er automatisk kansellert fordi det ikke ble startet innen fristen. Se SafePay-historikken for refusjonsstatus.',
           createdAt: now,
         },
       },
@@ -288,6 +288,14 @@ async function completeTimeoutRefund(order, payment, operation, refund) {
     { new: true }
   );
   if (!finalized) {
+    // The scheduler and the refund webhook both finalize; the second one finds it done.
+    const current = await Order.findById(order._id).select('providerConnectTimeout').lean();
+    if (
+      current?.providerConnectTimeout?.status === 'succeeded' &&
+      current.providerConnectTimeout.stripeRefundId === refund.id
+    ) {
+      return false;
+    }
     const reason = 'Stripe confirmed the refund, but the order changed state before the refund could be finalized.';
     await setTimeoutState(order._id, operation.operationKey, 'manual_review', {
       'providerConnectTimeout.manualReviewReason': reason,
@@ -315,7 +323,7 @@ async function completeTimeoutRefund(order, payment, operation, refund) {
         messages: {
           type: 'system_status',
           systemData: { event: 'provider_connect_timeout_refunded', orderId: order._id },
-          text: 'Oppdraget ble automatisk kansellert fordi Stripe Connect-oppsettet ikke ble fullført innen fristen. Full refusjon er registrert.',
+          text: 'Oppdraget ble automatisk kansellert fordi det ikke ble startet innen fristen. Full refusjon er registrert.',
           createdAt: now,
         },
       },
@@ -332,7 +340,7 @@ async function completeTimeoutRefund(order, payment, operation, refund) {
     notify({
       userId: order.customerId,
       type: 'payment',
-      content: 'Oppdraget ble kansellert fordi utføreren ikke fullførte Stripe Connect-oppsettet. Full refusjon er bekreftet hos Stripe. Det kan ta noen virkedager før pengene vises på kontoen din.',
+      content: 'Oppdraget ble kansellert fordi utføreren ikke startet oppdraget innen fristen. Full refusjon er bekreftet hos Stripe. Det kan ta noen virkedager før pengene vises på kontoen din.',
       orderId: order._id,
       event: 'provider_connect_timeout_refunded',
       payload: { orderId: String(order._id), refundId: refund.id },
@@ -340,7 +348,7 @@ async function completeTimeoutRefund(order, payment, operation, refund) {
     notify({
       userId: order.providerId,
       type: 'order',
-      content: 'Oppdraget ble automatisk kansellert fordi Stripe Connect-oppsettet ikke ble fullført innen fristen. Kundens full refusjon er bekreftet hos Stripe.',
+      content: 'Oppdraget ble automatisk kansellert fordi det ikke ble startet innen fristen. Kundens full refusjon er bekreftet hos Stripe.',
       orderId: order._id,
       event: 'provider_connect_timeout_refunded',
       payload: { orderId: String(order._id), refundId: refund.id },
@@ -386,7 +394,7 @@ async function processOrder(candidate, now) {
         },
       ],
       $or: [
-        { 'providerConnectTimeout.status': { $exists: false } },
+        { 'providerConnectTimeout.status': { $in: [null, 'provider_ready'] } },
         {
           'providerConnectTimeout.status': {
             $in: ['processing', 'pending', 'reconciliation_required'],
@@ -444,24 +452,8 @@ async function processOrder(candidate, now) {
       throw reviewRequired('Work may have started or the service is no longer eligible for automatic cancellation.');
     }
 
-    const providerReady = await providerIsPayoutReady(
-      stripe,
-      candidate.providerId,
-      payment.stripeLivemode === false
-    );
-    if (providerReady) {
-      const updated = await setTimeoutState(candidate._id, operationKey, 'provider_ready', {
-        'providerConnectTimeout.providerVerificationAt': new Date(),
-      });
-      if (updated) {
-        await SafePayHistory.updateOne(
-          { orderId: candidate._id, status: { $in: ['payment_received', 'waiting_connect'] } },
-          { $set: { status: 'payment_received', providerConnectStatus: 'ready' } }
-        );
-      }
-      return 'provider_ready';
-    }
-
+    // The refund depends only on whether the job was started by the deadline, not on the
+    // provider's Stripe Connect status: a connected provider who never starts is refunded too.
     const paymentIntentId = payment.stripePaymentIntentId;
     const { operation, refund, status } = await executeRefund(stripe, {
       operationKey,
@@ -501,7 +493,7 @@ async function processOrder(candidate, now) {
           notify({
             userId: candidate.providerId,
             type: 'order',
-            content: 'Oppdraget er automatisk kansellert fordi Stripe Connect-fristen utløp. Refusjonen krever manuell behandling.',
+            content: 'Oppdraget er automatisk kansellert fordi det ikke ble startet innen fristen. Refusjonen krever manuell behandling.',
             orderId: candidate._id,
             event: 'provider_connect_refund_failed',
             payload: { orderId: String(candidate._id) },
@@ -532,7 +524,7 @@ async function processOrder(candidate, now) {
         notify({
           userId: candidate.providerId,
           type: 'order',
-          content: 'Oppdraget er kansellert og venter på at Stripe bekrefter refusjonen etter utløpt Connect-frist.',
+          content: 'Oppdraget er kansellert fordi det ikke ble startet innen fristen, og venter på at Stripe bekrefter refusjonen.',
           orderId: candidate._id,
           event: 'provider_connect_refund_pending',
           payload: { orderId: String(candidate._id) },
@@ -597,7 +589,7 @@ async function processOrder(candidate, now) {
         notify({
           userId: candidate.providerId,
           type: 'order',
-          content: 'Oppdraget er automatisk kansellert fordi Stripe Connect-fristen utløp. Refusjonen krever manuell behandling.',
+          content: 'Oppdraget er automatisk kansellert fordi det ikke ble startet innen fristen. Refusjonen krever manuell behandling.',
           orderId: candidate._id,
           event: 'provider_connect_refund_failed',
           payload: { orderId: String(candidate._id) },
@@ -639,7 +631,7 @@ async function cancelUnconnectedPaidOrders(now = new Date()) {
         { status: 'cancelled', cancellationReason: CANCEL_REASON },
       ] },
       { $or: [
-        { 'providerConnectTimeout.status': { $exists: false } },
+        { 'providerConnectTimeout.status': { $in: [null, 'provider_ready'] } },
         {
           'providerConnectTimeout.status': {
             $in: ['processing', 'pending', 'reconciliation_required'],
@@ -819,7 +811,7 @@ async function applyTimeoutRefundResult(order, payment, operation, refund, statu
       notify({
         userId: order.providerId,
         type: 'order',
-        content: 'Oppdraget er kansellert og venter på at Stripe bekrefter refusjonen etter utløpt Connect-frist.',
+        content: 'Oppdraget er kansellert fordi det ikke ble startet innen fristen, og venter på at Stripe bekrefter refusjonen.',
         orderId: order._id,
         event: 'provider_connect_refund_pending',
         payload: { orderId: String(order._id) },
@@ -839,7 +831,7 @@ async function applyTimeoutRefundResult(order, payment, operation, refund, statu
       notify({
         userId: order.providerId,
         type: 'order',
-        content: 'Oppdraget er automatisk kansellert fordi Stripe Connect-fristen utløp. Refusjonen krever manuell behandling.',
+        content: 'Oppdraget er automatisk kansellert fordi det ikke ble startet innen fristen. Refusjonen krever manuell behandling.',
         orderId: order._id,
         event: 'provider_connect_refund_failed',
         payload: { orderId: String(order._id) },

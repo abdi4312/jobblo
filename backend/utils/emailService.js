@@ -15,6 +15,97 @@ const createTransporter = () => {
   });
 };
 
+const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (character) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+})[character]);
+
+const RECOVERY_COPY = {
+  payment_failed: {
+    subject: 'Betalingen for Jobblo-abonnementet mislyktes',
+    heading: 'Vi kunne ikke behandle betalingen',
+    body: 'Stripe vil forsøke å behandle betalingen på nytt. Oppdater betalingsmåten din før fristen for å beholde abonnementet.',
+  },
+  reminder_day_3: {
+    subject: 'Påminnelse: oppdater betalingsmåten din',
+    heading: 'Betalingen venter fortsatt',
+    body: 'Abonnementet ditt er fortsatt i betalingsperioden for gjenoppretting. Oppdater betalingsmåten før fristen for å beholde de betalte fordelene.',
+  },
+  reminder_day_6: {
+    subject: 'Siste påminnelse om Jobblo-abonnementet',
+    heading: 'Fristen nærmer seg',
+    body: 'Hvis betalingen ikke er løst innen fristen, blir abonnementet kansellert og betalte fordeler avsluttes.',
+  },
+  payment_recovered: {
+    subject: 'Betalingen for Jobblo-abonnementet er bekreftet',
+    heading: 'Betalingen er gjenopprettet',
+    body: 'Stripe har bekreftet betalingen. Abonnementet fortsetter, og betalingspåminnelsene er stoppet.',
+  },
+  subscription_canceled: {
+    subject: 'Jobblo-abonnementet er kansellert',
+    heading: 'Abonnementet er kansellert',
+    body: 'Betalingen ble ikke gjenopprettet innen fristen. Betalte abonnementsfordeler er avsluttet. Kontohistorikken din er beholdt.',
+  },
+};
+
+async function sendSubscriptionRecoveryEmail({
+  to,
+  name,
+  kind,
+  gracePeriodEndsAt,
+  frontendUrl,
+}) {
+  const copy = RECOVERY_COPY[kind] || (/^reminder_day_[1-6]$/.test(kind) ? {
+    subject: 'Påminnelse: oppdater betalingsmåten din',
+    heading: 'Betalingen venter fortsatt',
+    body: 'Abonnementet ditt er fortsatt i betalingsperioden for gjenoppretting. Oppdater betalingsmåten før fristen for å beholde de betalte fordelene.',
+  } : null);
+  if (!copy) throw new Error('Unknown subscription recovery email type');
+  let origin;
+  try {
+    origin = new URL(frontendUrl);
+    if (!['http:', 'https:'].includes(origin.protocol)) throw new Error('invalid scheme');
+  } catch {
+    throw new Error('FRONTEND_URL must be a valid http(s) URL for recovery emails');
+  }
+  const billingUrl = new URL('/settings/subscriptions', origin).toString();
+  const deadline = gracePeriodEndsAt instanceof Date && Number.isFinite(gracePeriodEndsAt.getTime())
+    ? new Intl.DateTimeFormat('nb-NO', {
+        dateStyle: 'long',
+        timeStyle: 'short',
+        timeZone: 'UTC',
+      }).format(gracePeriodEndsAt) + ' UTC'
+    : null;
+  const paragraph = deadline
+    ? `<p>Betalingsfristen er <strong>${escapeHtml(deadline)}</strong>.</p>`
+    : '';
+  const transporter = createTransporter();
+
+  await transporter.sendMail({
+    from: `"Jobblo" <${process.env.SMTP_USER}>`,
+    to,
+    subject: copy.subject,
+    text: [
+      `Hei ${name || 'der'},`,
+      '',
+      copy.body,
+      deadline ? `Betalingsfrist: ${deadline}.` : '',
+      `Betalingsinnstillinger: ${billingUrl}`,
+    ].filter(Boolean).join('\n'),
+    html: `<!doctype html><html lang="no"><meta charset="utf-8"><body>
+      <h1>${escapeHtml(copy.heading)}</h1>
+      <p>Hei ${escapeHtml(name || 'der')},</p>
+      <p>${escapeHtml(copy.body)}</p>
+      ${paragraph}
+      <p><a href="${escapeHtml(billingUrl)}">Åpne abonnementsinnstillinger</a></p>
+      <p>Ikke svar med kortopplysninger på denne e-posten.</p>
+    </body></html>`,
+  });
+}
+
 /**
  * Sends a 6-digit OTP email for password reset.
  * @param {string} toEmail - Recipient email address
@@ -108,4 +199,4 @@ const sendOtpEmail = async (toEmail, otp, userName) => {
   await transporter.sendMail(mailOptions);
 };
 
-module.exports = { sendOtpEmail };
+module.exports = { sendOtpEmail, sendSubscriptionRecoveryEmail };

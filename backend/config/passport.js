@@ -1,9 +1,9 @@
+const crypto = require('crypto');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
-const { ensureDefaultSubscription } = require('../utils/subscription');
 const { createUnusablePassword } = require('../utils/passwordUtils');
-const { resolveOAuthLogin } = require('../utils/oauthLinking');
+const { resolveOAuthLogin, findUserByProviderIdentity } = require('../utils/oauthLinking');
 
 /**
  * Google sign-in.
@@ -42,18 +42,108 @@ function emailVerifiedFrom(profile) {
   return undefined; // unknown -- treated as "not explicitly unverified"
 }
 
+/** How long a Google authorization request may sit unanswered before its state expires. */
+const GOOGLE_STATE_TTL_MS = 10 * 60 * 1000;
+
+function statesMatch(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
+}
+
+/**
+ * OAuth `state` store that also carries the account-linking intent.
+ *
+ * The strategy had no state at all, so a callback carrying an attacker's authorization
+ * code was accepted in the victim's browser: plain login logged the victim into the
+ * attacker's account (login CSRF), and after a forced `?link=1` start the attacker's
+ * Google identity was linked to the victim's account (account takeover). The link
+ * target also lived in the session on its own, unbound to any request and never expiring.
+ *
+ * Passport's built-in `state: true` would close the code-injection half, but not the
+ * rest. Here state and link intent are one single-use, expiring session record, and a
+ * link only proceeds if the callback arrives in the same authenticated Jobblo session
+ * (user AND session id) that started it.
+ *
+ * The start route sets `req.googleLinkRequest = { userId, sessionId }` for a link;
+ * verify hands the consumed intent to the verify callback as `req.googleOAuthIntent`.
+ */
+function buildGoogleStateStore(key) {
+  return {
+    store(req, _meta, callback) {
+      if (!req.session) return callback(new Error('Google OAuth requires session support'));
+      const state = crypto.randomBytes(32).toString('hex');
+      const link = req.googleLinkRequest;
+      req.session[key] = {
+        state,
+        expiresAt: Date.now() + GOOGLE_STATE_TTL_MS,
+        linkUserId: link ? String(link.userId) : null,
+        linkSessionId: link ? String(link.sessionId) : null,
+      };
+      return callback(null, state);
+    },
+
+    verify(req, providedState, _meta, callback) {
+      const pending = req.session?.[key];
+      // Single-use: consumed whatever happens next, so a replay finds nothing.
+      if (req.session) delete req.session[key];
+
+      // One coarse code for the browser (like vipps_invalid_state); the reason is for logs.
+      const reject = (reason) => {
+        console.warn('Google OAuth: rejected callback (%s)', reason);
+        return callback(null, false, { code: 'google_invalid_state' });
+      };
+      if (!pending || !statesMatch(String(providedState || ''), pending.state)) {
+        return reject('state missing or mismatched');
+      }
+      if (!(Date.now() <= pending.expiresAt)) return reject('state expired');
+      if (
+        pending.linkUserId &&
+        (String(req.userId) !== pending.linkUserId ||
+          String(req.sessionId) !== pending.linkSessionId)
+      ) {
+        return reject('link callback outside the session that started it');
+      }
+
+      req.googleOAuthIntent = { linkToUserId: pending.linkUserId };
+      return callback(null, true);
+    },
+  };
+}
+
+/**
+ * Google-only link guards that run before the shared policy in oauthLinking.js:
+ * while linking, never fall through to logging in as the identity's other owner, and
+ * never put a second Google identity on an account that already has one.
+ */
+async function googleLinkConflict(linkToUserId, providerId) {
+  if (typeof providerId !== 'string' || !providerId.trim()) return false;
+  const id = providerId.trim();
+  const holder = await findUserByProviderIdentity('google', id);
+  if (holder && String(holder._id) !== String(linkToUserId)) return true;
+  const target = await User.findById(linkToUserId).select('oauthProviders');
+  return Boolean(
+    target?.oauthProviders?.some((p) => p.provider === 'google' && p.providerId !== id)
+  );
+}
+
 function buildGoogleVerify() {
   return async (req, accessToken, refreshToken, profile, done) => {
     try {
+      const linkToUserId = req?.googleOAuthIntent?.linkToUserId || null;
+
+      if (linkToUserId && (await googleLinkConflict(linkToUserId, profile?.id))) {
+        return done(null, false, { code: 'google_already_linked' });
+      }
+
       const decision = await resolveOAuthLogin({
         provider: 'google',
         providerId: profile?.id,
         email: profile?.emails?.[0]?.value,
         emailVerified: emailVerifiedFrom(profile),
-        linkToUserId: req?.session?.googleLinkUserId || null,
+        linkToUserId,
       });
-
-      if (req?.session?.googleLinkUserId) delete req.session.googleLinkUserId;
 
       switch (decision.outcome) {
         case 'login':
@@ -87,7 +177,6 @@ function buildGoogleVerify() {
             oauthProviders: [{ provider: 'google', providerId: String(profile.id) }],
           });
 
-          await ensureDefaultSubscription(user);
           return done(null, user);
         }
 
@@ -102,13 +191,14 @@ function buildGoogleVerify() {
   };
 }
 
-function buildGoogleStrategy(callbackURL) {
+function buildGoogleStrategy(callbackURL, stateKey) {
   return new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL,
       passReqToCallback: true,
+      store: buildGoogleStateStore(stateKey),
     },
     buildGoogleVerify()
   );
@@ -118,12 +208,16 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(
     'google-web',
     buildGoogleStrategy(
-      process.env.GOOGLE_WEB_CALLBACK_URL || process.env.CALLBACK_URL || '/api/auth/web/google/callback'
+      process.env.GOOGLE_WEB_CALLBACK_URL || process.env.CALLBACK_URL || '/api/auth/web/google/callback',
+      'googleOAuth:web'
     )
   );
   passport.use(
     'google-mobile',
-    buildGoogleStrategy(process.env.GOOGLE_MOBILE_CALLBACK_URL || '/api/auth/mobile/google/callback')
+    buildGoogleStrategy(
+      process.env.GOOGLE_MOBILE_CALLBACK_URL || '/api/auth/mobile/google/callback',
+      'googleOAuth:mobile'
+    )
   );
 } else {
   console.warn('Google OAuth disabled: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are not set.');
@@ -145,3 +239,5 @@ passport.deserializeUser(async (id, done) => {
 });
 
 module.exports = passport;
+module.exports.buildGoogleStateStore = buildGoogleStateStore;
+module.exports.buildGoogleVerify = buildGoogleVerify;

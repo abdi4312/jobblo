@@ -52,8 +52,7 @@ const jobRequestSchema = new mongoose.Schema(
  * One OPEN application per applicant per job.
  *
  * The controller's duplicate guard is a findOne followed by a create, so two
- * concurrent POSTs both passed it and both created an application — and both
- * incremented monthlyContactUsage, spending the user's quota twice for one job.
+ * concurrent POSTs both passed it and both created an application.
  *
  * Partial, so re-applying after a decline or a withdrawal still works: only rows
  * still in `pending` participate in the constraint. That is the behaviour the

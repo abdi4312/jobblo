@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
+const { verifyToken } = require('../utils/tokenUtils');
 
 const onlineUsers = new Map(); // userId -> Set of socketIds
 
@@ -23,7 +23,8 @@ module.exports = (io) => {
         return next(new Error('No token found'));
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      // Same purpose check as authenticate(): a refresh token cannot open a socket.
+      const decoded = verifyToken(token, 'access');
 
       // Verify session exists in DB
       const Session = require('../models/Session');

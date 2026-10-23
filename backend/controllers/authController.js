@@ -1,12 +1,9 @@
-const Subscription = require('../models/Subscription');
 const User = require('../models/User');
 const Session = require('../models/Session');
 const bcrypt = require('bcryptjs');
 const { isBcryptHash } = require('../utils/passwordUtils');
-const { ensureDefaultSubscription } = require('../utils/subscription');
-const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { generateTokens, createSession } = require('../utils/tokenUtils');
+const { generateTokens, verifyToken, createSession } = require('../utils/tokenUtils');
 const { sendOtpEmail } = require('../utils/emailService');
 const { OWN_USER_SELECT, sanitizeUserOwner, SENSITIVE_STRIP } = require('../utils/userProjections');
 
@@ -26,6 +23,65 @@ const validatePasswordStrength = (password) => {
   if (!/\d/.test(password)) return 'Passordet må inneholde minst ett tall.';
   return null;
 };
+
+// ── Emailed 6-digit codes (forgot password, change password) ──────────────────
+const MAX_OTP_ATTEMPTS = 5;
+const sha256 = (value) => crypto.createHash('sha256').update(String(value)).digest('hex');
+const newOtp = () => String(crypto.randomInt(100000, 1000000));
+const CLEAR_RESET_STATE = {
+  $unset: {
+    passwordResetToken: 1,
+    passwordResetExpires: 1,
+    passwordResetAttempts: 1,
+    passwordResetSessionToken: 1,
+    passwordResetSessionExpires: 1,
+  },
+};
+
+/** Store a fresh code for the user (replacing any older one) and return it to email. */
+async function issueOtp(userId) {
+  const otp = newOtp();
+  await User.updateOne(
+    { _id: userId },
+    {
+      $set: {
+        passwordResetToken: sha256(otp),
+        passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000),
+        passwordResetAttempts: 0,
+      },
+      $unset: { passwordResetSessionToken: 1, passwordResetSessionExpires: 1 },
+    }
+  );
+  return otp;
+}
+
+/**
+ * Check a guess against the user's pending code. Every guess atomically spends one of
+ * MAX_OTP_ATTEMPTS on the ACCOUNT (an IP limit alone falls to rotating IPs), and the
+ * last miss deletes the code, so a 6-digit code cannot be brute-forced.
+ */
+async function checkOtp(userFilter, otp) {
+  const counted = await User.findOneAndUpdate(
+    {
+      ...userFilter,
+      passwordResetToken: { $type: 'string' },
+      passwordResetExpires: { $gt: new Date() },
+      passwordResetAttempts: { $not: { $gte: MAX_OTP_ATTEMPTS } },
+    },
+    { $inc: { passwordResetAttempts: 1 } },
+    { new: true }
+  ).select('+passwordResetToken +passwordResetAttempts');
+  if (!counted) return null;
+
+  const given = Buffer.from(sha256(otp));
+  const stored = Buffer.from(counted.passwordResetToken);
+  if (given.length === stored.length && crypto.timingSafeEqual(given, stored)) return counted;
+
+  if (counted.passwordResetAttempts >= MAX_OTP_ATTEMPTS) {
+    await User.updateOne({ _id: counted._id, passwordResetToken: counted.passwordResetToken }, CLEAR_RESET_STATE);
+  }
+  return null;
+}
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -199,11 +255,6 @@ exports.register = async (req, res) => {
 
     const { accessToken, refreshToken } = await createSession(req, user._id);
 
-    // Shared with the Google and Vipps signup paths so all three provision the same
-    // plan the same way. Atomic upsert with everything inside $setOnInsert, so a retry
-    // or a concurrent request cannot produce a second subscription row.
-    await ensureDefaultSubscription(user);
-
     setAuthCookies(res, accessToken, refreshToken);
 
     return res.status(201).json({
@@ -215,7 +266,6 @@ exports.register = async (req, res) => {
       await Promise.allSettled([
         User.deleteOne({ _id: createdUserId }),
         Session.deleteMany({ userId: createdUserId }),
-        Subscription.deleteMany({ userId: createdUserId }),
       ]);
     }
 
@@ -343,7 +393,15 @@ exports.refreshToken = async (req, res) => {
     let decoded;
 
     try {
-      decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+      // Purpose-checked: an access token in the refreshToken cookie is rejected. The
+      // token must also belong to the session row it was found in.
+      decoded = verifyToken(refreshToken, 'refresh');
+      if (
+        String(decoded.sid) !== String(session._id) ||
+        String(decoded.id) !== String(session.userId)
+      ) {
+        throw new Error('session mismatch');
+      }
     } catch (error) {
       await Session.deleteOne({
         $or: [{ refreshToken }, { oldRefreshToken: refreshToken }],
@@ -548,15 +606,7 @@ exports.changePasswordSendOtp = async (req, res) => {
       return res.status(400).json({ error: 'Nåværende passord er feil' });
     }
 
-    // Generate 6-digit OTP
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
-
-    await User.findByIdAndUpdate(userId, {
-      passwordResetToken: hashedOtp,
-      passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 min
-    });
-
+    const otp = await issueOtp(userId);
     await sendOtpEmail(user.email, otp, user.name);
 
     return res.json({ message: 'Kode sendt til e-posten din.' });
@@ -578,14 +628,7 @@ exports.changePasswordSendOtpNoPassword = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
-
-    await User.findByIdAndUpdate(userId, {
-      passwordResetToken: hashedOtp,
-      passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 min
-    });
-
+    const otp = await issueOtp(userId);
     await sendOtpEmail(user.email, otp, user.name);
 
     return res.json({
@@ -618,25 +661,16 @@ exports.changePasswordVerifyOtp = async (req, res) => {
       return res.status(400).json({ error: newPasswordError });
     }
 
-    const hashedOtp = crypto.createHash('sha256').update(String(otp)).digest('hex');
-
-    const user = await User.findOne({
-      _id: userId,
-      passwordResetToken: hashedOtp,
-      passwordResetExpires: { $gt: new Date() },
-    }).select('+passwordResetToken +passwordResetExpires +password');
-
+    const user = await checkOtp({ _id: userId }, otp);
     if (!user) {
       return res.status(400).json({ error: 'Ugyldig eller utløpt kode' });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    await User.findByIdAndUpdate(userId, {
-      password: hashedPassword,
-      passwordResetToken: undefined,
-      passwordResetExpires: undefined,
-    });
+    await User.updateOne({ _id: userId }, { $set: { password: hashedPassword }, ...CLEAR_RESET_STATE });
+    // Sign out every other device: a password change is how people lock out an intruder.
+    await Session.deleteMany({ userId, _id: { $ne: req.sessionId } });
 
     return res.json({ message: 'Passordet er oppdatert.' });
   } catch (error) {
@@ -647,8 +681,8 @@ exports.changePasswordVerifyOtp = async (req, res) => {
 /**
  * POST /api/auth/forgot-password
  * Generates a 6-digit OTP and emails it to the user.
- * Returns a generic success message to prevent email enumeration,
- * but includes a `sent` boolean so the frontend knows whether to proceed.
+ * Answers the same for known and unknown addresses, so it cannot be used to find out
+ * who has an account.
  */
 exports.forgotPassword = async (req, res) => {
   try {
@@ -662,32 +696,13 @@ exports.forgotPassword = async (req, res) => {
     }
 
     const user = await User.findOne({ email: normalizedEmail });
-
-    if (!user) {
-      // Return 404 — frontend can show "email not found" without exposing DB details
-      // This is a UX decision: we prioritize helping the user over hiding existence
-      return res.status(404).json({
-        error: 'Vi fant ingen konto med denne e-postadressen.',
-      });
+    if (user) {
+      const otp = await issueOtp(user._id);
+      await sendOtpEmail(user.email, otp, user.name);
     }
 
-    // Generate a 6-digit numeric OTP
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-
-    // Hash OTP before storing (never store plain OTP)
-    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
-
-    // Save hashed OTP + 10-minute expiry
-    await User.findByIdAndUpdate(user._id, {
-      passwordResetToken: hashedOtp,
-      passwordResetExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
-    });
-
-    // Send OTP email
-    await sendOtpEmail(user.email, otp, user.name);
-
     return res.json({
-      message: 'En kode er sendt til e-posten din.',
+      message: 'Hvis det finnes en konto med denne e-postadressen, har vi sendt en kode dit.',
     });
   } catch (error) {
     return sendServerError(res, error, 'Forgot password failed');
@@ -710,26 +725,24 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).json({ error: 'E-post og kode er påkrevd' });
     }
 
-    const hashedOtp = crypto.createHash('sha256').update(String(otp)).digest('hex');
-
-    const user = await User.findOne({
-      email: normalizedEmail,
-      passwordResetToken: hashedOtp,
-      passwordResetExpires: { $gt: new Date() },
-    }).select('+passwordResetToken +passwordResetExpires');
-
+    const user = await checkOtp({ email: normalizedEmail }, otp);
     if (!user) {
       return res.status(400).json({ error: 'Ugyldig eller utløpt kode' });
     }
 
-    // OTP is valid – generate a short-lived reset token (5 min) to authorize password change
+    // Code is valid and is now spent; hand out a short-lived (5 min) random reset token
+    // in its own field.
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const hashedResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-
-    await User.findByIdAndUpdate(user._id, {
-      passwordResetToken: hashedResetToken,
-      passwordResetExpires: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
-    });
+    await User.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          passwordResetSessionToken: sha256(resetToken),
+          passwordResetSessionExpires: new Date(Date.now() + 5 * 60 * 1000),
+        },
+        $unset: { passwordResetToken: 1, passwordResetExpires: 1, passwordResetAttempts: 1 },
+      }
+    );
 
     return res.json({
       message: 'Kode bekreftet',
@@ -757,24 +770,26 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ error: passwordError });
     }
 
-    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-
-    const user = await User.findOne({
-      passwordResetToken: hashedToken,
-      passwordResetExpires: { $gt: new Date() },
-    }).select('+passwordResetToken +passwordResetExpires +password');
-
+    // Only the 32-byte token from verify-otp works here, never an emailed code, and it
+    // is single-use: the compare-and-set below consumes it.
+    const tokenFilter = {
+      passwordResetSessionToken: sha256(resetToken),
+      passwordResetSessionExpires: { $gt: new Date() },
+    };
+    const user = await User.findOne(tokenFilter).select('_id');
     if (!user) {
       return res.status(400).json({ error: 'Ugyldig eller utløpt sesjonstoken. Start på nytt.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    await User.findByIdAndUpdate(user._id, {
-      password: hashedPassword,
-      passwordResetToken: undefined,
-      passwordResetExpires: undefined,
-    });
+    const updated = await User.updateOne(
+      { _id: user._id, ...tokenFilter },
+      { $set: { password: hashedPassword }, ...CLEAR_RESET_STATE }
+    );
+    if (updated.modifiedCount !== 1) {
+      return res.status(400).json({ error: 'Ugyldig eller utløpt sesjonstoken. Start på nytt.' });
+    }
 
     // Invalidate all sessions for security
     await Session.deleteMany({ userId: user._id });

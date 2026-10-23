@@ -473,7 +473,9 @@ exports.createService = async (req, res) => {
     const userId = req.userId;
     const {
       images,
-      imageMetadata,
+      // Never trusted from the client: metadata names the blobs a delete removes, so
+      // it is only ever built from this request's own uploads (req.files) below.
+      imageMetadata: _ignoredClientImageMetadata,
       countyCode,
       municipalityCode,
       areaCode,
@@ -535,10 +537,7 @@ exports.createService = async (req, res) => {
     serviceData.status = serviceData.status || 'open';
     serviceData.equipment = serviceData.equipment || 'utstyrfri';
 
-    // Restriction for urgent (haste) - only for paid subscribers
-    if (serviceData.urgent && user.subscription === 'Standard') {
-      serviceData.urgent = false;
-    }
+    serviceData.urgent = false;
 
     // Add images from Multer (Azure)
     if (req.files && req.files.length > 0) {
@@ -551,9 +550,9 @@ exports.createService = async (req, res) => {
         uploadedAt: new Date(),
       }));
     } else {
-      // Fallback to body images if no files uploaded (backwards compatibility)
+      // Fallback to body image URLs (backwards compatibility). No metadata: a URL
+      // alone carries no authority to delete anything.
       if (images) serviceData.images = images;
-      if (imageMetadata) serviceData.imageMetadata = imageMetadata;
     }
 
     // Parse checklist (frontend sends it as JSON string)
@@ -604,7 +603,7 @@ exports.createService = async (req, res) => {
       'equipment',
       'maxApplicants',
       'images',
-      'imageMetadata',
+      'imageMetadata', // only ever set from req.files above
       'urgent',
     ];
     const safeServiceData = {};
@@ -695,19 +694,17 @@ exports.updateService = async (req, res) => {
     }
 
     // ⭐ HANDLE IMAGE DELETION
+    // Only entries already on THIS listing are candidates; the blobs themselves are
+    // removed after the save (deleteListingImage verifies each one first).
+    const removedImageMetadata = [];
     if (req.body.imagesToDelete) {
-      const { deleteFromAzure } = require('../utils/azureUpload');
       const toDelete = Array.isArray(req.body.imagesToDelete)
         ? req.body.imagesToDelete
         : [req.body.imagesToDelete];
 
       for (const imageUrl of toDelete) {
-        // Find metadata to get the blob name
-        const meta = service.imageMetadata.find((m) => m.url === imageUrl);
-        if (meta && meta.blobName) {
-          await deleteFromAzure(meta.blobName);
-        }
-        // Remove from arrays
+        if (typeof imageUrl !== 'string') continue;
+        removedImageMetadata.push(...service.imageMetadata.filter((m) => m.url === imageUrl));
         service.images = service.images.filter((url) => url !== imageUrl);
         service.imageMetadata = service.imageMetadata.filter((m) => m.url !== imageUrl);
       }
@@ -727,11 +724,8 @@ exports.updateService = async (req, res) => {
       service.images = [...service.images, ...newImageUrls];
       service.imageMetadata = [...service.imageMetadata, ...newImageMetadata];
     } else if (req.body.images) {
-      // Fallback for body images
+      // Fallback for body image URLs. Client imageMetadata is ignored — see createService.
       service.images = [...service.images, ...req.body.images];
-      if (req.body.imageMetadata) {
-        service.imageMetadata = [...service.imageMetadata, ...req.body.imageMetadata];
-      }
     }
 
     // ⭐ HANDLE CHECKLIST UPDATE
@@ -790,12 +784,9 @@ exports.updateService = async (req, res) => {
     }
     Object.assign(service, pickContactUpdates(req.body));
 
-    // `urgent` is a paid-tier feature, enforced on create but previously not on
-    // update — which made the restriction free to bypass by editing.
+    // Urgent placement was a subscription entitlement and stays disabled until V2.
     if (req.body.urgent !== undefined) {
-      const owner = await require('../models/User').findById(req.userId).select('subscription');
-      const wantsUrgent = req.body.urgent === true || req.body.urgent === 'true';
-      service.urgent = wantsUrgent && owner?.subscription !== 'Standard';
+      service.urgent = false;
     }
 
     const { countyCode, municipalityCode, areaCode } = req.body;
@@ -804,6 +795,10 @@ exports.updateService = async (req, res) => {
     if (areaCode !== undefined) service.areaCode = areaCode;
 
     await service.save();
+
+    // After the save: a failed save must not leave the listing pointing at deleted blobs.
+    const { deleteListingImage } = require('../utils/azureUpload');
+    for (const meta of removedImageMetadata) await deleteListingImage(meta, service._id);
 
     res.json(service);
   } catch (err) {
@@ -860,15 +855,12 @@ exports.deleteService = async (req, res) => {
       });
     }
 
-    // ⭐ DELETE ALL IMAGES FROM AZURE
-    if (service.imageMetadata && service.imageMetadata.length > 0) {
-      const { deleteFromAzure } = require('../utils/azureUpload');
-      for (const meta of service.imageMetadata) {
-        if (meta.blobName) await deleteFromAzure(meta.blobName);
-      }
-    }
-
     await service.deleteOne();
+
+    // ⭐ DELETE THIS LISTING'S OWN IMAGES FROM AZURE (verified per blob; after the
+    // document is gone so a failed delete never leaves it pointing at missing files).
+    const { deleteListingImage } = require('../utils/azureUpload');
+    for (const meta of service.imageMetadata || []) await deleteListingImage(meta, service._id);
 
     // Cascade cleanup: delete Orders and Reviews referencing this service.
     // Orders are not deleted but cancelled to preserve audit trail of completed work.

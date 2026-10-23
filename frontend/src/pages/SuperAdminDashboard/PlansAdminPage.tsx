@@ -173,8 +173,10 @@ export default function PlansAdminPage() {
             toast.success('Plan oppdatert.');
             setShowEdit(false);
             fetchData();
-        } catch {
-            toast.error('Kunne ikke oppdatere plan.');
+        } catch (err) {
+            // e.g. PLAN_FIELD_LOCKED: price/name/type/active are tied to Stripe and not editable here.
+            const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            toast.error(msg || 'Kunne ikke oppdatere plan.');
         }
     };
 

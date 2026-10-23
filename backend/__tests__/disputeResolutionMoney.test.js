@@ -28,7 +28,7 @@ jest.mock('../utils/pagination', () => ({
   parseSort: jest.fn(),
   parseDate: jest.fn(),
 }));
-jest.mock('../models/Dispute', () => ({ findById: jest.fn() }));
+jest.mock('../models/Dispute', () => ({ findById: jest.fn(), findOneAndUpdate: jest.fn() }));
 jest.mock('../models/Order', () => ({}));
 jest.mock('../models/Payment', () => ({ findOne: jest.fn() }));
 jest.mock('../models/Payout', () => ({ findOne: jest.fn() }));
@@ -173,6 +173,9 @@ beforeEach(() => {
     save: jest.fn().mockResolvedValue(),
   });
   SafePayHistory.findOneAndUpdate.mockResolvedValue({});
+  // The resolution intent is claimed atomically; these tests resolve a fresh dispute,
+  // so the claim succeeds. Contention is covered in its own block below.
+  Dispute.findOneAndUpdate.mockImplementation(async (_filter, update) => ({ resolution: update.$set.resolution }));
   Notification.create.mockResolvedValue({});
   releasePayoutToProvider.mockResolvedValue({
     payout: { stripeTransferId: 'tr_1' },
@@ -368,5 +371,51 @@ describe('failure handling and retryability', () => {
 
     expect(captured.error.status).toBe(409);
     expect(releasePayoutToProvider).not.toHaveBeenCalled();
+  });
+});
+
+describe('the recorded resolution and concurrent admins', () => {
+  it('release_to_provider records the full secured amount the payout service will check, even if the form sent 0', async () => {
+    const order = ORDER();
+    Dispute.findById.mockReturnValue({ populate: jest.fn().mockResolvedValue(disputeDoc(order)) });
+
+    await run('release_to_provider', { providerAmount: 0, customerAmount: 0 });
+
+    const [, update] = Dispute.findOneAndUpdate.mock.calls[0];
+    expect(update.$set.resolution).toMatchObject({ outcome: 'release_to_provider', providerAmount: 1000, customerAmount: 0 });
+    expect(releasePayoutToProvider).toHaveBeenCalledWith(expect.objectContaining({ grossAmount: 1000 }));
+  });
+
+  it('a second admin who loses the atomic claim gets 409 and moves no money', async () => {
+    const order = ORDER();
+    Dispute.findById.mockReturnValue({ populate: jest.fn().mockResolvedValue(disputeDoc(order)) });
+    Dispute.findOneAndUpdate.mockResolvedValueOnce(null); // the other admin claimed it first
+
+    await run('full_refund_to_customer');
+
+    expect(captured.error.status).toBe(409);
+    expect(refundsCreate).not.toHaveBeenCalled();
+    expect(releasePayoutToProvider).not.toHaveBeenCalled();
+    expect(order.save).not.toHaveBeenCalled();
+  });
+
+  it('the claim only re-enters a pending resolution for the same outcome and amounts after it went idle', async () => {
+    const order = ORDER();
+    const doc = disputeDoc(order);
+    doc.resolution = { outcome: 'partial_refund', customerAmount: 300, providerAmount: 600, moneyState: 'pending' };
+    Dispute.findById.mockReturnValue({ populate: jest.fn().mockResolvedValue(doc) });
+
+    await run('partial_refund', { customerAmount: 300, providerAmount: 600 });
+
+    const [filter] = Dispute.findOneAndUpdate.mock.calls[0];
+    const pendingBranch = filter.$or.find((b) => b['resolution.moneyState'] === 'pending');
+    expect(pendingBranch).toMatchObject({
+      'resolution.outcome': 'partial_refund',
+      'resolution.customerAmount': 300,
+      'resolution.providerAmount': 600,
+    });
+    const idleFor = Date.now() - pendingBranch['resolution.resolvedAt'].$lte.getTime();
+    expect(idleFor).toBeGreaterThanOrEqual(10 * 60 * 1000 - 1000);
+    expect(filter.status.$in).toContain('open');
   });
 });

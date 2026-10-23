@@ -1,6 +1,5 @@
 jest.mock('axios', () => ({ post: jest.fn(), get: jest.fn() }));
 jest.mock('../models/User', () => ({ findOne: jest.fn(), findById: jest.fn(), create: jest.fn() }));
-jest.mock('../utils/subscription', () => ({ ensureDefaultSubscription: jest.fn(async () => ({})) }));
 jest.mock('../utils/tokenUtils', () => ({ createSession: jest.fn(async () => ({ accessToken: 'at', refreshToken: 'rt' })) }));
 
 let passport;
@@ -90,7 +89,7 @@ describe('explicit web/mobile OAuth routes', () => {
 
   it('web Google callback redirects to the web success destination', () => {
     const url = oauthDestination({ platform: 'web', accessToken: 'token123' });
-    expect(url).toBe('https://jobblo.example/oauth-success?token=token123');
+    expect(url).toBe('https://jobblo.example/oauth-success');
   });
 
   it('mobile Google callback redirects to the app hand-off', () => {

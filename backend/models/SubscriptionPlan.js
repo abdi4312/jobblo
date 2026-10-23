@@ -3,46 +3,36 @@ const mongoose = require('mongoose');
 const planSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
-
     price: { type: Number, required: true, min: 0 },
-
-    type: {
-      type: String,
-      enum: ['business', 'private'],
-      required: true,
-    },
-
-    // 🔑 LOGIC (middleware uses this)
+    type: { type: String, enum: ['business', 'private'], required: true },
     entitlements: {
-      freeContact: { type: Number, required: true },
-      radius: { type: Number, required: true },
-      numberOfCustomers: { type: Number, default: 1 },
-      maxJobsValue: { type: Number },
-      perContactPrice: { type: Number, default: 0 },
-      ContactUnlock: { type: Number, default: 0 },
-      maxContact: { type: Number, default: 0 },
-      visibilityLevel: { type: Number, default: 0 }, // Weighted sorting
-      locationPrecision: { type: String, enum: ['exact', 'approximate'], default: 'approximate' },
+      freeContact: { type: Number, required: true, min: 0 },
+      radius: { type: Number, required: true, min: 0 },
+      numberOfCustomers: { type: Number, default: 1, min: 0 },
+      maxJobsValue: { type: Number, min: 0 },
+      perContactPrice: { type: Number, default: 0, min: 0 },
+      ContactUnlock: { type: Number, default: 0, min: 0 },
+      maxContact: { type: Number, default: 0, min: 0 },
+      visibilityLevel: { type: Number, default: 0, min: 0 },
+      locationPrecision: {
+        type: String,
+        enum: ['exact', 'approximate'],
+        default: 'approximate',
+      },
       hasBadge: { type: Boolean, default: false },
       hasAnalytics: { type: Boolean, default: false },
     },
-
-    // 🖼️ UI ONLY
-    featuresText: {
-      type: [String],
-      default: [],
-    },
-
+    featuresText: { type: [String], default: [] },
     isActive: { type: Boolean, default: true },
-
-    // Recurring Stripe Prices are mode-specific. Existing plan prices remain the
-    // source of truth; Stripe Prices are only created from these exact amounts.
     stripeProductId: String,
     stripeProductIdTest: String,
     stripePriceId: String,
     stripePriceIdTest: String,
   },
-  { timestamps: true }
+  { timestamps: true, collection: 'subscriptionplans' }
 );
+
+planSchema.index({ type: 1, isActive: 1 });
+planSchema.index({ name: 1, type: 1 });
 
 module.exports = mongoose.model('SubscriptionPlan', planSchema);

@@ -1,26 +1,28 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../stores/userStore';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 
 export default function OAuthSuccess() {
   const navigate = useNavigate();
-  const { fetchProfile, setTokens } = useUserStore((state) => state);
+  const bootstrap = useUserStore((state) => state.bootstrap);
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  // StrictMode runs effects twice in dev; schedule the redirect only once.
+  const started = useRef(false);
 
   useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+
     const initOAuth = async () => {
       try {
         const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('token');
 
-        if (token) {
-          // Store token first so fetchProfile interceptor can use it if needed
-          setTokens({ accessToken: token });
-          // Scrub it from the URL immediately. The backend already sets the auth
-          // cookies on this same redirect, so the query param is redundant — and
-          // leaving it there persists a live JWT in browser history and in
-          // document.referrer for anything the page loads.
+        // Never authenticate from the URL. This page used to store whatever `?token=`
+        // it was given, so a link carrying an attacker's token logged the victim into
+        // the attacker's account (login CSRF). The backend no longer sends one; scrub
+        // any that a crafted or stale link carries so it leaves no trace in history.
+        if (urlParams.has('token')) {
           window.history.replaceState({}, document.title, window.location.pathname);
         }
 
@@ -33,7 +35,13 @@ export default function OAuthSuccess() {
           return;
         }
 
-        await fetchProfile();
+        // The OAuth callback set httpOnly session cookies on this same redirect. The
+        // page-load bootstrap (main.tsx) trades them for an in-memory access token and
+        // the profile: only a session this browser really holds can authenticate it,
+        // and a forged visit just re-confirms the current account. Awaiting the shared
+        // bootstrap keeps it to one refresh request.
+        await bootstrap();
+        if (!useUserStore.getState().isAuthenticated) throw new Error('No session after OAuth');
         setStatus('success');
 
         // Premium feel: Give user 2 seconds to see the success state
@@ -47,8 +55,8 @@ export default function OAuthSuccess() {
       }
     };
 
-    initOAuth();
-  }, [fetchProfile, navigate, setTokens]);
+    void initOAuth();
+  }, [bootstrap, navigate]);
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-[#F7F7F7] overflow-hidden font-['Inter',sans-serif]">

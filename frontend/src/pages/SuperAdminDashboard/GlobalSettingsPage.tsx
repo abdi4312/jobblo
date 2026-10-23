@@ -176,7 +176,8 @@ export default function GlobalSettingsPage() {
             <div>
               <h2 className="text-sm font-semibold text-gray-900">SafePay</h2>
               <p className="mt-1 text-sm text-gray-500">
-                Frist for utførerens Stripe Connect-oppsett etter bekreftet betaling.
+                Frist for at utføreren starter oppdraget etter bekreftet betaling. Startes det
+                ikke i tide, kanselleres oppdraget og kunden får full refusjon automatisk.
                 Hver dag tilsvarer 24 timer.
               </p>
               <p className="mt-2 text-sm font-medium text-gray-800">

@@ -79,12 +79,11 @@ describe('order lifecycle socket contract', () => {
   it('never emits a lifecycle name that is not in the canonical contract', () => {
     // Notification-only events (subscription, application) are out of scope for the
     // order contract; everything order-shaped must be declared.
-    // The notification tray and the subscription flow have their own events. This
-    // contract governs the order lifecycle only; the boundary is deliberate.
+    // The notification tray has its own events. This contract governs order
+    // lifecycle events only; the boundary is deliberate.
     const outOfScope = new Set([
       'new_notification',
       'notification_count',
-      'subscription_payment_failed',
       'application_submitted',
       'new_job_request',
       'order_approved',

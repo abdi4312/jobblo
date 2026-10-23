@@ -11,9 +11,16 @@ import { routes } from './routing/Routes.tsx';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { initCookieConsent } from './utils/cookieConsent';
+import { useUserStore } from './stores/userStore';
 
 // Re-inject the ad script for a returning visitor who already accepted.
 initCookieConsent();
+
+// Auth lives in memory only: ask the server (refresh cookie) who is signed in. Started
+// before render so it runs once even under StrictMode; route guards wait on authReady.
+void useUserStore.getState().bootstrap();
+// Dev server only (e2e tests read in-memory auth state); never in a production bundle.
+if (import.meta.env.DEV) Object.assign(window, { __jobbloUserStore: useUserStore });
 
 // 1. QueryClient ka instance create kiya
 const queryClient = new QueryClient({

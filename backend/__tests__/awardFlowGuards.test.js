@@ -22,7 +22,7 @@ jest.mock('../models/Order', () => {
   Order.findByIdAndUpdate = jest.fn();
   return Order;
 });
-jest.mock('../models/Service', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn() }));
+jest.mock('../models/Service', () => ({ findById: jest.fn(), findByIdAndUpdate: jest.fn(), findOneAndUpdate: jest.fn(async () => ({})), updateOne: jest.fn(async () => ({})) }));
 jest.mock('../models/JobRequest', () => ({
   find: jest.fn(),
   findOne: jest.fn(),
@@ -85,6 +85,8 @@ function req() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // safepayController.createContract reads the pair conversation for its agreed price.
+  Chat.findOne.mockReturnValue({ select: () => ({ lean: async () => null }) });
   getConnectReadiness.mockResolvedValue({ ready: true });
   Service.findById.mockResolvedValue({
     _id: SERVICE,
@@ -202,5 +204,30 @@ describe('the award links the existing conversation, whichever way round it is s
       expect.anything(),
       expect.objectContaining({ chatId: CHAT })
     );
+  });
+});
+
+describe('the contract uses the price agreed in the conversation', () => {
+  beforeEach(() => JobRequest.findOne.mockResolvedValue({ _id: REQUEST, status: 'pending' }));
+
+  it('creates the order at the chat agreedPrice and keeps that price on the chat', async () => {
+    // Previously: order at the listing price (2500) and the chat overwritten to 2500.
+    Chat.findOne.mockReturnValue({ select: () => ({ lean: async () => ({ agreedPrice: 1800, orderId: null }) }) });
+    await safepayController.createContract(req(), makeRes());
+    expect(Order.mock.calls[0][0]).toMatchObject({ initialPrice: 2500, agreedPrice: 1800 });
+    expect(Chat.findOneAndUpdate.mock.calls[0][1]).toMatchObject({ agreedPrice: 1800 });
+  });
+
+  it('falls back to the listing price when nothing was negotiated', async () => {
+    await safepayController.createContract(req(), makeRes());
+    expect(Order.mock.calls[0][0].agreedPrice).toBe(2500);
+  });
+
+  it('a second concurrent award is refused while the first holds the service lock', async () => {
+    Service.findOneAndUpdate.mockResolvedValueOnce(null); // lock held by the other request
+    const res = makeRes();
+    await safepayController.createContract(req(), res);
+    expect(res.statusCode).toBe(409);
+    expect(Order).not.toHaveBeenCalled();
   });
 });

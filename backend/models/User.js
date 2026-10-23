@@ -12,7 +12,9 @@ const userSchema = new mongoose.Schema(
       trim: true,
       index: true,
     },
-    password: { type: String, required: true },
+    // select:false so a bare find/populate never returns the hash. Password checks
+    // must opt in with .select('+password') (login, change-password).
+    password: { type: String, required: true, select: false },
     phone: {
       type: String,
       trim: true,
@@ -314,6 +316,21 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
     passwordResetExpires: {
+      type: Date,
+      select: false,
+    },
+    // Wrong guesses against the current emailed code; the code is deleted at the limit.
+    passwordResetAttempts: {
+      type: Number,
+      select: false,
+    },
+    // The 32-byte token handed out after a correct code. Kept apart from the code's
+    // hash so /reset-password can never be satisfied by a 6-digit guess.
+    passwordResetSessionToken: {
+      type: String,
+      select: false,
+    },
+    passwordResetSessionExpires: {
       type: Date,
       select: false,
     },

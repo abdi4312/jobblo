@@ -1,4 +1,8 @@
-jest.mock('../models/Order', () => ({ find: jest.fn(), findOneAndUpdate: jest.fn() }));
+jest.mock('../models/Order', () => ({
+  find: jest.fn(),
+  findOneAndUpdate: jest.fn(),
+  findById: jest.fn(() => ({ select: () => ({ lean: async () => null }) })),
+}));
 jest.mock('../models/Payment', () => ({ findOne: jest.fn(), updateOne: jest.fn() }));
 jest.mock('../models/Payout', () => ({ findOne: jest.fn() }));
 jest.mock('../models/StripeTransferRecord', () => ({ findOne: jest.fn() }));
@@ -26,6 +30,7 @@ const SafePayHistory = require('../models/SafePayHistory');
 const { getStripeForMode } = require('../config/stripe');
 const { executeRefund } = require('../services/stripe/financialOperations');
 const { notify } = require('../services/notifications');
+const { logApplicationError } = require('../utils/errorLogger');
 const {
   processOrder,
   recordReadyProvidersBeforeDeadline,
@@ -142,13 +147,28 @@ beforeEach(() => {
 });
 
 describe('SafePay provider Connect timeout processor', () => {
-  it('does not refund when authoritative Stripe account capabilities are ready', async () => {
-    configure({ stripe: makeStripe({ payoutReady: true }) });
+  it('refunds an unstarted job even when the provider is Stripe Connect-ready', async () => {
+    const stripe = configure({ stripe: makeStripe({ payoutReady: true }) });
+    executeRefund.mockResolvedValue({
+      operation: {
+        operationKey: `safepay-connect-timeout:${order._id}:${payment.stripePaymentIntentId}`,
+        orderId: order._id,
+        paymentIntentId: payment.stripePaymentIntentId,
+        amount: order.checkoutAmountMinor,
+      },
+      refund: { id: 're_test_ready', status: 'succeeded' },
+      status: 'succeeded',
+    });
 
-    await expect(processOrder(order, now)).resolves.toBe('provider_ready');
+    await expect(processOrder({ ...order, providerConnectTimeout: { status: 'provider_ready' } }, now))
+      .resolves.toBe('refunded');
 
-    expect(executeRefund).not.toHaveBeenCalled();
-    expect(Order.findOneAndUpdate).toHaveBeenCalledTimes(2);
+    expect(stripe.accounts.retrieve).not.toHaveBeenCalled();
+    expect(executeRefund).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({ amount: 103000 }));
+    // An order already marked provider_ready is still claimable; only a started job is excluded.
+    const claimFilter = Order.findOneAndUpdate.mock.calls[0][0];
+    expect(claimFilter).toMatchObject({ startedAt: null });
+    expect(claimFilter.$or).toContainEqual({ 'providerConnectTimeout.status': { $in: [null, 'provider_ready'] } });
   });
 
   it('stops the countdown when Stripe confirms readiness before the deadline', async () => {
@@ -324,15 +344,6 @@ describe('SafePay provider Connect timeout processor', () => {
     expect(notify).toHaveBeenCalledTimes(2);
   });
 
-  it('does not infer onboarding failure when Stripe account verification is unavailable', async () => {
-    configure({ stripe: makeStripe({ accountError: new Error('temporary outage') }) });
-
-    await expect(processOrder(order, now)).resolves.toBe('pending');
-
-    expect(executeRefund).not.toHaveBeenCalled();
-    expect(Service.findByIdAndUpdate).not.toHaveBeenCalled();
-  });
-
   it('routes active disputes, existing transfers and started work to manual review', async () => {
     configure();
     Dispute.findOne.mockResolvedValueOnce({ _id: 'dispute_1' });
@@ -386,10 +397,32 @@ describe('SafePay provider Connect timeout processor', () => {
 
     await expect(applyTimeoutRefundResult(order, payment, operation, refund, 'succeeded'))
       .resolves.toBe(true);
+    // The second finalizer (scheduler vs webhook) sees the same refund already recorded.
+    Order.findById.mockReturnValueOnce({
+      select: () => ({ lean: async () => ({ providerConnectTimeout: { status: 'succeeded', stripeRefundId: 're_test_1' } }) }),
+    });
     await expect(applyTimeoutRefundResult(order, payment, operation, refund, 'succeeded'))
       .resolves.toBe(false);
 
     expect(notify).toHaveBeenCalledTimes(2);
     expect(Payment.updateOne).toHaveBeenCalledTimes(1);
+    expect(logApplicationError).not.toHaveBeenCalled();
+  });
+
+  it('still flags a real finalization conflict for review', async () => {
+    configure();
+    Order.findOneAndUpdate.mockResolvedValue(null);
+    const operation = {
+      operationKey: `safepay-connect-timeout:${order._id}:${payment.stripePaymentIntentId}`,
+      orderId: order._id,
+      paymentIntentId: payment.stripePaymentIntentId,
+      amount: 103000,
+    };
+    const refund = { id: 're_test_2', status: 'succeeded', metadata: { jobbloOperationKey: operation.operationKey } };
+
+    await expect(applyTimeoutRefundResult(order, payment, operation, refund, 'succeeded')).resolves.toBe(false);
+    expect(logApplicationError).toHaveBeenCalledWith(expect.objectContaining({
+      errorCode: 'SAFEPAY_CONNECT_TIMEOUT_FINALIZATION_CONFLICT',
+    }));
   });
 });

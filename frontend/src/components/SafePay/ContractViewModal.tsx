@@ -62,7 +62,7 @@ export function ContractViewModal({ orderId, trigger }: ContractViewModalProps) 
     const order = data?.order;
     const calculation = data?.calculation;
     const cancellationReason = order?.cancellationReason === 'provider_stripe_connect_timeout'
-        ? 'Utføreren fullførte ikke Stripe Connect-oppsettet innen fristen.'
+        ? 'Utføreren startet ikke oppdraget innen fristen.'
         : order?.cancellationReason;
 
     const { label: statusText, color: statusColor } = order

@@ -1,12 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, MoreHorizontal, ChevronLeft, Flag } from 'lucide-react';
+import { User, MoreHorizontal, ChevronLeft, Flag, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { ChatReportDialog } from '../admin/chat/ChatReportDialog';
 
 interface ChatHeaderProps {
   isMobile: boolean;
-  otherUser?: { avatarUrl?: string; name?: string; _id?: string };
+  otherUser?: {
+    avatarUrl?: string;
+    name?: string;
+    _id?: string;
+    verified?: boolean;
+    identityVerified?: boolean;
+  };
   isOnline: boolean;
   hasService: boolean;
   chatId?: string;
@@ -63,6 +69,14 @@ function ChatHeader({ isMobile, otherUser, isOnline, chatId }: ChatHeaderProps) 
           </span>
           {isOnline && (
             <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-white bg-[#2E6641]" />
+          )}
+          {(otherUser?.identityVerified || otherUser?.verified) && (
+            <span
+              title="Verifisert bruker"
+              className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full border-2 border-white bg-[#2E6641] text-white"
+            >
+              <ShieldCheck size={8} strokeWidth={2.6} />
+            </span>
           )}
         </span>
 

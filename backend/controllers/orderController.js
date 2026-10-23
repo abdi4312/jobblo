@@ -10,6 +10,10 @@ const User = require('../models/User');
 const { calculatePointsFromService } = require('../utils/points');
 const { notify } = require('../services/notifications');
 const { ensureProviderConnectReady } = require('../middleware/requireProviderConnect');
+const {
+  consumeApplicationContact,
+  V2EntitlementError,
+} = require('../services/subscriptions/v2Entitlements');
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -122,20 +126,40 @@ exports.createJobRequest = async (req, res) => {
       });
     }
 
-    const jobRequest = await JobRequest.create({
-      serviceId,
-      customerId,
-      providerId,
-      ...(message && { message }),
-    });
-
-    // --- INCREMENT CONTACT USAGE ---
-    if (!req.isFreeContact) {
-      await User.findByIdAndUpdate(customerId, {
-        $inc: { monthlyContactUsage: 1 },
+    const jobRequestId = new mongoose.Types.ObjectId();
+    let jobRequest;
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        await consumeApplicationContact({
+          userId: customerId,
+          jobRequestId,
+          servicePrice: service.price,
+          serviceId: service._id,
+        }, { session });
+        [jobRequest] = await JobRequest.create([{
+          _id: jobRequestId,
+          serviceId,
+          customerId,
+          providerId,
+          ...(message && { message }),
+        }], { session });
       });
+    } catch (err) {
+      if (err.code === 11000) {
+        return res.status(400).json({
+          error: 'Du har allerede sendt en forespørsel på dette oppdraget',
+        });
+      }
+      if (err instanceof V2EntitlementError) throw err;
+      console.error('[Orders] atomic contact application failed:', err);
+      return res.status(503).json({
+        code: 'APPLICATION_CREATION_UNAVAILABLE',
+        message: 'Could not safely create the application. Please retry.',
+      });
+    } finally {
+      await session.endSession();
     }
-    // -------------------------------
 
     await jobRequest.populate('serviceId');
     await jobRequest.populate('customerId', 'name');
@@ -197,6 +221,14 @@ exports.createJobRequest = async (req, res) => {
 
     res.status(201).json({ ...jobRequest.toObject(), chatId: chat._id });
   } catch (err) {
+    if (err instanceof V2EntitlementError) {
+      return res.status(err.status).json({
+        code: err.code,
+        message: err.message,
+        ...(err.extraContact && { extraContact: err.extraContact }),
+      });
+    }
+    console.error('[Orders] application creation failed:', err);
     res.status(500).json({ error: err.message });
   }
 };

@@ -1,0 +1,63 @@
+# docker-compose.yml — beginner friendly setup for the Jobblo backend
+# Run everything with:   docker compose up
+# Stop everything with:  Ctrl+C  (or: docker compose down)
+
+services:
+  # ---- The backend API ----
+  backend:
+    # Build the image using the Dockerfile inside the ./backend folder
+    build: ./backend
+
+    # Map your computer's port 5001 to the container's port 5001
+    ports:
+      - "5001:5001"
+
+    # Load your secrets/settings from backend/.env
+    env_file:
+      - ./backend/.env
+
+    # Talk to the MongoDB running on YOUR Windows machine (where your real
+    # "jobblo-dev" data lives). Inside a container, "localhost" means the
+    # container itself, so Docker gives your host machine this special name:
+    # host.docker.internal.
+    environment:
+      - MONGO_URI=mongodb://host.docker.internal:27017/jobblo-dev
+
+    # Live reload: share your backend code with the container so changes
+    # you make on your computer show up instantly. The node_modules line
+    # keeps the container's installed packages instead of your local ones.
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+    # Use nodemon so the server restarts automatically when you edit files.
+    command: npx nodemon server.js
+
+  # ---- The frontend (Vite + React) ----
+  frontend:
+    # Build the image using the Dockerfile inside the ./frontend folder
+    build: ./frontend
+
+    # Open the app at http://localhost:5173
+    ports:
+      - "5173:5173"
+
+    # Load frontend settings from frontend/.env
+    env_file:
+      - ./frontend/.env
+
+    # Inside Docker the backend is the "backend" service, not localhost.
+    # Vite's /api proxy uses this value (see vite.config.ts).
+    environment:
+      - VITE_PROXY_TARGET=http://backend:5001
+
+    # Live reload: share your frontend code with the container so edits
+    # show up instantly. The node_modules line keeps the container's
+    # installed packages instead of your local Windows ones.
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+    # Start the frontend after the backend is up.
+    depends_on:
+      - backend

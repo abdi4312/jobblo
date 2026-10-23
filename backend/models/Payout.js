@@ -61,6 +61,9 @@ const payoutSchema = new mongoose.Schema(
       required: true,
     },
     releasedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    // Set once when the provider's `earnings` counter is credited for this transfer, so
+    // every release path (approval, dispute, auto-release, retry) credits exactly once.
+    earningsCreditedAt: { type: Date, default: null },
 
     // Stripe Connect transfer
     stripeTransferId: { type: String, trim: true, index: true, unique: true, sparse: true },

@@ -118,6 +118,7 @@ export default function SettingsPage() {
 
     const changed: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(form)) {
+      if (key === 'currentPassword') continue;
       const isSame =
         Array.isArray(value) || Array.isArray(current[key])
           ? JSON.stringify(value) === JSON.stringify(current[key] ?? [])
@@ -129,8 +130,13 @@ export default function SettingsPage() {
       toast('Ingen endringer å lagre.');
       return;
     }
+    // The backend requires the current password to change the login e-mail.
+    if ('email' in changed) changed.currentPassword = form.currentPassword || '';
 
-    updateUser.mutate({ userId: user._id, data: changed });
+    updateUser.mutate(
+      { userId: user._id, data: changed },
+      { onSuccess: () => setForm((prev) => ({ ...prev, currentPassword: '' })) }
+    );
   };
 
   const handlePhotoSelect = () => {

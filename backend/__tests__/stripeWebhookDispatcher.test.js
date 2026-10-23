@@ -17,28 +17,28 @@ jest.mock('../services/stripe/eventLedger', () => ({
   markProcessed: jest.fn(),
   releaseClaim: jest.fn(),
 }));
-jest.mock('../services/stripe/provisioning', () => ({
-  provisionSubscriptionFromSession: jest.fn(),
-  provisionExtraContactFromSession: jest.fn(),
-  applyInvoicePaid: jest.fn(),
-  applyInvoicePaymentFailed: jest.fn(),
-  applySubscriptionUpdated: jest.fn(),
-  applySubscriptionDeleted: jest.fn(),
-}));
 jest.mock('../controllers/SafePayCheckoutController', () => ({
   confirmPaidSession: jest.fn(),
 }));
 jest.mock('../models/Order', () => ({ updateOne: jest.fn() }));
 jest.mock('../utils/errorLogger', () => ({ logApplicationError: jest.fn() }));
+jest.mock('../services/stripe/paymentLifecycle', () => ({
+  recordStripePaymentLifecycle: jest.fn(),
+  recordRejectedSafePayPayment: jest.fn(),
+}));
+jest.mock('../services/subscriptions/v2WebhookProcessor', () => ({
+  processVerifiedEvent: jest.fn(),
+}));
 
 const { getStripeConfiguration, getStripeForMode } = require('../config/stripe');
 const webhookReadiness = require('../services/stripe/webhookReadiness');
 const ledger = require('../services/stripe/eventLedger');
-const provisioning = require('../services/stripe/provisioning');
 const { confirmPaidSession } = require('../controllers/SafePayCheckoutController');
 const Order = require('../models/Order');
 const { logApplicationError } = require('../utils/errorLogger');
-const { stripeWebhook } = require('../services/stripe/webhookDispatcher');
+const paymentLifecycle = require('../services/stripe/paymentLifecycle');
+const { stripeWebhook, ORDER_EVENT_TYPES } = require('../services/stripe/webhookDispatcher');
+const { processVerifiedEvent } = require('../services/subscriptions/v2WebhookProcessor');
 const Stripe = require('stripe');
 
 function makeRes() {
@@ -102,7 +102,9 @@ beforeEach(() => {
   ledger.claimEvent.mockResolvedValue({ claimed: true });
   ledger.markProcessed.mockResolvedValue();
   ledger.releaseClaim.mockResolvedValue();
+  paymentLifecycle.recordRejectedSafePayPayment.mockResolvedValue({ _id: 'incident_1' });
   confirmPaidSession.mockResolvedValue({ ok: true });
+  processVerifiedEvent.mockResolvedValue({ handled: 'subscription_activated' });
 });
 
 describe('signature verification', () => {
@@ -255,8 +257,35 @@ describe('event-level idempotency', () => {
     );
   });
 
-  it('does not mark an unconfirmed SafePay webhook as processed', async () => {
+  it('acknowledges a permanent verification failure only after recording manual review', async () => {
     confirmPaidSession.mockResolvedValue({ ok: false, reason: 'amount_mismatch' });
+    const session = { ...paidSafePaySession, amount_total: 5000 };
+    mockStripeConstructing({
+      id: 'evt_rejected_safepay',
+      type: 'checkout.session.completed',
+      data: { object: session },
+    });
+
+    const res = makeRes();
+    await stripeWebhook(makeReq(), res);
+
+    expect(paymentLifecycle.recordRejectedSafePayPayment).toHaveBeenCalledWith({
+      event: expect.objectContaining({ id: 'evt_rejected_safepay' }),
+      session,
+      reason: 'amount_mismatch',
+    });
+    expect(ledger.markProcessed).toHaveBeenCalledWith('evt_rejected_safepay');
+    expect(ledger.releaseClaim).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      received: true,
+      handled: 'safepay_manual_review',
+    });
+  });
+
+  it('keeps the event retryable if manual-review incident persistence fails', async () => {
+    confirmPaidSession.mockResolvedValue({ ok: false, reason: 'amount_mismatch' });
+    paymentLifecycle.recordRejectedSafePayPayment.mockRejectedValue(new Error('mongo is down'));
     mockStripeConstructing({
       id: 'evt_rejected_safepay',
       type: 'checkout.session.completed',
@@ -266,18 +295,31 @@ describe('event-level idempotency', () => {
     const res = makeRes();
     await stripeWebhook(makeReq(), res);
 
-    expect(res.statusCode).toBe(500);
     expect(ledger.markProcessed).not.toHaveBeenCalled();
-    expect(ledger.releaseClaim).toHaveBeenCalledWith(
-      'evt_rejected_safepay',
-      expect.any(Error)
-    );
+    expect(ledger.releaseClaim).toHaveBeenCalledWith('evt_rejected_safepay', expect.any(Error));
+    expect(res.statusCode).toBe(500);
+  });
+
+  it('retries an unknown confirmation result instead of acknowledging it', async () => {
+    confirmPaidSession.mockResolvedValue({ ok: false, reason: 'unexpected_result' });
+    mockStripeConstructing({
+      id: 'evt_unknown_safepay',
+      type: 'checkout.session.completed',
+      data: { object: paidSafePaySession },
+    });
+
+    const res = makeRes();
+    await stripeWebhook(makeReq(), res);
+
+    expect(paymentLifecycle.recordRejectedSafePayPayment).not.toHaveBeenCalled();
+    expect(ledger.markProcessed).not.toHaveBeenCalled();
+    expect(ledger.releaseClaim).toHaveBeenCalledWith('evt_unknown_safepay', expect.any(Error));
+    expect(res.statusCode).toBe(500);
   });
 });
 
-describe('routing by session type — the tab-close path', () => {
-  it('provisions a SUBSCRIPTION from the webhook alone', async () => {
-    provisioning.provisionSubscriptionFromSession.mockResolvedValue({ ok: true });
+describe('routing by session type', () => {
+  it('acknowledges a legacy subscription checkout without provisioning it', async () => {
     mockStripeConstructing({
       id: 'evt_sub',
       type: 'checkout.session.completed',
@@ -291,40 +333,16 @@ describe('routing by session type — the tab-close path', () => {
       },
     });
 
-    await stripeWebhook(makeReq(), makeRes());
-
-    expect(provisioning.provisionSubscriptionFromSession).toHaveBeenCalledTimes(1);
-    expect(confirmPaidSession).not.toHaveBeenCalled();
-  });
-
-  it('does not mark a rejected subscription event processed', async () => {
-    provisioning.provisionSubscriptionFromSession.mockResolvedValue({
-      ok: false,
-      reason: 'plan_metadata_mismatch',
-    });
-    mockStripeConstructing({
-      id: 'evt_sub_rejected',
-      type: 'checkout.session.completed',
-      data: {
-        object: {
-          id: 'cs_sub_rejected',
-          mode: 'subscription',
-          payment_status: 'paid',
-          metadata: { userId: 'u1', type: 'subscription' },
-        },
-      },
-    });
-
     const res = makeRes();
     await stripeWebhook(makeReq(), res);
 
-    expect(res.statusCode).toBe(500);
-    expect(ledger.markProcessed).not.toHaveBeenCalled();
-    expect(ledger.releaseClaim).toHaveBeenCalledWith('evt_sub_rejected', expect.any(Error));
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ received: true, handled: 'subscription_rebuild_in_progress' });
+    expect(confirmPaidSession).not.toHaveBeenCalled();
+    expect(ledger.markProcessed).toHaveBeenCalledWith('evt_sub');
   });
 
-  it('provisions an EXTRA CONTACT from the webhook alone', async () => {
-    provisioning.provisionExtraContactFromSession.mockResolvedValue({ ok: true });
+  it('routes an extra-contact checkout to the extra-contact handler, never to SafePay', async () => {
     mockStripeConstructing({
       id: 'evt_extra',
       type: 'checkout.session.completed',
@@ -338,36 +356,40 @@ describe('routing by session type — the tab-close path', () => {
       },
     });
 
-    await stripeWebhook(makeReq(), makeRes());
+    const res = makeRes();
+    await stripeWebhook(makeReq(), res);
 
-    expect(provisioning.provisionExtraContactFromSession).toHaveBeenCalledTimes(1);
+    expect(res.statusCode).toBe(200);
+    // No purchaseId in this metadata: the handler refuses it instead of confirming anything.
+    expect(res.body).toEqual({ received: true, handled: 'extra_contact_invalid_metadata' });
     expect(confirmPaidSession).not.toHaveBeenCalled();
   });
 
-  it('does not mark a rejected extra-contact event processed', async () => {
-    provisioning.provisionExtraContactFromSession.mockResolvedValue({
-      ok: false,
-      reason: 'missing_metadata',
-    });
+  it.each([
+    'checkout.session.completed',
+    'checkout.session.async_payment_succeeded',
+    'checkout.session.async_payment_failed',
+    'checkout.session.expired',
+  ])('does not process a legacy subscription %s event', async (type) => {
+    const session = {
+      id: `cs_${type}`,
+      mode: 'subscription',
+      payment_status: 'paid',
+      metadata: { userId: 'u1', type: 'subscription' },
+    };
     mockStripeConstructing({
-      id: 'evt_extra_rejected',
-      type: 'checkout.session.completed',
-      data: {
-        object: {
-          id: 'cs_extra_rejected',
-          mode: 'payment',
-          payment_status: 'paid',
-          metadata: { userId: 'u1', type: 'extra_contact' },
-        },
-      },
+      id: `evt_${type}`,
+      type,
+      data: { object: session },
     });
 
     const res = makeRes();
     await stripeWebhook(makeReq(), res);
 
-    expect(res.statusCode).toBe(500);
-    expect(ledger.markProcessed).not.toHaveBeenCalled();
-    expect(ledger.releaseClaim).toHaveBeenCalledWith('evt_extra_rejected', expect.any(Error));
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ received: true, handled: 'subscription_rebuild_in_progress' });
+    expect(confirmPaidSession).not.toHaveBeenCalled();
+    expect(Order.updateOne).not.toHaveBeenCalled();
   });
 
   it('routes a SafePay session to confirmPaidSession', async () => {
@@ -394,68 +416,131 @@ describe('routing by session type — the tab-close path', () => {
     expect(confirmPaidSession).not.toHaveBeenCalled();
   });
 
-  it('routes a zero-due membership session to provisioning', async () => {
-    provisioning.provisionSubscriptionFromSession.mockResolvedValue({ ok: true });
-    mockStripeConstructing({
-      id: 'evt_free_sub',
-      type: 'checkout.session.completed',
-      data: {
-        object: {
-          id: 'cs_free_sub',
-          mode: 'subscription',
-          payment_status: 'no_payment_required',
-          metadata: { userId: 'u1', type: 'subscription' },
-        },
-      },
-    });
+});
 
-    await stripeWebhook(makeReq(), makeRes());
+describe('legacy subscription webhook events', () => {
+  it.each([
+    'invoice.paid',
+    'invoice.payment_failed',
+    'customer.subscription.created',
+    'customer.subscription.updated',
+    'customer.subscription.deleted',
+  ])('does not claim or reconcile %s', async (type) => {
+    expect(ORDER_EVENT_TYPES.has(type)).toBe(true);
+    mockStripeConstructing({ id: `evt_${type}`, type, data: { object: { id: 'sub_1' } } });
 
-    expect(provisioning.provisionSubscriptionFromSession).toHaveBeenCalledTimes(1);
-    expect(confirmPaidSession).not.toHaveBeenCalled();
+    const res = makeRes();
+    await stripeWebhook(makeReq(), res);
+
+    expect(ledger.claimEvent).toHaveBeenCalled();
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ received: true, handled: 'subscription_rebuild_in_progress' });
   });
 });
 
-describe('subscription lifecycle events', () => {
-  const cases = [
-    ['invoice.paid', 'applyInvoicePaid'],
-    ['invoice.payment_failed', 'applyInvoicePaymentFailed'],
-    ['customer.subscription.updated', 'applySubscriptionUpdated'],
-    ['customer.subscription.deleted', 'applySubscriptionDeleted'],
-  ];
-
-  it.each(cases)('handles %s', async (type, handlerName) => {
-    provisioning[handlerName].mockResolvedValue({ ok: true });
-    mockStripeConstructing({ id: `evt_${type}`, type, data: { object: { id: 'obj_1' } } });
-
-    await stripeWebhook(makeReq(), makeRes());
-
-    expect(provisioning[handlerName]).toHaveBeenCalledTimes(1);
-  });
-
-  it('includes the provisioning failure reason when a subscription update cannot reconcile', async () => {
-    provisioning.applySubscriptionUpdated.mockResolvedValue({
-      ok: false,
-      reason: 'subscription_not_found',
-    });
+describe('Subscription V2 webhook routing', () => {
+  it('routes only V2-marked subscription checkout events to the V2 processor', async () => {
+    const session = {
+      id: 'cs_v2',
+      mode: 'subscription',
+      status: 'complete',
+      payment_status: 'paid',
+      metadata: { subscriptionV2: 'true', userId: 'u1', planId: 'p1', operationId: 'op1' },
+    };
     mockStripeConstructing({
-      id: 'evt_subscription_missing',
-      type: 'customer.subscription.updated',
-      data: { object: { id: 'sub_missing' } },
+      id: 'evt_v2',
+      type: 'checkout.session.completed',
+      data: { object: session },
     });
 
     const res = makeRes();
     await stripeWebhook(makeReq(), res);
 
-    expect(res.statusCode).toBe(500);
-    expect(ledger.releaseClaim).toHaveBeenCalledWith(
-      'evt_subscription_missing',
-      expect.objectContaining({
-        message: 'Subscription update could not be reconciled: subscription_not_found',
-      })
+    expect(processVerifiedEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'evt_v2' }),
+      'test',
+      expect.objectContaining({ webhooks: expect.any(Object) })
     );
+    expect(res.body).toEqual({ received: true, handled: 'subscription_activated' });
+    expect(confirmPaidSession).not.toHaveBeenCalled();
   });
 
+  it('routes V2 invoice events while safely ignoring V1 invoice events', async () => {
+    mockStripeConstructing({
+      id: 'evt_invoice_v2',
+      type: 'invoice.paid',
+      data: {
+        object: {
+          id: 'in_v2',
+          parent: {
+            subscription_details: {
+              metadata: { subscriptionV2: 'true' },
+            },
+          },
+        },
+      },
+    });
+    await stripeWebhook(makeReq(), makeRes());
+    expect(processVerifiedEvent).toHaveBeenCalledTimes(1);
+
+    processVerifiedEvent.mockClear();
+    mockStripeConstructing({
+      id: 'evt_invoice_v1',
+      type: 'invoice.paid',
+      data: { object: { id: 'in_v1', parent: { subscription_details: { metadata: {} } } } },
+    });
+    const res = makeRes();
+    await stripeWebhook(makeReq(), res);
+    expect(processVerifiedEvent).not.toHaveBeenCalled();
+    expect(res.body).toEqual({
+      received: true,
+      handled: 'subscription_rebuild_in_progress',
+    });
+  });
+
+  it.each([
+    'subscription_schedule.created',
+    'subscription_schedule.updated',
+    'subscription_schedule.canceled',
+    'subscription_schedule.released',
+    'subscription_schedule.aborted',
+  ])('routes V2 %s events and ignores unmarked schedules', async (type) => {
+    const schedule = {
+      id: 'sub_sched_v2',
+      metadata: { subscriptionV2: 'true' },
+    };
+    mockStripeConstructing({
+      id: `evt_${type}_v2`,
+      type,
+      data: { object: schedule },
+    });
+
+    const v2Response = makeRes();
+    await stripeWebhook(makeReq(), v2Response);
+    expect(ORDER_EVENT_TYPES.has(type)).toBe(true);
+    expect(processVerifiedEvent).toHaveBeenCalledTimes(1);
+
+    processVerifiedEvent.mockClear();
+    mockStripeConstructing({
+      id: `evt_${type}_legacy`,
+      type,
+      data: { object: { id: 'sub_sched_legacy', metadata: {} } },
+    });
+    const legacyResponse = makeRes();
+    await stripeWebhook(makeReq(), legacyResponse);
+    if (type === 'subscription_schedule.created') {
+      expect(processVerifiedEvent).toHaveBeenCalledTimes(1);
+    } else {
+      expect(processVerifiedEvent).not.toHaveBeenCalled();
+      expect(legacyResponse.body).toEqual({
+        received: true,
+        handled: 'subscription_event_ignored',
+      });
+    }
+  });
+});
+
+describe('SafePay event routing', () => {
   it('marks the order expired on checkout.session.expired', async () => {
     Order.updateOne.mockResolvedValue({});
     mockStripeConstructing({
@@ -471,6 +556,38 @@ describe('subscription lifecycle events', () => {
       { $set: { checkoutSessionStatus: 'expired' } }
     );
   });
+
+  it('marks a failed delayed SafePay payment as failed, never as paid', async () => {
+    Order.updateOne.mockResolvedValue({});
+    mockStripeConstructing({
+      id: 'evt_async_failed',
+      type: 'checkout.session.async_payment_failed',
+      data: { object: { id: 'cs_async', metadata: { type: 'safepay_payment', orderId: 'o1' } } },
+    });
+
+    await stripeWebhook(makeReq(), makeRes());
+
+    expect(Order.updateOne).toHaveBeenCalledTimes(1);
+    const [filter, update] = Order.updateOne.mock.calls[0];
+    expect(filter).toEqual(expect.objectContaining({ checkoutSessionId: 'cs_async', paymentStatus: { $ne: 'paid' } }));
+    expect(update).toEqual({ $set: { checkoutSessionStatus: 'failed' } });
+    expect(JSON.stringify(update)).not.toMatch(/"paid"/);
+  });
+
+  it.each(['invoice.voided', 'invoice.updated'])(
+    'acks %s for a V2 subscription invoice without processing it (no paid entitlement)',
+    async (type) => {
+      mockStripeConstructing({
+        id: `evt_${type}`,
+        type,
+        data: { object: { id: 'in_g', status: 'void', parent: { subscription_details: { subscription: 'sub_g', metadata: { subscriptionV2: 'true' } } } } },
+      });
+      const res = makeRes();
+      await stripeWebhook(makeReq(), res);
+      expect(ledger.claimEvent).not.toHaveBeenCalled();
+      expect(res.body).toEqual(expect.objectContaining({ ignored: true }));
+    }
+  );
 
   it('acks an event type it does not handle without claiming a ledger row', async () => {
     mockStripeConstructing({ id: 'evt_other', type: 'charge.succeeded', data: { object: {} } });

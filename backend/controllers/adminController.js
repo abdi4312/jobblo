@@ -258,15 +258,11 @@ exports.deleteService = async (req, res) => {
     const service = await Service.findById(id);
     if (!service) return res.status(404).json({ error: 'Service not found' });
 
-    // ⭐ DELETE ALL IMAGES FROM AZURE
-    if (service.imageMetadata && service.imageMetadata.length > 0) {
-      const { deleteFromAzure } = require('../utils/azureUpload');
-      for (const meta of service.imageMetadata) {
-        if (meta.blobName) await deleteFromAzure(meta.blobName);
-      }
-    }
-
     await service.deleteOne();
+
+    // Verified per blob — persisted listing metadata may have been client-forged.
+    const { deleteListingImage } = require('../utils/azureUpload');
+    for (const meta of service.imageMetadata || []) await deleteListingImage(meta, service._id);
 
     res.json({ message: 'Service deleted' });
   } catch (err) {

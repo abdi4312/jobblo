@@ -208,6 +208,58 @@ export const SafePayHistoryView = () => {
     return { key: 'approval', label: 'Venter på godkjenning', tone: 'text-gray-600' };
   };
 
+  // Customer view of a refund in three steps: paid → refund started → refunded (or failed).
+  const renderRefundSteps = (transaction: any) => {
+    const status = transaction.refundStatus;
+    if (transaction.isProvider || !status || status === 'none') return null;
+    const done = status === 'succeeded';
+    const failed = status === 'failed';
+    const steps = [
+      { label: 'Betaling mottatt', state: 'done', date: transaction.paymentDate },
+      { label: 'Refusjon startet', state: 'done', date: null },
+      {
+        label: done ? 'Refundert til kortet ditt' : failed ? 'Refusjon mislyktes' : 'Venter på bekreftelse fra Stripe',
+        state: done ? 'done' : failed ? 'failed' : 'current',
+        date: done ? transaction.refundCompletedAt : failed ? transaction.refundFailedAt : null,
+      },
+    ];
+    return (
+      <div data-testid="refund-steps" className="mb-4 rounded-xl border border-gray-200 bg-white p-4">
+        <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-gray-600">Refusjonsstatus</h5>
+        <ol className="space-y-3">
+          {steps.map((step, i) => (
+            <li key={step.label} className="flex items-start gap-3">
+              <span
+                className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-white ${
+                  step.state === 'done' ? 'bg-[#2E6641]' : step.state === 'failed' ? 'bg-red-600' : 'bg-amber-500'
+                }`}
+                aria-hidden="true"
+              >
+                {step.state === 'done' ? <CheckCircle2 size={14} /> : step.state === 'failed' ? <XCircle size={14} /> : <Clock size={14} />}
+              </span>
+              <div>
+                <p className="text-[14px] font-medium text-gray-900">
+                  <span className="sr-only">Steg {i + 1}: </span>
+                  {step.label}
+                </p>
+                {step.date && <p className="text-[12px] text-gray-500">{formatDate(step.date)}</p>}
+                {step.state === 'current' && (
+                  <p className="text-[12px] text-amber-700">Dette tar vanligvis noen minutter.</p>
+                )}
+                {step.state === 'done' && i === 2 && (
+                  <p className="text-[12px] text-gray-500">Det kan ta noen virkedager før beløpet vises på kontoen din.</p>
+                )}
+                {step.state === 'failed' && (
+                  <p className="text-[12px] text-red-700">Saken er sendt til manuell behandling. Kontakt kundesenteret ved spørsmål.</p>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    );
+  };
+
   const toggleExpand = (id: string) => {
     setExpandedTransaction(expandedTransaction === id ? null : id);
   };
@@ -466,6 +518,7 @@ export const SafePayHistoryView = () => {
               {/* Expanded details */}
               {expandedTransaction === transaction.id && (
                 <div className="border-t border-gray-100 p-5 bg-gray-50">
+                  {renderRefundSteps(transaction)}
                   <div className="space-y-3">
                     <h5 className="text-xs font-bold uppercase tracking-wide text-gray-600">Betalingsdetaljer</h5>
                     <div className="flex justify-between text-[14px]">
@@ -708,7 +761,7 @@ export const SafePayHistoryView = () => {
                           <span className="text-gray-500">Årsak</span>
                           <span className="text-gray-900 font-medium">
                             {(transaction.cancellationReason || transaction.refundReason) === 'provider_stripe_connect_timeout'
-                              ? 'Utføreren fullførte ikke Stripe Connect-oppsettet innen fristen'
+                              ? 'Utføreren startet ikke oppdraget innen fristen'
                               : transaction.cancellationReason || transaction.refundReason}
                           </span>
                         </div>

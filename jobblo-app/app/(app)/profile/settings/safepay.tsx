@@ -387,7 +387,7 @@ function Transaction({ transaction }: { transaction: SafePayHistoryTransaction }
               label="Årsak"
               value={
                 (transaction.cancellationReason || transaction.refundReason) === 'provider_stripe_connect_timeout'
-                  ? 'Utføreren fullførte ikke Stripe Connect-oppsettet innen fristen'
+                  ? 'Utføreren startet ikke oppdraget innen fristen'
                   : transaction.cancellationReason || transaction.refundReason || ''
               }
             />

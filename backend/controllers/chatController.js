@@ -1,14 +1,14 @@
 const User = require('../models/User');
 const { ensureProviderConnectReady } = require('../middleware/requireProviderConnect');
+const { acquireServiceContractLock } = require('../services/order/contractLock');
 const Chat = require('../models/ChatMessage');
 const Order = require('../models/Order');
 const Service = require('../models/Service');
 const Dispute = require('../models/Dispute');
 const JobRequest = require('../models/JobRequest');
-const { getStripe } = require('../config/stripe');
-const { resolveStripeCustomer } = require('../services/stripe/customers');
 const mongoose = require('mongoose');
 const { notify } = require('../services/notifications');
+const { identityVerificationSummary } = require('../utils/userProjections');
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -200,13 +200,19 @@ exports.getChatById = async (req, res) => {
 
     const chat = await Chat.findById(chatId)
       .select({ messages: { $slice: [-(offset + limit), limit] } })
-      .populate('clientId', 'name avatarUrl')
-      .populate('providerId', 'name avatarUrl')
+      .populate('clientId', 'name avatarUrl verified identityVerification')
+      .populate('providerId', 'name avatarUrl verified identityVerification')
       .populate('serviceId', 'title description images price categories userId')
       .populate('orderId')
       .populate('messages.senderId', 'name avatarUrl');
 
     const payload = chat.toObject();
+    // Header badge only needs the derived flag; never ship the raw BankID subdocument.
+    for (const party of [payload.clientId, payload.providerId]) {
+      if (!party) continue;
+      party.identityVerified = identityVerificationSummary(party).identityVerified;
+      delete party.identityVerification;
+    }
     payload.messagePage = {
       total: totalMessages,
       limit,
@@ -264,7 +270,6 @@ exports.sendMessage = async (req, res) => {
     };
 
     chat.messages.push(message);
-    const savedMessage = chat.messages[chat.messages.length - 1];
     chat.lastMessage = trimmed;
     // A new message brings the conversation back for anyone who had hidden it —
     // otherwise a reply landed in an inbox the recipient could no longer see, and the
@@ -273,8 +278,10 @@ exports.sendMessage = async (req, res) => {
 
     await chat.save();
 
-    const messagePayload =
-      typeof savedMessage.toObject === 'function' ? savedMessage.toObject() : savedMessage;
+    const savedMessage = chat.messages[chat.messages.length - 1];
+    const messagePayload = typeof savedMessage.toObject === 'function'
+      ? savedMessage.toObject()
+      : savedMessage;
 
     // Emit socket event to notify users in the chat room
     const io = req.app.get('io');
@@ -284,9 +291,6 @@ exports.sendMessage = async (req, res) => {
         message: messagePayload,
       });
     }
-
-    const recipientId =
-      chat.clientId.toString() === id ? chat.providerId.toString() : chat.clientId.toString();
 
     res.status(201).json(messagePayload);
   } catch (error) {
@@ -331,7 +335,6 @@ exports.deleteForMe = async (req, res) => {
  */
 exports.createPaymentSession = async (req, res) => {
   try {
-    const stripe = await getStripe();
     const { id } = req.user;
     const { chatId } = req.params;
 
@@ -345,87 +348,23 @@ exports.createPaymentSession = async (req, res) => {
     if (chat.clientId._id.toString() !== id && chat.providerId._id.toString() !== id)
       return res.status(403).json({ error: 'Not allowed' });
 
-    // Check if there's an existing order
-    let order = chat.orderId;
-    if (!order) {
+    if (!chat.orderId) {
       return res
         .status(400)
         .json({ error: 'No order exists for this chat. Please create a contract first.' });
     }
 
-    // Only the payer may start the checkout.
-    //
-    // The participant check above let the WORKER open a payment session. The session's
-    // metadata.userId then carried the worker's id, and confirmPaidSession rejects a
-    // session whose customer does not match the order (session_customer_mismatch) — so
-    // the card was charged, Stripe held the money, and the order was never marked paid
-    // and never refunded. Silent loss with no recovery path.
-    if (String(order.customerId) !== String(id)) {
-      return res.status(403).json({
-        error: 'Bare oppdragsgiveren kan betale for dette oppdraget.',
-        code: 'not_the_payer',
-      });
-    }
-
-    // Do not open a second checkout for an order that is already paid or under way.
-    // createSafePaySession guards this; this route did not, so paying twice was one
-    // button press away and the second payment was silently dropped by
-    // confirmPaidSession's already-confirmed branch.
-    const PAYABLE_STATUSES = ['awaiting_payment', 'pending', 'accepted'];
-    if (order.paymentStatus === 'paid' || !PAYABLE_STATUSES.includes(order.status)) {
-      return res.status(409).json({
-        error: 'Dette oppdraget er allerede betalt eller i gang.',
-        code: 'order_not_payable',
-      });
-    }
-
-    // Create Stripe checkout session
-    const fee = Math.round((chat.agreedPrice || order.agreedPrice || chat.serviceId.price) * 0.03);
-    const total = (chat.agreedPrice || order.agreedPrice || chat.serviceId.price) + fee;
-
-    if (total < 3) {
-      return res.status(400).json({ error: 'Minimum amount for payment is 3 kr including fee.' });
-    }
-
-    const frontendUrl = process.env.FRONTEND_URL?.replace(/\/$/, '') || 'http://localhost:5174';
-    const user = await User.findById(id);
-
-    // Was passing user.stripeCustomerId straight through — undefined for anyone who
-    // had never bought before, and a foreign-mode id for anyone who had. Both reach
-    // Stripe as an error rather than a checkout page.
-    const stripeCustomerId = await resolveStripeCustomer(stripe, user);
-
-    const session = await stripe.checkout.sessions.create({
-      customer: stripeCustomerId,
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'nok',
-            product_data: {
-              name: `SafePay: ${chat.serviceId.title}`,
-              description: `Chat: ${chat._id.toString().substring(0, 8).toUpperCase()}`,
-            },
-            unit_amount: Math.round(total * 100),
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      success_url: `${frontendUrl}/safepay/success?session_id={CHECKOUT_SESSION_ID}&chatId=${chatId}`,
-      cancel_url: `${frontendUrl}/chats/${chatId}`,
-      metadata: {
-        userId: id,
-        chatId: chatId.toString(),
-        orderId: order._id.toString(),
-        type: 'safepay_payment',
-      },
-    });
-
-    res.json({ url: session.url });
+    // This route used to build its own Stripe session without saving the session id on
+    // the order or using an idempotency key. The webhook then rejected every such payment
+    // as checkout_session_mismatch (card charged, order never paid), and the failing
+    // retries marked the webhook unhealthy, blocking every SafePay checkout.
+    // createSafePaySession owns payer, status, amount and session bookkeeping.
+    const { createSafePaySession } = require('./SafePayCheckoutController');
+    req.body = { orderId: String(chat.orderId._id || chat.orderId) };
+    return createSafePaySession(req, res);
   } catch (error) {
     console.error('Error creating payment session:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Kunne ikke starte betalingen' });
   }
 };
 
@@ -463,78 +402,90 @@ exports.createContract = async (req, res) => {
       return res.status(400).json({ error: 'Contract already exists for this chat' });
     }
 
-    // The same "any order at all" check safepayController makes, for the same reason:
-    // without it the two contract paths can both produce an order for one service.
-    const blockingOrder = await Order.findOne({
-      serviceId: chat.serviceId._id,
-      status: {
-        $in: [
-          'awaiting_payment',
-          'paid',
-          'in_progress',
-          'ready_for_review',
-          'disputed',
-          'completed',
-        ],
-      },
-    });
-    if (blockingOrder) {
-      return res.status(400).json({ error: 'Kontrakt finnes allerede for dette oppdraget' });
+    // Held across the check below and order.save(): two concurrent awards (this path or
+    // safepayController's) both saw "no order" and created two contracts for one job.
+    const lock = await acquireServiceContractLock(chat.serviceId._id);
+    if (!lock) {
+      return res.status(409).json({ error: 'Kontrakten opprettes allerede. Prøv igjen om litt.' });
     }
-
-    // Create order (contract)
-    const checklist = (chat.serviceId.checklist || []).map((item) => ({
-      id: item.id,
-      text: item.text,
-      checked: false,
-    }));
-
-    // Price comes from the negotiated value on the chat or the listing — never
-    // straight from this request body. `agreedPrice` was accepted verbatim, so
-    // whoever called this endpoint set the contract price unilaterally.
-    const price = chat.agreedPrice || chat.serviceId.price;
-
-    // Who pays and who gets paid is decided by the SERVICE, not by the chat slots.
-    //
-    // These used to be `chat.clientId` → customerId and `chat.providerId` → providerId.
-    // A chat created by the applicant applying stores { clientId: applicant,
-    // providerId: owner }, so creating the contract from that conversation produced an
-    // order with the applicant as the payer and the owner as the payee — the money
-    // pointing the wrong way. The owner sees the "Opprett kontrakt" button in either
-    // conversation (it keys off service ownership), so that path was reachable.
-    //
-    // The job owner always pays; the other participant always does the work. This
-    // matches safepayController.createContract, which is the primary award path.
-    const serviceOwnerId = String(chat.serviceId.userId);
-    const participants = [String(chat.clientId._id), String(chat.providerId._id)];
-    const workerId = participants.find((p) => p !== serviceOwnerId);
-
-    if (!workerId) {
-      return res.status(400).json({ error: 'Fant ikke motparten i denne samtalen.' });
-    }
-
-    if (!(await ensureProviderConnectReady(req, res, workerId))) return;
-
-    const order = new Order({
-      chatId: chat._id,
-      serviceId: chat.serviceId._id,
-      customerId: serviceOwnerId,
-      providerId: workerId,
-      status: 'awaiting_payment',
-      initialPrice: chat.serviceId.price,
-      agreedPrice: price,
-      checklist,
-      history: [
-        {
-          action: 'contract_created',
-          userId: id,
-          timestamp: new Date(),
-          data: { message: 'SafePay contract created' },
+    let order;
+    let price;
+    try {
+      // The same "any order at all" check safepayController makes, for the same reason:
+      // without it the two contract paths can both produce an order for one service.
+      const blockingOrder = await Order.findOne({
+        serviceId: chat.serviceId._id,
+        status: {
+          $in: [
+            'awaiting_payment',
+            'paid',
+            'in_progress',
+            'ready_for_review',
+            'disputed',
+            'completed',
+          ],
         },
-      ],
-    });
+      });
+      if (blockingOrder) {
+        return res.status(400).json({ error: 'Kontrakt finnes allerede for dette oppdraget' });
+      }
 
-    await order.save();
+      // Create order (contract)
+      const checklist = (chat.serviceId.checklist || []).map((item) => ({
+        id: item.id,
+        text: item.text,
+        checked: false,
+      }));
+
+      // Price comes from the negotiated value on the chat or the listing — never
+      // straight from this request body. `agreedPrice` was accepted verbatim, so
+      // whoever called this endpoint set the contract price unilaterally.
+      price = chat.agreedPrice || chat.serviceId.price;
+
+      // Who pays and who gets paid is decided by the SERVICE, not by the chat slots.
+      //
+      // These used to be `chat.clientId` → customerId and `chat.providerId` → providerId.
+      // A chat created by the applicant applying stores { clientId: applicant,
+      // providerId: owner }, so creating the contract from that conversation produced an
+      // order with the applicant as the payer and the owner as the payee — the money
+      // pointing the wrong way. The owner sees the "Opprett kontrakt" button in either
+      // conversation (it keys off service ownership), so that path was reachable.
+      //
+      // The job owner always pays; the other participant always does the work. This
+      // matches safepayController.createContract, which is the primary award path.
+      const serviceOwnerId = String(chat.serviceId.userId);
+      const participants = [String(chat.clientId._id), String(chat.providerId._id)];
+      const workerId = participants.find((p) => p !== serviceOwnerId);
+
+      if (!workerId) {
+        return res.status(400).json({ error: 'Fant ikke motparten i denne samtalen.' });
+      }
+
+      if (!(await ensureProviderConnectReady(req, res, workerId))) return;
+
+      order = new Order({
+        chatId: chat._id,
+        serviceId: chat.serviceId._id,
+        customerId: serviceOwnerId,
+        providerId: workerId,
+        status: 'awaiting_payment',
+        initialPrice: chat.serviceId.price,
+        agreedPrice: price,
+        checklist,
+        history: [
+          {
+            action: 'contract_created',
+            userId: id,
+            timestamp: new Date(),
+            data: { message: 'SafePay contract created' },
+          },
+        ],
+      });
+
+      await order.save();
+    } finally {
+      await lock.release();
+    }
 
     // Update chat
     chat.orderId = order._id;

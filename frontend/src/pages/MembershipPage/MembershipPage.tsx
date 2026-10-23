@@ -256,7 +256,7 @@ export default function MembershipPage() {
     !isCurrent &&
     hasPaidSubscription &&
     !mySub?.pendingPlan;
-  const { data: planChangePreview, isLoading: isPreviewLoading, isError: previewFailed } =
+  const { data: planChangePreview, isFetching: isPreviewFetching, isError: previewFailed } =
     useQuery<PlanChangePreview>({
       queryKey: ['subscription-plan-change-preview', mySub?.stripeSubscriptionId, selectedPlan?._id],
       queryFn: async () =>
@@ -268,6 +268,29 @@ export default function MembershipPage() {
       enabled: canChangePlan,
       retry: false,
     });
+  const summaryPayment = isFree
+    ? { label: 'Totalt', amount: '0 kr' }
+    : canCheckout
+      ? { label: 'Betaling', amount: 'Bekreftes i Stripe' }
+      : canChangePlan
+        ? {
+            label: 'Trekkes i dag',
+            amount:
+              isPreviewFetching || previewFailed || !planChangePreview
+                ? '—'
+                : planChangePreview.strategy === 'period_end'
+                  ? '0 kr'
+                  : planChangePreview.strategy === 'immediate'
+                    ? new Intl.NumberFormat('nb-NO', {
+                        style: 'currency',
+                        currency: planChangePreview.currency.toUpperCase(),
+                      }).format(planChangePreview.amountDueNow / 100)
+                    : '—',
+          }
+        : {
+            label: 'Pris per måned',
+            amount: `${selectedPlan?.price.toLocaleString('nb-NO') ?? '0'} kr`,
+          };
 
   const changePlanMutation = useMutation({
     mutationFn: async () =>
@@ -748,11 +771,9 @@ export default function MembershipPage() {
                       </span>
                     </div>
                     <div className="flex items-baseline justify-between gap-3 border-t border-[#E6E7E1] pt-3">
-                      <span className="font-semibold text-[#0B0B0B]">
-                        {isFree ? 'Totalt' : 'Trekkes i dag'}
-                      </span>
+                      <span className="font-semibold text-[#0B0B0B]">{summaryPayment.label}</span>
                       <span className="text-[1.25rem] font-bold tabular-nums tracking-[-0.03em] text-[#0B0B0B]">
-                        {isFree ? '0' : selectedPlan.price.toLocaleString('nb-NO')} kr
+                        {summaryPayment.amount}
                       </span>
                     </div>
                   </div>
@@ -791,7 +812,7 @@ export default function MembershipPage() {
                               ? 'Nedgradering ved neste periode'
                               : 'Oppgradering med forholdsmessig betaling'}
                           </p>
-                          {isPreviewLoading ? (
+                          {isPreviewFetching ? (
                             <p className="mt-2 text-[0.8125rem] text-[#63665F]">Beregner prisjustering…</p>
                           ) : previewFailed ? (
                             <p className="mt-2 text-[0.8125rem] text-amber-800">
@@ -815,7 +836,7 @@ export default function MembershipPage() {
                             type="button"
                             onClick={() => changePlanMutation.mutate()}
                             disabled={
-                              isPreviewLoading ||
+                              isPreviewFetching ||
                               previewFailed ||
                               !planChangePreview ||
                               planChangePreview.strategy === 'no_change' ||

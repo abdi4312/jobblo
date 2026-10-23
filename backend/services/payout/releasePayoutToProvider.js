@@ -35,6 +35,43 @@ function idOf(value) {
   return typeof value === 'string' ? value : value?.id || null;
 }
 
+/**
+ * Credit the provider's `earnings` counter once per transferred payout. Callers used to
+ * do this themselves, so approval and dispute release credited while auto-release and
+ * retryFailedPayouts (which also move real money) never did.
+ * ponytail: the claim and the $inc are two writes; a crash between them under-credits
+ * this display counter (never money). Upgrade: wrap both in a MongoDB transaction.
+ */
+async function creditProviderEarnings(payout) {
+  const claimed = await Payout.findOneAndUpdate(
+    { _id: payout._id, status: 'transferred', earningsCreditedAt: null },
+    { $set: { earningsCreditedAt: new Date() } }
+  );
+  if (claimed) {
+    await User.updateOne({ _id: payout.providerId }, { $inc: { earnings: payout.netProviderAmount } });
+  }
+}
+
+async function releaseOrderPayoutLock(orderId, payoutId) {
+  await Order.updateOne(
+    { _id: orderId, payoutLockId: String(payoutId) },
+    { $set: { payoutLockId: null, payoutLockedAt: null } }
+  );
+}
+
+/**
+ * Payment / order payment states a release may start from. An admin-approved dispute
+ * release necessarily starts from a `disputed` Payment (openDispute sets it) and, after
+ * a partial refund, a `partially_refunded` order — both used to be refused here, so no
+ * dispute outcome that pays the provider could ever pay out. The Stripe charge checks
+ * below (unrefunded remainder >= transfer, no Stripe chargeback) still bound the money.
+ */
+function releasablePaymentStates(releaseSource) {
+  return releaseSource === 'dispute_release'
+    ? { payment: ['completed', 'released', 'disputed'], order: ['paid', 'released', 'partially_refunded'] }
+    : { payment: ['completed', 'released'], order: ['paid', 'released'] };
+}
+
 async function verifiedSourceCharge({
   stripe,
   order,
@@ -42,15 +79,17 @@ async function verifiedSourceCharge({
   sessionId,
   paymentIntentId,
   maxTransferMinor,
+  releaseSource,
 }) {
+  const allowed = releasablePaymentStates(releaseSource);
   if (
     !payment ||
-    !['completed', 'released'].includes(payment.status) ||
+    !allowed.payment.includes(payment.status) ||
     !payment.stripeSessionId ||
     !payment.stripePaymentIntentId ||
     payment.stripeSessionId !== sessionId ||
     payment.stripePaymentIntentId !== paymentIntentId ||
-    !['paid', 'released'].includes(order.paymentStatus) ||
+    !allowed.order.includes(order.paymentStatus) ||
     order.checkoutSessionId !== sessionId ||
     order.paymentIntentId !== paymentIntentId
   ) {
@@ -180,7 +219,7 @@ async function releasePayoutToProvider(opts) {
     String(order.customerId) !== String(customerId) ||
     String(order.serviceId) !== String(serviceId) ||
     !['ready_for_review', 'completed', 'disputed'].includes(order.status) ||
-    !['paid', 'released'].includes(order.paymentStatus) ||
+    !releasablePaymentStates(releaseSource).order.includes(order.paymentStatus) ||
     grossAmount > Number(order.agreedPrice)
   ) {
     throw payoutError('PAYOUT_ORDER_INVALID', 'Order does not authorize this payout.');
@@ -243,12 +282,20 @@ async function releasePayoutToProvider(opts) {
       sessionId: stripeCheckoutSessionId,
       paymentIntentId: stripePaymentIntentId,
       maxTransferMinor: Math.round(netProviderAmount * 100),
+      releaseSource,
     });
   } catch (error) {
+    // No transfer was attempted, so this is a plain, retryable failure. It used to be
+    // recorded as `reconciliation_required` — the state for an UNKNOWN transfer outcome —
+    // which nothing retries, so one transient Stripe read error froze the payout for
+    // good. It also overwrote whatever record existed, including an in-flight
+    // `processing` attempt. Only a record with no transfer in play is touched now.
     const existing = await Payout.findOne({ orderId });
-    if (existing?.status !== 'transferred') {
+    if (!existing || ['pending', 'released_internal', 'failed'].includes(existing.status)) {
       await Payout.updateOne(
-        { orderId, status: { $ne: 'transferred' } },
+        existing
+          ? { _id: existing._id, status: existing.status }
+          : { orderId },
         {
           $set: {
             orderId,
@@ -262,7 +309,7 @@ async function releasePayoutToProvider(opts) {
             stripePaymentIntentId,
             stripeCheckoutSessionId,
             stripeLivemode: storedMode === 'live',
-            status: 'reconciliation_required',
+            status: 'failed',
             failureCode: error.code || 'PAYOUT_SOURCE_VERIFICATION_FAILED',
             failureReason: 'Source payment verification failed; no transfer was attempted.',
             idempotencyKey,
@@ -329,6 +376,28 @@ async function releasePayoutToProvider(opts) {
 
   const stripeConnectAccountId = provider[connectAccountField];
   if (!stripeConnectAccountId) {
+    // Callers such as customer approval have already completed the order. Leave a
+    // retryable record so retryFailedPayouts pays the provider once they connect —
+    // otherwise the order sat `completed` with the money held and nothing to retry.
+    if (!payout || ['pending', 'released_internal', 'failed'].includes(payout.status)) {
+      await Payout.updateOne(
+        payout ? { _id: payout._id, status: payout.status } : { orderId },
+        {
+          $set: {
+            orderId, providerId, customerId, serviceId,
+            grossAmount, platformFee, netProviderAmount, currency: 'NOK',
+            stripePaymentIntentId, stripeCheckoutSessionId,
+            stripeLivemode: source.livemode,
+            status: 'failed',
+            failureCode: 'PAYOUT_SETUP_REQUIRED',
+            failureReason: 'Provider has not connected a Stripe payout account; no transfer was attempted.',
+            idempotencyKey,
+          },
+          $setOnInsert: { releaseSource, releasedBy, disputeId },
+        },
+        { upsert: !payout }
+      );
+    }
     const err = new Error('PAYOUT_SETUP_REQUIRED: Provider has not connected a Stripe payout account.');
     err.code = 'PAYOUT_SETUP_REQUIRED';
     err.providerId = String(providerId);
@@ -377,11 +446,15 @@ async function releasePayoutToProvider(opts) {
   const recoveringUnknownAttempt =
     priorStatus === 'processing' || priorStatus === 'reconciliation_required';
   if (recoveringUnknownAttempt) {
+    // Claim the record in the state it is actually in. This filtered on 'processing'
+    // only, so a `reconciliation_required` payout could never even run the Stripe lookup
+    // below — a transfer that DID happen stayed unrecorded forever. The lookup still
+    // never creates a transfer; it only records one that exists.
     const claimed = await Payout.findOneAndUpdate(
       {
         _id: payout._id,
-        status: 'processing',
-        lastAttemptedAt: payout.lastAttemptedAt,
+        status: priorStatus,
+        lastAttemptedAt: payout.lastAttemptedAt ?? null,
       },
       {
         $set: { lastAttemptedAt: new Date() },
@@ -446,6 +519,8 @@ async function releasePayoutToProvider(opts) {
     payout.failureReason = null;
     await payout.save(saveOpts);
     await Payment.findOneAndUpdate({ orderId }, { $set: { status: 'released' } });
+    await releaseOrderPayoutLock(orderId, payout._id);
+    await creditProviderEarnings(payout);
     try {
       const { recordStripeTransfer } = require('../stripe/financialHistory');
       await recordStripeTransfer(recovered, {
@@ -477,6 +552,16 @@ async function releasePayoutToProvider(opts) {
         lastAttemptedAt: new Date(),
         failureReason: null,
         failureCode: null,
+        // No transfer exists for pending/failed records, so the record must describe
+        // THIS release. A failed customer-approval payout later released through a
+        // dispute split used to keep its old amounts while Stripe was sent the new
+        // ones, breaking every later reconciliation and reversal check.
+        grossAmount,
+        platformFee,
+        netProviderAmount,
+        releaseSource,
+        releasedBy,
+        disputeId: disputeId || null,
       },
       $inc: { retryCount: 1 },
     },
@@ -556,8 +641,43 @@ async function releasePayoutToProvider(opts) {
       payout.stripeTransferId = recovered.id;
       payout.transferInitiatedAt ||= new Date();
       await payout.save(saveOpts);
+      await releaseOrderPayoutLock(orderId, payout._id);
+      await creditProviderEarnings(payout);
       return { payout, transfer: recovered, alreadyPaid: false, reconciled: true };
     }
+  }
+
+  // ── 3b. Fence the order against a dispute opening ─────────────────────────
+  // Every check above is a read; a customer could open a dispute between them and the
+  // transfer. Claim the order itself, still in a releasable state, so openDispute's
+  // compare-and-swap (same document) cannot succeed while the transfer is in flight,
+  // and a dispute that won the race stops this payout before any money moves.
+  const lockedAt = new Date();
+  const fenced = await Order.findOneAndUpdate(
+    {
+      _id: orderId,
+      status: { $in: releaseSource === 'dispute_release' ? ['disputed'] : ['ready_for_review', 'completed'] },
+      $or: [
+        { payoutLockId: null },
+        { payoutLockId: String(payout._id) },
+        { payoutLockedAt: { $lte: new Date(lockedAt.getTime() - PROCESSING_LEASE_MS) } },
+      ],
+    },
+    { $set: { payoutLockId: String(payout._id), payoutLockedAt: lockedAt } },
+    { new: true }
+  );
+  if (!fenced) {
+    await Payout.updateOne(
+      { _id: payout._id, status: 'processing' },
+      {
+        $set: {
+          status: 'failed',
+          failureCode: 'PAYOUT_ORDER_HOLD_ACTIVE',
+          failureReason: 'The order changed (e.g. a dispute opened) before the transfer; no transfer was attempted.',
+        },
+      }
+    );
+    throw payoutError('PAYOUT_ORDER_HOLD_ACTIVE', 'Order is no longer releasable; no transfer was attempted.');
   }
 
   let transfer;
@@ -600,6 +720,10 @@ async function releasePayoutToProvider(opts) {
     stripeLivemode: source.livemode,
   });
   await payout.save(saveOpts);
+  // Released only once the outcome is known; an unknown outcome keeps the fence until
+  // its lease expires, so a dispute cannot open mid-reconciliation.
+  await releaseOrderPayoutLock(orderId, payout._id);
+  await creditProviderEarnings(payout);
 
   try {
     const { recordStripeTransfer } = require('../stripe/financialHistory');

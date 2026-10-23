@@ -34,7 +34,6 @@ const TransactionSchema = new mongoose.Schema(
     },
     coupon: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Coupon',
       default: null,
     },
     stripeSessionId: {
@@ -66,15 +65,8 @@ const TransactionSchema = new mongoose.Schema(
       default: false,
     },
     /**
-     * When an `extra_contact` purchase was spent.
-     *
-     * There was no such field, so checkSubscription treated the mere existence of a
-     * succeeded transaction as a standing permission: one purchase unlocked that
-     * service for that user permanently and without limit. One purchase is one use.
-     *
-     * Null means unspent. The middleware claims it with a single atomic
-     * findOneAndUpdate on `consumedAt: null`, so two concurrent applications cannot
-     * both spend it.
+     * Retained to preserve historical extra-contact transactions for migration.
+     * The legacy extra-contact purchase flow is disabled.
      */
     consumedAt: {
       type: Date,
@@ -84,7 +76,6 @@ const TransactionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Supports the atomic claim in checkSubscription.
 TransactionSchema.index({ userId: 1, serviceId: 1, type: 1, status: 1, consumedAt: 1 });
 
 module.exports = mongoose.model('Transaction', TransactionSchema);

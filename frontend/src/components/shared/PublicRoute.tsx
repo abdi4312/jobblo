@@ -1,9 +1,14 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useUserStore } from '../../stores/userStore';
+import { AuthPending } from './ProtectedRoute';
 
 export const PublicRoute = ({ children }: { children: JSX.Element }) => {
-  const isAuth = useUserStore((state: { isAuthenticated: boolean }) => state.isAuthenticated);
+  const isAuth = useUserStore((state) => state.isAuthenticated);
+  const authReady = useUserStore((state) => state.authReady);
   const location = useLocation();
+
+  // Wait for the session bootstrap, or a signed-in user sees the login form flash.
+  if (!authReady) return <AuthPending />;
 
   if (isAuth) {
     // Honour the destination ProtectedRoute stashed, so an already-authenticated

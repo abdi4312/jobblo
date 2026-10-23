@@ -1,19 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const {
-  getAllPlans,
-  updatePlan,
-  createPlan,
-  deletePlan,
-} = require('../controllers/subscriptionPlanController');
+const subscriptionRebuildInProgress = require('../middleware/subscriptionRebuildInProgress');
+const subscriptionV2Controller = require('../controllers/subscriptionV2Controller');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 
-// GET /api/plans (public)
-router.get('/', getAllPlans);
-
-// Admin routes
-router.post('/', authenticate, requireAdmin, createPlan);
-router.put('/:id', authenticate, requireAdmin, updatePlan);
-router.delete('/:id', authenticate, requireAdmin, deletePlan);
+router.get('/', subscriptionV2Controller.getPlanCatalogue);
+router.post('/', subscriptionRebuildInProgress);
+// Entitlements only (price/name/type/isActive locked to Stripe); create/delete stay off.
+router.put('/:id', authenticate, requireAdmin, subscriptionV2Controller.updatePlanEntitlements);
+router.delete('/:id', subscriptionRebuildInProgress);
 
 module.exports = router;

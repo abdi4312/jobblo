@@ -1,15 +1,29 @@
-FROM node:20-bookworm-slim
+# Start from an official Node.js image (version 20)
+FROM node:20
 
+# Make /app the folder we work inside the container
 WORKDIR /app
 
-COPY backend/package*.json ./
+# Copy the package files first (so Docker can cache installed packages)
+COPY package.json package-lock.json ./
 
-RUN npm ci --omit=dev
+# Install dependencies. --include=optional makes sure sharp's Linux
+# image binary is downloaded inside the container (not the Windows one).
+RUN npm install --include=optional
 
-COPY backend/ ./
+# Copy the rest of the backend code into the container
+COPY . .
 
+# Second lock behind .dockerignore: refuse to produce an image that contains a
+# private key (e.g. a Firebase service-account JSON). Firebase credentials are
+# provided at runtime via GOOGLE_APPLICATION_CREDENTIALS pointing at a mounted file.
+RUN if grep -rlIq --exclude-dir=node_modules -e '-----BEGIN [A-Z ]*PRIVATE KEY-----' . ; then \
+      echo 'Refusing to build: a private key is in the build context (see .dockerignore).' >&2; \
+      exit 1; \
+    fi
+
+# The server runs on port 5001 (see server.js)
 EXPOSE 5001
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD ["node", "-e", "require('http').get('http://127.0.0.1:5001/api/test', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
-
+# Command that starts the app
 CMD ["node", "server.js"]

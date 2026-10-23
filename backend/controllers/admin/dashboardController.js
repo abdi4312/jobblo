@@ -2,10 +2,10 @@ const User = require('../../models/User');
 const Service = require('../../models/Service');
 const Order = require('../../models/Order');
 const Transaction = require('../../models/Transaction');
-const Subscription = require('../../models/Subscription');
 const Review = require('../../models/Review');
 const Notification = require('../../models/Notification');
 const AdminActivity = require('../../models/AdminActivity');
+const SubscriptionV2 = require('../../models/SubscriptionV2');
 const { asyncHandler, sendSuccess, sendError, buildPagination } = require('../../utils/apiResponse');
 
 /**
@@ -109,8 +109,8 @@ const getOverview = asyncHandler(async (req, res) => {
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]),
 
-    // Active subscriptions
-    Subscription.countDocuments({ 'currentPlan.status': 'active' }),
+    // Active Subscription V2 records
+    SubscriptionV2.countDocuments({ status: 'active' }),
 
     // Reviews (total — as "pending moderation" flag — adjust when moderation field exists)
     Review.countDocuments(),

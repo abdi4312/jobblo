@@ -15,6 +15,8 @@ const { getStripeForMode } = require('../../config/stripe');
 const { executeRefund, executeTransferReversal } = require('../../services/stripe/financialOperations');
 
 const SORT_FIELDS = ['createdAt', 'updatedAt', 'openedAt'];
+/** A `pending` resolution idle this long is no longer being run by a live request. */
+const PENDING_RESOLUTION_RETRY_MS = 10 * 60 * 1000;
 const VALID_STATUSES = ['open','under_review','waiting_for_customer','waiting_for_provider','evidence_submitted','resolved','closed','cancelled'];
 const VALID_PRIORITIES = ['low', 'medium', 'high', 'critical'];
 
@@ -359,10 +361,12 @@ const resolveDispute = asyncHandler(async (req, res) => {
 
   // Prevent duplicate resolution. A resolution whose money movement FAILED is the
   // one case worth retrying — the Stripe calls below are all idempotent, so a retry
-  // re-attempts the transfer/refund without duplicating it.
+  // re-attempts the transfer/refund without duplicating it. A `pending` one may be
+  // re-entered too (the atomic claim below enforces when): a refund Stripe left pending
+  // used to make the dispute impossible to finish.
   if (
     dispute.resolution?.outcome &&
-    !['failed', 'reconciliation_required'].includes(dispute.resolution?.moneyState)
+    !['failed', 'reconciliation_required', 'pending'].includes(dispute.resolution?.moneyState)
   ) {
     return sendError(res, 'Tvisten er allerede løst.', 409);
   }
@@ -455,17 +459,51 @@ const resolveDispute = asyncHandler(async (req, res) => {
   // and Stripe cannot be made atomic, so instead: write the intent, act, write the
   // result. A crash in between leaves `moneyState: 'pending'` for a reconciliation
   // sweep to find, and every Stripe call below is idempotent.
-  dispute.resolution = {
+  //
+  // The amounts recorded are the ones the plan will move. `release_to_provider` pays the
+  // full secured amount, but recorded whatever providerAmount the admin form sent (0
+  // when left empty), and the payout service requires the two to be equal — so that
+  // outcome could never pay out.
+  const recordedCustomerAmount = outcome === 'release_to_provider' ? 0 : cust;
+  const recordedProviderAmount = outcome === 'release_to_provider' ? plan.payout : prov;
+  const resolution = {
     outcome,
     reason: reason.trim(),
-    customerAmount: cust,
-    providerAmount: prov,
+    customerAmount: recordedCustomerAmount,
+    providerAmount: recordedProviderAmount,
     platformFee: fee,
     resolvedBy: req.user._id,
     resolvedAt: new Date(),
     moneyState: movesMoney ? 'pending' : 'settled',
   };
-  await dispute.save();
+  // Atomic claim. The duplicate check above and this write were separate, so two
+  // admins could both pass it and move money for two different outcomes (one refund,
+  // one transfer). Claimable: never resolved, or its money movement failed, or a
+  // `pending` attempt for the SAME outcome and amounts that has been idle long enough
+  // that no request is still running it (same outcome => same idempotent Stripe keys).
+  const claimed = await Dispute.findOneAndUpdate(
+    {
+      _id: dispute._id,
+      status: { $in: ACTIVE_STATUSES },
+      $or: [
+        { 'resolution.outcome': null }, // never resolved (missing or null)
+        { 'resolution.moneyState': { $in: ['failed', 'reconciliation_required'] } },
+        {
+          'resolution.moneyState': 'pending',
+          'resolution.outcome': outcome,
+          'resolution.customerAmount': recordedCustomerAmount,
+          'resolution.providerAmount': recordedProviderAmount,
+          'resolution.resolvedAt': { $lte: new Date(Date.now() - PENDING_RESOLUTION_RETRY_MS) },
+        },
+      ],
+    },
+    { $set: { resolution } },
+    { new: true }
+  );
+  if (!claimed) {
+    return sendError(res, 'Tvisten behandles allerede eller er løst.', 409);
+  }
+  dispute.resolution = claimed.resolution;
 
   let stripeRefundId = null;
   let stripeRefundStatus = null;
@@ -577,12 +615,8 @@ const resolveDispute = asyncHandler(async (req, res) => {
           stripeCheckoutSessionId: payment?.stripeSessionId,
           disputeId: dispute._id,
         });
+        // Earnings are credited by releasePayoutToProvider, once per transferred payout.
         stripeTransferId = payoutResult?.payout?.stripeTransferId || null;
-        if (!payoutResult.alreadyPaid) {
-          await User.findByIdAndUpdate(order.providerId, {
-            $inc: { earnings: plan.payout - plan.payoutFee },
-          });
-        }
       }
     }
 

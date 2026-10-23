@@ -6,15 +6,9 @@ const {
 const { claimEvent, markProcessed, releaseClaim } = require('./eventLedger');
 const { logApplicationError } = require('../../utils/errorLogger');
 const {
-  provisionSubscriptionFromSession,
-  provisionExtraContactFromSession,
-  applyInvoicePaid,
-  applyInvoicePaymentFailed,
-  applySubscriptionUpdated,
-  applySubscriptionDeleted,
-  applySubscriptionScheduleCanceled,
-} = require('./provisioning');
-const { recordStripePaymentLifecycle } = require('./paymentLifecycle');
+  recordStripePaymentLifecycle,
+  recordRejectedSafePayPayment,
+} = require('./paymentLifecycle');
 
 /**
  * The single verified ingress for Stripe events.
@@ -35,17 +29,17 @@ const ORDER_EVENT_TYPES = new Set([
   'checkout.session.async_payment_succeeded',
   'checkout.session.async_payment_failed',
   'checkout.session.expired',
+  'customer.subscription.created',
+  'customer.subscription.updated',
+  'customer.subscription.deleted',
   'invoice.paid',
   'invoice.payment_failed',
   'invoice.payment_action_required',
-  'customer.subscription.updated',
-  'customer.subscription.deleted',
-  'customer.subscription.paused',
-  'customer.subscription.resumed',
-  'customer.subscription.pending_update_applied',
-  'customer.subscription.pending_update_expired',
-  'subscription_schedule.completed',
+  'subscription_schedule.created',
+  'subscription_schedule.updated',
   'subscription_schedule.canceled',
+  'subscription_schedule.released',
+  'subscription_schedule.aborted',
   'transfer.created',
   'transfer.updated',
   'transfer.reversed',
@@ -65,6 +59,65 @@ const ORDER_EVENT_TYPES = new Set([
   'payout.failed',
   'payout.canceled',
 ]);
+
+const PERMANENT_SAFEPAY_REJECTION_REASONS = new Set([
+  'missing_order_metadata',
+  'order_not_found',
+  'session_customer_mismatch',
+  'session_details_mismatch',
+  'session_mode_missing',
+  'stripe_mode_mismatch',
+  'amount_mismatch',
+  'currency_mismatch',
+  'customer_mismatch',
+  'checkout_attempt_mismatch',
+  'checkout_session_mismatch',
+  'payment_intent_mismatch',
+  'charge_missing',
+  'charge_mismatch',
+  'duplicate_successful_payment',
+  'order_state_conflict',
+]);
+
+function isLegacySubscriptionSession(session) {
+  return (
+    session?.mode === 'subscription' ||
+    session?.metadata?.type === 'subscription'
+  );
+}
+
+/** Paid extra contact (services/subscriptions/v2ExtraContacts.js). */
+function isExtraContactSession(session) {
+  return session?.metadata?.type === 'extra_contact';
+}
+
+function isV2SubscriptionEvent(event) {
+  const object = event?.data?.object;
+  if (event?.type === 'subscription_schedule.created') return true;
+  if (event?.type?.startsWith('checkout.session.')) {
+    return object?.mode === 'subscription' && object?.metadata?.subscriptionV2 === 'true';
+  }
+  if (event?.type?.startsWith('customer.subscription.')) {
+    return object?.metadata?.subscriptionV2 === 'true';
+  }
+  if (event?.type?.startsWith('subscription_schedule.')) {
+    return object?.metadata?.subscriptionV2 === 'true';
+  }
+  if (
+    event?.type === 'invoice.paid' ||
+    event?.type === 'invoice.payment_failed' ||
+    event?.type === 'invoice.payment_action_required'
+  ) {
+    return object?.parent?.subscription_details?.metadata?.subscriptionV2 === 'true';
+  }
+  return false;
+}
+
+async function handleV2SubscriptionEvent(event, stripe) {
+  const { processVerifiedEvent } = require('../subscriptions/v2WebhookProcessor');
+  const mode = event.livemode ? 'live' : 'test';
+  return processVerifiedEvent(event, mode, stripe);
+}
 
 /** Log a payment failure where an admin will actually see it, without leaking secrets. */
 async function logPaymentFailure({ req, error, httpStatus, errorCode, metadata }) {
@@ -89,7 +142,7 @@ async function logPaymentFailure({ req, error, httpStatus, errorCode, metadata }
  * which is what asks Stripe to retry — so throw for transient faults, and return
  * normally for anything a retry cannot fix.
  */
-async function handleEvent(event, { io } = {}) {
+async function handleEvent(event, { io, stripe } = {}) {
   // Required lazily: SafePayCheckoutController requires this module's siblings, and
   // a top-level import would close the cycle.
   const { confirmPaidSession } = require('../../controllers/SafePayCheckoutController');
@@ -98,49 +151,66 @@ async function handleEvent(event, { io } = {}) {
     recordStripeTransfer,
     recordStripeBankPayout,
   } = require('./financialHistory');
+  const confirmSafePay = async (session) => {
+    const confirmation = await confirmPaidSession(session, io);
+    if (confirmation.ok) return { handled: 'safepay', result: confirmation };
+    if (!PERMANENT_SAFEPAY_REJECTION_REASONS.has(confirmation.reason)) {
+      throw new Error('SafePay checkout confirmation returned an unknown result');
+    }
+    await recordRejectedSafePayPayment({ event, session, reason: confirmation.reason });
+    return { handled: 'safepay_manual_review' };
+  };
 
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object;
-      const isMembership =
-        session.mode === 'subscription' || session.metadata?.type === 'subscription';
-      if (
-        session.payment_status !== 'paid' &&
-        !(isMembership && session.payment_status === 'no_payment_required')
-      ) {
+      if (isV2SubscriptionEvent(event)) {
+        const result = await handleV2SubscriptionEvent(event, stripe);
+        return result;
+      }
+      if (isExtraContactSession(session)) {
+        return require('../subscriptions/v2ExtraContacts').confirmExtraContactSession(session);
+      }
+      if (isLegacySubscriptionSession(session)) {
+        return { handled: 'subscription_rebuild_in_progress' };
+      }
+      if (session.payment_status !== 'paid') {
         return { handled: 'ignored_unpaid' };
       }
 
-      const type = session.metadata?.type;
-
-      if (isMembership) {
-        const result = await provisionSubscriptionFromSession(session);
-        if (!result.ok) throw new Error('Subscription checkout provisioning rejected');
-        return { handled: 'subscription', result };
-      }
-      if (type === 'extra_contact') {
-        const result = await provisionExtraContactFromSession(session);
-        if (!result.ok) throw new Error('Extra-contact checkout provisioning rejected');
-        return {
-          handled: 'extra_contact',
-          result,
-        };
-      }
       // Default is SafePay: the original behaviour of this endpoint, and the only
       // type whose sessions predate the metadata convention.
-      const confirmation = await confirmPaidSession(session, io);
-      if (!confirmation.ok) throw new Error('SafePay checkout confirmation rejected');
-      return { handled: 'safepay', result: confirmation };
+      return confirmSafePay(session);
     }
 
     case 'checkout.session.async_payment_succeeded': {
-      const confirmation = await confirmPaidSession(event.data.object, io);
-      if (!confirmation.ok) throw new Error('SafePay checkout confirmation rejected');
-      return { handled: 'safepay_async_payment_succeeded', result: confirmation };
+      const session = event.data.object;
+      if (isV2SubscriptionEvent(event)) {
+        return handleV2SubscriptionEvent(event, stripe);
+      }
+      if (isExtraContactSession(session)) {
+        return require('../subscriptions/v2ExtraContacts').confirmExtraContactSession(session);
+      }
+      if (isLegacySubscriptionSession(session)) {
+        return { handled: 'subscription_rebuild_in_progress' };
+      }
+      const outcome = await confirmSafePay(session);
+      return outcome.handled === 'safepay'
+        ? { ...outcome, handled: 'safepay_async_payment_succeeded' }
+        : outcome;
     }
 
     case 'checkout.session.async_payment_failed': {
       const session = event.data.object;
+      if (isV2SubscriptionEvent(event)) {
+        return handleV2SubscriptionEvent(event, stripe);
+      }
+      if (isExtraContactSession(session)) {
+        return require('../subscriptions/v2ExtraContacts').expireExtraContactSession(session);
+      }
+      if (isLegacySubscriptionSession(session)) {
+        return { handled: 'subscription_rebuild_in_progress' };
+      }
       await Order.updateOne(
         { checkoutSessionId: session.id, paymentStatus: { $ne: 'paid' } },
         { $set: { checkoutSessionStatus: 'failed' } }
@@ -149,6 +219,15 @@ async function handleEvent(event, { io } = {}) {
     }
 
     case 'checkout.session.expired':
+      if (isV2SubscriptionEvent(event)) {
+        return handleV2SubscriptionEvent(event, stripe);
+      }
+      if (isExtraContactSession(event.data.object)) {
+        return require('../subscriptions/v2ExtraContacts').expireExtraContactSession(event.data.object);
+      }
+      if (isLegacySubscriptionSession(event.data.object)) {
+        return { handled: 'subscription_rebuild_in_progress' };
+      }
       // Clear the stale session so createSafePaySession stops trying to reuse it.
       await Order.updateOne(
         { checkoutSessionId: event.data.object.id },
@@ -156,61 +235,31 @@ async function handleEvent(event, { io } = {}) {
       );
       return { handled: 'session_expired' };
 
-    case 'invoice.paid': {
-      const result = await applyInvoicePaid(event.data.object);
-      if (!result.ok) throw new Error('Subscription invoice payment could not be reconciled');
-      return { handled: 'invoice_paid', result };
-    }
-
-    case 'invoice.payment_failed':
-    case 'invoice.payment_action_required': {
-      const result = await applyInvoicePaymentFailed(event.data.object);
-      if (!result.ok) throw new Error('Subscription invoice failure could not be reconciled');
-      return { handled: 'invoice_failed', result };
-    }
-
+    case 'customer.subscription.created':
     case 'customer.subscription.updated':
-    case 'customer.subscription.paused':
-    case 'customer.subscription.resumed':
-    case 'customer.subscription.pending_update_applied':
-    case 'customer.subscription.pending_update_expired': {
-      const result = await applySubscriptionUpdated(event.data.object);
-      if (!result.ok) {
-        throw new Error(
-          `Subscription update could not be reconciled: ${result.reason || 'unknown_reason'}`
-        );
+    case 'customer.subscription.deleted':
+    case 'invoice.paid':
+    case 'invoice.payment_failed':
+    case 'invoice.payment_action_required':
+      if (isV2SubscriptionEvent(event)) {
+        return handleV2SubscriptionEvent(event, stripe);
       }
-      return {
-        handled: 'subscription_updated',
-        result,
-      };
-    }
+      return { handled: 'subscription_rebuild_in_progress' };
 
-    case 'customer.subscription.deleted': {
-      const result = await applySubscriptionDeleted(event.data.object);
-      if (!result.ok) throw new Error('Subscription deletion could not be reconciled');
-      return { handled: 'subscription_deleted', result };
-    }
+    case 'subscription_schedule.created':
+      if (isV2SubscriptionEvent(event)) {
+        return handleV2SubscriptionEvent(event, stripe);
+      }
+      return { handled: 'subscription_event_ignored' };
 
-    case 'subscription_schedule.completed': {
-      const subscriptionId =
-        typeof event.data.object.subscription === 'string'
-          ? event.data.object.subscription
-          : event.data.object.subscription?.id;
-      if (!subscriptionId) throw new Error('Completed subscription schedule is missing its subscription');
-      const result = await applySubscriptionUpdated({
-        id: subscriptionId,
-        livemode: event.livemode,
-      });
-      if (!result.ok) throw new Error('Completed subscription schedule could not be reconciled');
-      return { handled: 'subscription_schedule_completed', result };
-    }
-
-    case 'subscription_schedule.canceled': {
-      const result = await applySubscriptionScheduleCanceled(event.data.object);
-      if (!result.ok) throw new Error('Canceled subscription schedule could not be reconciled');
-      return { handled: 'subscription_schedule_canceled', result };
-    }
+    case 'subscription_schedule.updated':
+    case 'subscription_schedule.canceled':
+    case 'subscription_schedule.released':
+    case 'subscription_schedule.aborted':
+      if (isV2SubscriptionEvent(event)) {
+        return handleV2SubscriptionEvent(event, stripe);
+      }
+      return { handled: 'subscription_event_ignored' };
 
     case 'charge.dispute.created':
     case 'charge.dispute.updated':
@@ -344,7 +393,7 @@ async function stripeWebhook(req, res) {
   }
 
   try {
-    const outcome = await handleEvent(event, { io: req.app?.get('io') });
+    const outcome = await handleEvent(event, { io: req.app?.get('io'), stripe });
     await markProcessed(event.id);
     await recordVerifiedDelivery(stripeConfig, event.id);
     return res.json({ received: true, handled: outcome.handled });

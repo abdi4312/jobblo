@@ -13,7 +13,7 @@ const mongoose = require('mongoose');
  * runs Azure Cosmos DB for MongoDB (RU-based, port 10255), which cannot add a unique
  * index to a collection that already holds data. `users` is very much not empty, so that
  * index cannot be created there — the same limitation already recorded for
- * `Payment.orderId` and `Subscription.userId`.
+ * `Payment.orderId` and the historical subscription collection's `userId`.
  *
  * This collection sidesteps it. The claim key IS the `_id`, and `_id` carries a unique
  * index on every MongoDB-compatible store, Cosmos included, from the moment the

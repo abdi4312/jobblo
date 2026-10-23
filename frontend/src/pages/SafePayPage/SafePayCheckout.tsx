@@ -194,8 +194,13 @@ const SafePayCheckout: React.FC = () => {
     );
   }
 
-  const { order, calculation } = data;
+  const { order, calculation, startDeadline } = data;
   const service = order.serviceId;
+  const startDeadlineText = startDeadline
+    ? startDeadline.testMinutes
+      ? `${startDeadline.testMinutes} minutter`
+      : `${startDeadline.days} ${startDeadline.days === 1 ? 'dag' : 'dager'}`
+    : null;
 
   // The service is populated by the endpoint, but comes back null if the underlying job
   // was deleted. Reading `service.title` and destructuring its dates unguarded made that
@@ -378,6 +383,13 @@ const SafePayCheckout: React.FC = () => {
                   {order.providerId?.name || 'oppdragstakeren'} mottar{' '}
                   {kr(calculation.providerNet)} først når du har godkjent jobben. Er du ikke
                   fornøyd, kan du opprette en tvist.
+                  {startDeadlineText && (
+                    <span data-testid="safepay-refund-promise" className="mt-2 block">
+                      Starter ikke {order.providerId?.name || 'oppdragstakeren'} oppdraget innen{' '}
+                      {startDeadlineText} etter betaling, kanselleres det automatisk og du får hele
+                      beløpet ({kr(calculation.total)}) refundert.
+                    </span>
+                  )}
                 </p>
               </div>
             </>

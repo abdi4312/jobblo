@@ -87,6 +87,10 @@ const serviceSchema = new mongoose.Schema(
       ],
       default: 'open',
     },
+    // Short mutex around "no live order exists → create the contract order"
+    // (services/order/contractLock.js). Both contract paths checked then created, so
+    // two concurrent awards could produce two orders for one job.
+    contractLockAt: { type: Date, default: null },
 
     tags: [{ type: String }],
 

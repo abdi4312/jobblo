@@ -12,6 +12,7 @@ const Payout = require('../models/Payout');
 const Review = require('../models/Review');
 const { notify } = require('../services/notifications');
 const { ensureProviderConnectReady } = require('../middleware/requireProviderConnect');
+const { acquireServiceContractLock } = require('../services/order/contractLock');
 
 /**
  * POST /api/safepay/create-contract
@@ -98,43 +99,69 @@ exports.createContract = async (req, res) => {
       'disputed',
       'completed',
     ];
-    const existingOrder = await Order.findOne({
-      serviceId,
-      status: { $in: BLOCKING_ORDER_STATUSES },
-    });
-    if (existingOrder) {
-      return res.status(400).json({ error: 'Kontrakt finnes allerede' });
+    const Chat = require('../models/ChatMessage');
+    const pairChatFilter = {
+      serviceId: serviceId,
+      $or: [
+        { clientId: userId, providerId: applicantId },
+        { clientId: applicantId, providerId: userId },
+      ],
+    };
+
+    // The check below and order.save() were not atomic: two concurrent awards both saw
+    // "no order" and created two contracts for one job.
+    const lock = await acquireServiceContractLock(serviceId);
+    if (!lock) {
+      return res.status(409).json({ error: 'Kontrakten opprettes allerede. Prøv igjen om litt.' });
+    }
+    let order;
+    let price;
+    try {
+      const existingOrder = await Order.findOne({
+        serviceId,
+        status: { $in: BLOCKING_ORDER_STATUSES },
+      });
+      if (existingOrder) {
+        return res.status(400).json({ error: 'Kontrakt finnes allerede' });
+      }
+
+      // The price both parties agreed in the conversation, as the chat contract path
+      // already uses. This path ignored it, created the order at the listing price and
+      // then overwrote the chat's agreed price with the listing price.
+      const pairChat = await Chat.findOne(pairChatFilter).select('agreedPrice orderId').lean();
+      price = (!pairChat?.orderId && pairChat?.agreedPrice) || service.price;
+
+      // 2. Create the Order (Contract) with checklist initialized from service
+      const checklist = (service.checklist || []).map((item) => ({
+        id: item.id,
+        text: item.text,
+        checked: false,
+      }));
+
+      order = new Order({
+        serviceId,
+        customerId: userId, // Service owner is the customer (person who pays)
+        providerId: applicantId, // Applicant is the provider (person who does the work)
+        status: 'awaiting_payment',
+        initialPrice: service.price,
+        agreedPrice: price,
+        checklist,
+        history: [
+          {
+            action: 'contract_created',
+            userId: userId,
+            timestamp: new Date(),
+            data: { message: 'SafePay kontrakt opprettet' },
+          },
+        ],
+      });
+
+      await order.save();
+    } finally {
+      await lock.release();
     }
 
-    // 2. Create the Order (Contract) with checklist initialized from service
-    const checklist = (service.checklist || []).map((item) => ({
-      id: item.id,
-      text: item.text,
-      checked: false,
-    }));
-
-    const order = new Order({
-      serviceId,
-      customerId: userId, // Service owner is the customer (person who pays)
-      providerId: applicantId, // Applicant is the provider (person who does the work)
-      status: 'awaiting_payment',
-      initialPrice: service.price,
-      agreedPrice: service.price,
-      checklist,
-      history: [
-        {
-          action: 'contract_created',
-          userId: userId,
-          timestamp: new Date(),
-          data: { message: 'SafePay kontrakt opprettet' },
-        },
-      ],
-    });
-
-    await order.save();
-
     // Link chat to order and vice versa
-    const Chat = require('../models/ChatMessage');
     // Direction-agnostic. This is the PRIMARY award path, and it looked only for
     // { clientId: owner, providerId: applicant } — while applying creates the chat the
     // other way round. So on the normal flow (applicant applies, owner awards) this
@@ -144,14 +171,8 @@ exports.createContract = async (req, res) => {
     // posted either. The whole conversation timeline went silent the moment a job was
     // awarded.
     const chat = await Chat.findOneAndUpdate(
-      {
-        serviceId: serviceId,
-        $or: [
-          { clientId: userId, providerId: applicantId },
-          { clientId: applicantId, providerId: userId },
-        ],
-      },
-      { orderId: order._id, status: 'contracted', agreedPrice: service.price },
+      pairChatFilter,
+      { orderId: order._id, status: 'contracted', agreedPrice: price },
       { new: true }
     );
     if (chat) {

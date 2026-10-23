@@ -20,10 +20,11 @@ import { CARD, MICRO_LABEL } from '../../theme/brand';
  * forward.
  */
 
-type Status = 'loading' | 'success' | 'failed' | 'error' | 'no-session';
+type Status = 'loading' | 'processing' | 'success' | 'failed' | 'error' | 'no-session';
 
 interface SessionResult {
   payment_status: string;
+  provisioning_status?: 'complete' | 'pending';
   plan?: string;
   planType?: string;
   amount?: number;
@@ -89,12 +90,13 @@ const SuccessPage = () => {
   const [result, setResult] = useState<SessionResult | null>(null);
   const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [pollAttempt, setPollAttempt] = useState(0);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const sessionId = searchParams.get('session_id');
 
-  const check = useCallback(async () => {
+  const check = useCallback(async (quiet = false) => {
     if (!sessionId) {
       setStatus('no-session');
       return;
@@ -102,16 +104,27 @@ const SuccessPage = () => {
     try {
       const res = await mainLink.get<SessionResult>(`/api/stripe/checkout-session/${sessionId}`);
       setResult(res.data);
-      setStatus(res.data.payment_status === 'paid' ? 'success' : 'failed');
+      const isPaid = ['paid', 'no_payment_required'].includes(res.data.payment_status);
+      if (isPaid && res.data.provisioning_status !== 'complete') {
+        setStatus('processing');
+        setPollAttempt((attempt) => attempt + 1);
+      } else {
+        setStatus(isPaid ? 'success' : 'failed');
+      }
     } catch {
-      // The response body is a Stripe session — it is never logged.
-      setStatus('error');
+      if (!quiet) setStatus('error');
     }
   }, [sessionId]);
 
   useEffect(() => {
     check();
   }, [check]);
+
+  useEffect(() => {
+    if (status !== 'processing' || pollAttempt >= 15) return;
+    const timer = setTimeout(() => void check(true), 2000);
+    return () => clearTimeout(timer);
+  }, [check, pollAttempt, status]);
 
   // Tick down visibly rather than jumping without warning. Anyone reading the amount gets
   // to finish reading it, and the button below moves on immediately if they would rather.
@@ -130,6 +143,7 @@ const SuccessPage = () => {
 
   const retry = async () => {
     setIsRetrying(true);
+    setPollAttempt(0);
     setStatus('loading');
     await check();
     setIsRetrying(false);
@@ -147,6 +161,30 @@ const SuccessPage = () => {
         <p className="mt-2 text-[0.9375rem] leading-relaxed text-[#63665F]">
           Vi henter bekreftelsen fra Stripe. Ikke lukk vinduet.
         </p>
+      </Panel>
+    );
+  }
+
+  if (status === 'processing') {
+    return (
+      <Panel>
+        <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-[#F7F1DF] text-[#96752A]">
+          <Loader2 size={26} className="animate-spin" />
+        </span>
+        <h1 className="mt-5 text-[1.375rem] font-bold tracking-[-0.03em] text-[#0B0B0B]">
+          Betalingen er mottatt
+        </h1>
+        <p className="mt-2 text-[0.9375rem] leading-relaxed text-[#63665F]">
+          Stripe bekrefter betalingen. Vi venter på at medlemskapet skal aktiveres, og sjekker automatisk.
+        </p>
+        <button type="button" onClick={retry} disabled={isRetrying} className={`${SOLID} mt-6`}>
+          <RefreshCw size={16} strokeWidth={2.4} className={isRetrying ? 'animate-spin' : ''} />
+          Sjekk på nytt
+        </button>
+        <Link to="/membership" className={`${OUTLINE} mt-2`}>
+          Til medlemskapet
+          <ArrowRight size={16} strokeWidth={2.4} />
+        </Link>
       </Panel>
     );
   }
@@ -208,7 +246,7 @@ const SuccessPage = () => {
 
   // ── Failure states ─────────────────────────────────────────────────────────
   const failures: Record<
-    Exclude<Status, 'loading' | 'success'>,
+    Exclude<Status, 'loading' | 'processing' | 'success'>,
     { title: string; body: string; retry: boolean }
   > = {
     failed: {

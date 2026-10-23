@@ -1,5 +1,11 @@
 # Stripe webhook deployment
 
+> **Subscription V2 checkout is disabled by default and lifecycle management is
+> incomplete. Do not enable it or treat this branch as production-ready.** The shared
+> webhook remains signature-verified for SafePay and finance events, and processes
+> only properly marked V2 subscription events. It does not process old subscription
+> events or modify Stripe subscriptions or MongoDB history.
+
 SafePay's canonical endpoint is `POST https://<api-host>/api/stripe/webhook`.
 It must be publicly reachable over HTTPS. New Stripe event destinations should
 use this URL; `/api/safepay-checkout/webhook` remains as a legacy alias.
@@ -13,32 +19,6 @@ For SafePay Checkout, subscribe to:
 - `checkout.session.async_payment_failed`
 - `checkout.session.expired`
 
-The shared dispatcher also consumes these existing subscription events:
-
-- `invoice.paid`
-- `invoice.payment_failed`
-- `invoice.payment_action_required`
-- `customer.subscription.updated`
-- `customer.subscription.deleted`
-- `customer.subscription.paused`
-- `customer.subscription.resumed`
-- `customer.subscription.pending_update_applied`
-- `customer.subscription.pending_update_expired`
-- `subscription_schedule.completed`
-- `subscription_schedule.canceled`
-
-`checkout.session.completed` activates the initial plan only after Stripe reports
-the checkout as paid (or no payment is required). `invoice.paid` records renewals,
-and failed/action-required invoice events mark an account past due. The configured
-`STRIPE_SUBSCRIPTION_GRACE_DAYS` controls entitlement grace (default 3 days,
-0–30); Stripe Billing Smart Retries and retry cadence must be configured in each
-Stripe Dashboard mode. A single failure never cancels the Stripe subscription.
-
-Subscription billing policy is monthly from the signup/period start date (there
-is no first-of-month alignment). Upgrades are immediate with Stripe proration and
-only verified subscription webhooks change Jobblo entitlements. Downgrades are
-scheduled for the end of the paid period without proration.
-
 For provider transfer and connected-account bank payout history, also subscribe
 to:
 
@@ -49,6 +29,23 @@ to:
 - `payout.paid`
 - `payout.failed`
 - `payout.canceled`
+
+Before enabling Subscription V2 in a future release, its destination must also
+deliver:
+
+- `customer.subscription.created`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+- `invoice.paid`
+- `invoice.payment_failed`
+- `checkout.session.completed`
+- `checkout.session.async_payment_succeeded`
+- `checkout.session.async_payment_failed`
+- `checkout.session.expired`
+
+The `SUBSCRIPTION_V2_CHECKOUT_ENABLED` flag remains off by default. Do not enable it
+until cancellation, plan changes, usage/entitlement handling, recovery, legal review,
+and end-to-end migration verification are complete.
 
 Transfer and payout updates must be delivered with the connected account context
 (`event.account`). Platform-level payouts are intentionally not treated as
@@ -100,6 +97,24 @@ last 30 days.
 The health endpoint is read-only and protected by the admin router. Ordinary
 users cannot mark an endpoint verified or clear a delivery problem.
 
+## Subscription V1 removed; V2 incomplete
+
+Legacy checkout, subscription-management, plan-catalogue, membership coupon, and
+extra-contact endpoints return HTTP 503 with `SUBSCRIPTION_REBUILD_IN_PROGRESS`.
+The V2 checkout endpoint is also disabled with `SUBSCRIPTION_V2_CHECKOUT_DISABLED`
+unless explicitly enabled by server configuration. The existing webhook verifies
+signatures using the raw request body; old subscription sessions/events are
+acknowledged without state changes. Only server-marked V2 events reach the V2
+processor. SafePay and unrelated payment/finance handlers remain active.
+
+V2 models use separate collections, while `SubscriptionPlan` remains compatible with
+the unchanged `subscriptionplans` collection and plan seed definitions. The obsolete
+`subscriptions` collection and historical transactions are retained but no active
+backend source code depends on the V1 subscription collection. No seed, migration,
+or database cleanup has been run. Extra-contact purchases remain unavailable because
+their fulfillment depended on V1 quota rules and V2 usage fulfillment is not yet
+implemented.
+
 ## Verify provider finance history
 
 1. Add the transfer and payout event types above to both the test and live
@@ -119,23 +134,3 @@ users cannot mark an endpoint verified or clear a delivery problem.
    explicit `test` or `live` mode to backfill missed history. This requires
    Stripe Connect account read/list permissions. A permission or API failure is
    reported as a failed account sync; it is not shown as a successful sync.
-
-## Subscription recovery and customer billing
-
-- Configure Customer Portal in Stripe for each mode. Enable payment-method and
-  billing-address updates, invoice history, and cancellation/reactivation. Do not
-  enable a portal plan switch unless all selectable recurring prices are managed
-  by Jobblo.
-- Enable Stripe Billing automatic collection and Smart Retries in both test and
-  live mode; choose the retry schedule and configure the after-retry behavior.
-  Jobblo does not cancel on an individual failed payment. It grants the configured
-  grace period after `past_due`, then removes paid entitlements.
-- Stripe automatically retries failed webhook deliveries. Failed handler claims
-  are released so event retries can run safely; event IDs and invoice IDs are
-  idempotent. Use Stripe Workbench to resend a failed event, then run the
-  authenticated admin subscription reconciliation endpoint to compare current
-  Stripe subscriptions/invoices with Jobblo. Reconciliation is read-only with
-  respect to Stripe and never creates charges.
-- Check subscriber status and failed invoices at
-  `/dashboard/subscription-billing`. Reconciliation requires an explicit mode and
-  is limited to 20 subscribers per request.

@@ -3,7 +3,6 @@ const router = express.Router();
 const orderController = require('../controllers/orderController');
 const { authenticate } = require('../middleware/auth');
 const { requireServiceApplicantConnectReady } = require('../middleware/requireProviderConnect');
-const { checkSubscription } = require('../middleware/checkSubscription');
 
 /**
  * @swagger
@@ -70,7 +69,6 @@ router.post(
   '/request',
   authenticate,
   requireServiceApplicantConnectReady,
-  checkSubscription,
   orderController.createJobRequest
 );
 router.get('/requests/my', authenticate, orderController.getMyJobRequests);

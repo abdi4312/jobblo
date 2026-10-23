@@ -67,6 +67,8 @@ export type ProfileUpdate = Partial<{
    * as 409 `E-postadressen er allerede i bruk.` via sendMongoError.
    */
   email: string;
+  /** Required by updateUser whenever `email` actually changes (403 CURRENT_PASSWORD_REQUIRED). */
+  currentPassword: string;
   bio: string;
   skills: string[];
   availabilityText: string;

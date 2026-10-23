@@ -11,7 +11,6 @@ const JobRequest = require('../models/JobRequest');
 const Order = require('../models/Order');
 const Chat = require('../models/ChatMessage');
 const Service = require('../models/Service');
-const User = require('../models/User');
 const { notify } = require('../services/notifications');
 
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -206,13 +205,6 @@ exports.withdrawApplication = async (req, res) => {
     jobRequest.archived = true;
     jobRequest.withdrawnAt = new Date();
     await jobRequest.save();
-
-    // Give the contact quota back. It was charged when the application was sent, and
-    // withdrawing before anyone acted on it should not cost the applicant a contact.
-    await User.updateOne(
-      { _id: userId, monthlyContactUsage: { $gt: 0 } },
-      { $inc: { monthlyContactUsage: -1 } }
-    );
 
     // The owner was never told. Their applicant list simply lost a row.
     if (service?.userId) {
