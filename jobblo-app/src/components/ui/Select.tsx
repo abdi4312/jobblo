@@ -1,7 +1,10 @@
 import React from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Check, ChevronDown } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
+import { BottomSheet } from './BottomSheet';
+import { TC, tc } from '../../theme/colors';
 
 interface SelectOption {
   label: string;
@@ -44,9 +47,9 @@ export function Select({
         className={cn(
           'flex-row items-center gap-2',
           isField
-            ? 'h-11 justify-between rounded-lg border bg-white px-3'
-            : 'self-start rounded-full border border-[#E6E7E1] bg-white px-3 py-2',
-          isField && (invalid ? 'border-[#B4453A]' : 'border-[#E6E7E1]'),
+            ? 'h-11 justify-between rounded-lg border bg-surface px-3'
+            : 'self-start rounded-full border border-line bg-surface px-3 py-2',
+          isField && (invalid ? 'border-danger' : 'border-line'),
           disabled && 'opacity-50'
         )}
       >
@@ -55,38 +58,36 @@ export function Select({
           className={cn(
             'shrink',
             isField ? 'text-[0.9375rem]' : 'text-[0.875rem] font-semibold',
-            selected ? 'text-[#0B0B0B]' : 'text-[#9B9E96]'
+            selected ? 'text-ink' : 'text-subtle'
           )}
         >
           {selected?.label ?? placeholder}
         </Text>
-        <ChevronDown size={isField ? 16 : 14} color="#63665F" />
+        <ChevronDown size={isField ? 16 : 14} color={tc('#63665F', 'muted')} />
       </Pressable>
-      <Modal transparent visible={visible} animationType="fade" onRequestClose={() => setVisible(false)}>
-        <Pressable className="flex-1 justify-end bg-black/25" onPress={() => setVisible(false)}>
-          <Pressable className="max-h-[70%] rounded-t-2xl bg-white p-5" onPress={(event) => event.stopPropagation()}>
-            <Text className="mb-3 text-[1rem] font-semibold text-[#0B0B0B]">{placeholder}</Text>
-            <ScrollView>
-              {options.map((option) => (
-                <Pressable
-                  key={option.value}
-                  onPress={() => {
-                    onValueChange(option.value);
-                    setVisible(false);
-                  }}
-                  className={cn(
-                    'flex-row items-center justify-between border-b border-[#EFF0EA] px-2 py-3',
-                    option.value === value ? 'bg-[#F4F6F0]' : 'bg-white'
-                  )}
-                >
-                  <Text className="text-[0.9375rem] text-[#0B0B0B]">{option.label}</Text>
-                  {option.value === value ? <Check size={16} color="#2E6641" /> : null}
-                </Pressable>
-              ))}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <BottomSheet visible={visible} onClose={() => setVisible(false)} title={placeholder} hideClose>
+        <View className="-mx-2 -my-2">
+          {options.map((option) => {
+            const active = option.value === value;
+            return (
+              <Pressable
+                key={option.value}
+                onPress={() => {
+                  void Haptics.selectionAsync().catch(() => undefined);
+                  onValueChange(option.value);
+                  setVisible(false);
+                }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                className={cn('flex-row items-center justify-between rounded-xl px-3 py-3.5', active ? 'bg-tint' : 'active:bg-surface-2')}
+              >
+                <Text className={cn('text-[1rem]', active ? 'font-semibold text-brand-text' : 'text-ink')}>{option.label}</Text>
+                {active ? <Check size={18} color={TC.brandText} /> : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      </BottomSheet>
     </>
   );
 }

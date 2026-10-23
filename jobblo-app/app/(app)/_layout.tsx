@@ -5,6 +5,12 @@ import { useAuthStore } from '@/store/authStore';
 import { useUnreadCount } from '@/hooks/useNotifications';
 import { useUnreadConversations } from '@/hooks/useUnreadConversations';
 import { userTerms } from '@/content/userTerms';
+import { GlassTabBar, useTabBarSpace } from '@/components/GlassTabBar';
+import { TC } from '../../src/theme/colors';
+
+// Feed screens scroll under the glass bar (they pad their own lists); every other screen
+// ends above it, so no fixed button or last row is ever hidden behind the bar.
+const SEE_THROUGH = new Set(['index', 'explore', 'alerts']);
 
 function BellIcon({ color, size }: { color: string; size: number }) {
   const { data } = useUnreadCount();
@@ -21,7 +27,7 @@ function BellIcon({ color, size }: { color: string; size: number }) {
             minWidth: 18,
             height: 18,
             borderRadius: 9,
-            backgroundColor: '#B4544A',
+            backgroundColor: TC.dangerSolid,
             alignItems: 'center',
             justifyContent: 'center',
             paddingHorizontal: 4,
@@ -50,7 +56,7 @@ function MessageIcon({ color, size }: { color: string; size: number }) {
             minWidth: 18,
             height: 18,
             borderRadius: 9,
-            backgroundColor: '#B4544A',
+            backgroundColor: TC.dangerSolid,
             alignItems: 'center',
             justifyContent: 'center',
             paddingHorizontal: 4,
@@ -69,6 +75,7 @@ export default function AppLayout() {
   const hydrated = useAuthStore((s) => s.hydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
+  const tabBarSpace = useTabBarSpace();
 
   // Until the persisted session is read back, "not authenticated" is unknown rather than
   // false. Redirecting here would kick a signed-in user to the login screen on every cold
@@ -94,17 +101,11 @@ export default function AppLayout() {
       // every back action out of those hidden screens lands on Hjem instead of the screen the
       // user actually came from. `history` returns to the last visited tab instead.
       backBehavior="history"
-      screenOptions={{
+      tabBar={(props) => <GlassTabBar {...props} />}
+      screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#E6E7E1',
-          borderTopWidth: 1,
-        },
-        tabBarActiveTintColor: '#2E6641',
-        tabBarInactiveTintColor: '#9B9E96',
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '500' as const },
-      }}
+        sceneStyle: SEE_THROUGH.has(route.name) ? undefined : { paddingBottom: tabBarSpace },
+      })}
     >
       {/* 5 visible tabs */}
       <Tabs.Screen

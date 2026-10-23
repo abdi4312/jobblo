@@ -42,23 +42,25 @@ import { EmptyState } from '../../src/components/ui/EmptyState';
 import { ErrorState } from '../../src/components/ui/ErrorState';
 import { LoadingIndicator } from '../../src/components/ui/LoadingIndicator';
 import { cn } from '../../src/lib/utils';
+import { useTabBarSpace } from '../../src/components/GlassTabBar';
 import type { Notification } from '../../src/types/Notification';
+import { TC, tc } from '../../src/theme/colors';
 
 /* ── Notification type metadata ──────────────────────────────────────────── */
 
 type Meta = { label: string; Icon: LucideIcon; tint: string; color: string };
 
 const META: Record<string, Meta> = {
-  order: { label: 'Bestilling', Icon: Banknote, tint: 'bg-[#EAF1E9]', color: '#2E6641' },
-  payment: { label: 'Betaling', Icon: Banknote, tint: 'bg-[#EAF1E9]', color: '#2E6641' },
+  order: { label: 'Bestilling', Icon: Banknote, tint: 'bg-tint', color: TC.brandText },
+  payment: { label: 'Betaling', Icon: Banknote, tint: 'bg-tint', color: TC.brandText },
   application: { label: 'Søknad', Icon: Briefcase, tint: 'bg-[#EAF0FA]', color: '#2F5D9E' },
   message: { label: 'Melding', Icon: MessageSquare, tint: 'bg-[#F2EEF9]', color: '#6B4FA0' },
   review: { label: 'Anmeldelse', Icon: Star, tint: 'bg-[#FBF4E3]', color: '#96752A' },
-  job_update: { label: 'Jobboppdatering', Icon: ClipboardCheck, tint: 'bg-[#F4F6F0]', color: '#63665F' },
+  job_update: { label: 'Jobboppdatering', Icon: ClipboardCheck, tint: 'bg-surface-2', color: tc('#63665F', 'muted') },
 };
 
 const notificationMeta = (type: string): Meta =>
-  META[type] || { label: 'Varsel', Icon: Bell, tint: 'bg-[#F4F6F0]', color: '#63665F' };
+  META[type] || { label: 'Varsel', Icon: Bell, tint: 'bg-surface-2', color: tc('#63665F', 'muted') };
 
 /* ── Time ────────────────────────────────────────────────────────────────── */
 
@@ -120,12 +122,12 @@ function NotificationRow({
       accessibilityLabel={`${label}: ${item.content}${isUnread ? ', ulest' : ''}`}
       className={cn(
         'mx-4 mb-2 flex-row items-start gap-3 rounded-2xl border p-3.5 active:opacity-80',
-        isUnread ? 'border-[#2E6641]/25 bg-white' : 'border-[#E6E7E1] bg-white/70'
+        isUnread ? 'border-brand-text/25 bg-surface' : 'border-line bg-white/70'
       )}
     >
       <View>
         {item.senderId?.avatarUrl ? (
-          <Image source={{ uri: item.senderId.avatarUrl }} className="h-11 w-11 rounded-full bg-[#EAF1E9]" />
+          <Image source={{ uri: item.senderId.avatarUrl }} className="h-11 w-11 rounded-full bg-tint" />
         ) : (
           <View className={cn('h-11 w-11 items-center justify-center rounded-full', tint)}>
             <Icon size={18} color={color} />
@@ -140,14 +142,14 @@ function NotificationRow({
 
       <View className="min-w-0 flex-1">
         <View className="flex-row items-center gap-2">
-          <Text className="flex-1 text-[0.75rem] font-semibold text-[#63665F]" numberOfLines={1}>
+          <Text className="flex-1 text-[0.8125rem] font-semibold text-muted" numberOfLines={1}>
             {sender ? `${label} · ${sender}` : label}
           </Text>
-          <Text className="text-[0.6875rem] tabular-nums text-[#9B9E96]">{formatNotificationTime(item.createdAt)}</Text>
-          {isUnread ? <View className="h-2 w-2 rounded-full bg-[#2E6641]" accessibilityLabel="Ulest" /> : null}
+          <Text className="text-[0.8125rem] tabular-nums text-subtle">{formatNotificationTime(item.createdAt)}</Text>
+          {isUnread ? <View className="h-2 w-2 rounded-full bg-brand" accessibilityLabel="Ulest" /> : null}
         </View>
         <Text
-          className={cn('mt-1 text-[0.875rem] leading-5', isUnread ? 'font-semibold text-[#0B0B0B]' : 'text-[#3C3F38]')}
+          className={cn('mt-1 text-[0.875rem] leading-5', isUnread ? 'font-semibold text-ink' : 'text-ink-2')}
           numberOfLines={3}
         >
           {item.content}
@@ -163,9 +165,9 @@ function NotificationRow({
           hitSlop={10}
           accessibilityRole="button"
           accessibilityLabel="Slett varsel"
-          className="-mr-1 h-8 w-8 items-center justify-center rounded-full active:bg-[#F4F6F0]"
+          className="-mr-1 h-8 w-8 items-center justify-center rounded-full active:bg-surface-2"
         >
-          <Trash2 size={15} color="#9B9E96" />
+          <Trash2 size={15} color={tc('#9B9E96', 'subtle')} />
         </Pressable>
       ) : null}
     </Pressable>
@@ -175,6 +177,7 @@ function NotificationRow({
 /* ── Screen ──────────────────────────────────────────────────────────────── */
 
 export default function AlertsScreen() {
+  const tabBarSpace = useTabBarSpace();
   const router = useRouter();
   const userId = useAuthStore((s) => s.user && typeof s.user._id === 'string' ? (s.user._id as string) : null);
 
@@ -294,8 +297,8 @@ export default function AlertsScreen() {
     <View className="px-4 pb-3 pt-2">
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1">
-          <Text className="text-[1.75rem] font-bold tracking-[-0.03em] text-[#0B0B0B]">Varsler</Text>
-          <Text className="mt-0.5 text-[0.875rem] text-[#63665F]">
+          <Text className="text-[1.75rem] font-bold tracking-[-0.03em] text-ink">Varsler</Text>
+          <Text className="mt-0.5 text-[0.875rem] text-muted">
             {unreadCount > 0 ? `Du har ${unreadCount} ${unreadCount === 1 ? 'ulest varsel' : 'uleste varsler'}` : 'Du er oppdatert'}
           </Text>
         </View>
@@ -304,9 +307,9 @@ export default function AlertsScreen() {
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Varslingsinnstillinger"
-          className="h-10 w-10 items-center justify-center rounded-full border border-[#E6E7E1] bg-white active:opacity-80"
+          className="h-10 w-10 items-center justify-center rounded-full border border-line bg-surface active:opacity-80"
         >
-          <Settings2 size={18} color="#0B0B0B" />
+          <Settings2 size={18} color={TC.ink} />
         </Pressable>
       </View>
 
@@ -322,7 +325,7 @@ export default function AlertsScreen() {
           count={unreadCount}
           onPress={() => setShowUnreadOnly((v) => !v)}
         />
-        <View className="mx-1 w-px self-stretch bg-[#E6E7E1]" />
+        <View className="mx-1 w-px self-stretch bg-line" />
         {FILTER_OPTIONS.map((option) => (
           <Chip
             key={option.value}
@@ -342,7 +345,7 @@ export default function AlertsScreen() {
               small
               disabled={markAll.isPending}
               onPress={handleMarkAll}
-              icon={<CheckCheck size={15} color="#0B0B0B" style={{ marginRight: 6 }} />}
+              icon={<CheckCheck size={15} color={TC.ink} style={{ marginRight: 6 }} />}
             />
           ) : <View />}
           {allNotifications.length > 0 ? (
@@ -358,8 +361,8 @@ export default function AlertsScreen() {
   ) : (
     <EmptyState
       icon={
-        <View className="h-14 w-14 items-center justify-center rounded-full bg-[#EAF1E9]">
-          {hasFilter ? <BellOff size={24} color="#2E6641" /> : <Bell size={24} color="#2E6641" />}
+        <View className="h-14 w-14 items-center justify-center rounded-full bg-tint">
+          {hasFilter ? <BellOff size={24} color={TC.brandText} /> : <Bell size={24} color={TC.brandText} />}
         </View>
       }
       title={hasFilter ? 'Ingen treff' : 'Ingen varsler ennå'}
@@ -373,7 +376,7 @@ export default function AlertsScreen() {
   );
 
   const footer = isFetchingNextPage ? (
-    <ActivityIndicator className="py-6" color="#2E6641" />
+    <ActivityIndicator className="py-6" color={TC.brandText} />
   ) : hasNextPage ? (
     <View className="items-center py-4">
       <Button label="Vis flere" variant="secondary" small onPress={() => fetchNextPage()} />
@@ -381,7 +384,7 @@ export default function AlertsScreen() {
   ) : null;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EFF0EA]" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-page" edges={['top']}>
       {isError && !isLoading ? (
         <>
           {header}
@@ -397,7 +400,7 @@ export default function AlertsScreen() {
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           renderSectionHeader={({ section }) => (
-            <Text className="bg-[#EFF0EA] px-4 pb-2 pt-3 text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[#9B9E96]">
+            <Text className="bg-page px-4 pb-2 pt-3 text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-subtle">
               {section.title}
             </Text>
           )}
@@ -405,13 +408,13 @@ export default function AlertsScreen() {
           ListHeaderComponent={header}
           ListEmptyComponent={empty}
           ListFooterComponent={footer}
-          contentContainerStyle={{ paddingBottom: 24 }}
+          contentContainerStyle={{ paddingBottom: 24 + tabBarSpace }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => void handleRefresh()}
-              tintColor="#2E6641"
-              colors={['#2E6641']}
+              tintColor={TC.brandText}
+              colors={[TC.brandText]}
             />
           }
           onEndReached={() => {
