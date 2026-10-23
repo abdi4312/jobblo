@@ -7,6 +7,12 @@ export type JobStatus = 'open' | 'closed' | 'awaiting_payment' | 'paid' | 'in_pr
 
 export type Equipment = 'utstyrfri' | 'delvis utstyr' | 'trengs utstyr';
 
+export const EQUIPMENT_LABELS: Record<Equipment, string> = {
+  utstyrfri: 'Ingen utstyr nødvendig',
+  'delvis utstyr': 'Noe utstyr trengs',
+  'trengs utstyr': 'Utstyr må medbringes',
+};
+
 export interface JobPoster {
   _id?: string;
   name?: string;
@@ -17,6 +23,9 @@ export interface JobPoster {
   role?: string;
   orgNumber?: string;
   completedJobs?: number;
+  lastName?: string;
+  reviewCount?: number;
+  createdAt?: string;
 }
 
 export interface JobLocation {
@@ -65,6 +74,7 @@ export interface Job {
   currentApplicants?: number;
   isLimitReached?: boolean;
   equipment: Equipment;
+  customerType?: 'private' | 'business';
   checklist?: Array<{ id: string; text: string; checked: boolean; checkedBy?: { name?: string }; checkedAt?: string }>;
   createdAt: string;
   updatedAt: string;

@@ -21,18 +21,23 @@ const SERVICE_STATUS: Record<string, { label: string; tone: Tone }> = {
 };
 
 const TONE_CLASS: Record<Tone, string> = {
-  quiet: 'bg-[#F4F6F0] text-[#63665F]',
-  moving: 'bg-[#EAF1E9] text-[#2E6641]',
-  action: 'bg-[#122A1C] text-white',
-  closed: 'border border-[#E6E7E1] bg-white text-[#9B9E96]',
+  quiet: 'bg-surface-2 text-muted',
+  moving: 'bg-tint text-brand-text',
+  action: 'bg-brand-deep text-white',
+  closed: 'border border-line bg-surface text-subtle',
 };
 
+/** Norwegian label for a Service.status; never the raw value. */
+export function serviceStatusLabel(status?: string | null): string {
+  return (status && SERVICE_STATUS[status]?.label) || 'Ukjent';
+}
+
 export function ServiceStatusBadge({ status }: { status: ServiceStatus }) {
-  const mapped = SERVICE_STATUS[status] ?? { label: status, tone: 'quiet' as Tone };
+  const mapped = SERVICE_STATUS[status] ?? { label: serviceStatusLabel(status), tone: 'quiet' as Tone };
 
   return (
     <View className={['self-start rounded-full px-2.5 py-1', TONE_CLASS[mapped.tone]].join(' ')}>
-      <Text className="text-[0.6875rem] font-semibold text-current">{mapped.label}</Text>
+      <Text className="text-[0.8125rem] font-semibold text-current">{mapped.label}</Text>
     </View>
   );
 }
